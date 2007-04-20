@@ -62,7 +62,7 @@ public class EditMetaWorkflowAction extends Action {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getImageDescriptor()
      */
     @Override
     public ImageDescriptor getImageDescriptor() {
@@ -70,7 +70,7 @@ public class EditMetaWorkflowAction extends Action {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getToolTipText()
      */
     @Override
     public String getToolTipText() {
@@ -78,7 +78,7 @@ public class EditMetaWorkflowAction extends Action {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getText()
      */
     @Override
     public String getText() {
@@ -86,7 +86,7 @@ public class EditMetaWorkflowAction extends Action {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.Action#run()
      */
     @Override
     public void run() {

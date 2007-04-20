@@ -38,7 +38,9 @@ import org.knime.core.node.workflow.WorkflowManager;
  */
 public class KnimeResourcePatternFilter extends ResourcePatternFilter {
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.viewers.ViewerFilter#
+     *      select(org.eclipse.jface.viewers.Viewer, java.lang.Object,
+     *      java.lang.Object)
      */
     @Override
     public boolean select(final Viewer viewer, final Object parentElement,
@@ -59,7 +61,7 @@ public class KnimeResourcePatternFilter extends ResourcePatternFilter {
                     // if crashes for some reason do not display it
                     return false;
                 }
-               
+
                 for (IResource currentResource : children) {
                     if (currentResource.getName().equals(
                             WorkflowManager.WORKFLOW_FILE)) {

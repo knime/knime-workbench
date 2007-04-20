@@ -50,13 +50,13 @@ public abstract class AbstractClipboardAction extends AbstractNodeAction {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getId()
      */
     @Override
     public abstract String getId();
 
     /**
-     * {@inheritDoc}
+     * @see org.knime.workbench.editor2.actions.AbstractNodeAction#runOnNodes(org.knime.workbench.editor2.editparts.NodeContainerEditPart[])
      */
     @Override
     public abstract void runOnNodes(NodeContainerEditPart[] nodeParts);

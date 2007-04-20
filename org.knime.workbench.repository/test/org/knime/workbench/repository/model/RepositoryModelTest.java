@@ -42,7 +42,7 @@ public class RepositoryModelTest extends TestCase {
     }
 
     /**
-     * {@inheritDoc}
+     * @see TestCase#setUp()
      */
     protected void setUp() throws Exception {
         super.setUp();

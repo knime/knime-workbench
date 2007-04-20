@@ -58,7 +58,7 @@ public class OpenViewAction extends Action {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getImageDescriptor()
      */
     @Override
     public ImageDescriptor getImageDescriptor() {
@@ -66,7 +66,7 @@ public class OpenViewAction extends Action {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getToolTipText()
      */
     @Override
     public String getToolTipText() {
@@ -75,7 +75,7 @@ public class OpenViewAction extends Action {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getText()
      */
     @Override
     public String getText() {
@@ -83,7 +83,7 @@ public class OpenViewAction extends Action {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.Action#run()
      */
     @Override
     public void run() {

@@ -55,7 +55,8 @@ public class UserNodeNameCellEditorLocator implements CellEditorLocator {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.tools.CellEditorLocator#
+     *      relocate(org.eclipse.jface.viewers.CellEditor)
      */
     public void relocate(final CellEditor celleditor) {
 

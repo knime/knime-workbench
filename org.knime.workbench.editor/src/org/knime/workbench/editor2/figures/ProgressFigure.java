@@ -166,7 +166,8 @@ public class ProgressFigure extends RectangleFigure implements
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.draw2d.IFigure#getMinimumSize(int, int)
      */
     @Override
     public Dimension getMinimumSize(final int whint, final int hhint) {
@@ -174,7 +175,7 @@ public class ProgressFigure extends RectangleFigure implements
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.draw2d.Figure#getMaximumSize()
      */
     @Override
     public Dimension getMaximumSize() {
@@ -182,7 +183,7 @@ public class ProgressFigure extends RectangleFigure implements
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.draw2d.IFigure#getPreferredSize(int, int)
      */
     @Override
     public Dimension getPreferredSize(final int wHint, final int hHint) {
@@ -219,7 +220,7 @@ public class ProgressFigure extends RectangleFigure implements
     // }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.draw2d.Figure#paintFigure(org.eclipse.draw2d.Graphics)
      */
     @Override
     public void paintFigure(final Graphics graphics) {

@@ -60,7 +60,9 @@ public class NodeInPortFigure extends AbstractNodePortFigure {
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.knime.workbench.editor2.figures.AbstractNodePortFigure
+     *  #isModelPort()
      */
     @Override
     protected boolean isModelPort() {

@@ -163,7 +163,7 @@ public class ProgressToolTipHelper extends PopUpHelper {
     // itself is registered at some global UI objects and stays alive until
     // Eclipse is closed.
     /**
-     * {@inheritDoc}
+     * @see PopUpHelper#hookShellListeners()
      */
     @Override
     protected void hookShellListeners() {

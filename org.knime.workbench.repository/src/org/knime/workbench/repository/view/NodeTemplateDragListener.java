@@ -66,7 +66,8 @@ public class NodeTemplateDragListener implements DragSourceListener {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.swt.dnd.DragSourceListener
+     *      #dragSetData(org.eclipse.swt.dnd.DragSourceEvent)
      */
     public void dragSetData(final DragSourceEvent event) {
         IStructuredSelection sel = (IStructuredSelection)m_viewer
@@ -76,7 +77,8 @@ public class NodeTemplateDragListener implements DragSourceListener {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.swt.dnd.DragSourceListener
+     *      #dragFinished(org.eclipse.swt.dnd.DragSourceEvent)
      */
     public void dragFinished(final DragSourceEvent event) {
         // TODO Auto-generated method stub

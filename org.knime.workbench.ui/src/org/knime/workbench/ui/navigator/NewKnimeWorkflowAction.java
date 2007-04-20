@@ -89,7 +89,7 @@ public class NewKnimeWorkflowAction extends Action {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getImageDescriptor()
      */
     @Override
     public ImageDescriptor getImageDescriptor() {

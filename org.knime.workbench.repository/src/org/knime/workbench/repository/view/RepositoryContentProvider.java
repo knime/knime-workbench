@@ -40,14 +40,16 @@ import org.knime.workbench.repository.model.ISimpleObject;
 public class RepositoryContentProvider implements IStructuredContentProvider,
         ITreeContentProvider {
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.viewers.IStructuredContentProvider#
+     *      getElements(java.lang.Object)
      */
     public Object[] getElements(final Object inputElement) {
         return ((IContainerObject)inputElement).getChildren();
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.viewers.ITreeContentProvider#
+     *      getChildren(java.lang.Object)
      */
     public Object[] getChildren(final Object parentElement) {
         if (parentElement instanceof IContainerObject) {
@@ -57,14 +59,16 @@ public class RepositoryContentProvider implements IStructuredContentProvider,
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.viewers.ITreeContentProvider#
+     *      getParent(java.lang.Object)
      */
     public Object getParent(final Object element) {
         return ((IRepositoryObject)element).getParent();
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.viewers.ITreeContentProvider#
+     *      hasChildren(java.lang.Object)
      */
     public boolean hasChildren(final Object element) {
         // If we have a simple object, this contains no children
@@ -77,7 +81,7 @@ public class RepositoryContentProvider implements IStructuredContentProvider,
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.viewers.IContentProvider#dispose()
      */
     public void dispose() {
 

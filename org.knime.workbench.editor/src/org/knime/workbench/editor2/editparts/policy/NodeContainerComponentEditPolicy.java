@@ -42,7 +42,8 @@ import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
  */
 public class NodeContainerComponentEditPolicy extends ComponentEditPolicy {
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.editpolicies.ComponentEditPolicy
+     *      #getDeleteCommand(org.eclipse.gef.requests.GroupRequest)
      */
     @Override
     protected Command getDeleteCommand(final GroupRequest request) {

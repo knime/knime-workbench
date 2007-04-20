@@ -46,7 +46,8 @@ import org.knime.workbench.ui.wizards.project.NewProjectWizard;
 public class NewProjectWizardIntroAction implements IIntroAction {
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.intro.config.IIntroAction
+     *      #run(org.eclipse.ui.intro.IIntroSite, java.util.Properties)
      */
     public void run(final IIntroSite site, final Properties params) {
 

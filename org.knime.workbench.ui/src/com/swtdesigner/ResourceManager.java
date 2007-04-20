@@ -249,8 +249,7 @@ public final class ResourceManager {
      */
     public static ImageDescriptor getImageDescriptor(final String path) {
         try {
-            return ImageDescriptor.createFromURL(
-                    new File(path).toURI().toURL());
+            return ImageDescriptor.createFromURL((new File(path)).toURL());
         } catch (MalformedURLException e) {
             return null;
         }
