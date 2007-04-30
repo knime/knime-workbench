@@ -207,7 +207,8 @@ public abstract class AbstractPortEditPart extends KnimeAbstractPart
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.NodeEditPart
+     *      #getSourceConnectionAnchor(org.eclipse.gef.ConnectionEditPart)
      */
     public ConnectionAnchor getSourceConnectionAnchor(
             final ConnectionEditPart connection) {
@@ -215,14 +216,16 @@ public abstract class AbstractPortEditPart extends KnimeAbstractPart
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.NodeEditPart
+     *      #getSourceConnectionAnchor(org.eclipse.gef.Request)
      */
     public ConnectionAnchor getSourceConnectionAnchor(final Request request) {
         return new OutPortConnectionAnchor(getFigure());
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.NodeEditPart
+     *      #getTargetConnectionAnchor(org.eclipse.gef.ConnectionEditPart)
      */
     public ConnectionAnchor getTargetConnectionAnchor(
             final ConnectionEditPart connection) {
@@ -230,7 +233,8 @@ public abstract class AbstractPortEditPart extends KnimeAbstractPart
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.NodeEditPart
+     *      #getTargetConnectionAnchor(org.eclipse.gef.Request)
      */
     public ConnectionAnchor getTargetConnectionAnchor(final Request request) {
         return new InPortConnectionAnchor(getFigure());

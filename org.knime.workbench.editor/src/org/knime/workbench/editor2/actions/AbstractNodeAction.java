@@ -158,7 +158,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.ui.actions.SelectionAction#getSelectedObjects()
      */
     @Override
     protected List getSelectedObjects() {

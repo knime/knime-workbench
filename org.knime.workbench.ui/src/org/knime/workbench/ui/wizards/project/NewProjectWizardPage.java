@@ -67,7 +67,9 @@ public class NewProjectWizardPage extends WizardPage {
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.jface.dialogs.IDialogPage
+     *      #createControl(org.eclipse.swt.widgets.Composite)
      */
     public void createControl(final Composite parent) {
         Composite container = new Composite(parent, SWT.NULL);

@@ -36,7 +36,8 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  */
 public class PreferenceInitializer extends AbstractPreferenceInitializer {
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer
+     *      #initializeDefaultPreferences()
      */
     @Override
     public void initializeDefaultPreferences() {

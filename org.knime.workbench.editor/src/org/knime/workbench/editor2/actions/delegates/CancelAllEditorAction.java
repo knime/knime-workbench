@@ -36,7 +36,8 @@ import org.knime.workbench.editor2.actions.CancelAllAction;
 public class CancelAllEditorAction extends AbstractEditorAction {
 
     /**
-     * {@inheritDoc}
+     * @see org.knime.workbench.editor2.actions.delegates.AbstractEditorAction
+     *      #createAction(org.knime.workbench.editor2.WorkflowEditor)
      */
     @Override
     protected AbstractNodeAction createAction(final WorkflowEditor editor) {

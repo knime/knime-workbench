@@ -81,7 +81,7 @@ public class CreateNodeCommand extends Command {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.commands.Command#execute()
      */
     @Override
     public void execute() {
@@ -117,7 +117,7 @@ public class CreateNodeCommand extends Command {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.commands.Command#undo()
      */
     @Override
     public void undo() {

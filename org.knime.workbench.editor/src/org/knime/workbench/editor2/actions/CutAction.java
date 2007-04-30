@@ -56,7 +56,7 @@ public class CutAction extends AbstractClipboardAction {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getId()
      */
     @Override
     public String getId() {
@@ -65,7 +65,7 @@ public class CutAction extends AbstractClipboardAction {
     }
     
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getImageDescriptor()
      */
     @Override
     public ImageDescriptor getImageDescriptor() {
@@ -76,7 +76,7 @@ public class CutAction extends AbstractClipboardAction {
     }
     
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.action.IAction#getText()
      */
     @Override
     public String getText() {

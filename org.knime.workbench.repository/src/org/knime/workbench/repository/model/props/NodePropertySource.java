@@ -86,14 +86,17 @@ public class NodePropertySource implements IPropertySource {
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.ui.views.properties.IPropertySource#getEditableValue()
      */
     public Object getEditableValue() {
         return this;
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.ui.views.properties.IPropertySource#
+     *      getPropertyDescriptors()
      */
     public IPropertyDescriptor[] getPropertyDescriptors() {
         return new IPropertyDescriptor[] {ID_DESC, NAME_DESC, TYPE_DESC,
@@ -101,7 +104,9 @@ public class NodePropertySource implements IPropertySource {
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.ui.views.properties.IPropertySource#
+     *      getPropertyValue(java.lang.Object)
      */
     public Object getPropertyValue(final Object id) {
         if ("name".equals(id)) {
@@ -126,21 +131,27 @@ public class NodePropertySource implements IPropertySource {
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.ui.views.properties.IPropertySource#
+     *      isPropertySet(java.lang.Object)
      */
     public boolean isPropertySet(final Object id) {
         return false;
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.ui.views.properties.IPropertySource#
+     *      resetPropertyValue(java.lang.Object)
      */
     public void resetPropertyValue(final Object id) {
 
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.ui.views.properties.IPropertySource#
+     *      setPropertyValue(java.lang.Object, java.lang.Object)
      */
     public void setPropertyValue(final Object id, final Object value) {
         // TODO Auto-generated method stub

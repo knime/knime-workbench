@@ -70,7 +70,8 @@ public class NodeFromNodeTemplateCreationFactory implements CreationFactory {
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.gef.requests.CreationFactory#getObjectType()
      */
     public Object getObjectType() {
         return NodeFactory.class;

@@ -127,7 +127,8 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.gef.EditPart#activate()
      */
     @Override
     public void activate() {
@@ -184,7 +185,8 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements
     }
 
     /**
-     * {@inheritDoc}
+     * 
+     * @see org.eclipse.gef.EditPart#deactivate()
      */
     @Override
     public void deactivate() {
@@ -194,7 +196,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.editparts.AbstractGraphicalEditPart#createFigure()
      */
     @Override
     protected IFigure createFigure() {
@@ -249,7 +251,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.EditPart#performRequest(org.eclipse.gef.Request)
      */
     @Override
     public void performRequest(final Request request) {

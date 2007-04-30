@@ -164,7 +164,8 @@ public class WrappedNodeDialog extends Dialog {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.dialogs.Dialog#
+     *      createDialogArea(org.eclipse.swt.widgets.Composite)
      */
     @Override
     protected Control createDialogArea(final Composite parent) {
@@ -207,7 +208,8 @@ public class WrappedNodeDialog extends Dialog {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.dialogs.Dialog
+     *      #createButtonsForButtonBar(org.eclipse.swt.widgets.Composite)
      */
     @Override
     protected void createButtonsForButtonBar(final Composite parent) {
@@ -353,7 +355,7 @@ public class WrappedNodeDialog extends Dialog {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.window.Window#close()
      */
     @Override
     public boolean close() {

@@ -69,14 +69,17 @@ public class NewOverviewOutlinePage extends Page
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.viewers.ISelectionProvider
+     *      #addSelectionChangedListener
+     *      (org.eclipse.jface.viewers.ISelectionChangedListener)
      */
     public void addSelectionChangedListener(
             final ISelectionChangedListener listener) {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.part.IPage
+     *      #createControl(org.eclipse.swt.widgets.Composite)
      */
     @Override
     public void createControl(final Composite parent) {
@@ -94,7 +97,7 @@ public class NewOverviewOutlinePage extends Page
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.part.IPage#dispose()
      */
     @Override
     public void dispose() {
@@ -106,7 +109,7 @@ public class NewOverviewOutlinePage extends Page
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.part.IPage#getControl()
      */
     @Override
     public Control getControl() {
@@ -114,14 +117,16 @@ public class NewOverviewOutlinePage extends Page
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.viewers.ISelectionProvider#getSelection()
      */
     public ISelection getSelection() {
         return StructuredSelection.EMPTY;
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.viewers.ISelectionProvider#
+     *      removeSelectionChangedListener
+     *      (org.eclipse.jface.viewers.ISelectionChangedListener)
      */
     public void removeSelectionChangedListener(
             final ISelectionChangedListener listener) {
@@ -129,7 +134,7 @@ public class NewOverviewOutlinePage extends Page
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.part.IPage#setFocus()
      */
     @Override
     public void setFocus() {
@@ -139,7 +144,8 @@ public class NewOverviewOutlinePage extends Page
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.viewers.ISelectionProvider
+     *      #setSelection(org.eclipse.jface.viewers.ISelection)
      */
     public void setSelection(final ISelection selection) {
         // nothing
