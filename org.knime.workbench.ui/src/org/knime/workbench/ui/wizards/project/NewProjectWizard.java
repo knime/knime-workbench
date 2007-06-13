@@ -97,7 +97,8 @@ public class NewProjectWizard extends Wizard implements INewWizard {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.IWorkbenchWizard #init(org.eclipse.ui.IWorkbench,
+     *      org.eclipse.jface.viewers.IStructuredSelection)
      */
     public void init(final IWorkbench workbench,
             final IStructuredSelection selection) {

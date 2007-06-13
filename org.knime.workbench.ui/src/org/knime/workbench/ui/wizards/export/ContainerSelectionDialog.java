@@ -116,7 +116,8 @@ public class ContainerSelectionDialog extends SelectionDialog {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.window.Window
+     *  #configureShell(org.eclipse.swt.widgets.Shell)
      */
     @Override
     protected void configureShell(final Shell shell) {
@@ -126,7 +127,8 @@ public class ContainerSelectionDialog extends SelectionDialog {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.dialogs.Dialog
+     *  #createDialogArea(org.eclipse.swt.widgets.Composite)
      */
     @Override
     protected Control createDialogArea(final Composite parent) {

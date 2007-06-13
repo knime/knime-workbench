@@ -37,7 +37,7 @@ public class KNIMEProjectNature implements IProjectNature {
     private IProject m_project;
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.core.resources.IProjectNature#configure()
      */
     public void configure() throws CoreException {
         // TODO Auto-generated method stub
@@ -45,7 +45,7 @@ public class KNIMEProjectNature implements IProjectNature {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.core.resources.IProjectNature#deconfigure()
      */
     public void deconfigure() throws CoreException {
         // TODO Auto-generated method stub
@@ -53,14 +53,15 @@ public class KNIMEProjectNature implements IProjectNature {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.core.resources.IProjectNature #getProject()
      */
     public IProject getProject() {
         return m_project;
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.core.resources.IProjectNature
+     *      #setProject(org.eclipse.core.resources.IProject)
      */
     public void setProject(final IProject project) {
         m_project = project;

@@ -416,7 +416,8 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.IEditorPart #init(org.eclipse.ui.IEditorSite,
+     *      org.eclipse.ui.IEditorInput)
      */
     @Override
     public void init(final IEditorSite site, final IEditorInput input)
@@ -948,7 +949,8 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.part.EditorPart
+     *      #doSave(org.eclipse.core.runtime.IProgressMonitor)
      */
     @Override
     public void doSave(final IProgressMonitor monitor) {
@@ -1054,7 +1056,7 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.part.EditorPart#doSaveAs()
      */
     @Override
     public void doSaveAs() {
@@ -1062,7 +1064,7 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.part.EditorPart#isDirty()
      */
     @Override
     public boolean isDirty() {
@@ -1070,7 +1072,7 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.part.EditorPart#isSaveAsAllowed()
      */
     @Override
     public boolean isSaveAsAllowed() {
@@ -1380,7 +1382,8 @@ public class WorkflowEditor extends GraphicalEditor implements
         }
 
         /**
-         * {@inheritDoc}
+         * @see org.eclipse.core.resources.IResourceDeltaVisitor
+         *      #visit(org.eclipse.core.resources.IResourceDelta)
          */
         public boolean visit(final IResourceDelta delta) throws CoreException {
 

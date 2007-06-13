@@ -77,7 +77,7 @@ public class PortLocator implements Locator {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.draw2d.Locator #relocate(org.eclipse.draw2d.IFigure)
      */
     public void relocate(final IFigure fig) {
         Rectangle parentBounds = m_parent.getContentFigure().getBounds()

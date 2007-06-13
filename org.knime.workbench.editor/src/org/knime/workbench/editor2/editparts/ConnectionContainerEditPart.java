@@ -90,7 +90,7 @@ public class ConnectionContainerEditPart extends AbstractConnectionEditPart
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.EditPart#activate()
      */
     @Override
     public void activate() {
@@ -99,7 +99,7 @@ public class ConnectionContainerEditPart extends AbstractConnectionEditPart
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.EditPart#deactivate()
      */
     @Override
     public void deactivate() {
@@ -108,7 +108,7 @@ public class ConnectionContainerEditPart extends AbstractConnectionEditPart
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.editparts.AbstractEditPart#createEditPolicies()
      */
     @Override
     protected void createEditPolicies() {
@@ -126,7 +126,7 @@ public class ConnectionContainerEditPart extends AbstractConnectionEditPart
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.editparts.AbstractConnectionEditPart#createFigure()
      */
     @Override
     protected IFigure createFigure() {
@@ -164,14 +164,15 @@ public class ConnectionContainerEditPart extends AbstractConnectionEditPart
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.knime.core.node.workflow.WorkflowListener
+     *      #workflowChanged(org.knime.core.node.workflow.WorkflowEvent)
      */
     public void workflowChanged(final WorkflowEvent event) {
         refreshVisuals();
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.editparts.AbstractEditPart#refreshVisuals()
      */
     @Override
     protected void refreshVisuals() {

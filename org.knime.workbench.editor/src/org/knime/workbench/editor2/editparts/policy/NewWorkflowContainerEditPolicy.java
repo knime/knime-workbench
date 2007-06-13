@@ -50,7 +50,8 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             .getLogger(NewWorkflowContainerEditPolicy.class);
 
     /**
-     * {@inheritDoc}
+     * @see ContainerEditPolicy#
+     *      getCreateCommand(org.eclipse.gef.requests.CreateRequest)
      */
     @Override
     protected Command getCreateCommand(final CreateRequest request) {
@@ -107,7 +108,8 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.EditPolicy
+     *      #getTargetEditPart(org.eclipse.gef.Request)
      */
     @Override
     public EditPart getTargetEditPart(final Request request) {

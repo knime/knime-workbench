@@ -37,7 +37,8 @@ import org.eclipse.ui.IWorkbench;
  */
 public class WorkflowImportWizard extends ExternalProjectImportWizard {
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.IWorkbenchWizard# init(org.eclipse.ui.IWorkbench,
+     *      org.eclipse.jface.viewers.IStructuredSelection)
      */
     @Override
     public void init(final IWorkbench workbench,
@@ -50,7 +51,7 @@ public class WorkflowImportWizard extends ExternalProjectImportWizard {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.jface.wizard.IWizard#addPages()
      */
     @Override
     public void addPages() {

@@ -208,7 +208,8 @@ public class MainPreferencePage extends FieldEditorPreferencePage implements
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.ui.IWorkbenchPreferencePage
+     *      #init(org.eclipse.ui.IWorkbench)
      */
     public void init(final IWorkbench workbench) {
         // ignore

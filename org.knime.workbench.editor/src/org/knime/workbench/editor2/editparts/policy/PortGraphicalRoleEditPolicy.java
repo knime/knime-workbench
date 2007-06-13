@@ -149,7 +149,9 @@ public class PortGraphicalRoleEditPolicy extends GraphicalNodeEditPolicy {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.editpolicies.GraphicalNodeEditPolicy
+     *      #getReconnectSourceCommand(
+     *      org.eclipse.gef.requests.ReconnectRequest)
      */
     @Override
     protected Command getReconnectSourceCommand(final ReconnectRequest req) {
@@ -176,7 +178,9 @@ public class PortGraphicalRoleEditPolicy extends GraphicalNodeEditPolicy {
     }
 
     /**
-     * {@inheritDoc}
+     * @see org.eclipse.gef.editpolicies.GraphicalNodeEditPolicy
+     *      #getReconnectTargetCommand(
+     *      org.eclipse.gef.requests.ReconnectRequest)
      */
     @Override
     protected Command getReconnectTargetCommand(final ReconnectRequest req) {
