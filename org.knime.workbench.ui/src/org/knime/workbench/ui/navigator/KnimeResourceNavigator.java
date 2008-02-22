@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -41,7 +41,6 @@ import org.eclipse.jface.viewers.OpenEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.actions.CloseResourceAction;
-import org.eclipse.ui.actions.CloseUnrelatedProjectsAction;
 import org.eclipse.ui.actions.OpenFileAction;
 import org.eclipse.ui.actions.OpenInNewWindowAction;
 import org.eclipse.ui.internal.Workbench;
@@ -174,9 +173,6 @@ public class KnimeResourceNavigator extends ResourceNavigator implements
                     menu.remove(aItem);
                 } else if (aItem.getAction() instanceof OpenInNewWindowAction) {
 
-                    menu.remove(aItem);
-                } else if (aItem.getAction() instanceof 
-                        CloseUnrelatedProjectsAction) {
                     menu.remove(aItem);
                 }
 

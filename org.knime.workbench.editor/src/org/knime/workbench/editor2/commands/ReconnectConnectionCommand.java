@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -45,7 +45,6 @@ import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
  * 
  * @author Christoph Sieb, University of Konstanz
  */
-// TODO: not used
 public class ReconnectConnectionCommand extends Command {
     private DeleteConnectionCommand m_deleteCommand;
 
@@ -77,7 +76,7 @@ public class ReconnectConnectionCommand extends Command {
 
             // request started on out port?
             cmd.setSourceNode(nodePart);
-            cmd.setSourcePortID(((AbstractPortEditPart)host).getIndex());
+            cmd.setSourcePortID(((NodeOutPortEditPart)host).getId());
             cmd.setStartedOnOutPort(true);
             // LOGGER.debug("Started connection on out-port...");
         } else if (host instanceof NodeInPortEditPart) {
@@ -105,7 +104,7 @@ public class ReconnectConnectionCommand extends Command {
 
             // LOGGER.debug("Ending connection on out-port...");
         } else if (target instanceof NodeInPortEditPart) {
-            cmd.setTargetPortID(((NodeInPortEditPart)target).getIndex());
+            cmd.setTargetPortID(((NodeInPortEditPart)target).getId());
             cmd.setTargetNode((NodeContainerEditPart)target.getParent());
 
             // LOGGER.debug("Ending connection on in-port...");

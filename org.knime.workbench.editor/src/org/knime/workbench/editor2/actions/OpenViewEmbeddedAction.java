@@ -1,9 +1,9 @@
-/*
+/* 
  * -------------------------------------------------------------------
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -18,7 +18,7 @@
  * website: www.knime.org
  * email: contact@knime.org
  * -------------------------------------------------------------------
- *
+ * 
  * History
  *   23.12.2005 (Florian Georg): created
  */
@@ -29,20 +29,21 @@ import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.Workbench;
-import org.knime.core.node.GenericNodeView;
+import org.knime.core.node.NodeView;
 import org.knime.core.node.workflow.NodeContainer;
+
 import org.knime.workbench.ui.views.EmbeddedNodeView;
 
 /**
  * Opens a node view embedded inside the Workbench - "Node View".
- *
+ * 
  * @author Florian Georg, University of Konstanz
  */
 public class OpenViewEmbeddedAction extends OpenViewAction {
 
-    private final NodeContainer m_container;
+    private NodeContainer m_container;
 
-    private final int m_viewIndex;
+    private int m_viewIndex;
 
     private static int numInstances = 0;
 
@@ -74,7 +75,7 @@ public class OpenViewEmbeddedAction extends OpenViewAction {
             if (part != null) {
                 EmbeddedNodeView view = (EmbeddedNodeView)part;
 
-                GenericNodeView<?> nodeView = m_container.getView(m_viewIndex);
+                NodeView nodeView = m_container.getView(m_viewIndex);
 
                 // sets the Node-view to the Eclipse-View...
                 view.setNodeView(nodeView);

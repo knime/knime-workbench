@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
-import org.knime.core.node.workflow.UIInformation;
+import org.knime.core.node.workflow.ConnectionExtraInfo;
 
 /**
  * Default implementation of a connection extra info.
@@ -38,14 +38,14 @@ import org.knime.core.node.workflow.UIInformation;
  * 
  * @author Florian Georg, University of Konstanz
  */
-public class ModellingConnectionExtraInfo implements UIInformation {
+public class ModellingConnectionExtraInfo implements ConnectionExtraInfo {
     /** The key under which the type is registered. * */
     public static final String KEY_VERSION = "extrainfo.conn.version";
 
     /** The key under which the bounds are registered. * */
     public static final String KEY_BENDPOINTS = "extrainfo.conn.bendpoints";
 
-    private final ArrayList<int[]> m_bendpoints = new ArrayList<int[]>();
+    private ArrayList<int[]> m_bendpoints = new ArrayList<int[]>();
 
     /**
      * Constructs a <code>ModellingConnectionExtraInfo</code>.
@@ -128,16 +128,5 @@ public class ModellingConnectionExtraInfo implements UIInformation {
             point[0] += moveDist[0];
             point[1] += moveDist[1];
         }
-    }
-    
-    @Override
-    public String toString() {
-        StringBuilder bld = new StringBuilder("bendpoints: ");
-        for (int[] bendpoints : m_bendpoints) {
-            for (int i = 0; i < bendpoints.length; i++) {
-                bld.append(bendpoints[i] + ", ");
-            }
-        }
-        return bld.toString();
     }
 }

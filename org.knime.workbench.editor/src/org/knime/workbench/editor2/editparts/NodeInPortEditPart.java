@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -28,30 +28,31 @@ import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.draw2d.IFigure;
-import org.knime.core.node.NodeInPort;
-import org.knime.core.node.PortType;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.NodeContainer;
 
 import org.knime.workbench.editor2.figures.NodeInPortFigure;
 
 /**
- * Edit Part for a {@link NodeInPort}.
- * Model: {@link NodeInPort}
- * View: {@link NodeInPortFigure}
- * Controller: {@link NodeInPortEditPart}
+ * Edit Part for a <code>NodeInPort</code>.
  * 
  * @author Florian Georg, University of Konstanz
  */
 public class NodeInPortEditPart extends AbstractPortEditPart {
     /**
-     * @param type the type of the port
      * @param portID The id for this incoming port
      */
-    public NodeInPortEditPart(final PortType type, final int portID) {
-        super(type, portID, true);
+    public NodeInPortEditPart(final int portID) {
+        super(portID);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isModelPort() {
+        return getNodeContainer().isPredictorInPort(getId());
+    }
 
     /**
      * {@inheritDoc}
@@ -61,9 +62,10 @@ public class NodeInPortEditPart extends AbstractPortEditPart {
         // Create the figure, we need the number of ports from the parent
         // container
         NodeContainer container = getNodeContainer();
-        NodeInPortFigure portFigure = new NodeInPortFigure(getType(),
-                getIndex(), container.getNrInPorts(),
-                container.getInPort(getIndex()).getPortName());
+        boolean isModelPort = container.isPredictorInPort(getId());
+        NodeInPortFigure portFigure = new NodeInPortFigure(getId(), container
+                .getNrModelContentInPorts(), container.getNrDataInPorts(),
+                container.getInportName(getId()), isModelPort);
 
         return portFigure;
     }
@@ -74,27 +76,28 @@ public class NodeInPortEditPart extends AbstractPortEditPart {
      * @return singleton list containing the connection, or an empty list. Never
      *         <code>null</code>
      * 
-     * {@inheritDoc}
+     * @see org.eclipse.gef.GraphicalEditPart#getTargetConnections()
      */
     @Override
-    public List<ConnectionContainer> getModelTargetConnections() {
-        ConnectionContainer container = getManager().getIncomingConnectionFor(
-                getNodeContainer().getID(), getIndex());
+    public List getModelTargetConnections() {
+        ConnectionContainer container = getManager().getIncomingConnectionAt(
+                getNodeContainer(), getId());
 
         if (container != null) {
             return Collections.singletonList(container);
         }
 
-        return EMPTY_LIST;
+        return Collections.EMPTY_LIST;
     }
 
     /**
      * @return empty list, as in-ports are never source for connections
      * 
-     * {@inheritDoc}
+     * @see org.eclipse.gef.editparts.AbstractGraphicalEditPart
+     *      #getModelSourceConnections()
      */
     @Override
-    protected List<ConnectionContainer> getModelSourceConnections() {
-        return EMPTY_LIST;
+    protected List getModelSourceConnections() {
+        return Collections.EMPTY_LIST;
     }
 }

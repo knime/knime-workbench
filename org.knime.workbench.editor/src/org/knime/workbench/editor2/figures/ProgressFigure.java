@@ -1,9 +1,9 @@
-/*
+/* 
  * -------------------------------------------------------------------
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -18,7 +18,7 @@
  * website: www.knime.org
  * email: contact@knime.org
  * -------------------------------------------------------------------
- *
+ * 
  * History
  *   31.05.2005 (Florian Georg): created
  */
@@ -42,15 +42,16 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.widgets.Display;
-import org.knime.core.node.workflow.NodeProgress;
+import org.knime.core.node.NodeProgressEvent;
+import org.knime.core.node.NodeProgressListener;
 
 /**
  * This figure creates the progress bar within a node container figure.
- *
+ * 
  * @author Christoph Sieb, University of Konstanz
  */
 public class ProgressFigure extends RectangleFigure implements
-        MouseMotionListener {
+        NodeProgressListener, MouseMotionListener {
 
     // private static final NodeLogger LOGGER =
     // NodeLogger.getLogger(ProgressFigure.class);
@@ -136,8 +137,6 @@ public class ProgressFigure extends RectangleFigure implements
      */
     public ProgressFigure() {
 
-        setBounds(new Rectangle(0, 0, WIDTH, HEIGHT));
-
         if (m_currentDisplay != null) {
             m_currentDisplay = Display.getCurrent();
         }
@@ -193,7 +192,7 @@ public class ProgressFigure extends RectangleFigure implements
 
     /**
      * We need to set the color before invoking super.
-     *
+     * 
      * @see org.eclipse.draw2d.Shape#fillShape(org.eclipse.draw2d.Graphics)
      */
     @Override
@@ -202,8 +201,8 @@ public class ProgressFigure extends RectangleFigure implements
         super.fillShape(graphics);
     }
 
-    private void drawSmoothRect(final Graphics graphics, final int x, final int y, final int w,
-            final int h) {
+    private void drawSmoothRect(final Graphics graphics, int x, int y, int w,
+            int h) {
 
         graphics.drawLine(x + 1, y, x + w - 2, y);
         graphics.drawLine(x + 1, y + h - 1, x + w - 2, y + h - 1);
@@ -251,8 +250,8 @@ public class ProgressFigure extends RectangleFigure implements
 
                     // calculate the progress bar width from the percentage
                     // current worked value
-                    int barWidth = (int) Math.round((WIDTH - 2)
-                            / 100.0D * m_currentWorked);
+                    int barWidth = (int) Math.round((double) (WIDTH - 2)
+                            / 100.0D * (double) m_currentWorked);
 
                     graphics.fillRectangle(x + 1, y + 1, barWidth, h - 2);
 
@@ -265,7 +264,7 @@ public class ProgressFigure extends RectangleFigure implements
                     graphics.setXORMode(true);
                     graphics.setForegroundColor(ColorConstants.white);
                     graphics.drawString(progressString, x + w / 2
-                            - (progressString.length() * 4), y - 1);
+                            - (int) (progressString.length() * 4), y - 1);
                 } else {
 
                     graphics.setForegroundColor(ColorConstants.darkBlue);
@@ -361,7 +360,7 @@ public class ProgressFigure extends RectangleFigure implements
 
     /**
      * Sets the mode of this progress bar. The modes are executing or queued
-     *
+     * 
      * @param executing
      *            if true the mode is executing otherwise the progress should be
      *            displayed as queued.
@@ -372,7 +371,7 @@ public class ProgressFigure extends RectangleFigure implements
 
     /**
      * Get the mode of this progress bar. The modes are executing or queued
-     *
+     * 
      * @return executing if true the mode is executing otherwise the progress
      *         should be displayed as queued.
      */
@@ -382,9 +381,11 @@ public class ProgressFigure extends RectangleFigure implements
 
     /**
      * Updates UI after progress has changed.
-     * @param pe the new progress to display
+     * 
+     * @see org.knime.core.node.NodeProgressListener
+     *      #progressChanged(NodeProgressEvent)
      */
-    public synchronized void progressChanged(final NodeProgress pe) {
+    public synchronized void progressChanged(final NodeProgressEvent pe) {
 
         if (!ON) {
             return;
@@ -469,7 +470,7 @@ public class ProgressFigure extends RectangleFigure implements
      * Sets the state message. This message is something like: Executing or
      * Waiting or Queued, etc. The message is always appended before the
      * progress message.
-     *
+     * 
      * @param stateMessage
      *            the state message to show
      */
@@ -497,7 +498,7 @@ public class ProgressFigure extends RectangleFigure implements
 
     /**
      * To set the current display. Null display is not set.
-     *
+     * 
      * @param currentDisplay
      *            the dipsplay to set
      */
@@ -510,7 +511,7 @@ public class ProgressFigure extends RectangleFigure implements
         m_currentDisplay = currentDisplay;
     }
 
-    public void mouseDragged(final MouseEvent me) {
+    public void mouseDragged(MouseEvent me) {
         // TODO Auto-generated method stub
 
     }
@@ -536,7 +537,7 @@ public class ProgressFigure extends RectangleFigure implements
         }
     }
 
-    public void mouseExited(final MouseEvent me) {
+    public void mouseExited(MouseEvent me) {
 
         m_mouseEvent = null;
 
@@ -568,12 +569,12 @@ public class ProgressFigure extends RectangleFigure implements
         return m_toolTipHelper;
     }
 
-    public void mouseHover(final MouseEvent me) {
+    public void mouseHover(MouseEvent me) {
         // TODO Auto-generated method stub
 
     }
 
-    public void mouseMoved(final MouseEvent me) {
+    public void mouseMoved(MouseEvent me) {
         // TODO Auto-generated method stub
 
     }
@@ -583,12 +584,12 @@ public class ProgressFigure extends RectangleFigure implements
      * updating the unknown progress figures (cycling figures) is intended to
      * run just one time. The advantage is that the expensive rendering on the
      * display thread is only invoked once for all figures to render.
-     *
+     * 
      * @author Christoph Sieb, University of Konstanz
      */
     private static class UnknownProgressTimer extends Thread {
 
-        private final Vector<ProgressFigure> m_figuresToPaint = new Vector<ProgressFigure>();
+        private Vector<ProgressFigure> m_figuresToPaint = new Vector<ProgressFigure>();
 
         /**
          * Creats an unknown progress timer for cycling progress bar rendering.
@@ -598,7 +599,6 @@ public class ProgressFigure extends RectangleFigure implements
             super("Unknown Progress Timer");
         }
 
-        @Override
         public void run() {
 
             while (true) {
@@ -642,7 +642,7 @@ public class ProgressFigure extends RectangleFigure implements
         /**
          * Add a progress figure that should be rendered regularly. (Intended
          * for cycling progress bars)
-         *
+         * 
          * @param figure
          *            The figure to render regularly
          */
@@ -660,7 +660,7 @@ public class ProgressFigure extends RectangleFigure implements
 
         /**
          * Remove a figure that is no longer intended to be rendered regulary.
-         *
+         * 
          * @param figure
          *            the figure to remove
          */

@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -26,8 +26,7 @@ package org.knime.workbench.repository;
 
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.swt.graphics.Image;
-import org.knime.core.node.GenericNodeFactory;
-import org.knime.core.node.GenericNodeModel;
+import org.knime.core.node.NodeFactory;
 import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.IContainerObject;
 import org.knime.workbench.repository.model.IRepositoryObject;
@@ -53,7 +52,6 @@ public final class RepositoryFactory {
      * @throws IllegalArgumentException If the element is not compatible (e.g.
      *             wrong attributes, or factory class not found)
      */
-    @SuppressWarnings("unchecked")
     public static NodeTemplate createNode(final IConfigurationElement element) {
         String id = element.getAttribute("id");
 
@@ -62,18 +60,16 @@ public final class RepositoryFactory {
         node.setAfterID(str(element.getAttribute("after"), ""));
 
         // Try to load the node factory class...
-        GenericNodeFactory<? extends GenericNodeModel> factory;
+        NodeFactory factory;
         try {
 
             // this ensures that the class is loaded by the correct eclipse
             // classloaders
             factory =
-                    (GenericNodeFactory<? extends GenericNodeModel>)element
+                    (NodeFactory)element
                             .createExecutableExtension("factory-class");
 
-            node.setFactory(
-                    (Class<GenericNodeFactory<? extends GenericNodeModel>>)
-                    factory.getClass());
+            node.setFactory(factory.getClass());
         } catch (Throwable e) {
             throw new IllegalArgumentException(
                     "Can't load factory class for node: "
@@ -97,7 +93,7 @@ public final class RepositoryFactory {
             // get default image if null
             if (icon == null) {
                 icon = ImageRepository.getScaledImage(
-                        GenericNodeFactory.getDefaultIcon(), 16, 16);
+                        NodeFactory.getDefaultIcon(), 16, 16);
             }
             // FIXME dispose this somewhere !!
             node.setIcon(icon);

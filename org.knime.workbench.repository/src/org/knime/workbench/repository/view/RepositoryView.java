@@ -1,9 +1,9 @@
-/*
+/* 
  * -------------------------------------------------------------------
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -18,7 +18,7 @@
  * website: www.knime.org
  * email: contact@knime.org
  * -------------------------------------------------------------------
- *
+ * 
  * History
  *   16.03.2005 (georg): created
  */
@@ -32,7 +32,6 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
-import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
@@ -57,7 +56,7 @@ import org.knime.workbench.repository.model.Root;
  * This view shows the content of the repository that was loaded from the
  * contributing extensions. It mainly includes a tree viewer which shows the
  * hierarchy of categories / nodes.
- *
+ * 
  * @author Florian Georg, University of Konstanz
  */
 public class RepositoryView extends ViewPart {
@@ -73,13 +72,13 @@ public class RepositoryView extends ViewPart {
 
     private Root m_root;
 
-    private final IPropertySourceProvider m_propertyProvider = new PropertyProvider();
+    private IPropertySourceProvider m_propertyProvider = new PropertyProvider();
 
     private FilterViewContributionItem m_toolbarFilterCombo;
 
     /**
      * This fetches the root repository object from the RepositoryManager.
-     *
+     * 
      */
     private void initialize() {
 
@@ -95,7 +94,7 @@ public class RepositoryView extends ViewPart {
     /**
      * This callback creates the contant of the view. The TreeViewer is
      * initialized.
-     *
+     * 
      * @see org.eclipse.ui.IWorkbenchPart
      *      #createPartControl(org.eclipse.swt.widgets.Composite)
      */
@@ -150,7 +149,8 @@ public class RepositoryView extends ViewPart {
         this.getSite().setSelectionProvider(m_viewer);
         // The viewer supports drag&drop
         // (well, actually only drag - objects are dropped into the editor ;-)
-        Transfer[] transfers = new Transfer[]{LocalSelectionTransfer.getTransfer()};
+        Transfer[] transfers = new Transfer[]{NodeTemplateTransfer
+                .getInstance()};
         m_viewer.addDragSupport(DND.DROP_COPY, transfers,
                 new NodeTemplateDragListener(m_viewer));
 
@@ -243,13 +243,13 @@ public class RepositoryView extends ViewPart {
 
     /**
      * Property source provider.
-     *
+     * 
      * @author Florian Georg, University of Konstanz
      */
     private class PropertyProvider implements IPropertySourceProvider {
         /**
          * Delegates the request, if the object is an IAdaptable.
-         *
+         * 
          * @see org.eclipse.ui.views.properties.IPropertySourceProvider#
          *      getPropertySource(java.lang.Object)
          */

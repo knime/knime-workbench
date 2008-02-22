@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -42,10 +42,11 @@ import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.editparts.ZoomManager;
 import org.eclipse.gef.editpolicies.SelectionHandlesEditPolicy;
 import org.eclipse.gef.requests.BendpointRequest;
+import org.knime.core.node.workflow.ConnectionContainer;
+
 import org.knime.workbench.editor2.commands.NewBendpointCreateCommand;
 import org.knime.workbench.editor2.commands.NewBendpointDeleteCommand;
 import org.knime.workbench.editor2.commands.NewBendpointMoveCommand;
-import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.snap.ConnectionBendpointCreationHandel;
 import org.knime.workbench.editor2.editparts.snap.ConnectionBendpointMoveHandel;
 
@@ -438,13 +439,12 @@ public class ConnectionBendpointEditPolicy extends SelectionHandlesEditPolicy
     protected Command getCreateBendpointCommand(final BendpointRequest req) {
         int index = req.getIndex();
         Point loc = req.getLocation();
-        ConnectionContainerEditPart editPart 
-            = (ConnectionContainerEditPart)getHost();
+        ConnectionContainer model = (ConnectionContainer)getHost().getModel();
 
         ZoomManager zoomManager = (ZoomManager)getHost().getRoot().getViewer()
                 .getProperty(ZoomManager.class.toString());
 
-        return new NewBendpointCreateCommand(editPart, index, loc, zoomManager);
+        return new NewBendpointCreateCommand(model, index, loc, zoomManager);
     }
 
     /**
@@ -453,10 +453,9 @@ public class ConnectionBendpointEditPolicy extends SelectionHandlesEditPolicy
     protected Command getDeleteBendpointCommand(final BendpointRequest req) {
         // get the index of the bendpoint to delete
         int index = req.getIndex();
-        ConnectionContainerEditPart editPart 
-            = (ConnectionContainerEditPart)getHost();
+        ConnectionContainer model = (ConnectionContainer)getHost().getModel();
 
-        return new NewBendpointDeleteCommand(editPart, index);
+        return new NewBendpointDeleteCommand(model, index);
     }
 
     /**
@@ -466,12 +465,11 @@ public class ConnectionBendpointEditPolicy extends SelectionHandlesEditPolicy
         // index of the bendpoint to move
         int index = request.getIndex();
         Point loc = request.getLocation();
-        ConnectionContainerEditPart editPart 
-            = (ConnectionContainerEditPart)getHost();
+        ConnectionContainer model = (ConnectionContainer)getHost().getModel();
 
         ZoomManager zoomManager = (ZoomManager)getHost().getRoot().getViewer()
                 .getProperty(ZoomManager.class.toString());
 
-        return new NewBendpointMoveCommand(editPart, index, loc, zoomManager);
+        return new NewBendpointMoveCommand(model, index, loc, zoomManager);
     }
 }

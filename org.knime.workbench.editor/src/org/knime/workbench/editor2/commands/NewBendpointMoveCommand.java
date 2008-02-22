@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -28,8 +28,9 @@ import org.eclipse.draw2d.AbsoluteBendpoint;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.editparts.ZoomManager;
+import org.knime.core.node.workflow.ConnectionContainer;
+
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.extrainfo.ModellingConnectionExtraInfo;
 
 /**
@@ -48,7 +49,7 @@ public class NewBendpointMoveCommand extends Command {
 
     //private AbsoluteBendpoint m_bendpoint;
 
-    private ConnectionContainerEditPart m_connection;
+    private ConnectionContainer m_connection;
 
     private ZoomManager m_zoomManager;
 
@@ -59,12 +60,10 @@ public class NewBendpointMoveCommand extends Command {
      * @param index The bendpoint index
      * @param newLocation the new location
      */
-    public NewBendpointMoveCommand(
-            final ConnectionContainerEditPart connection,
+    public NewBendpointMoveCommand(final ConnectionContainer connection,
             final int index, final Point newLocation,
             final ZoomManager zoomManager) {
-        m_extraInfo = (ModellingConnectionExtraInfo)connection
-            .getUIInformation();
+        m_extraInfo = (ModellingConnectionExtraInfo)connection.getExtraInfo();
         m_connection = connection;
 
         m_index = index;
@@ -91,7 +90,7 @@ public class NewBendpointMoveCommand extends Command {
         m_extraInfo.addBendpoint(bendpoint.x, bendpoint.y, m_index);
 
         // issue notfication
-        m_connection.setUIInformation(m_extraInfo);
+        m_connection.setExtraInfo(m_extraInfo);
     }
 
     /**
@@ -107,7 +106,7 @@ public class NewBendpointMoveCommand extends Command {
         m_extraInfo.addBendpoint(newLocation.x, newLocation.y, m_index);
 
         // issue notfication
-        m_connection.setUIInformation(m_extraInfo);
+        m_connection.setExtraInfo(m_extraInfo);
 
     }
 
@@ -123,6 +122,6 @@ public class NewBendpointMoveCommand extends Command {
         m_extraInfo.addBendpoint(oldLocation.x, oldLocation.y, m_index);
 
         // issue notfication
-        m_connection.setUIInformation(m_extraInfo);
+        m_connection.setExtraInfo(m_extraInfo);
     }
 }
