@@ -1,9 +1,9 @@
-/*
+/* 
  * -------------------------------------------------------------------
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -18,7 +18,7 @@
  * website: www.knime.org
  * email: contact@knime.org
  * -------------------------------------------------------------------
- *
+ * 
  * History
  *   23.12.2005 (georg): created
  */
@@ -39,12 +39,11 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
-import org.knime.core.node.GenericNodeView;
 import org.knime.core.node.NodeView;
 
 /**
  * View for showing Workbench-embedded KNIME Node-Views.
- *
+ * 
  * @author Florian Georg, University of Konstanz
  */
 public class EmbeddedNodeView extends ViewPart implements
@@ -64,7 +63,7 @@ public class EmbeddedNodeView extends ViewPart implements
 
     private Component m_content;
 
-    private GenericNodeView<?> m_nodeView;
+    private NodeView m_nodeView;
 
     /**
      * The constructor.
@@ -74,7 +73,7 @@ public class EmbeddedNodeView extends ViewPart implements
 
     /**
      * Creates the view part control.
-     *
+     * 
      * @see org.eclipse.ui.IWorkbenchPart
      *      #createPartControl(org.eclipse.swt.widgets.Composite)
      */
@@ -94,10 +93,10 @@ public class EmbeddedNodeView extends ViewPart implements
 
     /**
      * Sets the content node view that should be embedded in this view.
-     *
+     * 
      * @param view The node view to embedd
      */
-    public void setNodeView(final GenericNodeView<?> view) {
+    public void setNodeView(final NodeView view) {
         if (m_nodeView != null) {
             releaseNodeView();
             m_content.removePropertyChangeListener(this);
@@ -137,7 +136,7 @@ public class EmbeddedNodeView extends ViewPart implements
 //                    new MenuManager(menu.getName(), menu.getName());
 //            for(MenuItem item : menu.getmen)
 //            {
-//
+//                
 //            }
 //            manager.add(managerNew);
 //        }
@@ -208,7 +207,7 @@ public class EmbeddedNodeView extends ViewPart implements
 
     /**
      * releases the underlying node view, i.e. unregistering from node model.
-     *
+     * 
      * @see org.eclipse.ui.IWorkbenchPart#dispose()
      */
     @Override
@@ -231,7 +230,7 @@ public class EmbeddedNodeView extends ViewPart implements
     /**
      * Cares about events that come from the node view (more precisely from the
      * content pane m_content and will close this view.
-     *
+     * 
      * @see PropertyChangeListener
      *      #propertyChange(java.beans.PropertyChangeEvent)
      */

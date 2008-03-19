@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -18,7 +18,7 @@
  * website: www.knime.org
  * email: contact@knime.org
  * -------------------------------------------------------------------
- *
+ * 
  * History
  *   25.05.2005 (Florian Georg): created
  */
@@ -36,7 +36,10 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.widgets.Display;
+import org.knime.core.node.workflow.ConnectionContainer;
+import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
+
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.AbstractWorkflowEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
@@ -48,15 +51,15 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  * <code>WorkflowManager</code> is available. This is needed, because
  * enablement of an action may change not only on selection changes but also on
  * workflow changes.
- *
+ * 
  * @author Florian Georg, University of Konstanz
  */
 public abstract class AbstractNodeAction extends SelectionAction {
 
-    private final WorkflowEditor m_editor;
+    private WorkflowEditor m_editor;
 
     /**
-     *
+     * 
      * @param editor The editor that is associated with this action
      */
     public AbstractNodeAction(final WorkflowEditor editor) {
@@ -83,10 +86,10 @@ public abstract class AbstractNodeAction extends SelectionAction {
     /**
      * @return The manager that is edited by the current editor. Subclasses may
      *         want to have a reference to this.
-     *
+     * 
      * Note that this value may be <code>null</code> if the editor has not
      * already been created completly !
-     *
+     * 
      */
     protected final WorkflowManager getManager() {
         return m_editor.getWorkflowManager();
@@ -96,7 +99,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
     /**
      * Calls <code>runOnNodes</code> with the current selected
      * <code>NodeContainerEditPart</code>s.
-     *
+     * 
      * @see org.eclipse.jface.action.IAction#run()
      */
     @Override
@@ -192,7 +195,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
 
     /**
      * Returns all edit parts with the given ids.
-     *
+     * 
      * @param nodeIds the node container ids to retrieve the edit parts for
      * @param connectionIds the connection container ids to retrieve the edit
      *            parts for
@@ -201,8 +204,6 @@ public abstract class AbstractNodeAction extends SelectionAction {
     protected List<AbstractWorkflowEditPart> getEditPartsById(
             final int[] nodeIds, final int[] connectionIds) {
 
-        throw new UnsupportedOperationException("This method no longer exist!");
-        /*
         // the result
         ArrayList<AbstractWorkflowEditPart> parts = new ArrayList<AbstractWorkflowEditPart>();
 
@@ -234,19 +235,17 @@ public abstract class AbstractNodeAction extends SelectionAction {
         }
 
         return parts;
-        */
-
     }
 
     /**
      * Determines if the given value is included in the given array. Both is
      * integer typed. Helper method.
-     *
+     * 
      * @param value the int value to check
      * @param array the int array to check if value is included
-     *
+     * 
      * @return true if value is included in array
-     *
+     */
     private static boolean isInArray(final int value, final int[] array) {
         if (array == null) {
             return false;
@@ -281,7 +280,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
     // AbstractNodeAction.super.update();
     // }
     // });
-    //
+    //        
     // }
 
     // /**
@@ -296,7 +295,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
 
     /**
      * This normally needs to be overridden by subclasses.
-     *
+     * 
      * @see org.eclipse.gef.ui.actions.WorkbenchPartAction#calculateEnabled()
      */
     @Override
@@ -306,7 +305,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
 
     /**
      * Clients must provide a unique action ID.
-     *
+     * 
      * @see org.eclipse.jface.action.IAction#getId()
      */
     @Override
@@ -314,7 +313,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
 
     /**
      * Clients must implement action code here.
-     *
+     * 
      * @param nodeParts The parts that the action should be executed on.
      */
     public abstract void runOnNodes(final NodeContainerEditPart[] nodeParts);

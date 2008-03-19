@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -28,13 +28,9 @@ import java.util.Iterator;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceChangeEvent;
 import org.eclipse.core.resources.IResourceChangeListener;
-import org.eclipse.core.resources.IResourceDelta;
-import org.eclipse.core.resources.IResourceDeltaVisitor;
 import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.action.ActionContributionItem;
 import org.eclipse.jface.action.IContributionItem;
 import org.eclipse.jface.action.IMenuManager;
@@ -44,24 +40,13 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.OpenEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.CloseResourceAction;
-import org.eclipse.ui.actions.CloseUnrelatedProjectsAction;
 import org.eclipse.ui.actions.OpenFileAction;
 import org.eclipse.ui.actions.OpenInNewWindowAction;
+import org.eclipse.ui.internal.Workbench;
 import org.eclipse.ui.views.framelist.GoIntoAction;
 import org.eclipse.ui.views.navigator.ResourceNavigator;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.NodeContainer;
-import org.knime.core.node.workflow.NodeStateChangeListener;
-import org.knime.core.node.workflow.NodeStateEvent;
-import org.knime.core.node.workflow.WorkflowEvent;
-import org.knime.core.node.workflow.WorkflowListener;
-import org.knime.core.node.workflow.WorkflowManager;
 
 /**
  * This class is a filtered view on a knime project which hides utitility files
@@ -71,7 +56,7 @@ import org.knime.core.node.workflow.WorkflowManager;
  * @author Christoph Sieb, University of Konstanz
  */
 public class KnimeResourceNavigator extends ResourceNavigator implements
-        IResourceChangeListener, NodeStateChangeListener {
+        IResourceChangeListener {
     private static final NodeLogger LOGGER =
             NodeLogger.getLogger(KnimeResourceNavigator.class);
 
@@ -84,88 +69,15 @@ public class KnimeResourceNavigator extends ResourceNavigator implements
      */
 
     public KnimeResourceNavigator() {
-        super(); 
+        super();
 
         LOGGER.debug("Knime resource navigator created");
         // register listener to check wether prjects have been added
         // or renamed
-//        ResourcesPlugin.getWorkspace().addResourceChangeListener(this,
-//                IResourceChangeEvent.POST_CHANGE);
+        ResourcesPlugin.getWorkspace().addResourceChangeListener(this,
+                IResourceChangeEvent.POST_CHANGE);
 
-        
-        WorkflowManager.ROOT.addListener(new WorkflowListener() {
-
-            public void workflowChanged(final WorkflowEvent event) {
-                LOGGER.debug("ROOT's workflow has changed " + event.getType());
-                if (event.getType().equals(WorkflowEvent.Type.NODE_ADDED)) {
-                    ((NodeContainer)event.getNewValue())
-                        .addNodeStateChangeListener(
-                                KnimeResourceNavigator.this);
-                }
-            }
-            
-        });
-        
-        // to be sure register to all existing projects (in case they are added 
-        // before this constructor is called) 
-        for (NodeContainer nc : WorkflowManager.ROOT.getNodeContainers()) {
-                // register here to this nc and listen to changes
-                // on change -> update labels
-                // TODO: remove the listener?
-                nc.addNodeStateChangeListener(this);
-        }
     }
-    
-    
-    /**
-     * 
-     * {@inheritDoc}
-     */
-    public void stateChanged(final NodeStateEvent state) {
-        LOGGER.debug("state changed to " + state.getState());
-        Display.getDefault().asyncExec(new Runnable() {
-
-            public void run() {
-                // TODO: find Project
-                try {
-                    String name =  WorkflowManager.ROOT.getNodeContainer(
-                            state.getSource()).getName();
-                    IResource rsrc = ResourcesPlugin.getWorkspace()
-                        .getRoot().findMember(name);
-                    getTreeViewer().update(rsrc, null);
-                    } catch (IllegalArgumentException iae) {
-                        // node couldn't be found -> so we don't make a refresh
-                    }
-            }
-        });
-    }
-    
-    
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected TreeViewer createViewer(final Composite parent) {
-        TreeViewer viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL
-                | SWT.V_SCROLL) {
-            @Override
-            protected void handleDoubleSelect(final SelectionEvent event) {
-                // we have to consume this event in order to avoid 
-                // expansion/collaps of the double clicked project
-                // strangly enough it opens anyway and the collopased or 
-                // expanded state remains
-            }
-        };
-        viewer.setUseHashlookup(true);
-        initContentProvider(viewer);
-        initLabelProvider(viewer);
-        initFilters(viewer);
-        initListeners(viewer);
-        viewer.getControl().setDragDetect(false);
-        return viewer;
-    }
-    
-    
 
     /**
      * Adds the filters to the viewer.
@@ -175,6 +87,7 @@ public class KnimeResourceNavigator extends ResourceNavigator implements
      */
     @Override
     protected void initFilters(final TreeViewer viewer) {
+
         super.initFilters(viewer);
         // viewer.resetFilters();
         viewer.addFilter(new KnimeResourcePatternFilter());
@@ -212,13 +125,12 @@ public class KnimeResourceNavigator extends ResourceNavigator implements
 
                 // get the workflow file of the project
                 // must be "workflow.knime"
-                final IProject project = (IProject)element;
-                LOGGER.debug("opening: " + project.getName());
-                
+                IProject project = (IProject)element;
+
                 IFile workflowFile = project.getFile("workflow.knime");
 
-                
                 if (workflowFile.exists()) {
+
                     StructuredSelection selection2 =
                             new StructuredSelection(workflowFile);
                     if (m_openFileAction == null) {
@@ -262,9 +174,6 @@ public class KnimeResourceNavigator extends ResourceNavigator implements
                 } else if (aItem.getAction() instanceof OpenInNewWindowAction) {
 
                     menu.remove(aItem);
-                } else if (aItem.getAction() 
-                        instanceof CloseUnrelatedProjectsAction) {
-                    menu.remove(aItem);
                 }
 
             }
@@ -273,13 +182,12 @@ public class KnimeResourceNavigator extends ResourceNavigator implements
         // remove the default import export actions to store the own one
         // that invokes the knime export wizard directly
         menu.remove("import");
-        menu.insertBefore("export", new ImportKnimeWorkflowAction(
-                PlatformUI.getWorkbench().getActiveWorkbenchWindow()));
+        menu.insertBefore("export", new ImportKnimeWorkflowAction(Workbench
+                .getInstance().getActiveWorkbenchWindow()));
 
         menu.remove("export");
         menu.insertAfter(ImportKnimeWorkflowAction.ID,
-                new ExportKnimeWorkflowAction(
-                        PlatformUI.getWorkbench().getActiveWorkbenchWindow()));
+                new ExportKnimeWorkflowAction(Workbench.getInstance()));
 
         // TODO: this is hardcoded the copy item. should be retreived more
         // dynamically
@@ -289,11 +197,6 @@ public class KnimeResourceNavigator extends ResourceNavigator implements
         // not openable.
         menu.insertBefore(id, new Separator());
         menu.insertBefore(id, new OpenKnimeProjectAction(this));
-
-        // TODO: insert actions for
-        // - execute
-        // - cancel
-        
         menu.insertBefore(id, new Separator());
 
         // another bad workaround to replace the first "New" menu manager
@@ -304,7 +207,7 @@ public class KnimeResourceNavigator extends ResourceNavigator implements
         for (IContributionItem item : items) {
             menu.remove(item);
         }
-        menu.add(new NewKnimeWorkflowAction(PlatformUI.getWorkbench()
+        menu.add(new NewKnimeWorkflowAction(Workbench.getInstance()
                 .getActiveWorkbenchWindow()));
         for (int i = 1; i < items.length; i++) {
             menu.add(items[i]);
@@ -319,105 +222,14 @@ public class KnimeResourceNavigator extends ResourceNavigator implements
      * @since 2.0
      */
     @Override
-    protected void initContentProvider(final TreeViewer viewer) {
+    protected void initContentProvider(TreeViewer viewer) {
         viewer.setContentProvider(new KnimeContentProvider());
     }
 
     /**
      * {@inheritDoc}
      */
-    public void resourceChanged(final IResourceChangeEvent event) {
-            try {
-                if (event == null || event.getDelta() == null) {
-                    return;
-                }
-                event.getDelta().accept(new ResourceVisitor());
-            } catch (CoreException e) {
-                // should never happen, I think...
-                e.printStackTrace();
-            }
-
-        
-        /*
+    public void resourceChanged(IResourceChangeEvent event) {
         // do nothing
-        try {            
-            LOGGER.debug("refreshing " + event.getResource().getName());
-            event.getResource().refreshLocal(IResource.DEPTH_INFINITE, null);
-        } catch (CoreException ce) {
-            // TODO: what to do?
-            LOGGER.error("exception during resource change event", ce);
-        }
-        */
-    }
-    
-    private class ResourceVisitor implements IResourceDeltaVisitor {
-    private String getTypeString(final IResourceDelta delta) {
-        StringBuffer buffer = new StringBuffer();
-
-        if ((delta.getKind() & IResourceDelta.ADDED) != 0) {
-            buffer.append("ADDED|");
-        }
-        if ((delta.getKind() & IResourceDelta.ADDED_PHANTOM) != 0) {
-            buffer.append("ADDED_PHANTOM|");
-        }
-        if ((delta.getKind() & IResourceDelta.ALL_WITH_PHANTOMS) != 0) {
-            buffer.append("ALL_WITH_PHANTOMS|");
-        }
-        if ((delta.getKind() & IResourceDelta.CHANGED) != 0) {
-            buffer.append("CHANGED|");
-        }
-        if ((delta.getKind() & IResourceDelta.CONTENT) != 0) {
-            buffer.append("CONTENT|");
-        }
-        if ((delta.getFlags() & IResourceDelta.DESCRIPTION) != 0) {
-            buffer.append("DESCRIPTION|");
-        }
-        if ((delta.getKind() & IResourceDelta.ENCODING) != 0) {
-            buffer.append("ENCODING|");
-        }
-        if ((delta.getKind() & IResourceDelta.MARKERS) != 0) {
-            buffer.append("MARKERS|");
-        }
-        if ((delta.getFlags() & IResourceDelta.MOVED_FROM) != 0) {
-            buffer.append("MOVED_FROM|");
-        }
-        if ((delta.getFlags() & IResourceDelta.MOVED_TO) != 0) {
-            buffer.append("MOVED_TO|");
-        }
-        if ((delta.getKind() & IResourceDelta.NO_CHANGE) != 0) {
-            buffer.append("NO_CHANGE|");
-        }
-        if ((delta.getKind() & IResourceDelta.OPEN) != 0) {
-            buffer.append("OPEN|");
-        }
-        if ((delta.getKind() & IResourceDelta.REMOVED) != 0) {
-            buffer.append("REMOVED|");
-        }
-        if ((delta.getKind() & IResourceDelta.REMOVED_PHANTOM) != 0) {
-            buffer.append("REMOVED_PHANTOM|");
-        }
-        if ((delta.getKind() & IResourceDelta.REPLACED) != 0) {
-            buffer.append("REPLACED|");
-        }
-        if ((delta.getKind() & IResourceDelta.SYNC) != 0) {
-            buffer.append("SYNC|");
-        }
-        if ((delta.getKind() & IResourceDelta.TYPE) != 0) {
-            buffer.append("TYPE|");
-        }
-        return buffer.toString();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public boolean visit(final IResourceDelta delta) throws CoreException {
-
-        LOGGER.debug("resource changed: " + getTypeString(delta));
-        if ((delta.getKind() & IResourceDelta.ADDED) != 0) {
-            LOGGER.debug("refreshing: " + delta.getResource());
-        }
-        return true;
-    }
     }
 }

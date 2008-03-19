@@ -1,9 +1,9 @@
-/*
+/* 
  * -------------------------------------------------------------------
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -18,7 +18,7 @@
  * website: www.knime.org
  * email: contact@knime.org
  * -------------------------------------------------------------------
- *
+ * 
  * History
  *   20.02.2006 (sieb): created
  */
@@ -30,6 +30,11 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.ActionFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeSettings;
+import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.node.workflow.ConnectionContainer;
+import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.WorkflowManager;
+
 import org.knime.workbench.editor2.ClipboardObject;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
@@ -38,7 +43,7 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 /**
  * Implements the clipboard copy action to copy nodes and connections into the
  * clipboard.
- *
+ * 
  * @author Christoph Sieb, University of Konstanz
  */
 public class CopyAction extends AbstractClipboardAction {
@@ -48,7 +53,7 @@ public class CopyAction extends AbstractClipboardAction {
 
     /**
      * Constructs a new clipboard copy action.
-     *
+     * 
      * @param editor the workflow editor this action is intended for
      */
     public CopyAction(final WorkflowEditor editor) {
@@ -86,7 +91,7 @@ public class CopyAction extends AbstractClipboardAction {
 
     /**
      * At least one node must be selected.
-     *
+     * 
      * @see org.eclipse.gef.ui.actions.WorkbenchPartAction#calculateEnabled()
      */
     @Override
@@ -98,15 +103,13 @@ public class CopyAction extends AbstractClipboardAction {
 
     /*
      * Creates a <code>NodesSettings</code> object from the given edit parts.
-     *
+     * 
      * @return the node settings representing the selected nodes
      */
     private NodeSettings getNodeSettings(
             final NodeContainerEditPart[] nodeParts,
             final ConnectionContainerEditPart[] connectionParts) {
 
-        // TODO: functionality disabled
-        /*
         // copy node setttings root
         NodeSettings clipboardRootSettings = new NodeSettings(
                 WorkflowEditor.CLIPBOARD_ROOT_NAME);
@@ -140,9 +143,6 @@ public class CopyAction extends AbstractClipboardAction {
         }
 
         return clipboardRootSettings;
-        */
-        return null;
-
     }
 
     /**

@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -28,32 +28,43 @@ import org.eclipse.draw2d.Locator;
 import org.eclipse.draw2d.geometry.Dimension;
 import org.eclipse.draw2d.geometry.PointList;
 import org.eclipse.draw2d.geometry.Rectangle;
-import org.knime.core.node.BufferedDataTable;
-import org.knime.core.node.PortType;
 
 /**
  * Figure for displaying a <code>NodeInPort</code> inside a node.
  * 
  * @author Florian Georg, University of Konstanz
  */
-public class NodeInPortFigure extends AbstractPortFigure {
-    private final int m_id;
+public class NodeInPortFigure extends AbstractNodePortFigure {
+    private int m_id;
+
+    private boolean m_isModelPort;
 
     /**
      * 
-     * @param type the type of the port
      * @param id The id of the port, needed to determine the position inside the
      *            surrounding node visual
-     * @param numPorts the total ports
-     * @param tooltip the tooltip text
+     * @param numModelPorts the number of model ports for this figure
+     * @param numDataPorts the number of data ports for this figure
+     * @param tooltip The tooltip text for this port
+     * @param isModelPort indicates a model inPort, displayed with a diff. shape
      */
-    public NodeInPortFigure(final PortType type, final int id,
-            final int numPorts, final String tooltip) {
-        super(type, numPorts);
+    public NodeInPortFigure(final int id, final int numModelPorts,
+            final int numDataPorts, final String tooltip,
+            final boolean isModelPort) {
+        super(numModelPorts, numDataPorts);
         m_id = id;
+        m_isModelPort = isModelPort;
         setToolTip(new NewToolTipFigure(tooltip));
         setOpaque(false);
         setFill(true);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean isModelPort() {
+        return m_isModelPort;
     }
 
     /**
@@ -67,32 +78,26 @@ public class NodeInPortFigure extends AbstractPortFigure {
      */
     @Override
     protected PointList createShapePoints(final Rectangle r) {
-        if (getType().equals(BufferedDataTable.TYPE)) {
+        if (!m_isModelPort) {
             PointList points = new PointList(3);
-            points.addPoint(r.getRight().getCopy().translate(
-                    -NODE_PORT_SIZE * 2 - 3,
-                    -(NODE_PORT_SIZE / 2)));
-            points.addPoint(r.getRight().getCopy().translate(
-                    -NODE_PORT_SIZE - 3, 0));
-            points.addPoint(r.getRight().getCopy().translate(
-                    -NODE_PORT_SIZE * 2 - 3,
-                    (NODE_PORT_SIZE / 2)));
+            points.addPoint(r.getRight().getCopy().translate(-WIDTH * 2 - 3,
+                    -(HEIGHT / 2)));
+            points.addPoint(r.getRight().getCopy().translate(-WIDTH - 3, 0));
+            points.addPoint(r.getRight().getCopy().translate(-WIDTH * 2 - 3,
+                    (HEIGHT / 2)));
+            return points;
+        } else {
+            PointList points = new PointList(4);
+            points.addPoint(r.getRight().getCopy().translate(-WIDTH * 2 - 3,
+                    -((HEIGHT - 1) / 2)));
+            points.addPoint(r.getRight().getCopy().translate(-WIDTH - 3,
+                    -((HEIGHT - 1) / 2)));
+            points.addPoint(r.getRight().getCopy().translate(-WIDTH - 3,
+                    ((HEIGHT - 1) / 2)));
+            points.addPoint(r.getRight().getCopy().translate(-WIDTH * 2 - 3,
+                    ((HEIGHT - 1) / 2 - 1)));
             return points;
         }
-        PointList points = new PointList(4);
-        points.addPoint(r.getRight().getCopy().translate(
-                -NODE_PORT_SIZE * 2 - 3,
-                -((NODE_PORT_SIZE - 1) / 2)));
-        points.addPoint(r.getRight().getCopy().translate(
-                -NODE_PORT_SIZE - 3,
-                -((NODE_PORT_SIZE - 1) / 2)));
-        points.addPoint(r.getRight().getCopy().translate(
-                -NODE_PORT_SIZE - 3,
-                ((NODE_PORT_SIZE - 1) / 2)));
-        points.addPoint(r.getRight().getCopy().translate(
-                -NODE_PORT_SIZE * 2 - 3,
-                ((NODE_PORT_SIZE - 1) / 2 - 1)));
-        return points;
     }
 
     /**
@@ -100,27 +105,25 @@ public class NodeInPortFigure extends AbstractPortFigure {
      * depending on the number of ports. Always try to fill up as much height as
      * possible.
      * 
-     * {@inheritDoc}
+     * @see org.eclipse.draw2d.IFigure#getPreferredSize(int, int)
      */
     @Override
     public Dimension getPreferredSize(final int wHint, final int hHint) {
         Dimension d = new Dimension();
-//        System.out.println("parent: " + getParent());
-//        System.out.println("parent's bounds: " + getParent().getBounds());
-        d.height = (getParent().getBounds().height) / getNrPorts();
-        d.width = NODE_PORT_SIZE;
+
+        d.height = (getParent().getBounds().height) / getNumPorts();
+        d.width = WIDTH;
         return d;
     }
 
     /**
      * @return The <code>RelativeLocator</code> that places this figure on the
      *         left side (y offset corresponds to the number of the port).
-     * {@inheritDoc}
      */
     @Override
     public Locator getLocator() {
-        return new NodePortLocator((NodeContainerFigure)getParent().getParent(),
-                true, getNrPorts(),
-                m_id, getType());
+        return new PortLocator((NodeContainerFigure)getParent().getParent(),
+                PortLocator.TYPE_INPORT, getNumModelPorts(), getNumDataPorts(),
+                m_id, m_isModelPort);
     }
 }

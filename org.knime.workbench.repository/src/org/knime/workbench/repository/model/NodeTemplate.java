@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -29,8 +29,7 @@ import java.util.Set;
 
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.views.properties.IPropertySource;
-import org.knime.core.node.GenericNodeFactory;
-import org.knime.core.node.GenericNodeModel;
+
 import org.knime.workbench.repository.model.props.NodePropertySource;
 
 /**
@@ -84,7 +83,7 @@ public class NodeTemplate extends AbstractSimpleObject {
         TYPES.add(TYPE_OTHER);
     }
 
-    private Class<GenericNodeFactory<? extends GenericNodeModel>> m_factory;
+    private Class m_factory;
 
     private Image m_icon;
 
@@ -107,18 +106,14 @@ public class NodeTemplate extends AbstractSimpleObject {
     /**
      * @return Returns the factory.
      */
-    @SuppressWarnings("unchecked")
-    public Class<GenericNodeFactory<? extends GenericNodeModel>> getFactory() {
+    public Class getFactory() {
         return m_factory;
     }
 
     /**
      * @param factory The factory to set.
      */
-    @SuppressWarnings("unchecked")
-    public void setFactory(
-            final Class<GenericNodeFactory<? extends GenericNodeModel>> 
-            factory) {
+    public void setFactory(final Class factory) {
         m_factory = factory;
     }
 
@@ -157,7 +152,6 @@ public class NodeTemplate extends AbstractSimpleObject {
      * {@inheritDoc}
      */
     @Override
-    @SuppressWarnings("unchecked")
     public Object getAdapter(final Class adapter) {
         if (adapter == IPropertySource.class) {
             return new NodePropertySource(this);

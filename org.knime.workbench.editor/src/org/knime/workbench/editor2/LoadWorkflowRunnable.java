@@ -1,9 +1,9 @@
-/*
+/* 
  * -------------------------------------------------------------------
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -18,7 +18,7 @@
  * website: www.knime.org
  * email: contact@knime.org
  * -------------------------------------------------------------------
- *
+ * 
  * History
  *   11.01.2007 (sieb): created
  */
@@ -33,9 +33,9 @@ import javax.swing.UIManager;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.DefaultNodeProgressMonitor;
-import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.WorkflowException;
 import org.knime.core.node.workflow.WorkflowManager;
 
 /**
@@ -44,7 +44,7 @@ import org.knime.core.node.workflow.WorkflowManager;
  * runnable an own class file is necessary sucht that all references to the
  * created workflow manager can be deleted, otherwise the manager can not be
  * deleted later and the memeory can not be freed.
- *
+ * 
  * @author Christoph Sieb, University of Konstanz
  */
 class LoadWorkflowRunnable extends PersistWorflowRunnable {
@@ -56,7 +56,7 @@ class LoadWorkflowRunnable extends PersistWorflowRunnable {
 
     private File m_workflowFile;
 
-    public LoadWorkflowRunnable(final WorkflowEditor editor, final File workflowFile) {
+    public LoadWorkflowRunnable(WorkflowEditor editor, File workflowFile) {
         m_editor = editor;
         m_workflowFile = workflowFile;
     }
@@ -82,9 +82,9 @@ class LoadWorkflowRunnable extends PersistWorflowRunnable {
 
             checkThread.start();
 
-            WorkflowManager manager = WorkflowManager.load(m_workflowFile,
-                    new ExecutionMonitor());
+            WorkflowManager manager = new WorkflowManager();
             m_editor.setWorkflowManager(manager);
+            manager.load(m_workflowFile, progressMonitor);
             pm.subTask("Finished.");
             pm.done();
 
@@ -105,16 +105,14 @@ class LoadWorkflowRunnable extends PersistWorflowRunnable {
             LOGGER
                     .info("Canceled loading worflow: "
                             + m_workflowFile.getName());
+            m_editor.getWorkflowManager().shutdown();
             m_editor.setWorkflowManager(null);
             m_editor.setLoadingCanceled(true);
             m_editor.setLoadingCanceledMessage(cee.getMessage());
-            /*
-        } catch (Exception we) {
+        } catch (WorkflowException we) {
             // the workflow exception is a collection exception
             // it is stored to show the errors in a window
-//            m_editor.setWorkflowException(we);
- *
- */
+            m_editor.setWorkflowException(we);
         } catch (Exception e) {
             LOGGER.error("Workflow could not be loaded. " + e.getMessage(), e);
             m_editor.setWorkflowManager(null);
@@ -125,15 +123,14 @@ class LoadWorkflowRunnable extends PersistWorflowRunnable {
 
             if (createEmptyWorkflow) {
                 // && createEmptyWorkflow.intValue() == 0) {
-                m_editor.setWorkflowManager(WorkflowManager.ROOT.createAndAddProject());
+                m_editor.setWorkflowManager(new WorkflowManager());
                 m_editor.setIsDirty(false);
             }
-
-            // IMPORTANT: Remove the reference to the file and the
+            
+            // IMPORTANT: Remove the reference to the file and the 
             // editor!!! Otherwise the memory can not be freed later
             m_editor = null;
             m_workflowFile = null;
         }
     }
 }
-

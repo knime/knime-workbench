@@ -5,7 +5,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -33,10 +33,6 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
-import org.knime.core.node.NodeLogger;
-import org.knime.workbench.repository.NodeUsageRegistry;
-import org.knime.workbench.ui.favorites.FavoriteNodesManager;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.osgi.framework.BundleContext;
 
 /**
@@ -79,20 +75,38 @@ public class KNIMEUIPlugin extends AbstractUIPlugin {
 
         getImageRegistry().put("knime",
                 imageDescriptorFromPlugin(PLUGIN_ID, "/icons/knime.png"));
-        int freqHistorySize = getPreferenceStore().getInt(
-                PreferenceConstants.P_FAV_FREQUENCY_HISTORY_SIZE);
-        int usedHistorySize = getPreferenceStore().getInt(
-                PreferenceConstants.P_FAV_LAST_USED_SIZE);
-        try {
-        NodeUsageRegistry.setMaxFrequentSize(freqHistorySize);
-        NodeUsageRegistry.setMaxLastUsedSize(usedHistorySize);
-        } catch (Exception e) {
-            NodeLogger.getLogger(KNIMEUIPlugin.class).error(
-                    "Error during load: ", e);
-        }
+
+//        try {
+//
+//            new Thread() {
+//                @Override
+//                public void run() {
+//                    Display.getDefault().syncExec(new Runnable() {
+//                        public void run() {
+//                            if (InitialUpdateSiteIntroShell
+//                                    .loadNextTimeShowup()) {
+//
+//                                InitialUpdateSiteIntroShell shell =
+//                                        new InitialUpdateSiteIntroShell();
+//
+//                                boolean update = shell.open();
+//
+//                                if (update) {
+//                                    InstallWizardAction iwa =
+//                                            new InstallWizardAction();
+//                                    iwa.run();
+//                                }
+//                            }
+//                        }
+//                    });
+//                }
+//            }.start();
+//
+//        } catch (Throwable t) {
+//            // do nothing
+//        }
 
     }
-    
 
     /**
      * This method is called when the plug-in is stopped.
@@ -103,7 +117,6 @@ public class KNIMEUIPlugin extends AbstractUIPlugin {
      */
     @Override
     public void stop(final BundleContext context) throws Exception {
-        FavoriteNodesManager.getInstance().saveFavoriteNodes();
         super.stop(context);
         plugin = null;
         m_resourceBundle = null;

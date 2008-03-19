@@ -1,9 +1,9 @@
-/*
+/* 
  * -------------------------------------------------------------------
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -18,7 +18,7 @@
  * website: www.knime.org
  * email: contact@knime.org
  * -------------------------------------------------------------------
- *
+ * 
  * History
  *   09.06.2005 (Florian Georg): created
  */
@@ -28,25 +28,23 @@ import org.eclipse.gef.commands.Command;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.ConnectionContainer;
+import org.knime.core.node.workflow.WorkflowInExecutionException;
 import org.knime.core.node.workflow.WorkflowManager;
+
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
+import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
  * Command that deletes a <code>ConnectionContainer</code> from the workflow
  * manager.
- *
+ * 
  * @author Florian Georg, University of Konstanz
  */
 public class DeleteConnectionCommand extends Command {
+    private ConnectionContainerEditPart m_connection;
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            DeleteConnectionCommand.class);
-
-    private final ConnectionContainerEditPart m_connection;
-
-    private final WorkflowManager m_manager;
+    private WorkflowManager m_manager;
 
     /**
      * @param connection The edit part of the connection to delete
@@ -64,21 +62,13 @@ public class DeleteConnectionCommand extends Command {
      */
     @Override
     public boolean canExecute() {
-//        LOGGER.debug("can execute? target "
-//                + m_connection.getTarget());
-//        LOGGER.debug("can execute? source "
-//                + m_connection.getSource());
-        // TODO: also handle WorkflowRootEditParts (in case of MetaNodes)
-//        ConnectableEditPart part =
-//                (ConnectableEditPart)m_connection.getTarget().getParent();
+
+        NodeContainerEditPart part =
+                (NodeContainerEditPart)m_connection.getTarget().getParent();
         // does the workflow status allow deletion of the selected node
         // only if the workflow is not executing
-        if (m_connection == null || m_connection.getModel() == null) {
-            return false;
-        }
         boolean workflowAllowsDeletion =
-                m_manager.canRemoveConnection((ConnectionContainer)
-                        m_connection.getModel());
+                m_manager.canBeDeleted(part.getNodeContainer());
         return workflowAllowsDeletion;
     }
 
@@ -90,8 +80,7 @@ public class DeleteConnectionCommand extends Command {
         try {
             m_manager.removeConnection((ConnectionContainer)m_connection
                     .getModel());
-        } catch (Exception ex) {
-            LOGGER.warn("Operation not allowed.", ex);
+        } catch (WorkflowInExecutionException ex) {
             MessageBox mb =
                     new MessageBox(Display.getDefault().getActiveShell(),
                             SWT.ICON_INFORMATION | SWT.OK);

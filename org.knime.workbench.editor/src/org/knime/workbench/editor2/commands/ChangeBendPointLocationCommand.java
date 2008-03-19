@@ -3,7 +3,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright, 2003 - 2008
+ * Copyright, 2003 - 2007
  * University of Konstanz, Germany
  * Chair for Bioinformatics and Information Mining (Prof. M. Berthold)
  * and KNIME GmbH, Konstanz, Germany
@@ -27,9 +27,9 @@ package org.knime.workbench.editor2.commands;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.editparts.ZoomManager;
-import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.ConnectionContainer;
+
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.extrainfo.ModellingConnectionExtraInfo;
 
 /**
@@ -42,7 +42,7 @@ import org.knime.workbench.editor2.extrainfo.ModellingConnectionExtraInfo;
 public class ChangeBendPointLocationCommand extends Command {
     private Point m_locationShift;
 
-    private ConnectionContainerEditPart m_container;
+    private ConnectionContainer m_container;
 
     private ModellingConnectionExtraInfo m_extraInfo;
 
@@ -53,18 +53,15 @@ public class ChangeBendPointLocationCommand extends Command {
      * @param locationShift the values (x,y) to change the location of all
      *            bendpoints
      */
-    public ChangeBendPointLocationCommand(
-            final ConnectionContainerEditPart container,
+    public ChangeBendPointLocationCommand(final ConnectionContainer container,
             final Point locationShift, final ZoomManager zoomManager) {
         if (container == null
-                || container.getUIInformation() == null
-                || !(container.getUIInformation() 
-                        instanceof ModellingConnectionExtraInfo)) {
+                || container.getExtraInfo() == null
+                || !(container.getExtraInfo() instanceof ModellingConnectionExtraInfo)) {
             return;
         }
 
-        m_extraInfo = (ModellingConnectionExtraInfo)container
-            .getUIInformation();
+        m_extraInfo = (ModellingConnectionExtraInfo)container.getExtraInfo();
         m_locationShift = locationShift;
         m_container = container;
 
@@ -78,8 +75,6 @@ public class ChangeBendPointLocationCommand extends Command {
      */
     @Override
     public void execute() {
-        NodeLogger.getLogger(ChangeBendPointLocationCommand.class).debug(
-                " execute chenge bendpoint location command...");
         changeBendpointsExtraInfo(false);
     }
 
@@ -122,6 +117,6 @@ public class ChangeBendPointLocationCommand extends Command {
         }
 
         // must set explicitly so that event is fired by container
-        m_container.setUIInformation(m_extraInfo);
+        m_container.setExtraInfo(m_extraInfo);
     }
 }
