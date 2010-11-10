@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<fragment plugin-id="org.knime.workbench.editor">
+   <extension
+         point="org.eclipse.ui.actionSets">
+      <actionSet
+            id="org.knime.workbench.editor.svgexport.actionSet"
+            label="Export to SVG"
+            visible="true">
+         <action
+               class="org.knime.workbench.editor.svgexport.actions.ExportToSVGAction"
+               icon="icons/export.png"
+               id="ExportToSVGAction"
+               label="Export to SVG..."
+               menubarPath="Filemenu/SVGExport"
+               tooltip="Export the current workflow as an SVG-image">
+         </action>
+      </actionSet>
+   </extension>
+
+</fragment>
