@@ -302,7 +302,6 @@ public class BatikGraphics2DWrapper extends Graphics {
 		for (String string : text){
 			y = y+height;
 			batikGraphicsSVG.drawString(string, x, y);
-			y = y +2;
 		}
 
 
@@ -546,6 +545,10 @@ public class BatikGraphics2DWrapper extends Graphics {
 	 */
 	
 	private void updateFont() {
+		GC gc = new GC(display);
+		gc.setFont(_SWTFont);
+		int height = gc.getFontMetrics().getHeight();
+		gc.dispose();
 		FontData fd = _SWTFont.getFontData()[0];
 		int fontStyle = fd.getStyle();
 		int AWTStyle;
@@ -559,7 +562,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 		default :
 			AWTStyle = java.awt.Font.PLAIN;
 		}
-		java.awt.Font AWTFont = new java.awt.Font(fd.getName(), AWTStyle, 12);
+		java.awt.Font AWTFont = new java.awt.Font(fd.getName(), AWTStyle, height);
 		batikGraphicsSVG.setFont(AWTFont);
 	}
 	/**
