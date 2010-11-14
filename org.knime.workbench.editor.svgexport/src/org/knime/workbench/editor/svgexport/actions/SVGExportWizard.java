@@ -63,18 +63,24 @@ import org.apache.batik.svggen.SVGGeneratorContext;
 import org.eclipse.draw2d.Figure;
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.draw2d.text.BlockFlow;
+import org.eclipse.draw2d.text.FlowPage;
+import org.eclipse.draw2d.text.TextFlow;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.ui.IExportWizard;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.dialogs.ExportWizard;
 import org.knime.workbench.editor.svgexport.BatikGraphics2DWrapper;
+import org.knime.workbench.editor.svgexport.figures.AnnotationSVGFigure;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.AbstractWorkflowEditPart;
+import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.SubworkflowEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
+import org.knime.workbench.editor2.figures.AnnotationFigure3;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 
@@ -229,10 +235,10 @@ public class SVGExportWizard extends ExportWizard
     		}
     	}
     	
-    	int xOffset = Math.abs(xMin) + minWidth + 10;
-    	int yOffset = Math.abs(yMin) + minHeight + 10;
-    	int xBounds = xMax + xOffset + maxWidth + 10;
-    	int yBounds = yMax + yOffset + maxHeight + 10;
+    	int xOffset = Math.abs(xMin) + minWidth;
+    	int yOffset = Math.abs(yMin) + minHeight;
+    	int xBounds = xMax + xOffset + maxWidth;
+    	int yBounds = yMax + yOffset + maxHeight;
     	
     	Rectangle bounds = new Rectangle(0,0, xBounds, yBounds);
     	
@@ -241,10 +247,21 @@ public class SVGExportWizard extends ExportWizard
     	
     	// First, obtain the figure of the RootEditPart, its children are the figures of the nodes. Now each child paints itself to the wrapped
     	// generator and resets the foreground colour afterwards. This approach is necessary to prevent drawing each node twice and colour-errors.
-    	for (Object figure : part.getFigure().getChildren()){
-    		((Figure)figure).paint(graphics);
-    		graphics.resetColors();
+
+    	for (Object node : part.getChildren()){
+    		if (node instanceof AnnotationEditPart){
+    			if (m_page.includeAnnotations()){
+    			AnnotationSVGFigure figure = new AnnotationSVGFigure(PlatformUI.getWorkbench().getDisplay(),(AnnotationEditPart)node);
+    			figure.paint(graphics);
+    			graphics.resetColors();
+    			}
+    		}
+    		else{
+    			((AbstractWorkflowEditPart)node).getFigure().paint(graphics);
+        		graphics.resetColors();
+    		}
     	}
+
     	
     	
     	

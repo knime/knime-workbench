@@ -82,6 +82,8 @@ public class ExportToSVGPage extends WizardPage {
     
 //    private Button m_useCSS;
     
+    private Button m_includeAnnotations;
+    
     private String m_filename;
 
     private static final ImageDescriptor ICON =
@@ -165,6 +167,9 @@ public class ExportToSVGPage extends WizardPage {
 //        m_useCSS = new Button(group, SWT.CHECK);
 //        m_useCSS.setSelection(false);
 //        m_useCSS.setText("Use CSS-style attributes.");
+        m_includeAnnotations = new Button(group, SWT.CHECK);
+        m_includeAnnotations.setSelection(false);
+        m_includeAnnotations.setText("Include workflow-annotations in SVG-Export.");
 
         setControl(container);
     }
@@ -185,6 +190,11 @@ public class ExportToSVGPage extends WizardPage {
 //        return m_useCSS.getSelection();
     	
     	return false;
+    }
+    
+    boolean includeAnnotations() {
+    	
+    	return m_includeAnnotations.getSelection();
     }
 
     /**

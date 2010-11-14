@@ -352,8 +352,9 @@ public class BatikGraphics2DWrapper extends Graphics {
 
 	@Override
 	public void fillRoundRectangle(Rectangle r, int arcWidth, int arcHeight) {
+		swapColors();
 		batikGraphicsSVG.fillRoundRect(r.x, r.y-1, r.width, r.height, arcWidth, arcHeight);
-
+		swapColors();
 	}
 
 	public void fillString(String s, int x, int y) {
