@@ -12,7 +12,7 @@
                icon="icons/export.png"
                id="ExportToSVGAction"
                label="Export to SVG..."
-               menubarPath="Filemenu/SVGExport"
+               menubarPath="file/SVGExport"
                tooltip="Export the current workflow as an SVG-image">
          </action>
       </actionSet>
