@@ -20,5 +20,6 @@ Require-Bundle: org.apache.batik.bridge;bundle-version="1.6.0",
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Export-Package: org.knime.workbench.editor.svgexport,
- org.knime.workbench.editor.svgexport.actions
+ org.knime.workbench.editor.svgexport.actions,
+ org.knime.workbench.editor.svgexport.figures
 Bundle-Vendor: KNIME GmbH, Konstanz, Germany
