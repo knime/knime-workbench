@@ -9,12 +9,10 @@ import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 import org.eclipse.ui.PlatformUI;
 
 /**
- *  Action which initiates the SVG-export wizard.
- * 
- * @author Andreas Burger
+ * Action which initiates the SVG-export wizard.
  *
+ * @author Andreas Burger
  */
-
 public class ExportToSVGAction implements IWorkbenchWindowActionDelegate {
 	private static final int SIZING_WIZARD_WIDTH = 470;
 
@@ -29,8 +27,9 @@ public class ExportToSVGAction implements IWorkbenchWindowActionDelegate {
 	 * in the workbench UI.
 	 * @see IWorkbenchWindowActionDelegate#run
 	 */
-	public void run(IAction action) {
-		IWorkbenchWindow workbenchWindow = 
+	@Override
+    public void run(final IAction action) {
+		IWorkbenchWindow workbenchWindow =
             PlatformUI.getWorkbench().getActiveWorkbenchWindow();
         if (workbenchWindow == null) {
             // action has been disposed
@@ -51,14 +50,17 @@ public class ExportToSVGAction implements IWorkbenchWindowActionDelegate {
     }
 
 
-	public void selectionChanged(IAction action, ISelection selection) {
+	@Override
+    public void selectionChanged(final IAction action, final ISelection selection) {
 	}
 
 
-	public void dispose() {
+	@Override
+    public void dispose() {
 	}
 
 
-	public void init(IWorkbenchWindow window) {
+	@Override
+    public void init(final IWorkbenchWindow window) {
 	}
 }

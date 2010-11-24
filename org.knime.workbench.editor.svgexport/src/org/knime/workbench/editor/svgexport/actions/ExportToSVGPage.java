@@ -64,31 +64,30 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.ui.KNIMEUIPlugin;
-
 
 /**
  * Page to enter the destination to export the currently selected Workflow to.
  *
  * @author Christoph Sieb, University of Konstanz
  * @author Fabian Dill, KNIME.com GmbH, Zurich, Switzerland
- * @author Andreas Burger 
+ * @author Andreas Burger
  */
 public class ExportToSVGPage extends WizardPage {
-
     private Text m_fileDestination;
 
     private Button m_embedImages;
-    
-//    private Button m_useCSS;
-    
-    private Button m_includeAnnotations;
-    
+
+    // private Button m_useCSS;
+
+    // private Button m_includeAnnotations;
+
     private String m_filename;
 
-    private static final ImageDescriptor ICON =
-        KNIMEUIPlugin.imageDescriptorFromPlugin(
-        KNIMEUIPlugin.PLUGIN_ID, "icons/knime_export55.png");
+    private static final ImageDescriptor ICON = AbstractUIPlugin
+            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+                    "icons/knime_export55.png");
 
     /**
      * Constructor for NewWorkflowPage.
@@ -105,6 +104,7 @@ public class ExportToSVGPage extends WizardPage {
     /**
      * {@inheritDoc}
      */
+    @Override
     public void createControl(final Composite parent) {
         Composite container = new Composite(parent, SWT.NULL);
         // place components vertically
@@ -119,11 +119,10 @@ public class ExportToSVGPage extends WizardPage {
         Label label = new Label(exportGroup, SWT.NULL);
         label.setText("Select File to export to:");
 
-        m_fileDestination = new Text(exportGroup,
-                SWT.BORDER | SWT.SINGLE);
+        m_fileDestination = new Text(exportGroup, SWT.BORDER | SWT.SINGLE);
         GridData gd = new GridData(GridData.FILL_HORIZONTAL);
         m_fileDestination.setLayoutData(gd);
-        
+
         Button selectFileButton = new Button(exportGroup, SWT.PUSH);
         selectFileButton.setText("Select...");
         selectFileButton.setToolTipText("Opens a file selection dialog.");
@@ -147,7 +146,8 @@ public class ExportToSVGPage extends WizardPage {
                     m_fileDestination.setText(filePath);
                 }
             }
-            
+
+            @Override
             public void widgetDefaultSelected(final SelectionEvent se) {
                 widgetSelected(se);
             }
@@ -164,12 +164,12 @@ public class ExportToSVGPage extends WizardPage {
         m_embedImages = new Button(group, SWT.CHECK);
         m_embedImages.setSelection(true);
         m_embedImages.setText("Embed images in the SVG-file.");
-//        m_useCSS = new Button(group, SWT.CHECK);
-//        m_useCSS.setSelection(false);
-//        m_useCSS.setText("Use CSS-style attributes.");
-        m_includeAnnotations = new Button(group, SWT.CHECK);
-        m_includeAnnotations.setSelection(false);
-        m_includeAnnotations.setText("Include workflow-annotations in SVG-Export.");
+        // m_useCSS = new Button(group, SWT.CHECK);
+        // m_useCSS.setSelection(false);
+        // m_useCSS.setText("Use CSS-style attributes.");
+        // m_includeAnnotations = new Button(group, SWT.CHECK);
+        // m_includeAnnotations.setSelection(false);
+        // m_includeAnnotations.setText("Include workflow-annotations in SVG-Export.");
 
         setControl(container);
     }
@@ -181,20 +181,18 @@ public class ExportToSVGPage extends WizardPage {
 
         return m_embedImages.getSelection();
     }
-    
+
     /**
      * @return true if the check box for using CSS-style attributes is checked
      */
     boolean useCSS() {
-
-//        return m_useCSS.getSelection();
-    	
-    	return false;
+        // return m_useCSS.getSelection();
+        return false;
     }
-    
+
     boolean includeAnnotations() {
-    	
-    	return m_includeAnnotations.getSelection();
+        // return m_includeAnnotations.getSelection();
+        return false;
     }
 
     /**
@@ -203,11 +201,9 @@ public class ExportToSVGPage extends WizardPage {
     public String getFileDestination() {
         return m_fileDestination.getText();
     }
-    
-    public boolean isPageComplete(){
-    	return true;
+
+    @Override
+    public boolean isPageComplete() {
+        return true;
     }
-
-
-
 }

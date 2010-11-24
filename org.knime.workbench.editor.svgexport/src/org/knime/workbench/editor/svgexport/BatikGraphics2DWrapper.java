@@ -29,44 +29,44 @@ import org.w3c.dom.Document;
 
 /**
  * Wrapper for an Apache Batik SVGGraphics2D instance. Provides substitutes for most AWT Methods.
- * 
+ *
  * @author Andreas Burger
  *
  */
 public class BatikGraphics2DWrapper extends Graphics {
-	
+
 
 	private SVGGraphics2D					batikGraphicsSVG;
-	
+
 	private Display 						display;
-	
+
 	private float 							_SWTLineWidth = 10;
-	
+
 	private int 							_SWTLineStyle = org.eclipse.draw2d.Graphics.LINE_SOLID;
-	
+
 	private Font 							_SWTFont;
-	
+
 	private org.eclipse.swt.graphics.Color 	_SWTForegroundColor = new Color(display, 0, 0, 0) ;
-	
+
 	private org.eclipse.swt.graphics.Color 	_SWTBackgroundColor = new Color(display, 0, 0, 0);
-	
-	private boolean 						_XORMode;	
-	
-	private Rectangle						visibleArea; 
-	
+
+	private boolean 						_XORMode;
+
+	private Rectangle						visibleArea;
+
 	/**
-	 * 
+	 *
 	 * @param display display-instance required for several calculations. Must not be null
 	 * @param document required to instantiate the SVGGraphics2D
 	 */
-	
-	public BatikGraphics2DWrapper(Display display, Document document){
+
+	public BatikGraphics2DWrapper(final Display display, final Document document){
 		this.display = display;
 		this.batikGraphicsSVG = new SVGGraphics2D(document);
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @param display display-instance required for several calculations.
 	 * @param ctx SVG Generator Context
 	 * @param textAsShapes Whether or not to render text as Shapes
@@ -74,8 +74,8 @@ public class BatikGraphics2DWrapper extends Graphics {
 	 * @param yOffset y-value + width of the Node with the smallest y-coordinate
 	 * @param bounds visible Area. Note: Nodes with negative (x,y) are handled by Offset!
 	 */
-		
-	public BatikGraphics2DWrapper(Display display, SVGGeneratorContext ctx, boolean textAsShapes, int xOffset, int yOffset, Rectangle bounds) {
+
+	public BatikGraphics2DWrapper(final Display display, final SVGGeneratorContext ctx, final boolean textAsShapes, final int xOffset, final int yOffset, final Rectangle bounds) {
 		this.display = display;
 		this.batikGraphicsSVG = new SVGGraphics2D(ctx, textAsShapes);
 		bounds.x = bounds.x - xOffset;
@@ -84,30 +84,30 @@ public class BatikGraphics2DWrapper extends Graphics {
 	}
 
 	@Override
-	public void clipRect(Rectangle r) {
+	public void clipRect(final Rectangle r) {
 	}
 
 	@Override
 	public void dispose() {
-		
-		batikGraphicsSVG = null;	
+
+		batikGraphicsSVG = null;
 		display = null;
 		_SWTFont = null;
 		_SWTForegroundColor = null;
 		_SWTBackgroundColor = null;
 		visibleArea = null;
-		
+
 	}
-	
+
 
 	@Override
-	public void drawArc(int x, int y, int w, int h, int offset, int length) {
+	public void drawArc(final int x, final int y, final int w, final int h, final int offset, final int length) {
 		batikGraphicsSVG.drawArc(x, y, w, h, offset, length);
 
 	}
 
 	@Override
-	public void drawFocus(int x, int y, int w, int h) {
+	public void drawFocus(final int x, final int y, final int w, final int h) {
 		batikGraphicsSVG.drawRect(x, y, w, h); // !
 
 	}
@@ -117,10 +117,10 @@ public class BatikGraphics2DWrapper extends Graphics {
 	 * @param src Image to convert
 	 * @return BufferedImage equivalent to the source image
 	 */
-	
-	private BufferedImage convertImage(Image src){
+
+	private BufferedImage convertImage(final Image src){
 		ImageData data = src.getImageData();	// Obtain ImageData
-		
+
 		if (data.getTransparencyType() == SWT.TRANSPARENCY_NONE){			// No Transparency, so this should be easy
 			DirectColorModel cm = new DirectColorModel(data.depth, 0xFF0000, 0x00FF00, 0x0000FF);
 			PaletteData palette = data.palette;
@@ -144,7 +144,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 			BufferedImage result = new BufferedImage(cm, wr, false, null);
 			return result;
 		}
-		
+
 		if (data.getTransparencyType() == SWT.TRANSPARENCY_ALPHA){		// Uses Alpha-Values for each pixel
 			DirectColorModel cm = new DirectColorModel(32, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF);  // Creates a 32-bit ColorModel with 8 Bits each for red, green, blue and alpha
 			PaletteData palette = data.palette;
@@ -169,7 +169,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 			BufferedImage result = new BufferedImage(cm, wr, false, null);
 			return result;
 		}
-		
+
 		if (data.getTransparencyType() == SWT.TRANSPARENCY_PIXEL){		// A certain pixel-value is set for transparent pixels
 			DirectColorModel cm = new DirectColorModel(32, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF);
 			PaletteData palette = data.palette;
@@ -184,15 +184,18 @@ public class BatikGraphics2DWrapper extends Graphics {
 						rgbArray[0] = rgb.red;
 						rgbArray[1] = rgb.green;
 						rgbArray[2] = rgb.blue;
-						if (data.getPixel(x, y) == data.transparentPixel) rgbArray[3] = 0 ;
-						else rgbArray[3] = 255;
+						if (data.getPixel(x, y) == data.transparentPixel) {
+                            rgbArray[3] = 0 ;
+                        } else {
+                            rgbArray[3] = 255;
+                        }
 						wr.setPixel(x, y, rgbArray);
 					}
 				}
 			BufferedImage result = new BufferedImage(cm, wr, false, null);
 			return result;
 		}
-		
+
 		if (data.getTransparencyType() == SWT.TRANSPARENCY_MASK){  // Image contains additional ImageData for the alphaMask
 			DirectColorModel cm = new DirectColorModel(32, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF);
 			PaletteData palette = data.palette;
@@ -208,46 +211,49 @@ public class BatikGraphics2DWrapper extends Graphics {
 						rgbArray[0] = rgb.red;
 						rgbArray[1] = rgb.green;
 						rgbArray[2] = rgb.blue;
-						if (alphaMask.getPixel(x, y) == 0) rgbArray[3] = 0 ;
-						else rgbArray[3] = 255;
+						if (alphaMask.getPixel(x, y) == 0) {
+                            rgbArray[3] = 0 ;
+                        } else {
+                            rgbArray[3] = 255;
+                        }
 						wr.setPixel(x, y, rgbArray);
 					}
 				}
 			BufferedImage result = new BufferedImage(cm, wr, false, null);
 			return result;
 		}
-		 BufferedImage result = new BufferedImage(data.width, data.height, Transparency.OPAQUE); 
+		 BufferedImage result = new BufferedImage(data.width, data.height, Transparency.OPAQUE);
 		 return result;
-					
+
 	}
-	 
+
 
 	@Override
-	public void drawImage(Image srcImage, int x, int y) {
+	public void drawImage(final Image srcImage, final int x, final int y) {
 		batikGraphicsSVG.drawImage(convertImage(srcImage), x, y, null);
 
 	}
 
 	@Override
-	public void drawImage(Image srcImage, int x1, int y1, int w1, int h1,
-			int x2, int y2, int w2, int h2) {
+	public void drawImage(final Image srcImage, final int x1, final int y1, final int w1, final int h1,
+			final int x2, final int y2, final int w2, final int h2) {
 		batikGraphicsSVG.drawImage(convertImage(srcImage), x2, y2, x2+w2, y2+h2, x1, y1, x1+w1, y1+h1, null);
 
 	}
 
 	@Override
-	public void drawLine(int x1, int y1, int x2, int y2) {
+	public void drawLine(final int x1, final int y1, final int x2, final int y2) {
 		batikGraphicsSVG.drawLine(x1, y1, x2, y2);
 	}
 
 	@Override
-	public void drawOval(int x, int y, int w, int h) {
+	public void drawOval(final int x, final int y, final int w, final int h) {
 		batikGraphicsSVG.drawOval(x, y, w, h);
 
 	}
 
 	@Override
-	public void drawPolygon(PointList points) {
+	public void drawPolygon(final PointList points) {
 		int[] xPoints = new int[points.size()];
 		int[] yPoints = new int[points.size()];
 		for (int i = 0; i<points.size(); i++) {
@@ -259,7 +265,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 	}
 
 	@Override
-	public void drawPolyline(PointList points) {
+	public void drawPolyline(final PointList points) {
 		int[] xPoints = new int[points.size()];
 		int[] yPoints = new int[points.size()];
 		for (int i = 0; i<points.size(); i++) {
@@ -271,19 +277,19 @@ public class BatikGraphics2DWrapper extends Graphics {
 	}
 
 	@Override
-	public void drawRectangle(int x, int y, int width, int height) {
+	public void drawRectangle(final int x, final int y, final int width, final int height) {
 		batikGraphicsSVG.drawRect(x, y, width, height);
 
 	}
 
 	@Override
-	public void drawRoundRectangle(Rectangle r, int arcWidth, int arcHeight) {
+	public void drawRoundRectangle(final Rectangle r, final int arcWidth, final int arcHeight) {
 		batikGraphicsSVG.drawRoundRect(r.x, r.y, r.width, r.height, arcWidth, arcHeight);
 
 	}
 
 	@Override
-	public void drawString(String s, int x, int y) {
+	public void drawString(final String s, final int x, final int y) {
 		GC gc = new GC(display);
 		gc.setFont(_SWTFont);
 		int height = gc.getFontMetrics().getHeight();
@@ -293,7 +299,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 	}
 
 	@Override
-	public void drawText(String s, int x, int y) {
+	public void drawText(final String s, final int x, int y) {
 		String[] text = s.split("\n");
 		GC gc = new GC(display);
 		gc.setFont(_SWTFont);
@@ -301,14 +307,14 @@ public class BatikGraphics2DWrapper extends Graphics {
 		gc.dispose();
 		for (String string : text){
 			y = y+height;
-			batikGraphicsSVG.drawString(string, x, y);
+			batikGraphicsSVG.drawString(string,x, y);
 		}
 
 
 	}
 
 	@Override
-	public void fillArc(int x, int y, int w, int h, int offset, int length) {
+	public void fillArc(final int x, final int y, final int w, final int h, final int offset, final int length) {
 		swapColors();
 		batikGraphicsSVG.fillArc(x, y-1, w, h, offset, length);
 		swapColors();
@@ -316,20 +322,20 @@ public class BatikGraphics2DWrapper extends Graphics {
 	}
 
 	@Override
-	public void fillGradient(int x, int y, int w, int h, boolean vertical) {
-	
+	public void fillGradient(final int x, final int y, final int w, final int h, final boolean vertical) {
+
 	}
 
 	@Override
-	public void fillOval(int x, int y, int w, int h) {
+	public void fillOval(final int x, final int y, final int w, final int h) {
 		swapColors();
 		batikGraphicsSVG.fillOval(x, y-1, w, h);
 		swapColors();
-		
+
 	}
 
 	@Override
-	public void fillPolygon(PointList points) {
+	public void fillPolygon(final PointList points) {
 		int[] xPoints = new int[points.size()];
 		int[] yPoints = new int[points.size()];
 		for (int i = 0; i<points.size(); i++) {
@@ -339,53 +345,54 @@ public class BatikGraphics2DWrapper extends Graphics {
 		swapColors();
 		batikGraphicsSVG.fillPolygon(xPoints, yPoints, points.size());
 		swapColors();
-		
+
 	}
 
 	@Override
-	public void fillRectangle(int x, int y, int width, int height) {
+	public void fillRectangle(final int x, final int y, final int width, final int height) {
 		swapColors();
 		batikGraphicsSVG.fillRect(x, y-1, width, height);
 		swapColors();
-		
+
 	}
 
 	@Override
-	public void fillRoundRectangle(Rectangle r, int arcWidth, int arcHeight) {
+	public void fillRoundRectangle(final Rectangle r, final int arcWidth, final int arcHeight) {
 		swapColors();
 		batikGraphicsSVG.fillRoundRect(r.x, r.y-1, r.width, r.height, arcWidth, arcHeight);
 		swapColors();
 	}
 
-	public void fillString(String s, int x, int y) {
+	@Override
+    public void fillString(final String s, final int x, final int y) {
 		swapColors();
-		batikGraphicsSVG.drawString(s, x, y-1);
+		batikGraphicsSVG.drawString(s, x, y);
 		swapColors();
 	}
 
 	@Override
-	public void fillText(String s, int x, int y) {
+	public void fillText(final String s, final int x, final int y) {
 		swapColors();
-		batikGraphicsSVG.drawString(s, x, y-1);
+		batikGraphicsSVG.drawString(s, x, y);
 		swapColors();
 
 	}
 
 	@Override
 	public Color getBackgroundColor() {
-		
+
 		return _SWTBackgroundColor;
 	}
 
 	@Override
-	public Rectangle getClip(Rectangle rect) { 				// Determines visible area in the generated SVG image.
+	public Rectangle getClip(final Rectangle rect) { 				// Determines visible area in the generated SVG image.
 //		Rectangle rect2 = new Rectangle(0, 0, 7680, 4320);  // Super Hi-Vision resolution
 		return visibleArea;
 	}
 
 	@Override
 	public Font getFont() {
-		
+
 		return _SWTFont;
 	}
 
@@ -400,7 +407,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 
 	@Override
 	public Color getForegroundColor() {
-		
+
 		return _SWTForegroundColor;
 	}
 
@@ -418,7 +425,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 
 	@Override
 	public float getLineWidthFloat() {
-		
+
 		return _SWTLineWidth;
 	}
 
@@ -447,37 +454,37 @@ public class BatikGraphics2DWrapper extends Graphics {
 	}
 
 	@Override
-	public void scale(double amount) {
+	public void scale(final double amount) {
 		batikGraphicsSVG.scale(amount, amount);
 
 	}
 
 	@Override
-	public void setBackgroundColor(Color rgb) {
+	public void setBackgroundColor(final Color rgb) {
 		_SWTBackgroundColor = rgb;
 		batikGraphicsSVG.setBackground(SWTtoAWTColor(rgb));
 
 	}
 
 	@Override
-	public void setClip(Rectangle r) {
+	public void setClip(final Rectangle r) {
 	}
 
 	@Override
-	public void setFont(Font f) {
+	public void setFont(final Font f) {
 		_SWTFont = f;
 		updateFont();
 	}
 
 	@Override
-	public void setForegroundColor(Color rgb) {
+	public void setForegroundColor(final Color rgb) {
 		_SWTForegroundColor = rgb;
 		batikGraphicsSVG.setColor(SWTtoAWTColor(rgb));
 
 	}
 
 	@Override
-	public void setLineStyle(int style) {
+	public void setLineStyle(final int style) {
 		_SWTLineStyle = style;		// Currently, no case other than default is used.
 //		switch(style){
 //		case LINE_DOT :
@@ -504,54 +511,51 @@ public class BatikGraphics2DWrapper extends Graphics {
 	}
 
 	@Override
-	public void setLineWidth(int width) {
+	public void setLineWidth(final int width) {
 		_SWTLineWidth = width;
 	}
 
 	@Override
-	public void setLineWidthFloat(float width) {
+	public void setLineWidthFloat(final float width) {
 		_SWTLineWidth = width;
 	}
 
 	@Override
-	public void setLineMiterLimit(float miterLimit) {
+	public void setLineMiterLimit(final float miterLimit) {
 	}
 
 	@Override
-	public void setXORMode(boolean b) {
+	public void setXORMode(final boolean b) {
 		_XORMode = b;	//Note: No effect
 
 	}
 
 	/**
-	 * 
+	 *
 	 * @param writer Writer in which to stream the generated SVG
 	 * @param useCSS Whether to use CSS-Style attributes or not
 	 * @throws SVGGraphics2DIOException
 	 */
-	
-	public void stream(Writer writer, Boolean useCSS) throws SVGGraphics2DIOException{
+
+	public void stream(final Writer writer, final Boolean useCSS) throws SVGGraphics2DIOException{
 		batikGraphicsSVG.stream(writer, useCSS);
 	}
-	
+
 	@Override
-	public void setLineAttributes(LineAttributes attributes) {
+	public void setLineAttributes(final LineAttributes attributes) {
 		_SWTLineWidth = attributes.width;
 		_SWTLineStyle = attributes.style;
 		setLineStyle(_SWTLineStyle);
 	}
-	
+
 	/**
 	 * Updates the font currently used by the wrapped SVGGraphics2D
 	 */
-	
+
 	private void updateFont() {
-		GC gc = new GC(display);
-		gc.setFont(_SWTFont);
-		int height = gc.getFontMetrics().getHeight();
-		gc.dispose();
 		FontData fd = _SWTFont.getFontData()[0];
 		int fontStyle = fd.getStyle();
+		int height = fd.getHeight();
 		int AWTStyle;
 		switch (fontStyle) {
 		case SWT.BOLD :
@@ -570,28 +574,30 @@ public class BatikGraphics2DWrapper extends Graphics {
 	 * Swaps the colors currently used by the wrapped SVGGraphics2D
 	 */
 	private void swapColors(){
-		
+
 			java.awt.Color tempColour = batikGraphicsSVG.getBackground();
 			batikGraphicsSVG.setBackground(batikGraphicsSVG.getColor());
 			batikGraphicsSVG.setColor(tempColour);
 	}
-	
+
 	/**
 	 * Transforms a org.eclipse.swt.graphics Color into a java.awt.Color. All transparency information is lost.
-	 * 
+	 *
 	 * @param color SWT Color to transform
 	 * @return transformed AWT Color
 	 */
-	private java.awt.Color SWTtoAWTColor(org.eclipse.swt.graphics.Color color){
-		if (color == null) return new java.awt.Color(0,0,0);
+	private java.awt.Color SWTtoAWTColor(final org.eclipse.swt.graphics.Color color){
+		if (color == null) {
+            return new java.awt.Color(0,0,0);
+        }
 		java.awt.Color result = new java.awt.Color(color.getRed(), color.getGreen(), color.getBlue());
 		return result;
 	}
 
 	@Override
-	public void translate(int dx, int dy) {
+	public void translate(final int dx, final int dy) {
 		batikGraphicsSVG.translate(dx, dy);
-		
+
 	}
 	/**
 	 * Resets foreground- and background-color to black.
