@@ -6,6 +6,7 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DirectColorModel;
 import java.awt.image.WritableRaster;
 import java.io.Writer;
+import java.util.Stack;
 
 import org.apache.batik.svggen.SVGGeneratorContext;
 import org.apache.batik.svggen.SVGGraphics2D;
@@ -53,6 +54,40 @@ public class BatikGraphics2DWrapper extends Graphics {
 	private boolean 						_XORMode;
 
 	private Rectangle						visibleArea;
+	
+	private Stack<State>					_stack = new Stack<State>();
+	
+	private class State{
+		
+		float _lineWidth;
+		int _lineStyle;
+		Font _font;
+		Color _bg;
+		Color _fg;
+		boolean _XOR;
+		Rectangle _visibleArea;
+		
+		public State(){
+			_lineWidth = _SWTLineWidth;
+			_lineStyle = _SWTLineStyle;
+			_font = _SWTFont;
+			_bg = _SWTBackgroundColor;
+			_fg = _SWTForegroundColor;
+			_XOR = _XORMode;
+			_visibleArea = visibleArea;
+		}
+		
+		public void restore(){
+			_SWTLineWidth  = _lineWidth;
+			_SWTLineStyle  = _lineStyle;
+			_SWTFont  = _font;
+			_SWTBackgroundColor  = _bg;
+			_SWTForegroundColor  = _fg;
+			_XORMode  = _XOR;
+			visibleArea = _visibleArea;
+		}
+		
+	}
 
 	/**
 	 *
@@ -437,19 +472,19 @@ public class BatikGraphics2DWrapper extends Graphics {
 
 	@Override
 	public void popState() {
-		// TODO Auto-generated method stub
+		_stack.pop().restore();
 
 	}
 
 	@Override
 	public void pushState() {
-		// TODO Auto-generated method stub
+		_stack.push(new State());
 
 	}
 
 	@Override
 	public void restoreState() {
-		// TODO Auto-generated method stub
+		_stack.peek().restore();
 
 	}
 
