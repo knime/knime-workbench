@@ -472,6 +472,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 
 	@Override
 	public void popState() {
+		if (!(_stack.isEmpty()))
 		_stack.pop().restore();
 
 	}
