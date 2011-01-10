@@ -1,9 +1,13 @@
 Manifest-Version: 1.0
-Fragment-Host: org.knime.workbench.editor;bundle-version="2.3.0"
 Bundle-ManifestVersion: 2
 Bundle-Name: Workflow SVG export
 Bundle-SymbolicName: org.knime.workbench.editor.svgexport;singleton:=true
-Bundle-Version: 2.3.0.qualifier
+Bundle-Version: 2.3.1.qualifier
+Bundle-Vendor: KNIME GmbH, Konstanz, Germany
+Fragment-Host: org.knime.workbench.editor;bundle-version="2.3.0"
+Export-Package: org.knime.workbench.editor.svgexport,
+ org.knime.workbench.editor.svgexport.actions,
+ org.knime.workbench.editor.svgexport.figures
 Require-Bundle: org.apache.batik.bridge;bundle-version="1.6.0",
  org.apache.batik.css;bundle-version="1.6.0",
  org.apache.batik.dom;bundle-version="1.6.0",
@@ -17,9 +21,5 @@ Require-Bundle: org.apache.batik.bridge;bundle-version="1.6.0",
  org.apache.batik.util;bundle-version="1.6.0",
  org.apache.batik.util.gui;bundle-version="1.6.0",
  org.apache.batik.xml;bundle-version="1.6.0"
-Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
-Export-Package: org.knime.workbench.editor.svgexport,
- org.knime.workbench.editor.svgexport.actions,
- org.knime.workbench.editor.svgexport.figures
-Bundle-Vendor: KNIME GmbH, Konstanz, Germany
+Bundle-ActivationPolicy: lazy
