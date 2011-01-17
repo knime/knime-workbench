@@ -50,7 +50,7 @@ public class AnnotationSVGFigure {
 //		String[] lines = text.split("\n");
 		gc = new GC(display);
 
-		boolean qw = prepareText(anno);
+//		boolean qw = prepareText(anno);
 		gc.setFont(part.getFigure().getFont());
 //		if (lines.length!=0){
 //			while ((i<lines.length)&&((height+gc.getFontMetrics().getHeight()) < anno.getHeight())){
