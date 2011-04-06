@@ -1,4 +1,4 @@
-/*
+/* 
  * ------------------------------------------------------------------------
  *
  *  Copyright (C) 2003 - 2011
@@ -44,7 +44,7 @@
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
  * -------------------------------------------------------------------
- *
+ * 
  * History
  *   ${date} (${user}): created
  */
@@ -54,15 +54,16 @@ import org.eclipse.draw2d.AbsoluteBendpoint;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.gef.commands.Command;
 import org.eclipse.gef.editparts.ZoomManager;
-import org.knime.core.node.workflow.ConnectionID;
+import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.ConnectionUIInformation;
+import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 
 /**
  * Command for moving an absolute bendpoint on the connection.
- *
+ * 
  * @author Florian Georg, University of Konstanz
  */
 public class NewBendpointMoveCommand extends Command {
@@ -79,12 +80,12 @@ public class NewBendpointMoveCommand extends Command {
     private ZoomManager m_zoomManager;
 
     private final WorkflowManager m_manager;
-
-    private final ConnectionID m_connID;
+    private final NodeID m_destNodeID;
+    private final int m_destPort;
 
     /**
      * New bendpoint move command.
-     *
+     * 
      * @param connection The connection model
      * @param manager The workflow manager that contains the connection.
      * @param index The bendpoint index
@@ -98,11 +99,16 @@ public class NewBendpointMoveCommand extends Command {
             final ZoomManager zoomManager) {
         m_manager = manager;
         m_uiInfo = (ConnectionUIInformation)connection.getUIInformation();
-        m_connID = connection.getModel().getID();
-
+        m_destNodeID = connection.getModel().getDest();
+        m_destPort = connection.getModel().getDestPort();
+        
         m_index = index;
         m_newLocation = newLocation;
         m_zoomManager = zoomManager;
+    }
+
+    private ConnectionContainer getConnectionContainer() {
+        return m_manager.getIncomingConnectionFor(m_destNodeID, m_destPort);
     }
 
     /**
@@ -114,17 +120,17 @@ public class NewBendpointMoveCommand extends Command {
 
         AbsoluteBendpoint bendpoint = new AbsoluteBendpoint(p[0], p[1]);
         m_oldLocation = bendpoint.getLocation();
-
+        
         Point newLocation = m_newLocation.getCopy();
         WorkflowEditor.adaptZoom(m_zoomManager, newLocation, true);
-
+        
         bendpoint = new AbsoluteBendpoint(newLocation);
 
         m_uiInfo.removeBendpoint(m_index);
         m_uiInfo.addBendpoint(bendpoint.x, bendpoint.y, m_index);
 
         // issue notification
-        m_manager.getConnection(m_connID).setUIInfo(m_uiInfo);
+        getConnectionContainer().setUIInfo(m_uiInfo);
     }
 
     /**
@@ -133,14 +139,14 @@ public class NewBendpointMoveCommand extends Command {
     @Override
     public void redo() {
         m_uiInfo.removeBendpoint(m_index);
-
+        
         Point newLocation = m_newLocation.getCopy();
         WorkflowEditor.adaptZoom(m_zoomManager, newLocation, true);
-
+        
         m_uiInfo.addBendpoint(newLocation.x, newLocation.y, m_index);
 
         // issue notification
-        m_manager.getConnection(m_connID).setUIInfo(m_uiInfo);
+        getConnectionContainer().setUIInfo(m_uiInfo);
 
     }
 
@@ -156,6 +162,6 @@ public class NewBendpointMoveCommand extends Command {
         m_uiInfo.addBendpoint(oldLocation.x, oldLocation.y, m_index);
 
         // issue notification
-        m_manager.getConnection(m_connID).setUIInfo(m_uiInfo);
+        getConnectionContainer().setUIInfo(m_uiInfo);
     }
 }

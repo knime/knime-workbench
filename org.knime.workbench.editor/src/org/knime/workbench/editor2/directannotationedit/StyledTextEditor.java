@@ -501,7 +501,7 @@ public class StyledTextEditor extends CellEditor {
         m_styledText.setText(wa.getText());
         m_styledText.setStyleRanges(AnnotationEditPart.toSWTStyleRanges(wa,
                 m_zoomFactor));
-        setBackgroundColor(AnnotationEditPart.RGBintToColor(wa
+        m_styledText.setBackground(AnnotationEditPart.RGBintToColor(wa
                 .getBgColor()));
     }
 

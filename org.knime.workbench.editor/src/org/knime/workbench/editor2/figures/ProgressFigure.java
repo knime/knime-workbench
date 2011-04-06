@@ -136,8 +136,7 @@ public class ProgressFigure extends RectangleFigure implements
 
     private int m_unknownProgressBarDirection;
 
-    public static enum ProgressMode { EXECUTING, QUEUED, PAUSED };
-    private ProgressMode m_progressMode;
+    private boolean m_executing;
 
     private int m_currentWorked;
 
@@ -273,8 +272,7 @@ public class ProgressFigure extends RectangleFigure implements
             graphics.setForegroundColor(PROGRESS_BAR_COLOR);
             graphics.setBackgroundColor(PROGRESS_BAR_COLOR);
 
-            switch (m_progressMode) {
-            case EXECUTING:
+            if (m_executing) {
                 if (!m_unknownProgress) {
 
                     // calculate the progress bar width from the percentage
@@ -313,11 +311,9 @@ public class ProgressFigure extends RectangleFigure implements
                     m_unknownProgressBarRenderingPosition += m_unknownProgressBarDirection;
 
                 }
-                break;
-            case QUEUED:
-            case PAUSED:
-                // draw "Queued"/"Paused"
-                String queuedString = m_progressMode.equals(ProgressMode.QUEUED) ? "queued" : "paused";
+            } else {
+                // draw "Queued"
+                String queuedString = "queued";
                 graphics.setFont(QUEUED_FONT);
                 Dimension dim = FigureUtilities.getStringExtents(queuedString,
                         QUEUED_FONT);
@@ -328,7 +324,6 @@ public class ProgressFigure extends RectangleFigure implements
                     graphics.setFont(QUEUED_FONT_SMALL);
                 }
                 graphics.drawString(queuedString, x + 1, y);
-                break;
             }
         }
     }
@@ -391,21 +386,24 @@ public class ProgressFigure extends RectangleFigure implements
     }
 
     /**
-     * Sets the mode of this progress bar.
+     * Sets the mode of this progress bar. The modes are executing or queued
      *
      * @param executing
+     *            if true the mode is executing otherwise the progress should be
+     *            displayed as queued.
      */
-    public void setProgressMode(final ProgressMode ps) {
-        m_progressMode = ps;
+    public void setExecuting(final boolean executing) {
+        m_executing = executing;
     }
 
     /**
-     * Get the mode of this progress bar.
+     * Get the mode of this progress bar. The modes are executing or queued
      *
-     * @return progress mode.
+     * @return executing if true the mode is executing otherwise the progress
+     *         should be displayed as queued.
      */
-    public ProgressMode getProgressMode() {
-        return m_progressMode;
+    public boolean isExecuting() {
+        return m_executing;
     }
 
     /**

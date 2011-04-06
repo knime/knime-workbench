@@ -51,6 +51,7 @@
 package org.knime.workbench.editor2.actions;
 
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.editor2.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -59,9 +60,11 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 /**
  * Action to execute all nodes that are executable.
  *
- * @author Christoph Sieb, University of Konstanz
+ * @author Christoph sieb, University of Konstanz
  */
 public class ExecuteAllAction extends AbstractNodeAction {
+    private static final NodeLogger LOGGER = NodeLogger
+            .getLogger(ExecuteAllAction.class);
 
     /** unique ID for this action. * */
     public static final String ID = "knime.action.executeall";
