@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension-point id="org.knime.workbench.explorer.contentprovider" name="KNIME Explorer Contentprovider" schema="schema/org.knime.workbench.explorer.contentprovider.exsd"/>
+   <extension
+         point="org.eclipse.ui.views">
+      <view
+            allowMultiple="true"
+            category="org.knime.workbench.ui.category"
+            class="org.knime.workbench.explorer.view.ExplorerView"
+            icon="icons/knime_explorer.png"
+            id="com.knime.workbench.explorer.view"
+            name="KNIME Explorer"
+            restorable="true">
+      </view>
+   </extension>
+      <extension
+         point="org.eclipse.core.filesystem.filesystems">
+      <filesystem
+            scheme="knime">
+         <run
+               class="org.knime.workbench.explorer.filesystem.ExplorerFileSystem">
+         </run>
+      </filesystem>
+   </extension>
+      <extension
+            point="org.eclipse.ecf.filetransfer.urlStreamHandlerService">
+         <urlStreamHandlerService
+               protocol="knime"
+               serviceClass="org.knime.workbench.explorer.ExplorerURLStreamHandler">
+         </urlStreamHandlerService>
+      </extension>
+      <extension
+            point="org.knime.workbench.explorer.contentprovider">
+         <KNIMEExplorerContentProvider
+               ContentProviderFactory="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory">
+         </KNIMEExplorerContentProvider>
+      </extension>
+</plugin>

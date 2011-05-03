@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Schema file written by PDE -->
+<schema targetNamespace="org.knime.workbench.explorer.view" xmlns="http://www.w3.org/2001/XMLSchema">
+<annotation>
+      <appinfo>
+         <meta.schema plugin="org.knime.workbench.explorer.view" id="org.knime.workbench.explorer.view.ContentProviderFactory" name="KNIMEExplorerContentProviderFactory"/>
+      </appinfo>
+      <documentation>
+         Register factory to create ContentProvider objects for special content.
+      </documentation>
+   </annotation>
+
+   <element name="extension">
+      <annotation>
+         <appinfo>
+            <meta.element />
+         </appinfo>
+      </annotation>
+      <complexType>
+         <sequence minOccurs="1" maxOccurs="unbounded">
+            <choice minOccurs="1" maxOccurs="unbounded">
+               <element ref="KNIMEExplorerContentProvider"/>
+            </choice>
+         </sequence>
+      </complexType>
+   </element>
+
+   <element name="KNIMEExplorerContentProvider">
+      <complexType>
+         <attribute name="ContentProviderFactory" type="string" use="required">
+            <annotation>
+               <documentation>
+                  Specify an implementation of the org.knime.workbench.explorer.view.AbstractContentProviderFactory class.
+               </documentation>
+               <appinfo>
+                  <meta.attribute kind="java" basedOn="org.knime.workbench.explorer.view.AbstractContentProviderFactory:"/>
+               </appinfo>
+            </annotation>
+         </attribute>
+      </complexType>
+   </element>
+
+   <annotation>
+      <appinfo>
+         <meta.section type="since"/>
+      </appinfo>
+      <documentation>
+         KNIME v2.3.3
+      </documentation>
+   </annotation>
+
+
+
+
+   <annotation>
+      <appinfo>
+         <meta.section type="copyright"/>
+      </appinfo>
+      <documentation>
+         (C) 2011, KNIME.com, Zurich, Switzerland. All rights reserved.
+      </documentation>
+   </annotation>
+
+</schema>
