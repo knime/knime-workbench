@@ -70,8 +70,8 @@ public class FileDragListener implements DragSourceListener {
             event.doit = false;
         } else {
             // delegate the evaluation to the content providers
-            for (Map.Entry<AbstractContentProvider, List<ExplorerFileStore>> entry : providers
-                    .entrySet()) {
+            for (Map.Entry<AbstractContentProvider, List<ExplorerFileStore>>
+                    entry : providers.entrySet()) {
                 AbstractContentProvider provider = entry.getKey();
                 if (!provider.dragStart(entry.getValue())) {
                     // do not start dragging if one content provider rejects
