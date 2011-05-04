@@ -18,6 +18,7 @@
  */
 package org.knime.workbench.explorer.view;
 
+import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,8 +35,12 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.part.ViewPart;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.NodeMessage;
+import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 
 /**
  * Content and label provider for one source in the user space view. One
@@ -47,7 +52,6 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 public abstract class AbstractContentProvider extends LabelProvider implements
         IStructuredContentProvider, ITreeContentProvider,
         Comparable<AbstractContentProvider> {
-
 
     /**
      * Use icons from this class for a uniform look.
@@ -203,6 +207,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     @Override
     public abstract ExplorerFileStore getParent(Object element);
 
+    /* ---------- helper methods for content provider ------------------- */
     /**
      * Helper method for content providers. Returns children of a workflow.
      *
@@ -300,4 +305,70 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
     }
 
+    /* ------------ helper methods for label provider (icons) ------------- */
+    /**
+     * Returns an icon/image for the passed file, if it is something like a
+     * workflow, group, node or meta node. If it is not a store representing one
+     * of these, null is returned.
+     */
+    public static Image getWorkspaceImage(final ExplorerFileStore efs) {
+
+        if (ExplorerFileStore.isNode(efs)) {
+            return ICONS.node();
+        }
+        if (ExplorerFileStore.isMetaNode(efs)) {
+            return ICONS.node();
+        }
+        if (ExplorerFileStore.isWorkflowGroup(efs)) {
+            return ICONS.workflowgroup();
+        }
+        if (!ExplorerFileStore.isWorkflow(efs)) {
+            return null;
+        }
+
+        // if it is a local workflow return the correct icon for open flows
+        File f;
+        try {
+            f = efs.toLocalFile(EFS.NONE, null);
+        } catch (CoreException ce) {
+            return ICONS.workflowClosed();
+        }
+
+        if (f == null) {
+            return ICONS.workflowClosed();
+        }
+        URI wfURI = f.toURI();
+        NodeContainer nc = ProjectWorkflowMap.getWorkflow(wfURI);
+        if (nc == null) {
+            return ICONS.workflowClosed();
+        }
+        if (nc instanceof WorkflowManager) {
+            if (nc.getID().hasSamePrefix(WorkflowManager.ROOT.getID())) {
+                // only show workflow directly off the root
+                if (nc.getNodeMessage().getMessageType()
+                        .equals(NodeMessage.Type.ERROR)) {
+                    return ICONS.workflowError();
+                }
+                switch (nc.getState()) {
+                case EXECUTED:
+                    return ICONS.workflowExecuted();
+                case PREEXECUTE:
+                case EXECUTING:
+                case EXECUTINGREMOTELY:
+                case POSTEXECUTE:
+                    return ICONS.workflowExecuting();
+                case CONFIGURED:
+                case IDLE:
+                    return ICONS.workflowConfigured();
+                default:
+                    return ICONS.workflowConfigured();
+                }
+            } else {
+                return ICONS.node();
+            }
+        } else {
+            return ICONS.unknown();
+        }
+
+    }
 }

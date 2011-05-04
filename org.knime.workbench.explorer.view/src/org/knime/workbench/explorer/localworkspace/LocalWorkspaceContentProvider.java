@@ -18,8 +18,6 @@
  */
 package org.knime.workbench.explorer.localworkspace;
 
-import java.io.File;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,13 +29,9 @@ import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
-import org.knime.core.node.workflow.NodeContainer;
-import org.knime.core.node.workflow.NodeMessage;
-import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 
 /**
  * Provides content for the user space view that shows the content (workflows
@@ -153,55 +147,11 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             return ICONS.unknownRed();
         }
         LocalWorkspaceFileStore e = (LocalWorkspaceFileStore)element;
-        File f;
-        try {
-            f = e.toLocalFile(EFS.NONE, null);
-        } catch (CoreException ce) {
-            return ICONS.error();
-        }
-        if (ExplorerFileStore.isNode(e)) {
-            return ICONS.node();
-        }
-        if (ExplorerFileStore.isMetaNode(e)) {
-            return ICONS.node();
-        }
-        if (ExplorerFileStore.isWorkflowGroup(e)) {
-            return ICONS.workflowgroup();
-        }
-        if (!ExplorerFileStore.isWorkflow(e)) {
-            return ICONS.unknownRed();
-        }
-        URI wfURI = f.toURI();
-        NodeContainer nc = ProjectWorkflowMap.getWorkflow(wfURI);
-        if (nc == null) {
-            return ICONS.workflowClosed();
-        }
-        if (nc instanceof WorkflowManager) {
-            if (nc.getID().hasSamePrefix(WorkflowManager.ROOT.getID())) {
-                // only show workflow directly off the root
-                if (nc.getNodeMessage().getMessageType()
-                        .equals(NodeMessage.Type.ERROR)) {
-                    return ICONS.workflowError();
-                }
-                switch (nc.getState()) {
-                case EXECUTED:
-                    return ICONS.workflowExecuted();
-                case PREEXECUTE:
-                case EXECUTING:
-                case EXECUTINGREMOTELY:
-                case POSTEXECUTE:
-                    return ICONS.workflowExecuting();
-                case CONFIGURED:
-                case IDLE:
-                    return ICONS.workflowConfigured();
-                default:
-                    return ICONS.workflowConfigured();
-                }
-            } else {
-                return ICONS.node();
-            }
+        Image img = getWorkspaceImage(e);
+        if (img != null) {
+            return img;
         } else {
-            return ICONS.unknown();
+            return ICONS.unknownRed();
         }
     }
 
