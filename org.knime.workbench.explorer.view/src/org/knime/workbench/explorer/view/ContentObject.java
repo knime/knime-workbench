@@ -88,7 +88,7 @@ public final class ContentObject {
                 return true;
             }
             if (m_obj != null) {
-                return m_obj.equals(co);
+                return m_obj.equals(co.getObject());
             }
             return false;
         }
