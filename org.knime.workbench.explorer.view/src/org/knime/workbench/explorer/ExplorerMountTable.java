@@ -32,6 +32,7 @@ import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtensionPoint;
 import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.ui.IMemento;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
@@ -66,7 +67,21 @@ public class ExplorerMountTable {
      */
     public static AbstractContentProvider mount(final String mountID,
             final String providerID) throws IOException {
+        return mountOrRestore(mountID, providerID, null);
+    }
 
+    /**
+     * Mounts a new content with the specified mountID and from the specified
+     * provider factory - and initializes it from the specified storage, if that
+     * is not null.
+     *
+     * @param mountID
+     * @param providerID
+     * @param storage
+     * @return
+     */
+    private static AbstractContentProvider mountOrRestore(final String mountID,
+            final String providerID, final IMemento storage) throws IOException {
         synchronized (m_mounted) {
             // can't mount different providers with the same ID
             MountPoint existMp = m_mounted.get(mountID);
@@ -100,13 +115,22 @@ public class ExplorerMountTable {
                 throw new IllegalStateException("Cannot mount "
                         + fac.toString() + " multiple times.");
             }
-            // may open a dialog for the user to provide parameters
-            AbstractContentProvider newProvider =
-                    fac.getContentProvider(mountID);
-            if (newProvider == null) {
-                // user probably canceled.
-                return null;
+            AbstractContentProvider newProvider = null;
+            if (storage == null) {
+                // may open a dialog for the user to provide parameters
+                newProvider = fac.getContentProvider(mountID);
+                if (newProvider == null) {
+                    // user probably canceled.
+                    return null;
+                }
+            } else {
+                newProvider = fac.getContentProvider(mountID, storage);
+                if (newProvider == null) {
+                    // something went wrong
+                    return null;
+                }
             }
+
             MountPoint mp = new MountPoint(mountID, newProvider, fac);
             synchronized (m_mounted) {
                 m_mounted.put(mountID, mp);
@@ -127,6 +151,15 @@ public class ExplorerMountTable {
             }
             mp.dispose();
             return true;
+        }
+    }
+
+    public static void unmountAll() {
+        synchronized (m_mounted) {
+            List<String> IDs = getAllMountIDs();
+            for (String id : IDs) {
+                unmount(id);
+            }
         }
     }
 
@@ -317,6 +350,69 @@ public class ExplorerMountTable {
             if (instance != null) {
                 CONTENT_FACTORIES.put(instance.getID(), instance);
                 FACTORY_NAMES.put(instance.toString(), instance.getID());
+            }
+        }
+
+    }
+
+    /*---------------------------------------------------------------*/
+
+    private static final char SEP = ':';
+
+    private static final String KEY = "IDs";
+
+    public static void saveState(final IMemento memento) {
+        synchronized (m_mounted) {
+            StringBuilder sb = new StringBuilder();
+            for (MountPoint mp : m_mounted.values()) {
+                if (sb.length() > 0) {
+                    sb.append(SEP);
+                }
+                sb.append(mp.getMountID());
+                IMemento sub = memento.createChild(mp.getMountID());
+                sub.putString("Factory", mp.getProviderFactory().getID());
+                mp.getProvider().saveState(sub.createChild("Provider"));
+            }
+            memento.putString(KEY, sb.toString());
+        }
+    }
+
+    public static void restore(final IMemento memento) {
+
+        unmountAll();
+
+        synchronized (m_mounted) {
+            String[] mountIDs =
+                    memento.getString(KEY).split(String.valueOf(SEP));
+            for (String mountID : mountIDs) {
+                IMemento storage = memento.getChild(mountID);
+                if (storage == null) {
+                    LOGGER.error("Corrupted mount table state storage. "
+                            + "Can't restore mount point '" + mountID + "'.");
+                    continue;
+                }
+                String factID = storage.getString("Factory");
+                IMemento sub = storage.getChild("Provider");
+                if (factID == null || sub == null) {
+                    LOGGER.error("Corrupted mount table state storage. "
+                            + "Can't restore mount point '" + mountID + "'.");
+                    continue;
+                }
+
+                try {
+                    if (mountOrRestore(mountID, factID, sub) == null) {
+                        LOGGER.error("Unable to restore mount point '"
+                                + mountID + "' (from " + factID
+                                + ": returned null).");
+                    }
+                } catch (Throwable t) {
+                    String msg = t.getMessage();
+                    if (msg == null || msg.isEmpty()) {
+                        msg = "<no details>";
+                    }
+                    LOGGER.error("Unable to restore mount point '" + mountID
+                            + "' (from " + factID + "): " + msg, t);
+                }
             }
         }
 

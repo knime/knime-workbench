@@ -31,10 +31,10 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.ui.KNIMEUIPlugin;
-
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
@@ -155,8 +155,7 @@ public class ContentDelegator extends LabelProvider implements
         if (!(parentElement instanceof ContentObject)) {
             // all children should be of that type!
             LOGGER.coding("Unexpected object in tree view! (" + parentElement
-                    + " of type "
-                    + parentElement.getClass().getCanonicalName());
+                    + " of type " + parentElement.getClass().getCanonicalName());
             return NO_CHILDREN;
         }
         ContentObject c = ((ContentObject)parentElement);
@@ -321,23 +320,45 @@ public class ContentDelegator extends LabelProvider implements
      * --------------------------------------------------------
      */
 
+    // colon is very unlikely (up to not allowed) to appear in a mount id
+    private static final char ID_SEP = ':';
+
+    private static final String KEY = "DisplayedMountIDs";
+
+    /**
+     * @param storage store information in order to restore state
+     */
     public void saveState(final IMemento storage) {
-        // for all conentprovider instances:
-        // child = memento.getChild(contentprovider.getFactory().getID())
-        // contentprovider.saveState(child)
-        // TODO: Traverse the extensions and let them save their stuff
-        // Also store preserved sub-mementos from currently not present plugins
+        StringBuilder sb = new StringBuilder();
+        for (MountPoint mp : m_provider) {
+            if (sb.length() > 0) {
+                sb.append(':');
+            }
+            sb.append(mp.getMountID());
+        }
+        storage.putString(KEY, sb.toString());
     }
 
+    /**
+     *
+     * Restore previously displayed mount points.
+     *
+     * @param storage to restore display from
+     *
+     */
     public void restoreState(final IMemento storage) {
-        // for all registered contentprovider factories:
-        // instances = memento.getChildren(factory.getID())
-        // for all instances:
-        // factory.getInstance(inst (=memento))
-
-        // !!! Preserve sub-mementos of provider from plugins that are not
-        // present (and save them in the saveState method). In case the
-        // workspace gets opened with another installation that contains
-        // those plugins.
+        String displayed = storage.getString(KEY);
+        if (displayed != null) {
+            String[] ids = displayed.split(String.valueOf(ID_SEP));
+            for (String id : ids) {
+                MountPoint mp = ExplorerMountTable.getMountPoint(id);
+                if (mp != null) {
+                    addMountPoint(mp);
+                } else {
+                    LOGGER.info("Can't restore mount point to display: " + id);
+                    continue;
+                }
+            }
+        }
     }
 }

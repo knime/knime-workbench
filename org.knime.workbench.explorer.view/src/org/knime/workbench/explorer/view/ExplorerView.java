@@ -18,8 +18,12 @@
  */
 package org.knime.workbench.explorer.view;
 
+import java.io.File;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
+import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.filesystem.local.LocalFile;
 import org.eclipse.core.runtime.CoreException;
@@ -30,6 +34,8 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.util.LocalSelectionTransfer;
+import org.eclipse.jface.viewers.DoubleClickEvent;
+import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
@@ -44,6 +50,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IViewSite;
 import org.eclipse.ui.IWorkbenchActionConstants;
@@ -63,8 +70,8 @@ import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 
@@ -83,7 +90,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private TreeViewer m_viewer;
 
-    private ContentDelegator m_contentDelegator;
+    private final ContentDelegator m_contentDelegator = new ContentDelegator();
 
     private DrillDownAdapter m_drillDownAdapter;
 
@@ -104,7 +111,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         overall.setLayoutData(data);
 
         createButtons(overall);
-        m_contentDelegator = new ContentDelegator();
         createTreeViewer(overall, m_contentDelegator);
         assert m_viewer != null; // should be set by createTreeViewer
         // needed by the toolbar and the menus
@@ -189,48 +195,90 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         });
     }
 
-    private void openSelected() {
+    private boolean openSelected() {
         IStructuredSelection selection =
                 (IStructuredSelection)m_viewer.getSelection();
-        if (!selection.isEmpty()
-                && (selection.getFirstElement() instanceof ContentObject)) {
-            ContentObject co = (ContentObject)selection.getFirstElement();
-            ExplorerFileStore efs = co.getObject();
-            try {
-                openEditor(new LocalFile(efs.toLocalFile(PROP_TITLE, null)));
-            } catch (CoreException e) {
-                LOGGER.error("Unable to open " + efs.getFullName(), e);
+        // for now we open only local files
+        LinkedList<LocalFile> selFiles = new LinkedList<LocalFile>();
+        if (selection.isEmpty()) {
+            return false;
+        }
+        @SuppressWarnings("unchecked")
+        Iterator<Object> iter = selection.iterator();
+        while (iter.hasNext()) {
+            Object sel = iter.next();
+            if (sel instanceof ContentObject) {
+                try {
+                    ContentObject co = (ContentObject)sel;
+                    File f = co.getObject().toLocalFile(EFS.NONE, null);
+                    if (f != null) {
+                        selFiles.add(new LocalFile(f));
+                    }
+                } catch (CoreException ce) {
+                    // then don't add it
+                }
             }
         }
+
+        if (selFiles.size() > 5) {
+            MessageBox mb =
+                    new MessageBox(getViewSite().getShell(), SWT.ICON_QUESTION
+                            | SWT.CANCEL | SWT.OK);
+            mb.setText("Confirm creation of multiple edtiors");
+            mb.setMessage("Are you sure you want to open " + selection.size()
+                    + " editor windows?");
+            if (mb.open() != SWT.OK) {
+                return false;
+            }
+        }
+        boolean opened = false;
+        for (LocalFile lf : selFiles) {
+            opened |= openEditor(lf);
+        }
+        return opened;
     }
 
-    private void openEditor(final IFileStore fs) {
-        if (fs.fetchInfo().isDirectory()) {
-            IFileStore wf = fs.getChild(WorkflowPersistor.WORKFLOW_FILE);
+    private boolean openEditor(final LocalFile lf) {
+        if (lf.fetchInfo().isDirectory()) {
+            IFileStore wf = lf.getChild(WorkflowPersistor.WORKFLOW_FILE);
             if (wf.fetchInfo().exists()) {
                 try {
                     IDE.openEditorOnFileStore(PlatformUI.getWorkbench()
                             .getActiveWorkbenchWindow().getActivePage(), wf);
-                    return;
+                    return true;
                 } catch (PartInitException e) {
-                    LOGGER.warn("Unable to open editor for " + fs.getName()
+                    LOGGER.warn("Unable to open editor for " + lf.getName()
                             + ": " + e.getMessage(), e);
+                    return false;
                 }
+            } else {
+                // we open no other than workflow directories
+                return false;
             }
-            LOGGER.warn("Can't open directories: " + fs.getName());
         } else {
             try {
                 PlatformUI
                         .getWorkbench()
                         .getActiveWorkbenchWindow()
                         .getActivePage()
-                        .openEditor(new FileStoreEditorInput(fs),
+                        .openEditor(new FileStoreEditorInput(lf),
                                 "org.eclipse.ui.DefaultTextEditor");
-                return;
+                return true;
             } catch (PartInitException e) {
-                LOGGER.warn("Unable to open editor for " + fs.getName() + ": "
+                LOGGER.warn("Unable to open editor for " + lf.getName() + ": "
                         + e.getMessage(), e);
+                return false;
             }
+        }
+    }
+
+    private void expandSelected() {
+        IStructuredSelection selection =
+                (IStructuredSelection)m_viewer.getSelection();
+        @SuppressWarnings("unchecked")
+        Iterator<Object> iter = selection.iterator();
+        while (iter.hasNext()) {
+            m_viewer.expandToLevel(iter.next(), 1);
         }
     }
 
@@ -259,6 +307,14 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         m_viewer.setContentProvider(provider);
         m_viewer.setLabelProvider(provider);
         m_viewer.setInput(provider); // the provider is also the root!
+        m_viewer.addDoubleClickListener(new IDoubleClickListener() {
+            @Override
+            public void doubleClick(final DoubleClickEvent event) {
+                if (!openSelected()) {
+                    expandSelected();
+                }
+            }
+        });
         ProjectWorkflowMap.addWorkflowListener(this);
         ProjectWorkflowMap.addStateListener(this);
         ProjectWorkflowMap.addNodeMessageListener(this);
@@ -388,7 +444,13 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      */
     @Override
     public void saveState(final IMemento memento) {
-        m_contentDelegator.saveState(memento.getChild("content"));
+        m_contentDelegator.saveState(memento.createChild("content"));
+
+        // TODO: The mount table should be saved somewhere else.
+        // TODO: Remove the code below.
+        ExplorerMountTable.saveState(memento.createChild("mount"));
+
+
     }
 
     /**
@@ -399,6 +461,16 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             throws PartInitException {
         super.init(site, memento);
         if (memento != null) {
+            // TODO: The mount table should be saved somewhere else.
+            // first restore mount points
+            IMemento mounts = memento.getChild("mount");
+            if (mounts != null) {
+                ExplorerMountTable.restore(mounts);
+            } else {
+                LOGGER.warn("Corrupted User Resource View state storage. "
+                        + "Can't restore mount points.");
+            }
+            // restore visible mount points
             IMemento content = memento.getChild("content");
             if (content != null) {
                 m_contentDelegator.restoreState(content);
