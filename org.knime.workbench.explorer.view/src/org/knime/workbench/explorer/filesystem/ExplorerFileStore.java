@@ -118,6 +118,7 @@ public abstract class ExplorerFileStore extends FileStore {
                     return false;
                 }
             }
+            return true;
         }
         return false;
     }
