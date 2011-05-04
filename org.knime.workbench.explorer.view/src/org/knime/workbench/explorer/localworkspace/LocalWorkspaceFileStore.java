@@ -61,9 +61,11 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      *
      * @param mountID
      * @param file the underlying {@link LocalFile}
+     * @param fullPath the path relative to the root!
      */
-    private LocalWorkspaceFileStore(final String mountID, final IFileStore file) {
-        super(mountID, file.getName());
+    private LocalWorkspaceFileStore(final String mountID,
+            final IFileStore file, final String fullPath) {
+        super(mountID, fullPath);
         m_file = file;
     }
 
@@ -90,7 +92,8 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      */
     @Override
     public LocalWorkspaceFileStore getChild(final String name) {
-        return new LocalWorkspaceFileStore(getMountID(), m_file.getChild(name));
+        return new LocalWorkspaceFileStore(getMountID(), m_file.getChild(name),
+                new Path(getFullName()).append(name).toString());
     }
 
     /**
@@ -98,7 +101,12 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      */
     @Override
     public LocalWorkspaceFileStore getParent() {
-        return new LocalWorkspaceFileStore(getMountID(), m_file.getParent());
+        IFileStore p = m_file.getParent();
+        if (p == null) {
+            return null;
+        }
+        return new LocalWorkspaceFileStore(getMountID(), p, new Path(
+                getFullName()).removeLastSegments(1).toString());
     }
 
     /**

@@ -19,8 +19,12 @@
 package org.knime.workbench.explorer.view;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
@@ -29,6 +33,7 @@ import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.part.ViewPart;
+import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 
@@ -53,7 +58,10 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * Empty result array.
      */
     protected static final ExplorerFileStore[] NO_CHILD =
-        new ExplorerFileStore[0];
+            new ExplorerFileStore[0];
+
+    private static final NodeLogger LOGGER = NodeLogger
+            .getLogger(AbstractContentProvider.class);
 
     private final AbstractContentProviderFactory m_creator;
 
@@ -194,5 +202,102 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     @Override
     public abstract ExplorerFileStore getParent(Object element);
+
+    /**
+     * Helper method for content providers. Returns children of a workflow.
+     *
+     * @param workflow the workflow to return the children for
+     * @return children of a workflow
+     */
+    public static ExplorerFileStore[] getWorkflowChildren(
+            final ExplorerFileStore workflow) {
+        assert ExplorerFileStore.isWorkflow(workflow);
+
+        try {
+            IFileStore[] childs = workflow.childStores(EFS.NONE, null);
+            if (childs == null || childs.length == 0) {
+                return NO_CHILD;
+            }
+            /*
+             * currently we are not showing nodes
+             */
+            return NO_CHILD;
+            // ArrayList<ExplorerFileStore> result =
+            // new ArrayList<ExplorerFileStore>();
+            // for (IFileStore c : childs) {
+            // not adding nodes for now.
+            // if (ExplorerFileStore.isMetaNode((ExplorerFileStore)c)) {
+            // || ExplorerFileStore.isNode(childFile)) {
+            // result.add((ExplorerFileStore)c);
+            // }
+            // }
+            // return result.toArray(new ExplorerFileStore[result.size()]);
+        } catch (CoreException ce) {
+            LOGGER.debug(ce);
+            return NO_CHILD;
+        }
+
+    }
+
+    /**
+     * Helper method for content providers. Returns children of a workflowgroup.
+     *
+     * @param workflowGroup the workflow group to return the children for
+     * @return the content of the workflow group
+     */
+    public static ExplorerFileStore[] getWorkflowgroupChildren(
+            final ExplorerFileStore workflowGroup) {
+
+        assert ExplorerFileStore.isWorkflowGroup(workflowGroup);
+
+        try {
+            IFileStore[] childs = workflowGroup.childStores(EFS.NONE, null);
+            if (childs == null || childs.length == 0) {
+                return NO_CHILD;
+            }
+            ArrayList<ExplorerFileStore> result =
+                    new ArrayList<ExplorerFileStore>();
+            for (IFileStore c : childs) {
+                if (ExplorerFileStore.isWorkflowGroup((ExplorerFileStore)c)
+                        || ExplorerFileStore.isWorkflow(c)) {
+                    result.add((ExplorerFileStore)c);
+                }
+            }
+            return result.toArray(new ExplorerFileStore[result.size()]);
+        } catch (CoreException ce) {
+            LOGGER.debug(ce);
+            return NO_CHILD;
+        }
+    }
+
+    public static ExplorerFileStore[] getMetaNodeChildren(
+            final ExplorerFileStore metaNode) {
+        assert ExplorerFileStore.isMetaNode(metaNode);
+
+        try {
+            IFileStore[] childs = metaNode.childStores(EFS.NONE, null);
+            if (childs == null || childs.length == 0) {
+                return NO_CHILD;
+            }
+            /*
+             * currently we are not showing nodes
+             */
+            return NO_CHILD;
+            // ArrayList<ExplorerFileStore> result =
+            // new ArrayList<ExplorerFileStore>();
+            // for (IFileStore c : childs) {
+            // not adding nodes for now.
+            // if (ExplorerFileStore.isMetaNode((ExplorerFileStore)c)) {
+            // || ExplorerFileStore.isNode(childFile)) {
+            // result.add((ExplorerFileStore)c);
+            // }
+            // }
+            // return result.toArray(new ExplorerFileStore[result.size()]);
+        } catch (CoreException ce) {
+            LOGGER.debug(ce);
+            return NO_CHILD;
+        }
+
+    }
 
 }

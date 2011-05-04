@@ -204,7 +204,7 @@ public class ContentDelegator extends LabelProvider implements
         ContentObject c = (ContentObject)element;
         // we must ask the corresponding content provider
         AbstractContentProvider provider = c.getProvider();
-        Object parent = provider.getParent(c.getObject());
+        ExplorerFileStore parent = provider.getParent(c.getObject());
         if (provider.getFileStore("/").equals(parent)) {
             // the root of each subtree is the provider itself
             return provider;

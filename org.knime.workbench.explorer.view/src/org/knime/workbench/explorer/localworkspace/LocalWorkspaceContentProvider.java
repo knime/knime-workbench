@@ -26,7 +26,6 @@ import java.util.List;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
@@ -90,45 +89,35 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             return NO_CHILD;
         }
         LocalWorkspaceFileStore parent = (LocalWorkspaceFileStore)parentElement;
-        File parentFile;
+
+        if (ExplorerFileStore.isNode(parent)) {
+            return NO_CHILD;
+        }
+        if (ExplorerFileStore.isWorkflow(parent)) {
+            return AbstractContentProvider.getWorkflowChildren(parent);
+        }
+        if (ExplorerFileStore.isWorkflowGroup(parent)) {
+            return AbstractContentProvider.getWorkflowgroupChildren(parent);
+        }
+        // everything else: return dirs only
         try {
-            parentFile = parent.toLocalFile(EFS.NONE, null);
-        } catch (CoreException ce) {
-            return NO_CHILD;
-        }
-        // we display nodes, metanodes and workflows - which are directories
-        if (!parentFile.isDirectory()) {
-            return NO_CHILD;
-        }
-        if (ExplorerFileStore.isNode(parentFile)) {
-            return NO_CHILD;
-        }
-        try {
-            IFileStore[] childs = parent.childStores(EFS.NONE, null);
-            if (childs == null || childs.length == 0) {
-                return NO_CHILD;
-            }
+            IFileStore[] children = parent.childStores(EFS.NONE, null);
             ArrayList<ExplorerFileStore> result =
                     new ArrayList<ExplorerFileStore>();
-            for (IFileStore c : childs) {
-                File childFile = c.toLocalFile(EFS.NONE, null);
-                if (childFile == null) {
+            for (IFileStore c : children) {
+                if (ExplorerFileStore.isWorkflow(c)) {
+                    result.add((ExplorerFileStore)c);
                     continue;
                 }
-                if (ExplorerFileStore.isWorkflowGroup(childFile)
-                        || ExplorerFileStore.isWorkflow(childFile)
-                        || ExplorerFileStore.isMetaNode(childFile)
-                        || ExplorerFileStore.isNode(childFile)) {
-                    result.add(new LocalWorkspaceFileStore(getMountID(),
-                            new Path(parent.getFullName()).append(c.getName())
-                                    .toString()));
+                if (ExplorerFileStore.isWorkflowGroup((ExplorerFileStore)c)) {
+                    result.add((ExplorerFileStore)c);
+                    continue;
                 }
             }
             return result.toArray(new ExplorerFileStore[result.size()]);
-        } catch (CoreException ce) {
+        } catch (CoreException e) {
             return NO_CHILD;
         }
-
     }
 
     /**
@@ -170,16 +159,16 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         } catch (CoreException ce) {
             return ICONS.error();
         }
-        if (ExplorerFileStore.isNode(f)) {
+        if (ExplorerFileStore.isNode(e)) {
             return ICONS.node();
         }
-        if (ExplorerFileStore.isMetaNode(f)) {
+        if (ExplorerFileStore.isMetaNode(e)) {
             return ICONS.node();
         }
-        if (ExplorerFileStore.isWorkflowGroup(f)) {
+        if (ExplorerFileStore.isWorkflowGroup(e)) {
             return ICONS.workflowgroup();
         }
-        if (!ExplorerFileStore.isWorkflow(f)) {
+        if (!ExplorerFileStore.isWorkflow(e)) {
             return ICONS.unknownRed();
         }
         URI wfURI = f.toURI();

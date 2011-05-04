@@ -18,11 +18,11 @@
  */
 package org.knime.workbench.explorer.view;
 
-import java.io.File;
 import java.util.List;
 
 import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.internal.filesystem.local.LocalFileSystem;
+import org.eclipse.core.internal.filesystem.local.LocalFile;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
@@ -64,6 +64,7 @@ import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.MountPoint;
+import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 
@@ -194,12 +195,11 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         if (!selection.isEmpty()
                 && (selection.getFirstElement() instanceof ContentObject)) {
             ContentObject co = (ContentObject)selection.getFirstElement();
-            if (co.getObject() instanceof IFileStore) {
-                openEditor((IFileStore)co.getObject());
-            }
-            if (co.getObject() instanceof File) {
-                openEditor(LocalFileSystem.getInstance().fromLocalFile(
-                        (File)co.getObject()));
+            ExplorerFileStore efs = co.getObject();
+            try {
+                openEditor(new LocalFile(efs.toLocalFile(PROP_TITLE, null)));
+            } catch (CoreException e) {
+                LOGGER.error("Unable to open " + efs.getFullName(), e);
             }
         }
     }

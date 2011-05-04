@@ -54,6 +54,11 @@ public abstract class ExplorerFileStore extends FileStore {
     public ExplorerFileStore(final String mountID, final String fullPath) {
         m_fullPath = fullPath;
         m_mountID = mountID;
+        if (m_fullPath == null) {
+            throw new NullPointerException("Path in can't be null (mountID = "
+                    + m_mountID + ")");
+        }
+
     }
 
     /**
@@ -123,12 +128,12 @@ public abstract class ExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a workflow
      * @return true if the file is a workflow, false otherwise
      */
-    public static boolean isWorkflow(final File file) {
-        if (file == null || !file.exists()) {
+    public static boolean isWorkflow(final IFileStore file) {
+        if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-        File wf = new File(file, WorkflowPersistor.WORKFLOW_FILE);
-        return wf.exists() && !isWorkflow(file.getParentFile());
+        IFileStore wf = file.getChild(WorkflowPersistor.WORKFLOW_FILE);
+        return wf.fetchInfo().exists() && !isWorkflow(file.getParent());
     }
 
     /**
@@ -137,12 +142,15 @@ public abstract class ExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a workflow group
      * @return true if the file is a workflow group, false otherwise
      */
-    public static boolean isWorkflowGroup(final File file) {
-        if (isWorkflow(file) || isWorkflow(file.getParentFile())
-                || !file.exists()) {
+    public static boolean isWorkflowGroup(final ExplorerFileStore file) {
+        if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-        return new File(file, MetaInfoFile.METAINFO_FILE).exists();
+
+        if (isWorkflow(file) || isWorkflow(file.getParent())) {
+            return false;
+        }
+        return file.getChild(MetaInfoFile.METAINFO_FILE).fetchInfo().exists();
     }
 
     /**
@@ -151,14 +159,17 @@ public abstract class ExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a meta node
      * @return true if the file is a meta node, false otherwise
      */
-    public static boolean isMetaNode(final File file) {
-        if (!file.exists()) {
+    public static boolean isMetaNode(final ExplorerFileStore file) {
+        if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-        File wf = new File(file, WorkflowPersistor.WORKFLOW_FILE);
-        File parentWf =
-                new File(file.getParentFile(), WorkflowPersistor.WORKFLOW_FILE);
-        return wf.exists() && parentWf.exists();
+        IFileStore parent = file.getParent();
+        if (parent == null) {
+            return false;
+        }
+        IFileStore wf = file.getChild(WorkflowPersistor.WORKFLOW_FILE);
+        IFileStore parentWf = parent.getChild(WorkflowPersistor.WORKFLOW_FILE);
+        return wf.fetchInfo().exists() && parentWf.fetchInfo().exists();
     }
 
     /**
@@ -167,14 +178,13 @@ public abstract class ExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a node
      * @return true if the file is a node, false otherwise
      */
-    public static boolean isNode(final File file) {
-        if (!file.exists() || isMetaNode(file)) {
+    public static boolean isNode(final ExplorerFileStore file) {
+        if (file == null || !file.fetchInfo().exists() || isMetaNode(file)) {
             return false;
         }
-        return new File(file, SingleNodeContainerPersistorVersion200.NODE_FILE)
-                .exists();
+        return file.getChild(SingleNodeContainerPersistorVersion200.NODE_FILE)
+                .fetchInfo().exists();
     }
-
 
     /* ----------- placeholder store in the tree for string messages ----- */
 

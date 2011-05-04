@@ -18,10 +18,11 @@
  */
 package org.knime.workbench.explorer.view;
 
+import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 
 /**
- * Used as object in the treeview of the user space. Wraps the objects provided
- * by the different content providers. Stores the original object and a
+ * Used as object in the treeview of the KNIME Explorer. Wraps the objects
+ * provided by the different content providers. Stores the original object and a
  * reference to the creator/provider. <br />
  * (The original approach with a hash map doesn't work because the original
  * objects may not implement equals. Actually the eclipse resources don't.)
@@ -30,7 +31,7 @@ package org.knime.workbench.explorer.view;
  */
 public final class ContentObject {
 
-    private final Object m_obj;
+    private final ExplorerFileStore m_obj;
 
     private final AbstractContentProvider m_creator;
 
@@ -38,7 +39,8 @@ public final class ContentObject {
      * @param creator
      * @param o
      */
-    ContentObject(final AbstractContentProvider creator, final Object o) {
+    ContentObject(final AbstractContentProvider creator,
+            final ExplorerFileStore o) {
         if (creator == null) {
             throw new NullPointerException(
                     "Creator (provider) can't be null for Object " + o);
@@ -50,7 +52,7 @@ public final class ContentObject {
     /**
      * @return the wrapped object
      */
-    public Object getObject() {
+    public ExplorerFileStore getObject() {
         return m_obj;
     }
 
@@ -92,6 +94,7 @@ public final class ContentObject {
         }
         return false;
     }
+
     /**
      * {@inheritDoc}
      */
