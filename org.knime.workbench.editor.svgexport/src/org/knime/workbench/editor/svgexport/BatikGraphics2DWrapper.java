@@ -576,6 +576,29 @@ public class BatikGraphics2DWrapper extends Graphics {
 	public void stream(final Writer writer, final Boolean useCSS) throws SVGGraphics2DIOException{
 		batikGraphicsSVG.stream(writer, useCSS);
 	}
+	
+	
+
+	@Override
+	public void setLineDash(int[] dash) {
+		if (dash != null){
+			float[] dashes = new float[dash.length];
+			int i=0;
+			for (int value:dash){
+				dashes[i]=(float)value;
+				i++;
+			}
+			batikGraphicsSVG.setStroke(new BasicStroke(_SWTLineWidth, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10, dashes, 0));
+		}
+		else
+			batikGraphicsSVG.setStroke(new BasicStroke(_SWTLineWidth, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10, null, 0));
+
+	}
+
+	@Override
+	public void setLineDash(float[] value) {
+		batikGraphicsSVG.setStroke(new BasicStroke(_SWTLineWidth, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10, value, 0));
+	}
 
 	@Override
 	public void setLineAttributes(final LineAttributes attributes) {
