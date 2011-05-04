@@ -19,8 +19,13 @@
  */
 package org.knime.workbench.explorer;
 
+import java.util.Hashtable;
+
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.url.URLConstants;
+import org.osgi.service.url.URLStreamHandlerService;
 
 /**
  *
@@ -51,12 +56,12 @@ public class ExplorerActivator implements BundleActivator {
         ExplorerActivator.context = bundleContext;
 
         // register our handler for the "explorer" protocol with the framework
-//        Hashtable<String, String[]> properties =
-//                new Hashtable<String, String[]>();
-//        properties.put(URLConstants.URL_HANDLER_PROTOCOL,
-//                new String[]{ExplorerFileSystem.SCHEME});
-//        context.registerService(URLStreamHandlerService.class.getName(),
-//                new ExplorerURLStreamHandler(), properties);
+        Hashtable<String, String[]> properties =
+                new Hashtable<String, String[]>();
+        properties.put(URLConstants.URL_HANDLER_PROTOCOL,
+                new String[]{ExplorerFileSystem.SCHEME});
+        context.registerService(URLStreamHandlerService.class.getName(),
+                new ExplorerURLStreamHandler(), properties);
 
     }
 
