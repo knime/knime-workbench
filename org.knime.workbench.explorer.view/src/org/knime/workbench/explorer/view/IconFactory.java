@@ -47,6 +47,10 @@ public class IconFactory {
     private static final Image CLOSED_WORKFLOW = KNIMEUIPlugin.getDefault()
             .getImage(KNIMEUIPlugin.PLUGIN_ID, "icons/project_closed2.png");
 
+    /** Icon representing a workflow. Neutral.*/
+    private static final Image WORKFLOW = KNIMEUIPlugin.getDefault()
+            .getImage(KNIMEUIPlugin.PLUGIN_ID, "icons/project_basic.png");
+
     /** Icon representing a node in the resource navigator. */
     private static final Image NODE = KNIMEUIPlugin.getDefault().getImage(
             KNIMEUIPlugin.PLUGIN_ID, "icons/node.png");
@@ -101,6 +105,10 @@ public class IconFactory {
 
     public Image workflowError() {
         return ERROR_WORKFLOW;
+    }
+
+    public Image workflowNeutral() {
+        return WORKFLOW;
     }
 
     public Image node() {
