@@ -59,7 +59,7 @@ public final class ContentObject {
     /**
      * @return the creator of the wrapped object.
      */
-    AbstractContentProvider getProvider() {
+    public AbstractContentProvider getProvider() {
         return m_creator;
     }
 

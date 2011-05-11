@@ -20,7 +20,7 @@
  *   Apr 28, 2011 (morent): created
  */
 
-package org.knime.workbench.explorer.view;
+package org.knime.workbench.explorer.view.dnd;
 
 import java.util.List;
 import java.util.Map;
@@ -33,22 +33,23 @@ import org.eclipse.swt.dnd.DragSourceEvent;
 import org.eclipse.swt.dnd.DragSourceListener;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
  *
  * @author Dominik Morent, KNIME.com, Zurich, Switzerland
  *
  */
-public class FileDragListener implements DragSourceListener {
+public class ExplorerDragListener implements DragSourceListener {
     private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(FileDragListener.class);
+            .getLogger(ExplorerDragListener.class);
 
     private final TreeViewer m_viewer;
 
     /**
      * @param viewer the viewer to which this drag support has been added.
      */
-    public FileDragListener(final TreeViewer viewer) {
+    public ExplorerDragListener(final TreeViewer viewer) {
         m_viewer = viewer;
     }
 

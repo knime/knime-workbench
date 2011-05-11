@@ -74,6 +74,8 @@ import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
+import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
+import org.knime.workbench.explorer.view.dnd.ExplorerDropListener;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 
 /**
@@ -97,9 +99,9 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private DrillDownAdapter m_drillDownAdapter;
 
-    private FileDragListener m_dragListener;
+    private ExplorerDragListener m_dragListener;
 
-    private FileDropListener m_dropListener;
+    private ExplorerDropListener m_dropListener;
 
     /**
      * {@inheritDoc}
@@ -118,8 +120,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         assert m_viewer != null; // should be set by createTreeViewer
         // needed by the toolbar and the menus
         m_drillDownAdapter = new DrillDownAdapter(m_viewer);
-        m_dragListener = new FileDragListener(m_viewer);
-        m_dropListener = new FileDropListener(m_viewer);
+        m_dragListener = new ExplorerDragListener(m_viewer);
+        m_dropListener = new ExplorerDropListener(m_viewer);
         initDragAndDrop();
         makeGlobalActions();
         createLocalToolBar();

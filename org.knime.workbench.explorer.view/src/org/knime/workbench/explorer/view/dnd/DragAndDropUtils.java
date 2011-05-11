@@ -20,7 +20,7 @@
  *   Apr 29, 2011 (morent): created
  */
 
-package org.knime.workbench.explorer.view;
+package org.knime.workbench.explorer.view.dnd;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,6 +30,8 @@ import java.util.TreeMap;
 
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ContentObject;
 
 /**
  * Utility class for drag and drop support.

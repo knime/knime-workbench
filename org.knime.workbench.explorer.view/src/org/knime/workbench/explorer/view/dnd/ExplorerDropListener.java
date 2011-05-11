@@ -20,26 +20,27 @@
   *   Apr 28, 2011 (morent): created
   */
 
-package org.knime.workbench.explorer.view;
+package org.knime.workbench.explorer.view.dnd;
 
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
 import org.eclipse.swt.dnd.TransferData;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.view.ContentObject;
 
 /**
  *
  * @author Dominik Morent, KNIME.com, Zurich, Switzerland
  *
  */
-public class FileDropListener extends ViewerDropAdapter {
+public class ExplorerDropListener extends ViewerDropAdapter {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            FileDropListener.class);
+            ExplorerDropListener.class);
     /**
      * @param viewer the viewer to which this drop support has been added
      */
-    protected FileDropListener(final Viewer viewer) {
+    public ExplorerDropListener(final Viewer viewer) {
         super(viewer);
     }
 
