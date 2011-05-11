@@ -21,7 +21,9 @@ package org.knime.workbench.explorer;
 
 import java.util.Hashtable;
 
+import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.view.preferences.ExplorerPrefsSyncer;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.url.URLConstants;
@@ -52,9 +54,7 @@ public class ExplorerActivator implements BundleActivator {
      */
     @Override
     public void start(final BundleContext bundleContext) throws Exception {
-
         ExplorerActivator.context = bundleContext;
-
         // register our handler for the "explorer" protocol with the framework
         Hashtable<String, String[]> properties =
                 new Hashtable<String, String[]>();
@@ -62,7 +62,8 @@ public class ExplorerActivator implements BundleActivator {
                 new String[]{ExplorerFileSystem.SCHEME});
         context.registerService(URLStreamHandlerService.class.getName(),
                 new ExplorerURLStreamHandler(), properties);
-
+        KNIMECorePlugin.getDefault().getPreferenceStore()
+                .addPropertyChangeListener(new ExplorerPrefsSyncer());
     }
 
     /**

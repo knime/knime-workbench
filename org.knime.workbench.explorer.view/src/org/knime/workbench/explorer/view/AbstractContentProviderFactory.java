@@ -19,7 +19,6 @@
 package org.knime.workbench.explorer.view;
 
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.ui.IMemento;
 import org.knime.workbench.explorer.ExplorerMountTable;
 
 /**
@@ -28,9 +27,12 @@ import org.knime.workbench.explorer.ExplorerMountTable;
  */
 public abstract class AbstractContentProviderFactory {
 
+    /**
+     * Refreshes this factory.
+     */
     public void refreshMe() {
         // TODO: fire property change event.
-        // TODO: ContentDelegaor must register as listener (and unregister!)
+        // TODO: ContentDelegator must register as listener (and unregister!)
     }
 
     /**
@@ -70,11 +72,12 @@ public abstract class AbstractContentProviderFactory {
     public abstract AbstractContentProvider getContentProvider(final String id);
 
     /**
-     *
-     * @param menento
-     * @return a new instance with its state restored from the passed structure
-     * @see AbstractContentProvider#saveState(IMemento)
-     */
-    public abstract AbstractContentProvider getContentProvider(final String id,
-            final IMemento menento);
+    *
+    * @param mountID the id of the mount to restore
+     * @param content the string content representing the state of the content
+    *       provider
+    * @return a new instance with its state restored from the passed structure
+    */
+   public abstract AbstractContentProvider getContentProvider(
+           final String mountID, final String content);
 }

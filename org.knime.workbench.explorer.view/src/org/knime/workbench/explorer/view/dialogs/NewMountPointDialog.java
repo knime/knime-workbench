@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------
- * This source code, its documentation and all appendant files
+# * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
  * Copyright (c) KNIME.com, Zurich, Switzerland
@@ -22,6 +22,7 @@ package org.knime.workbench.explorer.view.dialogs;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -71,6 +72,23 @@ public class NewMountPointDialog extends ListDialog {
     private static final ImageDescriptor IMG_ERR = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/error.png");
+
+    private static final Set<Character> INVALID_CHARS;
+    private static final String INVALID_MSG;
+
+    static {
+        INVALID_CHARS = new LinkedHashSet<Character>();
+        INVALID_CHARS.add(':');
+        INVALID_CHARS.add('\\');
+        INVALID_CHARS.add('/');
+        StringBuffer sb = new StringBuffer();
+        sb.append("The following characters are invalid as mount id: ");
+        for (Character character : INVALID_CHARS) {
+            sb.append(character);
+            sb.append(" ");
+        }
+        INVALID_MSG = sb.toString();
+    }
 
     private String m_mountIDval;
 
@@ -129,7 +147,7 @@ public class NewMountPointDialog extends ListDialog {
     protected void okPressed() {
         // this method gets called through a double click (if cancel button is
         // added)
-        if (!validate()) {
+        if (!validate(null)) {
             return;
         }
 
@@ -163,28 +181,29 @@ public class NewMountPointDialog extends ListDialog {
         GridLayout gl = new GridLayout(1, true);
         gl.marginHeight =
                 convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
-        gl.marginWidth =
-                convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
+        gl.marginWidth = convertHorizontalDLUsToPixels(
+                IDialogConstants.HORIZONTAL_MARGIN);
         gl.verticalSpacing =
                 convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_SPACING);
-        gl.horizontalSpacing =
-                convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_SPACING);
+        gl.horizontalSpacing = convertHorizontalDLUsToPixels(
+                IDialogConstants.HORIZONTAL_SPACING);
         mountHdr.setLayout(gl);
         mountHdr.setLayoutData(new GridData(GridData.FILL_BOTH));
 
         Label txt = new Label(mountHdr, SWT.NONE);
-        txt.setText("Enter the name that is used to reference the new content.");
+        txt.setText(
+                "Enter the name that is used to reference the new content.");
 
         Composite mountInput = new Composite(mountHdr, SWT.FILL | SWT.BORDER);
         gl = new GridLayout(2, false);
         gl.marginHeight =
                 convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
-        gl.marginWidth =
-                convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
+        gl.marginWidth = convertHorizontalDLUsToPixels(
+                IDialogConstants.HORIZONTAL_MARGIN);
         // gl.verticalSpacing =
         // convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_SPACING);
-        gl.horizontalSpacing =
-                convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_SPACING);
+        gl.horizontalSpacing = convertHorizontalDLUsToPixels(
+                IDialogConstants.HORIZONTAL_SPACING);
         mountInput.setLayout(gl);
         GridData gd = new GridData(SWT.FILL, SWT.FILL, true, true);
         mountInput.setLayoutData(gd);
@@ -197,12 +216,12 @@ public class NewMountPointDialog extends ListDialog {
         m_mountID.addKeyListener(new KeyListener() {
             @Override
             public void keyReleased(final KeyEvent e) {
-                validate();
+                validate(e);
             }
 
             @Override
             public void keyPressed(final KeyEvent e) {
-                validate();
+                validate(e);
             }
         });
 
@@ -214,7 +233,7 @@ public class NewMountPointDialog extends ListDialog {
                     @Override
                     public void selectionChanged(
                             final SelectionChangedEvent event) {
-                        validate();
+                        validate(null);
                     }
                 });
         return c;
@@ -223,10 +242,11 @@ public class NewMountPointDialog extends ListDialog {
 
     /**
      * Enables the ok button and sets the error icon/message.
+     * @param keyEvent the key event or null
      *
      * @return true, if the selection/input is okay.
      */
-    protected boolean validate() {
+    protected boolean validate(final KeyEvent keyEvent) {
         boolean valid = true;
         String errMsg = "";
         if (getTableViewer().getSelection().isEmpty()) {
@@ -244,6 +264,18 @@ public class NewMountPointDialog extends ListDialog {
                 errMsg =
                         "Mount ID already in use. Please enter "
                                 + "a different ID.";
+            }
+        }
+        if (keyEvent != null && INVALID_CHARS.contains(keyEvent.character)) {
+            valid = false;
+            errMsg = INVALID_MSG;
+        } else {
+            for (char c : id.toCharArray()) {
+                if (INVALID_CHARS.contains(c)) {
+                    valid = false;
+                    errMsg = INVALID_MSG;
+                    break;
+                }
             }
         }
 

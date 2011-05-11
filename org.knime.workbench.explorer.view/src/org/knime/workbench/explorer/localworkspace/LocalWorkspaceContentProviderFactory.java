@@ -19,7 +19,6 @@
 package org.knime.workbench.explorer.localworkspace;
 
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.ui.IMemento;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
@@ -64,15 +63,6 @@ public class LocalWorkspaceContentProviderFactory extends
      * {@inheritDoc}
      */
     @Override
-    public AbstractContentProvider getContentProvider(final String mountID,
-            final IMemento menento) {
-        return new LocalWorkspaceContentProvider(this, mountID);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public boolean multipleInstances() {
         return false;
     }
@@ -91,6 +81,15 @@ public class LocalWorkspaceContentProviderFactory extends
     @Override
     public Image getImage() {
         return LOCAL_WS_IMG;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public AbstractContentProvider getContentProvider(final String mountID,
+            final String content) {
+        return new LocalWorkspaceContentProvider(this, mountID);
     }
 
 }

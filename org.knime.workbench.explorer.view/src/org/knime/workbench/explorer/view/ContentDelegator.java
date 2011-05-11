@@ -18,11 +18,14 @@
  */
 package org.knime.workbench.explorer.view;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
+import org.eclipse.jface.util.IPropertyChangeListener;
+import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
@@ -38,7 +41,8 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
- * calls to different content providers providing a view to different sources. <br />
+ * calls to different content providers providing a view to different sources.
+ * <br />
  * The objects returned by the different providers are wrapped into a
  * {@link ContentObject} (associating the creating provider with it) and the
  * wrapper is placed in the tree view. <br />
@@ -47,10 +51,16 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  * @author ohl, KNIME.com, Zurich, Switzerland
  */
 public class ContentDelegator extends LabelProvider implements
-        IStructuredContentProvider, ITreeContentProvider {
+        IStructuredContentProvider, ITreeContentProvider,
+        IPropertyChangeListener {
+    /** The property for changes in the content IPropertyChangeListener
+     * can register for. */
+    public static final String CONTENT_CHANGED = "CONTENT_CHANGED";
 
-    private static NodeLogger LOGGER = NodeLogger
+    private static final NodeLogger LOGGER = NodeLogger
             .getLogger(ContentDelegator.class);
+
+    private final List<IPropertyChangeListener> m_changeListener;
 
     private static final Image USER_SPACE_IMG = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
@@ -66,32 +76,44 @@ public class ContentDelegator extends LabelProvider implements
      */
     private final HashSet<MountPoint> m_provider;
 
-    /**
-     *
-     */
+
+    /** Creates a new content delegator and registers it for property changes
+     * of the explorer mount table. */
     public ContentDelegator() {
         m_provider = new HashSet<MountPoint>();
+        m_changeListener = new ArrayList<IPropertyChangeListener>();
+        ExplorerMountTable.addPropertyChangeListener(this);
     }
 
     /**
      * Adds the specified content provider to the explorer.
      *
-     * @param mountPoint the mount id and the contentprovider
-     * @throws IOException
+     * @param mountPoint the mount point to add
      */
     public void addMountPoint(final MountPoint mountPoint) {
         if (mountPoint == null) {
             throw new NullPointerException("Mount point can't be null");
         }
-        // TODO: register preference listener
         m_provider.add(mountPoint);
+        notifyListeners(new PropertyChangeEvent(mountPoint, CONTENT_CHANGED,
+                null, mountPoint.getMountID()));
+    }
+
+    /**
+     * @return a set with the ids of the currently shown mount points
+     */
+    public Set<String> getMountedIds() {
+        Set<String> mounted = new HashSet<String>();
+        for (MountPoint mountPoint : m_provider) {
+            mounted.add(mountPoint.getMountID());
+        }
+        return mounted;
     }
 
     /**
      * Clears the view content.
      */
     public void removeAllMountPoints() {
-        // TODO: unregister listeners
         m_provider.clear();
     }
 
@@ -155,7 +177,8 @@ public class ContentDelegator extends LabelProvider implements
         if (!(parentElement instanceof ContentObject)) {
             // all children should be of that type!
             LOGGER.coding("Unexpected object in tree view! (" + parentElement
-                    + " of type " + parentElement.getClass().getCanonicalName());
+                    + " of type "
+                    + parentElement.getClass().getCanonicalName());
             return NO_CHILDREN;
         }
         ContentObject c = ((ContentObject)parentElement);
@@ -359,6 +382,57 @@ public class ContentDelegator extends LabelProvider implements
                     continue;
                 }
             }
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void propertyChange(final PropertyChangeEvent event) {
+        if (!ExplorerMountTable.MOUNT_POINT_PROPERTY.equals(
+                event.getProperty())) {
+            return;
+        }
+        if (event.getNewValue() == null) {
+            // mount point was removed
+            MountPoint mp = (MountPoint)event.getSource();
+            boolean removed = m_provider.remove(mp);
+            if (removed) {
+                notifyListeners(new PropertyChangeEvent(mp, CONTENT_CHANGED,
+                        mp.getMountID(), null));
+                LOGGER.warn("Removed mount point with id \"" + mp.getMountID()
+                        + "\" from view because it was deleted in the "
+                        + "preferences.");
+            }
+        }
+        // The addition of mount points is ignored.
+    }
+
+    /*---------------------------------------------------------------*/
+    /**
+     * Adds a property change listener for mount changes.
+     * @param listener the property change listener to add
+     */
+    public void addPropertyChangeListener(
+            final IPropertyChangeListener listener) {
+        m_changeListener.add(listener);
+    }
+
+    /**
+     * Removes the given listener. Calling this method has no affect if the
+     * listener is not registered.
+     *
+     * @param listener a property change listener
+     */
+    public void removePropertyChangeListener(
+            final IPropertyChangeListener listener) {
+        m_changeListener.remove(listener);
+    }
+
+    private void notifyListeners(final PropertyChangeEvent event) {
+        for (IPropertyChangeListener listener : m_changeListener) {
+            listener.propertyChange(event);
         }
     }
 }

@@ -33,7 +33,9 @@ import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.InputDialog;
+import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.LocalSelectionTransfer;
+import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -70,7 +72,6 @@ import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
@@ -80,7 +81,8 @@ import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
  * @author Peter Ohl, KNIME.com, Zurich, Switzerland
  */
 public class ExplorerView extends ViewPart implements WorkflowListener,
-        NodeStateChangeListener, NodeMessageListener, JobManagerChangedListener {
+        NodeStateChangeListener, NodeMessageListener,
+        JobManagerChangedListener, IPropertyChangeListener {
 
     /** The ID of the view as specified by the extension. */
     public static final String ID = "com.knime.workbench.userspace.view";
@@ -90,7 +92,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private TreeViewer m_viewer;
 
-    private final ContentDelegator m_contentDelegator = new ContentDelegator();
+    private final ContentDelegator m_contentDelegator
+            = new ContentDelegator();
 
     private DrillDownAdapter m_drillDownAdapter;
 
@@ -109,7 +112,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         data.verticalIndent = 0;
         data.horizontalIndent = 0;
         overall.setLayoutData(data);
-
+        m_contentDelegator.addPropertyChangeListener(this);
         createButtons(overall);
         createTreeViewer(overall, m_contentDelegator);
         assert m_viewer != null; // should be set by createTreeViewer
@@ -284,7 +287,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private void addNewItemToView() {
         SelectMountPointDialog selectDlg =
-                new SelectMountPointDialog(m_viewer.getControl().getShell());
+                new SelectMountPointDialog(m_viewer.getControl().getShell(),
+                        m_contentDelegator.getMountedIds());
         selectDlg.setBlockOnOpen(true);
         if (selectDlg.open() != InputDialog.OK) {
             return;
@@ -295,7 +299,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             m_contentDelegator.addMountPoint(mp);
         }
         m_viewer.refresh();
-
     }
 
     private void createTreeViewer(final Composite parent,
@@ -351,6 +354,14 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      */
     @Override
     public void messageChanged(final NodeMessageEvent messageEvent) {
+        refreshAsync();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void propertyChange(final PropertyChangeEvent event) {
         refreshAsync();
     }
 
@@ -445,12 +456,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     @Override
     public void saveState(final IMemento memento) {
         m_contentDelegator.saveState(memento.createChild("content"));
-
-        // TODO: The mount table should be saved somewhere else.
-        // TODO: Remove the code below.
-        ExplorerMountTable.saveState(memento.createChild("mount"));
-
-
     }
 
     /**
@@ -461,15 +466,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             throws PartInitException {
         super.init(site, memento);
         if (memento != null) {
-            // TODO: The mount table should be saved somewhere else.
-            // first restore mount points
-            IMemento mounts = memento.getChild("mount");
-            if (mounts != null) {
-                ExplorerMountTable.restore(mounts);
-            } else {
-                LOGGER.warn("Corrupted User Resource View state storage. "
-                        + "Can't restore mount points.");
-            }
             // restore visible mount points
             IMemento content = memento.getChild("content");
             if (content != null) {
@@ -486,9 +482,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      */
     @Override
     public void dispose() {
-
         m_contentDelegator.dispose();
-
     }
-
 }

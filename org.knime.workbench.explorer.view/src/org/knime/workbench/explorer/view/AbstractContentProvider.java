@@ -32,8 +32,6 @@ import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.ui.IMemento;
-import org.eclipse.ui.part.ViewPart;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeMessage;
@@ -116,12 +114,12 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
     /**
      * Save state and parameters.
+     * @return a string representation of this factory
      *
-     * @param memento structure to save state and parameters in
      * @see AbstractContentProviderFactory
-     * @see ViewPart#saveState(IMemento)
      */
-    public abstract void saveState(final IMemento memento);
+    public abstract String saveState();
+
 
     /**
      * {@inheritDoc}
@@ -310,6 +308,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * Returns an icon/image for the passed file, if it is something like a
      * workflow, group, node or meta node. If it is not a store representing one
      * of these, null is returned.
+     * @param efs the explorer file store
+     * @return the icon/image for the passed file store
      */
     public static Image getWorkspaceImage(final ExplorerFileStore efs) {
 
