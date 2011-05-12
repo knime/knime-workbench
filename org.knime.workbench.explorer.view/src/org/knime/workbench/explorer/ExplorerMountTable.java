@@ -28,6 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtensionPoint;
@@ -57,7 +58,7 @@ public final class ExplorerMountTable {
             .getLogger(ExplorerMountTable.class);
 
     private static final List<IPropertyChangeListener> CHANGE_LISTENER
-            = new ArrayList<IPropertyChangeListener>();
+            = new CopyOnWriteArrayList<IPropertyChangeListener>();
 
     private ExplorerMountTable() {
         // hiding constructor of utility class
@@ -273,7 +274,8 @@ public final class ExplorerMountTable {
                     : CONTENT_FACTORIES.entrySet()) {
                 String facID = e.getKey();
                 AbstractContentProviderFactory fac = e.getValue();
-                if (fac.multipleInstances() || !isMounted(facID)) {
+                if (fac.multipleInstances()
+                        || !(isMounted(facID) || isPrepared(facID))) {
                     result.add(fac);
                 }
             }
@@ -344,6 +346,19 @@ public final class ExplorerMountTable {
 
     /**
      * Checks whether an instance created by the specified factory is already
+     * prepared for mounting.
+     *
+     *
+     * @param providerID the id of the provider factory
+     * @return true, if an instance created by the specified factory exists
+     *         already, false, if not.
+     */
+    public static boolean isPrepared(final String providerID) {
+        return !getPreparedMountIDs(providerID).isEmpty();
+    }
+
+    /**
+     * Checks whether an instance created by the specified factory is already
      * mounted and returns the mount IDs for it.
      *
      *
@@ -360,6 +375,33 @@ public final class ExplorerMountTable {
 
         synchronized (MOUNTED) {
             for (Map.Entry<String, MountPoint> e : MOUNTED.entrySet()) {
+                MountPoint mp = e.getValue();
+                if (providerID.equals(mp.getProviderFactory().getID())) {
+                    mountIDs.add(e.getKey());
+                }
+            }
+        }
+        return mountIDs;
+    }
+
+    /**
+     * Checks whether an instance created by the specified factory is already
+     * mounted and returns the mount IDs for it.
+     *
+     *
+     * @param providerID the id of the provider factory
+     * @return a list with mount IDs (or an empty list if provider is not
+     *         mounted).
+     */
+    private static List<String> getPreparedMountIDs(final String providerID) {
+        if (providerID == null || providerID.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Internal error: provider ID can't be null");
+        }
+        LinkedList<String> mountIDs = new LinkedList<String>();
+
+        synchronized (PREPARED) {
+            for (Map.Entry<String, MountPoint> e : PREPARED.entrySet()) {
                 MountPoint mp = e.getValue();
                 if (providerID.equals(mp.getProviderFactory().getID())) {
                     mountIDs.add(e.getKey());

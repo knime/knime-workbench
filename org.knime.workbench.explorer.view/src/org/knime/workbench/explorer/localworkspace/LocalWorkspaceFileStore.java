@@ -21,17 +21,20 @@
 package org.knime.workbench.explorer.localworkspace;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.internal.filesystem.local.LocalFile;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.Status;
+import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 
 /**
@@ -46,10 +49,11 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
     private final IFileStore m_file;
 
     /**
-     * @param mountID
-     * @param fullPath
+     * @param mountID the id of the mount
+     * @param fullPath the full path of the file store
      */
-    public LocalWorkspaceFileStore(final String mountID, final String fullPath) {
+    public LocalWorkspaceFileStore(final String mountID,
+            final String fullPath) {
         super(mountID, fullPath);
         IPath rootPath = ResourcesPlugin.getWorkspace().getRoot().getLocation();
         IPath filePath = rootPath.append(new Path(fullPath));
@@ -60,7 +64,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * Call this only with a local file!
      *
      * @param mountID
-     * @param file the underlying {@link LocalFile}
+     * @param file the underlying {@link IFileStore}
      * @param fullPath the path relative to the root!
      */
     private LocalWorkspaceFileStore(final String mountID,
@@ -73,8 +77,8 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public String[] childNames(final int options, final IProgressMonitor monitor)
-            throws CoreException {
+    public String[] childNames(final int options,
+            final IProgressMonitor monitor) throws CoreException {
         return m_file.childNames(options, monitor);
     }
 
@@ -82,8 +86,8 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public IFileInfo fetchInfo(final int options, final IProgressMonitor monitor)
-            throws CoreException {
+    public IFileInfo fetchInfo(final int options,
+            final IProgressMonitor monitor) throws CoreException {
         return m_file.fetchInfo(options, monitor);
     }
 
@@ -127,4 +131,60 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
         return m_file.toLocalFile(options, monitor);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void copy(final IFileStore destination, final int options,
+            final IProgressMonitor monitor) throws CoreException {
+        File srcFile = toLocalFile(options, monitor);
+        File dstFile = destination.toLocalFile(options, monitor);
+        if (!dstFile.isDirectory()) {
+            throw new UnsupportedOperationException("The local workspace "
+                    + "filestore only allows copying to directories but the "
+                    + "destination \"" + dstFile.getAbsolutePath() + "\" is not"
+                    + " a directory.");
+        }
+        File targetDir = new File(dstFile, srcFile.getName());
+        if (targetDir.exists()) {
+            throw new CoreException(new Status(Status.ERROR,
+                    ExplorerActivator.PLUGIN_ID, "A resource with the name "
+                    + srcFile.getName() + " already exists in "
+                    + dstFile.getName()));
+        }
+        try {
+            if (srcFile.isDirectory()) {
+                FileUtils.copyDirectory(srcFile, targetDir);
+            } else if (srcFile.isFile()) {
+                FileUtils.copyFileToDirectory(srcFile, dstFile);
+            }
+        } catch (IOException e) {
+            String message = "Could not copy \"" + srcFile.getAbsolutePath()
+                    + "\" to \"" + dstFile.getAbsolutePath() + "\".";
+            throw new CoreException(new Status(Status.ERROR,
+                    ExplorerActivator.PLUGIN_ID, message, e));
+        }
+
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void delete(final int options, final IProgressMonitor monitor)
+            throws CoreException {
+        File srcFile = toLocalFile(options, monitor);
+        try {
+            if (srcFile.isDirectory()) {
+                FileUtils.deleteDirectory(srcFile);
+            } else if (srcFile.isFile()) {
+                srcFile.delete();
+            }
+        } catch (IOException e) {
+            String message = "Could not delete \"" + srcFile.getAbsolutePath()
+            + "\".";
+            throw new CoreException(new Status(Status.ERROR,
+                    ExplorerActivator.PLUGIN_ID, message, e));
+        }
+    }
 }

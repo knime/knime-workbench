@@ -22,13 +22,17 @@
 
 package org.knime.workbench.explorer.view.dnd;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
+import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSourceEvent;
 import org.eclipse.swt.dnd.DragSourceListener;
 import org.knime.core.node.NodeLogger;
@@ -121,7 +125,34 @@ public class ExplorerDragListener implements DragSourceListener {
     @Override
     public void dragFinished(final DragSourceEvent event) {
         LOGGER.debug("dragFinished of event: " + event);
-        LocalSelectionTransfer.getTransfer().setSelection(null);
+        LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
+        if (DND.DROP_MOVE == event.detail && event.doit) {
+            LOGGER.debug("Removing source file(s) after successful drop.");
+            IStructuredSelection selections = (IStructuredSelection)
+                    transfer.getSelection();
+            List<ExplorerFileStore> fileStores = DragAndDropUtils
+                    .getExplorerFileStores(selections);
+            for (ExplorerFileStore fs : fileStores) {
+                try {
+                    if (!fs.fetchInfo().exists()) {
+                        continue;
+                    }
+                    fs.delete(EFS.NONE, null);
+                } catch (CoreException e) {
+                    String msg = "Could not move file \"" + fs.getFullName()
+                            + "\". Source file could not be deleted.";
+                    throw new RuntimeException(msg, e);
+                }
+            }
+            Iterator iterator = selections.iterator();
+            while (iterator.hasNext()) {
+                DragAndDropUtils.refreshResource(iterator.next());
+//                m_viewer.refresh(fs.getParent());
+            }
+        }
+        // TODO only refresh the updated part of the view
+        m_viewer.refresh();
+        transfer.setSelection(null);
     }
 
 }

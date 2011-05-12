@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
@@ -81,7 +82,7 @@ public class ContentDelegator extends LabelProvider implements
      * of the explorer mount table. */
     public ContentDelegator() {
         m_provider = new HashSet<MountPoint>();
-        m_changeListener = new ArrayList<IPropertyChangeListener>();
+        m_changeListener = new CopyOnWriteArrayList<IPropertyChangeListener>();
         ExplorerMountTable.addPropertyChangeListener(this);
     }
 
@@ -123,6 +124,7 @@ public class ContentDelegator extends LabelProvider implements
     @Override
     public void dispose() {
         m_provider.clear();
+        ExplorerMountTable.removePropertyChangeListener(this);
         super.dispose();
     }
 

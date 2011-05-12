@@ -30,6 +30,7 @@ import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.ViewerDropAdapter;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
 import org.knime.core.node.NodeLogger;
@@ -158,7 +159,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param transferType
      * @return true if the drop is valid, false otherwise
      */
-    public abstract boolean validateDrop(final Object target,
+    public abstract boolean validateDrop(final ExplorerFileStore target,
             final int operation, TransferData transferType);
 
     /**
@@ -167,9 +168,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * the {@link LocalSelectionTransfer}.
      *
      * @param data the drop data, might be null
+     * @param operation the operation to be performed as received from
+     *      {@link ViewerDropAdapter#getCurrentOperation()}
+     * @param target the drop target
      * @return true if the drop was successful, false otherwise
+     * @see ViewerDropAdapter#getCurrentOperation()
      */
-    public abstract boolean performDrop(final Object data);
+    public abstract boolean performDrop(final Object data,
+            final ExplorerFileStore target, int operation);
 
     /**
      * @param fileStores the dragged file stores of the content provider
@@ -369,6 +375,5 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         } else {
             return ICONS.unknown();
         }
-
     }
 }

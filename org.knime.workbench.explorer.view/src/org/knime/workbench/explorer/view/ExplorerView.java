@@ -484,6 +484,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      */
     @Override
     public void dispose() {
+        m_contentDelegator.removePropertyChangeListener(this);
         m_contentDelegator.dispose();
     }
 }

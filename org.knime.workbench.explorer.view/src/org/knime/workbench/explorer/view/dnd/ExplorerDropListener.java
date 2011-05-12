@@ -22,11 +22,14 @@
 
 package org.knime.workbench.explorer.view.dnd;
 
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
 import org.eclipse.swt.dnd.TransferData;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
 
 /**
@@ -50,12 +53,11 @@ public class ExplorerDropListener extends ViewerDropAdapter {
     @Override
     public boolean performDrop(final Object data) {
         LOGGER.debug("performDrop with data: " + data);
-        if (getCurrentTarget() instanceof ContentObject) {
-            return ((ContentObject)getCurrentTarget())
-                    .getProvider().performDrop(data);
-        } else {
-            return false;
-        }
+        Object target = getCurrentTarget();
+        ExplorerFileStore dstFS = DragAndDropUtils.getFileStore(target);
+        AbstractContentProvider acp = DragAndDropUtils.getContentProvider(
+                target);
+        return acp.performDrop(data, dstFS, getCurrentOperation());
     }
 
     /**
@@ -66,24 +68,24 @@ public class ExplorerDropListener extends ViewerDropAdapter {
             final TransferData transferType) {
         if (!LocalSelectionTransfer.getTransfer().isSupportedType(
                 transferType)) {
-            LOGGER.info("Only LocalSelectionTransfer can be dropped. Got "
+            LOGGER.debug("Only LocalSelectionTransfer can be dropped. Got "
                     + transferType + ".");
             return false;
         }
-        boolean valid = false;
-        if (target instanceof ContentObject) {
-            // delegate the validation to the content provider
-            valid = ((ContentObject)target).getProvider().validateDrop(
-                    target, operation, transferType);
+        ExplorerFileStore dstFS = DragAndDropUtils.getFileStore(target);
+        AbstractContentProvider acp = DragAndDropUtils.getContentProvider(
+                target);
+        if (dstFS == null || acp == null) {
+            return false;
         }
-        if (valid) {
-            LOGGER.debug("Successfully completed drop validation for target \""
-                    + target + "\"");
-        } else {
-            LOGGER.debug("Drop validation for target \"" + target
-                    + "\" failed.");
+        IFileStore parent = ((ContentObject)getSelectedObject()).getObject()
+            .getParent();
+        if (getSelectedObject() == target || dstFS.equals(parent)) {
+            LOGGER.debug("Cannot drop an item on itself.");
+            return false;
         }
-        return valid;
+        // delegate the validation to the content provider
+        return acp.validateDrop(dstFS, operation, transferType);
     }
 
 }
