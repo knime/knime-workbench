@@ -125,6 +125,7 @@ public class ExplorerDragListener implements DragSourceListener {
     @Override
     public void dragFinished(final DragSourceEvent event) {
         LOGGER.debug("dragFinished of event: " + event);
+        /* TODO delegate drag finished to content provider */
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
         if (DND.DROP_MOVE == event.detail && event.doit) {
             LOGGER.debug("Removing source file(s) after successful drop.");

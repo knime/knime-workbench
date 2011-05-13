@@ -30,9 +30,12 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
@@ -168,6 +171,34 @@ public final class DragAndDropUtils {
             LOGGER.error("Could not refresh resources for project "
                     + pName + ".");
         }
+    }
+
+    /**
+     * Evaluates if a project is linked into the workspace or if it has been
+     * copied/created there.
+     * @param selection a selection in the explorer tree view
+     * @return true if it is a KNIME project linked into the workspace, false
+     *          otherwise
+     */
+    public static boolean isLinkedProject(final Object selection) {
+        ExplorerFileStore fs = getFileStore(selection);
+        File localFile;
+        IResource source;
+        try {
+            localFile = fs.toLocalFile(EFS.NONE, null);
+            source = KnimeResourceUtil.getResourceForURI(
+                    localFile.toURI());
+        } catch (CoreException e) {
+            return false;
+        }
+        if (source != null && source.getProject() != null) {
+            IProject project = source.getProject();
+            IPath loc = project.getLocation();
+            return !ResourcesPlugin.getWorkspace().getRoot().getLocation()
+                    .isPrefixOf(loc);
+         } else {
+             return false;
+         }
     }
 
 }

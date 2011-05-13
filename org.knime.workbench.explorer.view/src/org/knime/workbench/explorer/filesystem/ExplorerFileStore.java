@@ -39,7 +39,6 @@ import org.eclipse.core.runtime.Path;
 import org.knime.core.node.workflow.SingleNodeContainerPersistorVersion200;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
  *
@@ -151,7 +150,8 @@ public abstract class ExplorerFileStore extends FileStore {
         if (isWorkflow(file) || isWorkflow(file.getParent())) {
             return false;
         }
-        return file.getChild(MetaInfoFile.METAINFO_FILE).fetchInfo().exists();
+        return file.getChild(
+                WorkflowPersistor.METAINFO_FILE).fetchInfo().exists();
     }
 
     /**

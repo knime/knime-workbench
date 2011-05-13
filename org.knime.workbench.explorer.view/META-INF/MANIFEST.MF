@@ -23,5 +23,6 @@ Provide-Package: org.knime.workbench.explorer,
  org.knime.workbench.explorer.view,
  org.knime.workbench.explorer.view.actions,
  org.knime.workbench.explorer.view.dialogs,
+ org.knime.workbench.explorer.view.dnd,
  org.knime.workbench.explorer.view.preferences
 Bundle-Activator: org.knime.workbench.explorer.ExplorerActivator

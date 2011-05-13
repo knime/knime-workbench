@@ -19,9 +19,11 @@
 package org.knime.workbench.explorer.localworkspace;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.resources.IProject;
@@ -34,10 +36,12 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.util.KnimeFileUtil;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -236,9 +240,28 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (!(DND.DROP_COPY == operation || DND.DROP_MOVE == operation)) {
             return false;
         }
-        return !(ExplorerFileStore.isNode(target)
+        LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
+        ISelection selection = transfer.getSelection();
+        if (selection != null && selection instanceof IStructuredSelection) {
+            List<ExplorerFileStore> fileStores = DragAndDropUtils
+                    .getExplorerFileStores((IStructuredSelection)selection);
+            for (ExplorerFileStore fs : fileStores) {
+                if (!(ExplorerFileStore.isWorkflow(fs)
+                        || ExplorerFileStore.isWorkflowGroup(fs))) {
+                    LOGGER.warn("Only workflows and workflow groups can be "
+                            + "dropped into the User Space");
+                    return false;
+                }
+            }
+        } else if (!FileTransfer.getInstance().isSupportedType(transferType)) {
+            return false;
+        }
+        boolean valid = !(ExplorerFileStore.isNode(target)
                 || ExplorerFileStore.isWorkflow(target)
                 || ExplorerFileStore.isMetaNode(target));
+        String v = valid ? "valid" : "invalid";
+        LOGGER.debug("Drop on " + target.getFullName() + " is " + v + ".");
+        return valid;
     }
 
     /**
@@ -258,12 +281,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                  * and move. The removal of the src object has to be done by the
                  * drag source. */
                 try {
-//                    if (DND.DROP_COPY == operation) {
-                        copy(fs, target);
-                    // TODO use a move to be more efficient
-//                   } else {
-//                        move()
-//                    }
+                    // TODO use a move to be more efficient if possible
+                    copy(fs, target);
                     DragAndDropUtils.refreshResource(target);
                 } catch (CoreException e) {
                     LOGGER.error("An error occured when transfering the file \""
@@ -272,6 +291,42 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 }
             }
             return true;
+        } else if (data instanceof String[]) { // we have a file transfer
+            String[] files = (String[])data;
+            try {
+                File targetDir = target.toLocalFile(EFS.NONE, null);
+                for (String path : files) {
+                    File src = new File(path);
+                    boolean isWorkflowOrGroup = KnimeFileUtil.isWorkflow(src)
+                            || KnimeFileUtil.isWorkflowGroup(src);
+                    if (!isWorkflowOrGroup) {
+                        LOGGER.warn("Only workflows or workflow groups can be"
+                                + " copied into the User Space. Aborting "
+                                + "operation.");
+                        return false;
+                    }
+                }
+                for (String path : files) {
+                    File src = new File(path);
+                    if (src.exists()
+                            && !targetDir.equals(src.getParentFile())) {
+                        File dir = new File(targetDir, src.getName());
+                        FileUtils.copyDirectory(src, dir);
+                        LOGGER.debug("Copied directory "
+                                + src.getAbsolutePath() + " to directory "
+                                + dir.getAbsolutePath() + ".");
+                    }
+                }
+                return true;
+            } catch (IOException e) {
+                LOGGER.error(
+                        "An error occured while copying files to the User"
+                                + " Space.", e);
+            } catch (CoreException e) {
+                LOGGER.error(
+                        "Could not get local file for item "
+                                + target.getFullName() + ".", e);
+            }
         }
         return false;
     }
@@ -311,7 +366,13 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public boolean dragStart(final List<ExplorerFileStore> fileStores) {
+        for (ExplorerFileStore fs : fileStores) {
+            if (DragAndDropUtils.isLinkedProject(fs)) {
+                LOGGER.warn("Linked workflow project cannot be copied from the"
+                        + " User Space.");
+                return false;
+            }
+        }
         return true;
     }
-
 }

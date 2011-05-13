@@ -154,9 +154,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     /**
-     * @param target
-     * @param operation
-     * @param transferType
+     * @param target the target the data is dropped on
+     * @param operation the operation to be performed
+     * @param transferType the transfer type
      * @return true if the drop is valid, false otherwise
      */
     public abstract boolean validateDrop(final ExplorerFileStore target,
