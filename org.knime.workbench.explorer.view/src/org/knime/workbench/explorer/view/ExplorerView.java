@@ -27,6 +27,7 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.filesystem.local.LocalFile;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
@@ -94,8 +95,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private TreeViewer m_viewer;
 
-    private final ContentDelegator m_contentDelegator
-            = new ContentDelegator();
+    private final ContentDelegator m_contentDelegator = new ContentDelegator();
 
     private DrillDownAdapter m_drillDownAdapter;
 
@@ -247,15 +247,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         if (lf.fetchInfo().isDirectory()) {
             IFileStore wf = lf.getChild(WorkflowPersistor.WORKFLOW_FILE);
             if (wf.fetchInfo().exists()) {
-                try {
-                    IDE.openEditorOnFileStore(PlatformUI.getWorkbench()
-                            .getActiveWorkbenchWindow().getActivePage(), wf);
-                    return true;
-                } catch (PartInitException e) {
-                    LOGGER.warn("Unable to open editor for " + lf.getName()
-                            + ": " + e.getMessage(), e);
-                    return false;
-                }
+                return openWorkflow(lf);
             } else {
                 // we open no other than workflow directories
                 return false;
@@ -274,6 +266,36 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                         + e.getMessage(), e);
                 return false;
             }
+        }
+    }
+
+    // private boolean openWorkflow(final LocalFile wfDir) {
+    // LocalFile metaInfo =
+    // (LocalFile)wfDir.getChild(MetaInfoFile.METAINFO_FILE);
+    //
+    // try {
+    // IDE.openEditorOnFileStore(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(),
+    // metaInfo);
+    // return true;
+    // } catch (PartInitException e) {
+    // return false;
+    // }
+    // }
+
+    private boolean openWorkflow(final LocalFile wfDirectory) {
+        String wfName = new Path(wfDirectory.getName()).lastSegment();
+        try {
+            LocalFile wfFile =
+                    (LocalFile)wfDirectory
+                            .getChild(WorkflowPersistor.WORKFLOW_FILE);
+            IDE.openEditorOnFileStore(PlatformUI.getWorkbench()
+                    .getActiveWorkbenchWindow().getActivePage(), wfFile);
+            return true;
+        } catch (PartInitException e) {
+            LOGGER.warn(
+                    "Unable to open editor for " + wfName + ": "
+                            + e.getMessage(), e);
+            return false;
         }
     }
 
@@ -301,6 +323,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             m_contentDelegator.addMountPoint(mp);
         }
         m_viewer.refresh();
+
     }
 
     private void createTreeViewer(final Composite parent,
@@ -486,5 +509,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     public void dispose() {
         m_contentDelegator.removePropertyChangeListener(this);
         m_contentDelegator.dispose();
+
     }
+
 }
