@@ -22,10 +22,12 @@ import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
@@ -115,12 +117,12 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
     /**
      * Save state and parameters.
+     *
      * @return a string representation of this factory
      *
      * @see AbstractContentProviderFactory
      */
     public abstract String saveState();
-
 
     /**
      * {@inheritDoc}
@@ -133,6 +135,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     @Override
     public abstract String toString();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int compareTo(final AbstractContentProvider provider) {
+        return m_id.compareTo(provider.getMountID());
+    }
 
     /**
      * @return icon of this instance. Or null, if you don't have any.
@@ -153,6 +163,20 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         return new ExplorerFileSystem().getStore(uri);
     }
 
+    /* ---------------- view context menu methods ------------------- */
+    /**
+     * Add items to the context menu.
+     *
+     * @param manager the context menu manager
+     * @param selection the current selection sorted by content provider (with
+     *            all selected item for all providers!)
+     */
+    public abstract void addContextMenuActions(
+            final IMenuManager manager,
+            final Map<AbstractContentProvider, List<ExplorerFileStore>> selection);
+
+    /* ---------------- drag and drop methods ----------------------- */
+
     /**
      * @param target the target the data is dropped on
      * @param operation the operation to be performed
@@ -169,7 +193,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      *
      * @param data the drop data, might be null
      * @param operation the operation to be performed as received from
-     *      {@link ViewerDropAdapter#getCurrentOperation()}
+     *            {@link ViewerDropAdapter#getCurrentOperation()}
      * @param target the drop target
      * @return true if the drop was successful, false otherwise
      * @see ViewerDropAdapter#getCurrentOperation()
@@ -182,14 +206,6 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @return true if dragging is allowed for the selection, false otherwise
      */
     public abstract boolean dragStart(List<ExplorerFileStore> fileStores);
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public int compareTo(final AbstractContentProvider provider) {
-        return m_id.compareTo(provider.getMountID());
-    }
 
     /* -------------- content provider methods ---------------------------- */
 
@@ -314,6 +330,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * Returns an icon/image for the passed file, if it is something like a
      * workflow, group, node or meta node. If it is not a store representing one
      * of these, null is returned.
+     *
      * @param efs the explorer file store
      * @return the icon/image for the passed file store
      */

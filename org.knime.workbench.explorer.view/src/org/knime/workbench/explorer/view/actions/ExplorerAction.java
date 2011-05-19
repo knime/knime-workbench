@@ -18,8 +18,6 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
-import java.util.Iterator;
-
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -36,12 +34,18 @@ public abstract class ExplorerAction extends Action {
     private final TreeViewer m_viewer;
 
     /**
-     * @param viewer
+     * @param viewer of the space
      */
-    public ExplorerAction(final TreeViewer viewer) {
+    public ExplorerAction(final TreeViewer viewer, final String menuText) {
         assert viewer != null;
         m_viewer = viewer;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract String getId();
 
     /**
      * @return the current selection in the corresponding view, could be null
@@ -50,20 +54,6 @@ public abstract class ExplorerAction extends Action {
         IStructuredSelection selection =
                 (IStructuredSelection)getViewer().getSelection();
         return selection;
-    }
-
-    /**
-     * @return null, if the selection is null, otherwise an iterator over the
-     *         selected items.
-     */
-    @SuppressWarnings("unchecked")
-    protected Iterator<Object> getSelectionIterator() {
-        IStructuredSelection sel = getSelection();
-        if (sel != null) {
-            return sel.iterator();
-        } else {
-            return null;
-        }
     }
 
     /**

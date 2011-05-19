@@ -42,9 +42,17 @@ public class CollapseAllAction extends ExplorerAction {
      * @param viewer
      */
     public CollapseAllAction(final TreeViewer viewer) {
-        super(viewer);
+        super(viewer, "Collapse All");
         setImageDescriptor(IMG_COLLALL);
         setToolTipText(TOOLTIP);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getId() {
+        return "org.knime.workbench.explorer.view.action.collapseall";
     }
 
     /**

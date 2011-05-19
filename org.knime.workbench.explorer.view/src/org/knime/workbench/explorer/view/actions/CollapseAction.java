@@ -22,6 +22,7 @@ import java.util.Iterator;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.AbstractTreeViewer;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -43,7 +44,7 @@ public class CollapseAction extends ExplorerAction {
      * @param viewer
      */
     public CollapseAction(final TreeViewer viewer) {
-        super(viewer);
+        super(viewer, "Collapse");
         setImageDescriptor(IMG_COLL);
         setToolTipText(TOOLTIP);
     }
@@ -52,8 +53,20 @@ public class CollapseAction extends ExplorerAction {
      * {@inheritDoc}
      */
     @Override
+    public String getId() {
+        return "org.knime.workbench.explorer.view.action.collapse";
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void run() {
-        Iterator<Object> iter = getSelectionIterator();
+        IStructuredSelection sel = getSelection();
+        if (sel == null) {
+            return;
+        }
+        Iterator<Object> iter = sel.iterator();
         if (iter == null) {
             return;
         }

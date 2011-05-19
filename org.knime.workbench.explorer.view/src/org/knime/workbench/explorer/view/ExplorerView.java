@@ -22,6 +22,8 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -73,8 +75,11 @@ import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
+import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
+import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
 import org.knime.workbench.explorer.view.dnd.ExplorerDropListener;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
@@ -97,8 +102,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private final ContentDelegator m_contentDelegator = new ContentDelegator();
 
-    private DrillDownAdapter m_drillDownAdapter;
-
     private ExplorerDragListener m_dragListener;
 
     private ExplorerDropListener m_dropListener;
@@ -119,7 +122,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         createTreeViewer(overall, m_contentDelegator);
         assert m_viewer != null; // should be set by createTreeViewer
         // needed by the toolbar and the menus
-        m_drillDownAdapter = new DrillDownAdapter(m_viewer);
         m_dragListener = new ExplorerDragListener(m_viewer);
         m_dropListener = new ExplorerDropListener(m_viewer);
         initDragAndDrop();
@@ -408,8 +410,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         menuMgr.addMenuListener(new IMenuListener() {
             @Override
             public void menuAboutToShow(final IMenuManager manager) {
-                assert m_drillDownAdapter != null; // set in createPartControl
-                ExplorerView.this.fillContextMenu(manager, m_drillDownAdapter);
+                ExplorerView.this.fillContextMenu(manager);
             }
         });
         Menu menu = menuMgr.createContextMenu(m_viewer.getControl());
@@ -419,21 +420,35 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         getSite().registerContextMenu(menuMgr, m_viewer);
     }
 
-    private void fillContextMenu(final IMenuManager manager,
-            final DrillDownAdapter dda) {
+    private void fillContextMenu(final IMenuManager manager) {
 
-        // TODO: Add global actions
 
-        // TODO: loop through contributors
+        addGlobalActions(manager);
 
-        manager.add(new Separator());
+        IStructuredSelection sel = (IStructuredSelection)m_viewer.getSelection();
+        Map<AbstractContentProvider, List<ExplorerFileStore>> selFiles =
+            DragAndDropUtils.getProviderMap(sel);
 
-        if (dda != null) {
-            dda.addNavigationActions(manager);
+        // all visible spaces may contribute to the menu
+        Set<String> ids = m_contentDelegator.getMountedIds();
+        for (String id : ids) {
+            MountPoint mp = ExplorerMountTable.getMountPoint(id);
+            if (mp == null) {
+                // gone...
+                continue;
+            }
+
+            mp.getProvider().addContextMenuActions(manager, selFiles);
         }
 
+        manager.add(new Separator());
         // Other plug-ins can contribute there actions here
         manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
+
+    }
+
+    private void addGlobalActions(final IMenuManager manager) {
+
 
     }
 

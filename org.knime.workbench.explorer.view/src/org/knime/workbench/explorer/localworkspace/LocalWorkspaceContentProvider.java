@@ -191,6 +191,12 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * -------------------------------------------------------
      */
 
+    /*
+     * ------------- view context menu -----------------------------
+     */
+    @Override
+    public void addContextMenuActions(final org.eclipse.jface.action.IMenuManager manager, final java.util.Map<AbstractContentProvider,java.util.List<ExplorerFileStore>> selection) {};
+
     /**
      * {@inheritDoc}
      */

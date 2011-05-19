@@ -62,13 +62,16 @@ public final class DragAndDropUtils {
      * content provider.
      * @param selection the structured collection to group by provider
      * @return a map of content providers to explorer file stores or null if
-     *      the selection includes {@link ContentObject}s not containing an
-     *      {@link ExplorerFileStore}.
+     *      the selection includes any object other than
+     *      {@link ContentObject} or {@link AbstractContentProvider}.
      */
-    public static Map<AbstractContentProvider, List<ExplorerFileStore>>
-            getProviderMap(final IStructuredSelection selection) {
+    public static Map<AbstractContentProvider, List<ExplorerFileStore>> getProviderMap(
+            final IStructuredSelection selection) {
         Map<AbstractContentProvider, List<ExplorerFileStore>> providers =
                 new TreeMap<AbstractContentProvider, List<ExplorerFileStore>>();
+        if (selection == null) {
+            return providers;
+        }
         @SuppressWarnings("rawtypes")
         Iterator iter = selection.iterator();
         while (iter.hasNext()) {
@@ -77,6 +80,15 @@ public final class DragAndDropUtils {
                 ContentObject content = (ContentObject)nextObject;
                 AbstractContentProvider provider = content.getProvider();
                 ExplorerFileStore fs = content.getObject();
+                if (!providers.containsKey(provider)) {
+                    providers.put(provider, new ArrayList<ExplorerFileStore>());
+                }
+                providers.get(provider).add(fs);
+            }
+            if (nextObject instanceof AbstractContentProvider) {
+                AbstractContentProvider provider =
+                        (AbstractContentProvider)nextObject;
+                ExplorerFileStore fs = provider.getFileStore("/");
                 if (!providers.containsKey(provider)) {
                     providers.put(provider, new ArrayList<ExplorerFileStore>());
                 }
