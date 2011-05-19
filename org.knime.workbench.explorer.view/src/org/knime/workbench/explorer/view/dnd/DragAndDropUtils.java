@@ -84,8 +84,7 @@ public final class DragAndDropUtils {
                     providers.put(provider, new ArrayList<ExplorerFileStore>());
                 }
                 providers.get(provider).add(fs);
-            }
-            if (nextObject instanceof AbstractContentProvider) {
+            }else if (nextObject instanceof AbstractContentProvider) {
                 AbstractContentProvider provider =
                         (AbstractContentProvider)nextObject;
                 ExplorerFileStore fs = provider.getFileStore("/");
