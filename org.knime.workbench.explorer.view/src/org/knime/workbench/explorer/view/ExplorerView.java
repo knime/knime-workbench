@@ -75,6 +75,7 @@ import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
@@ -134,11 +135,13 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         LocalSelectionTransfer selectionTransfer =
                 LocalSelectionTransfer.getTransfer();
         FileTransfer fileTransfer = FileTransfer.getInstance();
+        WorkflowManagerTransfer wfmTransfer
+            = WorkflowManagerTransfer.getTransfer();
         final int operation = DND.DROP_MOVE | DND.DROP_COPY;
         m_viewer.addDragSupport(operation, new Transfer[]{selectionTransfer},
                 m_dragListener);
         m_viewer.addDropSupport(operation, new Transfer[]{selectionTransfer,
-                fileTransfer}, m_dropListener);
+                fileTransfer, wfmTransfer}, m_dropListener);
     }
 
     private void makeGlobalActions() {
