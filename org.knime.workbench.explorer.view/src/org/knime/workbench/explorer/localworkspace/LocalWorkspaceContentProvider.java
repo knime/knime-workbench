@@ -58,8 +58,9 @@ import org.knime.workbench.ui.navigator.KnimeResourceUtil;
  * @author ohl, University of Konstanz
  */
 public class LocalWorkspaceContentProvider extends AbstractContentProvider {
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            LocalWorkspaceContentProvider.class);
+    private static final NodeLogger LOGGER = NodeLogger
+            .getLogger(LocalWorkspaceContentProvider.class);
+
     private static final Image LOCAL_WS_IMG = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/knime_default.png").createImage();
@@ -69,8 +70,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * @param id mount id
      */
     LocalWorkspaceContentProvider(
-            final LocalWorkspaceContentProviderFactory factory,
-            final String id) {
+            final LocalWorkspaceContentProviderFactory factory, final String id) {
         super(factory, id);
     }
 
@@ -195,7 +195,12 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * ------------- view context menu -----------------------------
      */
     @Override
-    public void addContextMenuActions(final org.eclipse.jface.action.IMenuManager manager, final java.util.Map<AbstractContentProvider,java.util.List<ExplorerFileStore>> selection) {};
+    public void addContextMenuActions(
+            final org.eclipse.jface.viewers.TreeViewer viewer,
+            final org.eclipse.jface.action.IMenuManager manager,
+            final java.util.Map<AbstractContentProvider, java.util.List<ExplorerFileStore>> selection) {
+
+    };
 
     /**
      * {@inheritDoc}
@@ -249,11 +254,12 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
         ISelection selection = transfer.getSelection();
         if (selection != null && selection instanceof IStructuredSelection) {
-            List<ExplorerFileStore> fileStores = DragAndDropUtils
-                    .getExplorerFileStores((IStructuredSelection)selection);
+            List<ExplorerFileStore> fileStores =
+                    DragAndDropUtils
+                            .getExplorerFileStores((IStructuredSelection)selection);
             for (ExplorerFileStore fs : fileStores) {
-                if (!(ExplorerFileStore.isWorkflow(fs)
-                        || ExplorerFileStore.isWorkflowGroup(fs))) {
+                if (!(ExplorerFileStore.isWorkflow(fs) || ExplorerFileStore
+                        .isWorkflowGroup(fs))) {
                     LOGGER.warn("Only workflows and workflow groups can be "
                             + "dropped into the User Space");
                     return false;
@@ -262,9 +268,10 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         } else if (!FileTransfer.getInstance().isSupportedType(transferType)) {
             return false;
         }
-        boolean valid = !(ExplorerFileStore.isNode(target)
-                || ExplorerFileStore.isWorkflow(target)
-                || ExplorerFileStore.isMetaNode(target));
+        boolean valid =
+                !(ExplorerFileStore.isNode(target)
+                        || ExplorerFileStore.isWorkflow(target) || ExplorerFileStore
+                        .isMetaNode(target));
         String v = valid ? "valid" : "invalid";
         LOGGER.debug("Drop on " + target.getFullName() + " is " + v + ".");
         return valid;
@@ -280,19 +287,22 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         ISelection selection = transfer.getSelection();
         if (selection instanceof IStructuredSelection) {
             IStructuredSelection ss = (IStructuredSelection)selection;
-            List<ExplorerFileStore> fileStores
-                    = DragAndDropUtils.getExplorerFileStores(ss);
+            List<ExplorerFileStore> fileStores =
+                    DragAndDropUtils.getExplorerFileStores(ss);
             for (ExplorerFileStore fs : fileStores) {
-                /* On the drop receiver side there is no difference between copy
+                /*
+                 * On the drop receiver side there is no difference between copy
                  * and move. The removal of the src object has to be done by the
-                 * drag source. */
+                 * drag source.
+                 */
                 try {
                     // TODO use a move to be more efficient if possible
                     copy(fs, target);
                     DragAndDropUtils.refreshResource(target);
                 } catch (CoreException e) {
-                    LOGGER.error("An error occured when transfering the file \""
-                            + fs.getFullName() + "\". ", e);
+                    LOGGER.error(
+                            "An error occured when transfering the file \""
+                                    + fs.getFullName() + "\". ", e);
                     return false;
                 }
             }
@@ -303,8 +313,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 File targetDir = target.toLocalFile(EFS.NONE, null);
                 for (String path : files) {
                     File src = new File(path);
-                    boolean isWorkflowOrGroup = KnimeFileUtil.isWorkflow(src)
-                            || KnimeFileUtil.isWorkflowGroup(src);
+                    boolean isWorkflowOrGroup =
+                            KnimeFileUtil.isWorkflow(src)
+                                    || KnimeFileUtil.isWorkflowGroup(src);
                     if (!isWorkflowOrGroup) {
                         LOGGER.warn("Only workflows or workflow groups can be"
                                 + " copied into the User Space. Aborting "
@@ -314,8 +325,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 }
                 for (String path : files) {
                     File src = new File(path);
-                    if (src.exists()
-                            && !targetDir.equals(src.getParentFile())) {
+                    if (src.exists() && !targetDir.equals(src.getParentFile())) {
                         File dir = new File(targetDir, src.getName());
                         FileUtils.copyDirectory(src, dir);
                         LOGGER.debug("Copied directory "
@@ -325,9 +335,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 }
                 return true;
             } catch (IOException e) {
-                LOGGER.error(
-                        "An error occured while copying files to the User"
-                                + " Space.", e);
+                LOGGER.error("An error occured while copying files to the User"
+                        + " Space.", e);
             } catch (CoreException e) {
                 LOGGER.error(
                         "Could not get local file for item "
@@ -342,24 +351,29 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * @param the destination file store
      * @throws CoreException
      */
-    private void copy(final ExplorerFileStore src,
-            final ExplorerFileStore dest) throws CoreException {
+    private void copy(final ExplorerFileStore src, final ExplorerFileStore dest)
+            throws CoreException {
         src.copy(dest, EFS.NONE, null);
 
         File dstDir = dest.toLocalFile(EFS.NONE, null);
         IResource res = KnimeResourceUtil.getResourceForURI(dstDir.toURI());
         if (res != null && res instanceof IWorkspaceRoot) {
-            /* The target is the workspace root. Therefore we have to create a
-             * .project file. */
+            /*
+             * The target is the workspace root. Therefore we have to create a
+             * .project file.
+             */
             IProject newProject =
-                ((IWorkspaceRoot)res).getProject(src.getName());
+                    ((IWorkspaceRoot)res).getProject(src.getName());
             if (!newProject.exists()) {
                 try {
-                    newProject = MetaInfoFile.createKnimeProject(
-                            newProject.getName(), KNIMEProjectNature.ID);
+                    newProject =
+                            MetaInfoFile
+                                    .createKnimeProject(newProject.getName(),
+                                            KNIMEProjectNature.ID);
                 } catch (Exception e) {
-                    String message = "Could not create KNIME project in "
-                            + "workspace root.";
+                    String message =
+                            "Could not create KNIME project in "
+                                    + "workspace root.";
                     throw new CoreException(new Status(Status.ERROR,
                             ExplorerActivator.PLUGIN_ID, message, e));
                 }

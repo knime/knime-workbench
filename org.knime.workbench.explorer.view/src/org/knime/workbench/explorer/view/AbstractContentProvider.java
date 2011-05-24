@@ -32,6 +32,7 @@ import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
@@ -172,6 +173,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      *            all selected item for all providers!)
      */
     public abstract void addContextMenuActions(
+            final TreeViewer viewer,
             final IMenuManager manager,
             final Map<AbstractContentProvider, List<ExplorerFileStore>> selection);
 

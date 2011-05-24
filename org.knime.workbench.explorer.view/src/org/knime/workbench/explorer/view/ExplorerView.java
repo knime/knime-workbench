@@ -79,6 +79,7 @@ import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
@@ -425,12 +426,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private void fillContextMenu(final IMenuManager manager) {
 
-
         addGlobalActions(manager);
 
-        IStructuredSelection sel = (IStructuredSelection)m_viewer.getSelection();
+        IStructuredSelection sel =
+                (IStructuredSelection)m_viewer.getSelection();
         Map<AbstractContentProvider, List<ExplorerFileStore>> selFiles =
-            DragAndDropUtils.getProviderMap(sel);
+                DragAndDropUtils.getProviderMap(sel);
 
         // all visible spaces may contribute to the menu
         Set<String> ids = m_contentDelegator.getMountedIds();
@@ -441,7 +442,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 continue;
             }
 
-            mp.getProvider().addContextMenuActions(manager, selFiles);
+            mp.getProvider().addContextMenuActions(m_viewer, manager, selFiles);
         }
 
         manager.add(new Separator());
@@ -451,7 +452,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     }
 
     private void addGlobalActions(final IMenuManager manager) {
-
+        manager.add(new GlobalDeleteAction(m_viewer));
 
     }
 
