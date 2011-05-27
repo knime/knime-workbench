@@ -15,7 +15,7 @@
  * email: contact@knime.com
  * ---------------------------------------------------------------------
  *
- * Created: May 19, 2011
+ * Created: May 27, 2011
  * Author: ohl
  */
 package org.knime.workbench.explorer.view.actions;
@@ -31,35 +31,34 @@ import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
- * Action to create a new workflow.
  *
  * @author ohl, University of Konstanz
  */
-public class NewWorkflowAction extends ExplorerAction {
+public class NewWorkflowGroupAction extends ExplorerAction {
 
     private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(NewWorkflowAction.class);
+            .getLogger(NewWorkflowGroupAction.class);
 
     private static final int SIZING_WIZARD_WIDTH = 470;
 
     private static final int SIZING_WIZARD_HEIGHT = 550;
 
-    private static final ImageDescriptor ICON = ExplorerActivator
-            .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
-                    "icons/new_knime16.png");;
+    private static final ImageDescriptor ICON = KNIMEUIPlugin
+            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+                    "icons/wf_group_new.png");;
 
     /**
      * @param viewer underlying viewer
      * @param teamSpaceProvider the sub tree provider
      */
-    public NewWorkflowAction(final TreeViewer viewer) {
-        super(viewer, "New KNIME Workflow...");
+    public NewWorkflowGroupAction(final TreeViewer viewer) {
+        super(viewer, "New Workflow Group...");
         setImageDescriptor(ICON);
     }
 
@@ -68,7 +67,7 @@ public class NewWorkflowAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-        return "org.knime.explorer.view.actions.newflow";
+        return "org.knime.explorer.view.actions.newgroup";
     }
 
     /**
@@ -89,7 +88,7 @@ public class NewWorkflowAction extends ExplorerAction {
                 getSelectedFiles();
         if (sel.size() != 1) {
             LOGGER.info("Select only files from one mount point "
-                    + "to create new workflow");
+                    + "to create a new workflow group");
             return;
         }
         AbstractContentProvider provider = sel.keySet().iterator().next();
@@ -103,7 +102,7 @@ public class NewWorkflowAction extends ExplorerAction {
             LOGGER.error("Internal Error: wrong file type selected.");
             return;
         }
-        NewWorkflowWizard newWiz = new NewWorkflowWizard(provider);
+        NewWorkflowWizard newWiz = new NewWorkflowGroupWizard(provider);
 
         newWiz.init(PlatformUI.getWorkbench(), getSelection());
 
@@ -123,8 +122,8 @@ public class NewWorkflowAction extends ExplorerAction {
                 Object o = ContentDelegator.getTreeObjectFor(file);
                 getViewer().update(p, null);
                 getViewer().setSelection(new StructuredSelection(o), true);
-
             }
         }
     }
+
 }

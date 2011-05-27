@@ -37,6 +37,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.INewWizard;
@@ -70,6 +71,14 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         setNeedsProgressMonitor(true);
     }
 
+    protected AbstractContentProvider getConentProvider() {
+        return m_contentProvider;
+    }
+
+    protected List<ExplorerFileStore> getInitialSelection() {
+        return m_initialSelection;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -101,10 +110,21 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
      */
     @Override
     public void addPages() {
-        m_page =
+        NewWorkflowWizardPage page =
                 new NewWorkflowWizardPage(m_contentProvider,
                         m_initialSelection, true);
-        addPage(m_page);
+        addPage(page);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void addPage(final IWizardPage page) {
+        if (page instanceof NewWorkflowWizardPage) {
+            m_page = (NewWorkflowWizardPage)page;
+        }
+        super.addPage(page);
     }
 
     /**
@@ -117,8 +137,8 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         final ExplorerFileStore newitem = m_page.getNewFile();
         if (!newitem.getMountID().equals(m_contentProvider.getMountID())) {
             MessageDialog.openError(getShell(), "Internal Error",
-                    "Internal Error: Unable to create workflow in this "
-                            + "context (wrong file type).");
+                    "Internal Error: Unable to create a new item in this "
+                            + "context (wrong content mount id).");
             return false;
         }
         // Create new runnable
@@ -158,7 +178,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
      * @param monitor Progress monitor
      * @throws CoreException if error while creating the project
      */
-    public static void doFinish(final ExplorerFileStore newItem,
+    protected void doFinish(final ExplorerFileStore newItem,
             final IProgressMonitor monitor) throws CoreException {
 
         if (newItem.fetchInfo().exists()) {
@@ -177,8 +197,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
 
         // create a new empty workflow file
         final ExplorerFileStore workflowFile =
-                (ExplorerFileStore)newItem
-                        .getChild(WorkflowPersistor.WORKFLOW_FILE);
+                newItem.getChild(WorkflowPersistor.WORKFLOW_FILE);
         OutputStream outStream =
                 workflowFile.openOutputStream(EFS.NONE, monitor);
         try {
@@ -211,7 +230,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         });
     }
 
-    private static void throwCoreException(final String message,
+    protected static void throwCoreException(final String message,
             final Throwable t) throws CoreException {
         IStatus status =
                 new Status(IStatus.ERROR, "org.knime.workbench.ui", IStatus.OK,
