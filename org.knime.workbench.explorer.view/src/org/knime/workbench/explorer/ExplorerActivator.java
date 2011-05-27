@@ -21,11 +21,14 @@ package org.knime.workbench.explorer;
 
 import java.util.Hashtable;
 
+import org.knime.core.util.pathresolve.URIToFileResolve;
 import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl;
 import org.knime.workbench.explorer.view.preferences.ExplorerPrefsSyncer;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.url.URLConstants;
 import org.osgi.service.url.URLStreamHandlerService;
 
@@ -41,6 +44,8 @@ public class ExplorerActivator implements BundleActivator {
     public static final String PLUGIN_ID = "org.knime.workbench.explorer.view";
 
     private static BundleContext context;
+
+    private ServiceRegistration m_uriToFileServiceRegistration;
 
     /**
      * @return the context.
@@ -64,6 +69,10 @@ public class ExplorerActivator implements BundleActivator {
                 new ExplorerURLStreamHandler(), properties);
         KNIMECorePlugin.getDefault().getPreferenceStore()
                 .addPropertyChangeListener(new ExplorerPrefsSyncer());
+
+        m_uriToFileServiceRegistration = bundleContext.registerService(
+                URIToFileResolve.class.getName(),
+                new URIToFileResolveImpl(), new Hashtable<String, String>());
     }
 
     /**
@@ -71,6 +80,8 @@ public class ExplorerActivator implements BundleActivator {
      */
     @Override
     public void stop(final BundleContext bundleContext) throws Exception {
+        bundleContext.ungetService(
+                m_uriToFileServiceRegistration.getReference());
         ExplorerActivator.context = null;
     }
 

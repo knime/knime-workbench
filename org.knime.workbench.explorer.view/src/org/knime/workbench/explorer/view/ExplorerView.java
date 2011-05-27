@@ -66,10 +66,10 @@ import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.DrillDownAdapter;
 import org.eclipse.ui.part.ViewPart;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.JobManagerChangedEvent;
-import org.knime.core.node.workflow.JobManagerChangedListener;
 import org.knime.core.node.workflow.NodeMessageEvent;
 import org.knime.core.node.workflow.NodeMessageListener;
+import org.knime.core.node.workflow.NodePropertyChangedEvent;
+import org.knime.core.node.workflow.NodePropertyChangedListener;
 import org.knime.core.node.workflow.NodeStateChangeListener;
 import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.WorkflowEvent;
@@ -92,7 +92,7 @@ import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
  */
 public class ExplorerView extends ViewPart implements WorkflowListener,
         NodeStateChangeListener, NodeMessageListener,
-        JobManagerChangedListener, IPropertyChangeListener {
+        NodePropertyChangedListener, IPropertyChangeListener {
 
     /** The ID of the view as specified by the extension. */
     public static final String ID = "com.knime.workbench.userspace.view";
@@ -329,7 +329,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             m_contentDelegator.addMountPoint(mp);
         }
         m_viewer.refresh();
-
     }
 
     private void createTreeViewer(final Composite parent,
@@ -352,7 +351,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         ProjectWorkflowMap.addWorkflowListener(this);
         ProjectWorkflowMap.addStateListener(this);
         ProjectWorkflowMap.addNodeMessageListener(this);
-        ProjectWorkflowMap.addJobManagerChangedListener(this);
+        ProjectWorkflowMap.addNodePropertyChangedListener(this);
 
     }
 
@@ -376,7 +375,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      * {@inheritDoc}
      */
     @Override
-    public void jobManagerChanged(final JobManagerChangedEvent e) {
+    public void nodePropertyChanged(final NodePropertyChangedEvent e) {
         refreshAsync();
     }
 
@@ -426,12 +425,13 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private void fillContextMenu(final IMenuManager manager) {
 
+
         addGlobalActions(manager);
 
         IStructuredSelection sel =
                 (IStructuredSelection)m_viewer.getSelection();
         Map<AbstractContentProvider, List<ExplorerFileStore>> selFiles =
-                DragAndDropUtils.getProviderMap(sel);
+            DragAndDropUtils.getProviderMap(sel);
 
         // all visible spaces may contribute to the menu
         Set<String> ids = m_contentDelegator.getMountedIds();
@@ -453,6 +453,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private void addGlobalActions(final IMenuManager manager) {
         manager.add(new GlobalDeleteAction(m_viewer));
+
 
     }
 
@@ -528,7 +529,5 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     public void dispose() {
         m_contentDelegator.removePropertyChangeListener(this);
         m_contentDelegator.dispose();
-
     }
-
 }

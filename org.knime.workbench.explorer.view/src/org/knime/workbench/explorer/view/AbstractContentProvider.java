@@ -21,13 +21,19 @@ package org.knime.workbench.explorer.view;
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
@@ -36,10 +42,15 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeMessage;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.util.UniqueNameGenerator;
+import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
@@ -208,6 +219,139 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @return true if dragging is allowed for the selection, false otherwise
      */
     public abstract boolean dragStart(List<ExplorerFileStore> fileStores);
+
+    protected boolean performDropMetaNodeTemplate(final List<WorkflowManager>
+        metaNodes, final ExplorerFileStore target) {
+        File directory;
+        try {
+            directory = target.toLocalFile(EFS.NONE, null);
+        } catch (CoreException e) {
+            LOGGER.warn("Unable to convert \"" + target + "\" to local path "
+                    + "(mount provider \"" + toString() + "\"");
+            return false;
+        }
+        if (!directory.isDirectory() || ExplorerFileStore.isWorkflow(target)
+                || ExplorerFileStore.isNode(target)
+                || ExplorerFileStore.isMetaNode(target)) {
+            return false;
+        }
+        Shell s = Display.getDefault().getActiveShell();
+        if (!directory.canWrite()) {
+            MessageDialog.openWarning(s, "No write permission", "You don't have"
+                    + " sufficient privileges to write to the target"
+                    + " directory \"" + toString() + "\"");
+        }
+        while (!VMFileLocker.lockForVM(directory)) {
+            MessageDialog dialog = new MessageDialog(s,
+                    "Unable to lock directory", null,
+                    "The target folder \"" + directory.getAbsolutePath()
+                    + "\" can currently not be locked. ",
+                    MessageDialog.QUESTION,
+                    new String[] {"&Try again", "&Cancel"}, 0);
+            if (dialog.open() == 0) {
+                continue; // next try
+            } else {
+                return false; // abort
+            }
+        }
+        try {
+            assert VMFileLocker.isLockedForVM(directory);
+            List<String> uniqueNames = new ArrayList<String>();
+            @SuppressWarnings("unchecked")
+            UniqueNameGenerator nameGenerator =
+                new UniqueNameGenerator(Collections.EMPTY_SET);
+            for (WorkflowManager wm : metaNodes) {
+                String name = nameGenerator.newName(wm.getName());
+                uniqueNames.add(name);
+            }
+            List<String> problematicFolderNames = new ArrayList<String>();
+            for (WorkflowManager wm : metaNodes) {
+                String name = wm.getName();
+                File wmDir = new File(directory, name);
+                if (wmDir.exists()) {
+                    problematicFolderNames.add(name);
+                }
+            }
+            boolean isOverwrite = true;
+            if (!problematicFolderNames.isEmpty()) {
+                StringBuilder eMsg = new StringBuilder();
+                if (problematicFolderNames.size() == 1) {
+                    eMsg.append("The target directory \"");
+                    eMsg.append(target.getFullName()).append("/");
+                    eMsg.append(problematicFolderNames.get(0));
+                    eMsg.append("\" already exists.");
+                } else {
+                    eMsg.append("Some target directories already exist:");
+                    for (int i = 0; i < problematicFolderNames.size(); i++) {
+                        eMsg.append("\n");
+                        if (i == 2) {
+                            eMsg.append("<");
+                            eMsg.append(problematicFolderNames.size() - 2);
+                            eMsg.append(" more>");
+                            break;
+                        } else {
+                            eMsg.append("\"");
+                            eMsg.append(target.getFullName()).append("/");
+                            eMsg.append(problematicFolderNames.get(i));
+                            eMsg.append("\"");
+                        }
+                    }
+                }
+                MessageDialog md = new MessageDialog(s, "Existing folder",
+                        null, eMsg.toString(), MessageDialog.WARNING,
+                        new String[] {"&Overwrite", "&Rename", "&Cancel"}, 0);
+                switch (md.open()) {
+                case 0: // Overwrite
+                    isOverwrite = true;
+                    break;
+                case 1: // Rename
+                    isOverwrite = false;
+                    break;
+                case 2: // Cancel
+                    return false;
+                }
+            }
+            Set<String> set;
+            try {
+                set = new HashSet<String>(
+                        Arrays.asList(target.childNames(EFS.NONE, null)));
+            } catch (CoreException e) {
+                LOGGER.warn("Can't query child elements of target \""
+                        + target + "\"", e);
+                set = Collections.emptySet();
+            }
+            if (!isOverwrite) {
+                UniqueNameGenerator nameGen = new UniqueNameGenerator(set);
+                for (int j = 0; j < uniqueNames.size(); j++) {
+                    String uniqueName = nameGen.newName(uniqueNames.get(j));
+                    uniqueNames.set(j, uniqueName);
+                }
+            }
+            StringBuilder problemSummary = null;
+            for (int i = 0; i < uniqueNames.size(); i++) {
+                String name = uniqueNames.get(i);
+                WorkflowManager wm = metaNodes.get(i);
+                File wmDir = new File(directory, name);
+                // TODO delete correctly
+                FileUtils.deleteQuietly(wmDir);
+                try {
+                    wm.saveAsMetaNodeTemplate(wmDir, new ExecutionMonitor());
+                } catch (Exception e) {
+                    String error = "Unable to save template: " + e.getMessage();
+                    if (problemSummary == null) {
+                        problemSummary = new StringBuilder();
+                    } else {
+                        problemSummary.append("\n");
+                    }
+                    problemSummary.append(error);
+                    LOGGER.warn(error, e);
+                }
+            }
+        } finally {
+            VMFileLocker.unlockForVM(directory);
+        }
+        return true;
+    }
 
     /* -------------- content provider methods ---------------------------- */
 

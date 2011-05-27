@@ -137,6 +137,17 @@ public abstract class ExplorerFileStore extends FileStore {
     }
 
     /**
+     * Checks whether a file represents a workflow template.
+     *
+     * @param file the file to check if it represents a workflow
+     * @return true if the file is a workflow template, false otherwise
+     */
+    public static boolean isWorkflowTemplate(final IFileStore file) {
+        // TODO distinguish between workflow and workflow template
+        return isWorkflow(file);
+    }
+
+    /**
      * Checks whether a file represents a workflow group.
      *
      * @param file the file to check if it represents a workflow group
