@@ -82,6 +82,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
 import org.knime.workbench.explorer.view.actions.GlobalOpenMetaInfoDialogAction;
 import org.knime.workbench.explorer.view.actions.GlobalRenameAction;
+import org.knime.workbench.explorer.view.actions.NewWorkflowAction;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
@@ -318,6 +319,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             m_contentDelegator.addMountPoint(mp);
         }
         m_viewer.refresh();
+
     }
 
     private void createTreeViewer(final Composite parent,
@@ -414,13 +416,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private void fillContextMenu(final IMenuManager manager) {
 
-
         addGlobalActions(manager);
 
         IStructuredSelection sel =
                 (IStructuredSelection)m_viewer.getSelection();
         Map<AbstractContentProvider, List<ExplorerFileStore>> selFiles =
-            DragAndDropUtils.getProviderMap(sel);
+                DragAndDropUtils.getProviderMap(sel);
 
         // all visible spaces may contribute to the menu
         Set<String> ids = m_contentDelegator.getMountedIds();
@@ -441,6 +442,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     }
 
     private void addGlobalActions(final IMenuManager manager) {
+        manager.add(new NewWorkflowAction(m_viewer));
         manager.add(new GlobalDeleteAction(m_viewer));
         manager.add(new GlobalRenameAction(m_viewer));
         manager.add(new GlobalOpenMetaInfoDialogAction(m_viewer));
@@ -518,5 +520,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     public void dispose() {
         m_contentDelegator.removePropertyChangeListener(this);
         m_contentDelegator.dispose();
+
     }
+
 }

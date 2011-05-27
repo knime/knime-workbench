@@ -28,9 +28,12 @@ import java.util.Map;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
+import org.eclipse.ui.ISharedImages;
+import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.FileUtil;
@@ -54,11 +57,16 @@ public class GlobalDeleteAction extends ExplorerAction {
     public static final String DELETEACTION_ID =
             "org.knime.workbench.explorer.action.delete";
 
+    private static final ImageDescriptor IMG_DELETE =
+        PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(
+                ISharedImages.IMG_TOOL_DELETE);
+
     /**
      * @param viewer the associated tree viewer
      */
     public GlobalDeleteAction(final TreeViewer viewer) {
         super(viewer, "Delete...");
+        setImageDescriptor(IMG_DELETE);
     }
 
     /**

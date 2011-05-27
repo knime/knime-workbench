@@ -185,14 +185,14 @@ public class ExplorerFileSystem extends FileSystem {
     public static boolean isValidPath(final String path) {
         Matcher matcher = ILLEGAL_DIR_CHARS_PATTERN.matcher(path);
         return !matcher.find();
-    }
+                }
 
     /**
      * @return the characters that are invalid for paths
      */
     public static String getIllegalPATHChars() {
         return ILLEGAL_DIR_CHARS;
-    }
+            }
 
     /**
      * Returns true, if the specified filename doesn't contain invalid
@@ -206,7 +206,7 @@ public class ExplorerFileSystem extends FileSystem {
     public static boolean isValidFilename(final String name) {
         Matcher matcher = ILLEGAL_FILENAME_CHARS_PATTERN.matcher(name);
         return !matcher.find();
-    }
+        }
 
     /**
      * @return the characters that are invalid for file names
@@ -214,4 +214,5 @@ public class ExplorerFileSystem extends FileSystem {
     public static String getIllegalFilenameChars() {
         return ILLEGAL_FILENAME_CHARS;
     }
+
 }

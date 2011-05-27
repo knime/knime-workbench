@@ -29,7 +29,6 @@ import java.net.URISyntaxException;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.filesystem.IFileSystem;
 import org.eclipse.core.filesystem.provider.FileInfo;
 import org.eclipse.core.filesystem.provider.FileStore;
 import org.eclipse.core.runtime.CoreException;
@@ -45,8 +44,6 @@ import org.knime.workbench.explorer.ExplorerMountTable;
  * @author ohl, University of Konstanz
  */
 public abstract class ExplorerFileStore extends FileStore {
-
-
 
     private final String m_mountID;
 
@@ -82,7 +79,35 @@ public abstract class ExplorerFileStore extends FileStore {
      * {@inheritDoc}
      */
     @Override
-    public IFileSystem getFileSystem() {
+    public abstract ExplorerFileStore mkdir(int options,
+            IProgressMonitor monitor) throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract OutputStream openOutputStream(int options,
+            IProgressMonitor monitor) throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract void copy(IFileStore destination, int options,
+            IProgressMonitor monitor) throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract void delete(int options, IProgressMonitor monitor)
+            throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ExplorerFileSystem getFileSystem() {
         return ExplorerMountTable.getFileSystem();
     }
 
@@ -164,8 +189,8 @@ public abstract class ExplorerFileStore extends FileStore {
         if (isWorkflow(file) || isWorkflow(file.getParent())) {
             return false;
         }
-        return file.getChild(
-                WorkflowPersistor.METAINFO_FILE).fetchInfo().exists();
+        return file.getChild(WorkflowPersistor.METAINFO_FILE).fetchInfo()
+                .exists();
     }
 
     /**
@@ -456,7 +481,7 @@ public abstract class ExplorerFileStore extends FileStore {
          * {@inheritDoc}
          */
         @Override
-        public IFileStore mkdir(final int options,
+        public ExplorerFileStore mkdir(final int options,
                 final IProgressMonitor monitor) throws CoreException {
             throw new UnsupportedOperationException(
                     "Not supported in message file store.");
@@ -518,5 +543,6 @@ public abstract class ExplorerFileStore extends FileStore {
         public String toString() {
             return m_msg;
         }
+
     }
 }

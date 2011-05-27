@@ -21,12 +21,12 @@ package org.knime.workbench.explorer;
 
 import java.util.Hashtable;
 
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.util.pathresolve.URIToFileResolve;
 import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl;
 import org.knime.workbench.explorer.view.preferences.ExplorerPrefsSyncer;
-import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.url.URLConstants;
@@ -36,7 +36,7 @@ import org.osgi.service.url.URLStreamHandlerService;
  *
  * @author ohl, University of Konstanz
  */
-public class ExplorerActivator implements BundleActivator {
+public class ExplorerActivator extends AbstractUIPlugin {
 
     /**
      * the id of the plug-in.

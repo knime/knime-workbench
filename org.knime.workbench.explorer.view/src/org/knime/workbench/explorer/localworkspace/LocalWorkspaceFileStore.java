@@ -23,6 +23,7 @@ package org.knime.workbench.explorer.localworkspace;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
@@ -52,8 +53,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * @param mountID the id of the mount
      * @param fullPath the full path of the file store
      */
-    public LocalWorkspaceFileStore(final String mountID,
-            final String fullPath) {
+    public LocalWorkspaceFileStore(final String mountID, final String fullPath) {
         super(mountID, fullPath);
         IPath rootPath = ResourcesPlugin.getWorkspace().getRoot().getLocation();
         IPath filePath = rootPath.append(new Path(fullPath));
@@ -77,8 +77,8 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public String[] childNames(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public String[] childNames(final int options, final IProgressMonitor monitor)
+            throws CoreException {
         return m_file.childNames(options, monitor);
     }
 
@@ -86,8 +86,8 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public IFileInfo fetchInfo(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public IFileInfo fetchInfo(final int options, final IProgressMonitor monitor)
+            throws CoreException {
         return m_file.fetchInfo(options, monitor);
     }
 
@@ -142,15 +142,15 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
         if (!dstFile.isDirectory()) {
             throw new UnsupportedOperationException("The local workspace "
                     + "filestore only allows copying to directories but the "
-                    + "destination \"" + dstFile.getAbsolutePath() + "\" is not"
-                    + " a directory.");
+                    + "destination \"" + dstFile.getAbsolutePath()
+                    + "\" is not" + " a directory.");
         }
         File targetDir = new File(dstFile, srcFile.getName());
         if (targetDir.exists()) {
             throw new CoreException(new Status(Status.ERROR,
                     ExplorerActivator.PLUGIN_ID, "A resource with the name "
-                    + srcFile.getName() + " already exists in "
-                    + dstFile.getName()));
+                            + srcFile.getName() + " already exists in "
+                            + dstFile.getName()));
         }
         try {
             if (srcFile.isDirectory()) {
@@ -159,8 +159,9 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
                 FileUtils.copyFileToDirectory(srcFile, dstFile);
             }
         } catch (IOException e) {
-            String message = "Could not copy \"" + srcFile.getAbsolutePath()
-                    + "\" to \"" + dstFile.getAbsolutePath() + "\".";
+            String message =
+                    "Could not copy \"" + srcFile.getAbsolutePath()
+                            + "\" to \"" + dstFile.getAbsolutePath() + "\".";
             throw new CoreException(new Status(Status.ERROR,
                     ExplorerActivator.PLUGIN_ID, message, e));
         }
@@ -181,11 +182,30 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
                 srcFile.delete();
             }
         } catch (IOException e) {
-            String message = "Could not delete \"" + srcFile.getAbsolutePath()
-            + "\".";
+            String message =
+                    "Could not delete \"" + srcFile.getAbsolutePath() + "\".";
             throw new CoreException(new Status(Status.ERROR,
                     ExplorerActivator.PLUGIN_ID, message, e));
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ExplorerFileStore mkdir(final int options,
+            final IProgressMonitor monitor) throws CoreException {
+        m_file.mkdir(options, monitor);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public OutputStream openOutputStream(final int options,
+            final IProgressMonitor monitor) throws CoreException {
+        return m_file.openOutputStream(options, monitor);
     }
 
     /**
@@ -208,4 +228,5 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
                     ExplorerActivator.PLUGIN_ID, message, e));
         }
     }
+
 }

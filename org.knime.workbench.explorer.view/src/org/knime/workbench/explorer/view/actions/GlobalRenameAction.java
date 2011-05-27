@@ -31,6 +31,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.dialogs.IInputValidator;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
@@ -38,10 +39,12 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  *
@@ -53,14 +56,19 @@ public class GlobalRenameAction extends ExplorerAction {
     .getLogger(GlobalRenameAction.class);
 
     /** ID of the global rename action in the explorer menu. */
-    public static final String DELETEACTION_ID =
-        "org.knime.workbench.explorer.action.delete";
+    public static final String RENAMEACTION_ID =
+        "org.knime.workbench.explorer.action.rename";
+
+    private static final ImageDescriptor ICON = KNIMEUIPlugin
+    .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
+            "icons/rename.png");;
 
     /**
      * @param viewer the associated tree viewer
      */
     public GlobalRenameAction(final TreeViewer viewer) {
         super(viewer, "Rename...");
+        setImageDescriptor(ICON);
     }
 
     /**
@@ -68,7 +76,7 @@ public class GlobalRenameAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-        return DELETEACTION_ID;
+        return RENAMEACTION_ID;
     }
 
     /**
