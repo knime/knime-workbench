@@ -45,6 +45,8 @@ import org.knime.workbench.explorer.ExplorerMountTable;
  */
 public abstract class ExplorerFileStore extends FileStore {
 
+
+
     private final String m_mountID;
 
     private final String m_fullPath;
@@ -189,8 +191,8 @@ public abstract class ExplorerFileStore extends FileStore {
         if (isWorkflow(file) || isWorkflow(file.getParent())) {
             return false;
         }
-        return file.getChild(WorkflowPersistor.METAINFO_FILE).fetchInfo()
-                .exists();
+        return file.getChild(
+                WorkflowPersistor.METAINFO_FILE).fetchInfo().exists();
     }
 
     /**
@@ -251,6 +253,16 @@ public abstract class ExplorerFileStore extends FileStore {
      */
     @Override
     public abstract ExplorerFileStore getChild(String name);
+
+    /**
+     * Convenience method that calls #toLocalFile(int, IProgressMonitor)
+     * with options = EFS.NONE and monitor = null.
+     * @return the local file or null if not supported
+     * @throws CoreException if this method fails
+     */
+    public File toLocalFile() throws CoreException {
+        return toLocalFile(EFS.NONE, null);
+    }
 
     /* ----------- placeholder store in the tree for string messages ----- */
 
@@ -543,6 +555,5 @@ public abstract class ExplorerFileStore extends FileStore {
         public String toString() {
             return m_msg;
         }
-
     }
 }
