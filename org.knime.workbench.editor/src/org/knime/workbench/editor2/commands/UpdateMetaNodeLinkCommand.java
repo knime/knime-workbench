@@ -46,91 +46,115 @@
  * -------------------------------------------------------------------
  *
  * History
- *   29.05.2005 (Florian Georg): created
+ *   13.04.2011 (Bernd Wiswedel): created
  */
 package org.knime.workbench.editor2.commands;
 
-import org.eclipse.draw2d.geometry.Point;
+import java.util.List;
+
 import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.MessageBox;
-import org.knime.core.node.NodeFactory;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.progress.IProgressService;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.NodeModel;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation.UpdateStatus;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.editor2.UpdateMetaNodeTemplateRunnable;
 
 /**
- * GEF command for adding a <code>Node</code> to the
- * <code>WorkflowManager</code>.
+ * GEF command for update meta node links.
  *
- * @author Florian Georg, University of Konstanz
+ * @author Bernd Wiswedel, KNIME.com, Zurich
  */
-public class CreateNodeCommand extends AbstractKNIMECommand {
+public class UpdateMetaNodeLinkCommand extends AbstractKNIMECommand {
+
     private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(CreateNodeCommand.class);
+            .getLogger(UpdateMetaNodeLinkCommand.class);
 
-    private final NodeFactory<? extends NodeModel> m_factory;
-
-    private final Point m_location;
-
-    private NodeContainer m_container;
+    // fields correspond to the fields in UpdateMetaNodeTemplateRunnable
+    private final NodeID[] m_ids;
+    private List<NodeID> m_newIDs;
+    private List<WorkflowPersistor> m_undoPersistors;
 
     /**
      * Creates a new command.
      *
-     * @param manager The workflow manager that should host the new node
-     * @param factory The factory of the Node that should be added
-     * @param location Initial visual location in the
+     * @param manager The workflow manager containing the links to be updated.
+     * @param ids The ids of the link nodes.
      */
-    public CreateNodeCommand(final WorkflowManager manager,
-            final NodeFactory<? extends NodeModel> factory, final Point location) {
+    public UpdateMetaNodeLinkCommand(final WorkflowManager manager,
+            final NodeID[] ids) {
         super(manager);
-        m_factory = factory;
-        m_location = location;
+        m_ids = ids;
     }
 
     /** We can execute, if all components were 'non-null' in the constructor.
      * {@inheritDoc} */
     @Override
     public boolean canExecute() {
-        return m_factory != null && m_location != null && super.canExecute();
+        if (!super.canExecute()) {
+            return false;
+        }
+        if (m_ids == null) {
+            return false;
+        }
+        WorkflowManager hostWFM = getHostWFM();
+        for (NodeID id : m_ids) {
+            NodeContainer nc = hostWFM.getNodeContainer(id);
+            if (nc instanceof WorkflowManager) {
+                WorkflowManager wm = (WorkflowManager)nc;
+                MetaNodeTemplateInformation lI = wm.getTemplateInformation();
+                if (UpdateStatus.HasUpdate.equals(lI.getUpdateStatus())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** {@inheritDoc} */
     @Override
     public void execute() {
-        WorkflowManager hostWFM = getHostWFM();
-        // Add node to workflow and get the container
+        UpdateMetaNodeTemplateRunnable updateRunner = null;
         try {
-            NodeID id = hostWFM.createAndAddNode(m_factory);
-            m_container = hostWFM.getNodeContainer(id);
+            IWorkbench wb = PlatformUI.getWorkbench();
+            IProgressService ps = wb.getProgressService();
+            WorkflowManager hostWFM = getHostWFM();
+            updateRunner = new UpdateMetaNodeTemplateRunnable(hostWFM, m_ids);
+            ps.busyCursorWhile(updateRunner);
+            m_newIDs = updateRunner.getNewIDs();
+            m_undoPersistors = updateRunner.getUndoPersistors();
+            assert m_newIDs.size() == m_undoPersistors.size();
         } catch (Throwable t) {
             // if fails notify the user
             LOGGER.debug("Node cannot be created.", t);
-            MessageBox mb = new MessageBox(Display.getDefault().
-                    getActiveShell(), SWT.ICON_WARNING | SWT.OK);
-            mb.setText("Node cannot be created.");
-            mb.setMessage("The selected node could not be created "
+            MessageDialog.openWarning(Display.getDefault().
+                    getActiveShell(), "Node cannot be created.",
+                    "The selected node could not be created "
                     + "due to the following reason:\n" + t.getMessage());
-            mb.open();
             return;
+        } finally {
+            if (updateRunner != null) {
+                updateRunner.discard();
+            }
         }
-        // create extra info and set it
-        NodeUIInformation info = new NodeUIInformation(
-                m_location.x, m_location.y, -1, -1, false);
-        m_container.setUIInformation(info);
-
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean canUndo() {
-        return m_container != null
-            && getHostWFM().canRemoveNode(m_container.getID());
+        if (m_ids == null || m_ids.length == 0) {
+            return false;
+        }
+        if (m_newIDs == null || m_undoPersistors == null) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -138,15 +162,16 @@ public class CreateNodeCommand extends AbstractKNIMECommand {
      */
     @Override
     public void undo() {
-        LOGGER.debug("Undo: Removing node #" + m_container.getID());
-        if (canUndo()) {
-            getHostWFM().removeNode(m_container.getID());
-        } else {
-            MessageDialog.openInformation(Display.getDefault().getActiveShell(),
-                    "Operation no allowed", "The node "
-                    + m_container.getNameWithID()
-                    + " can currently not be removed");
+        LOGGER.debug("Undo: Reverting meta node links ("
+                + m_newIDs.size() + " meta node(s))");
+        WorkflowManager hostWFM = getHostWFM();
+        for (int i = 0; i < m_newIDs.size(); i++) {
+            NodeID id = m_newIDs.get(i);
+            WorkflowPersistor p = m_undoPersistors.get(i);
+            hostWFM.removeNode(id);
+            hostWFM.paste(p);
         }
+
     }
 
 }

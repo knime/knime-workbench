@@ -46,43 +46,41 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   21.02.2008 (Fabian Dill): created
+ *   12.05.2010 (Bernd Wiswedel): created
  */
-package org.knime.workbench.editor2.commands;
+package org.knime.workbench.editor2.actions;
 
-import org.eclipse.draw2d.geometry.Rectangle;
-import org.knime.core.node.workflow.WorkflowAnnotation;
+import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.dialogs.InputDialog;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.workbench.editor2.editparts.AnnotationEditPart;
+import org.knime.workbench.editor2.ImageRepository;
+import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.commands.MetaNodeSetNameCommand;
+import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
  *
  * @author Bernd Wiswedel, KNIME.com, Zurich, Switzerland
  */
-public class ChangeAnnotationBoundsCommand extends AbstractKNIMECommand {
+public class MetaNodeSetNameAction extends AbstractNodeAction {
 
-    private final Rectangle m_oldBounds;
-
-    private final Rectangle m_newBounds;
-
-    // TODO this must not be a hard reference (undo/redo problems when deleted)
-    private final AnnotationEditPart m_annotationEditPart;
+    public static final String ID = "knime.action.meta_node_set_name";
 
     /**
-     * @param hostWFM The host WFM
-     * @param portBar The workflow port bar to change
-     * @param newBounds The new bounds
+     * @param node container edit part
      */
-    public ChangeAnnotationBoundsCommand(final WorkflowManager hostWFM,
-            final AnnotationEditPart portBar,
-            final Rectangle newBounds) {
-        super(hostWFM);
-        WorkflowAnnotation anno = portBar.getModel();
-        m_oldBounds =
-                new Rectangle(anno.getX(), anno.getY(), anno.getWidth(),
-                        anno.getHeight());
-        m_newBounds = newBounds;
-        m_annotationEditPart = portBar;
+    public MetaNodeSetNameAction(final WorkflowEditor editor) {
+        super(editor);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getId() {
+        return ID;
     }
 
     /**
@@ -90,45 +88,57 @@ public class ChangeAnnotationBoundsCommand extends AbstractKNIMECommand {
      * {@inheritDoc}
      */
     @Override
-    public boolean canExecute() {
-//        Dimension min = m_annotationEditPart.getFigure().getMinimumSize();
-//        if (m_newBounds.width < min.width || m_newBounds.height < min.height) {
-//            return false;
-//        }
-        return super.canExecute();
+    public String getText() {
+        return "Set name";
     }
 
     /**
-     * Sets the new bounds.
      *
-     * @see org.eclipse.gef.commands.Command#execute()
+     * {@inheritDoc}
      */
     @Override
-    public void execute() {
-        WorkflowAnnotation annotation =
-                m_annotationEditPart.getModel();
-        annotation.setDimension(m_newBounds.x, m_newBounds.y,
-                m_newBounds.width, m_newBounds.height);
-        m_annotationEditPart.getFigure().setBounds(m_newBounds);
-        m_annotationEditPart.getFigure().getLayoutManager()
-                .layout(m_annotationEditPart.getFigure());
+    public String getToolTipText() {
+        return "Set name on meta node";
+    }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ImageDescriptor getImageDescriptor() {
+        return ImageRepository.getImageDescriptor(
+                "icons/meta/metanode_rename.png");
     }
 
     /**
-     * Sets the old bounds.
-     *
-     * @see org.eclipse.gef.commands.Command#execute()
+     * @return true, if underlying model instance of
+     *         <code>WorkflowManager</code>, otherwise false
      */
     @Override
-    public void undo() {
-        WorkflowAnnotation annotation =
-                m_annotationEditPart.getModel();
-        annotation.setDimension(m_oldBounds.x, m_oldBounds.y,
-                        m_oldBounds.width, m_oldBounds.height);
-        // must set explicitly so that event is fired by container
-        m_annotationEditPart.getFigure().setBounds(m_oldBounds);
-        m_annotationEditPart.getFigure().getLayoutManager()
-                .layout(m_annotationEditPart.getFigure());
+    protected boolean calculateEnabled() {
+        NodeContainerEditPart[] nodes =
+            getSelectedParts(NodeContainerEditPart.class);
+        if (nodes.length != 1) {
+            return false;
+        }
+        Object model = nodes[0].getModel();
+        return model instanceof WorkflowManager;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
+        WorkflowManager w = (WorkflowManager)nodeParts[0].getModel();
+        String oldName = w.getNameField();
+        InputDialog id = new InputDialog(Display.getCurrent().getActiveShell(),
+                "Meta node name", "Enter name of meta node:", oldName, null);
+        String newName = null;
+        if (id.open() == Dialog.OK) {
+            String value = id.getValue();
+            newName = value == null || value.length() == 0 ? null : value;
+        }
+        getCommandStack().execute(new MetaNodeSetNameCommand(w, newName));
     }
 
 }

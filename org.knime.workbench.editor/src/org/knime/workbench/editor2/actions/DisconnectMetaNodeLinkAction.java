@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  *
- *  Copyright (C) 2003 - 2010
+ *  Copyright (C) 2003 - 2011
  *  University of Konstanz, Germany and
  *  KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
@@ -43,37 +43,38 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
+ * History
+ *   25.05.2010 (Bernd Wiswedel): created
  */
 package org.knime.workbench.editor2.actions;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
+import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.editor2.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.commands.ExpandMetaNodeCommand;
+import org.knime.workbench.editor2.commands.DisconnectMetaNodeLinkCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
- * Action to expand selected metanode.
- *
- * @author M. Berthold, University of Konstanz
+ * Action to get disconnect a meta node link from its template.
+ * @author Bernd Wiswedel, KNIME.com, Zurich, Switzerland
  */
-public class ExpandMetaNodeAction extends AbstractNodeAction {
-    private static final NodeLogger LOGGER =
-            NodeLogger.getLogger(ExpandMetaNodeAction.class);
+public class DisconnectMetaNodeLinkAction extends AbstractNodeAction {
 
-    /**
-     * unique ID for this action.
-     */
-    public static final String ID = "knime.action.expandmetanode";
+    /** Action ID. */
+    public static final String ID = "knime.action.meta_node_disconnect_link";
 
-    /**
-     * @param editor The workflow editor
-     */
-    public ExpandMetaNodeAction(final WorkflowEditor editor) {
+    /** Create new action based on given editor.
+     * @param editor The associated editor. */
+    public DisconnectMetaNodeLinkAction(final WorkflowEditor editor) {
         super(editor);
     }
 
@@ -86,78 +87,82 @@ public class ExpandMetaNodeAction extends AbstractNodeAction {
     }
 
     /**
+     *
      * {@inheritDoc}
      */
     @Override
     public String getText() {
-        return "Expand selected metanode.";
+        return "Disconnect Link";
     }
+
+    /**
+     *
+     * {@inheritDoc}
+     */
+    @Override
+    public String getToolTipText() {
+        return "Removes the link to the meta node template and keeps a local, "
+            + "editable copy of the meta node.";
+    }
+
 
     /**
      * {@inheritDoc}
      */
     @Override
     public ImageDescriptor getImageDescriptor() {
-        return ImageRepository.getImageDescriptor("icons/missing.png");
+        return ImageRepository.getImageDescriptor(
+                "icons/meta/meta_node_link_disconnect.png");
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
     public ImageDescriptor getDisabledImageDescriptor() {
-        return ImageRepository
-                .getImageDescriptor("icons/missing_diabled.png");
+        return ImageRepository.getImageDescriptor(
+                "icons/meta/meta_node_link_disconnect_disabled.png");
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getToolTipText() {
-        return "Expand selected metanode.";
-    }
-
-    /**
-     * @return <code>true</code>, if exactly one metanode is selected.
-     *
-     * @see org.eclipse.gef.ui.actions.WorkbenchPartAction#calculateEnabled()
+     * @return true, if underlying model instance of
+     *         <code>WorkflowManager</code>, otherwise false
      */
     @Override
     protected boolean calculateEnabled() {
-        NodeContainerEditPart[] parts =
+        NodeContainerEditPart[] nodes =
             getSelectedParts(NodeContainerEditPart.class);
-        if (parts.length != 1) {
-            return false;
+        for (NodeContainerEditPart p : nodes) {
+            Object model = p.getModel();
+            if (model instanceof WorkflowManager) {
+                WorkflowManager wm = (WorkflowManager)model;
+                MetaNodeTemplateInformation i = wm.getTemplateInformation();
+                if (Role.Link.equals(i.getRole())) {
+                    return true;
+                }
+            }
         }
-        if (parts[0].getNodeContainer() instanceof WorkflowManager) {
-            return true;
-        }
-        // in all other cases: don't enable.
         return false;
     }
 
-    /**
-     * Expand metanode!
-     *
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
     public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
-        LOGGER.debug("Creating 'Expand MetaNode' job for "
-                + nodeParts.length + " node(s)...");
-        WorkflowManager manager = getManager();
-        WorkflowManager metaNode =
-            (WorkflowManager)nodeParts[0].getNodeContainer();
-        ExpandMetaNodeCommand emnc =
-            new ExpandMetaNodeCommand(manager, metaNode.getID());
-        execute(emnc);
-        try {
-            // Give focus to the editor again. Otherwise the actions (selection)
-            // is not updated correctly.
-            getWorkbenchPart().getSite().getPage().activate(getWorkbenchPart());
-        } catch (Exception e) {
-            // ignore
+        NodeContainerEditPart[] nodes =
+            getSelectedParts(NodeContainerEditPart.class);
+        List<NodeID> idList = new ArrayList<NodeID>();
+        for (NodeContainerEditPart p : nodes) {
+            Object model = p.getModel();
+            if (model instanceof WorkflowManager) {
+                WorkflowManager wm = (WorkflowManager)model;
+                MetaNodeTemplateInformation i = wm.getTemplateInformation();
+                if (Role.Link.equals(i.getRole())) {
+                    idList.add(wm.getID());
+                }
+            }
         }
+        NodeID[] ids = idList.toArray(new NodeID[idList.size()]);
+        DisconnectMetaNodeLinkCommand disCmd =
+            new DisconnectMetaNodeLinkCommand(getManager(), ids);
+        execute(disCmd);
     }
+
 }

@@ -46,91 +46,101 @@
  * -------------------------------------------------------------------
  *
  * History
- *   29.05.2005 (Florian Georg): created
+ *   25.05.2011 (Bernd Wiswedel): created
  */
 package org.knime.workbench.editor2.commands;
 
-import org.eclipse.draw2d.geometry.Point;
-import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.MessageBox;
-import org.knime.core.node.NodeFactory;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.NodeModel;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
 
 /**
- * GEF command for adding a <code>Node</code> to the
- * <code>WorkflowManager</code>.
+ * GEF command for disconnecting meta node links.
  *
- * @author Florian Georg, University of Konstanz
+ * @author Bernd Wiswedel, KNIME.com, Zurich
  */
-public class CreateNodeCommand extends AbstractKNIMECommand {
+public class DisconnectMetaNodeLinkCommand extends AbstractKNIMECommand {
+
     private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(CreateNodeCommand.class);
+            .getLogger(DisconnectMetaNodeLinkCommand.class);
 
-    private final NodeFactory<? extends NodeModel> m_factory;
-
-    private final Point m_location;
-
-    private NodeContainer m_container;
+    private final NodeID[] m_ids;
+    private List<NodeID> m_changedIDs; // for undo
+    private List<MetaNodeTemplateInformation> m_oldTemplInfos; // for undo
 
     /**
      * Creates a new command.
      *
-     * @param manager The workflow manager that should host the new node
-     * @param factory The factory of the Node that should be added
-     * @param location Initial visual location in the
+     * @param manager The workflow manager containing the links to change
+     * @param ids The ids of the link nodes.
      */
-    public CreateNodeCommand(final WorkflowManager manager,
-            final NodeFactory<? extends NodeModel> factory, final Point location) {
+    public DisconnectMetaNodeLinkCommand(final WorkflowManager manager,
+            final NodeID[] ids) {
         super(manager);
-        m_factory = factory;
-        m_location = location;
+        m_ids = ids;
     }
 
     /** We can execute, if all components were 'non-null' in the constructor.
      * {@inheritDoc} */
     @Override
     public boolean canExecute() {
-        return m_factory != null && m_location != null && super.canExecute();
+        if (!super.canExecute()) {
+            return false;
+        }
+        if (m_ids == null) {
+            return false;
+        }
+        for (NodeID id : m_ids) {
+            NodeContainer nc = getHostWFM().getNodeContainer(id);
+            if (nc instanceof WorkflowManager) {
+                WorkflowManager wm = (WorkflowManager)nc;
+                MetaNodeTemplateInformation lI = wm.getTemplateInformation();
+                if (Role.Link.equals(lI.getRole())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** {@inheritDoc} */
     @Override
     public void execute() {
+        m_changedIDs = new ArrayList<NodeID>();
+        m_oldTemplInfos = new ArrayList<MetaNodeTemplateInformation>();
         WorkflowManager hostWFM = getHostWFM();
-        // Add node to workflow and get the container
-        try {
-            NodeID id = hostWFM.createAndAddNode(m_factory);
-            m_container = hostWFM.getNodeContainer(id);
-        } catch (Throwable t) {
-            // if fails notify the user
-            LOGGER.debug("Node cannot be created.", t);
-            MessageBox mb = new MessageBox(Display.getDefault().
-                    getActiveShell(), SWT.ICON_WARNING | SWT.OK);
-            mb.setText("Node cannot be created.");
-            mb.setMessage("The selected node could not be created "
-                    + "due to the following reason:\n" + t.getMessage());
-            mb.open();
-            return;
+        for (NodeID id : m_ids) {
+            NodeContainer nc = hostWFM.getNodeContainer(id);
+            if (nc instanceof WorkflowManager) {
+                WorkflowManager wm = (WorkflowManager)nc;
+                MetaNodeTemplateInformation lI = wm.getTemplateInformation();
+                if (Role.Link.equals(lI.getRole())) {
+                    MetaNodeTemplateInformation old =
+                            hostWFM.setTemplateInformation(id,
+                                    MetaNodeTemplateInformation.NONE);
+                    m_changedIDs.add(id);
+                    m_oldTemplInfos.add(old);
+                }
+            }
         }
-        // create extra info and set it
-        NodeUIInformation info = new NodeUIInformation(
-                m_location.x, m_location.y, -1, -1, false);
-        m_container.setUIInformation(info);
-
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean canUndo() {
-        return m_container != null
-            && getHostWFM().canRemoveNode(m_container.getID());
+        if (m_ids == null || m_ids.length == 0) {
+            return false;
+        }
+        if (m_changedIDs == null || m_oldTemplInfos == null) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -138,15 +148,15 @@ public class CreateNodeCommand extends AbstractKNIMECommand {
      */
     @Override
     public void undo() {
-        LOGGER.debug("Undo: Removing node #" + m_container.getID());
-        if (canUndo()) {
-            getHostWFM().removeNode(m_container.getID());
-        } else {
-            MessageDialog.openInformation(Display.getDefault().getActiveShell(),
-                    "Operation no allowed", "The node "
-                    + m_container.getNameWithID()
-                    + " can currently not be removed");
+        LOGGER.debug("Undo: Reconnecting meta node links ("
+                + m_changedIDs.size() + " meta node(s))");
+        for (int i = 0; i < m_changedIDs.size(); i++) {
+            NodeID id = m_changedIDs.get(i);
+            MetaNodeTemplateInformation old = m_oldTemplInfos.get(i);
+            getHostWFM().setTemplateInformation(id, old);
         }
+        m_changedIDs = null;
+        m_oldTemplInfos = null;
     }
 
 }

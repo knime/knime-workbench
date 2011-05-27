@@ -40,82 +40,47 @@
  *  License, the License does not apply to Nodes, you are not required to
  *  license Nodes under the License, and you are granted a license to
  *  prepare and propagate Nodes, in each case even if such Nodes are
- *  propagated with or for interoperation with KNIME.  The owner of a Node
+ *  propagated with or for interoperation with KNIME. The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ---------------------------------------------------------------------
+ * ------------------------------------------------------------------------
  *
  * History
- *   20.02.2008 (Fabian Dill): created
+ *   May 20, 2011 (wiswedel): created
  */
-package org.knime.workbench.editor2.editparts;
+package org.knime.workbench.editor2.actions;
 
-import org.eclipse.draw2d.geometry.Rectangle;
-import org.eclipse.gef.DragTracker;
-import org.eclipse.gef.EditPolicy;
-import org.eclipse.gef.Request;
-import org.knime.core.node.workflow.NodeUIInformation;
-import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.workbench.editor2.WorkflowSelectionDragEditPartsTracker;
-import org.knime.workbench.editor2.editparts.policy.PortGraphicalRoleEditPolicy;
-import org.knime.workbench.editor2.figures.AbstractWorkflowPortBarFigure;
-import org.knime.workbench.editor2.model.WorkflowPortBar;
+import org.eclipse.gef.EditPart;
+import org.knime.workbench.editor2.WorkflowEditor;
 
 /**
  *
- * @author Fabian Dill, University of Konstanz
+ * @author Bernd Wiswedel, KNIME.com, Zurich, Switzerland
  */
-public abstract class AbstractWorkflowPortBarEditPart
-    extends AbstractWorkflowEditPart implements ConnectableEditPart {
+public class CheckUpdateMetaNodeLinkAllAction extends
+        CheckUpdateMetaNodeLinkAction {
 
-    /**
-     *
-     * {@inheritDoc}
-     */
-    @Override
-    protected void refreshVisuals() {
-        NodeUIInformation uiInfo = ((WorkflowPortBar)getModel())
-            .getUIInfo();
-        if (uiInfo != null && uiInfo.isFilledProperly()
-                && !((AbstractWorkflowPortBarFigure)getFigure())
-                .isInitialized()) {
-            int[] bounds = uiInfo.getBounds();
-            ((AbstractWorkflowPortBarFigure)getFigure()).setBounds(
-                    new Rectangle(bounds[0], bounds[1], bounds[2], bounds[3]));
-        }
-        super.refreshVisuals();
+    /** Action ID. */
+    @SuppressWarnings("hiding")
+    public static final String ID =
+        "knime.action.meta_node_check_update_link_all";
+
+    /** @param editor The host editor. */
+    public CheckUpdateMetaNodeLinkAllAction(final WorkflowEditor editor) {
+        super(editor);
     }
-
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void createEditPolicies() {
-
-        // This policy provides create/reconnect commands for connections that
-        // are associated with ports of this node
-        this.installEditPolicy(EditPolicy.GRAPHICAL_NODE_ROLE,
-                new PortGraphicalRoleEditPolicy());
-
-    }
-
-    /**
-     * Overridden to return a custom <code>DragTracker</code> for
-     * NodeContainerEditParts.
-     *
-     * @see org.eclipse.gef.EditPart#getDragTracker(Request)
-     */
-    @Override
-    public DragTracker getDragTracker(final Request request) {
-        return new WorkflowSelectionDragEditPartsTracker(this);
-    }
-
 
     /** {@inheritDoc} */
     @Override
-    public WorkflowManager getNodeContainer() {
-        return ((WorkflowPortBar)getModel()).getWorkflowManager();
+    public String getId() {
+        return ID;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    protected <T extends EditPart> T[] getSelectedParts(
+            final Class<T> editPartClass) {
+        return getAllParts(editPartClass);
     }
 
 }
