@@ -223,6 +223,13 @@ public class GlobalDeleteAction extends ExplorerAction {
                 msg = "Do you want to delete the file ";
             }
             msg += "\"" + toDel.get(0).getName() + "\"?\n";
+            if (toDelWFs.size() > 0) {
+                msg += "It contains " + toDelWFs.size() + " workflow";
+                if (toDelWFs.size() > 1) {
+                    msg += "s";
+                }
+                msg += ".\n";
+            }
         } else {
             int stuff = toDel.size() - toDelWFs.size();
             if (stuff == 0) {

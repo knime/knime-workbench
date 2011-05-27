@@ -35,7 +35,6 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
-import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  * Action to create a new workflow.
@@ -51,7 +50,7 @@ public class NewWorkflowAction extends ExplorerAction {
 
     private static final int SIZING_WIZARD_HEIGHT = 550;
 
-    private static final ImageDescriptor ICON = KNIMEUIPlugin
+    private static final ImageDescriptor ICON = ExplorerActivator
             .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
                     "icons/new_knime16.png");;
 

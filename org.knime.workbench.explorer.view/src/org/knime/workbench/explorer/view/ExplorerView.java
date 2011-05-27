@@ -80,7 +80,7 @@ import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
-import org.knime.workbench.explorer.view.actions.GlobalOpenMetaInfoDialogAction;
+import org.knime.workbench.explorer.view.actions.GlobalEditMetaInfoAction;
 import org.knime.workbench.explorer.view.actions.GlobalRenameAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowAction;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
@@ -445,7 +445,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new NewWorkflowAction(m_viewer));
         manager.add(new GlobalDeleteAction(m_viewer));
         manager.add(new GlobalRenameAction(m_viewer));
-        manager.add(new GlobalOpenMetaInfoDialogAction(m_viewer));
+        manager.add(new GlobalEditMetaInfoAction(m_viewer));
     }
 
     private void createLocalToolBar(final DrillDownAdapter dda) {

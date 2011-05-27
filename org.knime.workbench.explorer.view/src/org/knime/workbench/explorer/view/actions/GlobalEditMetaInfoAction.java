@@ -27,6 +27,7 @@ import java.util.List;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.filesystem.local.LocalFile;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.PlatformUI;
@@ -35,6 +36,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
@@ -42,19 +44,24 @@ import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
  * @author Dominik Morent, KNIME.com, Zurich, Switzerland
  *
  */
-public class GlobalOpenMetaInfoDialogAction extends ExplorerAction {
+public class GlobalEditMetaInfoAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            GlobalOpenMetaInfoDialogAction.class);
+            GlobalEditMetaInfoAction.class);
 
     /** ID of the global rename action in the explorer menu. */
     public static final String METAINFO_ACTION_ID =
         "org.knime.workbench.explorer.action.openMetaInfo";
 
+    private static final ImageDescriptor ICON = KNIMEUIPlugin
+    .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+            "icons/meta_info_edit.png");;
+
     /**
      * @param viewer the associated tree viewer
      */
-    public GlobalOpenMetaInfoDialogAction(final TreeViewer viewer) {
+    public GlobalEditMetaInfoAction(final TreeViewer viewer) {
         super(viewer, "Edit Meta Information...");
+        setImageDescriptor(ICON);
     }
 
     /**
