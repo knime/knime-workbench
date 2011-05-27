@@ -42,8 +42,7 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
- * calls to different content providers providing a view to different sources.
- * <br />
+ * calls to different content providers providing a view to different sources. <br />
  * The objects returned by the different providers are wrapped into a
  * {@link ContentObject} (associating the creating provider with it) and the
  * wrapper is placed in the tree view. <br />
@@ -54,8 +53,10 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 public class ContentDelegator extends LabelProvider implements
         IStructuredContentProvider, ITreeContentProvider,
         IPropertyChangeListener {
-    /** The property for changes in the content IPropertyChangeListener
-     * can register for. */
+    /**
+     * The property for changes in the content IPropertyChangeListener can
+     * register for.
+     */
     public static final String CONTENT_CHANGED = "CONTENT_CHANGED";
 
     private static final NodeLogger LOGGER = NodeLogger
@@ -77,9 +78,10 @@ public class ContentDelegator extends LabelProvider implements
      */
     private final HashSet<MountPoint> m_provider;
 
-
-    /** Creates a new content delegator and registers it for property changes
-     * of the explorer mount table. */
+    /**
+     * Creates a new content delegator and registers it for property changes of
+     * the explorer mount table.
+     */
     public ContentDelegator() {
         m_provider = new HashSet<MountPoint>();
         m_changeListener = new CopyOnWriteArrayList<IPropertyChangeListener>();
@@ -179,8 +181,7 @@ public class ContentDelegator extends LabelProvider implements
         if (!(parentElement instanceof ContentObject)) {
             // all children should be of that type!
             LOGGER.coding("Unexpected object in tree view! (" + parentElement
-                    + " of type "
-                    + parentElement.getClass().getCanonicalName());
+                    + " of type " + parentElement.getClass().getCanonicalName());
             return NO_CHILDREN;
         }
         ContentObject c = ((ContentObject)parentElement);
@@ -284,6 +285,30 @@ public class ContentDelegator extends LabelProvider implements
         }
         ContentObject c = (ContentObject)inputElement;
         return c.getProvider().getElements(c.getObject());
+    }
+
+    /**
+     * Creates the (new but) same object that is stored in the view tree for the
+     * passed file.
+     *
+     * @param file to return the tree object for
+     * @return the (new but) same object that is stored in the view tree for the
+     *         passed file.
+     */
+    public static Object getTreeObjectFor(final ExplorerFileStore file) {
+        if (file == null) {
+            return null;
+        }
+        String id = file.getMountID();
+        MountPoint mp = ExplorerMountTable.getMountPoint(id);
+        if (mp == null) {
+            return null;
+        }
+        if (file.getFullName().equals("/") || file.getParent() == null) {
+            return mp.getProvider();
+        } else {
+            return new ContentObject(mp.getProvider(), file);
+        }
     }
 
     /*
@@ -392,8 +417,8 @@ public class ContentDelegator extends LabelProvider implements
      */
     @Override
     public void propertyChange(final PropertyChangeEvent event) {
-        if (!ExplorerMountTable.MOUNT_POINT_PROPERTY.equals(
-                event.getProperty())) {
+        if (!ExplorerMountTable.MOUNT_POINT_PROPERTY
+                .equals(event.getProperty())) {
             return;
         }
         if (event.getNewValue() == null) {
@@ -414,10 +439,10 @@ public class ContentDelegator extends LabelProvider implements
     /*---------------------------------------------------------------*/
     /**
      * Adds a property change listener for mount changes.
+     *
      * @param listener the property change listener to add
      */
-    public void addPropertyChangeListener(
-            final IPropertyChangeListener listener) {
+    public void addPropertyChangeListener(final IPropertyChangeListener listener) {
         m_changeListener.add(listener);
     }
 
