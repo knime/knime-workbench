@@ -30,7 +30,6 @@ import org.eclipse.core.runtime.Path;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 
-
 /**
  *
  * @author ohl, University of Konstanz
@@ -147,6 +146,55 @@ public class ExplorerFileSystem extends FileSystem {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Characters that are unfortunate to use in most file systems and in URIs.
+     * Slashes are disallowed in the name, but are separators though. It is not
+     * guaranteed that these characters are not used but usage should be
+     * avoided.
+     */
+    public static final String ILLEGAL_FILENAME_CHARS = "*?#:\"<>|%~";
+
+    /**
+     * Returns true, if the specified path doesn't contain invalid characters.
+     * Slashes and backslashes are valid, as they are considered separators -
+     * and the argument could contain a full path. See
+     * {@link #isValidFilename(String)}.
+     *
+     * @param path to test.
+     * @return true, if the specified path doesn't contain invalid characters.
+     */
+    public static boolean isValidPath(final String path) {
+        String forbidden = ILLEGAL_FILENAME_CHARS;
+        if (path != null) {
+            for (int i = 0; i < path.length(); i++) {
+                if (forbidden.indexOf(path.charAt(i)) >= 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns true, if the specified filename doesn't contain invalid
+     * characters. This is the same method as {@link #isValidPath(String)},
+     * except slashes are not allowed either.
+     *
+     * @param simplename to test.
+     * @return true, if the specified filename doesn't contain invalid
+     *         characters.
+     */
+    public static boolean isValidFilename(final String simplename) {
+        if (!isValidPath(simplename)) {
+            return false;
+        }
+        // separators are disallowed too in simple file names.
+        if (simplename.indexOf('/') >= 0 || simplename.indexOf('\\') >= 0) {
+            return false;
+        }
+        return true;
     }
 
 }

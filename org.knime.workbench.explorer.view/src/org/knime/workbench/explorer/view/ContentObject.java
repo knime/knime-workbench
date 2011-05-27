@@ -18,6 +18,8 @@
  */
 package org.knime.workbench.explorer.view;
 
+import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 
 /**
@@ -101,5 +103,26 @@ public final class ContentObject {
     @Override
     public int hashCode() {
         return m_obj.hashCode();
+    }
+
+    /**
+     *
+     * @param file to wrap into a into a content object
+     * @return an object used in the explorer view or null, if the file refers
+     *         to a non existing mount point. NOTE: The explorer view does not
+     *         store root file objects (with path "/"). But this method returns
+     *         a content object if a file with path "/" is passed.
+     *
+     */
+    public static ContentObject forFile(final ExplorerFileStore file) {
+        if (file == null) {
+            return null;
+        }
+        String id = file.getMountID();
+        MountPoint mp = ExplorerMountTable.getMountPoint(id);
+        if (mp == null) {
+            return null;
+        }
+        return new ContentObject(mp.getProvider(), file);
     }
 }
