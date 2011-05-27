@@ -80,6 +80,7 @@ import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
+import org.knime.workbench.explorer.view.actions.GlobalOpenMetaInfoDialogAction;
 import org.knime.workbench.explorer.view.actions.GlobalRenameAction;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -276,19 +277,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         }
     }
 
-    // private boolean openWorkflow(final LocalFile wfDir) {
-    // LocalFile metaInfo =
-    // (LocalFile)wfDir.getChild(MetaInfoFile.METAINFO_FILE);
-    //
-    // try {
-    // IDE.openEditorOnFileStore(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(),
-    // metaInfo);
-    // return true;
-    // } catch (PartInitException e) {
-    // return false;
-    // }
-    // }
-
     private boolean openWorkflow(final LocalFile wfDirectory) {
         String wfName = new Path(wfDirectory.getName()).lastSegment();
         try {
@@ -455,6 +443,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     private void addGlobalActions(final IMenuManager manager) {
         manager.add(new GlobalDeleteAction(m_viewer));
         manager.add(new GlobalRenameAction(m_viewer));
+        manager.add(new GlobalOpenMetaInfoDialogAction(m_viewer));
     }
 
     private void createLocalToolBar(final DrillDownAdapter dda) {
