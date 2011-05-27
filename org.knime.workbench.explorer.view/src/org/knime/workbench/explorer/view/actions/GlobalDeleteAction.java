@@ -31,20 +31,13 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
-import org.eclipse.ui.IEditorPart;
-import org.eclipse.ui.IEditorReference;
-import org.eclipse.ui.IWorkbenchPage;
-import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
-import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
 
 /**
  *
@@ -184,82 +177,6 @@ public class GlobalDeleteAction extends ExplorerAction {
             }
         }
         return success;
-    }
-
-    private void lockWorkflows(final List<ExplorerFileStore> toDelWorkflows,
-            final List<ExplorerFileStore> unlockableWF,
-            final List<ExplorerFileStore> lockedWF) {
-        assert unlockableWF.size() == 0; // the result lists should be empty
-        assert lockedWF.size() == 0;
-        // open workflows can be locked multiple times in one instance
-        for (ExplorerFileStore wf : toDelWorkflows) {
-            assert ExplorerFileStore.isWorkflow(wf);
-            File loc;
-            try {
-                loc = wf.toLocalFile(EFS.NONE, null);
-            } catch (CoreException e) {
-                loc = null;
-            }
-            if (loc != null && VMFileLocker.lockForVM(loc)) {
-                lockedWF.add(wf);
-            } else {
-                unlockableWF.add(wf);
-            }
-        }
-    }
-
-    private void unlockWorkflows(final List<ExplorerFileStore> lockedWFs) {
-        for (ExplorerFileStore lwf : lockedWFs) {
-            File loc;
-            try {
-                loc = lwf.toLocalFile(EFS.NONE, null);
-            } catch (CoreException e) {
-                continue;
-            }
-            assert VMFileLocker.isLockedForVM(loc);
-            assert ExplorerFileStore.isWorkflow(lwf);
-            VMFileLocker.unlockForVM(loc);
-        }
-    }
-
-    private void closeOpenWorkflows(
-            final List<ExplorerFileStore> allWorkflows) {
-        IWorkbenchPage page =
-                PlatformUI.getWorkbench().getActiveWorkbenchWindow()
-                        .getActivePage();
-        for (ExplorerFileStore wf : allWorkflows) {
-            File loc;
-            try {
-                loc = wf.toLocalFile(EFS.NONE, null);
-            } catch (CoreException e) {
-                loc = null;
-            }
-            if (loc == null) {
-                // not a local workflow. Not open.
-                continue;
-            }
-            NodeContainer wfm = ProjectWorkflowMap.getWorkflow(loc.toURI());
-            if (wfm != null) {
-                for (IEditorReference editRef : page.getEditorReferences()) {
-                    IEditorPart editor = editRef.getEditor(false);
-                    if (editor == null) {
-                        // got closed in the mean time
-                        continue;
-                    }
-                    WorkflowEditorAdapter wea =
-                            (WorkflowEditorAdapter)editor
-                                    .getAdapter(WorkflowEditorAdapter.class);
-                    NodeContainer editWFM = null;
-                    if (wea != null) {
-                        editWFM = wea.getWorkflowManager();
-                    }
-                    if (wfm == editWFM) {
-                        page.closeEditor(editor, false);
-                    }
-                }
-
-            }
-        }
     }
 
     private boolean deleteTheRest(final List<ExplorerFileStore> toDel) {

@@ -23,6 +23,8 @@ package org.knime.workbench.explorer.filesystem;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileSystem;
@@ -41,6 +43,28 @@ public class ExplorerFileSystem extends FileSystem {
      * "org.eclipse.core.filesystem.filesystems").
      */
     public static final String SCHEME = "knime";
+
+    /**
+     * Characters that are unfortunate to use in most file systems and in URIs.
+     * Slashes are disallowed in the name, but are separators though. It is not
+     * guaranteed that these characters are not used but usage should be
+     * avoided.
+     */
+    private static final String ILLEGAL_DIR_CHARS;
+    private static final String ILLEGAL_FILENAME_CHARS;
+    private static final Pattern ILLEGAL_FILENAME_CHARS_PATTERN;
+    private static final Pattern ILLEGAL_DIR_CHARS_PATTERN;
+
+    static {
+        ILLEGAL_DIR_CHARS = "*?#:\"<>%~|";
+        ILLEGAL_FILENAME_CHARS = ILLEGAL_DIR_CHARS + "/\\";
+        ILLEGAL_DIR_CHARS_PATTERN =
+            Pattern.compile("[" + ILLEGAL_DIR_CHARS + "]+");
+        // double escape backslashes for regular expression
+        ILLEGAL_FILENAME_CHARS_PATTERN =
+            Pattern.compile("[" + ILLEGAL_FILENAME_CHARS.replace(
+                    "\\", "\\\\") + "]+");
+    }
 
     /**
      * {@inheritDoc}
@@ -148,13 +172,6 @@ public class ExplorerFileSystem extends FileSystem {
         return false;
     }
 
-    /**
-     * Characters that are unfortunate to use in most file systems and in URIs.
-     * Slashes are disallowed in the name, but are separators though. It is not
-     * guaranteed that these characters are not used but usage should be
-     * avoided.
-     */
-    public static final String ILLEGAL_FILENAME_CHARS = "*?#:\"<>|%~";
 
     /**
      * Returns true, if the specified path doesn't contain invalid characters.
@@ -166,15 +183,15 @@ public class ExplorerFileSystem extends FileSystem {
      * @return true, if the specified path doesn't contain invalid characters.
      */
     public static boolean isValidPath(final String path) {
-        String forbidden = ILLEGAL_FILENAME_CHARS;
-        if (path != null) {
-            for (int i = 0; i < path.length(); i++) {
-                if (forbidden.indexOf(path.charAt(i)) >= 0) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        Matcher matcher = ILLEGAL_DIR_CHARS_PATTERN.matcher(path);
+        return !matcher.find();
+    }
+
+    /**
+     * @return the characters that are invalid for paths
+     */
+    public static String getIllegalPATHChars() {
+        return ILLEGAL_DIR_CHARS;
     }
 
     /**
@@ -182,19 +199,19 @@ public class ExplorerFileSystem extends FileSystem {
      * characters. This is the same method as {@link #isValidPath(String)},
      * except slashes are not allowed either.
      *
-     * @param simplename to test.
+     * @param name to test.
      * @return true, if the specified filename doesn't contain invalid
      *         characters.
      */
-    public static boolean isValidFilename(final String simplename) {
-        if (!isValidPath(simplename)) {
-            return false;
-        }
-        // separators are disallowed too in simple file names.
-        if (simplename.indexOf('/') >= 0 || simplename.indexOf('\\') >= 0) {
-            return false;
-        }
-        return true;
+    public static boolean isValidFilename(final String name) {
+        Matcher matcher = ILLEGAL_FILENAME_CHARS_PATTERN.matcher(name);
+        return !matcher.find();
     }
 
+    /**
+     * @return the characters that are invalid for file names
+     */
+    public static String getIllegalFilenameChars() {
+        return ILLEGAL_FILENAME_CHARS;
+    }
 }

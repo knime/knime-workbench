@@ -166,7 +166,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
         }
 
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -183,6 +183,27 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
         } catch (IOException e) {
             String message = "Could not delete \"" + srcFile.getAbsolutePath()
             + "\".";
+            throw new CoreException(new Status(Status.ERROR,
+                    ExplorerActivator.PLUGIN_ID, message, e));
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void move(final IFileStore destination, final int options,
+            final IProgressMonitor monitor) throws CoreException {
+        File srcFile = toLocalFile(options, monitor);
+        File dstFile = destination.toLocalFile(options, monitor);
+
+        try {
+            srcFile.renameTo(dstFile);
+        } catch (SecurityException e) {
+            String message = "Could not rename file \""
+                + srcFile.getAbsolutePath() + "\" to \""
+                + dstFile.getAbsolutePath()
+                + "\" due to missing access rights.";
             throw new CoreException(new Status(Status.ERROR,
                     ExplorerActivator.PLUGIN_ID, message, e));
         }

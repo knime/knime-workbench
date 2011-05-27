@@ -46,6 +46,8 @@ import org.knime.workbench.explorer.ExplorerMountTable;
  */
 public abstract class ExplorerFileStore extends FileStore {
 
+
+
     private final String m_mountID;
 
     private final String m_fullPath;
@@ -113,7 +115,8 @@ public abstract class ExplorerFileStore extends FileStore {
                 return false;
             }
             for (int s = otherPath.segmentCount() - 1; s >= 0; s--) {
-                if (!otherPath.segment(s).equalsIgnoreCase(thisPath.segment(s))) {
+                if (!otherPath.segment(s).equalsIgnoreCase(
+                        thisPath.segment(s))) {
                     return false;
                 }
             }
@@ -197,6 +200,32 @@ public abstract class ExplorerFileStore extends FileStore {
         return file.getChild(SingleNodeContainerPersistorVersion200.NODE_FILE)
                 .fetchInfo().exists();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ExplorerFileStore[] childStores(final int options,
+            final IProgressMonitor monitor) throws CoreException {
+        IFileStore[] childStores = super.childStores(options, monitor);
+        ExplorerFileStore[] efs = new ExplorerFileStore[childStores.length];
+        for (int i = 0; i < efs.length; i++) {
+            efs[i] = (ExplorerFileStore)childStores[i];
+        }
+        return efs;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract ExplorerFileStore getParent();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract ExplorerFileStore getChild(String name);
 
     /* ----------- placeholder store in the tree for string messages ----- */
 
@@ -309,9 +338,9 @@ public abstract class ExplorerFileStore extends FileStore {
          * {@inheritDoc}
          */
         @Override
-        public IFileStore[] childStores(final int options,
+        public ExplorerFileStore[] childStores(final int options,
                 final IProgressMonitor monitor) throws CoreException {
-            return new IFileStore[0];
+            return new ExplorerFileStore[0];
         }
 
         /**
@@ -403,7 +432,7 @@ public abstract class ExplorerFileStore extends FileStore {
          * {@inheritDoc}
          */
         @Override
-        public IFileStore getChild(final String name) {
+        public ExplorerFileStore getChild(final String name) {
             return null;
         }
 
@@ -411,7 +440,7 @@ public abstract class ExplorerFileStore extends FileStore {
          * {@inheritDoc}
          */
         @Override
-        public IFileStore getParent() {
+        public ExplorerFileStore getParent() {
             return null;
         }
 
@@ -489,6 +518,5 @@ public abstract class ExplorerFileStore extends FileStore {
         public String toString() {
             return m_msg;
         }
-
     }
 }
