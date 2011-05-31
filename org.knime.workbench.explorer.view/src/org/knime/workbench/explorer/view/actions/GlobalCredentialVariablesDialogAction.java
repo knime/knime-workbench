@@ -24,32 +24,37 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.List;
 
+import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.Credentials;
+import org.knime.core.node.workflow.CredentialsStore;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+import org.knime.workbench.ui.masterkey.CredentialVariablesDialog;
 
 /**
  *
  * @author Dominik Morent, KNIME.com, Zurich, Switzerland
  *
  */
-public class GlobalExecuteWorkflowAction extends ExplorerAction {
+public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            GlobalExecuteWorkflowAction.class);
+            GlobalCredentialVariablesDialogAction.class);
 
     /** ID of the global rename action in the explorer menu. */
-    public static final String EXECUTEWF_ACTION_ID =
-        "org.knime.workbench.explorer.action.execute-workflow";
+    public static final String CREDENTIAL_ACTION_ID =
+        "org.knime.workbench.explorer.action.credentials-dialog";
 
     /**
      * @param viewer the associated tree viewer
      */
-    public GlobalExecuteWorkflowAction(final TreeViewer viewer) {
-        super(viewer, "Execute Workflow...");
+    public GlobalCredentialVariablesDialogAction(final TreeViewer viewer) {
+        super(viewer, "Workflow Credentials...");
     }
 
     /**
@@ -57,7 +62,7 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-       return EXECUTEWF_ACTION_ID;
+       return CREDENTIAL_ACTION_ID;
     }
 
     /**
@@ -65,23 +70,47 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        WorkflowManager wfm = getWorkflow();
         List<ExplorerFileStore> fileStores =
             DragAndDropUtils.getExplorerFileStores(getSelection());
         ExplorerFileStore wfStore = fileStores.get(0);
+        WorkflowManager workflow = getWorkflow();
+
         try {
             if (lockWorkflow(wfStore)) {
-                WorkflowManager.ROOT.executeUpToHere(wfm.getID());
+                showDialog(workflow);
             } else {
-                LOGGER.info("The workflow cannot be executed as "
-                + "is still in use by another user/instance.\n"
-                + "Canceling execution.");
-                showCantExecuteLockMessage();
+                LOGGER.info("The workflow cannot be configured as "
+                + "is still in use by another user/instance.\n");
+                showCantEditCredentialsLockMessage();
             }
         } finally {
             unlockWorkflow(wfStore);
         }
 
+    }
+
+    private void showDialog(final WorkflowManager wfm) {
+        // open the dialog
+        final Display d = Display.getDefault();
+        // run in UI thread
+        d.asyncExec(new Runnable() {
+            @Override
+            public void run() {
+                CredentialsStore store = wfm.getCredentialsStore();
+                CredentialVariablesDialog dialog =
+                    new CredentialVariablesDialog(d.getActiveShell(), store,
+                        wfm.getName());
+                if (dialog.open() == Dialog.OK) {
+                    for (Credentials cred : store.getCredentials()) {
+                        store.remove(cred.getName());
+                    }
+                    List<Credentials> credentials = dialog.getCredentials();
+                    for (Credentials cred : credentials) {
+                        store.add(cred);
+                    }
+                }
+            }
+        });
     }
 
     /**
@@ -92,13 +121,12 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
         return getWorkflow() != null;
     }
 
-    private void showCantExecuteLockMessage() {
+    private void showCantEditCredentialsLockMessage() {
         MessageBox mb =
                 new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
-        mb.setText("Can't Lock for Execution");
-        mb.setMessage("The workflow cannot be executed as "
-                + "is still in use by another user/instance.\n"
-                + "Canceling execution.");
+        mb.setText("Can't Lock for Editing Credentials");
+        mb.setMessage("The workflow cannot be configured as "
+                + "is still in use by another user/instance.\n");
         mb.open();
     }
 }

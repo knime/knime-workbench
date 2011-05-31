@@ -37,6 +37,7 @@ import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -191,6 +192,33 @@ public abstract class ExplorerAction extends Action {
     }
 
     /**
+     * @return the workflow manager for the selection or null if multiple
+     *      file stores are selected or the file stores are not opened
+     */
+    protected WorkflowManager getWorkflow() {
+        List<ExplorerFileStore> fileStores =
+            DragAndDropUtils.getExplorerFileStores(getSelection());
+        if (fileStores == null || fileStores.size() != 1) {
+            return null;
+        }
+        ExplorerFileStore fileStore = fileStores.get(0);
+        if (ExplorerFileStore.isWorkflow(fileStore)) {
+            try {
+                File localFile = fileStore.toLocalFile();
+                if (localFile != null) {
+                    WorkflowManager workflow =
+                            (WorkflowManager)ProjectWorkflowMap.getWorkflow(
+                                    localFile.toURI());
+                    return workflow;
+                }
+            } catch (CoreException e) {
+               LOGGER.error("Could not retrieve workflow.", e);
+            }
+        }
+        return null;
+    }
+
+    /**
      * Tries to lock the workflows passed as first argument.
      *
      * @param workflowsToLock the workflows to be locked
@@ -205,19 +233,36 @@ public abstract class ExplorerAction extends Action {
         assert lockedWF.size() == 0;
         // open workflows can be locked multiple times in one instance
         for (ExplorerFileStore wf : workflowsToLock) {
-            assert ExplorerFileStore.isWorkflow(wf);
-            File loc;
-            try {
-                loc = wf.toLocalFile(EFS.NONE, null);
-            } catch (CoreException e) {
-                loc = null;
-            }
-            if (loc != null && VMFileLocker.lockForVM(loc)) {
+           boolean locked = lockWorkflow(wf);
+            if (locked) {
                 LOGGER.debug("Locked workflow " + wf);
                 lockedWF.add(wf);
             } else {
                 unlockableWF.add(wf);
             }
+        }
+    }
+
+    /**
+     * Tries to lock the workflow.
+     *
+     * @param workflow the workflow to be locked
+     * @return true if the workflow could be locked, false otherwise
+     */
+    public static boolean lockWorkflow(final ExplorerFileStore workflow) {
+        assert ExplorerFileStore.isWorkflow(workflow);
+        File loc;
+        try {
+            loc = workflow.toLocalFile(EFS.NONE, null);
+        } catch (CoreException e) {
+            loc = null;
+        }
+        if (loc != null && VMFileLocker.lockForVM(loc)) {
+            LOGGER.debug("Locked workflow " + workflow);
+            return true;
+        } else {
+            LOGGER.debug("Could not lock workflow " + workflow);
+            return false;
         }
     }
 
@@ -229,17 +274,30 @@ public abstract class ExplorerAction extends Action {
     public static void unlockWorkflows(
             final List<ExplorerFileStore> workflows) {
         for (ExplorerFileStore lwf : workflows) {
-            File loc;
-            try {
-                loc = lwf.toLocalFile(EFS.NONE, null);
-            } catch (CoreException e) {
-                continue;
-            }
-            assert VMFileLocker.isLockedForVM(loc);
-            assert ExplorerFileStore.isWorkflow(lwf);
-            LOGGER.debug("Unlocking workflow " + lwf);
-            VMFileLocker.unlockForVM(loc);
+           unlockWorkflow(lwf);
         }
+    }
+
+    /**
+     * Unlocks the specified workflow.
+     *
+     * @param workflow the workflow to be unlocked
+     */
+    public static void unlockWorkflow(final ExplorerFileStore workflow) {
+        File loc;
+        try {
+            loc = workflow.toLocalFile(EFS.NONE, null);
+        } catch (CoreException e) {
+            return;
+        }
+        if (!VMFileLocker.isLockedForVM(loc)) {
+            LOGGER.debug("Nothing to unlock. \"" + workflow.getFullName()
+                    + "\" is not locked.");
+            return;
+        }
+        assert ExplorerFileStore.isWorkflow(workflow);
+        LOGGER.debug("Unlocking workflow " + workflow);
+        VMFileLocker.unlockForVM(loc);
     }
 
 

@@ -24,32 +24,36 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.List;
 
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+import org.knime.workbench.ui.wrapper.WrappedNodeDialog;
 
 /**
  *
  * @author Dominik Morent, KNIME.com, Zurich, Switzerland
  *
  */
-public class GlobalExecuteWorkflowAction extends ExplorerAction {
+public class GlobalConfigureWorkflowAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            GlobalExecuteWorkflowAction.class);
+            GlobalConfigureWorkflowAction.class);
 
     /** ID of the global rename action in the explorer menu. */
-    public static final String EXECUTEWF_ACTION_ID =
-        "org.knime.workbench.explorer.action.execute-workflow";
+    public static final String CONFIGUREWF_ACTION_ID =
+        "org.knime.workbench.explorer.action.configure-workflow";
 
     /**
      * @param viewer the associated tree viewer
      */
-    public GlobalExecuteWorkflowAction(final TreeViewer viewer) {
-        super(viewer, "Execute Workflow...");
+    public GlobalConfigureWorkflowAction(final TreeViewer viewer) {
+        super(viewer, "Configure...");
     }
 
     /**
@@ -57,7 +61,7 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-       return EXECUTEWF_ACTION_ID;
+       return CONFIGUREWF_ACTION_ID;
     }
 
     /**
@@ -65,18 +69,18 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        WorkflowManager wfm = getWorkflow();
         List<ExplorerFileStore> fileStores =
             DragAndDropUtils.getExplorerFileStores(getSelection());
         ExplorerFileStore wfStore = fileStores.get(0);
+
         try {
             if (lockWorkflow(wfStore)) {
-                WorkflowManager.ROOT.executeUpToHere(wfm.getID());
+                showDialog(getWorkflow());
             } else {
-                LOGGER.info("The workflow cannot be executed as "
+                LOGGER.info("The workflow cannot be configured as "
                 + "is still in use by another user/instance.\n"
-                + "Canceling execution.");
-                showCantExecuteLockMessage();
+                + "Canceling configuration.");
+                showCantConfigureLockMessage();
             }
         } finally {
             unlockWorkflow(wfStore);
@@ -84,21 +88,49 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
 
     }
 
+    private void showDialog(final WorkflowManager wfm) {
+        Display.getDefault().syncExec(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    WrappedNodeDialog dialog = new WrappedNodeDialog(
+                            Display.getDefault().getActiveShell(),
+                            wfm);
+                    dialog.setBlockOnOpen(true);
+                    dialog.open();
+                } catch (final NotConfigurableException nce) {
+                    Display.getDefault().syncExec(new Runnable() {
+                        @Override
+                        public void run() {
+                            MessageDialog.openError(
+                                    Display.getDefault().getActiveShell(),
+                                    "Workflow Not Configurable",
+                                    "This workflow can not be "
+                                    + "configured: "
+                                    + nce.getMessage());
+                        }
+                    });
+                }
+
+            }
+        });
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
     public boolean isEnabled() {
-        return getWorkflow() != null;
+        return getWorkflow() != null && getWorkflow().hasDialog();
     }
 
-    private void showCantExecuteLockMessage() {
+    private void showCantConfigureLockMessage() {
         MessageBox mb =
                 new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
-        mb.setText("Can't Lock for Execution");
-        mb.setMessage("The workflow cannot be executed as "
+        mb.setText("Can't Lock for Configuration");
+        mb.setMessage("The workflow cannot be configured as "
                 + "is still in use by another user/instance.\n"
-                + "Canceling execution.");
+                + "Canceling configuration.");
         mb.open();
     }
 }
