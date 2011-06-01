@@ -95,6 +95,27 @@ public final class ExplorerMountTable {
     }
 
     /**
+     * Sorts the mount points in the same way as in the passed list. It makes 
+     * sure that if two entries A and B of the list are mounted and A comes 
+     * before B, the mount point A will appear before mount point B in the 
+     * mount table.
+     * @param mountIDs a list of mount ids
+     */
+    public static void setMountOrder(final List<String> mountIDs) {
+        synchronized (MOUNTED) {
+            for (String mountID : mountIDs) {
+                MountPoint mountPoint = MOUNTED.get(mountID);
+                if (mountPoint != null) {
+                    /* Remove the mount point and insert it again immediately to
+                     * get the same order as in the mount id list. */
+                    MOUNTED.remove(mountID);
+                    MOUNTED.put(mountID, mountPoint);
+                }
+            }
+        }
+    }
+
+    /**
      * Creates a new instance of the specified content provider.
      *
      * @param mountID name under which the content is mounted

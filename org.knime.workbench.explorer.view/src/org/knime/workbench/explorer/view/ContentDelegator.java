@@ -21,6 +21,7 @@ package org.knime.workbench.explorer.view;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -42,7 +43,8 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
- * calls to different content providers providing a view to different sources. <br />
+ * calls to different content providers providing a view to different sources.
+ * <br />
  * The objects returned by the different providers are wrapped into a
  * {@link ContentObject} (associating the creating provider with it) and the
  * wrapper is placed in the tree view. <br />
@@ -83,7 +85,7 @@ public class ContentDelegator extends LabelProvider implements
      * the explorer mount table.
      */
     public ContentDelegator() {
-        m_provider = new HashSet<MountPoint>();
+        m_provider = new LinkedHashSet<MountPoint>();
         m_changeListener = new CopyOnWriteArrayList<IPropertyChangeListener>();
         ExplorerMountTable.addPropertyChangeListener(this);
     }
@@ -106,7 +108,7 @@ public class ContentDelegator extends LabelProvider implements
      * @return a set with the ids of the currently shown mount points
      */
     public Set<String> getMountedIds() {
-        Set<String> mounted = new HashSet<String>();
+        Set<String> mounted = new LinkedHashSet<String>();
         for (MountPoint mountPoint : m_provider) {
             mounted.add(mountPoint.getMountID());
         }

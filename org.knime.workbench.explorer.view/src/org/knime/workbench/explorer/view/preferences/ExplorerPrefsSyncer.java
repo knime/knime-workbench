@@ -23,6 +23,7 @@
 package org.knime.workbench.explorer.view.preferences;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -101,6 +102,13 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
                             + "\" could not be unmounted.");
                 }
             }
+
+            // sync the ordering of the mount points
+            List<String> newMountIds = new ArrayList<String>();
+            for (MountSettings ms : newMS) {
+                newMountIds.add(ms.getMountID());
+            }
+            ExplorerMountTable.setMountOrder(newMountIds);
         }
 
     }
