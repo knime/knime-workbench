@@ -59,13 +59,20 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         return new ExplorerURLConnection(url, efs);
     }
 
+    /**
+     * Allows the communication with a "knime" URL.
+     * @author ohl, University of Konstanz
+     *
+     */
     class ExplorerURLConnection extends URLConnection {
         private final ExplorerFileStore m_file;
 
         /**
-         *
+         * @param url the specified url
+         * @param file the specified file
          */
-        public ExplorerURLConnection(final URL url, final ExplorerFileStore file) {
+        public ExplorerURLConnection(final URL url,
+                final ExplorerFileStore file) {
             super(url);
             m_file = file;
         }
