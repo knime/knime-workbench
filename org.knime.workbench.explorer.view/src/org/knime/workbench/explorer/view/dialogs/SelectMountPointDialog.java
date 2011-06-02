@@ -233,7 +233,7 @@ public class SelectMountPointDialog extends Dialog {
         Link link = new Link(addPanel, SWT.NONE);
         link.setText("<A>Configure Explorer Settings...</A>");
         link.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, true, false));
-        link.setToolTipText("Add or remove spaces etc.");
+        link.setToolTipText("Add or remove mount points etc.");
         link.addSelectionListener(new SelectionListener() {
             /**
              * {@inheritDoc}

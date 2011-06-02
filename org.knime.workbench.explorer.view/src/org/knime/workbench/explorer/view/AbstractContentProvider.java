@@ -33,7 +33,10 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.action.IMenuManager;
+import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
@@ -46,14 +49,17 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeMessage;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.UniqueNameGenerator;
 import org.knime.core.util.VMFileLocker;
+import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
  * Content and label provider for one source in the user space view. One
@@ -220,8 +226,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public abstract boolean dragStart(List<ExplorerFileStore> fileStores);
 
-    protected boolean performDropMetaNodeTemplate(final List<WorkflowManager>
-        metaNodes, final ExplorerFileStore target) {
+    protected boolean performDropMetaNodeTemplate(final WorkflowManager
+        metaNode, final ExplorerFileStore target) {
         File directory;
         try {
             directory = target.toLocalFile(EFS.NONE, null);
@@ -236,16 +242,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             return false;
         }
         Shell s = Display.getDefault().getActiveShell();
+        String mountIDWithFullPath = target.getMountIDWithFullPath();
         if (!directory.canWrite()) {
             MessageDialog.openWarning(s, "No write permission", "You don't have"
                     + " sufficient privileges to write to the target"
-                    + " directory \"" + toString() + "\"");
+                    + " directory \"" + mountIDWithFullPath + "\"");
+            return false;
         }
         while (!VMFileLocker.lockForVM(directory)) {
             MessageDialog dialog = new MessageDialog(s,
-                    "Unable to lock directory", null,
-                    "The target folder \"" + directory.getAbsolutePath()
-                    + "\" can currently not be locked. ",
+                    "Unable to lock directory", null, "The target folder \""
+                    + mountIDWithFullPath + "\" can currently not be locked. ",
                     MessageDialog.QUESTION,
                     new String[] {"&Try again", "&Cancel"}, 0);
             if (dialog.open() == 0) {
@@ -256,47 +263,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
         try {
             assert VMFileLocker.isLockedForVM(directory);
-            List<String> uniqueNames = new ArrayList<String>();
-            @SuppressWarnings("unchecked")
-            UniqueNameGenerator nameGenerator =
-                new UniqueNameGenerator(Collections.EMPTY_SET);
-            for (WorkflowManager wm : metaNodes) {
-                String name = nameGenerator.newName(wm.getName());
-                uniqueNames.add(name);
-            }
-            List<String> problematicFolderNames = new ArrayList<String>();
-            for (WorkflowManager wm : metaNodes) {
-                String name = wm.getName();
-                File wmDir = new File(directory, name);
-                if (wmDir.exists()) {
-                    problematicFolderNames.add(name);
-                }
-            }
-            boolean isOverwrite = true;
-            if (!problematicFolderNames.isEmpty()) {
+            String uniqueName = metaNode.getName();
+            File wmDir = new File(directory, uniqueName);
+            ExplorerFileStore efsDir = target.getChild(uniqueName);
+            boolean doesTargetExist = wmDir.exists();
+            boolean isOverwrite = false;
+            if (doesTargetExist) {
                 StringBuilder eMsg = new StringBuilder();
-                if (problematicFolderNames.size() == 1) {
-                    eMsg.append("The target directory \"");
-                    eMsg.append(target.getFullName()).append("/");
-                    eMsg.append(problematicFolderNames.get(0));
-                    eMsg.append("\" already exists.");
-                } else {
-                    eMsg.append("Some target directories already exist:");
-                    for (int i = 0; i < problematicFolderNames.size(); i++) {
-                        eMsg.append("\n");
-                        if (i == 2) {
-                            eMsg.append("<");
-                            eMsg.append(problematicFolderNames.size() - 2);
-                            eMsg.append(" more>");
-                            break;
-                        } else {
-                            eMsg.append("\"");
-                            eMsg.append(target.getFullName()).append("/");
-                            eMsg.append(problematicFolderNames.get(i));
-                            eMsg.append("\"");
-                        }
-                    }
-                }
+                eMsg.append("The target directory \"");
+                eMsg.append(mountIDWithFullPath).append("/");
+                eMsg.append(uniqueName);
+                eMsg.append("\" already exists.");
                 MessageDialog md = new MessageDialog(s, "Existing folder",
                         null, eMsg.toString(), MessageDialog.WARNING,
                         new String[] {"&Overwrite", "&Rename", "&Cancel"}, 0);
@@ -311,46 +288,76 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     return false;
                 }
             }
-            Set<String> set;
-            try {
-                set = new HashSet<String>(
-                        Arrays.asList(target.childNames(EFS.NONE, null)));
-            } catch (CoreException e) {
-                LOGGER.warn("Can't query child elements of target \""
-                        + target + "\"", e);
-                set = Collections.emptySet();
+            boolean linkMetaNodeToNewTemplate;
+            switch (promptLinkMetaNodeTemplate()) {
+            case IDialogConstants.YES_ID:
+                linkMetaNodeToNewTemplate = true;
+                break;
+            case IDialogConstants.NO_ID:
+                linkMetaNodeToNewTemplate = false;
+                break;
+            default: // Cancel
+                return false;
             }
-            if (!isOverwrite) {
-                UniqueNameGenerator nameGen = new UniqueNameGenerator(set);
-                for (int j = 0; j < uniqueNames.size(); j++) {
-                    String uniqueName = nameGen.newName(uniqueNames.get(j));
-                    uniqueNames.set(j, uniqueName);
+            if (doesTargetExist && !isOverwrite) { // generate new name
+                Set<String> set;
+                try {
+                    set = new HashSet<String>(
+                            Arrays.asList(target.childNames(EFS.NONE, null)));
+                } catch (CoreException e) {
+                    LOGGER.warn("Can't query child elements of target \""
+                            + target + "\"", e);
+                    set = Collections.emptySet();
                 }
+                UniqueNameGenerator nameGen = new UniqueNameGenerator(set);
+                uniqueName = nameGen.newName(uniqueName);
+                efsDir = target.getChild(uniqueName);
+                wmDir = new File(directory, uniqueName);
             }
-            StringBuilder problemSummary = null;
-            for (int i = 0; i < uniqueNames.size(); i++) {
-                String name = uniqueNames.get(i);
-                WorkflowManager wm = metaNodes.get(i);
-                File wmDir = new File(directory, name);
+            if (isOverwrite) {
                 // TODO delete correctly
                 FileUtils.deleteQuietly(wmDir);
-                try {
-                    wm.saveAsMetaNodeTemplate(wmDir, new ExecutionMonitor());
-                } catch (Exception e) {
-                    String error = "Unable to save template: " + e.getMessage();
-                    if (problemSummary == null) {
-                        problemSummary = new StringBuilder();
-                    } else {
-                        problemSummary.append("\n");
-                    }
-                    problemSummary.append(error);
-                    LOGGER.warn(error, e);
+            }
+            try {
+                MetaNodeTemplateInformation template =
+                    metaNode.saveAsMetaNodeTemplate(
+                            wmDir, new ExecutionMonitor());
+                if (linkMetaNodeToNewTemplate) {
+                    URI uri = efsDir.toURI();
+                    MetaNodeTemplateInformation link = template.createLink(uri);
+                    metaNode.getParent().setTemplateInformation(
+                            metaNode.getID(), link);
                 }
+            } catch (Exception e) {
+                String error = "Unable to save template: " + e.getMessage();
+                LOGGER.warn(error, e);
+                MessageDialog.openError(s, "Error while writing template",
+                        error);
             }
         } finally {
             VMFileLocker.unlockForVM(directory);
         }
         return true;
+    }
+
+    private int promptLinkMetaNodeTemplate() {
+        IPreferenceStore corePrefStore =
+            KNIMECorePlugin.getDefault().getPreferenceStore();
+        String pref = corePrefStore.getString(
+                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
+        if (MessageDialogWithToggle.ALWAYS.equals(pref)) {
+            return IDialogConstants.YES_ID;
+        } else if (MessageDialogWithToggle.NEVER.equals(pref)) {
+            return IDialogConstants.NO_ID;
+        }
+        Shell activeShell = Display.getDefault().getActiveShell();
+        MessageDialogWithToggle dlg =
+            MessageDialogWithToggle.openYesNoCancelQuestion(activeShell,
+                "Link Meta Node Template",
+                "Update meta node to link to the template?",
+                "Remember my decision", false, corePrefStore,
+                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
+        return dlg.getReturnCode();
     }
 
     /* -------------- content provider methods ---------------------------- */

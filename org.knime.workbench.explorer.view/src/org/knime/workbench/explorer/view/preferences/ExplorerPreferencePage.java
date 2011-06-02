@@ -22,15 +22,18 @@
 
 package org.knime.workbench.explorer.view.preferences;
 
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
+import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
- * Preference page for the Spaces Explorer containing the configured mount
+ * Preference page for the Explorer containing the configured mount
  * points.
  *
  * @author Dominik Morent, KNIME.com, Zurich, Switzerland
@@ -47,9 +50,8 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
     *
     */
    public ExplorerPreferencePage() {
-       super("KNIME Spaces Explorer Settings", null, GRID);
-       setDescription("Setup mount points for usage in KNIME Spaces Explorer "
-               + "view.");
+       super("KNIME Explorer Settings", null, GRID);
+       setDescription("Setup mount points for usage in KNIME Explorer view.");
    }
 
     /**
@@ -69,6 +71,15 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
     protected void createFieldEditors() {
         m_mountPoints = new MountPointListEditor(getFieldEditorParent());
         addField(m_mountPoints);
+        ComboFieldEditor linkTemplateEditor = new ComboFieldEditor(
+                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
+                "Link meta node when defining new template",
+                new String[][] {
+                        {"Always", MessageDialogWithToggle.ALWAYS},
+                        {"Never", MessageDialogWithToggle.NEVER},
+                        {"Prompt", MessageDialogWithToggle.PROMPT},
+                }, getFieldEditorParent());
+        addField(linkTemplateEditor);
     }
 
     /**

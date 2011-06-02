@@ -94,7 +94,7 @@ public class ExplorerDropListener extends ViewerDropAdapter {
             // delegate the validation to the content provider
             return acp.validateDrop(dstFS, operation, transferType);
         } else {
-            LOGGER.warn("Only files and items of the KNIME Spaces can be "
+            LOGGER.warn("Only files and items of the KNIME Explorer can be "
                     + "dropped.");
             return false;
         }

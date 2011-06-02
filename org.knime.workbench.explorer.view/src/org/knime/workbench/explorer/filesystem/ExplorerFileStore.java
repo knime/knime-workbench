@@ -73,6 +73,11 @@ public abstract class ExplorerFileStore extends FileStore {
         return m_fullPath;
     }
 
+    /** @return a human readable name including mount ID and path. */
+    public String getMountIDWithFullPath() {
+        return getMountID() + ":" + getFullName();
+    }
+
     public String getMountID() {
         return m_mountID;
     }

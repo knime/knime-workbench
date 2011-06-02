@@ -23,6 +23,7 @@
 package org.knime.workbench.explorer.view.preferences;
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
@@ -49,6 +50,9 @@ public class ExplorerPreferenceInitializer extends
         MountSettings ms = new MountSettings(fac.getContentProvider("LOCAL"));
         corePrefStore.setDefault(PreferenceConstants.P_EXPLORER_MOUNT_POINT,
                 ms.getSettingsString() + MountSettings.SETTINGS_SEPARATOR);
+        corePrefStore.setDefault(
+                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
+                MessageDialogWithToggle.PROMPT);
     }
 
 }

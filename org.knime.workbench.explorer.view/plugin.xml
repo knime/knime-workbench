@@ -10,7 +10,7 @@
             class="org.knime.workbench.explorer.view.ExplorerView"
             icon="icons/knime_explorer.png"
             id="com.knime.workbench.explorer.view"
-            name="KNIME Spaces Explorer"
+            name="KNIME Explorer"
             restorable="true">
       </view>
    </extension>
@@ -42,7 +42,7 @@
                category="org.knime.workbench.ui.preferences"
                class="org.knime.workbench.explorer.view.preferences.ExplorerPreferencePage"
                id="org.knime.workbench.explorer.view.explorer"
-               name="KNIME Spaces Explorer">
+               name="KNIME Explorer">
          </page>
       </extension>
       <extension
