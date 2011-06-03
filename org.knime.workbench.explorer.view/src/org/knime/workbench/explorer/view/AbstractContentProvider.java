@@ -517,6 +517,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         if (ExplorerFileStore.isWorkflowGroup(efs)) {
             return ICONS.workflowgroup();
         }
+        if (ExplorerFileStore.isWorkflowTemplate(efs)) {
+            return ICONS.workflowtemplate();
+        }
         if (!ExplorerFileStore.isWorkflow(efs)) {
             return null;
         }
