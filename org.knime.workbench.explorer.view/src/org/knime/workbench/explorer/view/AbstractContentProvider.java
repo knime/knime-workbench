@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
@@ -58,6 +57,7 @@ import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -314,9 +314,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 efsDir = target.getChild(uniqueName);
                 wmDir = new File(directory, uniqueName);
             }
+
             if (isOverwrite) {
-                // TODO delete correctly
-                FileUtils.deleteQuietly(wmDir);
+                boolean isWMLocked = VMFileLocker.lockForVM(wmDir);
+                if (!isWMLocked) {
+                    MessageDialog.openError(s, "Target directory locked",
+                            "The folder \"" + efsDir.getMountIDWithFullPath()
+                            + " is currently locked by another process");
+                    return false;
+                }
+                GlobalDeleteAction.deleteLockedWorkflows(
+                        Collections.singletonList(efsDir));
             }
             try {
                 MetaNodeTemplateInformation template =

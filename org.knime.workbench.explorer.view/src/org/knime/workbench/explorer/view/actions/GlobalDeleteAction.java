@@ -128,7 +128,14 @@ public class GlobalDeleteAction extends ExplorerAction {
         //TODO: Refresh !
     }
 
-    private boolean deleteLockedWorkflows(
+    /** Delete workflows from argument list. If the workflows are locked
+     * by this VM, they will be unlocked after this method returns.
+     * @param toDelWFs The list of directories associate with the workflows.
+     * @return true if that was successful, i.e. the workflow directory
+     * does not exist when this method returns, false if that fails
+     * (e.g. not locked by this VM)
+     **/
+    public static boolean deleteLockedWorkflows(
             final List<ExplorerFileStore> toDelWFs) {
         boolean success = true;
         for (ExplorerFileStore wf : toDelWFs) {
