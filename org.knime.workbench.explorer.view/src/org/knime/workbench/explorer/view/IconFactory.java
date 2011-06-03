@@ -60,6 +60,12 @@ public class IconFactory {
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/wf_set.png").createImage();
 
+    /** Icon representing a workflow template in the resource navigator. */
+    private static final Image FLOW_TEMPLATE = KNIMEUIPlugin
+            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+                    "icons/meta/metanode_template.png").createImage();
+
+
     private static final Image DEFAULT = KNIMEUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/knime_default.png").createImage();
