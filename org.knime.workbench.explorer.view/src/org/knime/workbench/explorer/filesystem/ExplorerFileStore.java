@@ -178,8 +178,11 @@ public abstract class ExplorerFileStore extends FileStore {
      * @return true if the file is a workflow template, false otherwise
      */
     public static boolean isWorkflowTemplate(final IFileStore file) {
-        // TODO distinguish between workflow and workflow template
-        return isWorkflow(file);
+        if (file == null || !file.fetchInfo().exists()) {
+            return false;
+        }
+        IFileStore wf = file.getChild(WorkflowPersistor.TEMPLATE_FILE);
+        return wf.fetchInfo().exists() && !isWorkflowTemplate(file.getParent());
     }
 
     /**
