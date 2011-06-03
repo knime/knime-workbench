@@ -463,16 +463,18 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         assert ExplorerFileStore.isWorkflowGroup(workflowGroup);
 
         try {
-            IFileStore[] childs = workflowGroup.childStores(EFS.NONE, null);
+            ExplorerFileStore[] childs =
+                workflowGroup.childStores(EFS.NONE, null);
             if (childs == null || childs.length == 0) {
                 return NO_CHILD;
             }
             ArrayList<ExplorerFileStore> result =
                     new ArrayList<ExplorerFileStore>();
-            for (IFileStore c : childs) {
-                if (ExplorerFileStore.isWorkflowGroup((ExplorerFileStore)c)
-                        || ExplorerFileStore.isWorkflow(c)) {
-                    result.add((ExplorerFileStore)c);
+            for (ExplorerFileStore c : childs) {
+                if (ExplorerFileStore.isDirOrWorkflowGroup(c)
+                        || ExplorerFileStore.isWorkflow(c)
+                        || ExplorerFileStore.isWorkflowTemplate(c)) {
+                    result.add(c);
                 }
             }
             return result.toArray(new ExplorerFileStore[result.size()]);

@@ -19,6 +19,7 @@
 package org.knime.workbench.explorer.view;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -87,6 +88,7 @@ import org.knime.workbench.explorer.view.actions.GlobalExecuteWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalRenameAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowGroupAction;
+import org.knime.workbench.explorer.view.actions.export.WorkflowExportAction;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
@@ -210,6 +212,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             public void widgetSelected(final SelectionEvent e) {
                 openSelected();
             }
+
         });
     }
 
@@ -222,6 +225,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             return false;
         }
         @SuppressWarnings("unchecked")
+        List<ContentObject> refreshs = new ArrayList<ContentObject>();
         Iterator<Object> iter = selection.iterator();
         while (iter.hasNext()) {
             Object sel = iter.next();
@@ -231,6 +235,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                     File f = co.getObject().toLocalFile(EFS.NONE, null);
                     if (f != null) {
                         selFiles.add(new LocalFile(f));
+                        refreshs.add(co);
                     }
                 } catch (CoreException ce) {
                     // then don't add it
@@ -253,6 +258,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         for (LocalFile lf : selFiles) {
             opened |= openEditor(lf);
         }
+        m_viewer.update(refreshs.toArray(), null);
         return opened;
     }
 
@@ -343,10 +349,10 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 }
             }
         });
-        ProjectWorkflowMap.addWorkflowListener(this);
         ProjectWorkflowMap.addStateListener(this);
-        ProjectWorkflowMap.addNodeMessageListener(this);
-        ProjectWorkflowMap.addNodePropertyChangedListener(this);
+        //ProjectWorkflowMap.addWorkflowListener(this);
+        //ProjectWorkflowMap.addNodeMessageListener(this);
+        //ProjectWorkflowMap.addNodePropertyChangedListener(this);
 
     }
 
@@ -448,13 +454,17 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     private void addGlobalActions(final IMenuManager manager) {
         manager.add(new NewWorkflowAction(m_viewer));
         manager.add(new NewWorkflowGroupAction(m_viewer));
+        manager.add(new Separator());
         manager.add(new GlobalDeleteAction(m_viewer));
         manager.add(new GlobalRenameAction(m_viewer));
-        manager.add(new GlobalEditMetaInfoAction(m_viewer));
+        manager.add(new Separator());
         manager.add(new GlobalConfigureWorkflowAction(m_viewer));
         manager.add(new GlobalExecuteWorkflowAction(m_viewer));
         manager.add(new GlobalCredentialVariablesDialogAction(m_viewer));
-
+        manager.add(new Separator());
+        manager.add(new GlobalEditMetaInfoAction(m_viewer));
+        manager.add(new Separator());
+        manager.add(new WorkflowExportAction(m_viewer));
     }
 
     private void createLocalToolBar(final DrillDownAdapter dda) {
@@ -529,7 +539,10 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     public void dispose() {
         m_contentDelegator.removePropertyChangeListener(this);
         m_contentDelegator.dispose();
-
+//        ProjectWorkflowMap.removeWorkflowListener(this);
+        ProjectWorkflowMap.removeStateListener(this);
+//        ProjectWorkflowMap.removeNodePropertyChangedListener(this);
+//        ProjectWorkflowMap.removeNodeMessageListener(this);
     }
 
 }

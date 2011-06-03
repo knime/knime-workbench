@@ -31,7 +31,6 @@ import org.eclipse.ui.dialogs.ISelectionValidator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.ui.navigator.actions.selection.TreeSelectionControl;
@@ -66,7 +65,11 @@ public class SpaceResourceSelectionDialog extends Dialog {
         m_message = message;
         m_mountIDs = providerIDs;
         m_initialSelection = initialSelection;
-        m_selectedContainer = initialSelection.getObject();
+        if (initialSelection != null) {
+            m_selectedContainer = initialSelection.getObject();
+        } else {
+            m_selectedContainer = null;
+        }
     }
 
     public void setTitle(final String title) {
@@ -98,7 +101,10 @@ public class SpaceResourceSelectionDialog extends Dialog {
         TreeSelectionControl tree = new TreeSelectionControl();
         tree.setContentProvider(m_treeInput);
         tree.setLabelProvider(m_treeInput);
-        tree.setInitialSelection(new StructuredSelection(m_initialSelection));
+        if (m_initialSelection != null) {
+            tree.setInitialSelection(
+                    new StructuredSelection(m_initialSelection));
+        }
         tree.setInput(m_treeInput);
         tree.setMessage(m_message);
         tree.setValidator(new ISelectionValidator() {
@@ -139,14 +145,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * is unexpected.
      */
     private ExplorerFileStore getSelectedFile(final Object selection) {
-        if (selection instanceof ContentObject) {
-            return ((ContentObject)selection).getObject();
-        } else if (selection instanceof AbstractContentProvider) {
-            return ((AbstractContentProvider)selection).getFileStore("/");
-        } else {
-            return null;
-        }
-
+        return ContentDelegator.getFileStore(selection);
     }
 
     /**

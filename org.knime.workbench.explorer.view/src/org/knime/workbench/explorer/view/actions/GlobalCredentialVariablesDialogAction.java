@@ -76,16 +76,16 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
         ExplorerFileStore wfStore = fileStores.get(0);
         WorkflowManager workflow = getWorkflow();
 
-        try {
-            if (ExplorerFileSystemUtils.lockWorkflow(wfStore)) {
+        if (ExplorerFileSystemUtils.lockWorkflow(wfStore)) {
+            try {
                 showDialog(workflow);
-            } else {
-                LOGGER.info("The workflow cannot be configured as "
-                + "is still in use by another user/instance.\n");
-                showCantEditCredentialsLockMessage();
+            } finally {
+                ExplorerFileSystemUtils.unlockWorkflow(wfStore);
             }
-        } finally {
-            ExplorerFileSystemUtils.unlockWorkflow(wfStore);
+        } else {
+            LOGGER.info("The workflow cannot be configured as it "
+                    + "is still in use by another user/instance.\n");
+            showCantEditCredentialsLockMessage();
         }
 
     }
@@ -126,7 +126,7 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
         MessageBox mb =
                 new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
         mb.setText("Can't Lock for Editing Credentials");
-        mb.setMessage("The workflow cannot be configured as "
+        mb.setMessage("The workflow cannot be configured as it "
                 + "is still in use by another user/instance.\n");
         mb.open();
     }

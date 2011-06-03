@@ -82,10 +82,31 @@ public class ContentDelegator extends LabelProvider implements
 
     /**
      * Creates a new content delegator and registers it for property changes of
-     * the explorer mount table.
+     * the explorer mount table. None of the mounted content is visible through
+     * this constructor.
      */
     public ContentDelegator() {
+        this(false);
+    }
+
+    /**
+     * Creates a new content delegator and registers it for property changes of
+     * the explorer mount table. All of the currently mounted content is visible
+     * if the parameter is set true.
+     *
+     * @param showAll if true all currently mounted content is visible through
+     *            this content provider. If false, the content is empty.
+     */
+    public ContentDelegator(final boolean showAll) {
         m_provider = new LinkedHashSet<MountPoint>();
+        if (showAll) {
+            for (String id : ExplorerMountTable.getAllMountIDs()) {
+                MountPoint mp = ExplorerMountTable.getMountPoint(id);
+                if (mp != null) {
+                    m_provider.add(mp);
+                }
+            }
+        }
         m_changeListener = new CopyOnWriteArrayList<IPropertyChangeListener>();
         ExplorerMountTable.addPropertyChangeListener(this);
     }
@@ -311,6 +332,72 @@ public class ContentDelegator extends LabelProvider implements
         } else {
             return new ContentObject(mp.getProvider(), file);
         }
+    }
+
+    /**
+     * Same as {@link #getTreeObjectFor(ExplorerFileStore)}, just for lists. The
+     * result list may be shorter than the argument list as null elements are
+     * not added (in case objects in the argument collection are of unexpected
+     * type).
+     *
+     * @param files the files to get tree objects for
+     * @return a list of tree objects for the files.
+     */
+    public static List<Object> getTreeObjectList(
+            final Collection<? extends ExplorerFileStore> files) {
+        if (files == null) {
+            return null;
+        }
+        ArrayList<Object> result = new ArrayList<Object>();
+        for (ExplorerFileStore f : files) {
+            Object o = getTreeObjectFor(f);
+            if (o != null) {
+                result.add(o);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Returns the file store corresponding to the passed treeviewer object.
+     *
+     * @param treeObject either a content object or a content provider
+     * @return the file store corresponding to the passed treeviewer object or
+     *         null, if the object passed is of unexpected type
+     */
+    public static ExplorerFileStore getFileStore(final Object treeObject) {
+        if (treeObject instanceof ContentObject) {
+            return ((ContentObject)treeObject).getObject();
+        } else if (treeObject instanceof AbstractContentProvider) {
+            // content provider represent the root object of their content
+            return ((AbstractContentProvider)treeObject).getFileStore("/");
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Same as {{@link #getFileStore(Object)}. Just for collections. The result
+     * list may be shorter than the argument list as null elements are not added
+     * (in case objects in the argument collection are of unexpected type).
+     *
+     * @param treeObjects the tree objects to convert
+     * @return a list of file stores
+     */
+    public static List<ExplorerFileStore> getFileStoreList(
+            final Collection<? extends Object> treeObjects) {
+        if (treeObjects == null) {
+            return null;
+        }
+        ArrayList<ExplorerFileStore> result =
+                new ArrayList<ExplorerFileStore>();
+        for (Object o : treeObjects) {
+            ExplorerFileStore f = getFileStore(o);
+            if (f != null) {
+                result.add(f);
+            }
+        }
+        return result;
     }
 
     /*

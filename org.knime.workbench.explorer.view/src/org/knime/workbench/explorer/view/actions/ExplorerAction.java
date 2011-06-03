@@ -144,13 +144,13 @@ public abstract class ExplorerAction extends Action {
 
     /**
      * Returns a new list with workflows that are contained in the parameter
-     * list (either directly or in any sub directory of the list)
+     * list (either directly or in any sub directory of the list).
      *
      * @param selected the list to return contained workflows from
      * @return a new list with workflows contained (directly or indirectly) in
      *         the argument
      */
-    protected List<ExplorerFileStore> getContainedWorkflows(
+    public static List<ExplorerFileStore> getContainedWorkflows(
             final List<? extends ExplorerFileStore> selected) {
         List<ExplorerFileStore> result = new LinkedList<ExplorerFileStore>();
         for (ExplorerFileStore f : selected) {

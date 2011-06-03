@@ -106,12 +106,12 @@ public final class ContentObject {
     }
 
     /**
-     *
      * @param file to wrap into a into a content object
      * @return an object used in the explorer view or null, if the file refers
      *         to a non existing mount point. NOTE: The explorer view does not
      *         store root file objects (with path "/"). But this method returns
      *         a content object if a file with path "/" is passed.
+     * @see ContentDelegator#getTreeObjectFor(ExplorerFileStore)
      *
      */
     public static ContentObject forFile(final ExplorerFileStore file) {
