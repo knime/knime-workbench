@@ -124,4 +124,8 @@ public class IconFactory {
     public Image workflowgroup() {
         return WORKFLOW_GROUP;
     }
+
+    public Image workflowtemplate() {
+        return FLOW_TEMPLATE;
+    }
 }
