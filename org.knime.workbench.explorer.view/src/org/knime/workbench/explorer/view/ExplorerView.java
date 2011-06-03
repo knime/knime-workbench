@@ -43,6 +43,7 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
@@ -57,6 +58,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MessageBox;
+import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IViewSite;
 import org.eclipse.ui.IWorkbenchActionConstants;
@@ -66,6 +68,7 @@ import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.DrillDownAdapter;
 import org.eclipse.ui.part.ViewPart;
+import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeMessageEvent;
 import org.knime.core.node.workflow.NodeMessageListener;
@@ -94,6 +97,7 @@ import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
 import org.knime.workbench.explorer.view.dnd.ExplorerDropListener;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
+import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
 
 /**
  *
@@ -199,7 +203,9 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             }
         });
         Button open = new Button(panel, SWT.PUSH);
-        open.setText("Open");
+        open.setText("Sync <->");
+        open.setToolTipText(
+                "Selects the workflow in the active editor in the explorer");
         open.addSelectionListener(new SelectionListener() {
             /** {@inheritDoc} */
             @Override
@@ -210,10 +216,66 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             /** {@inheritDoc} */
             @Override
             public void widgetSelected(final SelectionEvent e) {
-                openSelected();
+//                openSelected();
+                if (!sync()) {
+                    m_viewer.setSelection(null);
+                }
             }
 
         });
+    }
+
+    private boolean sync() {
+        IEditorPart activeEditor =
+                PlatformUI.getWorkbench().getActiveWorkbenchWindow()
+                        .getActivePage().getActiveEditor();
+        Object adapter = activeEditor.getAdapter(WorkflowEditorAdapter.class);
+        if (adapter == null) {
+            // not a workflow editor
+            return false;
+        }
+        ReferencedFile wfFileRef =
+                ((WorkflowEditorAdapter)adapter).getWorkflowManager()
+                        .getWorkingDir();
+        if (wfFileRef == null) {
+            // not saved yet
+            return false;
+        }
+        // that's the local file to find in a content provider
+        String wfDir = wfFileRef.getFile().getAbsolutePath().toLowerCase();
+
+        Set<String> mountedIds = m_contentDelegator.getMountedIds();
+        for (String id : mountedIds) {
+            MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
+            ExplorerFileStore root = mountPoint.getProvider().getFileStore("/");
+            File localRoot;
+            try {
+                localRoot = root.toLocalFile();
+            } catch (CoreException e) {
+                // no corresponding local file
+                continue;
+            }
+            if (localRoot == null) {
+                // no corresponding local file
+                continue;
+            }
+            if (!wfDir.startsWith(localRoot.getAbsolutePath().toLowerCase())) {
+                // got the wrong content provider
+                continue;
+            }
+            String relPath =
+                    wfDir.substring(localRoot.getAbsolutePath().length())
+                            .replace('\\', '/');
+            if (!relPath.startsWith("/")) {
+                relPath = "/" + relPath;
+            }
+            ExplorerFileStore store =
+                    mountPoint.getProvider().getFileStore(relPath);
+            m_viewer.setSelection(new StructuredSelection(ContentDelegator
+                    .getTreeObjectFor(store)), true);
+            return true;
+        }
+        return false;
     }
 
     private boolean openSelected() {
