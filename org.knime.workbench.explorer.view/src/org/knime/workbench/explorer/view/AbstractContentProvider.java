@@ -426,6 +426,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     /**
+     *
+     * @param template to return children for
+     * @return children of the template.
+     */
+    public static ExplorerFileStore[] getWorkflowTemplateChildren(
+            final ExplorerFileStore template) {
+        // meta nodes have not children (as long as we don't show their nodes)
+        return NO_CHILD;
+    }
+
+    /**
      * Helper method for content providers. Returns children of a workflowgroup.
      *
      * @param workflowGroup the workflow group to return the children for
