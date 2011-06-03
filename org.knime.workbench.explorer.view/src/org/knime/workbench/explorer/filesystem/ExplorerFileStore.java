@@ -45,8 +45,6 @@ import org.knime.workbench.explorer.ExplorerMountTable;
  */
 public abstract class ExplorerFileStore extends FileStore {
 
-
-
     private final String m_mountID;
 
     private final String m_fullPath;
@@ -147,8 +145,7 @@ public abstract class ExplorerFileStore extends FileStore {
                 return false;
             }
             for (int s = otherPath.segmentCount() - 1; s >= 0; s--) {
-                if (!otherPath.segment(s).equalsIgnoreCase(
-                        thisPath.segment(s))) {
+                if (!otherPath.segment(s).equalsIgnoreCase(thisPath.segment(s))) {
                     return false;
                 }
             }
@@ -181,8 +178,9 @@ public abstract class ExplorerFileStore extends FileStore {
         if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-        IFileStore wf = file.getChild(WorkflowPersistor.TEMPLATE_FILE);
-        return wf.fetchInfo().exists() && !isWorkflowTemplate(file.getParent());
+        IFileStore tf = file.getChild(WorkflowPersistor.TEMPLATE_FILE);
+        return tf.fetchInfo().exists();
+
     }
 
     /**
@@ -196,11 +194,12 @@ public abstract class ExplorerFileStore extends FileStore {
             return false;
         }
 
-        if (isWorkflow(file) || isWorkflow(file.getParent())) {
+        if (isWorkflow(file) || isWorkflow(file.getParent())
+                || isWorkflowTemplate(file)) {
             return false;
         }
-        return file.getChild(
-                WorkflowPersistor.METAINFO_FILE).fetchInfo().exists();
+        return file.getChild(WorkflowPersistor.METAINFO_FILE).fetchInfo()
+                .exists();
     }
 
     /**
@@ -237,6 +236,21 @@ public abstract class ExplorerFileStore extends FileStore {
     }
 
     /**
+     * @param file the file to test.
+     * @return true if the argument is a directory but no node nor meta node.
+     */
+    public static boolean isDirOrWorkflowGroup(final ExplorerFileStore file) {
+        if (file == null || !file.fetchInfo().isDirectory()) {
+            return false;
+        }
+        if (isWorkflow(file) || isMetaNode(file) || isNode(file)
+                || isWorkflowTemplate(file)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -263,8 +277,9 @@ public abstract class ExplorerFileStore extends FileStore {
     public abstract ExplorerFileStore getChild(String name);
 
     /**
-     * Convenience method that calls #toLocalFile(int, IProgressMonitor)
-     * with options = EFS.NONE and monitor = null.
+     * Convenience method that calls #toLocalFile(int, IProgressMonitor) with
+     * options = EFS.NONE and monitor = null.
+     *
      * @return the local file or null if not supported
      * @throws CoreException if this method fails
      */
