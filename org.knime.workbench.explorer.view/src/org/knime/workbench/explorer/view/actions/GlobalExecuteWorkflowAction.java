@@ -30,6 +30,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 
 /**
@@ -70,7 +71,7 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
             DragAndDropUtils.getExplorerFileStores(getSelection());
         ExplorerFileStore wfStore = fileStores.get(0);
         try {
-            if (lockWorkflow(wfStore)) {
+            if (ExplorerFileSystemUtils.lockWorkflow(wfStore)) {
                 WorkflowManager.ROOT.executeUpToHere(wfm.getID());
             } else {
                 LOGGER.info("The workflow cannot be executed as "
@@ -79,7 +80,7 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
                 showCantExecuteLockMessage();
             }
         } finally {
-            unlockWorkflow(wfStore);
+            ExplorerFileSystemUtils.unlockWorkflow(wfStore);
         }
 
     }

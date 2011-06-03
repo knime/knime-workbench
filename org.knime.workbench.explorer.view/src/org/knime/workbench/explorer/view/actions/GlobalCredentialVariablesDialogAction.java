@@ -34,6 +34,7 @@ import org.knime.core.node.workflow.Credentials;
 import org.knime.core.node.workflow.CredentialsStore;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.masterkey.CredentialVariablesDialog;
 
@@ -76,7 +77,7 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
         WorkflowManager workflow = getWorkflow();
 
         try {
-            if (lockWorkflow(wfStore)) {
+            if (ExplorerFileSystemUtils.lockWorkflow(wfStore)) {
                 showDialog(workflow);
             } else {
                 LOGGER.info("The workflow cannot be configured as "
@@ -84,7 +85,7 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
                 showCantEditCredentialsLockMessage();
             }
         } finally {
-            unlockWorkflow(wfStore);
+            ExplorerFileSystemUtils.unlockWorkflow(wfStore);
         }
 
     }

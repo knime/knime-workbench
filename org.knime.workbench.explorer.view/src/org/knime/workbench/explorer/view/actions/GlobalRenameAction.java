@@ -42,6 +42,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -104,10 +105,10 @@ public class GlobalRenameAction extends ExplorerAction {
         if (affectedFlows.size() > 0) {
             LinkedList<ExplorerFileStore> unlockableWFs =
                     new LinkedList<ExplorerFileStore>();
-            lockWorkflows(affectedFlows, unlockableWFs, lockedWFs);
+            ExplorerFileSystemUtils.lockWorkflows(affectedFlows, unlockableWFs, lockedWFs);
             if (unlockableWFs.size() > 0) {
                 // release locks acquired for renaming
-                unlockWorkflows(lockedWFs);
+                ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
                 showCantRenameLockMessage();
                 return;
             }
@@ -116,13 +117,13 @@ public class GlobalRenameAction extends ExplorerAction {
         ExplorerFileStore dstFileStore = queryTargetName(srcFileStore);
         if (dstFileStore == null) {
             // dialog was cancelled
-            unlockWorkflows(lockedWFs);
+            ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
             return;
         }
 
-        if (hasOpenWorkflows(affectedFlows)) {
+        if (ExplorerFileSystemUtils.hasOpenWorkflows(affectedFlows)) {
             // release locks acquired for renaming
-            unlockWorkflows(lockedWFs);
+            ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
             showCantRenameOpenMessage();
             return;
         }
@@ -130,7 +131,7 @@ public class GlobalRenameAction extends ExplorerAction {
         /* Unfortunately we have to unlock the workflows before moving. If we
          * move the workflows including the locks, we loose the possibility to
          * unlock them. */
-        unlockWorkflows(lockedWFs);
+        ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
         try {
             srcFileStore.move(dstFileStore, EFS.NONE, null);
 //            unlockDstWorkflows(acp, srcFileStore, dstFileStore, lockedWFs);
@@ -140,7 +141,7 @@ public class GlobalRenameAction extends ExplorerAction {
             String message = "Could not rename \"" + srcFileStore + "\" to \""
                     + dstFileStore + "\".";
             LOGGER.error(message, e);
-            unlockWorkflows(lockedWFs);
+            ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
             MessageDialog.openError(getParentShell(), "Renaming failed",
                     message);
         }
@@ -170,7 +171,7 @@ public class GlobalRenameAction extends ExplorerAction {
             ExplorerFileStore dstFs = acp.getFileStore(dstStoreName);
             dstStores.add(dstFs);
         }
-        unlockWorkflows(dstStores);
+        ExplorerFileSystemUtils.unlockWorkflows(dstStores);
     }
 
     private ExplorerFileStore queryTargetName(

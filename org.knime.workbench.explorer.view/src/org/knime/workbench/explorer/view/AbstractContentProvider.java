@@ -57,7 +57,7 @@ import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
-import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -323,7 +323,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                             + " is currently locked by another process");
                     return false;
                 }
-                GlobalDeleteAction.deleteLockedWorkflows(
+                ExplorerFileSystemUtils.deleteLockedWorkflows(
                         Collections.singletonList(efsDir));
             }
             try {

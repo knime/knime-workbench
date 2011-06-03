@@ -20,14 +20,10 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
-import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
@@ -35,11 +31,8 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.core.util.FileUtil;
-import org.knime.core.util.VMFileLocker;
-import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
@@ -100,10 +93,10 @@ public class GlobalDeleteAction extends ExplorerAction {
         if (toDelWorkflows.size() > 0) {
             LinkedList<ExplorerFileStore> unlockableWFs =
                     new LinkedList<ExplorerFileStore>();
-            lockWorkflows(toDelWorkflows, unlockableWFs, lockedWFs);
+            ExplorerFileSystemUtils.lockWorkflows(toDelWorkflows, unlockableWFs, lockedWFs);
             if (unlockableWFs.size() > 0) {
                 // release locks acquired for deletion
-                unlockWorkflows(lockedWFs);
+                ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
                 showCantDeleteMessage();
                 return;
             }
@@ -112,109 +105,20 @@ public class GlobalDeleteAction extends ExplorerAction {
         assert lockedWFs.size() == toDelWorkflows.size();
         if (!confirmDeletion(allFiles, toDelWorkflows)) {
             // release locks acquired for deletion
-            unlockWorkflows(lockedWFs);
+            ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
             return;
         }
 
-        closeOpenWorkflows(toDelWorkflows);
+        ExplorerFileSystemUtils.closeOpenWorkflows(toDelWorkflows);
 
         // delete Workflows first (unlocks them too)
-        boolean success = deleteLockedWorkflows(toDelWorkflows);
-        success &= deleteTheRest(allFiles);
+        boolean success = ExplorerFileSystemUtils.deleteLockedWorkflows(toDelWorkflows);
+        success &= ExplorerFileSystemUtils.deleteTheRest(allFiles);
 
         if (!success) {
             showUnsuccessfulMessage();
         }
         //TODO: Refresh !
-    }
-
-    /** Delete workflows from argument list. If the workflows are locked
-     * by this VM, they will be unlocked after this method returns.
-     * @param toDelWFs The list of directories associate with the workflows.
-     * @return true if that was successful, i.e. the workflow directory
-     * does not exist when this method returns, false if that fails
-     * (e.g. not locked by this VM)
-     **/
-    public static boolean deleteLockedWorkflows(
-            final List<ExplorerFileStore> toDelWFs) {
-        boolean success = true;
-        for (ExplorerFileStore wf : toDelWFs) {
-            assert ExplorerFileStore.isWorkflow(wf);
-            try {
-                File loc = wf.toLocalFile(EFS.NONE, null);
-                if (loc == null) {
-                    // can't do any locking or fancy deletion
-                    wf.delete(EFS.NONE, null);
-                    return true;
-                }
-                assert VMFileLocker.isLockedForVM(loc);
-
-                // delete the workflow file first
-                File[] children = loc.listFiles();
-                if (children == null) {
-                    throw new CoreException(
-                            new Status(Status.ERROR,
-                                    ExplorerActivator.PLUGIN_ID,
-                                    "Can't read location."));
-                }
-
-                // delete workflow file first
-                File wfFile = new File(loc, WorkflowPersistor.WORKFLOW_FILE);
-                success &= wfFile.delete();
-
-                children = loc.listFiles(); // get a list w/o workflow file
-                for (File child : children) {
-                    if (VMFileLocker.LOCK_FILE.equals(child.getName())) {
-                        // delete the lock file last
-                        continue;
-                    }
-                    boolean deletedIt = FileUtil.deleteRecursively(child);
-                    success &= deletedIt;
-                    if (!deletedIt) {
-                        LOGGER.error("Unable to delete " + child.toString());
-                    }
-                }
-
-                // release lock in order to delete lock file
-                VMFileLocker.unlockForVM(loc);
-                // lock file resource may not exist
-                File lockFile = new File(loc, VMFileLocker.LOCK_FILE);
-                if (lockFile.exists()) {
-                    success &= lockFile.delete();
-                }
-                // delete the workflow directory itself
-                success &= FileUtil.deleteRecursively(loc);
-            } catch (CoreException e) {
-                success = false;
-                LOGGER.error("Error while deleting workflow " + wf.toString()
-                        + ": " + e.getMessage(), e);
-                // continue with next workflow...
-            }
-        }
-        return success;
-    }
-
-    private boolean deleteTheRest(final List<ExplorerFileStore> toDel) {
-        boolean success = true;
-        for (ExplorerFileStore f : toDel) {
-            // go by the local file. (Does EFS.delete() delete recursively??)
-            try {
-                File loc = f.toLocalFile(EFS.NONE, null);
-                if (loc == null) {
-                    f.delete(EFS.NONE, null);
-                } else {
-                    // if it is a workflow it would be gone already
-                    if (loc.exists()) {
-                        success &= FileUtil.deleteRecursively(loc);
-                    }
-                }
-            } catch (CoreException e) {
-                success = false;
-                LOGGER.error("Error while deleting file " + f.toString()
-                        + ": " + e.getMessage(), e);
-            }
-        }
-        return success;
     }
 
     private boolean confirmDeletion(final List<ExplorerFileStore> toDel,

@@ -33,6 +33,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.wrapper.WrappedNodeDialog;
 
@@ -74,7 +75,7 @@ public class GlobalConfigureWorkflowAction extends ExplorerAction {
         ExplorerFileStore wfStore = fileStores.get(0);
 
         try {
-            if (lockWorkflow(wfStore)) {
+            if (ExplorerFileSystemUtils.lockWorkflow(wfStore)) {
                 showDialog(getWorkflow());
             } else {
                 LOGGER.info("The workflow cannot be configured as "
@@ -83,7 +84,7 @@ public class GlobalConfigureWorkflowAction extends ExplorerAction {
                 showCantConfigureLockMessage();
             }
         } finally {
-            unlockWorkflow(wfStore);
+            ExplorerFileSystemUtils.unlockWorkflow(wfStore);
         }
 
     }
