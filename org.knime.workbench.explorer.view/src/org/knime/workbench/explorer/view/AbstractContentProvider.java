@@ -268,9 +268,24 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             ExplorerFileStore efsDir = target.getChild(uniqueName);
             boolean doesTargetExist = wmDir.exists();
             boolean isOverwrite = false;
-            if (doesTargetExist) {
+            if (doesTargetExist
+                    && !ExplorerFileStore.isWorkflowTemplate(efsDir)) {
                 StringBuilder eMsg = new StringBuilder();
                 eMsg.append("The target directory \"");
+                eMsg.append(mountIDWithFullPath).append("/").append(uniqueName);
+                eMsg.append("\" already exists and can't be overwritten as it");
+                eMsg.append(" does not represent a workflow template.\n\n");
+                eMsg.append("The new template will be saved to a different ");
+                eMsg.append("folder instead.");
+                if (MessageDialog.openConfirm(
+                        s, "Existing folder", eMsg.toString())) {
+                    isOverwrite = false;
+                } else {
+                    return false;
+                }
+            } else if (doesTargetExist) {
+                StringBuilder eMsg = new StringBuilder();
+                eMsg.append("A template folder with the name \"");
                 eMsg.append(mountIDWithFullPath).append("/");
                 eMsg.append(uniqueName);
                 eMsg.append("\" already exists.");
