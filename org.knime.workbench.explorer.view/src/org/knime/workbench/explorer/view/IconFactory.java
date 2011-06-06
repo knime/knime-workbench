@@ -63,8 +63,8 @@ public class IconFactory {
     /** Icon representing a workflow template in the resource navigator. */
     private static final Image FLOW_TEMPLATE = KNIMEUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/meta/metanode_template.png").createImage();
-
+                    "icons/meta/metanode_template_repository.png")
+            .createImage();
 
     private static final Image DEFAULT = KNIMEUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
@@ -81,6 +81,9 @@ public class IconFactory {
     private static final Image ERROR = KNIMEUIPlugin.getDefault().getImage(
             KNIMEUIPlugin.PLUGIN_ID, "icons/error.png");
 
+    private static final Image SYNC = KNIMEUIPlugin.getDefault().getImage(
+            KNIMEUIPlugin.PLUGIN_ID, "icons/sync.png");
+
     public Image error() {
         return ERROR;
     }
@@ -94,7 +97,7 @@ public class IconFactory {
     }
 
     public Image workflowClosed() {
-        return CLOSED_WORKFLOW;
+        return WORKFLOW;
     }
 
     public Image workflowConfigured() {
@@ -107,6 +110,10 @@ public class IconFactory {
 
     public Image workflowExecuted() {
         return EXECUTED;
+    }
+
+    public Image sync() {
+        return SYNC;
     }
 
     public Image workflowError() {

@@ -202,11 +202,11 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 m_viewer.refresh();
             }
         });
-        Button open = new Button(panel, SWT.PUSH);
-        open.setText("Sync <->");
-        open.setToolTipText(
-                "Selects the workflow in the active editor in the explorer");
-        open.addSelectionListener(new SelectionListener() {
+        Button sync = new Button(panel, SWT.PUSH);
+        sync.setImage(new IconFactory().sync());
+        sync.setToolTipText("Selects the workflow displayed in the active "
+                + "editor");
+        sync.addSelectionListener(new SelectionListener() {
             /** {@inheritDoc} */
             @Override
             public void widgetDefaultSelected(final SelectionEvent e) {
@@ -216,7 +216,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             /** {@inheritDoc} */
             @Override
             public void widgetSelected(final SelectionEvent e) {
-//                openSelected();
                 if (!sync()) {
                     m_viewer.setSelection(null);
                 }
@@ -226,23 +225,31 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     }
 
     private boolean sync() {
-        IEditorPart activeEditor =
-                PlatformUI.getWorkbench().getActiveWorkbenchWindow()
-                        .getActivePage().getActiveEditor();
-        Object adapter = activeEditor.getAdapter(WorkflowEditorAdapter.class);
-        if (adapter == null) {
-            // not a workflow editor
-            return false;
-        }
-        ReferencedFile wfFileRef =
-                ((WorkflowEditorAdapter)adapter).getWorkflowManager()
-                        .getWorkingDir();
-        if (wfFileRef == null) {
-            // not saved yet
-            return false;
-        }
         // that's the local file to find in a content provider
-        String wfDir = wfFileRef.getFile().getAbsolutePath().toLowerCase();
+        String wfDir;
+
+        try {
+            IEditorPart activeEditor =
+                    PlatformUI.getWorkbench().getActiveWorkbenchWindow()
+                            .getActivePage().getActiveEditor();
+            Object adapter =
+                    activeEditor.getAdapter(WorkflowEditorAdapter.class);
+            if (adapter == null) {
+                // not a workflow editor
+                return false;
+            }
+            ReferencedFile wfFileRef =
+                    ((WorkflowEditorAdapter)adapter).getWorkflowManager()
+                            .getWorkingDir();
+            if (wfFileRef == null) {
+                // not saved yet
+                return false;
+            }
+            wfDir = wfFileRef.getFile().getAbsolutePath().toLowerCase();
+        } catch (Throwable t) {
+            // if anything is null or fails: don't sync
+            return false;
+        }
 
         Set<String> mountedIds = m_contentDelegator.getMountedIds();
         for (String id : mountedIds) {
