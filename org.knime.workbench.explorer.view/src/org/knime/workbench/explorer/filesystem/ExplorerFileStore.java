@@ -38,6 +38,8 @@ import org.eclipse.core.runtime.Path;
 import org.knime.core.node.workflow.SingleNodeContainerPersistorVersion200;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.MountPoint;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
  *
@@ -285,6 +287,18 @@ public abstract class ExplorerFileStore extends FileStore {
      */
     public File toLocalFile() throws CoreException {
         return toLocalFile(EFS.NONE, null);
+    }
+
+    /**
+     * @return the content provider responsible for the file store, or null
+     *      if the content provider is no longer mounted
+     */
+    public AbstractContentProvider getContentProvider() {
+        MountPoint mountPoint = ExplorerMountTable.getMountPoint(getMountID());
+        if (mountPoint == null) {
+            return null;
+        }
+        return mountPoint.getProvider();
     }
 
     /* ----------- placeholder store in the tree for string messages ----- */

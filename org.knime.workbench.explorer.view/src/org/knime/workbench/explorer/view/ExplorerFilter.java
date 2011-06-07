@@ -25,8 +25,6 @@ package org.knime.workbench.explorer.view;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.knime.core.node.NodeLogger;
@@ -59,10 +57,14 @@ public class ExplorerFilter extends TextualViewFilter {
         } else if (element instanceof ContentObject
                 || element instanceof ExplorerFileStore) {
             ExplorerFileStore fileStore = null;
+            AbstractContentProvider contentProvider = null;
             if (element instanceof ContentObject) {
-                fileStore = ((ContentObject)element).getObject();
+                ContentObject contentObject = (ContentObject)element;
+                fileStore = contentObject.getObject();
+                contentProvider = contentObject.getProvider();
             } else {
                 fileStore = (ExplorerFileStore)element;
+                contentProvider = fileStore.getContentProvider();
             }
             String fullName = fileStore.getFullName();
 
@@ -84,19 +86,13 @@ public class ExplorerFilter extends TextualViewFilter {
                 /* Directories are shown if their name matches or if the name
                  * of any child matches. */
                 if (!selectThis) {
-                    try {
-                        for (ExplorerFileStore child
-                                : fileStore.childStores(EFS.NONE, null)) {
-                            // parent is not necessary (->null)
-                            selectThis = doSelect(null, child, false);
-                            if (selectThis) {
-                                break;
-                            }
+                    for (ExplorerFileStore child
+                            : contentProvider.getChildren(fileStore)) {
+                        // parent is not necessary (->null)
+                        selectThis = doSelect(null, child, false);
+                        if (selectThis) {
+                            break;
                         }
-                    } catch (CoreException e) {
-                        /* file store is not displayed if its children cannot
-                            be fetched.*/
-                        selectThis = false;
                     }
                 }
             } else {
