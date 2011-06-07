@@ -15,6 +15,9 @@
  * website: www.knime.com
  * email: contact@knime.com
  * ---------------------------------------------------------------------
+ *
+ * History
+ *   14.08.2009 (ohl): created
  */
 package org.knime.workbench.explorer.view.actions;
 
@@ -29,26 +32,25 @@ import org.knime.workbench.explorer.ExplorerActivator;
 
 /**
  *
- * @author ohl, KNIME.com, Zurich, Switzerland
+ * @author morent, KNIME.com, Zurich, Switzerland
  */
-public class CollapseAction extends ExplorerAction {
+public class ExpandAction extends ExplorerAction {
 
     /**
-     * The icon for the collapse action.
+     * The icon for the expand action.
      */
-    public static final ImageDescriptor IMG_COLL =
+    public static final ImageDescriptor IMG_EXP =
         AbstractUIPlugin.imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
-        "icons/collapse.png");
+        "icons/expand.png");
 
-    private static final String TOOLTIP = "Collapse the selected element";
+    private static final String TOOLTIP = "Expands fully the selected element";
 
     /**
-     *
      * @param viewer the viewer
      */
-    public CollapseAction(final TreeViewer viewer) {
-        super(viewer, "Collapse");
-        setImageDescriptor(IMG_COLL);
+    public ExpandAction(final TreeViewer viewer) {
+        super(viewer, "Expand ...");
+        setImageDescriptor(IMG_EXP);
         setToolTipText(TOOLTIP);
     }
 
@@ -57,7 +59,7 @@ public class CollapseAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-        return "org.knime.workbench.explorer.view.action.collapse";
+        return "org.knime.workbench.explorer.view.action.expand";
     }
 
     /**
@@ -74,7 +76,7 @@ public class CollapseAction extends ExplorerAction {
             return;
         }
         while (iter.hasNext()) {
-            getViewer().collapseToLevel(iter.next(),
+            getViewer().expandToLevel(iter.next(),
                     AbstractTreeViewer.ALL_LEVELS);
         }
     }

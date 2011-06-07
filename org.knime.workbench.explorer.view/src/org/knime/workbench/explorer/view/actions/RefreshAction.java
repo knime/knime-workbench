@@ -15,40 +15,39 @@
  * website: www.knime.com
  * email: contact@knime.com
  * ---------------------------------------------------------------------
+ *
+ * History
+ *   14.08.2009 (ohl): created
  */
 package org.knime.workbench.explorer.view.actions;
 
-import java.util.Iterator;
-
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.AbstractTreeViewer;
-import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.explorer.ExplorerActivator;
 
 /**
  *
- * @author ohl, KNIME.com, Zurich, Switzerland
+ * @author morent, KNIME.com, Zurich, Switzerland
  */
-public class CollapseAction extends ExplorerAction {
+public class RefreshAction extends ExplorerAction {
 
     /**
-     * The icon for the collapse action.
+     * The icon for the refresh action.
      */
-    public static final ImageDescriptor IMG_COLL =
+    public static final ImageDescriptor IMG_REFRESH =
         AbstractUIPlugin.imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
-        "icons/collapse.png");
+        "icons/refresh_small.png");
 
-    private static final String TOOLTIP = "Collapse the selected element";
+    private static final String TOOLTIP = "Refresh the view";
 
     /**
      *
      * @param viewer the viewer
      */
-    public CollapseAction(final TreeViewer viewer) {
-        super(viewer, "Collapse");
-        setImageDescriptor(IMG_COLL);
+    public RefreshAction(final TreeViewer viewer) {
+        super(viewer, "Refresh");
+        setImageDescriptor(IMG_REFRESH);
         setToolTipText(TOOLTIP);
     }
 
@@ -57,7 +56,7 @@ public class CollapseAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-        return "org.knime.workbench.explorer.view.action.collapse";
+        return "org.knime.workbench.explorer.view.action.refresh";
     }
 
     /**
@@ -65,17 +64,6 @@ public class CollapseAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        IStructuredSelection sel = getSelection();
-        if (sel == null) {
-            return;
-        }
-        Iterator<Object> iter = sel.iterator();
-        if (iter == null) {
-            return;
-        }
-        while (iter.hasNext()) {
-            getViewer().collapseToLevel(iter.next(),
-                    AbstractTreeViewer.ALL_LEVELS);
-        }
+       getViewer().refresh();
     }
 }

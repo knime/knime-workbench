@@ -28,6 +28,7 @@ import java.util.Map;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.widgets.Shell;
@@ -73,6 +74,17 @@ public abstract class ExplorerAction extends Action {
         IStructuredSelection selection =
                 (IStructuredSelection)getViewer().getSelection();
         return selection;
+    }
+
+    /**
+     * @return the first selected element - or null, if non is selected
+     */
+    protected Object getFirstSelection() {
+        ISelection selection = m_viewer.getSelection();
+        if (selection == null) {
+            return null;
+        }
+        return ((IStructuredSelection)selection).getFirstElement();
     }
 
     /**

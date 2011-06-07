@@ -15,40 +15,35 @@
  * website: www.knime.com
  * email: contact@knime.com
  * ---------------------------------------------------------------------
+ *
+ * History
+ *   14.08.2009 (ohl): created
  */
 package org.knime.workbench.explorer.view.actions;
 
-import java.util.Iterator;
-
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.AbstractTreeViewer;
-import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
-import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  *
- * @author ohl, KNIME.com, Zurich, Switzerland
+ * @author morent, KNIME.com, Zurich, Switzerland
  */
-public class CollapseAction extends ExplorerAction {
+public class ExpandAllAction extends ExplorerAction {
+
+    private static final ImageDescriptor IMG_EXPALL =
+        AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+        "icons/fav/expandeall.png");
+
+    private static final String TOOLTIP = "Collapses the entire tree";
 
     /**
-     * The icon for the collapse action.
-     */
-    public static final ImageDescriptor IMG_COLL =
-        AbstractUIPlugin.imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
-        "icons/collapse.png");
-
-    private static final String TOOLTIP = "Collapse the selected element";
-
-    /**
-     *
      * @param viewer the viewer
      */
-    public CollapseAction(final TreeViewer viewer) {
-        super(viewer, "Collapse");
-        setImageDescriptor(IMG_COLL);
+    public ExpandAllAction(final TreeViewer viewer) {
+        super(viewer, "Expand All");
+        setImageDescriptor(IMG_EXPALL);
         setToolTipText(TOOLTIP);
     }
 
@@ -57,7 +52,7 @@ public class CollapseAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-        return "org.knime.workbench.explorer.view.action.collapse";
+        return "org.knime.workbench.explorer.view.action.expandall";
     }
 
     /**
@@ -65,17 +60,7 @@ public class CollapseAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        IStructuredSelection sel = getSelection();
-        if (sel == null) {
-            return;
-        }
-        Iterator<Object> iter = sel.iterator();
-        if (iter == null) {
-            return;
-        }
-        while (iter.hasNext()) {
-            getViewer().collapseToLevel(iter.next(),
-                    AbstractTreeViewer.ALL_LEVELS);
-        }
+        getViewer().expandAll();
     }
+
 }

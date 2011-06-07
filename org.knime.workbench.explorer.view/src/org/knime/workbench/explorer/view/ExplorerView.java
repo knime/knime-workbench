@@ -31,12 +31,14 @@ import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.filesystem.local.LocalFile;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.InputDialog;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.util.PropertyChangeEvent;
@@ -66,8 +68,8 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
-import org.eclipse.ui.part.DrillDownAdapter;
 import org.eclipse.ui.part.ViewPart;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeMessageEvent;
@@ -83,6 +85,9 @@ import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.view.actions.CollapseAction;
+import org.knime.workbench.explorer.view.actions.CollapseAllAction;
+import org.knime.workbench.explorer.view.actions.ExpandAction;
 import org.knime.workbench.explorer.view.actions.GlobalConfigureWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalCredentialVariablesDialogAction;
 import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
@@ -91,11 +96,15 @@ import org.knime.workbench.explorer.view.actions.GlobalExecuteWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalRenameAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowGroupAction;
+import org.knime.workbench.explorer.view.actions.RefreshAction;
 import org.knime.workbench.explorer.view.actions.export.WorkflowExportAction;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
 import org.knime.workbench.explorer.view.dnd.ExplorerDropListener;
+import org.knime.workbench.repository.view.FilterViewContributionItem;
+import org.knime.workbench.repository.view.LabeledFilterViewContributionItem;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
 
@@ -113,9 +122,15 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(ExplorerView.class);
 
+    private static final ImageDescriptor IMG_COLLALL =
+        AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+                "icons/fav/collapseall.png");
+
     private TreeViewer m_viewer;
 
     private final ContentDelegator m_contentDelegator = new ContentDelegator();
+
+    private FilterViewContributionItem m_toolbarFilterCombo;
 
     private ExplorerDragListener m_dragListener;
 
@@ -163,7 +178,30 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     }
 
     private void createLocalToolBar() {
-
+        IToolBarManager toolBarMgr =
+            getViewSite().getActionBars().getToolBarManager();
+        Action exp = new ExpandAction(m_viewer);
+        exp.setToolTipText("Expands fully the selected element");
+        exp.setImageDescriptor(ExpandAction.IMG_EXP);
+        toolBarMgr.add(exp);
+        Action coll = new CollapseAction(m_viewer);
+        coll.setToolTipText("Collapses the selected element.");
+        coll.setImageDescriptor(CollapseAction.IMG_COLL);
+        toolBarMgr.add(coll);
+        Action collAll = new CollapseAllAction(m_viewer);
+        collAll.setToolTipText("Collapses the entire tree");
+        collAll.setImageDescriptor(IMG_COLLALL);
+        toolBarMgr.add(collAll);
+        toolBarMgr.add(new Separator());
+        Action refresh = new RefreshAction(m_viewer);
+        refresh.setToolTipText("Refresh the view");
+        refresh.setImageDescriptor(RefreshAction.IMG_REFRESH);
+        toolBarMgr.add(refresh);
+        toolBarMgr.add(new Separator());
+        m_toolbarFilterCombo =
+            new LabeledFilterViewContributionItem(m_viewer,
+                    new ExplorerFilter(), false);
+        toolBarMgr.add(m_toolbarFilterCombo);
     }
 
     private void createButtons(final Composite parent) {
@@ -185,21 +223,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             @Override
             public void widgetSelected(final SelectionEvent e) {
                 addNewItemToView();
-            }
-        });
-        Button refresh = new Button(panel, SWT.PUSH);
-        refresh.setText("Refresh");
-        refresh.addSelectionListener(new SelectionListener() {
-            /** {@inheritDoc} */
-            @Override
-            public void widgetDefaultSelected(final SelectionEvent e) {
-                widgetSelected(e);
-            }
-
-            /** {@inheritDoc} */
-            @Override
-            public void widgetSelected(final SelectionEvent e) {
-                m_viewer.refresh();
             }
         });
         Button sync = new Button(panel, SWT.PUSH);
@@ -534,36 +557,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new GlobalEditMetaInfoAction(m_viewer));
         manager.add(new Separator());
         manager.add(new WorkflowExportAction(m_viewer));
-    }
-
-    private void createLocalToolBar(final DrillDownAdapter dda) {
-        IToolBarManager toolBarMgr =
-                getViewSite().getActionBars().getToolBarManager();
-
-        // m_toolbarFilterCombo = new ViewFilterItem(m_viewer);
-        // toolBarMgr.add(m_toolbarFilterCombo);
-        // toolBarMgr.add(new Separator());
-        // Action collAll = new CollapseAllAction(m_viewer);
-        // collAll.setToolTipText("Collapses the entire tree");
-        // collAll.setImageDescriptor(IMG_COLLALL);
-        // toolBarMgr.add(collAll);
-        // Action coll = new CollapseAction(m_viewer);
-        // coll.setToolTipText("Collapses the selected element");
-        // coll.setImageDescriptor(IMG_COLL);
-        // toolBarMgr.add(coll);
-        // Action exp = new ExpandAction(m_viewer);
-        // exp.setToolTipText("Expands fully the selected element");
-        // exp.setImageDescriptor(IMG_EXP);
-        // toolBarMgr.add(exp);
-        toolBarMgr.add(new Separator());
-        // add drill down actions to local tool bar
-        dda.addNavigationActions(toolBarMgr);
-        toolBarMgr.add(new Separator());
-        // Action info = new ShowInfoAction(m_viewer);
-        // info.setToolTipText("Shows server version and info");
-        // info.setImageDescriptor(IMG_INFO);
-        // info.setEnabled(true);
-        // toolBarMgr.add(info);
     }
 
     /**
