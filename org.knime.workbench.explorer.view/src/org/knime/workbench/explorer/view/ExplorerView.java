@@ -96,6 +96,7 @@ import org.knime.workbench.explorer.view.actions.GlobalExecuteWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalRenameAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowGroupAction;
+import org.knime.workbench.explorer.view.actions.NoMenuAction;
 import org.knime.workbench.explorer.view.actions.RefreshAction;
 import org.knime.workbench.explorer.view.actions.export.WorkflowExportAction;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
@@ -517,7 +518,11 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     }
 
     private void fillContextMenu(final IMenuManager manager) {
-
+        Set<String> ids = m_contentDelegator.getMountedIds();
+        if (ids.size() == 0) {
+            manager.add(new NoMenuAction(m_viewer));
+            return;
+        }
         addGlobalActions(manager);
 
         IStructuredSelection sel =
@@ -526,7 +531,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 DragAndDropUtils.getProviderMap(sel);
 
         // all visible spaces may contribute to the menu
-        Set<String> ids = m_contentDelegator.getMountedIds();
         for (String id : ids) {
             MountPoint mp = ExplorerMountTable.getMountPoint(id);
             if (mp == null) {
