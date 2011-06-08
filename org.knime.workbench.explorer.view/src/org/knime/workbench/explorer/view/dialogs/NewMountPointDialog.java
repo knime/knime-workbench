@@ -22,7 +22,6 @@ package org.knime.workbench.explorer.view.dialogs;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -52,6 +51,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.dialogs.ListDialog;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -73,22 +73,9 @@ public class NewMountPointDialog extends ListDialog {
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/error.png");
 
-    private static final Set<Character> INVALID_CHARS;
-    private static final String INVALID_MSG;
-
-    static {
-        INVALID_CHARS = new LinkedHashSet<Character>();
-        INVALID_CHARS.add(':');
-        INVALID_CHARS.add('\\');
-        INVALID_CHARS.add('/');
-        StringBuffer sb = new StringBuffer();
-        sb.append("The following characters are invalid as mount id: ");
-        for (Character character : INVALID_CHARS) {
-            sb.append(character);
-            sb.append(" ");
-        }
-        INVALID_MSG = sb.toString();
-    }
+    private static final String INVALID_MSG = "A valid mount id contains only"
+        + " characters a-z, A-Z, 0-9, '.' or '-' (it must start with a "
+        + "character and not end with a dot nor hyphen).";
 
     private String m_mountIDval;
 
@@ -266,19 +253,10 @@ public class NewMountPointDialog extends ListDialog {
                                 + "a different ID.";
             }
         }
-        if (keyEvent != null && INVALID_CHARS.contains(keyEvent.character)) {
+        if (!ExplorerMountTable.isValidMountID(id)) {
             valid = false;
             errMsg = INVALID_MSG;
-        } else {
-            for (char c : id.toCharArray()) {
-                if (INVALID_CHARS.contains(c)) {
-                    valid = false;
-                    errMsg = INVALID_MSG;
-                    break;
-                }
-            }
         }
-
         m_errText.setText(errMsg);
         m_errIcon.setVisible(!valid);
         m_ok.setEnabled(valid);
