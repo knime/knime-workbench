@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Pattern;
 
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtensionPoint;
@@ -50,20 +51,29 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  * @author ohl, University of Konstanz
  */
 public final class ExplorerMountTable {
-    /** The property for changes on mount points IPropertyChangeListener
-     * can register for. */
+    /**
+     * The property for changes on mount points IPropertyChangeListener can
+     * register for.
+     */
     public static final String MOUNT_POINT_PROPERTY = "MOUNT_POINTS";
 
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(ExplorerMountTable.class);
 
-    private static final List<IPropertyChangeListener> CHANGE_LISTENER
-            = new CopyOnWriteArrayList<IPropertyChangeListener>();
+    private static final List<IPropertyChangeListener> CHANGE_LISTENER =
+            new CopyOnWriteArrayList<IPropertyChangeListener>();
+
+    /**
+     * Valid mount IDs must comply with the hostname restrictions. That is, they
+     * must only contain a-z, A-Z, 0-9 and '.' or '-'. They must not start with
+     * a number, dot or a hyphen and must not end with a dot or hyphen.
+     */
+    private static final Pattern MOUNTID_PATTERN = Pattern
+            .compile("^[a-zA-Z](?:[.a-zA-Z0-9-]*[a-zA-Z0-9])?$");
 
     private ExplorerMountTable() {
         // hiding constructor of utility class
     }
-
 
     /**
      * Keeps all currently mounted content with the mountID (provided by the
@@ -95,10 +105,43 @@ public final class ExplorerMountTable {
     }
 
     /**
-     * Sorts the mount points in the same way as in the passed list. It makes 
-     * sure that if two entries A and B of the list are mounted and A comes 
-     * before B, the mount point A will appear before mount point B in the 
-     * mount table.
+     * Valid mount IDs must comply with the hostname restrictions. That is, they
+     * must only contain a-z, A-Z, 0-9 and '.' or '-'. They must not start with
+     * a number, dot or a hyphen and must not end with a dot or hyphen.
+     *
+     * @param id the id to test
+     * @return true if the id is valid (in terms of contained characters)
+     *         independent of it may already be in use.
+     */
+    public static boolean isValidMountID(final String id) {
+        if (id == null || id.isEmpty()) {
+            return false;
+        }
+        return MOUNTID_PATTERN.matcher(id).find();
+    }
+
+    /**
+     * Throws an exception, if the specified id is not a valid mount id (in
+     * terms of contained characters). (@see {@link #isValidMountID(String)})
+     *
+     * @param id to test
+     * @throws IllegalArgumentException if the specified id is not a valid mount
+     *             id (in terms of contained characters). (@see
+     *             {@link #isValidMountID(String)})
+     */
+    public static void checkMountID(final String id)
+            throws IllegalArgumentException {
+        if (!isValidMountID(id)) {
+            throw new IllegalArgumentException(id);
+        }
+    }
+
+    /**
+     * Sorts the mount points in the same way as in the passed list. It makes
+     * sure that if two entries A and B of the list are mounted and A comes
+     * before B, the mount point A will appear before mount point B in the mount
+     * table.
+     *
      * @param mountIDs a list of mount ids
      */
     public static void setMountOrder(final List<String> mountIDs) {
@@ -106,8 +149,10 @@ public final class ExplorerMountTable {
             for (String mountID : mountIDs) {
                 MountPoint mountPoint = MOUNTED.get(mountID);
                 if (mountPoint != null) {
-                    /* Remove the mount point and insert it again immediately to
-                     * get the same order as in the mount id list. */
+                    /*
+                     * Remove the mount point and insert it again immediately to
+                     * get the same order as in the mount id list.
+                     */
                     MOUNTED.remove(mountID);
                     MOUNTED.put(mountID, mountPoint);
                 }
@@ -131,9 +176,8 @@ public final class ExplorerMountTable {
 
     /**
      * Creates a new instance of the specified content provider and prepares the
-     * mount point for commitment. May open a user
-     * dialog to get parameters needed by the provider factory. Returns null, if
-     * the user canceled.
+     * mount point for commitment. May open a user dialog to get parameters
+     * needed by the provider factory. Returns null, if the user canceled.
      *
      * @param mountID name under which the content is mounted
      * @param providerID the provider factory id
@@ -147,6 +191,7 @@ public final class ExplorerMountTable {
 
     /**
      * Activates the mount point.
+     *
      * @param mountID name under which the content is mounted
      * @return a new content provider instance
      */
@@ -181,11 +226,12 @@ public final class ExplorerMountTable {
     private static AbstractContentProvider mountOrRestore(final String mountID,
             final String providerID, final String storage,
             final boolean prepare) throws IOException {
+        checkMountID(mountID);
         synchronized (MOUNTED) {
             // can't mount different providers with the same ID
             MountPoint existMp = MOUNTED.get(mountID);
             if (existMp == null) {
-               existMp = PREPARED.get(mountID);
+                existMp = PREPARED.get(mountID);
             }
             if (existMp != null) {
                 if (existMp.getProviderFactory().getID().equals(providerID)) {
@@ -240,9 +286,8 @@ public final class ExplorerMountTable {
                     PREPARED.put(mountID, mp);
                 } else {
                     MOUNTED.put(mountID, mp);
-                    notifyListeners(
-                            new PropertyChangeEvent(mp, MOUNT_POINT_PROPERTY,
-                            null, mp.getMountID()));
+                    notifyListeners(new PropertyChangeEvent(mp,
+                            MOUNT_POINT_PROPERTY, null, mp.getMountID()));
                 }
             }
             return newProvider;
@@ -285,7 +330,7 @@ public final class ExplorerMountTable {
      *
      * @return a map of available content providers (key = name, value = ID).
      */
-    public static List<AbstractContentProviderFactory>
+    public static List<AbstractContentProviderFactory> 
             getAddableContentProviders() {
         LinkedList<AbstractContentProviderFactory> result =
                 new LinkedList<AbstractContentProviderFactory>();
@@ -306,6 +351,7 @@ public final class ExplorerMountTable {
 
     /**
      * Returns the content provider factory for the provided id.
+     *
      * @param factoryID the id of the factory
      *
      * @return a map of available content providers (key = name, value = ID).
@@ -446,9 +492,9 @@ public final class ExplorerMountTable {
      * Stores all content provider factories (registered with the extension
      * point) mapped to their ID.
      */
-    private static final TreeMap<String, AbstractContentProviderFactory>
-            CONTENT_FACTORIES = new TreeMap<String,
-            AbstractContentProviderFactory>();
+    private static final TreeMap<String, AbstractContentProviderFactory> 
+            CONTENT_FACTORIES =
+                new TreeMap<String, AbstractContentProviderFactory>();
 
     private static final TreeMap<String, String> FACTORY_NAMES =
             new TreeMap<String, String>();
@@ -521,8 +567,8 @@ public final class ExplorerMountTable {
     /*---------------------------------------------------------------*/
 
     /**
-     * Initializes the explorer mount table based on the preferences of the
-     * core plugin's preference store.
+     * Initializes the explorer mount table based on the preferences of the core
+     * plugin's preference store.
      */
     public static void init() {
         unmountAll();
@@ -563,22 +609,22 @@ public final class ExplorerMountTable {
     }
 
     private static List<MountSettings> getMountSettings() {
-        String mpSettings = KNIMECorePlugin.getDefault()
-                .getPreferenceStore().getString(
-                                PreferenceConstants.P_EXPLORER_MOUNT_POINT);
-       return MountSettings.parseSettings(mpSettings);
+        String mpSettings =
+                KNIMECorePlugin.getDefault().getPreferenceStore()
+                        .getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
+        return MountSettings.parseSettings(mpSettings);
     }
 
     /*---------------------------------------------------------------*/
     /**
      * Adds a property change listener for mount changes.
+     *
      * @param listener the property change listener to add
      */
     public static void addPropertyChangeListener(
             final IPropertyChangeListener listener) {
         CHANGE_LISTENER.add(listener);
     }
-
 
     /**
      * Removes the given listener. Calling this method has no affect if the
