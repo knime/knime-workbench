@@ -66,6 +66,7 @@ import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
 
@@ -314,6 +315,9 @@ public final class ExplorerFileSystemUtils {
                 }
                 // delete the workflow directory itself
                 success &= FileUtil.deleteRecursively(loc);
+                if (wf instanceof LocalWorkspaceFileStore) {
+                    ((LocalWorkspaceFileStore)wf).refreshParentResource();
+                }
             } catch (CoreException e) {
                 success = false;
                 LOGGER.error("Error while deleting workflow " + wf.toString()
@@ -340,6 +344,9 @@ public final class ExplorerFileSystemUtils {
                     // if it is a workflow it would be gone already
                     if (loc.exists()) {
                         success &= FileUtil.deleteRecursively(loc);
+                    }
+                    if (f instanceof LocalWorkspaceFileStore) {
+                        ((LocalWorkspaceFileStore)f).refreshParentResource();
                     }
                 }
             } catch (CoreException e) {

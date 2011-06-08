@@ -34,6 +34,8 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 
 /**
  *
@@ -93,7 +95,8 @@ public class GlobalDeleteAction extends ExplorerAction {
         if (toDelWorkflows.size() > 0) {
             LinkedList<ExplorerFileStore> unlockableWFs =
                     new LinkedList<ExplorerFileStore>();
-            ExplorerFileSystemUtils.lockWorkflows(toDelWorkflows, unlockableWFs, lockedWFs);
+            ExplorerFileSystemUtils.lockWorkflows(toDelWorkflows, unlockableWFs,
+                    lockedWFs);
             if (unlockableWFs.size() > 0) {
                 // release locks acquired for deletion
                 ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
@@ -112,13 +115,24 @@ public class GlobalDeleteAction extends ExplorerAction {
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelWorkflows);
 
         // delete Workflows first (unlocks them too)
-        boolean success = ExplorerFileSystemUtils.deleteLockedWorkflows(toDelWorkflows);
+        boolean success = ExplorerFileSystemUtils.deleteLockedWorkflows(
+                toDelWorkflows);
         success &= ExplorerFileSystemUtils.deleteTheRest(allFiles);
 
         if (!success) {
             showUnsuccessfulMessage();
         }
-        //TODO: Refresh !
+
+        for (ExplorerFileStore fileStore : toDelWorkflows) {
+            Object parent = ContentDelegator.getTreeObjectFor(
+                    fileStore.getParent());
+            getViewer().refresh(parent);
+        }
+        for (ExplorerFileStore fileStore : allFiles) {
+            Object parent = ContentDelegator.getTreeObjectFor(
+                    fileStore.getParent());
+            getViewer().refresh(parent);
+        }
     }
 
     private boolean confirmDeletion(final List<ExplorerFileStore> toDel,
@@ -207,6 +221,16 @@ public class GlobalDeleteAction extends ExplorerAction {
         mb.setMessage("At least one item could not be deleted.\n"
                 + "Some might have been successfully deleted.");
         mb.open();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isEnabled() {
+        return getSelection().size() > 0
+                && DragAndDropUtils.getExplorerFileStores(
+                        getSelection()) != null;
     }
 
 }

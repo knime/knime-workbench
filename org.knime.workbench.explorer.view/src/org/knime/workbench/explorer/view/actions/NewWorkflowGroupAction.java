@@ -120,7 +120,7 @@ public class NewWorkflowGroupAction extends ExplorerAction {
                 ExplorerFileStore file = nwwp.getNewFile();
                 Object p = ContentDelegator.getTreeObjectFor(file.getParent());
                 Object o = ContentDelegator.getTreeObjectFor(file);
-                getViewer().update(p, null);
+                getViewer().refresh(p);
                 getViewer().setSelection(new StructuredSelection(o), true);
             }
         }

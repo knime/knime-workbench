@@ -26,6 +26,7 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
@@ -82,6 +83,9 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
             return;
         }
         MetaInfoFile.createMetaInfoFile(locFile, false);
+        if (newItem instanceof LocalWorkspaceFileStore) {
+            ((LocalWorkspaceFileStore)newItem).refreshParentResource();
+        }
     }
 
 }

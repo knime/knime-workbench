@@ -26,11 +26,7 @@ import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -42,14 +38,10 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.KnimeFileUtil;
-import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
-import org.knime.workbench.ui.nature.KNIMEProjectNature;
-import org.knime.workbench.ui.navigator.KnimeResourceUtil;
 
 /**
  * Provides content for the user space view that shows the content (workflows
@@ -354,31 +346,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     private void copy(final ExplorerFileStore src, final ExplorerFileStore dest)
             throws CoreException {
         src.copy(dest, EFS.NONE, null);
-
-        File dstDir = dest.toLocalFile(EFS.NONE, null);
-        IResource res = KnimeResourceUtil.getResourceForURI(dstDir.toURI());
-        if (res != null && res instanceof IWorkspaceRoot) {
-            /*
-             * The target is the workspace root. Therefore we have to create a
-             * .project file.
-             */
-            IProject newProject =
-                    ((IWorkspaceRoot)res).getProject(src.getName());
-            if (!newProject.exists()) {
-                try {
-                    newProject =
-                            MetaInfoFile
-                                    .createKnimeProject(newProject.getName(),
-                                            KNIMEProjectNature.ID);
-                } catch (Exception e) {
-                    String message =
-                            "Could not create KNIME project in "
-                                    + "workspace root.";
-                    throw new CoreException(new Status(Status.ERROR,
-                            ExplorerActivator.PLUGIN_ID, message, e));
-                }
-            }
-        }
     }
 
     /**

@@ -44,6 +44,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -89,8 +90,6 @@ public class GlobalRenameAction extends ExplorerAction {
             return;
         }
         IStructuredSelection selection = getSelection();
-        AbstractContentProvider acp = DragAndDropUtils.getContentProvider(
-                selection.iterator().next());
 
         List<ExplorerFileStore> stores
                 = DragAndDropUtils.getExplorerFileStores(selection);
@@ -145,10 +144,8 @@ public class GlobalRenameAction extends ExplorerAction {
             MessageDialog.openError(getParentShell(), "Renaming failed",
                     message);
         }
-        // TODO only refresh the updated part of the view
-        getViewer().refresh(acp);
-
-
+        getViewer().refresh(ContentDelegator.getTreeObjectFor(
+                dstFileStore.getParent()));
     }
 
     /**
@@ -229,7 +226,7 @@ public class GlobalRenameAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         // only a single selected file store can be renamed
-        return !isMultipleSelection()
+        return getSelection().size() == 1
             && DragAndDropUtils.getExplorerFileStores(getSelection()) != null;
     }
 

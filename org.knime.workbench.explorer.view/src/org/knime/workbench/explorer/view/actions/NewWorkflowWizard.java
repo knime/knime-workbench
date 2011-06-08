@@ -48,6 +48,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
 
@@ -59,7 +60,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
 
     private NewWorkflowWizardPage m_page;
 
-    private AbstractContentProvider m_contentProvider;
+    private final AbstractContentProvider m_contentProvider;
 
     private List<ExplorerFileStore> m_initialSelection;
 
@@ -228,6 +229,9 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                 }
             }
         });
+        if (newItem instanceof LocalWorkspaceFileStore) {
+            ((LocalWorkspaceFileStore)newItem).refreshParentResource();
+        }
     }
 
     protected static void throwCoreException(final String message,

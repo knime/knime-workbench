@@ -23,9 +23,7 @@ package org.knime.workbench.explorer.view.actions.export;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileInfo;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
@@ -54,6 +52,8 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
 
     private ExplorerFileStore m_root;
 
+    private AbstractContentProvider m_provider;
+
     /**
      * {@inheritDoc}
      */
@@ -68,27 +68,18 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
     @Override
     public Object[] getChildren(final Object parentElement) {
         if (parentElement instanceof ExplorerFileStore) {
-            ExplorerFileStore parent = (ExplorerFileStore)parentElement;
-            if (!ExplorerFileStore.isDirOrWorkflowGroup(parent)) {
-                return NONE;
-            }
-            try {
-                ExplorerFileStore[] childs =
-                        ((ExplorerFileStore)parentElement).childStores(
-                                EFS.NONE, null);
-                // can only export workflows, groups and dirs
-                ArrayList<ExplorerFileStore> result =
-                        new ArrayList<ExplorerFileStore>();
-                for (ExplorerFileStore c : childs) {
-                    if (ExplorerFileStore.isDirOrWorkflowGroup(c)
-                            || ExplorerFileStore.isWorkflow(c)) {
-                        result.add(c);
-                    }
+            ExplorerFileStore[] childs = m_provider.getChildren(
+                    parentElement);
+            // can only export workflows, groups and dirs
+            ArrayList<ExplorerFileStore> result =
+                    new ArrayList<ExplorerFileStore>();
+            for (ExplorerFileStore c : childs) {
+                if (ExplorerFileStore.isDirOrWorkflowGroup(c)
+                        || ExplorerFileStore.isWorkflow(c)) {
+                    result.add(c);
                 }
-                return result.toArray();
-            } catch (CoreException e) {
-                // fall through
             }
+            return result.toArray();
         } else if (parentElement instanceof Collection) {
             return ((Collection<?>)parentElement).toArray();
         }
@@ -127,7 +118,9 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
             final Object newInput) {
         m_root = null;
         if (newInput instanceof ExplorerFileStore) {
-            m_root = (ExplorerFileStore)newInput;
+            ExplorerFileStore input = (ExplorerFileStore)newInput;
+            m_root = input;
+            m_provider = input.getContentProvider();
         }
     }
 
