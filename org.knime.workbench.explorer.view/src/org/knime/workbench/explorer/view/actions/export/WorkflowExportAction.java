@@ -20,16 +20,11 @@
  */
 package org.knime.workbench.explorer.view.actions.export;
 
-import java.util.List;
-import java.util.Map;
-
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -80,24 +75,6 @@ public class WorkflowExportAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        Map<AbstractContentProvider, List<ExplorerFileStore>> sel =
-                getSelectedFiles();
-        if (sel.size() != 1) {
-            LOGGER.info("Select only files from one mount point "
-                    + "to create new workflow");
-            return;
-        }
-        AbstractContentProvider provider = sel.keySet().iterator().next();
-        List<ExplorerFileStore> list = sel.get(provider);
-        if (list == null || list.size() != 1) {
-            // no selection in our sub tree
-            LOGGER.debug("No selection: no action!");
-            return;
-        }
-        if (!(list.get(0).getMountID().equals(provider.getMountID()))) {
-            LOGGER.error("Internal Error: wrong file type selected.");
-            return;
-        }
         WorkflowExportWizard expWiz = new WorkflowExportWizard();
         expWiz.init(PlatformUI.getWorkbench(), getSelection());
 
