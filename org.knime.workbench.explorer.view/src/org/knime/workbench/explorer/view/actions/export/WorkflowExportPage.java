@@ -54,6 +54,7 @@ import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog;
+import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
@@ -228,7 +229,7 @@ public class WorkflowExportPage extends WizardPage {
             }
         }
         if (sel != null) {
-            m_containerText.setText(sel.getFullName());
+            m_containerText.setText(sel.getMountIDWithFullPath());
         }
         updateFileName(sel);
     }
@@ -270,6 +271,16 @@ public class WorkflowExportPage extends WizardPage {
                 new SpaceResourceSelectionDialog(getShell(), ExplorerMountTable
                         .getAllMountIDs().toArray(new String[0]), initSel,
                         "Select workflow or group to export");
+        dlg.setValidator(new SelectionValidator() {
+            @Override
+            public String isValid(final ExplorerFileStore selection) {
+                if (!ExplorerFileStore.isDirOrWorkflowGroup(selection)
+                        || ExplorerFileStore.isWorkflow(selection)) {
+                    return "Please select a workflow or workflow group";
+                }
+                return null;
+            }
+        });
         // dlg.expand(2);
         if (dlg.open() != Window.OK) {
             return;
@@ -300,7 +311,7 @@ public class WorkflowExportPage extends WizardPage {
             selectAllWorkflows();
         }
 
-        m_containerText.setText(m_selection.getFullName());
+        m_containerText.setText(m_selection.getMountIDWithFullPath());
         // also update the target file name
         updateFileName(m_selection);
     }
