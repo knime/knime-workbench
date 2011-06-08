@@ -431,6 +431,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL
                         | SWT.BORDER);
         m_viewer.getTree().setLayoutData(new GridData(GridData.FILL_BOTH));
+        m_viewer.setComparator(new ExplorerViewComparator());
         m_viewer.setContentProvider(provider);
         m_viewer.setLabelProvider(provider);
         m_viewer.setInput(provider); // the provider is also the root!
