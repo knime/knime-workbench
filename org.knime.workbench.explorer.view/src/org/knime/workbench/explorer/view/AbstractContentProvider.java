@@ -471,7 +471,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             ArrayList<ExplorerFileStore> result =
                     new ArrayList<ExplorerFileStore>();
             for (ExplorerFileStore c : childs) {
-                if (ExplorerFileStore.isDirOrWorkflowGroup(c)
+                if (ExplorerFileStore.isWorkflowGroup(c)
                         || ExplorerFileStore.isWorkflow(c)
                         || ExplorerFileStore.isWorkflowTemplate(c)) {
                     result.add(c);
