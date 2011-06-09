@@ -531,17 +531,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         Map<AbstractContentProvider, List<ExplorerFileStore>> selFiles =
                 DragAndDropUtils.getProviderMap(sel);
 
-        // all visible spaces may contribute to the menu
-        for (String id : ids) {
-            MountPoint mp = ExplorerMountTable.getMountPoint(id);
-            if (mp == null) {
-                // gone...
-                continue;
-            }
-
-            mp.getProvider().addContextMenuActions(m_viewer, manager, selFiles);
+        manager.add(new Separator());
+        /* All visible spaces with at least one selected file may contribute to
+         * the menu. */
+        for (AbstractContentProvider provider : selFiles.keySet()) {
+            provider.addContextMenuActions(m_viewer, manager, selFiles);
         }
-
         manager.add(new Separator());
         // Other plug-ins can contribute there actions here
         manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));

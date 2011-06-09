@@ -253,6 +253,14 @@ public abstract class ExplorerFileStore extends FileStore {
     }
 
     /**
+     * @param file the file to test.
+     * @return true if the argument is only a plain directory.
+     */
+    public static boolean isDirOnly(final ExplorerFileStore file) {
+         return isDirOrWorkflowGroup(file) && !isWorkflowGroup(file);
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
