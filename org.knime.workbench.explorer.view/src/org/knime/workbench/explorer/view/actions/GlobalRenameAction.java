@@ -187,7 +187,7 @@ public class GlobalRenameAction extends ExplorerAction {
         ExplorerFileStore dstFileStore
                 = fileStore.getParent().getChild(newName);
         if (dstFileStore.fetchInfo().exists() && !confirmOverride(newName)) {
-            queryTargetName(dstFileStore);
+            return queryTargetName(dstFileStore);
         }
         return dstFileStore;
     }
