@@ -234,7 +234,7 @@ public abstract class ExplorerFileStore extends FileStore {
             return false;
         }
         return file.getChild(SingleNodeContainerPersistorVersion200.NODE_FILE)
-                .fetchInfo().exists();
+                .fetchInfo().exists() && isWorkflow(file.getParent());
     }
 
     /**
