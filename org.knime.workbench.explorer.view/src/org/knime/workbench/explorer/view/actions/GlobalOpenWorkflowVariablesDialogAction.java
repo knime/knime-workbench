@@ -24,38 +24,35 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.List;
 
-import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.Credentials;
-import org.knime.core.node.workflow.CredentialsStore;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
-import org.knime.workbench.ui.masterkey.CredentialVariablesDialog;
+import org.knime.workbench.ui.wfvars.WorkflowVariablesDialog;
 
 /**
  *
  * @author Dominik Morent, KNIME.com, Zurich, Switzerland
  *
  */
-public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
+public class GlobalOpenWorkflowVariablesDialogAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            GlobalCredentialVariablesDialogAction.class);
+            GlobalOpenWorkflowVariablesDialogAction.class);
 
     /** ID of the global rename action in the explorer menu. */
-    public static final String CREDENTIAL_ACTION_ID =
-        "org.knime.workbench.explorer.action.credentials-dialog";
+    public static final String WFVAR_ACTION_ID =
+        "org.knime.workbench.explorer.action.workflow-vars-dialog";
 
     /**
      * @param viewer the associated tree viewer
      */
-    public GlobalCredentialVariablesDialogAction(final TreeViewer viewer) {
-        super(viewer, "Edit Workflow Credentials");
+    public GlobalOpenWorkflowVariablesDialogAction(final TreeViewer viewer) {
+        super(viewer, "Edit Workflow Variables");
     }
 
     /**
@@ -63,7 +60,7 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-       return CREDENTIAL_ACTION_ID;
+       return WFVAR_ACTION_ID;
     }
 
     /**
@@ -83,9 +80,9 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
                 ExplorerFileSystemUtils.unlockWorkflow(wfStore);
             }
         } else {
-            LOGGER.info("The workflow credentials cannot be edited as the "
+            LOGGER.info("The workflow variables cannot be edited as the "
                     + "workflow is in use by another user/instance.\n");
-            showCantEditCredentialsLockMessage();
+            showCantEditVarsLockMessage();
         }
 
     }
@@ -97,19 +94,10 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
         d.asyncExec(new Runnable() {
             @Override
             public void run() {
-                CredentialsStore store = wfm.getCredentialsStore();
-                CredentialVariablesDialog dialog =
-                    new CredentialVariablesDialog(d.getActiveShell(), store,
-                        wfm.getName());
-                if (dialog.open() == Dialog.OK) {
-                    for (Credentials cred : store.getCredentials()) {
-                        store.remove(cred.getName());
-                    }
-                    List<Credentials> credentials = dialog.getCredentials();
-                    for (Credentials cred : credentials) {
-                        store.add(cred);
-                    }
-                }
+             // and put it into the workflow variables dialog
+                WorkflowVariablesDialog dialog = new WorkflowVariablesDialog(
+                        d.getActiveShell(), wfm);
+                dialog.open();
             }
         });
     }
@@ -122,11 +110,11 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
         return getWorkflow() != null;
     }
 
-    private void showCantEditCredentialsLockMessage() {
+    private void showCantEditVarsLockMessage() {
         MessageBox mb =
                 new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
-        mb.setText("Can't Lock for Editing Credentials");
-        mb.setMessage("The workflow credentials cannot be edited as the "
+        mb.setText("Can't Lock for Editing Workflow Variables");
+        mb.setMessage("The workflow variables cannot be edited as the "
                 + "workflow is in use by another user/instance.\n");
         mb.open();
     }
