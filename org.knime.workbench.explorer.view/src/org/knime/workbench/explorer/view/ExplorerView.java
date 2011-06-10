@@ -100,6 +100,7 @@ import org.knime.workbench.explorer.view.actions.NewWorkflowGroupAction;
 import org.knime.workbench.explorer.view.actions.NoMenuAction;
 import org.knime.workbench.explorer.view.actions.RefreshAction;
 import org.knime.workbench.explorer.view.actions.export.WorkflowExportAction;
+import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
@@ -538,6 +539,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         for (AbstractContentProvider provider : selFiles.keySet()) {
             provider.addContextMenuActions(m_viewer, manager, selFiles);
         }
+
         manager.add(new Separator());
         // Other plug-ins can contribute there actions here
         manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
@@ -559,6 +561,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new GlobalEditMetaInfoAction(m_viewer));
         manager.add(new Separator());
         manager.add(new WorkflowExportAction(m_viewer));
+        manager.add(new WorkflowImportAction(m_viewer));
     }
 
     /**

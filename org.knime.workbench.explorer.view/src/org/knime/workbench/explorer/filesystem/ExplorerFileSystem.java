@@ -204,9 +204,15 @@ public class ExplorerFileSystem extends FileSystem {
      *         characters.
      */
     public static boolean isValidFilename(final String name) {
+        if (name == null || name.isEmpty()) {
+            return false;
+        }
+        if (".".equals(name) || "..".equals(name)) {
+            return false;
+        }
         Matcher matcher = ILLEGAL_FILENAME_CHARS_PATTERN.matcher(name);
         return !matcher.find();
-        }
+    }
 
     /**
      * @return the characters that are invalid for file names

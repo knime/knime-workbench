@@ -298,6 +298,12 @@ public abstract class ExplorerFileStore extends FileStore {
     }
 
     /**
+     * Called when changes are made to the underlying file system.
+     * Implementations can update their caches or internal members.
+     */
+    public abstract void refresh();
+
+    /**
      * @return the content provider responsible for the file store, or null
      *      if the content provider is no longer mounted
      */
@@ -591,6 +597,14 @@ public abstract class ExplorerFileStore extends FileStore {
         public File toLocalFile(final int options,
                 final IProgressMonitor monitor) throws CoreException {
             return null;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void refresh() {
+            // no-op
         }
 
         /**

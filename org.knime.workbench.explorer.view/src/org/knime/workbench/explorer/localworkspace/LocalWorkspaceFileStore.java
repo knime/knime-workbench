@@ -216,6 +216,18 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void refresh() {
+         try {
+            refreshResource(this, null);
+        } catch (CoreException e) {
+            // too bad
+        }
+    }
+
+    /**
      * Refreshes the parent resource if it exists.
      */
     public void refreshParentResource() {
