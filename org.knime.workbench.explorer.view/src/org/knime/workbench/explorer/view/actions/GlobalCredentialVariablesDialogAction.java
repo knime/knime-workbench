@@ -55,7 +55,7 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
      * @param viewer the associated tree viewer
      */
     public GlobalCredentialVariablesDialogAction(final TreeViewer viewer) {
-        super(viewer, "Edit Workflow Credentials");
+        super(viewer, "Workflow Credentials...");
     }
 
     /**

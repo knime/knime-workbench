@@ -24,6 +24,7 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.List;
 
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
@@ -32,6 +33,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  *
@@ -42,6 +44,10 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
             GlobalExecuteWorkflowAction.class);
 
+    private static final ImageDescriptor IMG
+            = KNIMEUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+                    "/icons/actions/execute.gif");
+
     /** ID of the global rename action in the explorer menu. */
     public static final String EXECUTEWF_ACTION_ID =
         "org.knime.workbench.explorer.action.execute-workflow";
@@ -50,7 +56,8 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
      * @param viewer the associated tree viewer
      */
     public GlobalExecuteWorkflowAction(final TreeViewer viewer) {
-        super(viewer, "Execute Workflow...");
+        super(viewer, "Execute...");
+        setImageDescriptor(IMG);
     }
 
     /**

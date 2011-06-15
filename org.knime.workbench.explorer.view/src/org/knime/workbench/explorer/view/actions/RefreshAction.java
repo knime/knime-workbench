@@ -37,7 +37,7 @@ public class RefreshAction extends ExplorerAction {
      */
     public static final ImageDescriptor IMG_REFRESH =
         AbstractUIPlugin.imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
-        "icons/refresh_small.png");
+        "icons/refresh_nav.gif");
 
     private static final String TOOLTIP = "Refresh the view";
 

@@ -52,7 +52,7 @@ public class GlobalOpenWorkflowVariablesDialogAction extends ExplorerAction {
      * @param viewer the associated tree viewer
      */
     public GlobalOpenWorkflowVariablesDialogAction(final TreeViewer viewer) {
-        super(viewer, "Edit Workflow Variables");
+        super(viewer, "Workflow Variables...");
     }
 
     /**

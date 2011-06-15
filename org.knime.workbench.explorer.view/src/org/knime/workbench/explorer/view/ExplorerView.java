@@ -551,18 +551,19 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new NewWorkflowAction(m_viewer));
         manager.add(new NewWorkflowGroupAction(m_viewer));
         manager.add(new Separator());
+        manager.add(new WorkflowImportAction(m_viewer));
+        manager.add(new WorkflowExportAction(m_viewer));
+        manager.add(new Separator());
         manager.add(new GlobalDeleteAction(m_viewer));
         manager.add(new GlobalRenameAction(m_viewer));
         manager.add(new Separator());
         manager.add(new GlobalConfigureWorkflowAction(m_viewer));
         manager.add(new GlobalExecuteWorkflowAction(m_viewer));
+        manager.add(new Separator());
         manager.add(new GlobalCredentialVariablesDialogAction(m_viewer));
         manager.add(new GlobalOpenWorkflowVariablesDialogAction(m_viewer));
         manager.add(new Separator());
         manager.add(new GlobalEditMetaInfoAction(m_viewer));
-        manager.add(new Separator());
-        manager.add(new WorkflowExportAction(m_viewer));
-        manager.add(new WorkflowImportAction(m_viewer));
     }
 
     /**
