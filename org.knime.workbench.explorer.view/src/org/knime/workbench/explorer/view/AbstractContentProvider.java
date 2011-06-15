@@ -264,6 +264,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         try {
             assert VMFileLocker.isLockedForVM(directory);
             String uniqueName = metaNode.getName();
+            // remove weird chars - word chars (\w), spaces & dashes are OK
+            uniqueName = uniqueName.replaceAll("[^\\w \\-]", "_");
             File wmDir = new File(directory, uniqueName);
             ExplorerFileStore efsDir = target.getChild(uniqueName);
             boolean doesTargetExist = wmDir.exists();
