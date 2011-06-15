@@ -23,7 +23,6 @@ import java.util.Hashtable;
 
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.util.pathresolve.URIToFileResolve;
-import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl;
 import org.knime.workbench.explorer.view.preferences.ExplorerPrefsSyncer;
 import org.osgi.framework.BundleContext;
@@ -43,11 +42,22 @@ public class ExplorerActivator extends AbstractUIPlugin {
 
     private ServiceRegistration m_uriToFileServiceRegistration;
 
+    private static ExplorerActivator plugin;
+
     /**
-     * @return the context.
+     * Creates a new activator for the explorer plugin.
      */
-    static BundleContext getContext() {
-        return context;
+    public ExplorerActivator() {
+        plugin = this;
+    }
+
+    /**
+     * Returns the shared instance.
+     *
+     * @return Singleton instance of the Explorer Plugin
+     */
+    public static ExplorerActivator getDefault() {
+        return plugin;
     }
 
     /**
@@ -55,10 +65,10 @@ public class ExplorerActivator extends AbstractUIPlugin {
      */
     @Override
     public void start(final BundleContext bundleContext) throws Exception {
+        super.start(bundleContext);
         ExplorerActivator.context = bundleContext;
-        KNIMECorePlugin.getDefault().getPreferenceStore()
+        ExplorerActivator.getDefault().getPreferenceStore()
                 .addPropertyChangeListener(new ExplorerPrefsSyncer());
-
         m_uriToFileServiceRegistration = bundleContext.registerService(
                 URIToFileResolve.class.getName(),
                 new URIToFileResolveImpl(), new Hashtable<String, String>());
@@ -71,7 +81,7 @@ public class ExplorerActivator extends AbstractUIPlugin {
     public void stop(final BundleContext bundleContext) throws Exception {
         bundleContext.ungetService(
                 m_uriToFileServiceRegistration.getReference());
+        super.stop(bundleContext);
         ExplorerActivator.context = null;
     }
-
 }

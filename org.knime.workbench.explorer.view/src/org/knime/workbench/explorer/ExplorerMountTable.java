@@ -38,7 +38,6 @@ import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -330,7 +329,7 @@ public final class ExplorerMountTable {
      *
      * @return a map of available content providers (key = name, value = ID).
      */
-    public static List<AbstractContentProviderFactory> 
+    public static List<AbstractContentProviderFactory>
             getAddableContentProviders() {
         LinkedList<AbstractContentProviderFactory> result =
                 new LinkedList<AbstractContentProviderFactory>();
@@ -492,7 +491,7 @@ public final class ExplorerMountTable {
      * Stores all content provider factories (registered with the extension
      * point) mapped to their ID.
      */
-    private static final TreeMap<String, AbstractContentProviderFactory> 
+    private static final TreeMap<String, AbstractContentProviderFactory>
             CONTENT_FACTORIES =
                 new TreeMap<String, AbstractContentProviderFactory>();
 
@@ -500,7 +499,7 @@ public final class ExplorerMountTable {
             new TreeMap<String, String>();
 
     static {
-        // read out the extenstion point now
+        // read out the extension point now
         collectContentProviderFactories();
         init();
     }
@@ -567,7 +566,7 @@ public final class ExplorerMountTable {
     /*---------------------------------------------------------------*/
 
     /**
-     * Initializes the explorer mount table based on the preferences of the core
+     * Initializes the explorer mount table based on the preferences of the
      * plugin's preference store.
      */
     public static void init() {
@@ -610,7 +609,7 @@ public final class ExplorerMountTable {
 
     private static List<MountSettings> getMountSettings() {
         String mpSettings =
-                KNIMECorePlugin.getDefault().getPreferenceStore()
+                ExplorerActivator.getDefault().getPreferenceStore()
                         .getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
         return MountSettings.parseSettings(mpSettings);
     }

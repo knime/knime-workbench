@@ -54,7 +54,7 @@ import org.knime.core.node.workflow.NodeMessage;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.UniqueNameGenerator;
 import org.knime.core.util.VMFileLocker;
-import org.knime.workbench.core.KNIMECorePlugin;
+import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
@@ -364,9 +364,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     private int promptLinkMetaNodeTemplate() {
-        IPreferenceStore corePrefStore =
-            KNIMECorePlugin.getDefault().getPreferenceStore();
-        String pref = corePrefStore.getString(
+        IPreferenceStore prefStore =
+            ExplorerActivator.getDefault().getPreferenceStore();
+        String pref = prefStore.getString(
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
         if (MessageDialogWithToggle.ALWAYS.equals(pref)) {
             return IDialogConstants.YES_ID;
@@ -378,7 +378,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             MessageDialogWithToggle.openYesNoCancelQuestion(activeShell,
                 "Link Meta Node Template",
                 "Update meta node to link to the template?",
-                "Remember my decision", false, corePrefStore,
+                "Remember my decision", false, prefStore,
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
         return dlg.getReturnCode();
     }

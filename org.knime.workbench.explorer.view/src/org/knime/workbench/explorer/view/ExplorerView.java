@@ -105,6 +105,7 @@ import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
 import org.knime.workbench.explorer.view.dnd.ExplorerDropListener;
+import org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializer;
 import org.knime.workbench.repository.view.FilterViewContributionItem;
 import org.knime.workbench.repository.view.LabeledFilterViewContributionItem;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -595,6 +596,18 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             } else {
                 LOGGER.warn("Corrupted User Resource View state storage. "
                         + "Can't restore state of view.");
+            }
+        } else { // freshly opened view
+            // add the local workspace by default
+            if (ExplorerMountTable.getAllMountIDs().contains(
+                    ExplorerPreferenceInitializer.DEFAULT_LOCAL_NAME)) {
+                m_contentDelegator.addMountPoint(
+                        ExplorerMountTable.getMountPoint(
+                             ExplorerPreferenceInitializer.DEFAULT_LOCAL_NAME));
+            } else {
+                LOGGER.warn("Default local workspace "
+                        + ExplorerPreferenceInitializer.DEFAULT_LOCAL_NAME
+                        + " is not mounted.");
             }
         }
     }
