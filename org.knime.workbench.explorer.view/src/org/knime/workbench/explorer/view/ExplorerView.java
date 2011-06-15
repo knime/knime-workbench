@@ -605,7 +605,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                         ExplorerMountTable.getMountPoint(
                              ExplorerPreferenceInitializer.DEFAULT_LOCAL_NAME));
             } else {
-                LOGGER.warn("Default local workspace "
+                LOGGER.info("Default local workspace "
                         + ExplorerPreferenceInitializer.DEFAULT_LOCAL_NAME
                         + " is not mounted.");
             }

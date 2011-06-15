@@ -32,6 +32,7 @@ import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
+import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.KeyEvent;
@@ -215,7 +216,8 @@ public class NewMountPointDialog extends ListDialog {
         // insert the selection list
         Control c = super.createDialogArea(parent);
 
-        getTableViewer().addSelectionChangedListener(
+        TableViewer tableViewer = getTableViewer();
+        tableViewer.addSelectionChangedListener(
                 new ISelectionChangedListener() {
                     @Override
                     public void selectionChanged(
@@ -223,8 +225,11 @@ public class NewMountPointDialog extends ListDialog {
                         validate(null);
                     }
                 });
+        Object firstElement = tableViewer.getElementAt(0);
+        if (firstElement != null) {
+            tableViewer.getTable().select(0);
+        }
         return c;
-
     }
 
     /**
