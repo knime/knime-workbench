@@ -178,18 +178,30 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
         refreshResource(destination, monitor);
     }
 
+
+    private void createProjectFile(final IFileStore dest,
+            final IProgressMonitor monitor) throws CoreException {
+        createProjectFile(getName(), dest, monitor);
+    }
+
     /**
      * Creates a .project for the destination if necessary (only in case that
      * destination is the workflow root and no .project file exists yet).
+     *
+     * @param projectName the name of the project
+     * @param the destination file store
      * @param monitor a progress monitor, or null if progress reporting and
      *      cancellation are not desired
      *
-     * @param the destination file store
      * @throws CoreException
      */
-    private void createProjectFile(final IFileStore dest,
-                final IProgressMonitor monitor) throws CoreException {
-        File dstDir = dest.toLocalFile(EFS.NONE, null);
+    public static void createProjectFile(final String projectName,
+            final IFileStore destination, final IProgressMonitor monitor)
+            throws CoreException {
+        File dstDir = destination.toLocalFile(EFS.NONE, monitor);
+        if (dstDir == null) {
+            return; // do nothing
+        }
         IResource res = KnimeResourceUtil.getResourceForURI(dstDir.toURI());
         if (res != null && res instanceof IWorkspaceRoot) {
             /*
@@ -197,7 +209,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
              * .project file.
              */
             IProject newProject =
-                    ((IWorkspaceRoot)res).getProject(getName());
+                    ((IWorkspaceRoot)res).getProject(projectName);
             if (!newProject.exists()) {
                 try {
                     newProject =
@@ -214,6 +226,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
             }
         }
     }
+
 
     /**
      * {@inheritDoc}
