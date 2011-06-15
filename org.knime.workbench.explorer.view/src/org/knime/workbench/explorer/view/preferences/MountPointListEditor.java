@@ -30,8 +30,11 @@ import java.util.TreeMap;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.preference.ListEditor;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.MessageBox;
+import org.eclipse.swt.widgets.Widget;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -56,7 +59,28 @@ public class MountPointListEditor extends ListEditor {
         super(PreferenceConstants.P_EXPLORER_MOUNT_POINT,
                 "List of configured mount points:", parent);
         m_mountSettings = new TreeMap<String, MountSettings>();
+
+        // select the newly created element
+        getAddButton().addSelectionListener(new SelectionAdapter() {
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public void widgetSelected(final SelectionEvent event) {
+                Widget widget = event.widget;
+                if (widget == getAddButton()) {
+                    int index = getList().getSelectionIndex();
+                    if (index >= 0) {
+                        getList().select(index + 1);
+                    } else {
+                        getList().select(0);
+                    }
+                    selectionChanged();
+                }
+            }
+        });
     }
+
 
     /**
      * {@inheritDoc}
@@ -129,4 +153,7 @@ public class MountPointListEditor extends ListEditor {
         }
         return res;
     }
+
+
+
 }
