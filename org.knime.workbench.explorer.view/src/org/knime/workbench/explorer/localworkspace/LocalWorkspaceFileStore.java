@@ -176,7 +176,6 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
         }
         createProjectFile(destination, monitor);
         refreshResource(destination, monitor);
-        refreshParentResource();
     }
 
 
@@ -336,7 +335,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
         }
         createProjectFile(destination, monitor);
         refreshResource(destination.getParent(), monitor);
-
+        refreshParentResource();
     }
 
 }
