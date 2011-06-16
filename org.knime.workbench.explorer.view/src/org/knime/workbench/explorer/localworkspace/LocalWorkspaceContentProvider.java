@@ -264,8 +264,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 !(ExplorerFileStore.isNode(target)
                         || ExplorerFileStore.isWorkflow(target) || ExplorerFileStore
                         .isMetaNode(target));
-        String v = valid ? "valid" : "invalid";
-        LOGGER.debug("Drop on " + target.getFullName() + " is " + v + ".");
         return valid;
     }
 

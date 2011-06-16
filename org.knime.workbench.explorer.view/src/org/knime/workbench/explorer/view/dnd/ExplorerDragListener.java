@@ -38,6 +38,7 @@ import org.eclipse.swt.dnd.DragSourceListener;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ContentDelegator;
 
 /**
  *
@@ -63,7 +64,6 @@ public class ExplorerDragListener implements DragSourceListener {
     @SuppressWarnings("unchecked")
     @Override
     public void dragStart(final DragSourceEvent event) {
-        LOGGER.debug("dragStart with event: " + event);
         IStructuredSelection selection =
                 (IStructuredSelection)m_viewer.getSelection();
         Map<AbstractContentProvider, List<ExplorerFileStore>> providers =
@@ -100,23 +100,7 @@ public class ExplorerDragListener implements DragSourceListener {
             ISelection selection =
                     LocalSelectionTransfer.getTransfer().getSelection();
             event.data = selection;
-            LOGGER.debug("dragSetData to selection:" + selection);
         }
-        // if (FileTransfer.getInstance().isSupportedType(event.dataType)) {
-        // List<String> drags = new ArrayList<String>();
-        // IStructuredSelection selection =
-        // (IStructuredSelection)m_viewer.getSelection();
-        // Iterator<Object> s = selection.iterator();
-        // while (s.hasNext()) {
-        // Object nextObject = s.next();
-        // if (nextObject instanceof ContentObject) {
-        // ContentObject content = (ContentObject)nextObject;
-        // Object object = content.getObject();
-        // drags.add()
-        // }
-        // }
-        // event.data = drags.toArray();
-        // }
     }
 
     /**
@@ -124,7 +108,6 @@ public class ExplorerDragListener implements DragSourceListener {
      */
     @Override
     public void dragFinished(final DragSourceEvent event) {
-        LOGGER.debug("dragFinished of event: " + event);
         /* TODO delegate drag finished to content provider */
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
         if (DND.DROP_MOVE == event.detail && event.doit) {
@@ -139,6 +122,8 @@ public class ExplorerDragListener implements DragSourceListener {
                         continue;
                     }
                     fs.delete(EFS.NONE, null);
+                    m_viewer.refresh(ContentDelegator.getTreeObjectFor(
+                            fs.getParent()));
                 } catch (CoreException e) {
                     String msg = "Could not move file \"" + fs.getFullName()
                             + "\". Source file could not be deleted.";
@@ -151,8 +136,6 @@ public class ExplorerDragListener implements DragSourceListener {
 //                m_viewer.refresh(fs.getParent());
             }
         }
-        // TODO only refresh the updated part of the view
-        m_viewer.refresh();
         transfer.setSelection(null);
     }
 

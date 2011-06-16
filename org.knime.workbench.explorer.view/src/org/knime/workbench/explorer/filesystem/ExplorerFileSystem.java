@@ -115,7 +115,6 @@ public class ExplorerFileSystem extends FileSystem {
      */
     @Override
     public IFileStore fromLocalFile(final File file) {
-        // TODO Auto-generated method stub
         return super.fromLocalFile(file);
     }
 

@@ -32,6 +32,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
 
 /**
@@ -60,8 +61,7 @@ public class ExplorerDropListener extends ViewerDropAdapter {
         AbstractContentProvider acp = DragAndDropUtils.getContentProvider(
                 target);
         boolean result = acp.performDrop(data, dstFS, getCurrentOperation());
-        // TODO only refresh the updated part of the view
-        getViewer().refresh(acp);
+        getViewer().refresh(ContentDelegator.getTreeObjectFor(dstFS));
         return result;
     }
 
