@@ -26,7 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -380,11 +380,13 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         });
     }
 
-    /** A semaphore that reduces the number of refreshs. */
-    private final AtomicBoolean m_updateInProgressFlag = new AtomicBoolean();
+    /** The set/map of node IDs that need to be refreshed. Only if a new id is
+     * not in the map it will be queued for refresh. */
+    private final ConcurrentHashMap<NodeID, NodeID> m_refreshSet =
+        new ConcurrentHashMap<NodeID, NodeID>();
 
     private void refreshAsync(final NodeID node) {
-        if (m_updateInProgressFlag.compareAndSet(false, true)) {
+        if (m_refreshSet.put(node, node) == null) { // freshly added to set
             SyncExecQueueDispatcher.asyncExec(new Runnable() {
                 @Override
                 public void run() {
@@ -392,7 +394,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                             || m_viewer.getControl().isDisposed()) {
                         return;
                     }
-                    m_updateInProgressFlag.set(false);
+                    m_refreshSet.remove(node);
                     try {
                         URI wf = ProjectWorkflowMap.findProjectFor(node);
                         if (wf == null) {
