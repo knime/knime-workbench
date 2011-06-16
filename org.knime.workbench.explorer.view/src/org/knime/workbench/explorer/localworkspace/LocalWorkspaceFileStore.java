@@ -189,7 +189,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * destination is the workflow root and no .project file exists yet).
      *
      * @param projectName the name of the project
-     * @param the destination file store
+     * @param the parent file store of the project
      * @param monitor a progress monitor, or null if progress reporting and
      *      cancellation are not desired
      *
@@ -300,7 +300,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
     public ExplorerFileStore mkdir(final int options,
             final IProgressMonitor monitor) throws CoreException {
         m_file.mkdir(options, monitor);
-        createProjectFile(this, monitor);
+        createProjectFile(getParent(), monitor);
         refreshResource(getParent(), monitor);
         return this;
     }
