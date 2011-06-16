@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -180,6 +181,41 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public final ExplorerFileStore getFileStore(final URI uri) {
         return new ExplorerFileSystem().getStore(uri);
     }
+
+    /** Implementation of {@link ExplorerFileSystem#fromLocalFile(File)}. If the
+     * file does not exist in this space or this is not a file based mount,
+     * null is returned.
+     *
+     * @param file The file in question.
+     * @return the file store or null.
+     */
+    public abstract ExplorerFileStore fromLocalFile(final File file);
+
+    /** Helper class to find the path segment for a given local (absolute) file.
+     * It will traverse the file's parents until it finds the root file (which
+     * is the root of the caller). If that matches, it will assemble the
+     * relative path ("/" separated).
+     * @param file The file to query, never null.
+     * @param root The root file of the argument content provider, never null.
+     * @return The path segments in a string or null if the argument file does
+     * not have the root argument as parent. */
+    public static String getPathSegments(final File file, final File root) {
+        LinkedList<String> segments = new LinkedList<String>();
+        File parent = file;
+        while (parent != null && !parent.equals(root)) {
+            segments.addFirst(parent.getName());
+            parent = parent.getParentFile();
+        }
+        if (parent == null || !parent.equals(root)) {
+            return null;
+        }
+        StringBuilder path = new StringBuilder();
+        for (String s : segments) {
+            path.append("/").append(s);
+        }
+        return path.toString();
+    }
+
 
     /* ---------------- view context menu methods ------------------- */
     /**

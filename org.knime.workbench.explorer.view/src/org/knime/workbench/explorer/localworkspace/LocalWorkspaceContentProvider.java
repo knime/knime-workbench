@@ -26,7 +26,9 @@ import java.util.List;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -232,6 +234,18 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     @Override
     public ExplorerFileStore getFileStore(final String fullPath) {
         return new LocalWorkspaceFileStore(getMountID(), fullPath);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public ExplorerFileStore fromLocalFile(final File file) {
+        IPath rootPath = ResourcesPlugin.getWorkspace().getRoot().getLocation();
+        File root = rootPath.toFile();
+        String s = getPathSegments(file, root);
+        if (s == null) { // file not present in local workspace
+            return null;
+        }
+        return new LocalWorkspaceFileStore(getMountID(), s);
     }
 
     /**

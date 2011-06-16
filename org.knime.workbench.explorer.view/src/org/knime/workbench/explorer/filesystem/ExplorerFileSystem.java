@@ -26,11 +26,11 @@ import java.net.URI;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileSystem;
 import org.eclipse.core.runtime.Path;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
  *
@@ -114,8 +114,15 @@ public class ExplorerFileSystem extends FileSystem {
      * {@inheritDoc}
      */
     @Override
-    public IFileStore fromLocalFile(final File file) {
-        return super.fromLocalFile(file);
+    public ExplorerFileStore fromLocalFile(final File file) {
+        for (AbstractContentProvider acp
+                : ExplorerMountTable.getMountedContent().values()) {
+            ExplorerFileStore fromLocalFile = acp.fromLocalFile(file);
+            if (fromLocalFile != null) {
+                return fromLocalFile;
+            }
+        }
+        return null;
     }
 
     /**
@@ -184,14 +191,14 @@ public class ExplorerFileSystem extends FileSystem {
     public static boolean isValidPath(final String path) {
         Matcher matcher = ILLEGAL_DIR_CHARS_PATTERN.matcher(path);
         return !matcher.find();
-                }
+    }
 
     /**
      * @return the characters that are invalid for paths
      */
     public static String getIllegalPATHChars() {
         return ILLEGAL_DIR_CHARS;
-            }
+    }
 
     /**
      * Returns true, if the specified filename doesn't contain invalid

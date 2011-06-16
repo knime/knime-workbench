@@ -19,12 +19,14 @@
 package org.knime.workbench.explorer.view;
 
 import java.io.File;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -65,6 +67,7 @@ import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeMessageEvent;
 import org.knime.core.node.workflow.NodeMessageListener;
 import org.knime.core.node.workflow.NodePropertyChangedEvent;
@@ -102,6 +105,7 @@ import org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializ
 import org.knime.workbench.repository.view.FilterViewContributionItem;
 import org.knime.workbench.repository.view.LabeledFilterViewContributionItem;
 import org.knime.workbench.ui.KNIMEUIPlugin;
+import org.knime.workbench.ui.SyncExecQueueDispatcher;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 
 /**
@@ -337,7 +341,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      */
     @Override
     public void stateChanged(final NodeStateEvent state) {
-        refreshAsync();
+        refreshAsync(state.getSource());
     }
 
     /**
@@ -376,6 +380,37 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         });
     }
 
+    /** A semaphore that reduces the number of refreshs. */
+    private final AtomicBoolean m_updateInProgressFlag = new AtomicBoolean();
+
+    private void refreshAsync(final NodeID node) {
+        if (m_updateInProgressFlag.compareAndSet(false, true)) {
+            SyncExecQueueDispatcher.asyncExec(new Runnable() {
+                @Override
+                public void run() {
+                    if (m_viewer == null
+                            || m_viewer.getControl().isDisposed()) {
+                        return;
+                    }
+                    m_updateInProgressFlag.set(false);
+                    try {
+                        URI wf = ProjectWorkflowMap.findProjectFor(node);
+                        if (wf == null) {
+                            return;
+                        }
+                        File file = new File(wf);
+                        ExplorerFileStore fs = ExplorerMountTable.
+                            getFileSystem().fromLocalFile(file);
+                        if (fs != null) {
+                            m_viewer.refresh(ContentObject.forFile(fs));
+                        }
+                    } catch (IllegalArgumentException iae) {
+                        // node couldn't be found -> so we don't make a refresh
+                    }
+                }
+            });
+        }
+    }
     private void hookContextMenu() {
         MenuManager menuMgr = new MenuManager("#PopupMenu");
         menuMgr.setRemoveAllWhenShown(true);
