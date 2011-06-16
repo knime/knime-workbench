@@ -459,7 +459,6 @@ public abstract class ExplorerFileStore extends FileStore {
         protected void copyFile(final IFileInfo sourceInfo,
                 final IFileStore destination, final int options,
                 final IProgressMonitor monitor) throws CoreException {
-            // TODO Auto-generated method stub
             throw new UnsupportedOperationException(
                     "Not supported in message file store.");
         }

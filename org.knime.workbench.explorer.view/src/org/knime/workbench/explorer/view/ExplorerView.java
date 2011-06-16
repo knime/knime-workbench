@@ -37,7 +37,6 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
-import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.LocalSelectionTransfer;
@@ -45,22 +44,17 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.Transfer;
-import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MessageBox;
-import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IViewSite;
 import org.eclipse.ui.IWorkbenchActionConstants;
@@ -70,7 +64,6 @@ import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
-import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeMessageEvent;
 import org.knime.core.node.workflow.NodeMessageListener;
@@ -83,10 +76,10 @@ import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
+import org.knime.workbench.explorer.view.actions.ConfigureExplorerViewAction;
 import org.knime.workbench.explorer.view.actions.ExpandAction;
 import org.knime.workbench.explorer.view.actions.GlobalConfigureWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalCredentialVariablesDialogAction;
@@ -99,9 +92,9 @@ import org.knime.workbench.explorer.view.actions.NewWorkflowAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowGroupAction;
 import org.knime.workbench.explorer.view.actions.NoMenuAction;
 import org.knime.workbench.explorer.view.actions.RefreshAction;
+import org.knime.workbench.explorer.view.actions.SynchronizeExplorerViewAction;
 import org.knime.workbench.explorer.view.actions.export.WorkflowExportAction;
 import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
-import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
 import org.knime.workbench.explorer.view.dnd.ExplorerDropListener;
@@ -110,7 +103,6 @@ import org.knime.workbench.repository.view.FilterViewContributionItem;
 import org.knime.workbench.repository.view.LabeledFilterViewContributionItem;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
-import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
 
 /**
  *
@@ -152,7 +144,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         data.horizontalIndent = 0;
         overall.setLayoutData(data);
         m_contentDelegator.addPropertyChangeListener(this);
-        createButtons(overall);
         createTreeViewer(overall, m_contentDelegator);
         assert m_viewer != null; // should be set by createTreeViewer
         // needed by the toolbar and the menus
@@ -186,130 +177,27 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             getViewSite().getActionBars().getToolBarManager();
         Action exp = new ExpandAction(m_viewer);
         exp.setToolTipText("Expands fully the selected element");
-        exp.setImageDescriptor(ExpandAction.IMG_EXP);
         toolBarMgr.add(exp);
         Action coll = new CollapseAction(m_viewer);
         coll.setToolTipText("Collapses the selected element.");
-        coll.setImageDescriptor(CollapseAction.IMG_COLL);
         toolBarMgr.add(coll);
         Action collAll = new CollapseAllAction(m_viewer);
         collAll.setToolTipText("Collapses the entire tree");
-        collAll.setImageDescriptor(IMG_COLLALL);
         toolBarMgr.add(collAll);
-        toolBarMgr.add(new Separator());
         Action refresh = new RefreshAction(m_viewer);
-        refresh.setToolTipText("Refresh the view");
-        refresh.setImageDescriptor(RefreshAction.IMG_REFRESH);
+        toolBarMgr.add(new Separator());
         toolBarMgr.add(refresh);
+        Action synchronize = new SynchronizeExplorerViewAction(m_viewer,
+                m_contentDelegator);
+        toolBarMgr.add(synchronize);
         toolBarMgr.add(new Separator());
         m_toolbarFilterCombo =
             new LabeledFilterViewContributionItem(m_viewer,
                     new ExplorerFilter(), false);
         toolBarMgr.add(m_toolbarFilterCombo);
-    }
-
-    private void createButtons(final Composite parent) {
-        Composite panel = new Composite(parent, SWT.NONE);
-        panel.setLayout(new GridLayout(3, false));
-        panel.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-
-        Button newItem = new Button(panel, SWT.PUSH);
-        newItem.setText("Manage Content...");
-        newItem.setToolTipText("Mount/Unmount resources.");
-        newItem.addSelectionListener(new SelectionListener() {
-            /** {@inheritDoc} */
-            @Override
-            public void widgetDefaultSelected(final SelectionEvent e) {
-                widgetSelected(e);
-            }
-
-            /** {@inheritDoc} */
-            @Override
-            public void widgetSelected(final SelectionEvent e) {
-                addNewItemToView();
-            }
-        });
-        Button sync = new Button(panel, SWT.PUSH);
-        sync.setImage(new IconFactory().sync());
-        sync.setToolTipText("Selects the workflow displayed in the active "
-                + "editor");
-        sync.addSelectionListener(new SelectionListener() {
-            /** {@inheritDoc} */
-            @Override
-            public void widgetDefaultSelected(final SelectionEvent e) {
-                widgetSelected(e);
-            }
-
-            /** {@inheritDoc} */
-            @Override
-            public void widgetSelected(final SelectionEvent e) {
-                if (!sync()) {
-                    m_viewer.setSelection(null);
-                }
-            }
-
-        });
-    }
-
-    private boolean sync() {
-        // that's the local file to find in a content provider
-        String wfDir;
-
-        try {
-            IEditorPart activeEditor =
-                    PlatformUI.getWorkbench().getActiveWorkbenchWindow()
-                            .getActivePage().getActiveEditor();
-            Object adapter =
-                    activeEditor.getAdapter(WorkflowEditorAdapter.class);
-            if (adapter == null) {
-                // not a workflow editor
-                return false;
-            }
-            ReferencedFile wfFileRef =
-                    ((WorkflowEditorAdapter)adapter).getWorkflowManager()
-                            .getWorkingDir();
-            if (wfFileRef == null) {
-                // not saved yet
-                return false;
-            }
-            wfDir = wfFileRef.getFile().getAbsolutePath().toLowerCase();
-        } catch (Throwable t) {
-            // if anything is null or fails: don't sync
-            return false;
-        }
-
-        Set<String> mountedIds = m_contentDelegator.getMountedIds();
-        for (String id : mountedIds) {
-            MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
-            ExplorerFileStore root = mountPoint.getProvider().getFileStore("/");
-            File localRoot;
-            try {
-                localRoot = root.toLocalFile();
-            } catch (CoreException e) {
-                // no corresponding local file
-                continue;
-            }
-            if (localRoot == null) {
-                // no corresponding local file
-                continue;
-            }
-            if (!wfDir.startsWith(localRoot.getAbsolutePath().toLowerCase())) {
-                // got the wrong content provider
-                continue;
-            }
-            String relPath =
-                    wfDir.substring(localRoot.getAbsolutePath().length())
-                            .replace('\\', '/');
-            if (!relPath.startsWith("/")) {
-                relPath = "/" + relPath;
-            }
-            ExplorerFileStore store =
-                    mountPoint.getProvider().getFileStore(relPath);
-            m_viewer.setSelection(new StructuredSelection(ContentDelegator
-                    .getTreeObjectFor(store)), true);
-            return true;
-        }
-        return false;
+        Action configure = new ConfigureExplorerViewAction(m_viewer,
+                m_contentDelegator);
+        toolBarMgr.add(configure);
     }
 
     private boolean openSelected() {
@@ -409,23 +297,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         while (iter.hasNext()) {
             m_viewer.expandToLevel(iter.next(), 1);
         }
-    }
-
-    private void addNewItemToView() {
-        SelectMountPointDialog selectDlg =
-                new SelectMountPointDialog(m_viewer.getControl().getShell(),
-                        m_contentDelegator.getMountedIds());
-        selectDlg.setBlockOnOpen(true);
-        if (selectDlg.open() != InputDialog.OK) {
-            return;
-        }
-        m_contentDelegator.removeAllMountPoints();
-        List<MountPoint> result = selectDlg.getResult();
-        for (MountPoint mp : result) {
-            m_contentDelegator.addMountPoint(mp);
-        }
-        m_viewer.refresh();
-
     }
 
     private void createTreeViewer(final Composite parent,
