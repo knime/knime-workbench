@@ -66,6 +66,7 @@ import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeMessageEvent;
@@ -76,6 +77,7 @@ import org.knime.core.node.workflow.NodeStateChangeListener;
 import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
+import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -322,7 +324,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             }
         });
         ProjectWorkflowMap.addStateListener(this);
-        //ProjectWorkflowMap.addWorkflowListener(this);
+        ProjectWorkflowMap.addWorkflowListener(this);
         //ProjectWorkflowMap.addNodeMessageListener(this);
         //ProjectWorkflowMap.addNodePropertyChangedListener(this);
 
@@ -333,7 +335,41 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      */
     @Override
     public void workflowChanged(final WorkflowEvent event) {
-        refreshAsync();
+        switch (event.getType()) {
+        case NODE_ADDED:
+            NodeID id = event.getID();
+            refreshAsync(id);
+            break;
+        case NODE_REMOVED:
+            // can't just use the ID here as the workflow is no longer in
+            // the static workflow map, try to get path from workflow and
+            // refresh here
+            Object oldValue = event.getOldValue();
+            if (oldValue instanceof WorkflowManager) {
+                WorkflowManager wm = (WorkflowManager)oldValue;
+                ReferencedFile workingDir = wm.getWorkingDir();
+                if (workingDir != null) {
+                    File file = workingDir.getFile();
+                    final ExplorerFileStore fs =
+                        ExplorerMountTable.getFileSystem().fromLocalFile(file);
+                    if (fs != null) {
+                        SyncExecQueueDispatcher.asyncExec(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (m_viewer == null
+                                        || m_viewer.getControl().isDisposed()) {
+                                    return;
+                                }
+                                m_viewer.refresh(ContentObject.forFile(fs));
+                            }
+                        });
+                    }
+                }
+            }
+            break;
+        default:
+            // ignore
+        }
     }
 
     /**
@@ -528,8 +564,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     public void dispose() {
         m_contentDelegator.removePropertyChangeListener(this);
         m_contentDelegator.dispose();
-//        ProjectWorkflowMap.removeWorkflowListener(this);
         ProjectWorkflowMap.removeStateListener(this);
+        ProjectWorkflowMap.removeWorkflowListener(this);
 //        ProjectWorkflowMap.removeNodePropertyChangedListener(this);
 //        ProjectWorkflowMap.removeNodeMessageListener(this);
     }
