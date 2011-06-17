@@ -33,10 +33,13 @@ import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.KnimeFileUtil;
@@ -293,6 +296,23 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             IStructuredSelection ss = (IStructuredSelection)selection;
             List<ExplorerFileStore> fileStores =
                     DragAndDropUtils.getExplorerFileStores(ss);
+
+            // check for existing files
+            for (ExplorerFileStore fs : fileStores) {
+                String childName = fs.getName();
+                if (target.getChild(childName).fetchInfo().exists()) {
+                    MessageBox mb =
+                        new MessageBox(Display.getCurrent().getActiveShell(),
+                                SWT.ICON_ERROR | SWT.OK);
+                    mb.setText("Operation Cancelled");
+                    mb.setMessage("A resource with the name \"" + childName
+                            +  "\" already exists in \"" + target.getFullName()
+                            + "\". Cancelling operation...");
+                    mb.open();
+                    return false;
+                }
+            }
+
             for (ExplorerFileStore fs : fileStores) {
                 /*
                  * On the drop receiver side there is no difference between copy
@@ -304,9 +324,15 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     copy(fs, target);
                     DragAndDropUtils.refreshResource(target);
                 } catch (CoreException e) {
-                    LOGGER.error(
-                            "An error occured when transfering the file \""
-                                    + fs.getFullName() + "\". ", e);
+                    String msg = "An error occured when transfering the file \""
+                            + fs.getFullName() + "\". ";
+                    LOGGER.error(msg, e);
+                    MessageBox mb =
+                        new MessageBox(Display.getCurrent().getActiveShell(),
+                                SWT.ICON_ERROR | SWT.OK);
+                    mb.setText("An error occured during transfer");
+                    mb.setMessage(msg);
+                    mb.open();
                     return false;
                 }
             }
