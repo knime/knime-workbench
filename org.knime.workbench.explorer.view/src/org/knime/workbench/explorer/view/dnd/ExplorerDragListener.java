@@ -145,13 +145,13 @@ public class ExplorerDragListener implements DragSourceListener {
                         continue;
                     }
                     fs.delete(EFS.NONE, null);
-                    m_viewer.refresh(ContentDelegator.getTreeObjectFor(
-                            fs.getParent()));
                 } catch (CoreException e) {
                     String msg = "Could not move file \"" + fs.getFullName()
                             + "\". Source file could not be deleted.";
                     throw new RuntimeException(msg, e);
                 }
+                m_viewer.refresh(ContentDelegator.getTreeObjectFor(
+                        fs.getParent()));
             }
             Iterator iterator = selections.iterator();
             while (iterator.hasNext()) {

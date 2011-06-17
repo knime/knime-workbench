@@ -251,10 +251,15 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
     }
 
     private void refreshResource(final IResource resource,
-            final IProgressMonitor monitor) throws CoreException {
+            final IProgressMonitor monitor) {
         if (resource != null) {
-            LOGGER.debug("Refreshing resource " + resource);
-            resource.refreshLocal(IResource.DEPTH_INFINITE, monitor);
+            try {
+                resource.refreshLocal(IResource.DEPTH_INFINITE, monitor);
+                LOGGER.debug("Refreshed resource " + resource);
+            } catch (Exception e) {
+                // do not refresh
+                LOGGER.debug("Could not refresh resource " + resource, e);
+            }
         }
     }
 
@@ -265,8 +270,8 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
         }
         File file = fileStore.toLocalFile(EFS.NONE, null);
         if (file != null) {
-           refreshResource(KnimeResourceUtil.getResourceForURI(file.toURI()),
-                   monitor);
+                refreshResource(KnimeResourceUtil.getResourceForURI(
+                        file.toURI()), monitor);
         }
     }
 
