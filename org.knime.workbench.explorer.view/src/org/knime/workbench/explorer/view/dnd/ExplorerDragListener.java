@@ -32,13 +32,18 @@ import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSourceEvent;
 import org.eclipse.swt.dnd.DragSourceListener;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.actions.ExplorerAction;
 
 /**
  *
@@ -66,6 +71,24 @@ public class ExplorerDragListener implements DragSourceListener {
     public void dragStart(final DragSourceEvent event) {
         IStructuredSelection selection =
                 (IStructuredSelection)m_viewer.getSelection();
+
+     // find affected workflows
+        List<ExplorerFileStore> affectedFlows
+                = ExplorerAction.getContainedWorkflows(
+                        DragAndDropUtils.getExplorerFileStores(selection));
+        if (ExplorerFileSystemUtils.hasOpenWorkflows(affectedFlows)) {
+            event.doit = false;
+            MessageBox mb =
+                new MessageBox(Display.getCurrent().getActiveShell(),
+                        SWT.ICON_ERROR | SWT.OK);
+            mb.setText("Can't perform operation");
+            mb.setMessage("At least one of the workflows affected by the "
+                    + "dragging is still opened in the editor and has to be "
+                    + "closed.");
+            mb.open();
+            return;
+        }
+
         Map<AbstractContentProvider, List<ExplorerFileStore>> providers =
                 DragAndDropUtils.getProviderMap(selection);
         if (providers == null) {
