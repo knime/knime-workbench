@@ -210,19 +210,18 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
              */
             IProject newProject =
                     ((IWorkspaceRoot)res).getProject(projectName);
-            if (!newProject.exists()) {
-                try {
-                    newProject =
-                            MetaInfoFile
-                                    .createKnimeProject(newProject.getName(),
-                                            KNIMEProjectNature.ID);
-                } catch (Exception e) {
-                    String message =
-                            "Could not create KNIME project in "
-                                    + "workspace root.";
-                    throw new CoreException(new Status(Status.ERROR,
-                            ExplorerActivator.PLUGIN_ID, message, e));
-                }
+            newProject.delete(false, true, monitor);
+            try {
+                newProject =
+                        MetaInfoFile
+                                .createKnimeProject(newProject.getName(),
+                                        KNIMEProjectNature.ID);
+            } catch (Exception e) {
+                String message =
+                        "Could not create KNIME project in "
+                                + "workspace root.";
+                throw new CoreException(new Status(Status.ERROR,
+                        ExplorerActivator.PLUGIN_ID, message, e));
             }
         }
     }
@@ -333,7 +332,8 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
             throw new CoreException(new Status(Status.ERROR,
                     ExplorerActivator.PLUGIN_ID, message, e));
         }
-        createProjectFile(destination, monitor);
+        createProjectFile(destination.getName(), destination.getParent(),
+                monitor);
         refreshResource(destination.getParent(), monitor);
         refreshParentResource();
     }
