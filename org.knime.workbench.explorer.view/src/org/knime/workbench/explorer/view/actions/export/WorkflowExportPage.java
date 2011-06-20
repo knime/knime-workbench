@@ -274,8 +274,8 @@ public class WorkflowExportPage extends WizardPage {
         dlg.setValidator(new SelectionValidator() {
             @Override
             public String isValid(final ExplorerFileStore selection) {
-                if (!ExplorerFileStore.isDirOrWorkflowGroup(selection)
-                        || ExplorerFileStore.isWorkflow(selection)) {
+                if (!(ExplorerFileStore.isDirOrWorkflowGroup(selection)
+                        || ExplorerFileStore.isWorkflow(selection))) {
                     return "Please select a workflow or workflow group";
                 }
                 return null;
