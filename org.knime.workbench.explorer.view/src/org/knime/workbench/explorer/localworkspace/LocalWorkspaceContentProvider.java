@@ -45,6 +45,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.util.KnimeFileUtil;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.IconFactory;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -161,14 +162,14 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     @Override
     public Image getImage(final Object element) {
         if (!(element instanceof LocalWorkspaceFileStore)) {
-            return ICONS.unknownRed();
+            return IconFactory.instance.unknownRed();
         }
         LocalWorkspaceFileStore e = (LocalWorkspaceFileStore)element;
         Image img = getWorkspaceImage(e);
         if (img != null) {
             return img;
         } else {
-            return ICONS.unknownRed();
+            return IconFactory.instance.unknownRed();
         }
     }
 
@@ -197,7 +198,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             final org.eclipse.jface.action.IMenuManager manager,
             final java.util.Map<AbstractContentProvider, java.util.List<ExplorerFileStore>> selection) {
 
-    };
+    }
 
     /**
      * {@inheritDoc}

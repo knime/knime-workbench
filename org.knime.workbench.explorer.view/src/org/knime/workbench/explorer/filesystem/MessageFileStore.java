@@ -12,6 +12,8 @@ import org.eclipse.core.filesystem.provider.FileInfo;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.swt.graphics.Image;
+import org.knime.workbench.explorer.view.IconFactory;
 
 /**
  * Placeholder store in the tree for string messages.
@@ -19,20 +21,26 @@ import org.eclipse.core.runtime.IProgressMonitor;
  * @author ohl, University of Konstanz
  */
 public final class MessageFileStore extends ExplorerFileStore {
-
     private final String m_msg;
 
-    /**
-     * @param mountID
-     * @param fullPath
-     */
+    private final Image m_image;
+
     public MessageFileStore(final String mountID, final String message) {
+        this(mountID, message, IconFactory.instance.info());
+    }
+
+    public MessageFileStore(final String mountID, final String message,
+            final Image image) {
         super(mountID, "");
         if (message == null) {
-            throw new NullPointerException(
-                    "Message to display can't be null");
+            throw new NullPointerException("Message to display must no be null");
         }
         m_msg = message;
+
+        if (image == null) {
+            throw new NullPointerException("Image to display must not be null");
+        }
+        m_image = image;
     }
 
     /**
@@ -90,8 +98,8 @@ public final class MessageFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public String[] childNames(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public String[] childNames(final int options, final IProgressMonitor monitor)
+            throws CoreException {
         return EMPTY_STRING_ARRAY;
     }
 
@@ -167,8 +175,8 @@ public final class MessageFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public IFileInfo fetchInfo(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public IFileInfo fetchInfo(final int options, final IProgressMonitor monitor)
+            throws CoreException {
         return fetchInfo();
     }
 
@@ -266,8 +274,8 @@ public final class MessageFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public File toLocalFile(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public File toLocalFile(final int options, final IProgressMonitor monitor)
+            throws CoreException {
         return null;
     }
 
@@ -293,5 +301,14 @@ public final class MessageFileStore extends ExplorerFileStore {
     @Override
     public int hashCode() {
         return m_msg.hashCode();
+    }
+
+    /**
+     * Returns the icon for the message.
+     *
+     * @return an image
+     */
+    public Image getImage() {
+        return m_image;
     }
 }

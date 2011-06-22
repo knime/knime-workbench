@@ -38,7 +38,6 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.LocalSelectionTransfer;
-import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -59,6 +58,7 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
+import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -70,13 +70,7 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  * @author ohl, University of Konstanz
  */
 public abstract class AbstractContentProvider extends LabelProvider implements
-        IStructuredContentProvider, ITreeContentProvider,
-        Comparable<AbstractContentProvider> {
-
-    /**
-     * Use icons from this class for a uniform look.
-     */
-    public static final IconFactory ICONS = new IconFactory();
+        ITreeContentProvider, Comparable<AbstractContentProvider> {
 
     /**
      * Empty result array.
@@ -564,16 +558,16 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public static Image getWorkspaceImage(final ExplorerFileStore efs) {
 
         if (ExplorerFileStore.isNode(efs)) {
-            return ICONS.node();
+            return IconFactory.instance.node();
         }
         if (ExplorerFileStore.isMetaNode(efs)) {
-            return ICONS.node();
+            return IconFactory.instance.node();
         }
         if (ExplorerFileStore.isWorkflowGroup(efs)) {
-            return ICONS.workflowgroup();
+            return IconFactory.instance.workflowgroup();
         }
         if (ExplorerFileStore.isWorkflowTemplate(efs)) {
-            return ICONS.workflowtemplate();
+            return IconFactory.instance.workflowtemplate();
         }
         if (!ExplorerFileStore.isWorkflow(efs)) {
             return null;
@@ -584,43 +578,54 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         try {
             f = efs.toLocalFile(EFS.NONE, null);
         } catch (CoreException ce) {
-            return ICONS.workflowClosed();
+            return IconFactory.instance.workflowClosed();
         }
 
         if (f == null) {
-            return ICONS.workflowClosed();
+            return IconFactory.instance.workflowClosed();
         }
         URI wfURI = f.toURI();
         NodeContainer nc = ProjectWorkflowMap.getWorkflow(wfURI);
         if (nc == null) {
-            return ICONS.workflowClosed();
+            return IconFactory.instance.workflowClosed();
         }
         if (nc instanceof WorkflowManager) {
             if (nc.getID().hasSamePrefix(WorkflowManager.ROOT.getID())) {
                 // only show workflow directly off the root
                 if (nc.getNodeMessage().getMessageType()
                         .equals(NodeMessage.Type.ERROR)) {
-                    return ICONS.workflowError();
+                    return IconFactory.instance.workflowError();
                 }
                 switch (nc.getState()) {
                 case EXECUTED:
-                    return ICONS.workflowExecuted();
+                    return IconFactory.instance.workflowExecuted();
                 case PREEXECUTE:
                 case EXECUTING:
                 case EXECUTINGREMOTELY:
                 case POSTEXECUTE:
-                    return ICONS.workflowExecuting();
+                    return IconFactory.instance.workflowExecuting();
                 case CONFIGURED:
                 case IDLE:
-                    return ICONS.workflowConfigured();
+                    return IconFactory.instance.workflowConfigured();
                 default:
-                    return ICONS.workflowConfigured();
+                    return IconFactory.instance.workflowConfigured();
                 }
             } else {
-                return ICONS.node();
+                return IconFactory.instance.node();
             }
         } else {
-            return ICONS.unknown();
+            return IconFactory.instance.unknown();
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Image getImage(final Object element) {
+        if (element instanceof MessageFileStore) {
+            return ((MessageFileStore) element).getImage();
+        }
+        return null;
     }
 }

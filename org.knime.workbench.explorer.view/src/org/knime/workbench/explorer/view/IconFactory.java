@@ -21,13 +21,17 @@
 package org.knime.workbench.explorer.view;
 
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  *
  * @author ohl, University of Konstanz
  */
-public class IconFactory {
+public final class IconFactory {
+    public final static IconFactory instance = new IconFactory();
+
+
     /** Icon representing the executing state. */
     private static final Image EXECUTING = KNIMEUIPlugin.getDefault().getImage(
             KNIMEUIPlugin.PLUGIN_ID, "icons/project_executing.png");
@@ -56,25 +60,25 @@ public class IconFactory {
             KNIMEUIPlugin.PLUGIN_ID, "icons/node.png");
 
     /** Icon representing a workflow group in the resource navigator. */
-    private static final Image WORKFLOW_GROUP = KNIMEUIPlugin
+    private static final Image WORKFLOW_GROUP = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/wf_set.png").createImage();
 
     /** Icon representing a workflow template in the resource navigator. */
-    private static final Image FLOW_TEMPLATE = KNIMEUIPlugin
+    private static final Image FLOW_TEMPLATE = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/meta/metanode_template_repository.png")
             .createImage();
 
-    private static final Image DEFAULT = KNIMEUIPlugin
+    private static final Image DEFAULT = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/knime_default.png").createImage();
 
-    private static final Image UNKNOWN = KNIMEUIPlugin
+    private static final Image UNKNOWN = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/knime_unknown.png").createImage();
 
-    private static final Image UNKNOWN_RED = KNIMEUIPlugin
+    private static final Image UNKNOWN_RED = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/knime_unknown_red.png").createImage();
 
@@ -83,6 +87,13 @@ public class IconFactory {
 
     private static final Image SYNC = KNIMEUIPlugin.getDefault().getImage(
             KNIMEUIPlugin.PLUGIN_ID, "icons/sync.png");
+
+    private static final Image INFO = KNIMEUIPlugin.getDefault().getImage(
+            KNIMEUIPlugin.PLUGIN_ID, "icons/info.png");
+
+
+    private IconFactory() {
+    }
 
     public Image error() {
         return ERROR;
@@ -134,5 +145,9 @@ public class IconFactory {
 
     public Image workflowtemplate() {
         return FLOW_TEMPLATE;
+    }
+
+    public Image info() {
+        return INFO;
     }
 }

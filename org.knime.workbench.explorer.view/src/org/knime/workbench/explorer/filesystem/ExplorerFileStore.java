@@ -322,16 +322,4 @@ public abstract class ExplorerFileStore extends FileStore {
     public ExplorerFileStore getMessageFileStore(final String msg) {
         return new MessageFileStore(getMountID(), msg);
     }
-
-    /**
-     * Creates a file store that carries a message.
-     *
-     * @param mountID id of the mount point to which this is added
-     * @param msg the message used as name and by toString
-     * @return a file store carrying the message
-     */
-    public static ExplorerFileStore getMessageFileStore(final String mountID,
-            final String msg) {
-        return new MessageFileStore(mountID, msg);
-    }
 }
