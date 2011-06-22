@@ -18,12 +18,14 @@ Require-Bundle: org.knime.core,
  com.knime.licenses;bundle-version="2.4.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
-Bundle-ClassPath: .
 Provide-Package: org.knime.workbench.explorer,
  org.knime.workbench.explorer.filesystem,
  org.knime.workbench.explorer.localworkspace,
+ org.knime.workbench.explorer.pathresolve,
  org.knime.workbench.explorer.view,
  org.knime.workbench.explorer.view.actions,
+ org.knime.workbench.explorer.view.actions.export,
+ org.knime.workbench.explorer.view.actions.imports,
  org.knime.workbench.explorer.view.dialogs,
  org.knime.workbench.explorer.view.dnd,
  org.knime.workbench.explorer.view.preferences
