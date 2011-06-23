@@ -46,6 +46,7 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
@@ -82,6 +83,7 @@ import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
 import org.knime.workbench.explorer.view.actions.ConfigureExplorerViewAction;
@@ -214,9 +216,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         if (selection.isEmpty()) {
             return false;
         }
-        @SuppressWarnings("unchecked")
         List<ContentObject> refreshs = new ArrayList<ContentObject>();
-        Iterator<Object> iter = selection.iterator();
+        Iterator<?> iter = selection.iterator();
         while (iter.hasNext()) {
             Object sel = iter.next();
             if (sel instanceof ContentObject) {
@@ -471,6 +472,13 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             manager.add(new NoMenuAction(m_viewer));
             return;
         }
+        List<ExplorerFileStore> fs = DragAndDropUtils
+            .getExplorerFileStores((TreeSelection) m_viewer.getSelection());
+        if ((fs != null) && (fs.size() == 1)
+                && (fs.get(0) instanceof MessageFileStore)) {
+            return;
+        }
+
         addGlobalActions(manager);
 
         IStructuredSelection sel =
