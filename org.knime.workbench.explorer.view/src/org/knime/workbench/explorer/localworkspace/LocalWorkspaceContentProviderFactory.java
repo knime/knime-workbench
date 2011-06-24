@@ -39,9 +39,7 @@ public class LocalWorkspaceContentProviderFactory extends
      */
     public static final String ID = "org.knime.workbench.explorer.workspace";
 
-    private static final Image LOCAL_WS_IMG = AbstractUIPlugin
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/knime_default.png").createImage();
+    private static Image localWSImg;
 
     /**
      * {@inheritDoc}
@@ -80,7 +78,16 @@ public class LocalWorkspaceContentProviderFactory extends
      */
     @Override
     public Image getImage() {
-        return LOCAL_WS_IMG;
+        synchronized (getClass()) {
+            // initialize lazy (not called in batch executor, where it would
+            // otherwise cause non-existing graphics problems)
+            if (localWSImg == null) {
+                localWSImg = AbstractUIPlugin
+                    .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+                    "icons/knime_default.png").createImage();
+            }
+        }
+        return localWSImg;
     }
 
     /**
