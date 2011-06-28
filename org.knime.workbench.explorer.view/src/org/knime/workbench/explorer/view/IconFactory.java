@@ -22,6 +22,7 @@ package org.knime.workbench.explorer.view;
 
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
@@ -91,6 +92,17 @@ public final class IconFactory {
     private static final Image INFO = KNIMEUIPlugin.getDefault().getImage(
             KNIMEUIPlugin.PLUGIN_ID, "icons/info.png");
 
+    private static final Image LOCAL_WS_IMG =
+        KNIMEUIPlugin.getDefault().getImage(
+                ExplorerActivator.PLUGIN_ID, "icons/knime_default.png");
+
+    private static final Image FILE_IMG =
+        KNIMEUIPlugin.getDefault().getImage(ExplorerActivator.PLUGIN_ID,
+            "icons/file.png");
+
+    private static final Image DIR_IMG =
+        KNIMEUIPlugin.getDefault().getImage(ExplorerActivator.PLUGIN_ID,
+            "icons/folder.png");
 
     private IconFactory() {
     }
@@ -150,4 +162,17 @@ public final class IconFactory {
     public Image info() {
         return INFO;
     }
+
+    public Image localWorkspace() {
+        return LOCAL_WS_IMG;
+    }
+
+    public Image file() {
+        return FILE_IMG;
+    }
+
+    public Image directory() {
+        return DIR_IMG;
+    }
+
 }

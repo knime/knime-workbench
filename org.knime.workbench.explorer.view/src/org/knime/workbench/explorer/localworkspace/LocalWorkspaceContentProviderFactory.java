@@ -19,10 +19,9 @@
 package org.knime.workbench.explorer.localworkspace;
 
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
-import org.knime.workbench.ui.KNIMEUIPlugin;
+import org.knime.workbench.explorer.view.IconFactory;
 
 
 /**
@@ -38,8 +37,6 @@ public class LocalWorkspaceContentProviderFactory extends
      * The id of this predefined and always existing content provider.
      */
     public static final String ID = "org.knime.workbench.explorer.workspace";
-
-    private static Image localWSImg;
 
     /**
      * {@inheritDoc}
@@ -78,16 +75,7 @@ public class LocalWorkspaceContentProviderFactory extends
      */
     @Override
     public Image getImage() {
-        synchronized (getClass()) {
-            // initialize lazy (not called in batch executor, where it would
-            // otherwise cause non-existing graphics problems)
-            if (localWSImg == null) {
-                localWSImg = AbstractUIPlugin
-                    .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/knime_default.png").createImage();
-            }
-        }
-        return localWSImg;
+        return IconFactory.instance.localWorkspace();
     }
 
     /**

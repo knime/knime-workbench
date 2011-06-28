@@ -29,9 +29,9 @@ import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.graphics.Image;
-import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.IconFactory;
 
 /**
  *
@@ -41,14 +41,6 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
         IStructuredContentProvider, ITreeContentProvider {
 
     private static final Object[] NONE = new Object[0];
-
-    private static final Image FILE_IMG = ExplorerActivator
-            .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
-                    "icons/file.png").createImage();
-
-    private static final Image DIR_IMG = ExplorerActivator
-            .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
-                    "icons/folder.png").createImage();
 
     private ExplorerFileStore m_root;
 
@@ -137,9 +129,9 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
             }
             IFileInfo info = e.fetchInfo();
             if (info.isDirectory()) {
-                return DIR_IMG;
+                return IconFactory.instance.directory();
             } else {
-                return FILE_IMG;
+                return IconFactory.instance.file();
             }
         }
         return null;

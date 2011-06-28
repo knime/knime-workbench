@@ -40,14 +40,12 @@ import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
-import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.KnimeFileUtil;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.IconFactory;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
-import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  * Provides content for the user space view that shows the content (workflows
@@ -59,9 +57,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(LocalWorkspaceContentProvider.class);
 
-    private static final Image LOCAL_WS_IMG = AbstractUIPlugin
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/knime_default.png").createImage();
 
     /**
      * @param factory the factory that created us.
@@ -205,7 +200,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public Image getImage() {
-        return LOCAL_WS_IMG;
+        return IconFactory.instance.localWorkspace();
     }
 
     /**
