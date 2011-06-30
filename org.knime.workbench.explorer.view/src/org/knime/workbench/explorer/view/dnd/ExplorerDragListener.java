@@ -83,7 +83,7 @@ public class ExplorerDragListener implements DragSourceListener {
                         SWT.ICON_ERROR | SWT.OK);
             mb.setText("Can't perform operation");
             mb.setMessage("At least one of the workflows affected by the "
-                    + "dragging is still opened in the editor and has to be "
+                    + "dragging is still open in the editor and has to be "
                     + "closed.");
             mb.open();
             return;
