@@ -23,6 +23,7 @@
 package org.knime.workbench.explorer.view.dnd;
 
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +57,8 @@ public class ExplorerDragListener implements DragSourceListener {
 
     private final TreeViewer m_viewer;
 
+    private LinkedList<ExplorerFileStore> m_lockedFlows;
+
     /**
      * @param viewer the viewer to which this drag support has been added.
      */
@@ -86,6 +89,32 @@ public class ExplorerDragListener implements DragSourceListener {
                     + "dragging is still open in the editor and has to be "
                     + "closed.");
             mb.open();
+            return;
+        }
+
+        m_lockedFlows = new LinkedList<ExplorerFileStore>();
+        LinkedList<ExplorerFileStore> unlockableFlows = new LinkedList<ExplorerFileStore>();
+        ExplorerFileSystemUtils.lockWorkflows(affectedFlows, unlockableFlows, m_lockedFlows);
+        // unlock flows locked in here
+        ExplorerFileSystemUtils.unlockWorkflows(m_lockedFlows);
+        if (!unlockableFlows.isEmpty()) {
+            event.doit = false;
+            StringBuilder msg = new StringBuilder("Dragging canceled. "
+                    + "At least one of the workflows affected by the "
+                    + "dragging is in use by another user/instance:\n");
+            for (ExplorerFileStore lockedFlow : unlockableFlows) {
+                msg.append("\t" + lockedFlow.getMountIDWithFullPath() + "\n");
+            }
+            LOGGER.warn(msg);
+            MessageBox mb =
+                new MessageBox(Display.getCurrent().getActiveShell(),
+                        SWT.ICON_ERROR | SWT.OK);
+            mb.setText("Can't perform operation");
+            mb.setMessage("At least one of the workflows affected by the "
+                    + "dragging is in use by another user/instance.\n"
+                    + "(See log file for details.)");
+            mb.open();
+
             return;
         }
 
@@ -131,8 +160,9 @@ public class ExplorerDragListener implements DragSourceListener {
      */
     @Override
     public void dragFinished(final DragSourceEvent event) {
-        /* TODO delegate drag finished to content provider */
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
+        try {
+        /* TODO delegate drag finished to content provider */
         if (DND.DROP_MOVE == event.detail && event.doit) {
             LOGGER.debug("Removing source file(s) after successful drop.");
             IStructuredSelection selections = (IStructuredSelection)
@@ -159,7 +189,9 @@ public class ExplorerDragListener implements DragSourceListener {
 //                m_viewer.refresh(fs.getParent());
             }
         }
-        transfer.setSelection(null);
+        } finally {
+            transfer.setSelection(null);
+        }
     }
 
 }
