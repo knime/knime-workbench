@@ -134,7 +134,7 @@ public class RenameWorkflowImportPage extends WizardPage {
             name.addModifyListener(new ModifyListener() {
                 @Override
                 public void modifyText(final ModifyEvent e) {
-                    String newName = name.getText();
+                    String newName = name.getText().trim();
                     checkIsNameValid(newName);
                     checkNameExists(newName);
                     if (m_isNameValid) {

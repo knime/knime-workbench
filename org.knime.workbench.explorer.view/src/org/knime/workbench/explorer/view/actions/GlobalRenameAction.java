@@ -183,7 +183,7 @@ public class GlobalRenameAction extends ExplorerAction {
         if (dialog.open() == InputDialog.CANCEL) {
             return null;
         }
-        String newName = dialog.getValue();
+        String newName = dialog.getValue().trim();
         ExplorerFileStore dstFileStore
                 = fileStore.getParent().getChild(newName);
         if (dstFileStore.fetchInfo().exists() && !confirmOverride(newName)) {
@@ -242,7 +242,7 @@ public class GlobalRenameAction extends ExplorerAction {
          */
         @Override
         public String isValid(final String name) {
-            if (!ExplorerFileSystem.isValidFilename(name)) {
+            if (!ExplorerFileSystem.isValidFilename(name.trim())) {
                 return "One of the following illegal characters is used: "
                         + ExplorerFileSystem.getIllegalFilenameChars();
             } else {
