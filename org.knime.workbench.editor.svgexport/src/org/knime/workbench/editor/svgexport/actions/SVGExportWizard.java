@@ -153,7 +153,7 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
             mb.setMessage("Could not export workflow as SVG: "
                     + ex.getMessage());
             mb.open();
-            throw ex;
+            return false;
         }
     }
 
