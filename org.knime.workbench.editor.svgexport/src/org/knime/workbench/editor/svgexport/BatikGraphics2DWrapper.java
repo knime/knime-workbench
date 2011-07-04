@@ -54,11 +54,11 @@ public class BatikGraphics2DWrapper extends Graphics {
 	private boolean 						_XORMode;
 
 	private Rectangle						visibleArea;
-	
+
 	private Stack<State>					_stack = new Stack<State>();
-	
+
 	private class State{
-		
+
 		float _lineWidth;
 		int _lineStyle;
 		Font _font;
@@ -66,7 +66,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 		Color _fg;
 		boolean _XOR;
 		Rectangle _visibleArea;
-		
+
 		public State(){
 			_lineWidth = _SWTLineWidth;
 			_lineStyle = _SWTLineStyle;
@@ -76,7 +76,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 			_XOR = _XORMode;
 			_visibleArea = visibleArea;
 		}
-		
+
 		public void restore(){
 			_SWTLineWidth  = _lineWidth;
 			_SWTLineStyle  = _lineStyle;
@@ -86,7 +86,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 			_XORMode  = _XOR;
 			visibleArea = _visibleArea;
 		}
-		
+
 	}
 
 	/**
@@ -157,7 +157,7 @@ public class BatikGraphics2DWrapper extends Graphics {
 		ImageData data = src.getImageData();	// Obtain ImageData
 
 		if (data.getTransparencyType() == SWT.TRANSPARENCY_NONE){			// No Transparency, so this should be easy
-			DirectColorModel cm = new DirectColorModel(data.depth, 0xFF0000, 0x00FF00, 0x0000FF);
+			DirectColorModel cm = new DirectColorModel(24, 0xFF0000, 0x00FF00, 0x0000FF);
 			PaletteData palette = data.palette;
 			WritableRaster wr = cm.createCompatibleWritableRaster(data.width, data.height);
 //			if (palette.isDirect){		// Note: Currently all opaque images have a direct palette
@@ -472,8 +472,9 @@ public class BatikGraphics2DWrapper extends Graphics {
 
 	@Override
 	public void popState() {
-		if (!(_stack.isEmpty()))
-		_stack.pop().restore();
+		if (!(_stack.isEmpty())) {
+            _stack.pop().restore();
+        }
 
 	}
 
@@ -576,27 +577,27 @@ public class BatikGraphics2DWrapper extends Graphics {
 	public void stream(final Writer writer, final Boolean useCSS) throws SVGGraphics2DIOException{
 		batikGraphicsSVG.stream(writer, useCSS);
 	}
-	
-	
+
+
 
 	@Override
-	public void setLineDash(int[] dash) {
+	public void setLineDash(final int[] dash) {
 		if (dash != null){
 			float[] dashes = new float[dash.length];
 			int i=0;
 			for (int value:dash){
-				dashes[i]=(float)value;
+				dashes[i]=value;
 				i++;
 			}
 			batikGraphicsSVG.setStroke(new BasicStroke(_SWTLineWidth, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10, dashes, 0));
-		}
-		else
-			batikGraphicsSVG.setStroke(new BasicStroke(_SWTLineWidth, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10, null, 0));
+		} else {
+            batikGraphicsSVG.setStroke(new BasicStroke(_SWTLineWidth, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10, null, 0));
+        }
 
 	}
 
 	@Override
-	public void setLineDash(float[] value) {
+	public void setLineDash(final float[] value) {
 		batikGraphicsSVG.setStroke(new BasicStroke(_SWTLineWidth, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10, value, 0));
 	}
 
