@@ -64,9 +64,13 @@ import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.IExportWizard;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.dialogs.ExportWizard;
+import org.knime.core.node.NodeLogger;
 import org.knime.workbench.editor.svgexport.BatikGraphics2DWrapper;
 import org.knime.workbench.editor.svgexport.figures.AnnotationSVGFigure;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -90,6 +94,8 @@ import org.w3c.dom.Document;
  */
 @SuppressWarnings("restriction")
 public class SVGExportWizard extends ExportWizard implements IExportWizard {
+    private static final NodeLogger LOGGER = NodeLogger
+            .getLogger(SVGExportWizard.class);
 
     private List<ConnectionContainerEditPart> drawnConnections =
             new LinkedList<ConnectionContainerEditPart>();
@@ -136,6 +142,22 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
      */
     @Override
     public boolean performFinish() {
+        try {
+            return export();
+        } catch (RuntimeException ex) {
+            LOGGER.error("Error during SVG export: " + ex.getMessage(), ex);
+            MessageBox mb =
+                    new MessageBox(Display.getDefault().getActiveShell(),
+                            SWT.ICON_ERROR | SWT.OK);
+            mb.setText("Error during export");
+            mb.setMessage("Could not export workflow as SVG: "
+                    + ex.getMessage());
+            mb.open();
+            throw ex;
+        }
+    }
+
+    private boolean export() {
 
         String fileDestination = m_page.getFileDestination();
 
