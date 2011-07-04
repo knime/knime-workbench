@@ -265,8 +265,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             for (ExplorerFileStore fs : fileStores) {
                 if (!(ExplorerFileStore.isWorkflow(fs) || ExplorerFileStore
                         .isWorkflowGroup(fs))) {
-                    LOGGER.warn("Only workflows and workflow groups can be "
-                            + "dropped into the User Space");
                     return false;
                 }
             }
