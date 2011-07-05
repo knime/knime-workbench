@@ -270,7 +270,8 @@ public final class ExplorerFileSystemUtils {
             final List<ExplorerFileStore> toDelWFs) {
         boolean success = true;
         for (ExplorerFileStore wf : toDelWFs) {
-            assert ExplorerFileStore.isWorkflow(wf);
+            assert ExplorerFileStore.isWorkflow(wf)
+                    || ExplorerFileStore.isWorkflowTemplate(wf);
             try {
                 File loc = wf.toLocalFile(EFS.NONE, null);
                 if (loc == null) {
@@ -291,7 +292,13 @@ public final class ExplorerFileSystemUtils {
 
                 // delete workflow file first
                 File wfFile = new File(loc, WorkflowPersistor.WORKFLOW_FILE);
-                success &= wfFile.delete();
+                if (wfFile.exists()) {
+                    success &= wfFile.delete();
+                } else {
+                    File tempFile = new File(loc,
+                            WorkflowPersistor.TEMPLATE_FILE);
+                    success &= tempFile.delete();
+                }
 
                 children = loc.listFiles(); // get a list w/o workflow file
                 for (File child : children) {
