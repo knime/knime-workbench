@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-Name: KNIME Explorer View
 Bundle-SymbolicName: org.knime.workbench.explorer.view;singleton=true
-Bundle-Version: 1.0.0.qualifier
+Bundle-Version: 1.0.1.qualifier
 Bundle-Vendor: KNIME.com, Zurich, Switzerland
 Require-Bundle: org.knime.core,
  org.eclipse.ui;bundle-version="3.6.1",
