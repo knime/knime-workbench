@@ -26,8 +26,13 @@ import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DropTargetEvent;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.TransferData;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
@@ -56,6 +61,20 @@ public class ExplorerDropListener extends ViewerDropAdapter {
     @Override
     public boolean performDrop(final Object data) {
         LOGGER.debug("performDrop with data: " + data);
+        // open confirmation dialog if moving within the explorer
+        if (LocalSelectionTransfer.getTransfer().isSupportedType(
+                getCurrentEvent().currentDataType)
+                && DND.DROP_MOVE == getCurrentOperation()) {
+            MessageBox mb = new MessageBox(
+                    Display.getDefault().getActiveShell(),
+                    SWT.ICON_QUESTION | SWT.OK | SWT.CANCEL);
+            mb.setText("Confirm Move");
+            mb.setMessage("Are you sure that you want to move the selected "
+                    + "items?");
+            if (mb.open() == SWT.CANCEL) {
+                return false;
+            }
+        }
         Object target = getCurrentTarget();
         ExplorerFileStore dstFS = DragAndDropUtils.getFileStore(target);
         AbstractContentProvider acp = DragAndDropUtils.getContentProvider(
@@ -108,5 +127,13 @@ public class ExplorerDropListener extends ViewerDropAdapter {
         return (TreeViewer)super.getViewer();
     }
 
-
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void dragEnter(final DropTargetEvent event) {
+        // use copy as default behavior
+        event.detail = DND.DROP_COPY;
+        super.dragEnter(event);
+    }
 }
