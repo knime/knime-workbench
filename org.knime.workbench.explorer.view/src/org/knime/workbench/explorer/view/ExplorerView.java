@@ -52,6 +52,8 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
@@ -88,6 +90,7 @@ import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
 import org.knime.workbench.explorer.view.actions.ConfigureExplorerViewAction;
 import org.knime.workbench.explorer.view.actions.ExpandAction;
+import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.explorer.view.actions.GlobalConfigureWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalCredentialVariablesDialogAction;
 import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
@@ -161,6 +164,40 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         makeGlobalActions();
         createLocalToolBar();
         hookContextMenu();
+        hookKeyListener();
+    }
+
+    private void hookKeyListener() {
+        m_viewer.getControl().addKeyListener(new KeyListener() {
+            @Override
+            public void keyPressed(final KeyEvent event) {
+                handleKeyPressed(event);
+            }
+
+            @Override
+            public void keyReleased(final KeyEvent event) {
+                handleKeyReleased(event);
+            }
+        });
+    }
+
+    private void handleKeyPressed(final KeyEvent event) {
+        // nothing
+    }
+
+    private void handleKeyReleased(final KeyEvent event) {
+        final ExplorerAction action;
+        if (event.keyCode == SWT.F2 && event.stateMask == 0) {
+            action = new GlobalRenameAction(m_viewer);
+        } else if (event.keyCode == SWT.DEL && event.stateMask == 0) {
+            action = new GlobalDeleteAction(m_viewer);
+        } else {
+            action = null;
+        }
+        if (action != null && action.isEnabled()) {
+            action.run();
+            event.doit = false;
+        }
     }
 
     private void initDragAndDrop() {
