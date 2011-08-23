@@ -12,6 +12,13 @@
       </filesystem>
    </extension>
       <extension
+            point="org.eclipse.ecf.filetransfer.urlStreamHandlerService">
+         <urlStreamHandlerService
+               protocol="knime"
+               serviceClass="org.knime.workbench.explorer.ExplorerURLStreamHandler">
+         </urlStreamHandlerService>
+      </extension>
+      <extension
             point="org.knime.workbench.explorer.contentprovider">
          <KNIMEExplorerContentProvider
                ContentProviderFactory="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory">
