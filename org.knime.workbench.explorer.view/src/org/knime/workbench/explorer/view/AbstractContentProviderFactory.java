@@ -28,14 +28,6 @@ import org.knime.workbench.explorer.ExplorerMountTable;
 public abstract class AbstractContentProviderFactory {
 
     /**
-     * Refreshes this factory.
-     */
-    public void refreshMe() {
-        // TODO: fire property change event.
-        // TODO: ContentDelegator must register as listener (and unregister!)
-    }
-
-    /**
      * @return a unique ID (e.g. "com.knime.explorer.filesystem", etc.)
      */
     public abstract String getID();
