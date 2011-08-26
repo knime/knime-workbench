@@ -30,7 +30,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.wfvars.WorkflowVariablesDialog;
@@ -68,9 +68,9 @@ public class GlobalOpenWorkflowVariablesDialogAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        List<ExplorerFileStore> fileStores =
+        List<AbstractExplorerFileStore> fileStores =
             DragAndDropUtils.getExplorerFileStores(getSelection());
-        ExplorerFileStore wfStore = fileStores.get(0);
+        AbstractExplorerFileStore wfStore = fileStores.get(0);
         WorkflowManager workflow = getWorkflow();
 
         if (ExplorerFileSystemUtils.lockWorkflow(wfStore)) {

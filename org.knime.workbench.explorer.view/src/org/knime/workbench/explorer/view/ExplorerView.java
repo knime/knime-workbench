@@ -84,7 +84,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
@@ -388,7 +388,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 ReferencedFile workingDir = wm.getWorkingDir();
                 if (workingDir != null) {
                     File file = workingDir.getFile();
-                    final ExplorerFileStore fs =
+                    final AbstractExplorerFileStore fs =
                         ExplorerMountTable.getFileSystem().fromLocalFile(file);
                     if (fs != null) {
                         SyncExecQueueDispatcher.asyncExec(new Runnable() {
@@ -475,7 +475,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                             return;
                         }
                         File file = new File(wf);
-                        ExplorerFileStore fs = ExplorerMountTable.
+                        AbstractExplorerFileStore fs = ExplorerMountTable.
                             getFileSystem().fromLocalFile(file);
                         if (fs != null) {
                             m_viewer.refresh(ContentObject.forFile(fs));
@@ -509,7 +509,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             manager.add(new NoMenuAction(m_viewer));
             return;
         }
-        List<ExplorerFileStore> fs = DragAndDropUtils
+        List<AbstractExplorerFileStore> fs = DragAndDropUtils
             .getExplorerFileStores((TreeSelection) m_viewer.getSelection());
         if ((fs != null) && (fs.size() == 1)
                 && (fs.get(0) instanceof MessageFileStore)) {
@@ -520,7 +520,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
         IStructuredSelection sel =
                 (IStructuredSelection)m_viewer.getSelection();
-        Map<AbstractContentProvider, List<ExplorerFileStore>> selFiles =
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selFiles =
                 DragAndDropUtils.getProviderMap(sel);
 
         manager.add(new Separator());

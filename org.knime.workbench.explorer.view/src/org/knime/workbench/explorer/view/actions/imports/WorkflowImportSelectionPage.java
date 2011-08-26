@@ -103,7 +103,7 @@ import org.eclipse.ui.internal.wizards.datatransfer.TarLeveledStructureProvider;
 import org.eclipse.ui.internal.wizards.datatransfer.ZipLeveledStructureProvider;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
@@ -150,7 +150,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
     private static boolean initialFromDir = true;
 
     // the initial destination should not be static
-    private ExplorerFileStore m_initialDestination;
+    private AbstractExplorerFileStore m_initialDestination;
 
     private static final GridData FILL_BOTH = new GridData(GridData.FILL_BOTH);
 
@@ -172,7 +172,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
     // target selection part components
     private Text m_targetTextUI;
 
-    private ExplorerFileStore m_target;
+    private AbstractExplorerFileStore m_target;
 
     private Button m_browseWorkflowGroupsBtn;
 
@@ -181,8 +181,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
 
     private IWorkflowImportElement m_importRoot;
 
-    private final Collection<IWorkflowImportElement> m_invalidAndCheckedImports =
-            new ArrayList<IWorkflowImportElement>();
+    private final Collection<IWorkflowImportElement> m_invalidAndCheckedImports 
+            = new ArrayList<IWorkflowImportElement>();
 
     private final Collection<IWorkflowImportElement> m_validAndCheckedImports =
             new ArrayList<IWorkflowImportElement>();
@@ -261,7 +261,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
         });
         // set initial selection
         IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-        if (m_initialDestination != null && !m_initialDestination.equals(root)) {
+        if (m_initialDestination != null 
+                && !m_initialDestination.equals(root)) {
             m_targetTextUI.setText(m_initialDestination
                     .getMountIDWithFullPath());
             m_target = m_initialDestination;
@@ -561,7 +562,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
      *
      * @return the destination
      */
-    protected ExplorerFileStore getDestination() {
+    protected AbstractExplorerFileStore getDestination() {
         return m_target;
     }
 
@@ -681,8 +682,9 @@ public class WorkflowImportSelectionPage extends WizardPage {
                     ExplorerMountTable.getAllMountIDs().toArray(new String[0]),
                     ContentObject.forFile(m_target), "Select destination");
         dlg.setValidator(new SelectionValidator() {
-            public String isValid(final ExplorerFileStore selection) {
-                if (!ExplorerFileStore.isDirOrWorkflowGroup(selection)) {
+            public String isValid(final AbstractExplorerFileStore selection) {
+                if (!AbstractExplorerFileStore.isDirOrWorkflowGroup(
+                        selection)) {
                     return "Please select a workflow group or directory.";
                 }
                 return null;
@@ -691,8 +693,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
         int returnCode = dlg.open();
         if (returnCode == IDialogConstants.OK_ID) {
             // set the newly selected workflow group as destination
-            ExplorerFileStore target = dlg.getSelection();
-            if (ExplorerFileStore.isDirOrWorkflowGroup(target)) {
+            AbstractExplorerFileStore target = dlg.getSelection();
+            if (AbstractExplorerFileStore.isDirOrWorkflowGroup(target)) {
                 m_targetTextUI.setText(target.getMountIDWithFullPath());
                 m_target = target;
             }
@@ -1035,7 +1037,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
      *
      * @return the destination path
      */
-    protected ExplorerFileStore getDestinationPath() {
+    protected AbstractExplorerFileStore getDestinationPath() {
         return m_target;
     }
 
@@ -1046,14 +1048,15 @@ public class WorkflowImportSelectionPage extends WizardPage {
      * @param destination the destination path
      * @param element the workflow import element to check
      */
-    protected void isValidImport(final ExplorerFileStore destination,
+    protected void isValidImport(final AbstractExplorerFileStore destination,
             final IWorkflowImportElement element) {
         // get path
         IPath childPath = element.getRenamedPath();
         boolean exists = false;
         if (childPath.segmentCount() > 0) {
             // append to the destination path
-            ExplorerFileStore result = destination.getChild(childPath.toString());
+            AbstractExplorerFileStore result 
+                    = destination.getChild(childPath.toString());
             // check whether this exists
             exists = result.fetchInfo().exists();
         }
@@ -1067,7 +1070,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
      *
      * @param destination the initial destination container
      */
-    public void setInitialTarget(final ExplorerFileStore destination) {
+    public void setInitialTarget(final AbstractExplorerFileStore destination) {
         m_initialDestination = destination;
     }
 

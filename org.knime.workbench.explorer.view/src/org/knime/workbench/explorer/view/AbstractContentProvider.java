@@ -55,7 +55,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.UniqueNameGenerator;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.explorer.ExplorerActivator;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
@@ -75,8 +75,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /**
      * Empty result array.
      */
-    protected static final ExplorerFileStore[] NO_CHILD =
-            new ExplorerFileStore[0];
+    protected static final AbstractExplorerFileStore[] NO_CHILD =
+            new AbstractExplorerFileStore[0];
 
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(AbstractContentProvider.class);
@@ -166,13 +166,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param fullPath the path to the item.
      * @return the file store for the specified path.
      */
-    public abstract ExplorerFileStore getFileStore(final String fullPath);
+    public abstract AbstractExplorerFileStore getFileStore(
+            final String fullPath);
 
     /**
      * @param uri the uri of the item
      * @return the file store for the specified uri
      */
-    public final ExplorerFileStore getFileStore(final URI uri) {
+    public final AbstractExplorerFileStore getFileStore(final URI uri) {
         return new ExplorerFileSystem().getStore(uri);
     }
 
@@ -183,7 +184,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param file The file in question.
      * @return the file store or null.
      */
-    public abstract ExplorerFileStore fromLocalFile(final File file);
+    public abstract AbstractExplorerFileStore fromLocalFile(final File file);
 
     /** Helper class to find the path segment for a given local (absolute) file.
      * It will traverse the file's parents until it finds the root file (which
@@ -222,7 +223,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public abstract void addContextMenuActions(
             final TreeViewer viewer,
             final IMenuManager manager,
-            final Map<AbstractContentProvider, List<ExplorerFileStore>> selection);
+            final Map<AbstractContentProvider, 
+            List<AbstractExplorerFileStore>> selection);
 
     /* ---------------- drag and drop methods ----------------------- */
 
@@ -232,7 +234,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param transferType the transfer type
      * @return true if the drop is valid, false otherwise
      */
-    public abstract boolean validateDrop(final ExplorerFileStore target,
+    public abstract boolean validateDrop(final AbstractExplorerFileStore target,
             final int operation, TransferData transferType);
 
     /**
@@ -248,16 +250,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @see ViewerDropAdapter#getCurrentOperation()
      */
     public abstract boolean performDrop(final Object data,
-            final ExplorerFileStore target, int operation);
+            final AbstractExplorerFileStore target, int operation);
 
     /**
      * @param fileStores the dragged file stores of the content provider
      * @return true if dragging is allowed for the selection, false otherwise
      */
-    public abstract boolean dragStart(List<ExplorerFileStore> fileStores);
+    public abstract boolean dragStart(
+            List<AbstractExplorerFileStore> fileStores);
 
     protected boolean performDropMetaNodeTemplate(final WorkflowManager
-        metaNode, final ExplorerFileStore target) {
+        metaNode, final AbstractExplorerFileStore target) {
         File directory;
         try {
             directory = target.toLocalFile(EFS.NONE, null);
@@ -266,9 +269,10 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     + "(mount provider \"" + toString() + "\"");
             return false;
         }
-        if (!directory.isDirectory() || ExplorerFileStore.isWorkflow(target)
-                || ExplorerFileStore.isNode(target)
-                || ExplorerFileStore.isMetaNode(target)) {
+        if (!directory.isDirectory() 
+                || AbstractExplorerFileStore.isWorkflow(target)
+                || AbstractExplorerFileStore.isNode(target)
+                || AbstractExplorerFileStore.isMetaNode(target)) {
             return false;
         }
         Shell s = Display.getDefault().getActiveShell();
@@ -297,11 +301,11 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             // remove weird chars - word chars (\w), spaces & dashes are OK
             uniqueName = uniqueName.replaceAll("[^\\w \\-]", "_");
             File wmDir = new File(directory, uniqueName);
-            ExplorerFileStore efsDir = target.getChild(uniqueName);
+            AbstractExplorerFileStore efsDir = target.getChild(uniqueName);
             boolean doesTargetExist = wmDir.exists();
             boolean isOverwrite = false;
             if (doesTargetExist
-                    && !ExplorerFileStore.isWorkflowTemplate(efsDir)) {
+                    && !AbstractExplorerFileStore.isWorkflowTemplate(efsDir)) {
                 StringBuilder eMsg = new StringBuilder();
                 eMsg.append("The target directory \"");
                 eMsg.append(mountIDWithFullPath).append("/").append(uniqueName);
@@ -421,19 +425,21 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * {@inheritDoc}
      */
     @Override
-    public abstract ExplorerFileStore[] getChildren(Object parentElement);
+    public abstract AbstractExplorerFileStore[] getChildren(
+            Object parentElement);
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public abstract ExplorerFileStore[] getElements(Object inputElement);
+    public abstract AbstractExplorerFileStore[] getElements(
+            Object inputElement);
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public abstract ExplorerFileStore getParent(Object element);
+    public abstract AbstractExplorerFileStore getParent(Object element);
 
     /* ---------- helper methods for content provider ------------------- */
     /**
@@ -442,9 +448,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param workflow the workflow to return the children for
      * @return children of a workflow
      */
-    public static ExplorerFileStore[] getWorkflowChildren(
-            final ExplorerFileStore workflow) {
-        assert ExplorerFileStore.isWorkflow(workflow);
+    public static AbstractExplorerFileStore[] getWorkflowChildren(
+            final AbstractExplorerFileStore workflow) {
+        assert AbstractExplorerFileStore.isWorkflow(workflow);
 
         try {
             IFileStore[] childs = workflow.childStores(EFS.NONE, null);
@@ -477,8 +483,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param template to return children for
      * @return children of the template.
      */
-    public static ExplorerFileStore[] getWorkflowTemplateChildren(
-            final ExplorerFileStore template) {
+    public static AbstractExplorerFileStore[] getWorkflowTemplateChildren(
+            final AbstractExplorerFileStore template) {
         // meta nodes have not children (as long as we don't show their nodes)
         return NO_CHILD;
     }
@@ -489,36 +495,36 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param workflowGroup the workflow group to return the children for
      * @return the content of the workflow group
      */
-    public static ExplorerFileStore[] getWorkflowgroupChildren(
-            final ExplorerFileStore workflowGroup) {
+    public static AbstractExplorerFileStore[] getWorkflowgroupChildren(
+            final AbstractExplorerFileStore workflowGroup) {
 
-        assert ExplorerFileStore.isWorkflowGroup(workflowGroup);
+        assert AbstractExplorerFileStore.isWorkflowGroup(workflowGroup);
 
         try {
-            ExplorerFileStore[] childs =
+            AbstractExplorerFileStore[] childs =
                 workflowGroup.childStores(EFS.NONE, null);
             if (childs == null || childs.length == 0) {
                 return NO_CHILD;
             }
-            ArrayList<ExplorerFileStore> result =
-                    new ArrayList<ExplorerFileStore>();
-            for (ExplorerFileStore c : childs) {
-                if (ExplorerFileStore.isWorkflowGroup(c)
-                        || ExplorerFileStore.isWorkflow(c)
-                        || ExplorerFileStore.isWorkflowTemplate(c)) {
+            ArrayList<AbstractExplorerFileStore> result =
+                    new ArrayList<AbstractExplorerFileStore>();
+            for (AbstractExplorerFileStore c : childs) {
+                if (AbstractExplorerFileStore.isWorkflowGroup(c)
+                        || AbstractExplorerFileStore.isWorkflow(c)
+                        || AbstractExplorerFileStore.isWorkflowTemplate(c)) {
                     result.add(c);
                 }
             }
-            return result.toArray(new ExplorerFileStore[result.size()]);
+            return result.toArray(new AbstractExplorerFileStore[result.size()]);
         } catch (CoreException ce) {
             LOGGER.debug(ce);
             return NO_CHILD;
         }
     }
 
-    public static ExplorerFileStore[] getMetaNodeChildren(
-            final ExplorerFileStore metaNode) {
-        assert ExplorerFileStore.isMetaNode(metaNode);
+    public static AbstractExplorerFileStore[] getMetaNodeChildren(
+            final AbstractExplorerFileStore metaNode) {
+        assert AbstractExplorerFileStore.isMetaNode(metaNode);
 
         try {
             IFileStore[] childs = metaNode.childStores(EFS.NONE, null);
@@ -555,21 +561,21 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param efs the explorer file store
      * @return the icon/image for the passed file store
      */
-    public static Image getWorkspaceImage(final ExplorerFileStore efs) {
+    public static Image getWorkspaceImage(final AbstractExplorerFileStore efs) {
 
-        if (ExplorerFileStore.isNode(efs)) {
+        if (AbstractExplorerFileStore.isNode(efs)) {
             return IconFactory.instance.node();
         }
-        if (ExplorerFileStore.isMetaNode(efs)) {
+        if (AbstractExplorerFileStore.isMetaNode(efs)) {
             return IconFactory.instance.node();
         }
-        if (ExplorerFileStore.isWorkflowGroup(efs)) {
+        if (AbstractExplorerFileStore.isWorkflowGroup(efs)) {
             return IconFactory.instance.workflowgroup();
         }
-        if (ExplorerFileStore.isWorkflowTemplate(efs)) {
+        if (AbstractExplorerFileStore.isWorkflowTemplate(efs)) {
             return IconFactory.instance.workflowtemplate();
         }
-        if (!ExplorerFileStore.isWorkflow(efs)) {
+        if (!AbstractExplorerFileStore.isWorkflow(efs)) {
             return null;
         }
 

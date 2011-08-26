@@ -57,7 +57,7 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
@@ -111,9 +111,10 @@ public class WorkflowImportAction extends ExplorerAction {
     @Override
     public void run() {
         WorkflowImportWizard impWiz = new WorkflowImportWizard();
-        Map<AbstractContentProvider, List<ExplorerFileStore>> selectedFiles =
+        Map<AbstractContentProvider, 
+                List<AbstractExplorerFileStore>> selectedFiles =
                 getSelectedFiles();
-        ExplorerFileStore sel = null;
+        AbstractExplorerFileStore sel = null;
         if (selectedFiles != null && selectedFiles.size() > 0) {
             sel = selectedFiles.values().iterator().next().iterator().next();
         }
@@ -126,7 +127,8 @@ public class WorkflowImportAction extends ExplorerAction {
 //                SIZING_WIZARD_HEIGHT);
         dialog.open();
 
-        ExplorerFileStore destination = impWiz.getDestinationContainer();
+        AbstractExplorerFileStore destination 
+                = impWiz.getDestinationContainer();
         Object object = ContentDelegator.getTreeObjectFor(destination);
         getViewer().refresh(object);
         getViewer().reveal(object);

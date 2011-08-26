@@ -45,78 +45,40 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * Created: May 27, 2011
+ * Created: Apr 12, 2011
  * Author: ohl
  */
-package org.knime.workbench.explorer.view.actions;
+package org.knime.workbench.explorer.filesystem;
 
 import java.io.File;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
  *
  * @author ohl, University of Konstanz
  */
-public class NewWorkflowGroupWizard extends NewWorkflowWizard {
+public abstract class LocalExplorerFileStore extends AbstractExplorerFileStore {
 
     /**
-     * Creates the wizard.
+     * @param mountID the id of the mount point
+     * @param fullPath the full path
+     */
+    protected LocalExplorerFileStore(final String mountID,
+            final String fullPath) {
+        super(mountID, fullPath);
+    }
+
+    /**
+     * Convenience method that calls #toLocalFile(int, IProgressMonitor) with
+     * options = EFS.CACHE and monitor = null.
      *
-     * @param spaceProvider the content provider to create a group in
-     */
-    public NewWorkflowGroupWizard(final AbstractContentProvider spaceProvider) {
-        super(spaceProvider);
-    }
-
-    /**
-     * {@inheritDoc}
+     * @return the local file or null if not supported
+     * @throws CoreException if this method fails
      */
     @Override
-    public void addPages() {
-        NewWorkflowWizardPage page = new NewWorkflowWizardPage(
-                getConentProvider(), getInitialSelection(), 
-                /* isWorkflow= */false);
-        addPage(page);
+    public File toLocalFile() throws CoreException {
+        return toLocalFile(EFS.CACHE, null);
     }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void doFinish(final AbstractExplorerFileStore newItem,
-            final IProgressMonitor monitor) throws CoreException {
-
-        if (newItem.fetchInfo().exists()) {
-            throwCoreException("Resource \"" + newItem.getFullName()
-                    + "\" already exists.", null);
-        }
-
-        if (!newItem.getParent().fetchInfo().exists()) {
-            throwCoreException("Parent directory doesn't exist. "
-                    + "Create a workflow group before you place "
-                    + "a workflow group in.", null);
-        }
-
-        // create workflow group dir
-        newItem.mkdir(EFS.NONE, monitor);
-
-        // create a new empty meta info file
-        File locFile = newItem.toLocalFile(EFS.NONE, monitor);
-        if (locFile == null) {
-            // strange - can't create meta info file then
-            return;
-        }
-        MetaInfoFile.createMetaInfoFile(locFile, false);
-        if (newItem instanceof LocalWorkspaceFileStore) {
-            ((LocalWorkspaceFileStore)newItem).refreshParentResource();
-        }
-    }
-
 }

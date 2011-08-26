@@ -61,7 +61,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.dialogs.ISelectionValidator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.ui.navigator.actions.selection.TreeSelectionControl;
@@ -77,7 +77,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     private ContentDelegator m_treeInput;
 
-    private ExplorerFileStore m_selectedContainer;
+    private AbstractExplorerFileStore m_selectedContainer;
 
     private final ContentObject m_initialSelection;
 
@@ -115,7 +115,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
         }
     }
 
-    public ExplorerFileStore getSelection() {
+    public AbstractExplorerFileStore getSelection() {
         return m_selectedContainer;
     }
 
@@ -143,7 +143,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
             @Override
             public String isValid(final Object selection) {
                 if (m_validator != null) {
-                    ExplorerFileStore selFile = getSelectedFile(selection);
+                    AbstractExplorerFileStore selFile = getSelectedFile(selection);
                     String result;
                     if (selFile != null) {
                         result = m_validator.isValid(selFile);
@@ -175,7 +175,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * Extracts the file store from the selection. Returns null if the type
      * is unexpected.
      */
-    private ExplorerFileStore getSelectedFile(final Object selection) {
+    private AbstractExplorerFileStore getSelectedFile(final Object selection) {
         return ContentDelegator.getFileStore(selection);
     }
 
@@ -229,7 +229,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
          * @return null if the selection is valid. A user message if it is
          *         invalid.
          */
-        public String isValid(final ExplorerFileStore selection);
+        public String isValid(final AbstractExplorerFileStore selection);
     }
 
 }

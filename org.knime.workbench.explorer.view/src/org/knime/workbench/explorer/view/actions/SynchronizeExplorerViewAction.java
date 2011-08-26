@@ -34,7 +34,7 @@ import org.eclipse.ui.PlatformUI;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
@@ -109,7 +109,8 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         Set<String> mountedIds = m_delegator.getMountedIds();
         for (String id : mountedIds) {
             MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
-            ExplorerFileStore root = mountPoint.getProvider().getFileStore("/");
+            AbstractExplorerFileStore root 
+                    = mountPoint.getProvider().getFileStore("/");
             File localRoot;
             try {
                 localRoot = root.toLocalFile();
@@ -131,7 +132,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
             if (!relPath.startsWith("/")) {
                 relPath = "/" + relPath;
             }
-            ExplorerFileStore store =
+            AbstractExplorerFileStore store =
                     mountPoint.getProvider().getFileStore(relPath);
             getViewer().setSelection(new StructuredSelection(ContentDelegator
                     .getTreeObjectFor(store)), true);

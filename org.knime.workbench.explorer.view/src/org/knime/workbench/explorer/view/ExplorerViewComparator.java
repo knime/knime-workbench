@@ -52,7 +52,7 @@ package org.knime.workbench.explorer.view;
 
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerComparator;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 
 /**
  *
@@ -66,8 +66,8 @@ public class ExplorerViewComparator extends ViewerComparator {
     public int compare(final Viewer viewer, final Object e1, final Object e2) {
         if ((e1 instanceof ContentObject)
                 && (e2 instanceof ContentObject)) {
-            ExplorerFileStore efs1 = ((ContentObject)e1).getObject();
-            ExplorerFileStore efs2 = ((ContentObject)e2).getObject();
+            AbstractExplorerFileStore efs1 = ((ContentObject)e1).getObject();
+            AbstractExplorerFileStore efs2 = ((ContentObject)e2).getObject();
             int cmp = rank(efs2) - rank(efs1);
             if (cmp == 0) {
                 return efs1.getName().compareTo(efs2.getName());
@@ -78,17 +78,17 @@ public class ExplorerViewComparator extends ViewerComparator {
         return 0;
     }
 
-    private int rank(final ExplorerFileStore f) {
+    private int rank(final AbstractExplorerFileStore f) {
         // we want to see workflow groups at the top
-        if (ExplorerFileStore.isWorkflowGroup(f)) {
+        if (AbstractExplorerFileStore.isWorkflowGroup(f)) {
             return 4;
         }
         // then flows
-        if (ExplorerFileStore.isWorkflow(f)) {
+        if (AbstractExplorerFileStore.isWorkflow(f)) {
             return 3;
         }
         // then templates
-        if (ExplorerFileStore.isWorkflowTemplate(f)) {
+        if (AbstractExplorerFileStore.isWorkflowTemplate(f)) {
             return 2;
         }
         // down there directories

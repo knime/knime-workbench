@@ -72,7 +72,7 @@ import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.eclipse.ui.internal.wizards.datatransfer.ArchiveFileManipulations;
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
 import org.knime.core.util.FileUtil;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
@@ -84,15 +84,15 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
     private final Collection<IWorkflowImportElement> m_workflows;
 
-    private final ExplorerFileStore m_targetPath;
+    private final AbstractExplorerFileStore m_targetPath;
 
     private final Shell m_shell;
 
     // stores those directories which not yet contain a metainfo file and
     // hence are not displayed - meta info file has to be created after the
     // import -> occurs when importing zip files containing directories
-    private final List<ExplorerFileStore> m_missingMetaInfoLocations =
-            new ArrayList<ExplorerFileStore>();
+    private final List<AbstractExplorerFileStore> m_missingMetaInfoLocations =
+            new ArrayList<AbstractExplorerFileStore>();
 
     /**
      *
@@ -102,7 +102,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      */
     public WorkflowImportOperation(
             final Collection<IWorkflowImportElement> workflows,
-            final ExplorerFileStore targetPath, final Shell shell) {
+            final AbstractExplorerFileStore targetPath, final Shell shell) {
         m_workflows = workflows;
         m_targetPath = targetPath;
         m_shell = shell;
@@ -149,7 +149,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
         // determine the destination from the renamed element
         IPath renamedElementPath = importElement.getRenamedPath();
-        ExplorerFileStore destination = m_targetPath;
+        AbstractExplorerFileStore destination = m_targetPath;
         if (renamedElementPath.segmentCount() > 0) {
             destination = m_targetPath.getChild(renamedElementPath.toString());
         }
@@ -167,12 +167,6 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
         } else if (importElement instanceof WorkflowImportElementFromArchive) {
             WorkflowImportElementFromArchive zip =
                     (WorkflowImportElementFromArchive)importElement;
-            if (provider != null) {
-                // since we can only import from one archive
-                // file we assume to have the very same provider
-                // for all entries
-                assert provider == zip.getProvider();
-            }
             provider = zip.getProvider();
 
             // create workflow from ZIP archive
@@ -195,8 +189,8 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      */
     protected void importWorkflowFromFile(
             final WorkflowImportElementFromFile fileElement,
-            final ExplorerFileStore destination, final IProgressMonitor monitor)
-            throws IOException {
+            final AbstractExplorerFileStore destination, 
+            final IProgressMonitor monitor) throws IOException {
 
         File destinationDir = null;
 
@@ -219,7 +213,8 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             m_missingMetaInfoLocations.add(destination);
             // import all sub elements
             for (IWorkflowImportElement wieff : fileElement.getChildren()) {
-                ExplorerFileStore dest = destination.getChild(wieff.getName());
+                AbstractExplorerFileStore dest 
+                        = destination.getChild(wieff.getName());
                 importWorkflowFromFile((WorkflowImportElementFromFile)wieff,
                         dest, monitor);
             }
@@ -241,7 +236,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      */
     protected void importWorkflowFromArchive(
             final WorkflowImportElementFromArchive zipElement,
-            final ExplorerFileStore destination, final IProgressMonitor monitor)
+            final AbstractExplorerFileStore destination, final IProgressMonitor monitor)
             throws IOException {
 
         // in the wizard page we make sure the destination doesn't exist
@@ -261,7 +256,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             m_missingMetaInfoLocations.add(destination);
             // import all sub elements
             for (IWorkflowImportElement wie : zipElement.getChildren()) {
-                ExplorerFileStore dest = destination.getChild(wie.getName());
+                AbstractExplorerFileStore dest = destination.getChild(wie.getName());
                 importWorkflowFromArchive(
                         (WorkflowImportElementFromArchive)wie, dest, monitor);
             }
@@ -280,7 +275,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      */
     protected void importZipEntry(
             final ILeveledImportStructureProvider zipProvider,
-            final ZipEntry entry, final ExplorerFileStore destination,
+            final ZipEntry entry, final AbstractExplorerFileStore destination,
             final IProgressMonitor monitor) throws IOException {
 
         assert !destination.fetchInfo().exists();
@@ -296,7 +291,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             // import all sub elements
             for (Object c : zipProvider.getChildren(entry)) {
                 ZipEntry child = (ZipEntry)c;
-                ExplorerFileStore childDest =
+                AbstractExplorerFileStore childDest =
                         destination.getChild(
                                 new Path(child.getName()).lastSegment());
                 importZipEntry(zipProvider, child, childDest, monitor);
@@ -335,7 +330,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
     }
 
     private void createMetaInfo() throws Exception {
-        for (ExplorerFileStore f : m_missingMetaInfoLocations) {
+        for (AbstractExplorerFileStore f : m_missingMetaInfoLocations) {
             assert f.fetchInfo().exists();
             File parent = f.toLocalFile();
             if (parent != null) {

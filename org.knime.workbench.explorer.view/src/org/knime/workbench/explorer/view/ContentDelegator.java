@@ -38,7 +38,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
@@ -173,7 +173,7 @@ public class ContentDelegator extends LabelProvider implements
      * @return a new array with wrapped objects.
      */
     private ContentObject[] wrapObjects(final AbstractContentProvider provider,
-            final ExplorerFileStore[] fileStores) {
+            final AbstractExplorerFileStore[] fileStores) {
         ContentObject[] result = new ContentObject[fileStores.length];
         for (int i = 0; i < fileStores.length; i++) {
             result[i] = new ContentObject(provider, fileStores[i]);
@@ -204,7 +204,8 @@ public class ContentDelegator extends LabelProvider implements
         if (!(parentElement instanceof ContentObject)) {
             // all children should be of that type!
             LOGGER.coding("Unexpected object in tree view! (" + parentElement
-                    + " of type " + parentElement.getClass().getCanonicalName());
+                    + " of type " 
+                    + parentElement.getClass().getCanonicalName());
             return NO_CHILDREN;
         }
         ContentObject c = ((ContentObject)parentElement);
@@ -252,7 +253,7 @@ public class ContentDelegator extends LabelProvider implements
         ContentObject c = (ContentObject)element;
         // we must ask the corresponding content provider
         AbstractContentProvider provider = c.getProvider();
-        ExplorerFileStore parent = provider.getParent(c.getObject());
+        AbstractExplorerFileStore parent = provider.getParent(c.getObject());
         if (parent == null || provider.getFileStore("/").equals(parent)) {
             // the root of each subtree is the provider itself
             return provider;
@@ -318,7 +319,7 @@ public class ContentDelegator extends LabelProvider implements
      * @return the (new but) same object that is stored in the view tree for the
      *         passed file.
      */
-    public static Object getTreeObjectFor(final ExplorerFileStore file) {
+    public static Object getTreeObjectFor(final AbstractExplorerFileStore file) {
         if (file == null) {
             return null;
         }
@@ -335,21 +336,21 @@ public class ContentDelegator extends LabelProvider implements
     }
 
     /**
-     * Same as {@link #getTreeObjectFor(ExplorerFileStore)}, just for lists. The
-     * result list may be shorter than the argument list as null elements are
-     * not added (in case objects in the argument collection are of unexpected
-     * type).
-     *
+     * Same as {@link #getTreeObjectFor(AbstractExplorerFileStore)}, just for
+     * lists. The result list may be shorter than the argument list as null
+     * elements are not added (in case objects in the argument collection are of
+     * unexpected type).
+     * 
      * @param files the files to get tree objects for
      * @return a list of tree objects for the files.
      */
     public static List<Object> getTreeObjectList(
-            final Collection<? extends ExplorerFileStore> files) {
+            final Collection<? extends AbstractExplorerFileStore> files) {
         if (files == null) {
             return null;
         }
         ArrayList<Object> result = new ArrayList<Object>();
-        for (ExplorerFileStore f : files) {
+        for (AbstractExplorerFileStore f : files) {
             Object o = getTreeObjectFor(f);
             if (o != null) {
                 result.add(o);
@@ -365,7 +366,8 @@ public class ContentDelegator extends LabelProvider implements
      * @return the file store corresponding to the passed treeviewer object or
      *         null, if the object passed is of unexpected type
      */
-    public static ExplorerFileStore getFileStore(final Object treeObject) {
+    public static AbstractExplorerFileStore getFileStore(
+            final Object treeObject) {
         if (treeObject instanceof ContentObject) {
             return ((ContentObject)treeObject).getObject();
         } else if (treeObject instanceof AbstractContentProvider) {
@@ -384,15 +386,15 @@ public class ContentDelegator extends LabelProvider implements
      * @param treeObjects the tree objects to convert
      * @return a list of file stores
      */
-    public static List<ExplorerFileStore> getFileStoreList(
+    public static List<AbstractExplorerFileStore> getFileStoreList(
             final Collection<? extends Object> treeObjects) {
         if (treeObjects == null) {
             return null;
         }
-        ArrayList<ExplorerFileStore> result =
-                new ArrayList<ExplorerFileStore>();
+        ArrayList<AbstractExplorerFileStore> result =
+                new ArrayList<AbstractExplorerFileStore>();
         for (Object o : treeObjects) {
-            ExplorerFileStore f = getFileStore(o);
+            AbstractExplorerFileStore f = getFileStore(o);
             if (f != null) {
                 result.add(f);
             }
@@ -531,7 +533,8 @@ public class ContentDelegator extends LabelProvider implements
      *
      * @param listener the property change listener to add
      */
-    public void addPropertyChangeListener(final IPropertyChangeListener listener) {
+    public void addPropertyChangeListener(
+            final IPropertyChangeListener listener) {
         m_changeListener.add(listener);
     }
 

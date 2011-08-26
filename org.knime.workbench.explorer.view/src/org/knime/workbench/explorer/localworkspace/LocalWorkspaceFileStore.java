@@ -71,7 +71,8 @@ import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 import org.knime.workbench.ui.nature.KNIMEProjectNature;
 import org.knime.workbench.ui.navigator.KnimeResourceUtil;
@@ -83,7 +84,7 @@ import org.knime.workbench.ui.navigator.KnimeResourceUtil;
  *
  * @author ohl, University of Konstanz
  */
-public class LocalWorkspaceFileStore extends ExplorerFileStore {
+public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     private static final NodeLogger LOGGER
             = NodeLogger.getLogger(LocalWorkspaceFileStore.class);
 
@@ -93,11 +94,32 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * @param mountID the id of the mount
      * @param fullPath the full path of the file store
      */
-    public LocalWorkspaceFileStore(final String mountID, final String fullPath) {
+    public LocalWorkspaceFileStore(final String mountID,
+            final String fullPath) {
         super(mountID, fullPath);
         IPath rootPath = ResourcesPlugin.getWorkspace().getRoot().getLocation();
         IPath filePath = rootPath.append(new Path(fullPath));
         m_file = EFS.getLocalFileSystem().getStore(filePath);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean equals(final Object obj) {
+        if (!(obj instanceof LocalWorkspaceFileStore)) {
+            return false;
+        }
+        LocalWorkspaceFileStore other = (LocalWorkspaceFileStore)obj;
+        return getFullName().equalsIgnoreCase(other.getFullName());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int hashCode() {
+        return getFullName().toLowerCase().hashCode();
     }
 
     /**
@@ -117,8 +139,8 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public String[] childNames(final int options, final IProgressMonitor monitor)
-            throws CoreException {
+    public String[] childNames(final int options,
+            final IProgressMonitor monitor) throws CoreException {
         return m_file.childNames(options, monitor);
     }
 
@@ -126,8 +148,8 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public IFileInfo fetchInfo(final int options, final IProgressMonitor monitor)
-            throws CoreException {
+    public IFileInfo fetchInfo(final int options,
+            final IProgressMonitor monitor) throws CoreException {
         return m_file.fetchInfo(options, monitor);
     }
 
@@ -220,7 +242,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * destination is the workflow root and no .project file exists yet).
      *
      * @param projectName the name of the project
-     * @param the parent file store of the project
+     * @param destination the parent file store of the project
      * @param monitor a progress monitor, or null if progress reporting and
      *      cancellation are not desired
      *
@@ -332,7 +354,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore mkdir(final int options,
+    public AbstractExplorerFileStore mkdir(final int options,
             final IProgressMonitor monitor) throws CoreException {
         m_file.mkdir(options, monitor);
         createProjectFile(getParent(), monitor);
@@ -373,5 +395,7 @@ public class LocalWorkspaceFileStore extends ExplorerFileStore {
         refreshResource(destination.getParent(), monitor);
         refreshParentResource();
     }
+
+
 
 }

@@ -20,7 +20,7 @@ package org.knime.workbench.explorer.view;
 
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 
 /**
  * Used as object in the treeview of the KNIME Explorer. Wraps the objects
@@ -33,7 +33,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
  */
 public final class ContentObject {
 
-    private final ExplorerFileStore m_obj;
+    private final AbstractExplorerFileStore m_obj;
 
     private final AbstractContentProvider m_creator;
 
@@ -42,7 +42,7 @@ public final class ContentObject {
      * @param o
      */
     ContentObject(final AbstractContentProvider creator,
-            final ExplorerFileStore o) {
+            final AbstractExplorerFileStore o) {
         if (creator == null) {
             throw new NullPointerException(
                     "Creator (provider) can't be null for Object " + o);
@@ -54,7 +54,7 @@ public final class ContentObject {
     /**
      * @return the wrapped object
      */
-    public ExplorerFileStore getObject() {
+    public AbstractExplorerFileStore getObject() {
         return m_obj;
     }
 
@@ -111,10 +111,10 @@ public final class ContentObject {
      *         to a non existing mount point. NOTE: The explorer view does not
      *         store root file objects (with path "/"). But this method returns
      *         a content object if a file with path "/" is passed.
-     * @see ContentDelegator#getTreeObjectFor(ExplorerFileStore)
+     * @see ContentDelegator#getTreeObjectFor(AbstractExplorerFileStore)
      *
      */
-    public static ContentObject forFile(final ExplorerFileStore file) {
+    public static ContentObject forFile(final AbstractExplorerFileStore file) {
         if (file == null) {
             return null;
         }

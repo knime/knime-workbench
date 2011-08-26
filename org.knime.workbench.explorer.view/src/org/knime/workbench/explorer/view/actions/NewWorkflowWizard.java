@@ -77,7 +77,7 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -92,7 +92,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
 
     private final AbstractContentProvider m_contentProvider;
 
-    private List<ExplorerFileStore> m_initialSelection;
+    private List<AbstractExplorerFileStore> m_initialSelection;
 
     /**
      * Creates the wizard.
@@ -106,7 +106,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         return m_contentProvider;
     }
 
-    protected List<ExplorerFileStore> getInitialSelection() {
+    protected List<AbstractExplorerFileStore> getInitialSelection() {
         return m_initialSelection;
     }
 
@@ -116,14 +116,14 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
     @Override
     public void init(final IWorkbench workbench,
             final IStructuredSelection selection) {
-        m_initialSelection = new LinkedList<ExplorerFileStore>();
+        m_initialSelection = new LinkedList<AbstractExplorerFileStore>();
         if (selection != null && selection.size() > 0) {
             String mountID = m_contentProvider.getMountID();
             @SuppressWarnings("rawtypes")
             Iterator iter = selection.iterator();
             while (iter.hasNext()) {
                 Object n = iter.next();
-                ExplorerFileStore file = null;
+                AbstractExplorerFileStore file = null;
                 if (n instanceof ContentObject) {
                     file = ((ContentObject)n).getObject();
                 } else if (n instanceof AbstractContentProvider) {
@@ -165,7 +165,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
      */
     @Override
     public boolean performFinish() {
-        final ExplorerFileStore newitem = m_page.getNewFile();
+        final AbstractExplorerFileStore newitem = m_page.getNewFile();
         if (!newitem.getMountID().equals(m_contentProvider.getMountID())) {
             MessageDialog.openError(getShell(), "Internal Error",
                     "Internal Error: Unable to create a new item in this "
@@ -209,7 +209,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
      * @param monitor Progress monitor
      * @throws CoreException if error while creating the project
      */
-    protected void doFinish(final ExplorerFileStore newItem,
+    protected void doFinish(final AbstractExplorerFileStore newItem,
             final IProgressMonitor monitor) throws CoreException {
 
         if (newItem.fetchInfo().exists()) {
@@ -227,7 +227,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         newItem.mkdir(EFS.NONE, monitor);
 
         // create a new empty workflow file
-        final ExplorerFileStore workflowFile =
+        final AbstractExplorerFileStore workflowFile =
                 newItem.getChild(WorkflowPersistor.WORKFLOW_FILE);
         OutputStream outStream =
                 workflowFile.openOutputStream(EFS.NONE, monitor);

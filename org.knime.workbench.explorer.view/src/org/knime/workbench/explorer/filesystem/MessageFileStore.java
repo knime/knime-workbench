@@ -20,20 +20,35 @@ import org.knime.workbench.explorer.view.IconFactory;
  *
  * @author ohl, University of Konstanz
  */
-public final class MessageFileStore extends ExplorerFileStore {
+public final class MessageFileStore extends AbstractExplorerFileStore {
     private final String m_msg;
-
     private final Image m_image;
 
+    /**
+     * Creates a new message file store with the specified mount id and
+     * message.
+     * @param mountID the id of the mount point
+     * @param message the message to display
+     *
+     * @see AbstractExplorerFileStore#AbstractExplorerFileStore(String, String)
+     */
     public MessageFileStore(final String mountID, final String message) {
         this(mountID, message, IconFactory.instance.info());
     }
 
+    /**
+     * Creates a new message file store with the specified mount id, message
+     * and icon.
+     * @param mountID the id of the mount point
+     * @param message the message to display
+     * @param image the image for the icon to display
+     */
     public MessageFileStore(final String mountID, final String message,
             final Image image) {
         super(mountID, "");
         if (message == null) {
-            throw new NullPointerException("Message to display must no be null");
+            throw new NullPointerException(
+                    "Message to display must no be null");
         }
         m_msg = message;
 
@@ -80,7 +95,7 @@ public final class MessageFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore getMessageFileStore(final String msg) {
+    public AbstractExplorerFileStore getMessageFileStore(final String msg) {
         throw new UnsupportedOperationException(
                 "Not supported in message file store.");
     }
@@ -98,8 +113,8 @@ public final class MessageFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public String[] childNames(final int options, final IProgressMonitor monitor)
-            throws CoreException {
+    public String[] childNames(final int options,
+            final IProgressMonitor monitor) throws CoreException {
         return EMPTY_STRING_ARRAY;
     }
 
@@ -107,9 +122,9 @@ public final class MessageFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore[] childStores(final int options,
+    public AbstractExplorerFileStore[] childStores(final int options,
             final IProgressMonitor monitor) throws CoreException {
-        return new ExplorerFileStore[0];
+        return new AbstractExplorerFileStore[0];
     }
 
     /**
@@ -175,8 +190,8 @@ public final class MessageFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public IFileInfo fetchInfo(final int options, final IProgressMonitor monitor)
-            throws CoreException {
+    public IFileInfo fetchInfo(final int options,
+            final IProgressMonitor monitor) throws CoreException {
         return fetchInfo();
     }
 
@@ -200,7 +215,7 @@ public final class MessageFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore getChild(final String name) {
+    public AbstractExplorerFileStore getChild(final String name) {
         return null;
     }
 
@@ -208,7 +223,7 @@ public final class MessageFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore getParent() {
+    public AbstractExplorerFileStore getParent() {
         return null;
     }
 
@@ -224,7 +239,7 @@ public final class MessageFileStore extends ExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore mkdir(final int options,
+    public AbstractExplorerFileStore mkdir(final int options,
             final IProgressMonitor monitor) throws CoreException {
         throw new UnsupportedOperationException(
                 "Not supported in message file store.");
@@ -310,5 +325,13 @@ public final class MessageFileStore extends ExplorerFileStore {
      */
     public Image getImage() {
         return m_image;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public File toLocalFile() throws CoreException {
+        return null;
     }
 }

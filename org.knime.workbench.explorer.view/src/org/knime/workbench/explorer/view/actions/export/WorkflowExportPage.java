@@ -81,7 +81,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
@@ -103,7 +103,7 @@ public class WorkflowExportPage extends WizardPage {
 
     private Button m_excludeData;
 
-    private ExplorerFileStore m_selection;
+    private AbstractExplorerFileStore m_selection;
 
     private ExplorerFileStoreProvider m_provider;
 
@@ -120,7 +120,7 @@ public class WorkflowExportPage extends WizardPage {
      *
      * @param selection The initial selection
      */
-    public WorkflowExportPage(final ExplorerFileStore selection) {
+    public WorkflowExportPage(final AbstractExplorerFileStore selection) {
         super("wizardPage");
         setTitle("Export KNIME workflow(s)");
         setDescription("Exports KNIME workflows.");
@@ -233,8 +233,9 @@ public class WorkflowExportPage extends WizardPage {
                 // first expand in order to be able to check children as well
                 m_treeViewer.expandToLevel(o, AbstractTreeViewer.ALL_LEVELS);
                 m_treeViewer.setSubtreeChecked(o, isChecked);
-                if (o instanceof ExplorerFileStore) {
-                    ExplorerFileStore sel = (ExplorerFileStore)o;
+                if (o instanceof AbstractExplorerFileStore) {
+                    AbstractExplorerFileStore sel 
+                            = (AbstractExplorerFileStore)o;
                     setParentTreeChecked(sel, isChecked);
                 }
                 dialogChanged();
@@ -249,7 +250,7 @@ public class WorkflowExportPage extends WizardPage {
      */
     private void initialize() {
 
-        ExplorerFileStore sel = m_selection;
+        AbstractExplorerFileStore sel = m_selection;
         // load last selected dir from dialog settings
         IDialogSettings settings = getDialogSettings();
         if (settings != null) {
@@ -264,7 +265,7 @@ public class WorkflowExportPage extends WizardPage {
         updateFileName(sel);
     }
 
-    private void updateFileName(final ExplorerFileStore sel) {
+    private void updateFileName(final AbstractExplorerFileStore sel) {
         if (sel != null) {
             String fileName = sel.getName() + ".zip";
             if (sel.getFullName().equals("/")) {
@@ -303,9 +304,9 @@ public class WorkflowExportPage extends WizardPage {
                         "Select workflow or group to export");
         dlg.setValidator(new SelectionValidator() {
             @Override
-            public String isValid(final ExplorerFileStore selection) {
-                if (!(ExplorerFileStore.isDirOrWorkflowGroup(selection)
-                        || ExplorerFileStore.isWorkflow(selection))) {
+            public String isValid(final AbstractExplorerFileStore selection) {
+                if (!(AbstractExplorerFileStore.isDirOrWorkflowGroup(selection)
+                        || AbstractExplorerFileStore.isWorkflow(selection))) {
                     return "Please select a workflow or workflow group";
                 }
                 return null;
@@ -315,7 +316,7 @@ public class WorkflowExportPage extends WizardPage {
         if (dlg.open() != Window.OK) {
             return;
         }
-        ExplorerFileStore sel = dlg.getSelection();
+        AbstractExplorerFileStore sel = dlg.getSelection();
         if (sel == null) {
             return;
         }
@@ -331,7 +332,7 @@ public class WorkflowExportPage extends WizardPage {
 //        m_treeViewer.expandAll();
 //        m_treeViewer.setAllChecked(false);
 
-        if (ExplorerFileStore.isWorkflow(m_selection)) {
+        if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
             m_treeViewer.getTree().setVisible(false);
         } else {
             // clear the selection before setting a new input!!!
@@ -387,9 +388,9 @@ public class WorkflowExportPage extends WizardPage {
         obj.add(m_selection);
         while (obj.size() > 0) {
             Object f = obj.remove(obj.size() - 1);
-            if (f instanceof ExplorerFileStore) {
-                ExplorerFileStore store = (ExplorerFileStore)f;
-                if (ExplorerFileStore.isWorkflow(store)) {
+            if (f instanceof AbstractExplorerFileStore) {
+                AbstractExplorerFileStore store = (AbstractExplorerFileStore)f;
+                if (AbstractExplorerFileStore.isWorkflow(store)) {
                     m_treeViewer.setChecked(store, true);
                     setParentTreeChecked(store, true);
                     // workflows don't have no children
@@ -424,10 +425,10 @@ public class WorkflowExportPage extends WizardPage {
                 && m_treeViewer.getCheckedElements().length == 0) {
             return "Please select the workflows to export.";
         }
-        Collection<ExplorerFileStore> sel = getWorkflowsOrGroups();
+        Collection<AbstractExplorerFileStore> sel = getWorkflowsOrGroups();
         String msg = "Selection contains no workflows.";
-        for (ExplorerFileStore store : sel) {
-            if (ExplorerFileStore.isWorkflow(store)) {
+        for (AbstractExplorerFileStore store : sel) {
+            if (AbstractExplorerFileStore.isWorkflow(store)) {
                 msg = null;
                 break;
             }
@@ -445,7 +446,7 @@ public class WorkflowExportPage extends WizardPage {
      *
      * @return selected workflow, or the root of all selected flows
      */
-    public ExplorerFileStore getSelectedStore() {
+    public AbstractExplorerFileStore getSelectedStore() {
         return m_selection;
     }
 
@@ -453,26 +454,27 @@ public class WorkflowExportPage extends WizardPage {
      *
      * @return checked workflows and workflow groups
      */
-    public Collection<ExplorerFileStore> getWorkflowsOrGroups() {
+    public Collection<AbstractExplorerFileStore> getWorkflowsOrGroups() {
 
-        List<ExplorerFileStore> workflows = new ArrayList<ExplorerFileStore>();
+        List<AbstractExplorerFileStore> workflows 
+                = new ArrayList<AbstractExplorerFileStore>();
 
-        if (ExplorerFileStore.isWorkflow(m_selection)) {
+        if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
             workflows.add(m_selection);
             return workflows;
         }
 
-        if (ExplorerFileStore.isDirOrWorkflowGroup(m_selection)) {
+        if (AbstractExplorerFileStore.isDirOrWorkflowGroup(m_selection)) {
             // also add the selected root - unless it is the "/"
             if (!"/".equals(m_selection.getFullName())) {
                 workflows.add(m_selection);
             }
             Object[] checkedObjs = m_treeViewer.getCheckedElements();
             for (Object o : checkedObjs) {
-                ExplorerFileStore file = (ExplorerFileStore)o;
-                if (ExplorerFileStore.isDirOrWorkflowGroup(file)) {
+                AbstractExplorerFileStore file = (AbstractExplorerFileStore)o;
+                if (AbstractExplorerFileStore.isDirOrWorkflowGroup(file)) {
                     workflows.add(file);
-                } else if (ExplorerFileStore.isWorkflow(file)) {
+                } else if (AbstractExplorerFileStore.isWorkflow(file)) {
                     workflows.add(file);
                 }
             }
@@ -510,13 +512,13 @@ public class WorkflowExportPage extends WizardPage {
      * @param element the element whose parents should be checked
      * @param state true for checked, false for uncheck
      */
-    private void setParentTreeChecked(final ExplorerFileStore element,
+    private void setParentTreeChecked(final AbstractExplorerFileStore element,
             final boolean state) {
 
         if (state) {
             // trivial case -> go up and set active
-            ExplorerFileStore child = element;
-            ExplorerFileStore parent = element.getParent();
+            AbstractExplorerFileStore child = element;
+            AbstractExplorerFileStore parent = element.getParent();
             while (parent != null && parent != child) {
                 if (!m_treeViewer.setChecked(parent, state)) {
                     break;
@@ -526,8 +528,8 @@ public class WorkflowExportPage extends WizardPage {
             }
         } else {
             // go up and set parents inactive that have no checked children.
-            ExplorerFileStore child = element;
-            ExplorerFileStore parent = element.getParent();
+            AbstractExplorerFileStore child = element;
+            AbstractExplorerFileStore parent = element.getParent();
             while (parent != null && child != parent) {
                 boolean hasCheckedChild = false;
                 for (Object c : m_provider.getChildren(parent)) {

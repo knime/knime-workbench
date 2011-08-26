@@ -100,7 +100,7 @@ public class ExplorerFileSystem extends FileSystem {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore getStore(final URI uri) {
+    public AbstractExplorerFileStore getStore(final URI uri) {
         String mountID = getIDfromURI(uri);
         MountPoint mountPoint = ExplorerMountTable.getMountPoint(mountID);
         if (mountPoint == null) {
@@ -144,10 +144,10 @@ public class ExplorerFileSystem extends FileSystem {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore fromLocalFile(final File file) {
+    public AbstractExplorerFileStore fromLocalFile(final File file) {
         for (AbstractContentProvider acp
                 : ExplorerMountTable.getMountedContent().values()) {
-            ExplorerFileStore fromLocalFile = acp.fromLocalFile(file);
+            AbstractExplorerFileStore fromLocalFile = acp.fromLocalFile(file);
             if (fromLocalFile != null) {
                 return fromLocalFile;
             }
@@ -166,14 +166,15 @@ public class ExplorerFileSystem extends FileSystem {
     /**
      * If the child path starts with the parent path (ignoring case).
      *
-     * @param parent
-     * @param child
+     * @param parent the file to check if it's the parent
+     * @param child the file to check if it's a child
      * @return true, if the child is contained in the parent or any sub folder
      *         of the parent.
      */
     static boolean isParent(final File parent, final File child) {
         try {
-            return isParent(parent.getCanonicalPath(), child.getCanonicalPath());
+            return isParent(parent.getCanonicalPath(), 
+                    child.getCanonicalPath());
         } catch (IOException e) {
             return false;
         }
@@ -182,8 +183,8 @@ public class ExplorerFileSystem extends FileSystem {
     /**
      * If the child path starts with the parent path (ignoring case).
      *
-     * @param parent
-     * @param child
+     * @param parent the file to check if it's the parent
+     * @param child the file to check if it's a child
      * @return true, if the child is contained in the parent or any sub folder
      *         of the parent.
      */

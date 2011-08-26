@@ -61,7 +61,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
@@ -106,25 +106,27 @@ public class GlobalDeleteAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        Map<AbstractContentProvider, List<ExplorerFileStore>> selectedFiles =
-                getSelectedFiles();
-        List<ExplorerFileStore> allFiles = new LinkedList<ExplorerFileStore>();
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>>
+                selectedFiles = getSelectedFiles();
+        List<AbstractExplorerFileStore> allFiles 
+                = new LinkedList<AbstractExplorerFileStore>();
 
         // remove "double selection" (child whose parents are selected as well)
-        for (Map.Entry<AbstractContentProvider, List<ExplorerFileStore>> e
-                : selectedFiles.entrySet()) {
-            List<ExplorerFileStore> sel = removeSelectedChildren(e.getValue());
+        for (Map.Entry<AbstractContentProvider, 
+                List<AbstractExplorerFileStore>> e : selectedFiles.entrySet()) {
+            List<AbstractExplorerFileStore> sel 
+                    = removeSelectedChildren(e.getValue());
             allFiles.addAll(sel);
         }
         // find workflows included in selection
-        List<ExplorerFileStore> toDelWorkflows =
+        List<AbstractExplorerFileStore> toDelWorkflows =
                 getContainedWorkflows(allFiles);
         // try locking all workflows for deletion
-        LinkedList<ExplorerFileStore> lockedWFs =
-                new LinkedList<ExplorerFileStore>();
+        LinkedList<AbstractExplorerFileStore> lockedWFs =
+                new LinkedList<AbstractExplorerFileStore>();
         if (toDelWorkflows.size() > 0) {
-            LinkedList<ExplorerFileStore> unlockableWFs =
-                    new LinkedList<ExplorerFileStore>();
+            LinkedList<AbstractExplorerFileStore> unlockableWFs =
+                    new LinkedList<AbstractExplorerFileStore>();
             ExplorerFileSystemUtils.lockWorkflows(toDelWorkflows, unlockableWFs,
                     lockedWFs);
             if (unlockableWFs.size() > 0) {
@@ -153,26 +155,27 @@ public class GlobalDeleteAction extends ExplorerAction {
             showUnsuccessfulMessage();
         }
 
-        for (ExplorerFileStore fileStore : toDelWorkflows) {
+        for (AbstractExplorerFileStore fileStore : toDelWorkflows) {
             Object parent = ContentDelegator.getTreeObjectFor(
                     fileStore.getParent());
             getViewer().refresh(parent);
         }
-        for (ExplorerFileStore fileStore : allFiles) {
+        for (AbstractExplorerFileStore fileStore : allFiles) {
             Object parent = ContentDelegator.getTreeObjectFor(
                     fileStore.getParent());
             getViewer().refresh(parent);
         }
     }
 
-    private boolean confirmDeletion(final List<ExplorerFileStore> toDel,
-            final List<ExplorerFileStore> toDelWFs) {
+    private boolean confirmDeletion(final List<AbstractExplorerFileStore> toDel,
+            final List<AbstractExplorerFileStore> toDelWFs) {
 
         String msg = "";
         if (toDel.size() == 1) {
-            if (ExplorerFileStore.isWorkflow(toDel.get(0))) {
+            if (AbstractExplorerFileStore.isWorkflow(toDel.get(0))) {
                 msg = "Do you want to delete the workflow ";
-            } else if (ExplorerFileStore.isWorkflowGroup(toDel.get(0))) {
+            } else if (AbstractExplorerFileStore.isWorkflowGroup(
+                    toDel.get(0))) {
                 msg = "Do you want to delete the workflow group ";
             } else {
                 msg = "Do you want to delete the file ";

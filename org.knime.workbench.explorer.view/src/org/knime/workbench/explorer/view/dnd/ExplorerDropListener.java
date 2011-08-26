@@ -30,7 +30,7 @@ import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.TransferData;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.WorkflowManagerTransfer;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -57,7 +57,7 @@ public class ExplorerDropListener extends ViewerDropAdapter {
     public boolean performDrop(final Object data) {
         LOGGER.debug("performDrop with data: " + data);
         Object target = getCurrentTarget();
-        ExplorerFileStore dstFS = DragAndDropUtils.getFileStore(target);
+        AbstractExplorerFileStore dstFS = DragAndDropUtils.getFileStore(target);
         AbstractContentProvider acp = DragAndDropUtils.getContentProvider(
                 target);
         boolean result = acp.performDrop(data, dstFS, getCurrentOperation());
@@ -78,7 +78,8 @@ public class ExplorerDropListener extends ViewerDropAdapter {
                 || FileTransfer.getInstance().isSupportedType(transferType)
                 || WorkflowManagerTransfer.getTransfer().isSupportedType(
                         transferType)) {
-            ExplorerFileStore dstFS = DragAndDropUtils.getFileStore(target);
+            AbstractExplorerFileStore dstFS 
+                    = DragAndDropUtils.getFileStore(target);
             AbstractContentProvider acp = DragAndDropUtils.getContentProvider(
                     target);
             if (dstFS == null || acp == null) {

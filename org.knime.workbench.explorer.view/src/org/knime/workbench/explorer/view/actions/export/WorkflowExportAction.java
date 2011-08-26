@@ -58,7 +58,7 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -102,7 +102,7 @@ public class WorkflowExportAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        Map<AbstractContentProvider, List<ExplorerFileStore>> sel =
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> sel =
                 getSelectedFiles();
         if (sel.size() != 1 || isMultipleSelection()) {
             LOGGER.info("Please select only a single item to export its "

@@ -51,17 +51,49 @@ package org.knime.workbench.explorer.pathresolve;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Date;
 
 import org.eclipse.core.filesystem.EFS;
 import org.knime.core.util.pathresolve.URIToFileResolve;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+
+import com.knime.licenses.License;
+import com.knime.licenses.LicenseStore;
+import com.knime.licenses.LicenseTypes;
 
 /**
  *
  * @author Bernd Wiswedel, KNIME.com, Zurich, Switzerland
  */
 public class URIToFileResolveImpl implements URIToFileResolve {
+    /* Check the license. */
+    private static final boolean VALID_LICENSE;
+    private static final String LICENSE_MESSAGE;
+    static {
+        License license = LicenseStore.getDefaultStore().getLicense(
+                LicenseTypes.TeamSpace);
+        String message = "";
+        boolean valid = false;
+        try {
+            if (license != null) {
+                valid = license.validate();
+            }
+        } catch (Exception e) {
+            valid = false;
+        }
+        VALID_LICENSE = valid;
+        if (!valid) {
+            message = "No valid license for Team Space feature found.";
+            boolean expired = license != null && license.checkExpiry();
+            if (expired) {
+                Date expirationDate = license.getExpirationDate();
+                message += " Your license has expired on " + expirationDate
+                        + ".";
+            }
+        }
+        LICENSE_MESSAGE = message;
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -84,7 +116,8 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         }
         if (scheme.equalsIgnoreCase(ExplorerFileSystem.SCHEME)) {
             try {
-                ExplorerFileStore s = new ExplorerFileSystem().getStore(uri);
+                AbstractExplorerFileStore s
+                        = new ExplorerFileSystem().getStore(uri);
                 if (s == null) {
                     throw new IOException("Can't resolve file to URI \"" + uri
                             + "\"; the corresponding mount point is probably "

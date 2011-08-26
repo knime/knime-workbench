@@ -40,7 +40,7 @@ import org.eclipse.swt.dnd.DragSourceListener;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
@@ -57,7 +57,7 @@ public class ExplorerDragListener implements DragSourceListener {
 
     private final TreeViewer m_viewer;
 
-    private LinkedList<ExplorerFileStore> m_lockedFlows;
+    private LinkedList<AbstractExplorerFileStore> m_lockedFlows;
 
     /**
      * @param viewer the viewer to which this drag support has been added.
@@ -76,7 +76,7 @@ public class ExplorerDragListener implements DragSourceListener {
                 (IStructuredSelection)m_viewer.getSelection();
 
      // find affected workflows
-        List<ExplorerFileStore> affectedFlows
+        List<AbstractExplorerFileStore> affectedFlows
                 = ExplorerAction.getContainedWorkflows(
                         DragAndDropUtils.getExplorerFileStores(selection));
         if (ExplorerFileSystemUtils.hasOpenWorkflows(affectedFlows)) {
@@ -92,9 +92,11 @@ public class ExplorerDragListener implements DragSourceListener {
             return;
         }
 
-        m_lockedFlows = new LinkedList<ExplorerFileStore>();
-        LinkedList<ExplorerFileStore> unlockableFlows = new LinkedList<ExplorerFileStore>();
-        ExplorerFileSystemUtils.lockWorkflows(affectedFlows, unlockableFlows, m_lockedFlows);
+        m_lockedFlows = new LinkedList<AbstractExplorerFileStore>();
+        LinkedList<AbstractExplorerFileStore> unlockableFlows 
+                = new LinkedList<AbstractExplorerFileStore>();
+        ExplorerFileSystemUtils.lockWorkflows(affectedFlows, unlockableFlows, 
+                m_lockedFlows);
         // unlock flows locked in here
         ExplorerFileSystemUtils.unlockWorkflows(m_lockedFlows);
         if (!unlockableFlows.isEmpty()) {
@@ -102,7 +104,7 @@ public class ExplorerDragListener implements DragSourceListener {
             StringBuilder msg = new StringBuilder("Dragging canceled. "
                     + "At least one of the workflows affected by the "
                     + "dragging is in use by another user/instance:\n");
-            for (ExplorerFileStore lockedFlow : unlockableFlows) {
+            for (AbstractExplorerFileStore lockedFlow : unlockableFlows) {
                 msg.append("\t" + lockedFlow.getMountIDWithFullPath() + "\n");
             }
             LOGGER.warn(msg);
@@ -118,8 +120,8 @@ public class ExplorerDragListener implements DragSourceListener {
             return;
         }
 
-        Map<AbstractContentProvider, List<ExplorerFileStore>> providers =
-                DragAndDropUtils.getProviderMap(selection);
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> 
+                providers = DragAndDropUtils.getProviderMap(selection);
         if (providers == null) {
             // do not allow to drag whole mount points
             LOGGER.warn("Dragging cancelled. Mount points cannot be "
@@ -127,7 +129,8 @@ public class ExplorerDragListener implements DragSourceListener {
             event.doit = false;
         } else {
             // delegate the evaluation to the content providers
-            for (Map.Entry<AbstractContentProvider, List<ExplorerFileStore>>
+            for (Map.Entry<AbstractContentProvider, 
+                    List<AbstractExplorerFileStore>>
                     entry : providers.entrySet()) {
                 AbstractContentProvider provider = entry.getKey();
                 if (!provider.dragStart(entry.getValue())) {
@@ -167,9 +170,9 @@ public class ExplorerDragListener implements DragSourceListener {
             LOGGER.debug("Removing source file(s) after successful drop.");
             IStructuredSelection selections = (IStructuredSelection)
                     transfer.getSelection();
-            List<ExplorerFileStore> fileStores = DragAndDropUtils
+            List<AbstractExplorerFileStore> fileStores = DragAndDropUtils
                     .getExplorerFileStores(selections);
-            for (ExplorerFileStore fs : fileStores) {
+            for (AbstractExplorerFileStore fs : fileStores) {
                 try {
                     if (!fs.fetchInfo().exists()) {
                         continue;

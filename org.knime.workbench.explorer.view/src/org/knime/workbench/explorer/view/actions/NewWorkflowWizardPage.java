@@ -69,7 +69,7 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.knime.workbench.explorer.ExplorerActivator;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -94,7 +94,7 @@ public class NewWorkflowWizardPage extends WizardPage {
             .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
                     "icons/new_knime55.png");
 
-    private ExplorerFileStore m_parent;
+    private AbstractExplorerFileStore m_parent;
 
     private Text m_projectNameUI;
 
@@ -120,14 +120,15 @@ public class NewWorkflowWizardPage extends WizardPage {
      *
      */
     public NewWorkflowWizardPage(final AbstractContentProvider contentProvider,
-            final List<ExplorerFileStore> selection, final boolean isWorkflow) {
+            final List<AbstractExplorerFileStore> selection, 
+            final boolean isWorkflow) {
         super("TeamSpaceNewItemWizardPage");
         if (contentProvider == null) {
             throw new NullPointerException(
                     "Need to provide a non-null content provider");
         }
         if (selection.size() > 0) {
-            ExplorerFileStore f = selection.get(0);
+            AbstractExplorerFileStore f = selection.get(0);
             if (!f.getMountID().equals(contentProvider.getMountID())) {
                 throw new IllegalArgumentException(
                         "MountID of content provider"
@@ -149,14 +150,14 @@ public class NewWorkflowWizardPage extends WizardPage {
     }
 
     private void extractInitiallySelectedResource(
-            final List<ExplorerFileStore> selection) {
+            final List<AbstractExplorerFileStore> selection) {
         if (selection.size() != 1) {
             m_parent = m_contentProvider.getFileStore("/");
             return;
         }
-        ExplorerFileStore sel = selection.get(0);
+        AbstractExplorerFileStore sel = selection.get(0);
         while (!isDirAndNoWorkflow(sel)) {
-            ExplorerFileStore parent = sel.getParent();
+            AbstractExplorerFileStore parent = sel.getParent();
             if (parent == null) {
                 break;
             }
@@ -244,7 +245,7 @@ public class NewWorkflowWizardPage extends WizardPage {
                         "Select a new destination");
         dlg.setValidator(new SelectionValidator() {
             @Override
-            public String isValid(final ExplorerFileStore selection) {
+            public String isValid(final AbstractExplorerFileStore selection) {
                 String msg =
                         "Please select a directory or workflow group "
                                 + "in the " + m_parent.getMountID()
@@ -304,18 +305,18 @@ public class NewWorkflowWizardPage extends WizardPage {
      *
      * @return a file store containing the new path
      */
-    public ExplorerFileStore getNewFile() {
+    public AbstractExplorerFileStore getNewFile() {
         return m_parent.getChild(m_projectName);
     }
 
-    private boolean isDirAndNoWorkflow(final ExplorerFileStore file) {
-        if (ExplorerFileStore.isNode(file)) {
+    private boolean isDirAndNoWorkflow(final AbstractExplorerFileStore file) {
+        if (AbstractExplorerFileStore.isNode(file)) {
             return false;
         }
-        if (ExplorerFileStore.isMetaNode(file)) {
+        if (AbstractExplorerFileStore.isMetaNode(file)) {
             return false;
         }
-        if (ExplorerFileStore.isWorkflow(file)) {
+        if (AbstractExplorerFileStore.isWorkflow(file)) {
             return false;
         }
         return file.fetchInfo().isDirectory();

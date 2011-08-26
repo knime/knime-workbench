@@ -40,7 +40,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -91,20 +91,22 @@ public class GlobalRenameAction extends ExplorerAction {
         }
         IStructuredSelection selection = getSelection();
 
-        List<ExplorerFileStore> stores
+        List<AbstractExplorerFileStore> stores
                 = DragAndDropUtils.getExplorerFileStores(selection);
-        ExplorerFileStore srcFileStore = stores.get(0);
+        AbstractExplorerFileStore srcFileStore = stores.get(0);
 
         // find affected workflows
-        List<ExplorerFileStore> affectedFlows = getContainedWorkflows(stores);
+        List<AbstractExplorerFileStore> affectedFlows
+                = getContainedWorkflows(stores);
 
         // try locking all workflows for renaming
-        LinkedList<ExplorerFileStore> lockedWFs =
-                new LinkedList<ExplorerFileStore>();
+        LinkedList<AbstractExplorerFileStore> lockedWFs =
+                new LinkedList<AbstractExplorerFileStore>();
         if (affectedFlows.size() > 0) {
-            LinkedList<ExplorerFileStore> unlockableWFs =
-                    new LinkedList<ExplorerFileStore>();
-            ExplorerFileSystemUtils.lockWorkflows(affectedFlows, unlockableWFs, lockedWFs);
+            LinkedList<AbstractExplorerFileStore> unlockableWFs =
+                    new LinkedList<AbstractExplorerFileStore>();
+            ExplorerFileSystemUtils.lockWorkflows(affectedFlows, unlockableWFs,
+                    lockedWFs);
             if (unlockableWFs.size() > 0) {
                 // release locks acquired for renaming
                 ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
@@ -113,7 +115,7 @@ public class GlobalRenameAction extends ExplorerAction {
             }
         }
 
-        ExplorerFileStore dstFileStore = queryTargetName(srcFileStore);
+        AbstractExplorerFileStore dstFileStore = queryTargetName(srcFileStore);
         if (dstFileStore == null) {
             // dialog was cancelled
             ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
@@ -157,22 +159,23 @@ public class GlobalRenameAction extends ExplorerAction {
     @SuppressWarnings("unused") // might be needed later
     private void unlockDstWorkflows(
             final AbstractContentProvider acp,
-            final ExplorerFileStore srcFileStore,
-            final ExplorerFileStore dstFileStore,
-            final List<ExplorerFileStore> lockedWFs) {
+            final AbstractExplorerFileStore srcFileStore,
+            final AbstractExplorerFileStore dstFileStore,
+            final List<AbstractExplorerFileStore> lockedWFs) {
         String srcName = srcFileStore.getFullName();
         String dstName = dstFileStore.getFullName();
-        List<ExplorerFileStore> dstStores = new ArrayList<ExplorerFileStore>();
-        for (ExplorerFileStore fs : lockedWFs) {
+        List<AbstractExplorerFileStore> dstStores 
+                = new ArrayList<AbstractExplorerFileStore>();
+        for (AbstractExplorerFileStore fs : lockedWFs) {
             String dstStoreName = fs.getFullName().replace(srcName, dstName);
-            ExplorerFileStore dstFs = acp.getFileStore(dstStoreName);
+            AbstractExplorerFileStore dstFs = acp.getFileStore(dstStoreName);
             dstStores.add(dstFs);
         }
         ExplorerFileSystemUtils.unlockWorkflows(dstStores);
     }
 
-    private ExplorerFileStore queryTargetName(
-            final ExplorerFileStore fileStore) {
+    private AbstractExplorerFileStore queryTargetName(
+            final AbstractExplorerFileStore fileStore) {
         Shell shell = Display.getDefault().getActiveShell();
         String name = fileStore.getName();
         InputDialog dialog = new InputDialog(shell,
@@ -184,7 +187,7 @@ public class GlobalRenameAction extends ExplorerAction {
             return null;
         }
         String newName = dialog.getValue().trim();
-        ExplorerFileStore dstFileStore
+        AbstractExplorerFileStore dstFileStore
                 = fileStore.getParent().getChild(newName);
         if (dstFileStore.fetchInfo().exists() && !confirmOverride(newName)) {
             return queryTargetName(dstFileStore);
@@ -231,7 +234,7 @@ public class GlobalRenameAction extends ExplorerAction {
     }
 
     /**
-     * Checks for valid {@link ExplorerFileStore} file names.
+     * Checks for valid {@link AbstractExplorerFileStore} file names.
      *
      * @author Dominik Morent, KNIME.com, Zurich, Switzerland
      *

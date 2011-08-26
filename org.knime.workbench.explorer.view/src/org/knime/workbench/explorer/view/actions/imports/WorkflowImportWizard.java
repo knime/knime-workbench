@@ -62,7 +62,7 @@ import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
@@ -76,9 +76,9 @@ public class WorkflowImportWizard extends Wizard {
 
     private WorkflowImportSelectionPage m_importPage;
 
-    private ExplorerFileStore m_initialDestination;
+    private AbstractExplorerFileStore m_initialDestination;
 
-    private ExplorerFileStore m_target;
+    private AbstractExplorerFileStore m_target;
 
     /**
      *
@@ -96,14 +96,16 @@ public class WorkflowImportWizard extends Wizard {
      *
      * @param destination the inital destination of the import
      */
-    public void setInitialDestination(final ExplorerFileStore destination) {
+    public void setInitialDestination(
+            final AbstractExplorerFileStore destination) {
         if (destination == null) {
             m_initialDestination = null;
             return;
         }
         m_initialDestination = destination;
-        while (!ExplorerFileStore.isDirOrWorkflowGroup(m_initialDestination)) {
-            ExplorerFileStore f = m_initialDestination;
+        while (!AbstractExplorerFileStore.isDirOrWorkflowGroup(
+                m_initialDestination)) {
+            AbstractExplorerFileStore f = m_initialDestination;
             m_initialDestination = m_initialDestination.getParent();
             if (m_initialDestination == null || m_initialDestination == f) {
                 // that is strange - at least the root should be valid...
@@ -166,7 +168,7 @@ public class WorkflowImportWizard extends Wizard {
      *         successful.
      */
     public boolean createWorkflows() {
-       final ExplorerFileStore target = m_importPage.getDestination();
+       final AbstractExplorerFileStore target = m_importPage.getDestination();
        final Collection<IWorkflowImportElement> workflows = m_importPage
            .getWorkflowsToImport();
        // validate target path
@@ -204,7 +206,7 @@ public class WorkflowImportWizard extends Wizard {
     /**
      * @return the destination where flows were imported to
      */
-    ExplorerFileStore getDestinationContainer() {
+    AbstractExplorerFileStore getDestinationContainer() {
         return m_target;
     }
 

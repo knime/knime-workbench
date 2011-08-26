@@ -34,7 +34,7 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
@@ -100,7 +100,8 @@ public abstract class ExplorerAction extends Action {
      * @return a map associating the selected file store(s) to the corresponding
      *         content provider(s)
      */
-    protected Map<AbstractContentProvider, List<ExplorerFileStore>> getSelectedFiles() {
+    protected Map<AbstractContentProvider, 
+            List<AbstractExplorerFileStore>> getSelectedFiles() {
         return DragAndDropUtils.getProviderMap(getSelection());
     }
 
@@ -117,17 +118,18 @@ public abstract class ExplorerAction extends Action {
      * @throws IllegalArgumentException if the files are not from the same
      *             content provider (have a different mount ID)
      */
-    protected List<ExplorerFileStore> removeSelectedChildren(
-            final List<ExplorerFileStore> selection)
+    protected List<AbstractExplorerFileStore> removeSelectedChildren(
+            final List<AbstractExplorerFileStore> selection)
             throws IllegalArgumentException {
-        List<ExplorerFileStore> result = new LinkedList<ExplorerFileStore>();
+        List<AbstractExplorerFileStore> result 
+                = new LinkedList<AbstractExplorerFileStore>();
         if (selection.size() <= 0) {
             return result;
         }
 
         String mountID = selection.get(0).getMountID();
 
-        for (ExplorerFileStore file : selection) {
+        for (AbstractExplorerFileStore file : selection) {
             if (!mountID.equals(file.getMountID())) {
                 LOGGER.coding("Method must be called with identical mountIDs"
                         + " in the files.");
@@ -135,9 +137,9 @@ public abstract class ExplorerAction extends Action {
             // don't be case sensitive
             String p = file.getFullName().toLowerCase();
             boolean isChild = false;
-            Iterator<ExplorerFileStore> iter = result.iterator();
+            Iterator<AbstractExplorerFileStore> iter = result.iterator();
             while (iter.hasNext()) {
-                ExplorerFileStore resultF = iter.next();
+                AbstractExplorerFileStore resultF = iter.next();
                 String resultP = resultF.getFullName().toLowerCase();
                 if (p.startsWith(resultP)) {
                     isChild = true;
@@ -162,15 +164,16 @@ public abstract class ExplorerAction extends Action {
      * @return a new list with workflows contained (directly or indirectly) in
      *         the argument
      */
-    public static List<ExplorerFileStore> getContainedWorkflows(
-            final List<? extends ExplorerFileStore> selected) {
-        List<ExplorerFileStore> result = new LinkedList<ExplorerFileStore>();
-        for (ExplorerFileStore f : selected) {
-            if (ExplorerFileStore.isWorkflow(f)) {
+    public static List<AbstractExplorerFileStore> getContainedWorkflows(
+            final List<? extends AbstractExplorerFileStore> selected) {
+        List<AbstractExplorerFileStore> result 
+                = new LinkedList<AbstractExplorerFileStore>();
+        for (AbstractExplorerFileStore f : selected) {
+            if (AbstractExplorerFileStore.isWorkflow(f)) {
                 result.add(f);
             } else if (f.fetchInfo().isDirectory()) {
                 try {
-                    ExplorerFileStore[] children
+                    AbstractExplorerFileStore[] children
                     = f.childStores(EFS.NONE, null);
                     result.addAll(getContainedWorkflows(Arrays
                             .asList(children)));
@@ -201,13 +204,13 @@ public abstract class ExplorerAction extends Action {
      *      file stores are selected or the file stores are not opened
      */
     protected WorkflowManager getWorkflow() {
-        List<ExplorerFileStore> fileStores =
+        List<AbstractExplorerFileStore> fileStores =
             DragAndDropUtils.getExplorerFileStores(getSelection());
         if (fileStores == null || fileStores.size() != 1) {
             return null;
         }
-        ExplorerFileStore fileStore = fileStores.get(0);
-        if (ExplorerFileStore.isWorkflow(fileStore)) {
+        AbstractExplorerFileStore fileStore = fileStores.get(0);
+        if (AbstractExplorerFileStore.isWorkflow(fileStore)) {
             try {
                 File localFile = fileStore.toLocalFile();
                 if (localFile != null) {

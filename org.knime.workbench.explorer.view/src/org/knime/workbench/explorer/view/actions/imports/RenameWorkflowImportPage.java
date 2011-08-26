@@ -63,7 +63,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 
 /**
@@ -169,8 +169,9 @@ public class RenameWorkflowImportPage extends WizardPage {
     }
 
     private boolean checkNameExists(final String name) {
-        ExplorerFileStore destination = m_previousPage.getDestinationPath();
-        ExplorerFileStore newChild = destination.getChild(name);
+        AbstractExplorerFileStore destination 
+                = m_previousPage.getDestinationPath();
+        AbstractExplorerFileStore newChild = destination.getChild(name);
         m_nameExists = newChild.fetchInfo().exists();
         if (m_nameExists) {
             setErrorMessage(name + " already exists in target destination!");

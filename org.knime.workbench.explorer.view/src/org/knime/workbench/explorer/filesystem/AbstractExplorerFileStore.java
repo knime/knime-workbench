@@ -45,17 +45,19 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * Created: Apr 12, 2011
- * Author: ohl
+ * History
+ *   Aug 24, 2011 (morent): created
  */
+
 package org.knime.workbench.explorer.filesystem;
 
 import java.io.File;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileStore;
 import org.eclipse.core.runtime.CoreException;
@@ -68,51 +70,71 @@ import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
+ * Abstract base class for all explorer file stores.
  *
- * @author ohl, University of Konstanz
+ * @author Dominik Morent, KNIME.com, Zurich, Switzerland
+ *
  */
-public abstract class ExplorerFileStore extends FileStore {
-
+public abstract class AbstractExplorerFileStore extends FileStore {
     private final String m_mountID;
-
     private final String m_fullPath;
 
-    public ExplorerFileStore(final String mountID, final String fullPath) {
+    /**
+     * Creates a new local explorer file store with the specified mount id and
+     * full path.
+     * @param mountID the id of the mount point
+     * @param fullPath the full path
+     */
+    public AbstractExplorerFileStore(final String mountID,
+            final String fullPath) {
         m_fullPath = fullPath;
         m_mountID = mountID;
-        if (m_fullPath == null) {
-            throw new NullPointerException("Path in can't be null (mountID = "
-                    + m_mountID + ")");
+        if (fullPath == null) {
+            throw new NullPointerException("Path can't be null (mountID = "
+                    + getMountID() + ")");
         }
-
     }
+
+
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public String getName() {
-        return new Path(m_fullPath).lastSegment();
-    }
-
-    public String getFullName() {
-        return m_fullPath;
-    }
-
-    /** @return a human readable name including mount ID and path. */
-    public String getMountIDWithFullPath() {
-        return getMountID() + ":" + getFullName();
-    }
-
-    public String getMountID() {
-        return m_mountID;
-    }
+    public abstract String[] childNames(final int options,
+            final IProgressMonitor monitor) throws CoreException;
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public abstract ExplorerFileStore mkdir(int options,
+    public abstract IFileInfo fetchInfo(final int options,
+            final IProgressMonitor monitor) throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract AbstractExplorerFileStore getChild(final String name);
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract AbstractExplorerFileStore getParent();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract InputStream openInputStream(final int options,
+            final IProgressMonitor monitor) throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract AbstractExplorerFileStore mkdir(int options,
             IProgressMonitor monitor) throws CoreException;
 
     /**
@@ -140,8 +162,63 @@ public abstract class ExplorerFileStore extends FileStore {
      * {@inheritDoc}
      */
     @Override
+    public abstract boolean equals(Object obj);
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract int hashCode();
+
+    /**
+     * Called when changes are made to the underlying file system.
+     * Implementations can update their caches or internal members.
+     */
+    public abstract void refresh();
+
+
+    /**
+     * Convenience method that calls #toLocalFile(int, IProgressMonitor) with
+     * options = EFS.CACHE and monitor = null.
+     *
+     * @return the local file or null if not supported
+     * @throws CoreException if this method fails
+     */
+    public abstract File toLocalFile() throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public ExplorerFileSystem getFileSystem() {
         return ExplorerMountTable.getFileSystem();
+    }
+
+    /**
+     * @return the mountID
+     */
+    public String getMountID() {
+        return m_mountID;
+    }
+
+    /**
+     * @return the fullName
+     */
+    public String getFullName() {
+        return m_fullPath;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getName() {
+        return new Path(m_fullPath).lastSegment();
+    }
+
+    /** @return a human readable name including mount ID and path. */
+    public String getMountIDWithFullPath() {
+        return getMountID() + ":" + getFullName();
     }
 
     /**
@@ -155,31 +232,6 @@ public abstract class ExplorerFileStore extends FileStore {
         } catch (URISyntaxException e) {
             return null;
         }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean equals(final Object obj) {
-        if (obj instanceof ExplorerFileStore) {
-            ExplorerFileStore other = (ExplorerFileStore)obj;
-            if (!other.m_mountID.equalsIgnoreCase(m_mountID)) {
-                return false;
-            }
-            Path otherPath = new Path(other.m_fullPath);
-            Path thisPath = new Path(m_fullPath);
-            if (otherPath.segmentCount() != thisPath.segmentCount()) {
-                return false;
-            }
-            for (int s = otherPath.segmentCount() - 1; s >= 0; s--) {
-                if (!otherPath.segment(s).equalsIgnoreCase(thisPath.segment(s))) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return false;
     }
 
     /**
@@ -217,7 +269,7 @@ public abstract class ExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a workflow group
      * @return true if the file is a workflow group, false otherwise
      */
-    public static boolean isWorkflowGroup(final ExplorerFileStore file) {
+    public static boolean isWorkflowGroup(final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
@@ -236,7 +288,7 @@ public abstract class ExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a meta node
      * @return true if the file is a meta node, false otherwise
      */
-    public static boolean isMetaNode(final ExplorerFileStore file) {
+    public static boolean isMetaNode(final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
@@ -255,7 +307,7 @@ public abstract class ExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a node
      * @return true if the file is a node, false otherwise
      */
-    public static boolean isNode(final ExplorerFileStore file) {
+    public static boolean isNode(final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().exists() || isMetaNode(file)) {
             return false;
         }
@@ -267,7 +319,8 @@ public abstract class ExplorerFileStore extends FileStore {
      * @param file the file to test.
      * @return true if the argument is a directory but no node nor meta node.
      */
-    public static boolean isDirOrWorkflowGroup(final ExplorerFileStore file) {
+    public static boolean isDirOrWorkflowGroup(
+            final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().isDirectory()) {
             return false;
         }
@@ -282,7 +335,7 @@ public abstract class ExplorerFileStore extends FileStore {
      * @param file the file to test.
      * @return true if the argument is only a plain directory.
      */
-    public static boolean isDirOnly(final ExplorerFileStore file) {
+    public static boolean isDirOnly(final AbstractExplorerFileStore file) {
          return isDirOrWorkflowGroup(file) && !isWorkflowGroup(file);
     }
 
@@ -290,44 +343,16 @@ public abstract class ExplorerFileStore extends FileStore {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore[] childStores(final int options,
+    public AbstractExplorerFileStore[] childStores(final int options,
             final IProgressMonitor monitor) throws CoreException {
         IFileStore[] childStores = super.childStores(options, monitor);
-        ExplorerFileStore[] efs = new ExplorerFileStore[childStores.length];
+        AbstractExplorerFileStore[] efs
+                = new AbstractExplorerFileStore[childStores.length];
         for (int i = 0; i < efs.length; i++) {
-            efs[i] = (ExplorerFileStore)childStores[i];
+            efs[i] = (AbstractExplorerFileStore)childStores[i];
         }
         return efs;
     }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public abstract ExplorerFileStore getParent();
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public abstract ExplorerFileStore getChild(String name);
-
-    /**
-     * Convenience method that calls #toLocalFile(int, IProgressMonitor) with
-     * options = EFS.NONE and monitor = null.
-     *
-     * @return the local file or null if not supported
-     * @throws CoreException if this method fails
-     */
-    public File toLocalFile() throws CoreException {
-        return toLocalFile(EFS.NONE, null);
-    }
-
-    /**
-     * Called when changes are made to the underlying file system.
-     * Implementations can update their caches or internal members.
-     */
-    public abstract void refresh();
 
     /**
      * @return the content provider responsible for the file store, or null
@@ -349,7 +374,7 @@ public abstract class ExplorerFileStore extends FileStore {
      * @param msg the message used as name and by toString
      * @return a file store carrying the message
      */
-    public ExplorerFileStore getMessageFileStore(final String msg) {
+    public AbstractExplorerFileStore getMessageFileStore(final String msg) {
         return new MessageFileStore(getMountID(), msg);
     }
 }

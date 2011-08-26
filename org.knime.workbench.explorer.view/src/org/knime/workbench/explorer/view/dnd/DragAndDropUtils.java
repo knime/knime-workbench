@@ -38,7 +38,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.ui.navigator.KnimeResourceUtil;
@@ -65,10 +65,11 @@ public final class DragAndDropUtils {
      *      the selection includes any object other than
      *      {@link ContentObject} or {@link AbstractContentProvider}.
      */
-    public static Map<AbstractContentProvider, List<ExplorerFileStore>> getProviderMap(
-            final IStructuredSelection selection) {
-        Map<AbstractContentProvider, List<ExplorerFileStore>> providers =
-                new TreeMap<AbstractContentProvider, List<ExplorerFileStore>>();
+    public static Map<AbstractContentProvider, List<AbstractExplorerFileStore>> 
+            getProviderMap(final IStructuredSelection selection) {
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> providers 
+                = new TreeMap<AbstractContentProvider, 
+                List<AbstractExplorerFileStore>>();
         if (selection == null) {
             return providers;
         }
@@ -79,17 +80,19 @@ public final class DragAndDropUtils {
             if (nextObject instanceof ContentObject) {
                 ContentObject content = (ContentObject)nextObject;
                 AbstractContentProvider provider = content.getProvider();
-                ExplorerFileStore fs = content.getObject();
+                AbstractExplorerFileStore fs = content.getObject();
                 if (!providers.containsKey(provider)) {
-                    providers.put(provider, new ArrayList<ExplorerFileStore>());
+                    providers.put(provider, 
+                            new ArrayList<AbstractExplorerFileStore>());
                 }
                 providers.get(provider).add(fs);
             }else if (nextObject instanceof AbstractContentProvider) {
                 AbstractContentProvider provider =
                         (AbstractContentProvider)nextObject;
-                ExplorerFileStore fs = provider.getFileStore("/");
+                AbstractExplorerFileStore fs = provider.getFileStore("/");
                 if (!providers.containsKey(provider)) {
-                    providers.put(provider, new ArrayList<ExplorerFileStore>());
+                    providers.put(provider, 
+                            new ArrayList<AbstractExplorerFileStore>());
                 }
                 providers.get(provider).add(fs);
             } else {
@@ -104,11 +107,12 @@ public final class DragAndDropUtils {
      * @param selection the structured collection to process
      * @return a map of content providers to explorer file stores or null if
      *      the selection includes {@link ContentObject}s not containing an
-     *      {@link ExplorerFileStore}.
+     *      {@link AbstractExplorerFileStore}.
      */
-    public static List<ExplorerFileStore> getExplorerFileStores(
+    public static List<AbstractExplorerFileStore> getExplorerFileStores(
             final IStructuredSelection selection) {
-        List<ExplorerFileStore> fileStores = new ArrayList<ExplorerFileStore>();
+        List<AbstractExplorerFileStore> fileStores 
+                = new ArrayList<AbstractExplorerFileStore>();
         @SuppressWarnings("rawtypes")
         Iterator iter = selection.iterator();
         while (iter.hasNext()) {
@@ -126,13 +130,14 @@ public final class DragAndDropUtils {
      * @param selection a selection in the explorer tree view
      * @return the explorer file store corresponding to the selection
      */
-    public static ExplorerFileStore getFileStore(final Object selection) {
+    public static AbstractExplorerFileStore getFileStore(
+            final Object selection) {
         if (selection instanceof ContentObject) {
             return ((ContentObject)selection).getObject();
         } else if (selection instanceof AbstractContentProvider) {
             return ((AbstractContentProvider)selection).getFileStore("/");
-        } else if (selection instanceof ExplorerFileStore) {
-            return (ExplorerFileStore)selection;
+        } else if (selection instanceof AbstractExplorerFileStore) {
+            return (AbstractExplorerFileStore)selection;
         } else {
             return null;
         }
@@ -162,7 +167,8 @@ public final class DragAndDropUtils {
         IResource r = null;
         String pName = "<unknown>";
         try {
-            ExplorerFileStore fs = DragAndDropUtils.getFileStore(selection);
+            AbstractExplorerFileStore fs 
+                    = DragAndDropUtils.getFileStore(selection);
             File localFile = fs.toLocalFile(EFS.NONE, null);
             if (fs == null || localFile == null) {
                 return;
@@ -192,7 +198,7 @@ public final class DragAndDropUtils {
      *          otherwise
      */
     public static boolean isLinkedProject(final Object selection) {
-        ExplorerFileStore fs = getFileStore(selection);
+        AbstractExplorerFileStore fs = getFileStore(selection);
         File localFile;
         IResource source;
         try {

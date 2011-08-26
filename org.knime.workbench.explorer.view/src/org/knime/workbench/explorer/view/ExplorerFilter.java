@@ -28,7 +28,7 @@ import java.util.Map;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.repository.view.TextualViewFilter;
 
 /**
@@ -55,15 +55,15 @@ public class ExplorerFilter extends TextualViewFilter {
         if (element instanceof AbstractContentProvider) {
             return true;
         } else if (element instanceof ContentObject
-                || element instanceof ExplorerFileStore) {
-            ExplorerFileStore fileStore = null;
+                || element instanceof AbstractExplorerFileStore) {
+            AbstractExplorerFileStore fileStore = null;
             AbstractContentProvider contentProvider = null;
             if (element instanceof ContentObject) {
                 ContentObject contentObject = (ContentObject)element;
                 fileStore = contentObject.getObject();
                 contentProvider = contentObject.getProvider();
             } else {
-                fileStore = (ExplorerFileStore)element;
+                fileStore = (AbstractExplorerFileStore)element;
                 contentProvider = fileStore.getContentProvider();
             }
             String fullName = fileStore.getFullName();
@@ -82,11 +82,11 @@ public class ExplorerFilter extends TextualViewFilter {
             selectThis = match(fullName);
             /* Files are shown if their name matches or if the name of any
              * parent folder matches. */
-            if (ExplorerFileStore.isDirOrWorkflowGroup(fileStore)) {
+            if (AbstractExplorerFileStore.isDirOrWorkflowGroup(fileStore)) {
                 /* Directories are shown if their name matches or if the name
                  * of any child matches. */
                 if (!selectThis) {
-                    for (ExplorerFileStore child
+                    for (AbstractExplorerFileStore child
                             : contentProvider.getChildren(fileStore)) {
                         // parent is not necessary (->null)
                         selectThis = doSelect(null, child, false);

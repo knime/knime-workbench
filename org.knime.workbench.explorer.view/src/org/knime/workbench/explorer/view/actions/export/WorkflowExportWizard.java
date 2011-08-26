@@ -80,7 +80,7 @@ import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.explorer.ExplorerActivator;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentDelegator;
 
 /**
@@ -96,12 +96,12 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
 
     private ISelection m_selection;
 
-    private final Collection<ExplorerFileStore> m_workflowsToExport =
-            new ArrayList<ExplorerFileStore>();
+    private final Collection<AbstractExplorerFileStore> m_workflowsToExport =
+            new ArrayList<AbstractExplorerFileStore>();
 
     private boolean m_excludeData;
 
-    private ExplorerFileStore m_commonParent;
+    private AbstractExplorerFileStore m_commonParent;
 
     private String m_fileName;
 
@@ -119,7 +119,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
      */
     @Override
     public void addPages() {
-        ExplorerFileStore initFile = null;
+        AbstractExplorerFileStore initFile = null;
         if (m_selection instanceof IStructuredSelection) {
             initFile =
                     ContentDelegator
@@ -163,8 +163,8 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         // get all workflows and workflow groups selected
         m_workflowsToExport.addAll(m_page.getWorkflowsOrGroups());
         boolean containsFlow = false;
-        for (ExplorerFileStore efs : m_workflowsToExport) {
-            if (ExplorerFileStore.isWorkflow(efs)) {
+        for (AbstractExplorerFileStore efs : m_workflowsToExport) {
+            if (AbstractExplorerFileStore.isWorkflow(efs)) {
                 containsFlow = true;
                 break;
             }
@@ -263,7 +263,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
      * @return true if the given resource should be excluded, false if it should
      *         be included
      */
-    protected static boolean excludeResource(final ExplorerFileStore store) {
+    protected static boolean excludeResource(final AbstractExplorerFileStore store) {
         String name = store.getName();
         if (name.equals("internal")) {
             return true;
@@ -313,7 +313,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         // iterate over the resources and add only the wanted stuff
         // i.e. the "intern" folder and "*.zip" files are excluded
         final List<File> resourceList = new ArrayList<File>();
-        for (ExplorerFileStore wf : m_workflowsToExport) {
+        for (AbstractExplorerFileStore wf : m_workflowsToExport) {
             // add all files within the workflow or group
             addResourcesFor(resourceList, wf, m_excludeData);
         }
@@ -359,14 +359,14 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
      * @param excludeData true if KNIME data files should be excluded
      */
     public static void addResourcesFor(final List<File> resourceList,
-            final ExplorerFileStore flowOrGroup, final boolean excludeData)
+            final AbstractExplorerFileStore flowOrGroup, final boolean excludeData)
             throws CoreException {
         if (resourceList == null) {
             throw new NullPointerException("Result list can't be null");
         }
-        if (ExplorerFileStore.isWorkflow(flowOrGroup)) {
+        if (AbstractExplorerFileStore.isWorkflow(flowOrGroup)) {
             addResourcesRec(resourceList, flowOrGroup, excludeData);
-        } else if (ExplorerFileStore.isDirOrWorkflowGroup(flowOrGroup)) {
+        } else if (AbstractExplorerFileStore.isDirOrWorkflowGroup(flowOrGroup)) {
             addFiles(resourceList, flowOrGroup);
         } else {
             throw new IllegalArgumentException(
@@ -383,9 +383,10 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
      * @throws CoreException
      */
     private static void addFiles(final List<File> resourceList,
-            final ExplorerFileStore group) throws CoreException {
-        ExplorerFileStore[] childStores = group.childStores(EFS.NONE, null);
-        for (ExplorerFileStore child : childStores) {
+            final AbstractExplorerFileStore group) throws CoreException {
+        AbstractExplorerFileStore[] childStores = group.childStores(EFS.NONE,
+                null);
+        for (AbstractExplorerFileStore child : childStores) {
             if (!child.fetchInfo().isDirectory()) {
                 File loc = child.toLocalFile();
                 if (loc == null) {
@@ -401,7 +402,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
     }
 
     private static void addResourcesRec(final List<File> resourceList,
-            final ExplorerFileStore store, final boolean excludeData)
+            final AbstractExplorerFileStore store, final boolean excludeData)
             throws CoreException {
 
         // if this resource must be excluded do not add to resource list and
@@ -424,7 +425,8 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         }
 
         // add all (not-excluded) sub dirs of workflows
-        for (ExplorerFileStore child : store.childStores(EFS.NONE, null)) {
+        for (AbstractExplorerFileStore child 
+                : store.childStores(EFS.NONE, null)) {
             addResourcesRec(resourceList, child, excludeData);
         }
     }

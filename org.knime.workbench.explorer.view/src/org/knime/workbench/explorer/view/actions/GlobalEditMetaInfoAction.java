@@ -34,7 +34,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
@@ -78,20 +78,20 @@ public class GlobalEditMetaInfoAction extends ExplorerAction {
     @Override
     public void run() {
         IStructuredSelection selection = getSelection();
-        List<ExplorerFileStore> stores =
+        List<AbstractExplorerFileStore> stores =
                 DragAndDropUtils.getExplorerFileStores(selection);
-        ExplorerFileStore srcFileStore = stores.get(0);
-        ExplorerFileStore metaInfo =
+        AbstractExplorerFileStore srcFileStore = stores.get(0);
+        AbstractExplorerFileStore metaInfo =
                 srcFileStore.getChild(WorkflowPersistor.METAINFO_FILE);
         try {
             if (!metaInfo.fetchInfo().exists()) {
                 // create a new meta info file if it does not exist
                 MetaInfoFile.createMetaInfoFile(
                         srcFileStore.toLocalFile(EFS.NONE, null),
-                        ExplorerFileStore.isWorkflow(srcFileStore));
+                        AbstractExplorerFileStore.isWorkflow(srcFileStore));
             }
             IFileStore localFS = new LocalFile(
-                    metaInfo.toLocalFile(EFS.NONE,null));
+                    metaInfo.toLocalFile(EFS.NONE, null));
             IDE.openEditorOnFileStore(PlatformUI.getWorkbench()
                     .getActiveWorkbenchWindow().getActivePage(), localFS);
         } catch (Exception e) {
@@ -105,15 +105,15 @@ public class GlobalEditMetaInfoAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         // only a single selected workflow or workflow group can be used
-        List<ExplorerFileStore> fileStores
+        List<AbstractExplorerFileStore> fileStores
                 = DragAndDropUtils.getExplorerFileStores(
                 getSelection());
         if (fileStores == null || fileStores.size() != 1) {
             return false;
         }
-        ExplorerFileStore fileStore = fileStores.get(0);
-        if (!(ExplorerFileStore.isWorkflow(fileStore)
-                || ExplorerFileStore.isWorkflowGroup(fileStore))) {
+        AbstractExplorerFileStore fileStore = fileStores.get(0);
+        if (!(AbstractExplorerFileStore.isWorkflow(fileStore)
+                || AbstractExplorerFileStore.isWorkflowGroup(fileStore))) {
             return false;
         }
         return true;

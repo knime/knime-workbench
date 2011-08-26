@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
@@ -42,7 +43,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.KnimeFileUtil;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.IconFactory;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -63,7 +64,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * @param id mount id
      */
     LocalWorkspaceContentProvider(
-            final LocalWorkspaceContentProviderFactory factory, final String id) {
+            final LocalWorkspaceContentProviderFactory factory, 
+            final String id) {
         super(factory, id);
     }
 
@@ -74,7 +76,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore[] getElements(final Object inputElement) {
+    public AbstractExplorerFileStore[] getElements(final Object inputElement) {
         return getChildren(inputElement);
     }
 
@@ -91,37 +93,38 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore[] getChildren(final Object parentElement) {
+    public AbstractExplorerFileStore[] getChildren(final Object parentElement) {
         if (!(parentElement instanceof LocalWorkspaceFileStore)) {
             return NO_CHILD;
         }
         LocalWorkspaceFileStore parent = (LocalWorkspaceFileStore)parentElement;
 
-        if (ExplorerFileStore.isNode(parent)) {
+        if (AbstractExplorerFileStore.isNode(parent)) {
             return NO_CHILD;
         }
-        if (ExplorerFileStore.isWorkflow(parent)) {
+        if (AbstractExplorerFileStore.isWorkflow(parent)) {
             return AbstractContentProvider.getWorkflowChildren(parent);
         }
-        if (ExplorerFileStore.isWorkflowGroup(parent)) {
+        if (AbstractExplorerFileStore.isWorkflowGroup(parent)) {
             return AbstractContentProvider.getWorkflowgroupChildren(parent);
         }
         // everything else: return dirs only
         try {
             IFileStore[] children = parent.childStores(EFS.NONE, null);
-            ArrayList<ExplorerFileStore> result =
-                    new ArrayList<ExplorerFileStore>();
+            ArrayList<AbstractExplorerFileStore> result =
+                    new ArrayList<AbstractExplorerFileStore>();
             for (IFileStore c : children) {
-                if (ExplorerFileStore.isWorkflow(c)) {
-                    result.add((ExplorerFileStore)c);
+                if (AbstractExplorerFileStore.isWorkflow(c)) {
+                    result.add((AbstractExplorerFileStore)c);
                     continue;
                 }
-                if (ExplorerFileStore.isWorkflowGroup((ExplorerFileStore)c)) {
-                    result.add((ExplorerFileStore)c);
+                if (AbstractExplorerFileStore.isWorkflowGroup(
+                        (AbstractExplorerFileStore)c)) {
+                    result.add((AbstractExplorerFileStore)c);
                     continue;
                 }
             }
-            return result.toArray(new ExplorerFileStore[result.size()]);
+            return result.toArray(new AbstractExplorerFileStore[result.size()]);
         } catch (CoreException e) {
             return NO_CHILD;
         }
@@ -131,7 +134,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore getParent(final Object element) {
+    public AbstractExplorerFileStore getParent(final Object element) {
         if (!(element instanceof LocalWorkspaceFileStore)) {
             return null;
         }
@@ -187,12 +190,16 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     /*
      * ------------- view context menu -----------------------------
      */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void addContextMenuActions(
             final org.eclipse.jface.viewers.TreeViewer viewer,
             final org.eclipse.jface.action.IMenuManager manager,
-            final java.util.Map<AbstractContentProvider, java.util.List<ExplorerFileStore>> selection) {
-
+            final Map<AbstractContentProvider, 
+            List<AbstractExplorerFileStore>> selection) {
+        // nothing to add so far
     }
 
     /**
@@ -231,13 +238,13 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public ExplorerFileStore getFileStore(final String fullPath) {
+    public AbstractExplorerFileStore getFileStore(final String fullPath) {
         return new LocalWorkspaceFileStore(getMountID(), fullPath);
     }
 
     /** {@inheritDoc} */
     @Override
-    public ExplorerFileStore fromLocalFile(final File file) {
+    public AbstractExplorerFileStore fromLocalFile(final File file) {
         IPath rootPath = ResourcesPlugin.getWorkspace().getRoot().getLocation();
         File root = rootPath.toFile();
         String s = getPathSegments(file, root);
@@ -251,7 +258,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public boolean validateDrop(final ExplorerFileStore target,
+    public boolean validateDrop(final AbstractExplorerFileStore target,
             final int operation, final TransferData transferType) {
         if (!(DND.DROP_COPY == operation || DND.DROP_MOVE == operation)) {
             return false;
@@ -259,12 +266,12 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
         ISelection selection = transfer.getSelection();
         if (selection != null && selection instanceof IStructuredSelection) {
-            List<ExplorerFileStore> fileStores =
-                    DragAndDropUtils
-                            .getExplorerFileStores((IStructuredSelection)selection);
-            for (ExplorerFileStore fs : fileStores) {
-                if (!(ExplorerFileStore.isWorkflow(fs) || ExplorerFileStore
-                        .isWorkflowGroup(fs))) {
+            List<AbstractExplorerFileStore> fileStores =
+                    DragAndDropUtils.getExplorerFileStores(
+                            (IStructuredSelection)selection);
+            for (AbstractExplorerFileStore fs : fileStores) {
+                if (!(AbstractExplorerFileStore.isWorkflow(fs) 
+                        || AbstractExplorerFileStore.isWorkflowGroup(fs))) {
                     return false;
                 }
             }
@@ -272,9 +279,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             return false;
         }
         boolean valid =
-                !(ExplorerFileStore.isNode(target)
-                        || ExplorerFileStore.isWorkflow(target) || ExplorerFileStore
-                        .isMetaNode(target));
+                !(AbstractExplorerFileStore.isNode(target)
+                        || AbstractExplorerFileStore.isWorkflow(target) 
+                        || AbstractExplorerFileStore.isMetaNode(target));
         return valid;
     }
 
@@ -283,16 +290,16 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public boolean performDrop(final Object data,
-            final ExplorerFileStore target, final int operation) {
+            final AbstractExplorerFileStore target, final int operation) {
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
         ISelection selection = transfer.getSelection();
         if (selection instanceof IStructuredSelection) {
             IStructuredSelection ss = (IStructuredSelection)selection;
-            List<ExplorerFileStore> fileStores =
+            List<AbstractExplorerFileStore> fileStores =
                     DragAndDropUtils.getExplorerFileStores(ss);
 
             // check for existing files
-            for (ExplorerFileStore fs : fileStores) {
+            for (AbstractExplorerFileStore fs : fileStores) {
                 String childName = fs.getName();
                 if (target.getChild(childName).fetchInfo().exists()) {
                     MessageBox mb =
@@ -307,7 +314,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 }
             }
 
-            for (ExplorerFileStore fs : fileStores) {
+            for (AbstractExplorerFileStore fs : fileStores) {
                 /*
                  * On the drop receiver side there is no difference between copy
                  * and move. The removal of the src object has to be done by the
@@ -349,7 +356,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 }
                 for (String path : files) {
                     File src = new File(path);
-                    if (src.exists() && !targetDir.equals(src.getParentFile())) {
+                    if (src.exists() 
+                            && !targetDir.equals(src.getParentFile())) {
                         File dir = new File(targetDir, src.getName());
                         FileUtils.copyDirectory(src, dir);
                         LOGGER.debug("Copied directory "
@@ -375,8 +383,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * @param the destination file store
      * @throws CoreException
      */
-    private void copy(final ExplorerFileStore src, final ExplorerFileStore dest)
-            throws CoreException {
+    private void copy(final AbstractExplorerFileStore src, 
+            final AbstractExplorerFileStore dest) throws CoreException {
         src.copy(dest, EFS.NONE, null);
     }
 
@@ -384,8 +392,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public boolean dragStart(final List<ExplorerFileStore> fileStores) {
-        for (ExplorerFileStore fs : fileStores) {
+    public boolean dragStart(final List<AbstractExplorerFileStore> fileStores) {
+        for (AbstractExplorerFileStore fs : fileStores) {
             if (DragAndDropUtils.isLinkedProject(fs)) {
                 LOGGER.warn("Linked workflow project cannot be copied from the"
                         + " User Space.");

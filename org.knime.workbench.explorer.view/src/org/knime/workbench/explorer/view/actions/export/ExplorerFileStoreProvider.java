@@ -59,7 +59,7 @@ import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.graphics.Image;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.IconFactory;
 
@@ -72,7 +72,7 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
 
     private static final Object[] NONE = new Object[0];
 
-    private ExplorerFileStore m_root;
+    private AbstractExplorerFileStore m_root;
 
     private AbstractContentProvider m_provider;
 
@@ -89,15 +89,15 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
      */
     @Override
     public Object[] getChildren(final Object parentElement) {
-        if (parentElement instanceof ExplorerFileStore) {
-            ExplorerFileStore[] childs = m_provider.getChildren(
+        if (parentElement instanceof AbstractExplorerFileStore) {
+            AbstractExplorerFileStore[] childs = m_provider.getChildren(
                     parentElement);
             // can only export workflows, groups and dirs
-            ArrayList<ExplorerFileStore> result =
-                    new ArrayList<ExplorerFileStore>();
-            for (ExplorerFileStore c : childs) {
-                if (ExplorerFileStore.isDirOrWorkflowGroup(c)
-                        || ExplorerFileStore.isWorkflow(c)) {
+            ArrayList<AbstractExplorerFileStore> result =
+                    new ArrayList<AbstractExplorerFileStore>();
+            for (AbstractExplorerFileStore c : childs) {
+                if (AbstractExplorerFileStore.isDirOrWorkflowGroup(c)
+                        || AbstractExplorerFileStore.isWorkflow(c)) {
                     result.add(c);
                 }
             }
@@ -113,8 +113,9 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
      */
     @Override
     public Object getParent(final Object element) {
-        if (element instanceof ExplorerFileStore) {
-            ExplorerFileStore child = (ExplorerFileStore)element;
+        if (element instanceof AbstractExplorerFileStore) {
+            AbstractExplorerFileStore child 
+                    = (AbstractExplorerFileStore)element;
             if (child.equals(m_root)) {
                 // don't traverse up beyond the root - the tree will be confused
                 return null;
@@ -139,8 +140,9 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
     public void inputChanged(final Viewer viewer, final Object oldInput,
             final Object newInput) {
         m_root = null;
-        if (newInput instanceof ExplorerFileStore) {
-            ExplorerFileStore input = (ExplorerFileStore)newInput;
+        if (newInput instanceof AbstractExplorerFileStore) {
+            AbstractExplorerFileStore input 
+                    = (AbstractExplorerFileStore)newInput;
             m_root = input;
             m_provider = input.getContentProvider();
         }
@@ -151,8 +153,8 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
      */
     @Override
     public Image getImage(final Object element) {
-        if (element instanceof ExplorerFileStore) {
-            ExplorerFileStore e = (ExplorerFileStore)element;
+        if (element instanceof AbstractExplorerFileStore) {
+            AbstractExplorerFileStore e = (AbstractExplorerFileStore)element;
             Image i = AbstractContentProvider.getWorkspaceImage(e);
             if (i != null) {
                 return i;
@@ -172,8 +174,8 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
      */
     @Override
     public String getText(final Object element) {
-        if (element instanceof ExplorerFileStore) {
-            return ((ExplorerFileStore)element).getName();
+        if (element instanceof AbstractExplorerFileStore) {
+            return ((AbstractExplorerFileStore)element).getName();
         }
         return super.getText(element);
     }

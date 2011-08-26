@@ -95,13 +95,13 @@ public final class ExplorerFileSystemUtils {
      * @param lockedWF the workflows that could be locked
      */
     public static void lockWorkflows(
-            final List<ExplorerFileStore> workflowsToLock,
-            final List<ExplorerFileStore> unlockableWF,
-            final List<ExplorerFileStore> lockedWF) {
+            final List<AbstractExplorerFileStore> workflowsToLock,
+            final List<AbstractExplorerFileStore> unlockableWF,
+            final List<AbstractExplorerFileStore> lockedWF) {
         assert unlockableWF.size() == 0; // the result lists should be empty
         assert lockedWF.size() == 0;
         // open workflows can be locked multiple times in one instance
-        for (ExplorerFileStore wf : workflowsToLock) {
+        for (AbstractExplorerFileStore wf : workflowsToLock) {
            boolean locked = lockWorkflow(wf);
             if (locked) {
                 LOGGER.debug("Locked workflow " + wf);
@@ -118,8 +118,9 @@ public final class ExplorerFileSystemUtils {
      * @param workflow the workflow to be locked
      * @return true if the workflow could be locked, false otherwise
      */
-    public static boolean lockWorkflow(final ExplorerFileStore workflow) {
-        assert ExplorerFileStore.isWorkflow(workflow);
+    public static boolean lockWorkflow(
+            final AbstractExplorerFileStore workflow) {
+        assert AbstractExplorerFileStore.isWorkflow(workflow);
         File loc;
         try {
             loc = workflow.toLocalFile(EFS.NONE, null);
@@ -141,8 +142,8 @@ public final class ExplorerFileSystemUtils {
      * @param workflows the workflows to be unlocked
      */
     public static void unlockWorkflows(
-            final List<ExplorerFileStore> workflows) {
-        for (ExplorerFileStore lwf : workflows) {
+            final List<AbstractExplorerFileStore> workflows) {
+        for (AbstractExplorerFileStore lwf : workflows) {
            unlockWorkflow(lwf);
         }
     }
@@ -152,7 +153,8 @@ public final class ExplorerFileSystemUtils {
      *
      * @param workflow the workflow to be unlocked
      */
-    public static void unlockWorkflow(final ExplorerFileStore workflow) {
+    public static void unlockWorkflow(
+            final AbstractExplorerFileStore workflow) {
         File loc;
         try {
             loc = workflow.toLocalFile(EFS.NONE, null);
@@ -164,7 +166,7 @@ public final class ExplorerFileSystemUtils {
                     + "\" is not locked.");
             return;
         }
-        assert ExplorerFileStore.isWorkflow(workflow);
+        assert AbstractExplorerFileStore.isWorkflow(workflow);
         LOGGER.debug("Unlocking workflow " + workflow);
         VMFileLocker.unlockForVM(loc);
     }
@@ -174,11 +176,11 @@ public final class ExplorerFileSystemUtils {
      * @param workflows the workflows to be closed
      */
     public static void closeOpenWorkflows(
-            final List<ExplorerFileStore> workflows) {
+            final List<AbstractExplorerFileStore> workflows) {
         IWorkbenchPage page =
                 PlatformUI.getWorkbench().getActiveWorkbenchWindow()
                         .getActivePage();
-        for (ExplorerFileStore wf : workflows) {
+        for (AbstractExplorerFileStore wf : workflows) {
             File loc;
             try {
                 loc = wf.toLocalFile(EFS.NONE, null);
@@ -219,11 +221,11 @@ public final class ExplorerFileSystemUtils {
      *      false otherwise
      */
     public static boolean hasOpenWorkflows(
-            final List<ExplorerFileStore> workflows) {
+            final List<AbstractExplorerFileStore> workflows) {
         IWorkbenchPage page =
                 PlatformUI.getWorkbench().getActiveWorkbenchWindow()
                         .getActivePage();
-        for (ExplorerFileStore wf : workflows) {
+        for (AbstractExplorerFileStore wf : workflows) {
             File loc;
             try {
                 loc = wf.toLocalFile(EFS.NONE, null);
@@ -267,11 +269,11 @@ public final class ExplorerFileSystemUtils {
      * (e.g. not locked by this VM)
      **/
     public static boolean deleteLockedWorkflows(
-            final List<ExplorerFileStore> toDelWFs) {
+            final List<AbstractExplorerFileStore> toDelWFs) {
         boolean success = true;
-        for (ExplorerFileStore wf : toDelWFs) {
-            assert ExplorerFileStore.isWorkflow(wf)
-                    || ExplorerFileStore.isWorkflowTemplate(wf);
+        for (AbstractExplorerFileStore wf : toDelWFs) {
+            assert AbstractExplorerFileStore.isWorkflow(wf)
+                    || AbstractExplorerFileStore.isWorkflowTemplate(wf);
             try {
                 File loc = wf.toLocalFile(EFS.NONE, null);
                 if (loc == null) {
@@ -339,9 +341,10 @@ public final class ExplorerFileSystemUtils {
      * @param toDel The list of files to be deleted.
      * @return true if the files/directories don't exist when this
      *         method returns. */
-    public static boolean deleteTheRest(final List<ExplorerFileStore> toDel) {
+    public static boolean deleteTheRest(
+            final List<AbstractExplorerFileStore> toDel) {
         boolean success = true;
-        for (ExplorerFileStore f : toDel) {
+        for (AbstractExplorerFileStore f : toDel) {
             // go by the local file. (Does EFS.delete() delete recursively??)
             try {
                 File loc = f.toLocalFile(EFS.NONE, null);

@@ -61,7 +61,7 @@ import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.explorer.filesystem.ExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -85,7 +85,6 @@ public class NewWorkflowGroupAction extends ExplorerAction {
 
     /**
      * @param viewer underlying viewer
-     * @param teamSpaceProvider the sub tree provider
      */
     public NewWorkflowGroupAction(final TreeViewer viewer) {
         super(viewer, "New Workflow Group...");
@@ -114,7 +113,7 @@ public class NewWorkflowGroupAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        Map<AbstractContentProvider, List<ExplorerFileStore>> sel =
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> sel =
                 getSelectedFiles();
         if (sel.size() != 1) {
             LOGGER.info("Select only files from one mount point "
@@ -122,7 +121,7 @@ public class NewWorkflowGroupAction extends ExplorerAction {
             return;
         }
         AbstractContentProvider provider = sel.keySet().iterator().next();
-        List<ExplorerFileStore> list = sel.get(provider);
+        List<AbstractExplorerFileStore> list = sel.get(provider);
         if (list == null || list.size() != 1) {
             // no selection in our sub tree
             LOGGER.debug("No selection: no action!");
@@ -147,7 +146,7 @@ public class NewWorkflowGroupAction extends ExplorerAction {
             IWizardPage currentPage = dialog.getCurrentPage();
             if (currentPage instanceof NewWorkflowWizardPage) {
                 NewWorkflowWizardPage nwwp = (NewWorkflowWizardPage)currentPage;
-                ExplorerFileStore file = nwwp.getNewFile();
+                AbstractExplorerFileStore file = nwwp.getNewFile();
                 Object p = ContentDelegator.getTreeObjectFor(file.getParent());
                 Object o = ContentDelegator.getTreeObjectFor(file);
                 getViewer().refresh(p);
