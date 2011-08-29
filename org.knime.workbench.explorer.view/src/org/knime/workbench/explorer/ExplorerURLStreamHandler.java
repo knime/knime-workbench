@@ -55,7 +55,6 @@ import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Date;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -63,44 +62,12 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.osgi.service.url.AbstractURLStreamHandlerService;
 
-import com.knime.licenses.License;
-import com.knime.licenses.LicenseStore;
-import com.knime.licenses.LicenseTypes;
-
 
 /**
  *
  * @author ohl, University of Konstanz
  */
 public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
-    /* Check the license. */
-    private static final boolean VALID_LICENSE;
-    private static final String LICENSE_MESSAGE;
-    static {
-        License license = LicenseStore.getDefaultStore().getLicense(
-                LicenseTypes.TeamSpace);
-        String message = "";
-        boolean valid = false;
-        try {
-            if (license != null) {
-                valid = license.validate();
-            }
-        } catch (Exception e) {
-            valid = false;
-        }
-        VALID_LICENSE = valid;
-        if (!valid) {
-            message = "No valid license for Team Space feature found.";
-            boolean expired = license != null && license.checkExpiry();
-            if (expired) {
-                Date expirationDate = license.getExpirationDate();
-                message += " Your license has expired on " + expirationDate
-                        + ".";
-            }
-        }
-        LICENSE_MESSAGE = message;
-    }
-
     /**
      * {@inheritDoc}
      */
@@ -111,9 +78,6 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             throw new IOException("Unexpected protocol: " + url.getProtocol()
                     + ". Only " + ExplorerFileSystem.SCHEME
                     + " is supported by this handler.");
-        } else if (!VALID_LICENSE) {
-            throw new IOException("Protocol: " + url.getProtocol()
-                    + " requires a license." + LICENSE_MESSAGE);
         }
         AbstractExplorerFileStore efs;
         try {
