@@ -51,6 +51,7 @@
 package org.knime.workbench.explorer.view.dialogs;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -85,7 +86,6 @@ import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.explorer.view.preferences.ExplorerPreferencePage;
 import org.knime.workbench.ui.KNIMEUIPlugin;
-
 
 /**
  *
@@ -134,12 +134,12 @@ public class SelectMountPointDialog extends Dialog {
         GridLayout gl = new GridLayout(1, true);
         gl.marginHeight =
                 convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
-        gl.marginWidth = convertHorizontalDLUsToPixels(
-                IDialogConstants.HORIZONTAL_MARGIN);
+        gl.marginWidth =
+                convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
         gl.verticalSpacing =
                 convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_SPACING);
-        gl.horizontalSpacing = convertHorizontalDLUsToPixels(
-                IDialogConstants.HORIZONTAL_SPACING);
+        gl.horizontalSpacing =
+                convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_SPACING);
 
         Composite overall = new Composite(parent, SWT.FILL);
         overall.setLayoutData(new GridData(GridData.FILL_BOTH));
@@ -178,8 +178,7 @@ public class SelectMountPointDialog extends Dialog {
         Label execIcon = new Label(header, SWT.NONE);
         execIcon.setBackground(white);
         execIcon.setImage(IMG_NEWMOUNT.createImage());
-        execIcon.setLayoutData(
-                new GridData(SWT.END, SWT.BEGINNING, true, true));
+        execIcon.setLayoutData(new GridData(SWT.END, SWT.BEGINNING, true, true));
         // second row
         new Label(header, SWT.None);
         Label txt = new Label(header, SWT.NONE);
@@ -204,6 +203,7 @@ public class SelectMountPointDialog extends Dialog {
 
     /**
      * Creates a table and adds it to the panel.
+     *
      * @param panel the panel to add the table to
      */
     protected void createTableSelectionPanel(final Composite panel) {
@@ -227,6 +227,31 @@ public class SelectMountPointDialog extends Dialog {
      * Fills the table with the current content of the explorer mount table.
      */
     protected void updateTableContent() {
+        final int mountIDidx = 0;
+        // make sure unchecked content stays unchecked after update
+        HashMap<String, String> m_unchecked = new HashMap<String, String>();
+        // hashmap of <mountID, ACP.toString()>
+        Map<String, AbstractContentProvider> mounts =
+                ExplorerMountTable.getMountedContent();
+        if (m_table.getItemCount() == 0) {
+            // table created for the first time: check all IDs visible in view
+            for (AbstractContentProvider acp : mounts.values()) {
+                if (!m_mountedIds.contains(acp.getMountID())) {
+                    m_unchecked.put(acp.getMountID(), acp.toString());
+                }
+            }
+        } else {
+            for (TableItem i : m_table.getItems()) {
+                if (!i.getChecked()) {
+                    // keep the mountID and toString() of unchecked items
+                    AbstractContentProvider acp =
+                            mounts.get(i.getText(mountIDidx));
+                    if (acp != null) {
+                        m_unchecked.put(acp.getMountID(), acp.toString());
+                    }
+                }
+            }
+        }
         m_table.removeAll();
         Map<String, AbstractContentProvider> mountedContent =
                 ExplorerMountTable.getMountedContent();
@@ -234,7 +259,7 @@ public class SelectMountPointDialog extends Dialog {
                 .entrySet()) {
             TableItem item = new TableItem(m_table, SWT.NONE);
             // Column0: MountID
-            item.setText(0, e.getKey());
+            item.setText(mountIDidx, e.getKey());
             // Column 1: icon and name of provider instance
             AbstractContentProvider acp = e.getValue();
             item.setImage(1, acp.getImage());
@@ -243,7 +268,13 @@ public class SelectMountPointDialog extends Dialog {
             AbstractContentProviderFactory acpf = acp.getFactory();
             item.setImage(2, acpf.getImage());
             item.setText(2, acpf.toString());
-            item.setChecked(m_mountedIds.contains(acp.getMountID()));
+            boolean check = true;
+            String toString = m_unchecked.get(e.getKey());
+            if (acp.toString().equals(toString)) {
+                // if old mount point is still the same - keep it unchecked
+                check = false;
+            }
+            item.setChecked(check);
         }
         for (TableColumn c : m_table.getColumns()) {
             c.pack();
@@ -252,6 +283,7 @@ public class SelectMountPointDialog extends Dialog {
 
     /**
      * Creates a panel containing a link to the Explorer preference page.
+     *
      * @param parent the parent composite
      */
     protected void createManageMountPointPanel(final Composite parent) {
@@ -271,9 +303,9 @@ public class SelectMountPointDialog extends Dialog {
             @Override
             public void widgetSelected(final SelectionEvent e) {
                 PreferenceDialog dialog =
-                    PreferencesUtil.createPreferenceDialogOn(getShell(),
-                        ExplorerPreferencePage.ID,
-                        new String[]{ExplorerPreferencePage.ID}, null);
+                        PreferencesUtil.createPreferenceDialogOn(getShell(),
+                                ExplorerPreferencePage.ID,
+                                new String[]{ExplorerPreferencePage.ID}, null);
                 dialog.open();
                 updateTableContent();
             }
@@ -316,6 +348,7 @@ public class SelectMountPointDialog extends Dialog {
 
     /**
      * Returns the mount points that are selected for display in the view.
+     *
      * @return the selected mount points
      */
     public List<MountPoint> getResult() {
@@ -330,79 +363,79 @@ public class SelectMountPointDialog extends Dialog {
         return true;
     }
 
-//    public static void main2(final String[] args) {
-//        Display display = new Display();
-//        Shell shell = new Shell(display);
-//        shell.setLayout(new FillLayout());
-//        Table table = new Table(shell, SWT.BORDER | SWT.MULTI);
-//        table.setLinesVisible(true);
-//        for (int i = 0; i < 3; i++) {
-//            TableColumn column = new TableColumn(table, SWT.NONE);
-//            column.setWidth(100);
-//        }
-//        for (int i = 0; i < 12; i++) {
-//            new TableItem(table, SWT.NONE);
-//        }
-//        TableItem[] items = table.getItems();
-//        for (int i = 0; i < items.length; i++) {
-//            TableEditor editor = new TableEditor(table);
-//            CCombo combo = new CCombo(table, SWT.NONE);
-//            combo.setText("CCombo");
-//            combo.add("item 1");
-//            combo.add("item 2");
-//            editor.grabHorizontal = true;
-//            editor.setEditor(combo, items[i], 0);
-//            editor = new TableEditor(table);
-//            Text text = new Text(table, SWT.NONE);
-//            text.setText("Text");
-//            editor.grabHorizontal = true;
-//            editor.setEditor(text, items[i], 1);
-//            editor = new TableEditor(table);
-//            Button button = new Button(table, SWT.CHECK);
-//            button.pack();
-//            editor.minimumWidth = button.getSize().x;
-//            editor.horizontalAlignment = SWT.LEFT;
-//            editor.setEditor(button, items[i], 2);
-//        }
-//        shell.pack();
-//        shell.open();
-//        while (!shell.isDisposed()) {
-//            if (!display.readAndDispatch())
-//                display.sleep();
-//        }
-//        display.dispose();
-//    }
-//
-//    public static void main(final String[] args) {
-//        Display display = new Display();
-//        Shell shell = new Shell(display);
-//        final Table table =
-//                new Table(shell, SWT.CHECK | SWT.BORDER | SWT.V_SCROLL
-//                        | SWT.H_SCROLL | SWT.FULL_SELECTION);
-//        for (int i = 0; i < 12; i++) {
-//            TableItem item = new TableItem(table, SWT.NONE);
-//            item.setText("Item " + i);
-//        }
-//        Rectangle clientArea = shell.getClientArea();
-//        table.setBounds(clientArea.x, clientArea.y, 100, 100);
-//        table.addListener(SWT.Selection, new Listener() {
-//            @Override
-//            public void handleEvent(final Event event) {
-//                TableItem[] sel = table.getItems();
-//                for (TableItem ti : sel) {
-//                    if (ti.getChecked()) {
-//                        System.out.println("Checked: " + ti.getText());
-//                    }
-//                }
-//            }
-//        });
-//        shell.setSize(200, 200);
-//        shell.open();
-//        while (!shell.isDisposed()) {
-//            if (!display.readAndDispatch())
-//                display.sleep();
-//        }
-//        display.dispose();
-//    }
+    // public static void main2(final String[] args) {
+    // Display display = new Display();
+    // Shell shell = new Shell(display);
+    // shell.setLayout(new FillLayout());
+    // Table table = new Table(shell, SWT.BORDER | SWT.MULTI);
+    // table.setLinesVisible(true);
+    // for (int i = 0; i < 3; i++) {
+    // TableColumn column = new TableColumn(table, SWT.NONE);
+    // column.setWidth(100);
+    // }
+    // for (int i = 0; i < 12; i++) {
+    // new TableItem(table, SWT.NONE);
+    // }
+    // TableItem[] items = table.getItems();
+    // for (int i = 0; i < items.length; i++) {
+    // TableEditor editor = new TableEditor(table);
+    // CCombo combo = new CCombo(table, SWT.NONE);
+    // combo.setText("CCombo");
+    // combo.add("item 1");
+    // combo.add("item 2");
+    // editor.grabHorizontal = true;
+    // editor.setEditor(combo, items[i], 0);
+    // editor = new TableEditor(table);
+    // Text text = new Text(table, SWT.NONE);
+    // text.setText("Text");
+    // editor.grabHorizontal = true;
+    // editor.setEditor(text, items[i], 1);
+    // editor = new TableEditor(table);
+    // Button button = new Button(table, SWT.CHECK);
+    // button.pack();
+    // editor.minimumWidth = button.getSize().x;
+    // editor.horizontalAlignment = SWT.LEFT;
+    // editor.setEditor(button, items[i], 2);
+    // }
+    // shell.pack();
+    // shell.open();
+    // while (!shell.isDisposed()) {
+    // if (!display.readAndDispatch())
+    // display.sleep();
+    // }
+    // display.dispose();
+    // }
+    //
+    // public static void main(final String[] args) {
+    // Display display = new Display();
+    // Shell shell = new Shell(display);
+    // final Table table =
+    // new Table(shell, SWT.CHECK | SWT.BORDER | SWT.V_SCROLL
+    // | SWT.H_SCROLL | SWT.FULL_SELECTION);
+    // for (int i = 0; i < 12; i++) {
+    // TableItem item = new TableItem(table, SWT.NONE);
+    // item.setText("Item " + i);
+    // }
+    // Rectangle clientArea = shell.getClientArea();
+    // table.setBounds(clientArea.x, clientArea.y, 100, 100);
+    // table.addListener(SWT.Selection, new Listener() {
+    // @Override
+    // public void handleEvent(final Event event) {
+    // TableItem[] sel = table.getItems();
+    // for (TableItem ti : sel) {
+    // if (ti.getChecked()) {
+    // System.out.println("Checked: " + ti.getText());
+    // }
+    // }
+    // }
+    // });
+    // shell.setSize(200, 200);
+    // shell.open();
+    // while (!shell.isDisposed()) {
+    // if (!display.readAndDispatch())
+    // display.sleep();
+    // }
+    // display.dispose();
+    // }
 
 }
