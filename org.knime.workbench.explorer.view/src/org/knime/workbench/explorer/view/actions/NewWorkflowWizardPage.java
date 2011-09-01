@@ -106,7 +106,7 @@ public class NewWorkflowWizardPage extends WizardPage {
 
     private final String m_elementName;
 
-    private AbstractContentProvider m_contentProvider;
+    private final AbstractContentProvider m_contentProvider;
 
     /**
      * Create and init the page.
@@ -120,7 +120,7 @@ public class NewWorkflowWizardPage extends WizardPage {
      *
      */
     public NewWorkflowWizardPage(final AbstractContentProvider contentProvider,
-            final List<AbstractExplorerFileStore> selection, 
+            final List<AbstractExplorerFileStore> selection,
             final boolean isWorkflow) {
         super("TeamSpaceNewItemWizardPage");
         if (contentProvider == null) {

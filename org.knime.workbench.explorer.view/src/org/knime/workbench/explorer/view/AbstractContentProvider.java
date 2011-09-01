@@ -216,6 +216,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /**
      * Add items to the context menu.
      *
+     * @param viewer the tree viewer
      * @param manager the context menu manager
      * @param selection the current selection sorted by content provider (with
      *            all selected item for all providers!)
@@ -223,7 +224,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public abstract void addContextMenuActions(
             final TreeViewer viewer,
             final IMenuManager manager,
-            final Map<AbstractContentProvider, 
+            final Map<AbstractContentProvider,
             List<AbstractExplorerFileStore>> selection);
 
     /* ---------------- drag and drop methods ----------------------- */
@@ -269,7 +270,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     + "(mount provider \"" + toString() + "\"");
             return false;
         }
-        if (!directory.isDirectory() 
+        if (!directory.isDirectory()
                 || AbstractExplorerFileStore.isWorkflow(target)
                 || AbstractExplorerFileStore.isNode(target)
                 || AbstractExplorerFileStore.isMetaNode(target)) {

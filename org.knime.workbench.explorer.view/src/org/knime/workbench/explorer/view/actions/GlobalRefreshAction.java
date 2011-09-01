@@ -25,12 +25,14 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.ContentDelegator;
 
 /**
  *
  * @author morent, KNIME.com, Zurich, Switzerland
  */
-public class RefreshAction extends ExplorerAction {
+public class GlobalRefreshAction extends ExplorerAction {
 
     /**
      * The icon for the refresh action.
@@ -41,14 +43,27 @@ public class RefreshAction extends ExplorerAction {
 
     private static final String TOOLTIP = "Refresh the view";
 
+    private AbstractExplorerFileStore[] m_fileStore;
+
     /**
-     *
-     * @param viewer the viewer
+     * Refreshes all elements in the viewer.
+     * @param viewer the viewer to refresh
      */
-    public RefreshAction(final TreeViewer viewer) {
+    public GlobalRefreshAction(final TreeViewer viewer) {
         super(viewer, "Refresh");
         setImageDescriptor(IMG_REFRESH);
         setToolTipText(TOOLTIP);
+    }
+
+    /**
+     * Refreshes the passed elements in the viewer.
+     * @param viewer the viewer containing the file stores
+     * @param fileStore the file stores to refresh
+     */
+    public GlobalRefreshAction(final TreeViewer viewer,
+            final AbstractExplorerFileStore ... fileStore) {
+        this(viewer);
+        m_fileStore = fileStore;
     }
 
     /**
@@ -64,6 +79,12 @@ public class RefreshAction extends ExplorerAction {
      */
     @Override
     public void run() {
-       getViewer().refresh();
+        if (m_fileStore == null) {
+            getViewer().refresh();
+        } else {
+            for (AbstractExplorerFileStore file : m_fileStore) {
+                getViewer().refresh(ContentDelegator.getTreeObjectFor(file));
+            }
+        }
     }
 }

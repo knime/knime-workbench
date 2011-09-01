@@ -56,6 +56,7 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
@@ -81,7 +82,7 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
     @Override
     public void addPages() {
         NewWorkflowWizardPage page = new NewWorkflowWizardPage(
-                getConentProvider(), getInitialSelection(), 
+                getContentProvider(), getInitialSelection(),
                 /* isWorkflow= */false);
         addPage(page);
     }
@@ -107,16 +108,19 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
         // create workflow group dir
         newItem.mkdir(EFS.NONE, monitor);
 
-        // create a new empty meta info file
-        File locFile = newItem.toLocalFile(EFS.NONE, monitor);
-        if (locFile == null) {
-            // strange - can't create meta info file then
-            return;
+        if (newItem instanceof LocalExplorerFileStore) {
+            // create a new empty meta info file
+            File locFile = newItem.toLocalFile(EFS.NONE, monitor);
+            if (locFile == null) {
+                // strange - can't create meta info file then
+                return;
+            }
+            MetaInfoFile.createMetaInfoFile(locFile, false);
+            if (newItem instanceof LocalWorkspaceFileStore) {
+                ((LocalWorkspaceFileStore)newItem).refreshParentResource();
+            }
         }
-        MetaInfoFile.createMetaInfoFile(locFile, false);
-        if (newItem instanceof LocalWorkspaceFileStore) {
-            ((LocalWorkspaceFileStore)newItem).refreshParentResource();
-        }
+        // TODO handle meta file creation for remote files
     }
 
 }

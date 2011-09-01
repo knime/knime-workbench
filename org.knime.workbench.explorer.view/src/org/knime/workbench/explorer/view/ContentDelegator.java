@@ -204,7 +204,7 @@ public class ContentDelegator extends LabelProvider implements
         if (!(parentElement instanceof ContentObject)) {
             // all children should be of that type!
             LOGGER.coding("Unexpected object in tree view! (" + parentElement
-                    + " of type " 
+                    + " of type "
                     + parentElement.getClass().getCanonicalName());
             return NO_CHILDREN;
         }
@@ -336,11 +336,25 @@ public class ContentDelegator extends LabelProvider implements
     }
 
     /**
+     * Creates the (new but) same object that is stored in the view tree for the
+     * mount point with the passed mount id.
+     *
+     * @param mountID mount id of the mount point
+     * @return the (new but) same object that is stored in the view tree for the
+     *         passed mount id.
+     */
+    public static AbstractContentProvider getTreeObjectFor(
+            final String mountID) {
+        MountPoint mp = ExplorerMountTable.getMountPoint(mountID);
+        return mp.getProvider();
+    }
+
+    /**
      * Same as {@link #getTreeObjectFor(AbstractExplorerFileStore)}, just for
      * lists. The result list may be shorter than the argument list as null
      * elements are not added (in case objects in the argument collection are of
      * unexpected type).
-     * 
+     *
      * @param files the files to get tree objects for
      * @return a list of tree objects for the files.
      */

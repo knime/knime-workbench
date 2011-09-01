@@ -73,6 +73,10 @@ import org.knime.workbench.explorer.view.ContentDelegator;
  */
 public class NewWorkflowAction extends ExplorerAction {
 
+    /** ID of the global new workflow action in the explorer menu. */
+    public static final String ID =
+            "org.knime.explorer.view.actions.newflow";
+
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(NewWorkflowAction.class);
 
@@ -97,7 +101,7 @@ public class NewWorkflowAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-        return "org.knime.explorer.view.actions.newflow";
+        return ID;
     }
 
     /**

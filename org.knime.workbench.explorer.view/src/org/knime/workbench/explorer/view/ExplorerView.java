@@ -97,11 +97,11 @@ import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
 import org.knime.workbench.explorer.view.actions.GlobalEditMetaInfoAction;
 import org.knime.workbench.explorer.view.actions.GlobalExecuteWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalOpenWorkflowVariablesDialogAction;
+import org.knime.workbench.explorer.view.actions.GlobalRefreshAction;
 import org.knime.workbench.explorer.view.actions.GlobalRenameAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowGroupAction;
 import org.knime.workbench.explorer.view.actions.NoMenuAction;
-import org.knime.workbench.explorer.view.actions.RefreshAction;
 import org.knime.workbench.explorer.view.actions.SynchronizeExplorerViewAction;
 import org.knime.workbench.explorer.view.actions.export.WorkflowExportAction;
 import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
@@ -229,7 +229,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         Action collAll = new CollapseAllAction(m_viewer);
         collAll.setToolTipText("Collapses the entire tree");
         toolBarMgr.add(collAll);
-        Action refresh = new RefreshAction(m_viewer);
+        Action refresh = new GlobalRefreshAction(m_viewer);
         toolBarMgr.add(new Separator());
         toolBarMgr.add(refresh);
         Action synchronize = new SynchronizeExplorerViewAction(m_viewer,
@@ -516,7 +516,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             return;
         }
 
-        addGlobalActions(manager);
+        addGlobalActions(manager, fs);
 
         IStructuredSelection sel =
                 (IStructuredSelection)m_viewer.getSelection();
@@ -536,7 +536,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     }
 
-    private void addGlobalActions(final IMenuManager manager) {
+    private void addGlobalActions(final IMenuManager manager,
+            final List<AbstractExplorerFileStore> fs) {
         manager.add(new NewWorkflowAction(m_viewer));
         manager.add(new NewWorkflowGroupAction(m_viewer));
         manager.add(new Separator());
@@ -553,6 +554,11 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new GlobalOpenWorkflowVariablesDialogAction(m_viewer));
         manager.add(new Separator());
         manager.add(new GlobalEditMetaInfoAction(m_viewer));
+        manager.add(new Separator());
+        if (fs != null && !fs.isEmpty()) {
+            manager.add(new GlobalRefreshAction(m_viewer,
+                    fs.toArray(new AbstractExplorerFileStore[0])));
+        }
     }
 
     /**

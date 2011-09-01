@@ -102,7 +102,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         setNeedsProgressMonitor(true);
     }
 
-    protected AbstractContentProvider getConentProvider() {
+    protected AbstractContentProvider getContentProvider() {
         return m_contentProvider;
     }
 
