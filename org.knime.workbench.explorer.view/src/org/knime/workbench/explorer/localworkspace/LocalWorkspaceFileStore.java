@@ -57,7 +57,6 @@ import java.io.OutputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -148,9 +147,9 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public IFileInfo fetchInfo(final int options,
+    public LocalWorkspaceFileInfo fetchInfo(final int options,
             final IProgressMonitor monitor) throws CoreException {
-        return m_file.fetchInfo(options, monitor);
+        return new LocalWorkspaceFileInfo(m_file);
     }
 
     /**

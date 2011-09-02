@@ -26,7 +26,6 @@ import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -64,7 +63,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * @param id mount id
      */
     LocalWorkspaceContentProvider(
-            final LocalWorkspaceContentProviderFactory factory, 
+            final LocalWorkspaceContentProviderFactory factory,
             final String id) {
         super(factory, id);
     }
@@ -110,17 +109,18 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         }
         // everything else: return dirs only
         try {
-            IFileStore[] children = parent.childStores(EFS.NONE, null);
+            AbstractExplorerFileStore[] children
+                    = parent.childStores(EFS.NONE, null);
             ArrayList<AbstractExplorerFileStore> result =
                     new ArrayList<AbstractExplorerFileStore>();
-            for (IFileStore c : children) {
+            for (AbstractExplorerFileStore c : children) {
                 if (AbstractExplorerFileStore.isWorkflow(c)) {
-                    result.add((AbstractExplorerFileStore)c);
+                    result.add(c);
                     continue;
                 }
                 if (AbstractExplorerFileStore.isWorkflowGroup(
-                        (AbstractExplorerFileStore)c)) {
-                    result.add((AbstractExplorerFileStore)c);
+                        c)) {
+                    result.add(c);
                     continue;
                 }
             }
@@ -197,7 +197,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     public void addContextMenuActions(
             final org.eclipse.jface.viewers.TreeViewer viewer,
             final org.eclipse.jface.action.IMenuManager manager,
-            final Map<AbstractContentProvider, 
+            final Map<AbstractContentProvider,
             List<AbstractExplorerFileStore>> selection) {
         // nothing to add so far
     }
@@ -270,7 +270,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     DragAndDropUtils.getExplorerFileStores(
                             (IStructuredSelection)selection);
             for (AbstractExplorerFileStore fs : fileStores) {
-                if (!(AbstractExplorerFileStore.isWorkflow(fs) 
+                if (!(AbstractExplorerFileStore.isWorkflow(fs)
                         || AbstractExplorerFileStore.isWorkflowGroup(fs))) {
                     return false;
                 }
@@ -280,7 +280,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         }
         boolean valid =
                 !(AbstractExplorerFileStore.isNode(target)
-                        || AbstractExplorerFileStore.isWorkflow(target) 
+                        || AbstractExplorerFileStore.isWorkflow(target)
                         || AbstractExplorerFileStore.isMetaNode(target));
         return valid;
     }
@@ -356,7 +356,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 }
                 for (String path : files) {
                     File src = new File(path);
-                    if (src.exists() 
+                    if (src.exists()
                             && !targetDir.equals(src.getParentFile())) {
                         File dir = new File(targetDir, src.getName());
                         FileUtils.copyDirectory(src, dir);
@@ -383,7 +383,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * @param the destination file store
      * @throws CoreException
      */
-    private void copy(final AbstractExplorerFileStore src, 
+    private void copy(final AbstractExplorerFileStore src,
             final AbstractExplorerFileStore dest) throws CoreException {
         src.copy(dest, EFS.NONE, null);
     }

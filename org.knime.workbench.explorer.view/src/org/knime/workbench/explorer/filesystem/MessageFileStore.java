@@ -5,10 +5,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 
-import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.filesystem.provider.FileInfo;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -173,26 +171,9 @@ public final class MessageFileStore extends AbstractExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public IFileInfo fetchInfo() {
-        // re-use Eclipse local file info
-        FileInfo info = new FileInfo();
-        info.setExists(false);
-        info.setDirectory(false);
-        info.setLastModified(0);
-        info.setLength(0);
-        info.setAttribute(EFS.ATTRIBUTE_READ_ONLY, true);
-        info.setAttribute(EFS.ATTRIBUTE_HIDDEN, false);
-        info.setName(m_msg);
-        return info;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public IFileInfo fetchInfo(final int options,
+    public MessageFileInfo fetchInfo(final int options,
             final IProgressMonitor monitor) throws CoreException {
-        return fetchInfo();
+        return MessageFileInfo.getInstance();
     }
 
     /**

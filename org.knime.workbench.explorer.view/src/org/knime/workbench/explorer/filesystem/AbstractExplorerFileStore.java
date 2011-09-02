@@ -57,14 +57,12 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import org.eclipse.core.filesystem.IFileInfo;
+import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
-import org.knime.core.node.workflow.SingleNodeContainerPersistorVersion200;
-import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -108,8 +106,21 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * {@inheritDoc}
      */
     @Override
-    public abstract IFileInfo fetchInfo(final int options,
+    public abstract AbstractExplorerFileInfo fetchInfo(final int options,
             final IProgressMonitor monitor) throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public AbstractExplorerFileInfo fetchInfo() {
+        try {
+            return fetchInfo(EFS.NONE, null);
+        } catch (CoreException e) {
+            // this should never happen
+            throw new RuntimeException(e);
+        }
+    }
 
     /**
      * {@inheritDoc}
@@ -240,12 +251,11 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a workflow
      * @return true if the file is a workflow, false otherwise
      */
-    public static boolean isWorkflow(final IFileStore file) {
+    public static boolean isWorkflow(final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-        IFileStore wf = file.getChild(WorkflowPersistor.WORKFLOW_FILE);
-        return wf.fetchInfo().exists() && !isWorkflow(file.getParent());
+        return file.fetchInfo().isWorkflow();
     }
 
     /**
@@ -254,12 +264,12 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a workflow
      * @return true if the file is a workflow template, false otherwise
      */
-    public static boolean isWorkflowTemplate(final IFileStore file) {
+    public static boolean isWorkflowTemplate(
+            final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-        IFileStore tf = file.getChild(WorkflowPersistor.TEMPLATE_FILE);
-        return tf.fetchInfo().exists();
+        return file.fetchInfo().isWorkflowTemplate();
 
     }
 
@@ -269,17 +279,12 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a workflow group
      * @return true if the file is a workflow group, false otherwise
      */
-    public static boolean isWorkflowGroup(final AbstractExplorerFileStore file) {
+    public static boolean isWorkflowGroup(
+            final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-
-        if (isWorkflow(file) || isWorkflow(file.getParent())
-                || isWorkflowTemplate(file)) {
-            return false;
-        }
-        return file.getChild(WorkflowPersistor.METAINFO_FILE).fetchInfo()
-                .exists();
+        return file.fetchInfo().isWorkflowGroup();
     }
 
     /**
@@ -292,13 +297,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-        IFileStore parent = file.getParent();
-        if (parent == null) {
-            return false;
-        }
-        IFileStore wf = file.getChild(WorkflowPersistor.WORKFLOW_FILE);
-        IFileStore parentWf = parent.getChild(WorkflowPersistor.WORKFLOW_FILE);
-        return wf.fetchInfo().exists() && parentWf.fetchInfo().exists();
+        return file.fetchInfo().isMetaNode();
     }
 
     /**
@@ -308,11 +307,10 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * @return true if the file is a node, false otherwise
      */
     public static boolean isNode(final AbstractExplorerFileStore file) {
-        if (file == null || !file.fetchInfo().exists() || isMetaNode(file)) {
+        if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-        return file.getChild(SingleNodeContainerPersistorVersion200.NODE_FILE)
-                .fetchInfo().exists() && isWorkflow(file.getParent());
+        return file.fetchInfo().isNode();
     }
 
     /**
@@ -321,22 +319,12 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      */
     public static boolean isDirOrWorkflowGroup(
             final AbstractExplorerFileStore file) {
-        if (file == null || !file.fetchInfo().isDirectory()) {
+        if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-        if (isWorkflow(file) || isMetaNode(file) || isNode(file)
-                || isWorkflowTemplate(file)) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * @param file the file to test.
-     * @return true if the argument is only a plain directory.
-     */
-    public static boolean isDirOnly(final AbstractExplorerFileStore file) {
-         return isDirOrWorkflowGroup(file) && !isWorkflowGroup(file);
+        AbstractExplorerFileInfo fileInfo = file.fetchInfo();
+        return fileInfo.isDirectory()
+                || fileInfo.isWorkflowGroup();
     }
 
     /**
