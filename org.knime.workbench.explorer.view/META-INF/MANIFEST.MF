@@ -1,6 +1,7 @@
 Manifest-Version: 1.0
 Bundle-Name: KNIME Explorer View
-Bundle-SymbolicName: org.knime.workbench.explorer.view;singleton=true
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: org.knime.workbench.explorer.view;singleton:=true
 Bundle-Version: 1.0.0.qualifier
 Bundle-Vendor: KNIME.com, Zurich, Switzerland
 Require-Bundle: org.knime.core,
@@ -14,10 +15,10 @@ Require-Bundle: org.knime.core,
  org.eclipse.ecf.filetransfer;bundle-version="4.0.0",
  org.eclipse.ecf.identity;bundle-version="3.1.0",
  org.knime.workbench.core;bundle-version="2.4.0",
- org.knime.workbench.repository;bundle-version="2.4.0";reprovide=true
+ org.knime.workbench.repository;bundle-version="2.4.0";visibility:=reexport
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy
-Provide-Package: org.knime.workbench.explorer,
+Export-Package: org.knime.workbench.explorer,
  org.knime.workbench.explorer.filesystem,
  org.knime.workbench.explorer.localworkspace,
  org.knime.workbench.explorer.pathresolve,
