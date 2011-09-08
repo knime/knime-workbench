@@ -57,6 +57,7 @@ import java.io.OutputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -84,8 +85,8 @@ import org.knime.workbench.ui.navigator.KnimeResourceUtil;
  * @author ohl, University of Konstanz
  */
 public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
-    private static final NodeLogger LOGGER
-            = NodeLogger.getLogger(LocalWorkspaceFileStore.class);
+    private static final NodeLogger LOGGER = NodeLogger
+            .getLogger(LocalWorkspaceFileStore.class);
 
     private final IFileStore m_file;
 
@@ -93,8 +94,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      * @param mountID the id of the mount
      * @param fullPath the full path of the file store
      */
-    public LocalWorkspaceFileStore(final String mountID,
-            final String fullPath) {
+    public LocalWorkspaceFileStore(final String mountID, final String fullPath) {
         super(mountID, fullPath);
         IPath rootPath = ResourcesPlugin.getWorkspace().getRoot().getLocation();
         IPath filePath = rootPath.append(new Path(fullPath));
@@ -138,8 +138,8 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public String[] childNames(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public String[] childNames(final int options, final IProgressMonitor monitor)
+            throws CoreException {
         return m_file.childNames(options, monitor);
     }
 
@@ -149,7 +149,21 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     @Override
     public LocalWorkspaceFileInfo fetchInfo(final int options,
             final IProgressMonitor monitor) throws CoreException {
-        return new LocalWorkspaceFileInfo(m_file);
+        LocalWorkspaceFileInfo info = new LocalWorkspaceFileInfo(m_file);
+        IFileInfo fileInfo = m_file.fetchInfo();
+        if (fileInfo.exists()) {
+            info.setExists(true);
+            info.setDirectory(fileInfo.isDirectory());
+            info.setLastModified(fileInfo.getLastModified());
+            info.setLength(fileInfo.getLength());
+            info.setAttribute(EFS.ATTRIBUTE_READ_ONLY,
+                    fileInfo.getAttribute(EFS.ATTRIBUTE_READ_ONLY));
+            info.setAttribute(EFS.ATTRIBUTE_HIDDEN,
+                    fileInfo.getAttribute(EFS.ATTRIBUTE_HIDDEN));
+        } else {
+            info.setExists(false);
+        }
+        return info;
     }
 
     /**
@@ -230,7 +244,6 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         refreshResource(destination, monitor);
     }
 
-
     private void createProjectFile(final IFileStore dest,
             final IProgressMonitor monitor) throws CoreException {
         createProjectFile(getName(), dest, monitor);
@@ -243,7 +256,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      * @param projectName the name of the project
      * @param destination the parent file store of the project
      * @param monitor a progress monitor, or null if progress reporting and
-     *      cancellation are not desired
+     *            cancellation are not desired
      *
      * @throws CoreException
      */
@@ -260,14 +273,12 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
              * The target is the workspace root. Therefore we have to create a
              * .project file.
              */
-            IProject newProject =
-                    ((IWorkspaceRoot)res).getProject(projectName);
+            IProject newProject = ((IWorkspaceRoot)res).getProject(projectName);
             newProject.delete(false, true, monitor);
             try {
                 newProject =
-                        MetaInfoFile
-                                .createKnimeProject(newProject.getName(),
-                                        KNIMEProjectNature.ID);
+                        MetaInfoFile.createKnimeProject(newProject.getName(),
+                                KNIMEProjectNature.ID);
             } catch (Exception e) {
                 String message =
                         "Could not create KNIME project in "
@@ -278,13 +289,12 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         }
     }
 
-
     /**
      * {@inheritDoc}
      */
     @Override
     public void refresh() {
-         try {
+        try {
             refreshResource(this, null);
         } catch (CoreException e) {
             // too bad
@@ -322,8 +332,8 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         }
         File file = fileStore.toLocalFile(EFS.NONE, null);
         if (file != null) {
-                refreshResource(KnimeResourceUtil.getResourceForURI(
-                        file.toURI()), monitor);
+            refreshResource(KnimeResourceUtil.getResourceForURI(file.toURI()),
+                    monitor);
         }
     }
 
@@ -382,10 +392,10 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         try {
             srcFile.renameTo(dstFile);
         } catch (SecurityException e) {
-            String message = "Could not rename file \""
-                + srcFile.getAbsolutePath() + "\" to \""
-                + dstFile.getAbsolutePath()
-                + "\" due to missing access rights.";
+            String message =
+                    "Could not rename file \"" + srcFile.getAbsolutePath()
+                            + "\" to \"" + dstFile.getAbsolutePath()
+                            + "\" due to missing access rights.";
             throw new CoreException(new Status(IStatus.ERROR,
                     ExplorerActivator.PLUGIN_ID, message, e));
         }
@@ -394,7 +404,5 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         refreshResource(destination.getParent(), monitor);
         refreshParentResource();
     }
-
-
 
 }
