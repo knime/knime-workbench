@@ -102,8 +102,8 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
                     new CredentialVariablesDialog(d.getActiveShell(), store,
                         wfm.getName());
                 if (dialog.open() == Dialog.OK) {
-                    for (Credentials cred : store.getCredentials()) {
-                        store.remove(cred.getName());
+                    for (String name : store.listNames()) {
+                        store.remove(name);
                     }
                     List<Credentials> credentials = dialog.getCredentials();
                     for (Credentials cred : credentials) {

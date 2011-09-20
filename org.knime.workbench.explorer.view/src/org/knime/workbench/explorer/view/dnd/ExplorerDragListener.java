@@ -76,9 +76,14 @@ public class ExplorerDragListener implements DragSourceListener {
                 (IStructuredSelection)m_viewer.getSelection();
 
      // find affected workflows
+        List<AbstractExplorerFileStore> selFileStores =
+            DragAndDropUtils.getExplorerFileStores(selection);
+        if (selFileStores == null || selFileStores.isEmpty()) {
+            event.doit = false;
+            return;
+        }
         List<AbstractExplorerFileStore> affectedFlows
-                = ExplorerAction.getContainedWorkflows(
-                        DragAndDropUtils.getExplorerFileStores(selection));
+                = ExplorerAction.getContainedWorkflows(selFileStores);
         if (ExplorerFileSystemUtils.hasOpenWorkflows(affectedFlows)) {
             event.doit = false;
             MessageBox mb =

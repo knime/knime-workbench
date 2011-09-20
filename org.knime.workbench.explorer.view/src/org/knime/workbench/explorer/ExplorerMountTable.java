@@ -234,6 +234,23 @@ public final class ExplorerMountTable {
         return mountPoint.getProvider();
     }
 
+
+    /**
+     * @param mountID the prepared mount id to clear
+     * @return true if clearing was successful, false otherwise
+     */
+    public static synchronized boolean clearPreparedMount(
+            final String mountID) {
+        synchronized (PREPARED) {
+            MountPoint mp = PREPARED.remove(mountID);
+            if (mp == null) {
+                return false;
+            }
+            return true;
+        }
+    }
+
+
     /**
      * Clears all prepared mount points.
      */

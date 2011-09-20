@@ -32,7 +32,9 @@ import org.eclipse.jface.preference.ListEditor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Widget;
 import org.knime.core.node.NodeLogger;
@@ -79,6 +81,41 @@ public class MountPointListEditor extends ListEditor {
                 }
             }
         });
+
+        /* Add our own selection listener before the parent's. Otherwise
+         * the parent just removes the item and there is no chance to retrieve
+         * the removed item.*/
+        Button removeButton = getRemoveButton();
+        Listener[] listeners = removeButton.getListeners(SWT.Selection);
+        // remove registered selection listeners
+        for (Listener listener : listeners) {
+            removeButton.removeListener(SWT.Selection, listener);
+        }
+        // insert this listener as first selection listener
+        removeButton.addSelectionListener(new SelectionAdapter() {
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public void widgetSelected(final SelectionEvent event) {
+                org.eclipse.swt.widgets.List list = getList();
+                int index = list.getSelectionIndex();
+                if (index >= 0) {
+                    MountSettings mountSettings = m_mountSettings.remove(
+                            list.getItem(index));
+                    String mountID = mountSettings.getMountID();
+                    if (ExplorerMountTable.clearPreparedMount(mountID)) {
+                        LOGGER.debug("Prepared mount point \"" + mountID
+                                    + "\" removed. ");
+                    }
+                }
+            }
+        });
+        // add the previously registered listeners
+        for (Listener listener : listeners) {
+            removeButton.addListener(SWT.Selection, listener);
+        }
+
     }
 
 
@@ -137,6 +174,8 @@ public class MountPointListEditor extends ListEditor {
         return null;
     }
 
+
+
     /**
      * {@inheritDoc}
      */
@@ -153,7 +192,4 @@ public class MountPointListEditor extends ListEditor {
         }
         return res;
     }
-
-
-
 }
