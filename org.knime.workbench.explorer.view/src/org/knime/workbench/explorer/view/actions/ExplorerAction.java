@@ -35,6 +35,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
@@ -121,8 +122,8 @@ public abstract class ExplorerAction extends Action {
     protected List<AbstractExplorerFileStore> removeSelectedChildren(
             final List<AbstractExplorerFileStore> selection)
             throws IllegalArgumentException {
-        List<AbstractExplorerFileStore> result 
-                = new LinkedList<AbstractExplorerFileStore>();
+        List<AbstractExplorerFileStore> result =
+                new LinkedList<AbstractExplorerFileStore>();
         if (selection.size() <= 0) {
             return result;
         }
@@ -158,24 +159,58 @@ public abstract class ExplorerAction extends Action {
 
     /**
      * Returns a new list with workflows that are contained in the parameter
+     * list (either directly or in any sub directory of the list) and that are
+     * in a local file system (implement {@link LocalExplorerFileStore}).
+     *
+     * @param selected the list to return contained workflows from
+     * @return a new list with local workflows contained (directly or
+     *         indirectly) in the argument
+     */
+    public static List<LocalExplorerFileStore> getContainedLocalWorkflows(
+            final List<? extends AbstractExplorerFileStore> selected) {
+        List<LocalExplorerFileStore> result =
+                new LinkedList<LocalExplorerFileStore>();
+        for (AbstractExplorerFileStore f : selected) {
+            if (!(f instanceof LocalExplorerFileStore)) {
+                // assuming that only local stores have local children!
+                continue;
+            }
+            if (AbstractExplorerFileStore.isWorkflow(f)) {
+                result.add((LocalExplorerFileStore)f);
+            } else if (f.fetchInfo().isDirectory()) {
+                try {
+                    AbstractExplorerFileStore[] children =
+                            f.childStores(EFS.NONE, null);
+                    result.addAll(getContainedLocalWorkflows(Arrays
+                            .asList(children)));
+                } catch (CoreException e) {
+                    // ignore - no workflows contained.
+                }
+            } // else ignore
+        }
+        return result;
+    }
+
+    /**
+     * Returns a new list with workflows that are contained in the parameter
      * list (either directly or in any sub directory of the list).
      *
      * @param selected the list to return contained workflows from
      * @return a new list with workflows contained (directly or indirectly) in
      *         the argument
      */
-    public static List<AbstractExplorerFileStore> getContainedWorkflows(
+    public static List<AbstractExplorerFileStore> getAllContainedWorkflows(
             final List<? extends AbstractExplorerFileStore> selected) {
-        List<AbstractExplorerFileStore> result 
-                = new LinkedList<AbstractExplorerFileStore>();
+        List<AbstractExplorerFileStore> result =
+                new LinkedList<AbstractExplorerFileStore>();
         for (AbstractExplorerFileStore f : selected) {
             if (AbstractExplorerFileStore.isWorkflow(f)) {
                 result.add(f);
             } else if (f.fetchInfo().isDirectory()) {
                 try {
-                    AbstractExplorerFileStore[] children
-                    = f.childStores(EFS.NONE, null);
-                    result.addAll(getContainedWorkflows(Arrays
+                    AbstractExplorerFileStore[] children =
+                            f.childStores(EFS.NONE, null);
+                    result.addAll(getContainedLocalWorkflows(Arrays
                             .asList(children)));
                 } catch (CoreException e) {
                     // ignore - no workflows contained.
@@ -200,12 +235,12 @@ public abstract class ExplorerAction extends Action {
     }
 
     /**
-     * @return the workflow manager for the selection or null if multiple
-     *      file stores are selected or the file stores are not opened
+     * @return the workflow manager for the selection or null if multiple file
+     *         stores are selected or the file stores are not opened
      */
     protected WorkflowManager getWorkflow() {
         List<AbstractExplorerFileStore> fileStores =
-            DragAndDropUtils.getExplorerFileStores(getSelection());
+                DragAndDropUtils.getExplorerFileStores(getSelection());
         if (fileStores == null || fileStores.size() != 1) {
             return null;
         }
@@ -215,12 +250,12 @@ public abstract class ExplorerAction extends Action {
                 File localFile = fileStore.toLocalFile();
                 if (localFile != null) {
                     WorkflowManager workflow =
-                            (WorkflowManager)ProjectWorkflowMap.getWorkflow(
-                                    localFile.toURI());
+                            (WorkflowManager)ProjectWorkflowMap
+                                    .getWorkflow(localFile.toURI());
                     return workflow;
                 }
             } catch (CoreException e) {
-               LOGGER.error("Could not retrieve workflow.", e);
+                LOGGER.error("Could not retrieve workflow.", e);
             }
         }
         return null;

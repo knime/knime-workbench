@@ -212,6 +212,14 @@ public class ContentDelegator extends LabelProvider implements
         AbstractContentProvider prov = c.getProvider();
         return wrapObjects(prov, prov.getChildren(c.getObject()));
     }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Object[] getElements(final Object inputElement) {
+        return getChildren(inputElement);
+    }
+
 
     /**
      * {@inheritDoc}
@@ -284,31 +292,6 @@ public class ContentDelegator extends LabelProvider implements
         }
         ContentObject c = (ContentObject)element;
         return c.getProvider().hasChildren(c.getObject());
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Object[] getElements(final Object inputElement) {
-        // we are the root element - providers are the first level children
-        if (inputElement == this) {
-            return getVisibleContentProvider().toArray();
-        }
-        if (inputElement instanceof AbstractContentProvider) {
-            AbstractContentProvider prov =
-                    (AbstractContentProvider)inputElement;
-            // get the children of the provider's root.
-            return prov.getElements(prov.getFileStore("/"));
-        }
-        if (!(inputElement instanceof ContentObject)) {
-            // all children should be of that type!
-            LOGGER.coding("Unexpected object in tree view! (" + inputElement
-                    + " of type " + inputElement.getClass().getCanonicalName());
-            return NO_CHILDREN;
-        }
-        ContentObject c = (ContentObject)inputElement;
-        return c.getProvider().getElements(c.getObject());
     }
 
     /**

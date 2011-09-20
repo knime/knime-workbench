@@ -90,11 +90,11 @@ public class SpaceResourceSelectionDialog extends Dialog {
     private boolean m_valid = true;
 
     public SpaceResourceSelectionDialog(final Shell parentShell,
-            final String[] providerIDs, final ContentObject initialSelection,
+            final String[] mountIDs, final ContentObject initialSelection,
             final String message) {
         super(parentShell);
         m_message = message;
-        m_mountIDs = providerIDs;
+        m_mountIDs = mountIDs;
         m_initialSelection = initialSelection;
         if (initialSelection != null) {
             m_selectedContainer = initialSelection.getObject();

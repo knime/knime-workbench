@@ -79,7 +79,10 @@ public class WorkflowImportAction extends ExplorerAction {
 
     private static final ImageDescriptor ICON = KNIMEUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/knime_import.png");;
+                    "icons/knime_import.png");
+
+    /** id of the action */
+    public static final String ID = "org.knime.explorer.view.actions.import";
 
     /**
      * @param viewer underlying viewer
@@ -94,7 +97,7 @@ public class WorkflowImportAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-        return "org.knime.explorer.view.actions.import";
+        return ID;
     }
 
     /**
@@ -111,8 +114,7 @@ public class WorkflowImportAction extends ExplorerAction {
     @Override
     public void run() {
         WorkflowImportWizard impWiz = new WorkflowImportWizard();
-        Map<AbstractContentProvider, 
-                List<AbstractExplorerFileStore>> selectedFiles =
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selectedFiles =
                 getSelectedFiles();
         AbstractExplorerFileStore sel = null;
         if (selectedFiles != null && selectedFiles.size() > 0) {
@@ -121,14 +123,14 @@ public class WorkflowImportAction extends ExplorerAction {
         impWiz.setInitialDestination(sel);
 
         WizardDialog dialog = new WizardDialog(getParentShell(), impWiz);
-//        dialog.create();
-//        dialog.getShell().setSize(
-//                Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x),
-//                SIZING_WIZARD_HEIGHT);
+        // dialog.create();
+        // dialog.getShell().setSize(
+        // Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x),
+        // SIZING_WIZARD_HEIGHT);
         dialog.open();
 
-        AbstractExplorerFileStore destination 
-                = impWiz.getDestinationContainer();
+        AbstractExplorerFileStore destination =
+                impWiz.getDestinationContainer();
         Object object = ContentDelegator.getTreeObjectFor(destination);
         getViewer().refresh(object);
         getViewer().reveal(object);

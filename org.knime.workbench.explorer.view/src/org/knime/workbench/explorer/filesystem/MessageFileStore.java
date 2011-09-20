@@ -171,8 +171,7 @@ public final class MessageFileStore extends AbstractExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public MessageFileInfo fetchInfo(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public MessageFileInfo fetchInfo() {
         return MessageFileInfo.getInstance();
     }
 

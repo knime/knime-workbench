@@ -23,7 +23,6 @@
 package org.knime.workbench.explorer.view.dnd;
 
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -33,18 +32,13 @@ import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSourceEvent;
 import org.eclipse.swt.dnd.DragSourceListener;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
-import org.knime.workbench.explorer.view.actions.ExplorerAction;
 
 /**
  *
@@ -56,8 +50,6 @@ public class ExplorerDragListener implements DragSourceListener {
             .getLogger(ExplorerDragListener.class);
 
     private final TreeViewer m_viewer;
-
-    private LinkedList<AbstractExplorerFileStore> m_lockedFlows;
 
     /**
      * @param viewer the viewer to which this drag support has been added.
@@ -75,66 +67,16 @@ public class ExplorerDragListener implements DragSourceListener {
         IStructuredSelection selection =
                 (IStructuredSelection)m_viewer.getSelection();
 
-     // find affected workflows
-        List<AbstractExplorerFileStore> selFileStores =
-            DragAndDropUtils.getExplorerFileStores(selection);
-        if (selFileStores == null || selFileStores.isEmpty()) {
-            event.doit = false;
-            return;
-        }
-        List<AbstractExplorerFileStore> affectedFlows
-                = ExplorerAction.getContainedWorkflows(selFileStores);
-        if (ExplorerFileSystemUtils.hasOpenWorkflows(affectedFlows)) {
-            event.doit = false;
-            MessageBox mb =
-                new MessageBox(Display.getCurrent().getActiveShell(),
-                        SWT.ICON_ERROR | SWT.OK);
-            mb.setText("Can't perform operation");
-            mb.setMessage("At least one of the workflows affected by the "
-                    + "dragging is still open in the editor and has to be "
-                    + "closed.");
-            mb.open();
-            return;
-        }
 
-        m_lockedFlows = new LinkedList<AbstractExplorerFileStore>();
-        LinkedList<AbstractExplorerFileStore> unlockableFlows 
-                = new LinkedList<AbstractExplorerFileStore>();
-        ExplorerFileSystemUtils.lockWorkflows(affectedFlows, unlockableFlows, 
-                m_lockedFlows);
-        // unlock flows locked in here
-        ExplorerFileSystemUtils.unlockWorkflows(m_lockedFlows);
-        if (!unlockableFlows.isEmpty()) {
-            event.doit = false;
-            StringBuilder msg = new StringBuilder("Dragging canceled. "
-                    + "At least one of the workflows affected by the "
-                    + "dragging is in use by another user/instance:\n");
-            for (AbstractExplorerFileStore lockedFlow : unlockableFlows) {
-                msg.append("\t" + lockedFlow.getMountIDWithFullPath() + "\n");
-            }
-            LOGGER.warn(msg);
-            MessageBox mb =
-                new MessageBox(Display.getCurrent().getActiveShell(),
-                        SWT.ICON_ERROR | SWT.OK);
-            mb.setText("Can't perform operation");
-            mb.setMessage("At least one of the workflows affected by the "
-                    + "dragging is in use by another user/instance.\n"
-                    + "(See log file for details.)");
-            mb.open();
-
-            return;
-        }
-
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> 
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>>
                 providers = DragAndDropUtils.getProviderMap(selection);
         if (providers == null) {
             // do not allow to drag whole mount points
-            LOGGER.warn("Dragging cancelled. Mount points cannot be "
-                    + "dragged.");
+            LOGGER.warn("Mount points cannot be dragged.");
             event.doit = false;
         } else {
             // delegate the evaluation to the content providers
-            for (Map.Entry<AbstractContentProvider, 
+            for (Map.Entry<AbstractContentProvider,
                     List<AbstractExplorerFileStore>>
                     entry : providers.entrySet()) {
                 AbstractContentProvider provider = entry.getKey();
@@ -146,6 +88,7 @@ public class ExplorerDragListener implements DragSourceListener {
                     return;
                 }
             }
+            event.doit = true;
             LocalSelectionTransfer.getTransfer().setSelection(selection);
         }
     }

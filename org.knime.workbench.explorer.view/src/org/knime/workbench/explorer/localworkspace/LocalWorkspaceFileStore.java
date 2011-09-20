@@ -147,8 +147,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
-    public LocalWorkspaceFileInfo fetchInfo(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public LocalWorkspaceFileInfo fetchInfo() {
         LocalWorkspaceFileInfo info = new LocalWorkspaceFileInfo(m_file);
         IFileInfo fileInfo = m_file.fetchInfo();
         if (fileInfo.exists()) {

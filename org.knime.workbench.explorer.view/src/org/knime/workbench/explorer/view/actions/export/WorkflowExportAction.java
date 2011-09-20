@@ -79,7 +79,10 @@ public class WorkflowExportAction extends ExplorerAction {
 
     private static final ImageDescriptor ICON = KNIMEUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/knime_export.png");;
+                    "icons/knime_export.png");
+
+    /** id of the action */
+    public static final String ID = "org.knime.explorer.view.actions.export";
 
     /**
      * @param viewer underlying viewer
@@ -94,7 +97,7 @@ public class WorkflowExportAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-        return "org.knime.explorer.view.actions.export";
+        return ID;
     }
 
     /**

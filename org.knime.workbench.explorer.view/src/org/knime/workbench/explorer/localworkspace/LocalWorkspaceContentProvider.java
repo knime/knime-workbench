@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
@@ -197,6 +198,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     public void addContextMenuActions(
             final org.eclipse.jface.viewers.TreeViewer viewer,
             final org.eclipse.jface.action.IMenuManager manager,
+            final Set<String> visibleIDs,
             final Map<AbstractContentProvider,
             List<AbstractExplorerFileStore>> selection) {
         // nothing to add so far
@@ -247,7 +249,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     public AbstractExplorerFileStore fromLocalFile(final File file) {
         IPath rootPath = ResourcesPlugin.getWorkspace().getRoot().getLocation();
         File root = rootPath.toFile();
-        String s = getPathSegments(file, root);
+        String s = getRelativePath(file, root);
         if (s == null) { // file not present in local workspace
             return null;
         }

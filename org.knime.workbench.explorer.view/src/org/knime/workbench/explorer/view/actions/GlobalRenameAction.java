@@ -1,24 +1,24 @@
 /* ------------------------------------------------------------------
-  * This source code, its documentation and all appendant files
-  * are protected by copyright law. All rights reserved.
-  *
-  * Copyright, 2008 - 2011
-  * KNIME.com, Zurich, Switzerland
-  *
-  * You may not modify, publish, transmit, transfer or sell, reproduce,
-  * create derivative works from, distribute, perform, display, or in
-  * any way exploit any of the content, in whole or in part, except as
-  * otherwise expressly permitted in writing by the copyright owner or
-  * as specified in the license file distributed with this product.
-  *
-  * If you have any questions please contact the copyright holder:
-  * website: www.knime.com
-  * email: contact@knime.com
-  * ---------------------------------------------------------------------
-  *
-  * History
-  *   May 26, 2011 (morent): created
-  */
+ * This source code, its documentation and all appendant files
+ * are protected by copyright law. All rights reserved.
+ *
+ * Copyright, 2008 - 2011
+ * KNIME.com, Zurich, Switzerland
+ *
+ * You may not modify, publish, transmit, transfer or sell, reproduce,
+ * create derivative works from, distribute, perform, display, or in
+ * any way exploit any of the content, in whole or in part, except as
+ * otherwise expressly permitted in writing by the copyright owner or
+ * as specified in the license file distributed with this product.
+ *
+ * If you have any questions please contact the copyright holder:
+ * website: www.knime.com
+ * email: contact@knime.com
+ * ---------------------------------------------------------------------
+ *
+ * History
+ *   May 26, 2011 (morent): created
+ */
 
 package org.knime.workbench.explorer.view.actions;
 
@@ -43,6 +43,7 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -55,15 +56,15 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  */
 public class GlobalRenameAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger
-    .getLogger(GlobalRenameAction.class);
+            .getLogger(GlobalRenameAction.class);
 
     /** ID of the global rename action in the explorer menu. */
     public static final String RENAMEACTION_ID =
-        "org.knime.workbench.explorer.action.rename";
+            "org.knime.workbench.explorer.action.rename";
 
     private static final ImageDescriptor ICON = KNIMEUIPlugin
-    .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
-            "icons/rename.png");;
+            .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
+                    "icons/rename.png");;
 
     /**
      * @param viewer the associated tree viewer
@@ -91,21 +92,23 @@ public class GlobalRenameAction extends ExplorerAction {
         }
         IStructuredSelection selection = getSelection();
 
-        List<AbstractExplorerFileStore> stores
-                = DragAndDropUtils.getExplorerFileStores(selection);
+        List<AbstractExplorerFileStore> stores =
+                DragAndDropUtils.getExplorerFileStores(selection);
         AbstractExplorerFileStore srcFileStore = stores.get(0);
 
         // find affected workflows
-        List<AbstractExplorerFileStore> affectedFlows
-                = getContainedWorkflows(stores);
+        List<AbstractExplorerFileStore> affectedFlows =
+                getAllContainedWorkflows(stores);
 
-        // try locking all workflows for renaming
-        LinkedList<AbstractExplorerFileStore> lockedWFs =
-                new LinkedList<AbstractExplorerFileStore>();
-        if (affectedFlows.size() > 0) {
-            LinkedList<AbstractExplorerFileStore> unlockableWFs =
-                    new LinkedList<AbstractExplorerFileStore>();
-            ExplorerFileSystemUtils.lockWorkflows(affectedFlows, unlockableWFs,
+        // try locking all local workflows for renaming
+        List<LocalExplorerFileStore> localWFs =
+                getContainedLocalWorkflows(stores);
+        LinkedList<LocalExplorerFileStore> lockedWFs =
+                new LinkedList<LocalExplorerFileStore>();
+        if (localWFs.size() > 0) {
+            LinkedList<LocalExplorerFileStore> unlockableWFs =
+                    new LinkedList<LocalExplorerFileStore>();
+            ExplorerFileSystemUtils.lockWorkflows(localWFs, unlockableWFs,
                     lockedWFs);
             if (unlockableWFs.size() > 0) {
                 // release locks acquired for renaming
@@ -129,46 +132,51 @@ public class GlobalRenameAction extends ExplorerAction {
             return;
         }
 
-        /* Unfortunately we have to unlock the workflows before moving. If we
+        /*
+         * Unfortunately we have to unlock the workflows before moving. If we
          * move the workflows including the locks, we loose the possibility to
-         * unlock them. */
+         * unlock them.
+         */
         ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
         try {
             srcFileStore.move(dstFileStore, EFS.NONE, null);
-//            unlockDstWorkflows(acp, srcFileStore, dstFileStore, lockedWFs);
+            // unlockDstWorkflows(acp, srcFileStore, dstFileStore, lockedWFs);
             LOGGER.debug("Renamed \"" + srcFileStore + "\" to \""
                     + dstFileStore + "\".");
         } catch (CoreException e) {
-            String message = "Could not rename \"" + srcFileStore + "\" to \""
-                    + dstFileStore + "\".";
+            String message =
+                    "Could not rename \"" + srcFileStore + "\" to \""
+                            + dstFileStore + "\".";
             LOGGER.error(message, e);
             ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
             MessageDialog.openError(getParentShell(), "Renaming failed",
                     message);
         }
-        getViewer().refresh(ContentDelegator.getTreeObjectFor(
-                dstFileStore.getParent()));
+        getViewer().refresh(
+                ContentDelegator.getTreeObjectFor(dstFileStore.getParent()));
     }
 
     /**
      * Constructs the new names of the locked workflows and removes the lock.
+     *
      * @param acp the content provider of the file stores
      * @param srcFileStore the file store selected for renaming
      * @param lockedWFs the locked workflows
      */
-    @SuppressWarnings("unused") // might be needed later
-    private void unlockDstWorkflows(
-            final AbstractContentProvider acp,
+    @SuppressWarnings("unused")
+    // might be needed later
+    private void unlockDstWorkflows(final AbstractContentProvider acp,
             final AbstractExplorerFileStore srcFileStore,
             final AbstractExplorerFileStore dstFileStore,
-            final List<AbstractExplorerFileStore> lockedWFs) {
+            final List<LocalExplorerFileStore> lockedWFs) {
         String srcName = srcFileStore.getFullName();
         String dstName = dstFileStore.getFullName();
-        List<AbstractExplorerFileStore> dstStores 
-                = new ArrayList<AbstractExplorerFileStore>();
-        for (AbstractExplorerFileStore fs : lockedWFs) {
+        List<LocalExplorerFileStore> dstStores =
+                new ArrayList<LocalExplorerFileStore>();
+        for (LocalExplorerFileStore fs : lockedWFs) {
             String dstStoreName = fs.getFullName().replace(srcName, dstName);
-            AbstractExplorerFileStore dstFs = acp.getFileStore(dstStoreName);
+            LocalExplorerFileStore dstFs =
+                    (LocalExplorerFileStore)acp.getFileStore(dstStoreName);
             dstStores.add(dstFs);
         }
         ExplorerFileSystemUtils.unlockWorkflows(dstStores);
@@ -178,17 +186,18 @@ public class GlobalRenameAction extends ExplorerAction {
             final AbstractExplorerFileStore fileStore) {
         Shell shell = Display.getDefault().getActiveShell();
         String name = fileStore.getName();
-        InputDialog dialog = new InputDialog(shell,
-                "Rename", "Please enter the new name for \""
-                + name + "\"", name, new FileStoreNameValidator());
+        InputDialog dialog =
+                new InputDialog(shell, "Rename",
+                        "Please enter the new name for \"" + name + "\"", name,
+                        new FileStoreNameValidator());
         dialog.setBlockOnOpen(true);
 
         if (dialog.open() == InputDialog.CANCEL) {
             return null;
         }
         String newName = dialog.getValue().trim();
-        AbstractExplorerFileStore dstFileStore
-                = fileStore.getParent().getChild(newName);
+        AbstractExplorerFileStore dstFileStore =
+                fileStore.getParent().getChild(newName);
         if (dstFileStore.fetchInfo().exists() && !confirmOverride(newName)) {
             return queryTargetName(dstFileStore);
         }
@@ -215,8 +224,7 @@ public class GlobalRenameAction extends ExplorerAction {
     }
 
     private boolean confirmOverride(final String name) {
-        return MessageDialog.openConfirm(getParentShell(),
-                "Confirm Overwrite",
+        return MessageDialog.openConfirm(getParentShell(), "Confirm Overwrite",
                 "Rename target \"" + name + "\" already exists and will be "
                         + "deleted/overwritten!\n\n"
                         + "Click 'Ok' to overwrite existing target.\n"
@@ -230,7 +238,7 @@ public class GlobalRenameAction extends ExplorerAction {
     public boolean isEnabled() {
         // only a single selected file store can be renamed
         return getSelection().size() == 1
-            && DragAndDropUtils.getExplorerFileStores(getSelection()) != null;
+                && DragAndDropUtils.getExplorerFileStores(getSelection()) != null;
     }
 
     /**

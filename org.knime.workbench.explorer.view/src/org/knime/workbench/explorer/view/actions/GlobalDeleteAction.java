@@ -63,6 +63,7 @@ import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -82,9 +83,9 @@ public class GlobalDeleteAction extends ExplorerAction {
     public static final String DELETEACTION_ID =
             "org.knime.workbench.explorer.action.delete";
 
-    private static final ImageDescriptor IMG_DELETE =
-        PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(
-                ISharedImages.IMG_TOOL_DELETE);
+    private static final ImageDescriptor IMG_DELETE = PlatformUI.getWorkbench()
+            .getSharedImages()
+            .getImageDescriptor(ISharedImages.IMG_TOOL_DELETE);
 
     /**
      * @param viewer the associated tree viewer
@@ -101,34 +102,37 @@ public class GlobalDeleteAction extends ExplorerAction {
     public String getId() {
         return DELETEACTION_ID;
     }
+
     /**
      * {@inheritDoc}
      */
     @Override
     public void run() {
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>>
-                selectedFiles = getSelectedFiles();
-        List<AbstractExplorerFileStore> allFiles 
-                = new LinkedList<AbstractExplorerFileStore>();
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selectedFiles =
+                getSelectedFiles();
+        List<AbstractExplorerFileStore> allFiles =
+                new LinkedList<AbstractExplorerFileStore>();
 
         // remove "double selection" (child whose parents are selected as well)
-        for (Map.Entry<AbstractContentProvider, 
-                List<AbstractExplorerFileStore>> e : selectedFiles.entrySet()) {
-            List<AbstractExplorerFileStore> sel 
-                    = removeSelectedChildren(e.getValue());
+        for (Map.Entry<AbstractContentProvider, List<AbstractExplorerFileStore>> e : selectedFiles
+                .entrySet()) {
+            List<AbstractExplorerFileStore> sel =
+                    removeSelectedChildren(e.getValue());
             allFiles.addAll(sel);
         }
         // find workflows included in selection
         List<AbstractExplorerFileStore> toDelWorkflows =
-                getContainedWorkflows(allFiles);
-        // try locking all workflows for deletion
-        LinkedList<AbstractExplorerFileStore> lockedWFs =
-                new LinkedList<AbstractExplorerFileStore>();
-        if (toDelWorkflows.size() > 0) {
-            LinkedList<AbstractExplorerFileStore> unlockableWFs =
-                    new LinkedList<AbstractExplorerFileStore>();
-            ExplorerFileSystemUtils.lockWorkflows(toDelWorkflows, unlockableWFs,
-                    lockedWFs);
+                getAllContainedWorkflows(allFiles);
+        List<LocalExplorerFileStore> toDelLocalFlows =
+                getContainedLocalWorkflows(allFiles);
+        // try locking all local workflows for deletion
+        LinkedList<LocalExplorerFileStore> lockedWFs =
+                new LinkedList<LocalExplorerFileStore>();
+        if (toDelLocalFlows.size() > 0) {
+            LinkedList<LocalExplorerFileStore> unlockableWFs =
+                    new LinkedList<LocalExplorerFileStore>();
+            ExplorerFileSystemUtils.lockWorkflows(toDelLocalFlows,
+                    unlockableWFs, lockedWFs);
             if (unlockableWFs.size() > 0) {
                 // release locks acquired for deletion
                 ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
@@ -137,7 +141,7 @@ public class GlobalDeleteAction extends ExplorerAction {
             }
         }
 
-        assert lockedWFs.size() == toDelWorkflows.size();
+        assert lockedWFs.size() == toDelLocalFlows.size();
         if (!confirmDeletion(allFiles, toDelWorkflows)) {
             // release locks acquired for deletion
             ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
@@ -147,35 +151,30 @@ public class GlobalDeleteAction extends ExplorerAction {
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelWorkflows);
 
         // delete Workflows first (unlocks them too)
-        boolean success = ExplorerFileSystemUtils.deleteLockedWorkflows(
-                toDelWorkflows);
+        boolean success =
+                ExplorerFileSystemUtils.deleteLockedWorkflows(lockedWFs);
         success &= ExplorerFileSystemUtils.deleteTheRest(allFiles);
 
         if (!success) {
             showUnsuccessfulMessage();
         }
 
-        for (AbstractExplorerFileStore fileStore : toDelWorkflows) {
-            Object parent = ContentDelegator.getTreeObjectFor(
-                    fileStore.getParent());
-            getViewer().refresh(parent);
-        }
         for (AbstractExplorerFileStore fileStore : allFiles) {
-            Object parent = ContentDelegator.getTreeObjectFor(
-                    fileStore.getParent());
+            Object parent =
+                    ContentDelegator.getTreeObjectFor(fileStore.getParent());
             getViewer().refresh(parent);
         }
     }
 
-    private boolean confirmDeletion(final List<AbstractExplorerFileStore> toDel,
+    private boolean confirmDeletion(
+            final List<AbstractExplorerFileStore> toDel,
             final List<AbstractExplorerFileStore> toDelWFs) {
 
         String msg = "";
         if (toDel.size() == 1) {
             if (AbstractExplorerFileStore.isWorkflow(toDel.get(0))) {
                 msg = "Do you want to delete the workflow ";
-            } else if (AbstractExplorerFileStore.isWorkflowGroup(
-                    toDel.get(0))) {
+            } else if (AbstractExplorerFileStore.isWorkflowGroup(toDel.get(0))) {
                 msg = "Do you want to delete the workflow group ";
             } else {
                 msg = "Do you want to delete the file ";
@@ -262,8 +261,7 @@ public class GlobalDeleteAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         return getSelection().size() > 0
-                && DragAndDropUtils.getExplorerFileStores(
-                        getSelection()) != null;
+                && DragAndDropUtils.getExplorerFileStores(getSelection()) != null;
     }
 
 }

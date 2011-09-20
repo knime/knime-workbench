@@ -194,7 +194,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param root The root file of the argument content provider, never null.
      * @return The path segments in a string or null if the argument file does
      * not have the root argument as parent. */
-    public static String getPathSegments(final File file, final File root) {
+    public static String getRelativePath(final File file, final File root) {
         LinkedList<String> segments = new LinkedList<String>();
         File parent = file;
         while (parent != null && !parent.equals(root)) {
@@ -203,6 +203,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
         if (parent == null || !parent.equals(root)) {
             return null;
+        }
+        if (segments.size() == 0) {
+            return ("/");
         }
         StringBuilder path = new StringBuilder();
         for (String s : segments) {
@@ -218,12 +221,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      *
      * @param viewer the tree viewer
      * @param manager the context menu manager
+     * @param visibleMountIDs the ids of the mount points currently viewed
      * @param selection the current selection sorted by content provider (with
      *            all selected item for all providers!)
      */
     public abstract void addContextMenuActions(
             final TreeViewer viewer,
             final IMenuManager manager,
+            final Set<String> visibleMountIDs,
             final Map<AbstractContentProvider,
             List<AbstractExplorerFileStore>> selection);
 

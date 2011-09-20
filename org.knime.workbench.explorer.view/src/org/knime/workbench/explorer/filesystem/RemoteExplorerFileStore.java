@@ -53,15 +53,16 @@ package org.knime.workbench.explorer.filesystem;
 
 import java.io.File;
 
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
 
 /**
  *
  * @author Dominik Morent, KNIME.com, Zurich, Switzerland
  *
  */
-public abstract class RemoteExplorerFileStore
-        extends AbstractExplorerFileStore {
+public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore {
 
     /**
      * @param mountID the id of the mount point
@@ -73,6 +74,25 @@ public abstract class RemoteExplorerFileStore
     }
 
     /**
+     * File stores representing files on the same remote host should return
+     * equal IDs. To enable smart "remote copy" (i.e. copying files directly on
+     * the host avoiding download with a subsequent upload to the same host)
+     *
+     * @return an ID unique to the host the underlying file is located
+     */
+    public abstract String getRemoteHostID();
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Note: Implementations should do a smart "remote copy" if the destination
+     * is on the same remote host than this (see {@link #getRemoteHostID()}).
+     */
+    @Override
+    public abstract void copy(IFileStore destination, int options,
+            IProgressMonitor monitor) throws CoreException;
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -80,4 +100,24 @@ public abstract class RemoteExplorerFileStore
         return null;
     }
 
+    /**
+     * If this store represents a workflow return an open stream that sends the
+     * zipped flow.
+     *
+     * @return a stream containing the zipped workflow.
+     * @throws CoreException if this is not a workflow or things go wrong
+     */
+    public abstract RemoteFlowDownloadStream openWorkflowDownloadStream()
+            throws CoreException;
+
+    /**
+     * A zipped workflow sent through the stream is stored on the server as
+     * workflow represented by this.
+     *
+     * @return an open stream, that stores the content as a workflow on the
+     *         server.
+     * @throws CoreException
+     */
+    public abstract RemoteFlowUploadStream openWorkflowUploadStream()
+            throws CoreException;
 }

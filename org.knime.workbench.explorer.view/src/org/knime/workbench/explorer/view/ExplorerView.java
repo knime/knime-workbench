@@ -49,6 +49,7 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.Transfer;
@@ -89,6 +90,8 @@ import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
 import org.knime.workbench.explorer.view.actions.ConfigureExplorerViewAction;
+import org.knime.workbench.explorer.view.actions.CopyLocationAction;
+import org.knime.workbench.explorer.view.actions.CopyURLAction;
 import org.knime.workbench.explorer.view.actions.ExpandAction;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.explorer.view.actions.GlobalConfigureWorkflowAction;
@@ -143,6 +146,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private ExplorerDropListener m_dropListener;
 
+    private Clipboard m_clipboard;
+
     /**
      * {@inheritDoc}
      */
@@ -158,6 +163,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         createTreeViewer(overall, m_contentDelegator);
         assert m_viewer != null; // should be set by createTreeViewer
         // needed by the toolbar and the menus
+        m_clipboard = new Clipboard(Display.getCurrent()); // used by copy actions
         m_dragListener = new ExplorerDragListener(m_viewer);
         m_dropListener = new ExplorerDropListener(m_viewer);
         initDragAndDrop();
@@ -527,7 +533,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         /* All visible spaces with at least one selected file may contribute to
          * the menu. */
         for (AbstractContentProvider provider : selFiles.keySet()) {
-            provider.addContextMenuActions(m_viewer, manager, selFiles);
+            provider.addContextMenuActions(m_viewer, manager, ids, selFiles);
         }
 
         manager.add(new Separator());
@@ -555,10 +561,17 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new Separator());
         manager.add(new GlobalEditMetaInfoAction(m_viewer));
         manager.add(new Separator());
+        manager.add(new CopyURLAction(m_viewer, m_clipboard));
+        manager.add(new CopyLocationAction(m_viewer, m_clipboard));
+        manager.add(new Separator());
         if (fs != null && !fs.isEmpty()) {
             manager.add(new GlobalRefreshAction(m_viewer,
                     fs.toArray(new AbstractExplorerFileStore[0])));
         }
+    }
+
+    public Clipboard getClipboard() {
+        return m_clipboard;
     }
 
     /**
@@ -619,6 +632,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         ProjectWorkflowMap.removeWorkflowListener(this);
 //        ProjectWorkflowMap.removeNodePropertyChangedListener(this);
 //        ProjectWorkflowMap.removeNodeMessageListener(this);
+        m_clipboard.dispose();
     }
 
 }

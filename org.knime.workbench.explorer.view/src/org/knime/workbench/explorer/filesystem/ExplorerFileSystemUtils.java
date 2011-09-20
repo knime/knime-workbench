@@ -71,16 +71,15 @@ import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
 
 /**
- * A set of static methods to deal with the creation/deletion of possibly
- * locked workflows in the explorer file system.
+ * A set of static methods to deal with the creation/deletion of possibly locked
+ * workflows in the explorer file system.
  *
  * @author Bernd Wiswedel, KNIME.com, Zurich, Switzerland
  */
 public final class ExplorerFileSystemUtils {
 
-    private static final NodeLogger LOGGER =
-        NodeLogger.getLogger(ExplorerFileSystemUtils.class);
-
+    private static final NodeLogger LOGGER = NodeLogger
+            .getLogger(ExplorerFileSystemUtils.class);
 
     /** Utility class, no public constructor. */
     private ExplorerFileSystemUtils() {
@@ -95,14 +94,14 @@ public final class ExplorerFileSystemUtils {
      * @param lockedWF the workflows that could be locked
      */
     public static void lockWorkflows(
-            final List<AbstractExplorerFileStore> workflowsToLock,
-            final List<AbstractExplorerFileStore> unlockableWF,
-            final List<AbstractExplorerFileStore> lockedWF) {
+            final List<? extends LocalExplorerFileStore> workflowsToLock,
+            final List<LocalExplorerFileStore> unlockableWF,
+            final List<LocalExplorerFileStore> lockedWF) {
         assert unlockableWF.size() == 0; // the result lists should be empty
         assert lockedWF.size() == 0;
         // open workflows can be locked multiple times in one instance
-        for (AbstractExplorerFileStore wf : workflowsToLock) {
-           boolean locked = lockWorkflow(wf);
+        for (LocalExplorerFileStore wf : workflowsToLock) {
+            boolean locked = lockWorkflow(wf);
             if (locked) {
                 LOGGER.debug("Locked workflow " + wf);
                 lockedWF.add(wf);
@@ -118,8 +117,7 @@ public final class ExplorerFileSystemUtils {
      * @param workflow the workflow to be locked
      * @return true if the workflow could be locked, false otherwise
      */
-    public static boolean lockWorkflow(
-            final AbstractExplorerFileStore workflow) {
+    public static boolean lockWorkflow(final LocalExplorerFileStore workflow) {
         assert AbstractExplorerFileStore.isWorkflow(workflow);
         File loc;
         try {
@@ -142,9 +140,9 @@ public final class ExplorerFileSystemUtils {
      * @param workflows the workflows to be unlocked
      */
     public static void unlockWorkflows(
-            final List<AbstractExplorerFileStore> workflows) {
-        for (AbstractExplorerFileStore lwf : workflows) {
-           unlockWorkflow(lwf);
+            final List<? extends LocalExplorerFileStore> workflows) {
+        for (LocalExplorerFileStore lwf : workflows) {
+            unlockWorkflow(lwf);
         }
     }
 
@@ -153,8 +151,7 @@ public final class ExplorerFileSystemUtils {
      *
      * @param workflow the workflow to be unlocked
      */
-    public static void unlockWorkflow(
-            final AbstractExplorerFileStore workflow) {
+    public static void unlockWorkflow(final LocalExplorerFileStore workflow) {
         File loc;
         try {
             loc = workflow.toLocalFile(EFS.NONE, null);
@@ -173,10 +170,11 @@ public final class ExplorerFileSystemUtils {
 
     /**
      * Closes the editor of the specified workflows.
+     *
      * @param workflows the workflows to be closed
      */
     public static void closeOpenWorkflows(
-            final List<AbstractExplorerFileStore> workflows) {
+            final List<? extends AbstractExplorerFileStore> workflows) {
         IWorkbenchPage page =
                 PlatformUI.getWorkbench().getActiveWorkbenchWindow()
                         .getActivePage();
@@ -217,11 +215,11 @@ public final class ExplorerFileSystemUtils {
 
     /**
      * @param workflows the workflows to check
-     * @return true if at least one of the specified workflows are open,
-     *      false otherwise
+     * @return true if at least one of the specified workflows are open, false
+     *         otherwise
      */
     public static boolean hasOpenWorkflows(
-            final List<AbstractExplorerFileStore> workflows) {
+            final List<? extends AbstractExplorerFileStore> workflows) {
         IWorkbenchPage page =
                 PlatformUI.getWorkbench().getActiveWorkbenchWindow()
                         .getActivePage();
@@ -252,7 +250,7 @@ public final class ExplorerFileSystemUtils {
                         editWFM = wea.getWorkflowManager();
                     }
                     if (wfm == editWFM) {
-                       return true;
+                        return true;
                     }
                 }
 
@@ -261,15 +259,17 @@ public final class ExplorerFileSystemUtils {
         return false;
     }
 
-    /** Delete workflows from argument list. If the workflows are locked
-     * by this VM, they will be unlocked after this method returns.
+    /**
+     * Delete workflows from argument list. If the workflows are locked by this
+     * VM, they will be unlocked after this method returns.
+     *
      * @param toDelWFs The list of directories associate with the workflows.
-     * @return true if that was successful, i.e. the workflow directory
-     * does not exist when this method returns, false if that fails
-     * (e.g. not locked by this VM)
+     * @return true if that was successful, i.e. the workflow directory does not
+     *         exist when this method returns, false if that fails (e.g. not
+     *         locked by this VM)
      **/
     public static boolean deleteLockedWorkflows(
-            final List<AbstractExplorerFileStore> toDelWFs) {
+            final List<? extends AbstractExplorerFileStore> toDelWFs) {
         boolean success = true;
         for (AbstractExplorerFileStore wf : toDelWFs) {
             assert AbstractExplorerFileStore.isWorkflow(wf)
@@ -279,7 +279,7 @@ public final class ExplorerFileSystemUtils {
                 if (loc == null) {
                     // can't do any locking or fancy deletion
                     wf.delete(EFS.NONE, null);
-                    return true;
+                    continue;
                 }
                 assert VMFileLocker.isLockedForVM(loc);
 
@@ -297,8 +297,8 @@ public final class ExplorerFileSystemUtils {
                 if (wfFile.exists()) {
                     success &= wfFile.delete();
                 } else {
-                    File tempFile = new File(loc,
-                            WorkflowPersistor.TEMPLATE_FILE);
+                    File tempFile =
+                            new File(loc, WorkflowPersistor.TEMPLATE_FILE);
                     success &= tempFile.delete();
                 }
 
@@ -337,32 +337,38 @@ public final class ExplorerFileSystemUtils {
         return success;
     }
 
-    /** Delete the files denoted by the argument list.
+    /**
+     * Delete the files denoted by the argument list.
+     *
      * @param toDel The list of files to be deleted.
-     * @return true if the files/directories don't exist when this
-     *         method returns. */
+     * @return true if the files/directories don't exist when this method
+     *         returns.
+     */
     public static boolean deleteTheRest(
-            final List<AbstractExplorerFileStore> toDel) {
+            final List<? extends AbstractExplorerFileStore> toDel) {
         boolean success = true;
         for (AbstractExplorerFileStore f : toDel) {
             // go by the local file. (Does EFS.delete() delete recursively??)
             try {
-                File loc = f.toLocalFile(EFS.NONE, null);
-                if (loc == null) {
-                    f.delete(EFS.NONE, null);
-                } else {
-                    // if it is a workflow it would be gone already
-                    if (loc.exists()) {
-                        success &= FileUtil.deleteRecursively(loc);
-                    }
-                    if (f instanceof LocalWorkspaceFileStore) {
-                        ((LocalWorkspaceFileStore)f).refreshParentResource();
+                if (f.fetchInfo().exists()) {
+                    File loc = f.toLocalFile(EFS.NONE, null);
+                    if (loc == null) {
+                        f.delete(EFS.NONE, null);
+                    } else {
+                        // if it is a workflow it would be gone already
+                        if (loc.exists()) {
+                            success &= FileUtil.deleteRecursively(loc);
+                        }
+                        if (f instanceof LocalWorkspaceFileStore) {
+                            ((LocalWorkspaceFileStore)f)
+                                    .refreshParentResource();
+                        }
                     }
                 }
             } catch (CoreException e) {
                 success = false;
-                LOGGER.error("Error while deleting file " + f.toString()
-                        + ": " + e.getMessage(), e);
+                LOGGER.error("Error while deleting file " + f.toString() + ": "
+                        + e.getMessage(), e);
             }
         }
         return success;

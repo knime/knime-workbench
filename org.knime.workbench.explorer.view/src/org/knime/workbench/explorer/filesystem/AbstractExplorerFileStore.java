@@ -57,7 +57,6 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileStore;
 import org.eclipse.core.runtime.CoreException;
@@ -106,21 +105,16 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * {@inheritDoc}
      */
     @Override
-    public abstract AbstractExplorerFileInfo fetchInfo(final int options,
-            final IProgressMonitor monitor) throws CoreException;
+    public AbstractExplorerFileInfo fetchInfo(final int options,
+            final IProgressMonitor monitor) throws CoreException {
+        return fetchInfo();
+    }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public AbstractExplorerFileInfo fetchInfo() {
-        try {
-            return fetchInfo(EFS.NONE, null);
-        } catch (CoreException e) {
-            // this should never happen
-            throw new RuntimeException(e);
-        }
-    }
+    public abstract AbstractExplorerFileInfo fetchInfo();
 
     /**
      * {@inheritDoc}

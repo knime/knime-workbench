@@ -26,7 +26,6 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.view.ContentDelegator;
 
 /**
  *
@@ -50,9 +49,7 @@ public class GlobalRefreshAction extends ExplorerAction {
      * @param viewer the viewer to refresh
      */
     public GlobalRefreshAction(final TreeViewer viewer) {
-        super(viewer, "Refresh");
-        setImageDescriptor(IMG_REFRESH);
-        setToolTipText(TOOLTIP);
+        this(viewer, (AbstractExplorerFileStore[])null);
     }
 
     /**
@@ -62,7 +59,9 @@ public class GlobalRefreshAction extends ExplorerAction {
      */
     public GlobalRefreshAction(final TreeViewer viewer,
             final AbstractExplorerFileStore ... fileStore) {
-        this(viewer);
+        super(viewer, "Refresh");
+        setImageDescriptor(IMG_REFRESH);
+        setToolTipText(TOOLTIP);
         m_fileStore = fileStore;
     }
 
@@ -83,7 +82,8 @@ public class GlobalRefreshAction extends ExplorerAction {
             getViewer().refresh();
         } else {
             for (AbstractExplorerFileStore file : m_fileStore) {
-                getViewer().refresh(ContentDelegator.getTreeObjectFor(file));
+//                getViewer().refresh(ContentDelegator.getTreeObjectFor(file));
+                file.refresh();
             }
         }
     }
