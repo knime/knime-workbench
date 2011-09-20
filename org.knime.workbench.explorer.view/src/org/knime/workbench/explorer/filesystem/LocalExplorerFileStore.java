@@ -79,6 +79,11 @@ public abstract class LocalExplorerFileStore extends AbstractExplorerFileStore {
      */
     @Override
     public File toLocalFile() throws CoreException {
-        return toLocalFile(EFS.CACHE, null);
+        // to be called with NONE (bug fix 2887) - the local (work-) space
+        // uses org.eclipse.core.internal.filesystem.local.LocalFile, which
+        // ignores the options field ... and the SharedSpaceFileStore
+        // overwrites to the toLocalFile(int, IProgMon) to return the underlying
+        // file (ignores options argument, too)
+        return toLocalFile(EFS.NONE, null);
     }
 }
