@@ -44,6 +44,8 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.KnimeFileUtil;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.IconFactory;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -323,9 +325,22 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                  * drag source.
                  */
                 try {
-                    // TODO use a move to be more efficient if possible
-                    copy(fs, target);
-                    DragAndDropUtils.refreshResource(target);
+                    if (fs instanceof RemoteExplorerFileStore) {
+                        RemoteExplorerFileStore rfs = (RemoteExplorerFileStore)fs;
+                        if (!rfs.fetchInfo().isWorkflow()) {
+                            LOGGER.error("Can only download workflows. "
+                                    + rfs.getMountIDWithFullPath() + " is no workflow.");
+                            return false;
+                        }
+                        if (!performDownload(rfs, (LocalExplorerFileStore)target)) {
+                            return false;
+                        }
+                    } else {
+
+                        // TODO use a move to be more efficient if possible
+                        copy(fs, target);
+                        DragAndDropUtils.refreshResource(target);
+                    }
                 } catch (CoreException e) {
                     String msg = "An error occured when transfering the file \""
                             + fs.getFullName() + "\". ";
@@ -404,4 +419,13 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         }
         return true;
     }
+
+    private boolean performDownload(final RemoteExplorerFileStore source,
+            final LocalExplorerFileStore parent) {
+        DownloadWorkflowToWorkspaceAction downloadAction =
+                new DownloadWorkflowToWorkspaceAction(null, source, parent);
+        downloadAction.run();
+        return true;
+    }
+
 }

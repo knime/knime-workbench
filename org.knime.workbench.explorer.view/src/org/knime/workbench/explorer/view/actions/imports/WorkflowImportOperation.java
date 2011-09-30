@@ -189,7 +189,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      */
     protected void importWorkflowFromFile(
             final WorkflowImportElementFromFile fileElement,
-            final AbstractExplorerFileStore destination, 
+            final AbstractExplorerFileStore destination,
             final IProgressMonitor monitor) throws IOException {
 
         File destinationDir = null;
@@ -213,7 +213,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             m_missingMetaInfoLocations.add(destination);
             // import all sub elements
             for (IWorkflowImportElement wieff : fileElement.getChildren()) {
-                AbstractExplorerFileStore dest 
+                AbstractExplorerFileStore dest
                         = destination.getChild(wieff.getName());
                 importWorkflowFromFile((WorkflowImportElementFromFile)wieff,
                         dest, monitor);
@@ -278,7 +278,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             final ZipEntry entry, final AbstractExplorerFileStore destination,
             final IProgressMonitor monitor) throws IOException {
 
-        assert !destination.fetchInfo().exists();
+        //assert !destination.fetchInfo().exists();
 
         if (zipProvider.isFolder(entry)) {
             // first create the destination
