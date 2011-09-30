@@ -54,6 +54,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
@@ -140,6 +141,19 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     @Override
     public String[] childNames(final int options, final IProgressMonitor monitor)
             throws CoreException {
+        String[] children = m_file.childNames(options, monitor);
+        if (getFullName().equals("/")) {
+            // TODO: We MUST rewrite this if we change to IResources!!!
+            // remove .metadata from the list of shown childs
+            ArrayList<String> rootChilds = new ArrayList<String>(children.length);
+            for (String c : children) {
+                if (c.equals(".metadata")) {
+                    continue;
+                }
+                rootChilds.add(c);
+            }
+            return rootChilds.toArray(new String[rootChilds.size()]);
+        }
         return m_file.childNames(options, monitor);
     }
 
