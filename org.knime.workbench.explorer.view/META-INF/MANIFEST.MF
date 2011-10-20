@@ -13,6 +13,7 @@ Export-Package: org.knime.workbench.explorer,
  org.knime.workbench.explorer.view.actions,
  org.knime.workbench.explorer.view.actions.export,
  org.knime.workbench.explorer.view.actions.imports,
+ org.knime.workbench.explorer.view.actions.validators,
  org.knime.workbench.explorer.view.dialogs,
  org.knime.workbench.explorer.view.dnd,
  org.knime.workbench.explorer.view.preferences

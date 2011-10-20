@@ -28,7 +28,6 @@ import java.util.List;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.jface.dialogs.IInputValidator;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -41,11 +40,11 @@ import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -239,28 +238,6 @@ public class GlobalRenameAction extends ExplorerAction {
         // only a single selected file store can be renamed
         return getSelection().size() == 1
                 && DragAndDropUtils.getExplorerFileStores(getSelection()) != null;
-    }
-
-    /**
-     * Checks for valid {@link AbstractExplorerFileStore} file names.
-     *
-     * @author Dominik Morent, KNIME.com, Zurich, Switzerland
-     *
-     */
-    class FileStoreNameValidator implements IInputValidator {
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public String isValid(final String name) {
-            if (!ExplorerFileSystem.isValidFilename(name.trim())) {
-                return "One of the following illegal characters is used: "
-                        + ExplorerFileSystem.getIllegalFilenameChars();
-            } else {
-                return null;
-            }
-        }
-
     }
 
 }
