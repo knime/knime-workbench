@@ -366,7 +366,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         }
         if (AbstractExplorerFileStore.isWorkflow(flowOrGroup)) {
             addResourcesRec(resourceList, flowOrGroup, excludeData);
-        } else if (AbstractExplorerFileStore.isDirOrWorkflowGroup(flowOrGroup)) {
+        } else if (AbstractExplorerFileStore.isWorkflowGroup(flowOrGroup)) {
             addFiles(resourceList, flowOrGroup);
         } else {
             throw new IllegalArgumentException(
@@ -425,7 +425,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         }
 
         // add all (not-excluded) sub dirs of workflows
-        for (AbstractExplorerFileStore child 
+        for (AbstractExplorerFileStore child
                 : store.childStores(EFS.NONE, null)) {
             addResourcesRec(resourceList, child, excludeData);
         }

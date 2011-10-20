@@ -234,7 +234,7 @@ public class WorkflowExportPage extends WizardPage {
                 m_treeViewer.expandToLevel(o, AbstractTreeViewer.ALL_LEVELS);
                 m_treeViewer.setSubtreeChecked(o, isChecked);
                 if (o instanceof AbstractExplorerFileStore) {
-                    AbstractExplorerFileStore sel 
+                    AbstractExplorerFileStore sel
                             = (AbstractExplorerFileStore)o;
                     setParentTreeChecked(sel, isChecked);
                 }
@@ -305,7 +305,7 @@ public class WorkflowExportPage extends WizardPage {
         dlg.setValidator(new SelectionValidator() {
             @Override
             public String isValid(final AbstractExplorerFileStore selection) {
-                if (!(AbstractExplorerFileStore.isDirOrWorkflowGroup(selection)
+                if (!(AbstractExplorerFileStore.isWorkflowGroup(selection)
                         || AbstractExplorerFileStore.isWorkflow(selection))) {
                     return "Please select a workflow or workflow group";
                 }
@@ -456,7 +456,7 @@ public class WorkflowExportPage extends WizardPage {
      */
     public Collection<AbstractExplorerFileStore> getWorkflowsOrGroups() {
 
-        List<AbstractExplorerFileStore> workflows 
+        List<AbstractExplorerFileStore> workflows
                 = new ArrayList<AbstractExplorerFileStore>();
 
         if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
@@ -464,7 +464,7 @@ public class WorkflowExportPage extends WizardPage {
             return workflows;
         }
 
-        if (AbstractExplorerFileStore.isDirOrWorkflowGroup(m_selection)) {
+        if (AbstractExplorerFileStore.isWorkflowGroup(m_selection)) {
             // also add the selected root - unless it is the "/"
             if (!"/".equals(m_selection.getFullName())) {
                 workflows.add(m_selection);
@@ -472,7 +472,7 @@ public class WorkflowExportPage extends WizardPage {
             Object[] checkedObjs = m_treeViewer.getCheckedElements();
             for (Object o : checkedObjs) {
                 AbstractExplorerFileStore file = (AbstractExplorerFileStore)o;
-                if (AbstractExplorerFileStore.isDirOrWorkflowGroup(file)) {
+                if (AbstractExplorerFileStore.isWorkflowGroup(file)) {
                     workflows.add(file);
                 } else if (AbstractExplorerFileStore.isWorkflow(file)) {
                     workflows.add(file);

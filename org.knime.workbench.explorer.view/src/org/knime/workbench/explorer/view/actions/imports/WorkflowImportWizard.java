@@ -103,7 +103,7 @@ public class WorkflowImportWizard extends Wizard {
             return;
         }
         m_initialDestination = destination;
-        while (!AbstractExplorerFileStore.isDirOrWorkflowGroup(
+        while (!AbstractExplorerFileStore.isWorkflowGroup(
                 m_initialDestination)) {
             AbstractExplorerFileStore f = m_initialDestination;
             m_initialDestination = m_initialDestination.getParent();

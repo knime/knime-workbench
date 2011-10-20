@@ -82,7 +82,7 @@ public class ExplorerFilter extends TextualViewFilter {
             selectThis = match(fullName);
             /* Files are shown if their name matches or if the name of any
              * parent folder matches. */
-            if (AbstractExplorerFileStore.isDirOrWorkflowGroup(fileStore)) {
+            if (AbstractExplorerFileStore.isWorkflowGroup(fileStore)) {
                 /* Directories are shown if their name matches or if the name
                  * of any child matches. */
                 if (!selectThis) {

@@ -308,20 +308,6 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     }
 
     /**
-     * @param file the file to test.
-     * @return true if the argument is a directory but no node nor meta node.
-     */
-    public static boolean isDirOrWorkflowGroup(
-            final AbstractExplorerFileStore file) {
-        if (file == null || !file.fetchInfo().exists()) {
-            return false;
-        }
-        AbstractExplorerFileInfo fileInfo = file.fetchInfo();
-        return fileInfo.isDirectory()
-                || fileInfo.isWorkflowGroup();
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override

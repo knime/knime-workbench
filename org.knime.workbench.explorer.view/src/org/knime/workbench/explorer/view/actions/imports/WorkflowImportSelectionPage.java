@@ -181,7 +181,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
 
     private IWorkflowImportElement m_importRoot;
 
-    private final Collection<IWorkflowImportElement> m_invalidAndCheckedImports 
+    private final Collection<IWorkflowImportElement> m_invalidAndCheckedImports
             = new ArrayList<IWorkflowImportElement>();
 
     private final Collection<IWorkflowImportElement> m_validAndCheckedImports =
@@ -261,7 +261,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
         });
         // set initial selection
         IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-        if (m_initialDestination != null 
+        if (m_initialDestination != null
                 && !m_initialDestination.equals(root)) {
             m_targetTextUI.setText(m_initialDestination
                     .getMountIDWithFullPath());
@@ -682,10 +682,11 @@ public class WorkflowImportSelectionPage extends WizardPage {
                     ExplorerMountTable.getAllMountIDs().toArray(new String[0]),
                     ContentObject.forFile(m_target), "Select destination");
         dlg.setValidator(new SelectionValidator() {
+            @Override
             public String isValid(final AbstractExplorerFileStore selection) {
-                if (!AbstractExplorerFileStore.isDirOrWorkflowGroup(
+                if (!AbstractExplorerFileStore.isWorkflowGroup(
                         selection)) {
-                    return "Please select a workflow group or directory.";
+                    return "Please select a workflow group.";
                 }
                 return null;
             }
@@ -694,7 +695,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
         if (returnCode == IDialogConstants.OK_ID) {
             // set the newly selected workflow group as destination
             AbstractExplorerFileStore target = dlg.getSelection();
-            if (AbstractExplorerFileStore.isDirOrWorkflowGroup(target)) {
+            if (AbstractExplorerFileStore.isWorkflowGroup(target)) {
                 m_targetTextUI.setText(target.getMountIDWithFullPath());
                 m_target = target;
             }
@@ -1055,7 +1056,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
         boolean exists = false;
         if (childPath.segmentCount() > 0) {
             // append to the destination path
-            AbstractExplorerFileStore result 
+            AbstractExplorerFileStore result
                     = destination.getChild(childPath.toString());
             // check whether this exists
             exists = result.fetchInfo().exists();

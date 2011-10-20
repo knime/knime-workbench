@@ -96,7 +96,7 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
             ArrayList<AbstractExplorerFileStore> result =
                     new ArrayList<AbstractExplorerFileStore>();
             for (AbstractExplorerFileStore c : childs) {
-                if (AbstractExplorerFileStore.isDirOrWorkflowGroup(c)
+                if (AbstractExplorerFileStore.isWorkflowGroup(c)
                         || AbstractExplorerFileStore.isWorkflow(c)) {
                     result.add(c);
                 }
@@ -114,7 +114,7 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
     @Override
     public Object getParent(final Object element) {
         if (element instanceof AbstractExplorerFileStore) {
-            AbstractExplorerFileStore child 
+            AbstractExplorerFileStore child
                     = (AbstractExplorerFileStore)element;
             if (child.equals(m_root)) {
                 // don't traverse up beyond the root - the tree will be confused
@@ -141,7 +141,7 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
             final Object newInput) {
         m_root = null;
         if (newInput instanceof AbstractExplorerFileStore) {
-            AbstractExplorerFileStore input 
+            AbstractExplorerFileStore input
                     = (AbstractExplorerFileStore)newInput;
             m_root = input;
             m_provider = input.getContentProvider();

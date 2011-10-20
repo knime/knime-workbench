@@ -82,16 +82,4 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
      * @return true if the file is a KNIME meta node, false otherwise
      */
     public abstract boolean isMetaNode();
-
-    /**
-     * Returns true if the file represents an ordinary directory and is not
-     * a "special" KNIME directory (workflow, node, meta node, or workflow
-     * template).
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isDirectory() {
-        return super.isDirectory() && !isWorkflow() && !isWorkflowTemplate()
-                && !isNode() && !isMetaNode();
-    }
 }
