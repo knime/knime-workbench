@@ -29,6 +29,7 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeContainer.State;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
@@ -105,7 +106,8 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        return getWorkflow() != null;
+        WorkflowManager wfm = getWorkflow();
+        return wfm != null && State.CONFIGURED.equals(wfm.getState());
     }
 
     private void showCantExecuteLockMessage() {

@@ -295,6 +295,7 @@ public class NewMountPointDialog extends ListDialog {
         m_errText.setText(errMsg);
         m_errIcon.setVisible(!valid);
         m_ok.setEnabled(valid);
+
         return valid;
     }
 
@@ -341,10 +342,12 @@ public class NewMountPointDialog extends ListDialog {
         m_errIcon.setLayoutData(new GridData(
                 GridData.HORIZONTAL_ALIGN_BEGINNING));
         m_errIcon.setBackground(white);
-        m_errText = new Label(header, SWT.None);
+        m_errText = new Label(header, SWT.WRAP);
         m_errText.setText("Please enter a mount id.");
+        m_errText.setSize(SWT.DEFAULT, 100);
         m_errText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         m_errText.setBackground(white);
+        parent.layout();
         new Label(header, SWT.None);
     }
 
