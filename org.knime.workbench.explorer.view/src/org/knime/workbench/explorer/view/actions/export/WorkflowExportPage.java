@@ -60,7 +60,6 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.AbstractTreeViewer;
 import org.eclipse.jface.viewers.CheckStateChangedEvent;
 import org.eclipse.jface.viewers.CheckboxTreeViewer;
 import org.eclipse.jface.viewers.ICheckStateListener;
@@ -81,10 +80,10 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
+import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
-import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog;
-import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
@@ -230,8 +229,6 @@ public class WorkflowExportPage extends WizardPage {
             public void checkStateChanged(final CheckStateChangedEvent event) {
                 Object o = event.getElement();
                 boolean isChecked = event.getChecked();
-                // first expand in order to be able to check children as well
-                m_treeViewer.expandToLevel(o, AbstractTreeViewer.ALL_LEVELS);
                 m_treeViewer.setSubtreeChecked(o, isChecked);
                 if (o instanceof AbstractExplorerFileStore) {
                     AbstractExplorerFileStore sel
@@ -300,8 +297,10 @@ public class WorkflowExportPage extends WizardPage {
         ContentObject initSel = ContentObject.forFile(m_selection);
         SpaceResourceSelectionDialog dlg =
                 new SpaceResourceSelectionDialog(getShell(), ExplorerMountTable
-                        .getAllMountIDs().toArray(new String[0]), initSel,
-                        "Select workflow or group to export");
+                        .getAllMountIDs().toArray(new String[0]), initSel);
+        dlg.setTitle("Source Selection");
+        dlg.setHeader("Workflow selection.");
+        dlg.setDescription("Please select the workflow or directory to export.");
         dlg.setValidator(new SelectionValidator() {
             @Override
             public String isValid(final AbstractExplorerFileStore selection) {
