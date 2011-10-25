@@ -6,6 +6,7 @@ Bundle-Version: 2.5.0.qualifier
 Bundle-Activator: org.knime.workbench.explorer.ExplorerActivator
 Bundle-Vendor: KNIME.com, Zurich, Switzerland
 Export-Package: org.knime.workbench.explorer,
+ org.knime.workbench.explorer.dialogs,
  org.knime.workbench.explorer.filesystem,
  org.knime.workbench.explorer.localworkspace,
  org.knime.workbench.explorer.pathresolve,
