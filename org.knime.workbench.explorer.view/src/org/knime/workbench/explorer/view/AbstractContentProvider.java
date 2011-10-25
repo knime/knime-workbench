@@ -209,7 +209,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
         StringBuilder path = new StringBuilder();
         for (String s : segments) {
-            path.append("/").append(s);
+            if (!s.isEmpty()) {
+                path.append("/").append(s);
+            }
         }
         return path.toString();
     }
