@@ -22,23 +22,18 @@
 
 package org.knime.workbench.explorer.view.dnd;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
-import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSourceEvent;
 import org.eclipse.swt.dnd.DragSourceListener;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.ContentDelegator;
 
 /**
  *
@@ -111,38 +106,11 @@ public class ExplorerDragListener implements DragSourceListener {
      */
     @Override
     public void dragFinished(final DragSourceEvent event) {
+        /* drop performer are supposed to delete the source in case of a 
+         * drag-move operation (for performance reasons). Therefore no action
+         * is required here. */
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
-        try {
-        /* TODO delegate drag finished to content provider */
-        if (DND.DROP_MOVE == event.detail && event.doit) {
-            LOGGER.debug("Removing source file(s) after successful drop.");
-            IStructuredSelection selections = (IStructuredSelection)
-                    transfer.getSelection();
-            List<AbstractExplorerFileStore> fileStores = DragAndDropUtils
-                    .getExplorerFileStores(selections);
-            for (AbstractExplorerFileStore fs : fileStores) {
-                try {
-                    if (!fs.fetchInfo().exists()) {
-                        continue;
-                    }
-                    fs.delete(EFS.NONE, null);
-                } catch (CoreException e) {
-                    String msg = "Could not move file \"" + fs.getFullName()
-                            + "\". Source file could not be deleted.";
-                    throw new RuntimeException(msg, e);
-                }
-                m_viewer.refresh(ContentDelegator.getTreeObjectFor(
-                        fs.getParent()));
-            }
-            Iterator iterator = selections.iterator();
-            while (iterator.hasNext()) {
-                DragAndDropUtils.refreshResource(iterator.next());
-//                m_viewer.refresh(fs.getParent());
-            }
-        }
-        } finally {
-            transfer.setSelection(null);
-        }
+        transfer.setSelection(null);
     }
 
 }

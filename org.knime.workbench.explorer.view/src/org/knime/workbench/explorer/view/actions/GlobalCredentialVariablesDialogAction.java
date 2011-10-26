@@ -91,7 +91,7 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
             }
         } else {
             LOGGER.info("The workflow credentials cannot be edited as the "
-                    + "workflow is in use by another user/instance.\n");
+                    + "workflow is in use by another user/instance.");
             showCantEditCredentialsLockMessage();
         }
 
@@ -134,7 +134,7 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
                 new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
         mb.setText("Can't Lock for Editing Credentials");
         mb.setMessage("The workflow credentials cannot be edited as the "
-                + "workflow is in use by another user/instance.\n");
+                + "workflow is in use by another user/instance.");
         mb.open();
     }
 }

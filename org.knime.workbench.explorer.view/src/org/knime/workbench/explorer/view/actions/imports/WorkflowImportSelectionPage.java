@@ -71,7 +71,6 @@ import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.AbstractTreeViewer;
 import org.eclipse.jface.viewers.CheckStateChangedEvent;
 import org.eclipse.jface.viewers.CheckboxTreeViewer;
 import org.eclipse.jface.viewers.ICheckStateListener;
@@ -103,10 +102,10 @@ import org.eclipse.ui.internal.wizards.datatransfer.TarLeveledStructureProvider;
 import org.eclipse.ui.internal.wizards.datatransfer.ZipLeveledStructureProvider;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
+import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
-import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog;
-import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.navigator.KnimeResourceLabelProvider;
 
@@ -181,8 +180,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
 
     private IWorkflowImportElement m_importRoot;
 
-    private final Collection<IWorkflowImportElement> m_invalidAndCheckedImports
-            = new ArrayList<IWorkflowImportElement>();
+    private final Collection<IWorkflowImportElement> m_invalidAndCheckedImports =
+            new ArrayList<IWorkflowImportElement>();
 
     private final Collection<IWorkflowImportElement> m_validAndCheckedImports =
             new ArrayList<IWorkflowImportElement>();
@@ -261,8 +260,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
         });
         // set initial selection
         IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-        if (m_initialDestination != null
-                && !m_initialDestination.equals(root)) {
+        if (m_initialDestination != null && !m_initialDestination.equals(root)) {
             m_targetTextUI.setText(m_initialDestination
                     .getMountIDWithFullPath());
             m_target = m_initialDestination;
@@ -483,9 +481,6 @@ public class WorkflowImportSelectionPage extends WizardPage {
             public void checkStateChanged(final CheckStateChangedEvent event) {
                 Object o = event.getElement();
                 boolean isChecked = event.getChecked();
-                // first expand in order to be able to check children as well
-                m_workflowListUI
-                        .expandToLevel(o, AbstractTreeViewer.ALL_LEVELS);
                 m_workflowListUI.setSubtreeChecked(o, isChecked);
                 if (o instanceof IWorkflowImportElement) {
                     IWorkflowImportElement element = (IWorkflowImportElement)o;
@@ -678,14 +673,17 @@ public class WorkflowImportSelectionPage extends WizardPage {
         // get the value from the text field
 
         SpaceResourceSelectionDialog dlg =
-            new SpaceResourceSelectionDialog(getShell(),
-                    ExplorerMountTable.getAllMountIDs().toArray(new String[0]),
-                    ContentObject.forFile(m_target), "Select destination");
+                new SpaceResourceSelectionDialog(getShell(), ExplorerMountTable
+                        .getAllMountIDs().toArray(new String[0]),
+                        ContentObject.forFile(m_target));
+        dlg.setTitle("Import Destination");
+        dlg.setHeader("Select the import destination");
+        dlg.setDescription(
+                "Please select the directory to store the new workflows in");
         dlg.setValidator(new SelectionValidator() {
             @Override
             public String isValid(final AbstractExplorerFileStore selection) {
-                if (!AbstractExplorerFileStore.isWorkflowGroup(
-                        selection)) {
+                if (!AbstractExplorerFileStore.isWorkflowGroup(selection)) {
                     return "Please select a workflow group.";
                 }
                 return null;
@@ -1056,8 +1054,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
         boolean exists = false;
         if (childPath.segmentCount() > 0) {
             // append to the destination path
-            AbstractExplorerFileStore result
-                    = destination.getChild(childPath.toString());
+            AbstractExplorerFileStore result =
+                    destination.getChild(childPath.toString());
             // check whether this exists
             exists = result.fetchInfo().exists();
         }

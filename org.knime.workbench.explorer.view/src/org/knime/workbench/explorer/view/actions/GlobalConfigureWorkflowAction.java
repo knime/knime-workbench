@@ -90,9 +90,8 @@ public class GlobalConfigureWorkflowAction extends ExplorerAction {
                     .lockWorkflow((LocalExplorerFileStore)wfStore)) {
                 showDialog(getWorkflow());
             } else {
-                LOGGER.info("The workflow cannot be configured as "
-                        + "is still in use by another user/instance.\n"
-                        + "Canceling configuration.");
+                LOGGER.info("The workflow cannot be configured. "
+                        + "It is in use by another user/instance.");
                 showCantConfigureLockMessage();
             }
         } finally {
@@ -145,8 +144,7 @@ public class GlobalConfigureWorkflowAction extends ExplorerAction {
                 new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
         mb.setText("Can't Lock for Configuration");
         mb.setMessage("The workflow cannot be configured as "
-                + "is still in use by another user/instance.\n"
-                + "Canceling configuration.");
+                + "is in use by another user/instance.");
         mb.open();
     }
 }

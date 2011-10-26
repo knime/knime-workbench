@@ -210,8 +210,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         StringBuilder path = new StringBuilder();
         for (String s : segments) {
             if (!s.isEmpty()) {
-                path.append("/").append(s);
-            }
+            path.append("/").append(s);
+        }
         }
         return path.toString();
     }
@@ -248,7 +248,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /**
      * Performs any work associated with the drop. Drop data might be null. In
      * this case the implementing classes should try to retrieve the data from
-     * the {@link LocalSelectionTransfer}.
+     * the {@link LocalSelectionTransfer}. Implementors must finish the drop!
+     * I.e. if the operation is a move, the source should be deleted!
      *
      * @param data the drop data, might be null
      * @param operation the operation to be performed as received from

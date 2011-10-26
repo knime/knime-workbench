@@ -65,10 +65,10 @@ public final class DragAndDropUtils {
      *      the selection includes any object other than
      *      {@link ContentObject} or {@link AbstractContentProvider}.
      */
-    public static Map<AbstractContentProvider, List<AbstractExplorerFileStore>> 
+    public static Map<AbstractContentProvider, List<AbstractExplorerFileStore>>
             getProviderMap(final IStructuredSelection selection) {
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> providers 
-                = new TreeMap<AbstractContentProvider, 
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> providers
+                = new TreeMap<AbstractContentProvider,
                 List<AbstractExplorerFileStore>>();
         if (selection == null) {
             return providers;
@@ -82,7 +82,7 @@ public final class DragAndDropUtils {
                 AbstractContentProvider provider = content.getProvider();
                 AbstractExplorerFileStore fs = content.getObject();
                 if (!providers.containsKey(provider)) {
-                    providers.put(provider, 
+                    providers.put(provider,
                             new ArrayList<AbstractExplorerFileStore>());
                 }
                 providers.get(provider).add(fs);
@@ -91,7 +91,7 @@ public final class DragAndDropUtils {
                         (AbstractContentProvider)nextObject;
                 AbstractExplorerFileStore fs = provider.getFileStore("/");
                 if (!providers.containsKey(provider)) {
-                    providers.put(provider, 
+                    providers.put(provider,
                             new ArrayList<AbstractExplorerFileStore>());
                 }
                 providers.get(provider).add(fs);
@@ -103,7 +103,9 @@ public final class DragAndDropUtils {
     }
 
     /**
-     * Builds a list containing all selected explorer file stores.
+     * Builds a list containing all selected explorer file stores. Selected
+     * content providers (mount points) are represented by a root file store 
+     * ("/").
      * @param selection the structured collection to process
      * @return a map of content providers to explorer file stores or null if
      *      the selection includes {@link ContentObject}s not containing an
@@ -111,7 +113,7 @@ public final class DragAndDropUtils {
      */
     public static List<AbstractExplorerFileStore> getExplorerFileStores(
             final IStructuredSelection selection) {
-        List<AbstractExplorerFileStore> fileStores 
+        List<AbstractExplorerFileStore> fileStores
                 = new ArrayList<AbstractExplorerFileStore>();
         @SuppressWarnings("rawtypes")
         Iterator iter = selection.iterator();
@@ -119,6 +121,9 @@ public final class DragAndDropUtils {
             Object nextObject = iter.next();
             if (nextObject instanceof ContentObject) {
                 fileStores.add(((ContentObject)nextObject).getObject());
+            } else if (nextObject instanceof AbstractContentProvider) {
+                fileStores.add(((AbstractContentProvider)nextObject)
+                        .getFileStore("/"));
             } else {
                 return null;
             }
@@ -167,7 +172,7 @@ public final class DragAndDropUtils {
         IResource r = null;
         String pName = "<unknown>";
         try {
-            AbstractExplorerFileStore fs 
+            AbstractExplorerFileStore fs
                     = DragAndDropUtils.getFileStore(selection);
             File localFile = fs.toLocalFile(EFS.NONE, null);
             if (fs == null || localFile == null) {

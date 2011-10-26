@@ -239,9 +239,6 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             final AbstractExplorerFileStore destination, final IProgressMonitor monitor)
             throws IOException {
 
-        // in the wizard page we make sure the destination doesn't exist
-        assert !destination.fetchInfo().exists();
-
         if (zipElement.isWorkflow()) {
             importZipEntry(zipElement.getProvider(),
                     (ZipEntry)zipElement.getEntry(), destination, monitor);

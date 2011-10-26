@@ -69,12 +69,12 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
+import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
-import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog;
-import org.knime.workbench.explorer.view.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 
 /**
  *
@@ -156,7 +156,7 @@ public class NewWorkflowWizardPage extends WizardPage {
             return;
         }
         AbstractExplorerFileStore sel = selection.get(0);
-        while (!isDirAndNoWorkflow(sel)) {
+        while (!AbstractExplorerFileStore.isWorkflowGroup(sel)) {
             AbstractExplorerFileStore parent = sel.getParent();
             if (parent == null) {
                 break;
@@ -241,20 +241,20 @@ public class NewWorkflowWizardPage extends WizardPage {
         SpaceResourceSelectionDialog dlg =
                 new SpaceResourceSelectionDialog(getShell(),
                         new String[]{m_contentProvider.getMountID()},
-                        ContentObject.forFile(m_parent),
-                        "Select a new destination");
+                        ContentObject.forFile(m_parent));
+        dlg.setTitle("Destination Selection");
+        dlg.setHeader("Select a new destination.");
+        dlg.setDescription("Please select the destination directory in the "
+                + m_parent.getMountID() + " TeamSpace");
         dlg.setValidator(new SelectionValidator() {
             @Override
             public String isValid(final AbstractExplorerFileStore selection) {
-                String msg =
-                        "Please select a directory or workflow group "
-                                + "in the " + m_parent.getMountID()
-                                + " team space.";
+                String msg = "Please select a directory or workflow group.";
                 if (!selection.getMountID().equals(
                         m_contentProvider.getMountID())) {
                     return msg;
                 }
-                if (isDirAndNoWorkflow(selection)) {
+                if (AbstractExplorerFileStore.isWorkflowGroup(selection)) {
                     return null;
                 } else {
                     return msg;
@@ -309,16 +309,4 @@ public class NewWorkflowWizardPage extends WizardPage {
         return m_parent.getChild(m_projectName);
     }
 
-    private boolean isDirAndNoWorkflow(final AbstractExplorerFileStore file) {
-        if (AbstractExplorerFileStore.isNode(file)) {
-            return false;
-        }
-        if (AbstractExplorerFileStore.isMetaNode(file)) {
-            return false;
-        }
-        if (AbstractExplorerFileStore.isWorkflow(file)) {
-            return false;
-        }
-        return file.fetchInfo().isDirectory();
-    }
 }

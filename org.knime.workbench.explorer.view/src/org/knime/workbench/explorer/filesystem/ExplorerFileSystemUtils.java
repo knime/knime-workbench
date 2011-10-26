@@ -350,6 +350,12 @@ public final class ExplorerFileSystemUtils {
         for (AbstractExplorerFileStore f : toDel) {
             // go by the local file. (Does EFS.delete() delete recursively??)
             try {
+                if (f.getName().equals("/")) {
+                    // the root is represented by the mount point. Can't del it!
+                    LOGGER.info("Can't delete the root of a mounted space. "
+                            + "(Skipping " + f.getMountIDWithFullPath() + ")");
+                    continue;
+                }
                 if (f.fetchInfo().exists()) {
                     File loc = f.toLocalFile(EFS.NONE, null);
                     if (loc == null) {

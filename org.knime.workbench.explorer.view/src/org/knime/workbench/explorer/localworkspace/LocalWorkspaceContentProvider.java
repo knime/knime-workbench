@@ -305,6 +305,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             // check for existing files
             for (AbstractExplorerFileStore fs : fileStores) {
                 String childName = fs.getName();
+                //TODO: What if two selected stores have the same name?!?
                 if (target.getChild(childName).fetchInfo().exists()) {
                     MessageBox mb =
                         new MessageBox(Display.getCurrent().getActiveShell(),
@@ -332,13 +333,19 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                                     + rfs.getMountIDWithFullPath() + " is no workflow.");
                             return false;
                         }
-                        if (!performDownload(rfs, (LocalExplorerFileStore)target)) {
+                        if (performDownload(rfs, (LocalExplorerFileStore)target)) {
+                            if (operation == DND.DROP_MOVE) {
+                                rfs.delete(EFS.NONE, null);
+                            }
+                        } else {
                             return false;
                         }
                     } else {
-
-                        // TODO use a move to be more efficient if possible
-                        copy(fs, target);
+                        if (operation == DND.DROP_MOVE) {
+                            move(fs, target);
+                        } else {
+                            copy(fs, target);
+                        }
                         DragAndDropUtils.refreshResource(target);
                     }
                 } catch (CoreException e) {
@@ -403,6 +410,16 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     private void copy(final AbstractExplorerFileStore src,
             final AbstractExplorerFileStore dest) throws CoreException {
         src.copy(dest, EFS.NONE, null);
+    }
+
+    /**
+     * @param src the explorer file store to copy
+     * @param the destination file store
+     * @throws CoreException
+     */
+    private void move(final AbstractExplorerFileStore src,
+            final AbstractExplorerFileStore dest) throws CoreException {
+        src.move(dest, EFS.NONE, null);
     }
 
     /**

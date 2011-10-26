@@ -48,7 +48,7 @@
  * Created: Mar 22, 2011
  * Author: ohl
  */
-package org.knime.workbench.explorer.view.dialogs;
+package org.knime.workbench.explorer.view.preferences;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -295,7 +295,6 @@ public class NewMountPointDialog extends ListDialog {
         m_errText.setText(errMsg);
         m_errIcon.setVisible(!valid);
         m_ok.setEnabled(valid);
-
         return valid;
     }
 
