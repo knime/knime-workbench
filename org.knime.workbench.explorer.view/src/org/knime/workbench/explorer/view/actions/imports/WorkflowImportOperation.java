@@ -239,7 +239,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             final AbstractExplorerFileStore destination, final IProgressMonitor monitor)
             throws IOException {
 
-        if (zipElement.isWorkflow()) {
+        if (zipElement.isWorkflow() || zipElement.isTemplate()) {
             importZipEntry(zipElement.getProvider(),
                     (ZipEntry)zipElement.getEntry(), destination, monitor);
         } else {

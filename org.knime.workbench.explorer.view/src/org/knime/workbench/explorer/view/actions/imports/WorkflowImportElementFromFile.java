@@ -209,4 +209,19 @@ public class WorkflowImportElementFromFile
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isTemplate() {
+        File dir = getFile();
+        if (!dir.isDirectory()) {
+            return false;
+        }
+        File templateFile = new File(dir, WorkflowPersistor.TEMPLATE_FILE);
+        if (templateFile.exists()) {
+            return true;
+        }
+        return false;
+    }
 }

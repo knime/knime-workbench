@@ -114,6 +114,29 @@ public class WorkflowImportElementFromArchive
         return false;
     }
 
+    /**
+    *
+    * {@inheritDoc}
+    */
+   @Override
+   public boolean isTemplate() {
+       ILeveledImportStructureProvider provider = getProvider();
+       Object zipEntry = getEntry();
+       if (provider.isFolder(zipEntry)) {
+           List children = provider.getChildren(zipEntry);
+           if (children == null) {
+               return false;
+           }
+           for (Object o : children) {
+               String elementLabel = provider.getLabel(o);
+               if (elementLabel.equals(WorkflowPersistor.TEMPLATE_FILE)) {
+                   return true;
+               }
+           }
+       }
+       return false;
+   }
+
     private final ILeveledImportStructureProvider m_provider;
 
     // this is either org.eclipse.ui.internal.wizards.datatransfer.ZipFile or

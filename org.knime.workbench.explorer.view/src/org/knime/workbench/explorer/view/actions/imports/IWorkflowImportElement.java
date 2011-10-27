@@ -151,6 +151,12 @@ public interface IWorkflowImportElement {
      */
     public boolean isWorkflowGroup();
 
+    /**
+     *
+     * @return true if the element is a metanode template
+     */
+    public boolean isTemplate();
+
 
 
 }

@@ -470,6 +470,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
                         return KnimeResourceLabelProvider.CLOSED_WORKFLOW;
                     } else if (wf.isWorkflowGroup()) {
                         return KnimeResourceLabelProvider.WORKFLOW_GROUP;
+                    } else if (wf.isTemplate()) {
+                        return KnimeResourceLabelProvider.TEMPLATE;
                     }
                 }
                 return super.getImage(element);
@@ -881,7 +883,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
         // public in order to make it possible to import from a given zip entry
         ILeveledImportStructureProvider provider = parent.getProvider();
         Object entry = parent.getEntry();
-        if (parent.isWorkflow()) {
+        if (parent.isWorkflow() || parent.isTemplate()) {
             // abort recursion
             return;
         }

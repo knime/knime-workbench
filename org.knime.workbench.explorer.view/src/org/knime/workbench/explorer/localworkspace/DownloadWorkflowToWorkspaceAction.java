@@ -265,7 +265,7 @@ public class DownloadWorkflowToWorkspaceAction extends Action {
             final WorkflowImportElementFromArchive parent) {
         ILeveledImportStructureProvider provider = parent.getProvider();
         Object entry = parent.getEntry();
-        if (parent.isWorkflow()) {
+        if (parent.isWorkflow() || parent.isTemplate()) {
             // abort recursion
             return;
         }
@@ -318,6 +318,7 @@ public class DownloadWorkflowToWorkspaceAction extends Action {
         /**
          * {@inheritDoc}
          */
+        @Override
         public void run() {
             run(null);
         }
