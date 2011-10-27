@@ -59,6 +59,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
+import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -520,7 +521,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             for (AbstractExplorerFileStore c : childs) {
                 if (AbstractExplorerFileStore.isWorkflowGroup(c)
                         || AbstractExplorerFileStore.isWorkflow(c)
-                        || AbstractExplorerFileStore.isWorkflowTemplate(c)) {
+                        || AbstractExplorerFileStore.isWorkflowTemplate(c)
+                        || ContextAwareNodeFactoryMapper.getNodeFactory(
+                                c.getName()) != null) {
                     result.add(c);
                 }
             }

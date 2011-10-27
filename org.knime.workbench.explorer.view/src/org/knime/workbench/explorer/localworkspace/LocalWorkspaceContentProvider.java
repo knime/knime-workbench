@@ -108,7 +108,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             return AbstractContentProvider.getWorkflowChildren(parent);
         }
         if (AbstractExplorerFileStore.isWorkflowGroup(parent)) {
-            return AbstractContentProvider.getWorkflowgroupChildren(parent);
+            return getWorkflowgroupChildren(parent);
         }
         // everything else: return dirs only
         try {
@@ -130,6 +130,38 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             return result.toArray(new AbstractExplorerFileStore[result.size()]);
         } catch (CoreException e) {
             return NO_CHILD;
+        }
+    }
+
+    /**
+     * Returns children of a workflowgroup.
+     *
+     * @param workflowGroup the workflow group to return the children for
+     * @return the content of the workflow group
+     */
+    public static AbstractExplorerFileStore[] getWorkflowgroupChildren(
+            final LocalWorkspaceFileStore workflowGroup) {
+
+        assert AbstractExplorerFileStore.isWorkflowGroup(workflowGroup);
+
+        try {
+            AbstractExplorerFileStore[] childs =
+                workflowGroup.childStores(EFS.NONE, null);
+            if (childs == null || childs.length == 0) {
+                return AbstractContentProvider.NO_CHILD;
+            }
+            ArrayList<AbstractExplorerFileStore> result =
+                    new ArrayList<AbstractExplorerFileStore>();
+            for (AbstractExplorerFileStore c : childs) {
+                if (AbstractExplorerFileStore.isWorkflowGroup(c)
+                        || AbstractExplorerFileStore.isWorkflow(c)) {
+                    result.add(c);
+                }
+            }
+            return result.toArray(new AbstractExplorerFileStore[result.size()]);
+        } catch (CoreException ce) {
+            LOGGER.debug(ce);
+            return AbstractContentProvider.NO_CHILD;
         }
     }
 
