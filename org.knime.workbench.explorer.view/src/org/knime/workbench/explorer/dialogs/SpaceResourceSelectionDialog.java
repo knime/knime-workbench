@@ -58,6 +58,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -101,10 +102,21 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     private String m_description = "";
 
-    private String m_message = "";
+    private final String m_message = "";
 
     private boolean m_valid = true;
 
+    private int m_xSizeFactor;
+
+    private int m_ySizeFactor;
+
+    /**
+     * Creates a new dialog showing the passed mount ids.
+     *
+     * @param parentShell the parent shell
+     * @param mountIDs the ids of the mount points to show
+     * @param initialSelection the object to select initially
+     */
     public SpaceResourceSelectionDialog(final Shell parentShell,
             final String[] mountIDs, final ContentObject initialSelection) {
         super(parentShell);
@@ -115,13 +127,25 @@ public class SpaceResourceSelectionDialog extends Dialog {
         } else {
             m_selectedContainer = null;
         }
+        m_xSizeFactor = 1;
+        m_ySizeFactor = 2;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected Point getInitialSize() {
+        Point size = super.getInitialSize();
+        return  new Point(size.x * m_xSizeFactor,
+                size.y * m_ySizeFactor);
     }
 
     /**
      * Sets the title of the dialog window (has no effect after window is
-     * created)
+     * created).
      *
-     * @param title
+     * @param title the title to display
      */
     public void setTitle(final String title) {
         m_title = title;
@@ -132,7 +156,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * dialog. Defaults to &quot;Make a selection&quot;. Has no effect after the
      * window is created.
      *
-     * @param header
+     * @param header the header to display
      */
     public void setHeader(final String header) {
         if (header != null && !header.isEmpty()) {
@@ -144,7 +168,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * Sets the descriptive text that is displayed beneath the header. Has no
      * effect after the window is created.
      *
-     * @param descr
+     * @param descr the description
      */
     public void setDescription(final String descr) {
         if (descr != null && !descr.isEmpty()) {
@@ -152,6 +176,9 @@ public class SpaceResourceSelectionDialog extends Dialog {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected void configureShell(final Shell newShell) {
         super.configureShell(newShell);
@@ -160,10 +187,16 @@ public class SpaceResourceSelectionDialog extends Dialog {
         }
     }
 
+    /**
+     * @return the selected file store
+     */
     public AbstractExplorerFileStore getSelection() {
         return m_selectedContainer;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected Control createDialogArea(final Composite parent) {
         Composite overall = new Composite(parent, SWT.NONE);
@@ -178,6 +211,11 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     }
 
+    /**
+     * Creates the header composite.
+     *
+     * @param parent the parent composite
+     */
     protected void createHeader(final Composite parent) {
         Composite header = new Composite(parent, SWT.FILL);
         Color white = Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
@@ -206,7 +244,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
     /**
      * Creates the tree selection panel.
      *
-     * @param parent
+     * @param parent the parent composite
      */
     protected void createTreeControl(final Composite parent) {
         m_treeInput = new ContentDelegator();
@@ -261,6 +299,11 @@ public class SpaceResourceSelectionDialog extends Dialog {
         m_tree.createTreeControl(parent);
     }
 
+    /**
+     * Creates the result panel.
+     *
+     * @param parent the parent composite
+     */
     protected void createResultPanel(final Composite parent) {
         Composite panel = new Composite(parent, SWT.FILL);
         panel.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
@@ -270,6 +313,9 @@ public class SpaceResourceSelectionDialog extends Dialog {
         updateResultPanel();
     }
 
+    /**
+     * Update the result panel.
+     */
     protected void updateResultPanel() {
         if (m_selectedContainer != null) {
             m_path.setText(m_selectedContainer.getMountIDWithFullPath());
@@ -310,6 +356,12 @@ public class SpaceResourceSelectionDialog extends Dialog {
         return b;
     }
 
+    /**
+     * Sets the validator to use.
+     *
+     * @param validator the validator that is used to determin if a selected
+     *          file is valid
+     */
     public void setValidator(final SelectionValidator validator) {
         m_validator = validator;
     }
@@ -320,6 +372,17 @@ public class SpaceResourceSelectionDialog extends Dialog {
     @Override
     protected boolean isResizable() {
         return true;
+    }
+
+    /**
+     * Allows to scale the initial dialog size.
+     *
+     * @param xFactor the factor to multiply the width with
+     * @param yFactor the factor to multiply the height with
+     */
+    public void scaleDialogSize(final int xFactor, final int yFactor) {
+        m_xSizeFactor = xFactor;
+        m_ySizeFactor = yFactor;
     }
 
     /**

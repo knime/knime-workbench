@@ -52,6 +52,7 @@ package org.knime.workbench.explorer;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -124,6 +125,30 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             } catch (CoreException e) {
                 throw new IOException(e.getMessage(), e);
             }
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public OutputStream getOutputStream() throws IOException {
+            try {
+                return m_file.openOutputStream(EFS.NONE, null);
+            } catch (CoreException e) {
+                throw new IOException(e.getMessage(), e);
+            }
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public int getContentLength() {
+            long length = m_file.fetchInfo().getLength();
+            if (length > Integer.MAX_VALUE) {
+                length = Integer.MAX_VALUE;
+            }
+            return EFS.NONE == length ? -1 : (int) length;
         }
     }
 }
