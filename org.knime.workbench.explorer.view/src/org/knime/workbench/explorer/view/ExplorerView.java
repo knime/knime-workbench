@@ -636,7 +636,10 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         ProjectWorkflowMap.removeWorkflowListener(this);
 //        ProjectWorkflowMap.removeNodePropertyChangedListener(this);
 //        ProjectWorkflowMap.removeNodeMessageListener(this);
-        m_clipboard.dispose();
+        if (m_clipboard != null) {
+            // some times we get a NPE if the view is not fully initialized
+            m_clipboard.dispose();
+        }
     }
 
 }
