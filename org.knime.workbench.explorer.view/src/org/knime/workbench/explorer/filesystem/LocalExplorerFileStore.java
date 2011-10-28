@@ -86,4 +86,16 @@ public abstract class LocalExplorerFileStore extends AbstractExplorerFileStore {
         // file (ignores options argument, too)
         return toLocalFile(EFS.NONE, null);
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract LocalExplorerFileStore getChild(String name);
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract LocalExplorerFileStore getParent();
 }

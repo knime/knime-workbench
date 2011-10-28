@@ -48,6 +48,7 @@ import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.IconFactory;
+import org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 
 /**
@@ -280,7 +281,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
 
     /** {@inheritDoc} */
     @Override
-    public AbstractExplorerFileStore fromLocalFile(final File file) {
+    public LocalExplorerFileStore fromLocalFile(final File file) {
         IPath rootPath = ResourcesPlugin.getWorkspace().getRoot().getLocation();
         File root = rootPath.toFile();
         String s = getRelativePath(file, root);
@@ -471,8 +472,16 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
 
     private boolean performDownload(final RemoteExplorerFileStore source,
             final LocalExplorerFileStore parent) {
-        DownloadWorkflowToWorkspaceAction downloadAction =
-                new DownloadWorkflowToWorkspaceAction(null, source, parent);
+        File parentDir;
+        try {
+            parentDir = parent.toLocalFile();
+        } catch (CoreException e) {
+            LOGGER.error("Could not get local target directory for download.",
+                    e);
+            return false;
+        }
+        LocalDownloadWorkflowAction downloadAction =
+                new LocalDownloadWorkflowAction(source, parentDir);
         downloadAction.run();
         return true;
     }

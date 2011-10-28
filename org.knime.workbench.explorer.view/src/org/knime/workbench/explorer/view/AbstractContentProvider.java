@@ -58,6 +58,7 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
@@ -185,7 +186,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param file The file in question.
      * @return the file store or null.
      */
-    public abstract AbstractExplorerFileStore fromLocalFile(final File file);
+    public abstract LocalExplorerFileStore fromLocalFile(final File file);
 
     /** Helper class to find the path segment for a given local (absolute) file.
      * It will traverse the file's parents until it finds the root file (which

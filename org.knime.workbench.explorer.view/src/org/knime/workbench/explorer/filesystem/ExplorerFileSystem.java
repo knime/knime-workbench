@@ -144,10 +144,10 @@ public class ExplorerFileSystem extends FileSystem {
      * {@inheritDoc}
      */
     @Override
-    public AbstractExplorerFileStore fromLocalFile(final File file) {
+    public LocalExplorerFileStore fromLocalFile(final File file) {
         for (AbstractContentProvider acp
                 : ExplorerMountTable.getMountedContent().values()) {
-            AbstractExplorerFileStore fromLocalFile = acp.fromLocalFile(file);
+            LocalExplorerFileStore fromLocalFile = acp.fromLocalFile(file);
             if (fromLocalFile != null) {
                 return fromLocalFile;
             }
@@ -173,7 +173,7 @@ public class ExplorerFileSystem extends FileSystem {
      */
     static boolean isParent(final File parent, final File child) {
         try {
-            return isParent(parent.getCanonicalPath(), 
+            return isParent(parent.getCanonicalPath(),
                     child.getCanonicalPath());
         } catch (IOException e) {
             return false;

@@ -100,4 +100,12 @@ public class URIToFileResolveImpl implements URIToFileResolve {
                 + "\" to local file, unknown scheme");
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public File resolveToLocalOrTempFile(final URI uri) throws IOException {
+        return resolveToFile(uri);
+    }
+
 }
