@@ -269,130 +269,122 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public abstract boolean dragStart(
             List<AbstractExplorerFileStore> fileStores);
 
+    /**
+     * @param metaNode
+     * @param target
+     * @return
+     */
     protected boolean performDropMetaNodeTemplate(final WorkflowManager
         metaNode, final AbstractExplorerFileStore target) {
-        File directory;
-        try {
-            directory = target.toLocalFile(EFS.NONE, null);
-        } catch (CoreException e) {
-            LOGGER.warn("Unable to convert \"" + target + "\" to local path "
-                    + "(mount provider \"" + toString() + "\"");
+
+        if (!AbstractExplorerFileStore.isWorkflowGroup(target)) {
             return false;
         }
-        if (!directory.isDirectory()
-                || AbstractExplorerFileStore.isWorkflow(target)
-                || AbstractExplorerFileStore.isNode(target)
-                || AbstractExplorerFileStore.isMetaNode(target)) {
-            return false;
-        }
-        Shell s = Display.getDefault().getActiveShell();
+
         String mountIDWithFullPath = target.getMountIDWithFullPath();
-        if (!directory.canWrite()) {
-            MessageDialog.openWarning(s, "No write permission", "You don't have"
-                    + " sufficient privileges to write to the target"
-                    + " directory \"" + mountIDWithFullPath + "\"");
-            return false;
-        }
-        while (!VMFileLocker.lockForVM(directory)) {
-            MessageDialog dialog = new MessageDialog(s,
-                    "Unable to lock directory", null, "The target folder \""
-                    + mountIDWithFullPath + "\" can currently not be locked. ",
-                    MessageDialog.QUESTION,
-                    new String[] {"&Try again", "&Cancel"}, 0);
-            if (dialog.open() == 0) {
-                continue; // next try
+        Shell shell = Display.getDefault().getActiveShell();
+        String uniqueName = metaNode.getName();
+        // remove weird chars - word chars (\w), spaces & dashes are OK
+        uniqueName = uniqueName.replaceAll("[^\\w \\-]", "_");
+        AbstractExplorerFileStore templateLoc = target.getChild(uniqueName);
+        boolean doesTargetExist = templateLoc.fetchInfo().exists();
+        boolean isOverwrite = false;
+        if (doesTargetExist
+                && !AbstractExplorerFileStore.isWorkflowTemplate(templateLoc)) {
+            StringBuilder eMsg = new StringBuilder();
+            eMsg.append("The target directory \"");
+            eMsg.append(mountIDWithFullPath).append("/").append(uniqueName);
+            eMsg.append("\" already exists and can't be overwritten as it");
+            eMsg.append(" does not represent a workflow template.\n\n");
+            eMsg.append("The new template will be saved to a different ");
+            eMsg.append("folder instead.");
+            if (MessageDialog.openConfirm(
+                    shell, "Existing folder", eMsg.toString())) {
+                isOverwrite = false;
             } else {
-                return false; // abort
-            }
-        }
-        try {
-            assert VMFileLocker.isLockedForVM(directory);
-            String uniqueName = metaNode.getName();
-            // remove weird chars - word chars (\w), spaces & dashes are OK
-            uniqueName = uniqueName.replaceAll("[^\\w \\-]", "_");
-            File wmDir = new File(directory, uniqueName);
-            AbstractExplorerFileStore efsDir = target.getChild(uniqueName);
-            boolean doesTargetExist = wmDir.exists();
-            boolean isOverwrite = false;
-            if (doesTargetExist
-                    && !AbstractExplorerFileStore.isWorkflowTemplate(efsDir)) {
-                StringBuilder eMsg = new StringBuilder();
-                eMsg.append("The target directory \"");
-                eMsg.append(mountIDWithFullPath).append("/").append(uniqueName);
-                eMsg.append("\" already exists and can't be overwritten as it");
-                eMsg.append(" does not represent a workflow template.\n\n");
-                eMsg.append("The new template will be saved to a different ");
-                eMsg.append("folder instead.");
-                if (MessageDialog.openConfirm(
-                        s, "Existing folder", eMsg.toString())) {
-                    isOverwrite = false;
-                } else {
-                    return false;
-                }
-            } else if (doesTargetExist) {
-                StringBuilder eMsg = new StringBuilder();
-                eMsg.append("A template folder with the name \"");
-                eMsg.append(mountIDWithFullPath).append("/");
-                eMsg.append(uniqueName);
-                eMsg.append("\" already exists.");
-                MessageDialog md = new MessageDialog(s, "Existing folder",
-                        null, eMsg.toString(), MessageDialog.WARNING,
-                        new String[] {"&Overwrite", "&Rename", "&Cancel"}, 0);
-                switch (md.open()) {
-                case 0: // Overwrite
-                    isOverwrite = true;
-                    break;
-                case 1: // Rename
-                    isOverwrite = false;
-                    break;
-                case 2: // Cancel
-                    return false;
-                }
-            }
-            boolean linkMetaNodeToNewTemplate;
-            switch (promptLinkMetaNodeTemplate()) {
-            case IDialogConstants.YES_ID:
-                linkMetaNodeToNewTemplate = true;
-                break;
-            case IDialogConstants.NO_ID:
-                linkMetaNodeToNewTemplate = false;
-                break;
-            default: // Cancel
                 return false;
             }
-            if (doesTargetExist && !isOverwrite) { // generate new name
-                Set<String> set;
-                try {
-                    set = new HashSet<String>(
-                            Arrays.asList(target.childNames(EFS.NONE, null)));
-                } catch (CoreException e) {
-                    LOGGER.warn("Can't query child elements of target \""
-                            + target + "\"", e);
-                    set = Collections.emptySet();
-                }
-                UniqueNameGenerator nameGen = new UniqueNameGenerator(set);
-                uniqueName = nameGen.newName(uniqueName);
-                efsDir = target.getChild(uniqueName);
-                wmDir = new File(directory, uniqueName);
+        } else if (doesTargetExist) {
+            StringBuilder eMsg = new StringBuilder();
+            eMsg.append("A template folder with the name \"");
+            eMsg.append(mountIDWithFullPath).append("/");
+            eMsg.append(uniqueName);
+            eMsg.append("\" already exists.");
+            MessageDialog md = new MessageDialog(shell, "Existing folder",
+                    null, eMsg.toString(), MessageDialog.WARNING,
+                    new String[] {"&Overwrite", "&Rename", "&Cancel"}, 0);
+            switch (md.open()) {
+            case 0: // Overwrite
+                isOverwrite = true;
+                break;
+            case 1: // Rename
+                isOverwrite = false;
+                break;
+            case 2: // Cancel
+                return false;
             }
+        }
+        if (doesTargetExist && !isOverwrite) { // generate new name
+            Set<String> set;
+            try {
+                set = new HashSet<String>(
+                        Arrays.asList(target.childNames(EFS.NONE, null)));
+            } catch (CoreException e) {
+                LOGGER.warn("Can't query child elements of target \""
+                        + target + "\"", e);
+                set = Collections.emptySet();
+            }
+            UniqueNameGenerator nameGen = new UniqueNameGenerator(set);
+            uniqueName = nameGen.newName(uniqueName);
+            templateLoc = target.getChild(uniqueName);
+        }
 
-            if (isOverwrite) {
-                boolean isWMLocked = VMFileLocker.lockForVM(wmDir);
-                if (!isWMLocked) {
-                    MessageDialog.openError(s, "Target directory locked",
-                            "The folder \"" + efsDir.getMountIDWithFullPath()
-                            + " is currently locked by another process");
+        boolean linkMetaNodeToNewTemplate;
+        switch (promptLinkMetaNodeTemplate()) {
+        case IDialogConstants.YES_ID:
+            linkMetaNodeToNewTemplate = true;
+            break;
+        case IDialogConstants.NO_ID:
+            linkMetaNodeToNewTemplate = false;
+            break;
+        default: // Cancel
+            return false;
+        }
+
+        File directory = metaTemplateDropGetTempDir(templateLoc);
+
+        try {
+            if (directory == null) {
+                LOGGER.error("Unable to convert \"" + templateLoc
+                        + "\" to local path " + "(mount provider \""
+                        + toString() + "\"");
+                return false;
+            }
+            if (directory.exists()) {
+                if (!directory.isDirectory()) {
+                    LOGGER.error("Implementation error: Provided storage path"
+                            + " doesn't denote a directory!");
                     return false;
                 }
-                ExplorerFileSystemUtils.deleteLockedWorkflows(
-                        Collections.singletonList(efsDir));
+                if (!directory.canWrite()) {
+                    MessageDialog.openWarning(shell, "No write permission",
+                            "You don't have sufficient privileges to write "
+                                    + "to the target directory \""
+                                    + mountIDWithFullPath + "\"");
+                    return false;
+                }
+            }
+
+            if (!metaTemplateDropPrepareForSave(templateLoc, directory, isOverwrite)) {
+                LOGGER.debug("Preparation for MetaTemplate save failed.");
+                return false;
             }
             try {
                 MetaNodeTemplateInformation template =
-                    metaNode.saveAsMetaNodeTemplate(
-                            wmDir, new ExecutionMonitor());
+                        metaNode.saveAsMetaNodeTemplate(directory,
+                                new ExecutionMonitor());
                 if (linkMetaNodeToNewTemplate) {
-                    URI uri = efsDir.toURI();
+                    URI uri = templateLoc.toURI();
                     MetaNodeTemplateInformation link = template.createLink(uri);
                     metaNode.getParent().setTemplateInformation(
                             metaNode.getID(), link);
@@ -400,13 +392,106 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             } catch (Exception e) {
                 String error = "Unable to save template: " + e.getMessage();
                 LOGGER.warn(error, e);
-                MessageDialog.openError(s, "Error while writing template",
+                MessageDialog.openError(shell, "Error while writing template",
                         error);
             }
+
+            metaTemplateDropFinish(templateLoc, directory);
+
         } finally {
-            VMFileLocker.unlockForVM(directory);
+            metaTemplateDropCleanup(directory);
         }
         return true;
+    }
+
+    /**
+     * Remote targets create and return a tmp dir, local targets can just return
+     * their local file.
+     *
+     * @param target
+     * @return never null
+     */
+    protected File metaTemplateDropGetTempDir(
+            final AbstractExplorerFileStore target) {
+        File result;
+        try {
+            result = target.toLocalFile();
+        } catch (CoreException e) {
+            throw new IllegalStateException("IMPLEMENTATION ERROR: Remote file"
+                    + "content provider must overwrite this method");
+        }
+        if (result == null) {
+            throw new IllegalStateException("IMPLEMENTATION ERROR: Remote file"
+                    + "content provider must overwrite this method");
+        }
+        return result;
+    }
+
+    /**
+     * After a successful or unsuccessful finish of the template save/drop this
+     * is called to get the (possible) tmp file cleaned.
+     *
+     * @param tmpDir the temp location provided by
+     *            {@link #metaTemplateDropGetTempDir(AbstractExplorerFileStore)}
+     */
+    protected void metaTemplateDropCleanup(final File tmpDir) {
+        // default implementation for local file stores doesn't create tmp dirs
+    }
+
+    /**
+     * Called right before the meta template is saved to the tmpDir. Locals may
+     * delete existing/overwritten templates. Target could be locked for
+     * writing.
+     *
+     * @param target the final target
+     * @param tmpDir the dir provided by
+     *            {@link #metaTemplateDropGetTempDir(AbstractExplorerFileStore)}
+     * @param overwrite if true the target/tmpDir should be cleaned for the
+     *            following template save
+     * @return true if drop can proceed. If false is return the drop method
+     *         silently return.
+     */
+    protected boolean metaTemplateDropPrepareForSave(
+            final AbstractExplorerFileStore target, final File tmpDir,
+            final boolean overwrite) {
+        /*
+         * default implementation assumes a local target file store and tries to
+         * lock it for writing (and deletes it to provide a clean target)
+         */
+        if (target.fetchInfo().exists() && overwrite) {
+            while (!VMFileLocker.lockForVM(tmpDir)) {
+                MessageDialog dialog =
+                        new MessageDialog(
+                                Display.getDefault().getActiveShell(),
+                                "Unable to lock directory", null,
+                                "The target folder \""
+                                        + target.getMountIDWithFullPath()
+                                        + "\" can currently not be locked. ",
+                                MessageDialog.QUESTION, new String[]{
+                                        "&Try again", "&Cancel"}, 0);
+                if (dialog.open() == 0) {
+                    continue; // next try
+                } else {
+                    return false; // abort
+                }
+            }
+            assert VMFileLocker.isLockedForVM(tmpDir);
+            ExplorerFileSystemUtils.deleteLockedWorkflows(Collections
+                    .singletonList(target));
+            // the deletion method unlocks
+        }
+        return true;
+    }
+
+    /**
+     * Called after the meta template is stored in the temp dir. Implementations
+     * can now synch the tempDir with the actual target file store.
+     * @param target
+     * @param tmpDir
+     */
+    protected void metaTemplateDropFinish(
+            final AbstractExplorerFileStore target, final File tmpDir) {
+        // default local implementation doesn't need to do nothing
     }
 
     private int promptLinkMetaNodeTemplate() {
