@@ -335,7 +335,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 set = Collections.emptySet();
             }
             UniqueNameGenerator nameGen = new UniqueNameGenerator(set);
-            uniqueName = nameGen.newName(uniqueName);
+            String newName = nameGen.newName(uniqueName);
+            // the generator appends a "(#x)" - and # is invalid!
+            uniqueName = newName.replace("#", "");
             templateLoc = target.getChild(uniqueName);
         }
 
