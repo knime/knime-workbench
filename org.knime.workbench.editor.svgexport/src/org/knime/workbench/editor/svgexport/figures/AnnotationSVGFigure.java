@@ -9,8 +9,8 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.widgets.Display;
-import org.knime.core.node.workflow.WorkflowAnnotation;
-import org.knime.core.node.workflow.WorkflowAnnotation.StyleRange;
+import org.knime.core.node.workflow.Annotation;
+import org.knime.core.node.workflow.AnnotationData.StyleRange;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 
 /**
@@ -34,7 +34,7 @@ public class AnnotationSVGFigure {
 	}
 
 	public void paint(final Graphics g){
-		WorkflowAnnotation anno = part.getModel();
+		Annotation anno = part.getModel();
 
 		Color bg = part.getFigure().getBackgroundColor();
 		Color fg = part.getFigure().getForegroundColor();
@@ -107,7 +107,7 @@ public class AnnotationSVGFigure {
 		gc.dispose();
 	}
 
-	private boolean prepareText(final WorkflowAnnotation annotation){
+	private boolean prepareText(final Annotation annotation){
 		StyleRange[] ranges = annotation.getStyleRanges();
 		String text = annotation.getText();
 		if (ranges[0].getStart() != 0) {
