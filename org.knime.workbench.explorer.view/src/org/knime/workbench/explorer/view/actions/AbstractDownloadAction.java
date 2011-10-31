@@ -83,11 +83,12 @@ public abstract class AbstractDownloadAction extends Action {
     public final void run() {
         Shell shell = Display.getDefault().getActiveShell();
 
-        if (!isSourceSupported()) {
-            LOGGER.error(getUnsupportedSourceMessage());
-            return;
-        }
         String srcIdentifier = getSourceFile().getMountIDWithFullPath();
+        if (!isSourceSupported()) {
+            throw new IllegalArgumentException("Download source \""
+                    + srcIdentifier
+                    + "\" is not supported.");
+        }
         LOGGER.debug("Downloading " + srcIdentifier
                 + " into local destination " + getTargetIdentifier());
 

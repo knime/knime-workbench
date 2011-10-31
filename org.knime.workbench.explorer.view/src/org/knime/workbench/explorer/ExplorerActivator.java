@@ -19,7 +19,12 @@
  */
 package org.knime.workbench.explorer;
 
+import java.util.Hashtable;
+
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.core.util.pathresolve.URIToFileResolve;
+import org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl;
+import org.knime.workbench.explorer.view.preferences.ExplorerPrefsSyncer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 
@@ -62,11 +67,11 @@ public class ExplorerActivator extends AbstractUIPlugin {
     public void start(final BundleContext bundleContext) throws Exception {
         super.start(bundleContext);
         ExplorerActivator.context = bundleContext;
-//        ExplorerActivator.getDefault().getPreferenceStore()
-//                .addPropertyChangeListener(new ExplorerPrefsSyncer());
-//        m_uriToFileServiceRegistration = bundleContext.registerService(
-//                URIToFileResolve.class.getName(),
-//                new URIToFileResolveImpl(), new Hashtable<String, String>());
+        ExplorerActivator.getDefault().getPreferenceStore()
+                .addPropertyChangeListener(new ExplorerPrefsSyncer());
+        m_uriToFileServiceRegistration = bundleContext.registerService(
+                URIToFileResolve.class.getName(),
+                new URIToFileResolveImpl(), new Hashtable<String, String>());
     }
 
     /**
@@ -74,8 +79,8 @@ public class ExplorerActivator extends AbstractUIPlugin {
      */
     @Override
     public void stop(final BundleContext bundleContext) throws Exception {
-//        bundleContext.ungetService(
-//                m_uriToFileServiceRegistration.getReference());
+        bundleContext.ungetService(
+                m_uriToFileServiceRegistration.getReference());
         super.stop(bundleContext);
         ExplorerActivator.context = null;
     }

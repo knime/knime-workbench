@@ -53,9 +53,11 @@ import java.io.IOException;
 import java.net.URI;
 
 import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.runtime.CoreException;
 import org.knime.core.util.pathresolve.URIToFileResolve;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 
 /**
  *
@@ -105,7 +107,24 @@ public class URIToFileResolveImpl implements URIToFileResolve {
      */
     @Override
     public File resolveToLocalOrTempFile(final URI uri) throws IOException {
-        return resolveToFile(uri);
+        File localFile = resolveToFile(uri);
+        if (localFile != null) {
+            return localFile;
+        }
+
+        // we have a remote file
+        RemoteExplorerFileStore source
+            = (RemoteExplorerFileStore) new ExplorerFileSystem().getStore(uri);
+        if (source == null) {
+            throw new IOException("Can't resolve file to URI \"" + uri
+                    + "\"; the corresponding mount point is probably "
+                    + "not defined or the resource has been (re)moved");
+        }
+        try {
+            return source.resolveToLocalFile();
+        } catch (CoreException e) {
+            throw new IOException(e);
+        }
     }
 
 }

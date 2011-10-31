@@ -98,4 +98,12 @@ public abstract class LocalExplorerFileStore extends AbstractExplorerFileStore {
      */
     @Override
     public abstract LocalExplorerFileStore getParent();
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public File resolveToLocalFile() throws CoreException {
+        return toLocalFile();
+    }
 }

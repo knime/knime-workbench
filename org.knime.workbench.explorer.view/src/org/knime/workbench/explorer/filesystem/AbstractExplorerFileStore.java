@@ -191,6 +191,22 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      */
     public abstract File toLocalFile() throws CoreException;
 
+
+    /**
+     * Returns the local file corresponding to the file store. In contrast
+     * to {@link #toLocalFile()} implementors can not only return the local file
+     * when implementing {@link LocalExplorerFileStore}, but also return
+     * a temporary copy of remote files.<br/>
+     * <b>Please note: The returned file should be read only! It can be only a
+     * copy of the file stores content and there is no guarantee that changes
+     * are propagated.</b>
+     *
+     * @return the local file, the temporary remote file, or null if not
+     *      supported
+     * @throws CoreException if this method fails
+     */
+    public abstract File resolveToLocalFile() throws CoreException;
+
     /**
      * {@inheritDoc}
      */
