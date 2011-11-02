@@ -734,4 +734,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
         return null;
     }
+
+    /**
+     * @return true if this content provider is accessing a remote file system
+     */
+    public abstract boolean isRemote();
 }

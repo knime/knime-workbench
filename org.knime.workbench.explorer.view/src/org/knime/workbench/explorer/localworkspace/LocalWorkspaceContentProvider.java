@@ -335,66 +335,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             List<AbstractExplorerFileStore> fileStores =
                     DragAndDropUtils.getExplorerFileStores(ss);
 
-            // check for existing files
-            for (AbstractExplorerFileStore fs : fileStores) {
-                String childName = fs.getName();
-                //TODO: What if two selected stores have the same name?!?
-                if (target.getChild(childName).fetchInfo().exists()) {
-                    MessageBox mb =
-                        new MessageBox(Display.getCurrent().getActiveShell(),
-                                SWT.ICON_ERROR | SWT.OK);
-                    mb.setText("Operation Cancelled");
-                    mb.setMessage("A resource with the name \"" + childName
-                            +  "\" already exists in \"" + target.getFullName()
-                            + "\". Cancelling operation...");
-                    mb.open();
-                    return false;
-                }
-            }
-
-            for (AbstractExplorerFileStore fs : fileStores) {
-                /*
-                 * On the drop receiver side there is no difference between copy
-                 * and move. The removal of the src object has to be done by the
-                 * drag source.
-                 */
-                try {
-                    if (fs instanceof RemoteExplorerFileStore) {
-                        RemoteExplorerFileStore rfs = (RemoteExplorerFileStore)fs;
-                        if (!rfs.fetchInfo().isWorkflow()) {
-                            LOGGER.error("Can only download workflows. "
-                                    + rfs.getMountIDWithFullPath() + " is no workflow.");
-                            return false;
-                        }
-                        if (performDownload(rfs, (LocalExplorerFileStore)target)) {
-                            if (operation == DND.DROP_MOVE) {
-                                rfs.delete(EFS.NONE, null);
-                            }
-                        } else {
-                            return false;
-                        }
-                    } else {
-                        if (operation == DND.DROP_MOVE) {
-                            move(fs, target);
-                        } else {
-                            copy(fs, target);
-                        }
-                        DragAndDropUtils.refreshResource(target);
-                    }
-                } catch (CoreException e) {
-                    String msg = "An error occured when transfering the file \""
-                            + fs.getFullName() + "\". ";
-                    LOGGER.error(msg, e);
-                    MessageBox mb =
-                        new MessageBox(Display.getCurrent().getActiveShell(),
-                                SWT.ICON_ERROR | SWT.OK);
-                    mb.setText("An error occured during transfer");
-                    mb.setMessage(msg);
-                    mb.open();
-                    return false;
-                }
-            }
-            return true;
+            return copyOrMove(fileStores, target, DND.DROP_MOVE == operation);
         } else if (data instanceof String[]) { // we have a file transfer
             String[] files = (String[])data;
             try {
@@ -433,6 +374,71 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             }
         }
         return false;
+    }
+
+    /**
+     * @param fileStores
+     * @param target
+     * @param operation
+     * @return
+     */
+    public boolean copyOrMove(final List<AbstractExplorerFileStore> fileStores,
+            final AbstractExplorerFileStore target, final boolean performMove) {
+        // check for existing files
+        for (AbstractExplorerFileStore fs : fileStores) {
+            String childName = fs.getName();
+            //TODO: What if two selected stores have the same name?!?
+            if (target.getChild(childName).fetchInfo().exists()) {
+                MessageBox mb =
+                    new MessageBox(Display.getCurrent().getActiveShell(),
+                            SWT.ICON_ERROR | SWT.OK);
+                mb.setText("Operation Cancelled");
+                mb.setMessage("A resource with the name \"" + childName
+                        +  "\" already exists in \"" + target.getFullName()
+                        + "\". Cancelling operation...");
+                mb.open();
+                return false;
+            }
+        }
+
+        for (AbstractExplorerFileStore fs : fileStores) {
+            try {
+                if (fs instanceof RemoteExplorerFileStore) {
+                    RemoteExplorerFileStore rfs = (RemoteExplorerFileStore)fs;
+                    if (!rfs.fetchInfo().isWorkflow()) {
+                        LOGGER.error("Can only download workflows. "
+                                + rfs.getMountIDWithFullPath() + " is no workflow.");
+                        return false;
+                    }
+                    if (performDownload(rfs, (LocalExplorerFileStore)target)) {
+                        if (performMove) {
+                            rfs.delete(EFS.NONE, null);
+                        }
+                    } else {
+                        return false;
+                    }
+                } else {
+                    if (performMove) {
+                        move(fs, target);
+                    } else {
+                        copy(fs, target);
+                    }
+                    DragAndDropUtils.refreshResource(target);
+                }
+            } catch (CoreException e) {
+                String msg = "An error occured when transfering the file \""
+                        + fs.getFullName() + "\". ";
+                LOGGER.error(msg, e);
+                MessageBox mb =
+                    new MessageBox(Display.getCurrent().getActiveShell(),
+                            SWT.ICON_ERROR | SWT.OK);
+                mb.setText("An error occured during transfer");
+                mb.setMessage(msg);
+                mb.open();
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -484,6 +490,14 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 new LocalDownloadWorkflowAction(source, parentDir);
         downloadAction.run();
         return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isRemote() {
+        return false;
     }
 
 }
