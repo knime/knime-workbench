@@ -418,10 +418,23 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                         return false;
                     }
                 } else {
+                    AbstractExplorerFileStore dest = target;
+                    if (target.fetchInfo().isDirectory()) {
+                        // drop on a dir (group) will move/copy it into the dir
+                        dest = target.getChild(fs.getName());
+                        if (dest.fetchInfo().exists()) {
+                            LOGGER.error("Destination "
+                                    + dest.getMountIDWithFullPath()
+                                    + " already exists. Not "
+                                    + (performMove ? "moved" : "copied")
+                                    + ". Skipped.");
+                            continue;
+                        }
+                    }
                     if (performMove) {
-                        move(fs, target);
+                        move(fs, dest);
                     } else {
-                        copy(fs, target);
+                        copy(fs, dest);
                     }
                     DragAndDropUtils.refreshResource(target);
                 }

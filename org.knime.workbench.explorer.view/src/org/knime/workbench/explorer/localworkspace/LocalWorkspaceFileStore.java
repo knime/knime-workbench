@@ -227,24 +227,16 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             final IProgressMonitor monitor) throws CoreException {
         File srcFile = toLocalFile(options, monitor);
         File dstFile = destination.toLocalFile(options, monitor);
-        if (!dstFile.isDirectory()) {
+        if (dstFile == null) {
             throw new UnsupportedOperationException("The local workspace "
-                    + "filestore only allows copying to directories but the "
-                    + "destination \"" + dstFile.getAbsolutePath()
-                    + "\" is not" + " a directory.");
-        }
-        File targetDir = new File(dstFile, srcFile.getName());
-        if (targetDir.exists()) {
-            throw new CoreException(new Status(IStatus.ERROR,
-                    ExplorerActivator.PLUGIN_ID, "A resource with the name "
-                            + srcFile.getName() + " already exists in "
-                            + dstFile.getName()));
+                    + "filestore only allows copying to local destinations but"
+                    + " \"" + dstFile.getAbsolutePath() + "\" is not local.");
         }
         try {
             if (srcFile.isDirectory()) {
-                FileUtils.copyDirectory(srcFile, targetDir);
+                FileUtils.copyDirectory(srcFile, dstFile);
             } else if (srcFile.isFile()) {
-                FileUtils.copyFileToDirectory(srcFile, dstFile);
+                FileUtils.copyFile(srcFile, dstFile);
             }
         } catch (IOException e) {
             String message =
@@ -403,7 +395,10 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         File dstFile = destination.toLocalFile(options, monitor);
 
         try {
-            srcFile.renameTo(dstFile);
+            if (!srcFile.renameTo(dstFile)) {
+                LOGGER.warn("Rename (move) failed (File: "
+                        + srcFile.getAbsolutePath() + ").");
+            }
         } catch (SecurityException e) {
             String message =
                     "Could not rename file \"" + srcFile.getAbsolutePath()
