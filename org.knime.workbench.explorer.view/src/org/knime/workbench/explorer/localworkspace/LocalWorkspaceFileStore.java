@@ -230,11 +230,12 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         if (dstFile == null) {
             throw new UnsupportedOperationException("The local workspace "
                     + "filestore only allows copying to local destinations but"
-                    + " \"" + dstFile.getAbsolutePath() + "\" is not local.");
+                    + " \"" + destination.getName() + "\" is not local.");
         }
         try {
             if (srcFile.isDirectory()) {
                 FileUtils.copyDirectory(srcFile, dstFile);
+                createProjectFile(destination, monitor);
             } else if (srcFile.isFile()) {
                 FileUtils.copyFile(srcFile, dstFile);
             }
@@ -245,44 +246,40 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             throw new CoreException(new Status(IStatus.ERROR,
                     ExplorerActivator.PLUGIN_ID, message, e));
         }
-        createProjectFile(destination, monitor);
-        refreshResource(destination, monitor);
-    }
-
-    private void createProjectFile(final IFileStore dest,
-            final IProgressMonitor monitor) throws CoreException {
-        createProjectFile(getName(), dest, monitor);
+        refreshResource(destination.getParent(), monitor);
     }
 
     /**
      * Creates a .project for the destination if necessary (only in case that
      * destination is the workflow root and no .project file exists yet).
      *
-     * @param projectName the name of the project
-     * @param destination the parent file store of the project
+     * @param destination the file store of the project
      * @param monitor a progress monitor, or null if progress reporting and
      *            cancellation are not desired
      *
      * @throws CoreException
      */
-    public static void createProjectFile(final String projectName,
-            final IFileStore destination, final IProgressMonitor monitor)
-            throws CoreException {
+    public static void createProjectFile(final IFileStore destination,
+            final IProgressMonitor monitor) throws CoreException {
         File dstDir = destination.toLocalFile(EFS.NONE, monitor);
         if (dstDir == null) {
             return; // do nothing
         }
-        IResource res = KnimeResourceUtil.getResourceForURI(dstDir.toURI());
+        File root = dstDir.getParentFile();
+        IResource res = null;
+        if (root != null) {
+            res = KnimeResourceUtil.getResourceForURI(root.toURI());
+        }
         if (res != null && res instanceof IWorkspaceRoot) {
             /*
              * The target is the workspace root. Therefore we have to create a
              * .project file.
              */
-            IProject newProject = ((IWorkspaceRoot)res).getProject(projectName);
+            IProject newProject = ((IWorkspaceRoot)res).getProject(dstDir.getName());
             newProject.delete(false, true, monitor);
             try {
                 newProject =
-                        MetaInfoFile.createKnimeProject(newProject.getName(),
+                        MetaInfoFile.createKnimeProject(dstDir.getName(),
                                 KNIMEProjectNature.ID);
             } catch (Exception e) {
                 String message =
@@ -321,7 +318,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             final IProgressMonitor monitor) {
         if (resource != null) {
             try {
-                resource.refreshLocal(IResource.DEPTH_INFINITE, monitor);
+                resource.refreshLocal(1, monitor);
                 LOGGER.debug("Refreshed resource " + resource);
             } catch (Exception e) {
                 // do not refresh
@@ -371,7 +368,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     public AbstractExplorerFileStore mkdir(final int options,
             final IProgressMonitor monitor) throws CoreException {
         m_file.mkdir(options, monitor);
-        createProjectFile(getParent(), monitor);
+        createProjectFile(this, monitor);
         refreshResource(getParent(), monitor);
         return this;
     }
@@ -395,9 +392,15 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         File dstFile = destination.toLocalFile(options, monitor);
 
         try {
-            if (!srcFile.renameTo(dstFile)) {
-                LOGGER.warn("Rename (move) failed (File: "
-                        + srcFile.getAbsolutePath() + ").");
+            if (srcFile.renameTo(dstFile)) {
+                // if rename works: refresh
+                createProjectFile(destination, monitor);
+                refreshResource(getParent(), monitor);
+                refreshResource(destination.getParent(), monitor);
+            } else {
+                copy(destination, options, monitor);
+                delete(options, monitor);
+                // copy/delete refreshes
             }
         } catch (SecurityException e) {
             String message =
@@ -407,10 +410,6 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             throw new CoreException(new Status(IStatus.ERROR,
                     ExplorerActivator.PLUGIN_ID, message, e));
         }
-        createProjectFile(destination.getName(), destination.getParent(),
-                monitor);
-        refreshResource(destination.getParent(), monitor);
-        refreshParentResource();
     }
 
 }

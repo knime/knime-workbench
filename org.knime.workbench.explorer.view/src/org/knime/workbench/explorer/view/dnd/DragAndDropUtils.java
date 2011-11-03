@@ -104,7 +104,7 @@ public final class DragAndDropUtils {
 
     /**
      * Builds a list containing all selected explorer file stores. Selected
-     * content providers (mount points) are represented by a root file store 
+     * content providers (mount points) are represented by a root file store
      * ("/").
      * @param selection the structured collection to process
      * @return a map of content providers to explorer file stores or null if
@@ -183,10 +183,10 @@ public final class DragAndDropUtils {
                 if (r instanceof IWorkspaceRoot) {
                     // we have the workspace root and therefore no project
                     pName = "workspace root";
-                    r.refreshLocal(IResource.DEPTH_INFINITE, null);
+                    r.refreshLocal(1, null);
                 } else {
                     pName = r.getParent().getName();
-                    r.getParent().refreshLocal(IResource.DEPTH_INFINITE, null);
+                    r.getParent().refreshLocal(1, null);
                 }
             }
         } catch (CoreException e) {
