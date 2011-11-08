@@ -193,11 +193,14 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      */
     @Override
     public LocalWorkspaceFileStore getParent() {
-        IFileStore p = m_file.getParent();
-        if (p == null) {
+        if ("/".equals(getFullName())) { // root file store
             return null;
         }
-        return new LocalWorkspaceFileStore(getMountID(), p, new Path(
+        IFileStore parent = m_file.getParent();
+        if (parent == null) {
+            return null;
+        }
+        return new LocalWorkspaceFileStore(getMountID(), parent, new Path(
                 getFullName()).removeLastSegments(1).toString());
     }
 

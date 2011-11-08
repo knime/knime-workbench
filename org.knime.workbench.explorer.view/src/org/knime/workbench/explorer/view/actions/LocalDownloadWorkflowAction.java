@@ -76,7 +76,13 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
         super("Download", source, target);
         LocalExplorerFileStore parent = new ExplorerFileSystem()
                 .fromLocalFile(getTargetDir());
-        m_targetFileStore = parent.getChild(source.getName());
+        String name = source.getName();
+        if ("/".equals(name)) {
+            /* If the mount point itself was selected we cannot
+             * use the root "/" as name but choose the mount id. */
+            name = source.getMountID();
+        }
+        m_targetFileStore = parent.getChild(name);
     }
 
     /**

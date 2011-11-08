@@ -739,4 +739,18 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @return true if this content provider is accessing a remote file system
      */
     public abstract boolean isRemote();
+
+    /**
+     * Copies or moves one or multiple file stores into the target directory.
+     *
+     * @param fileStores the file stores to copy or move
+     * @param targetDir the target directory. Make sure to call the content
+     *      provider that can handle the target dir type.
+     * @param performMove true, if the file stores should be moved, false
+     *      otherwise
+     * @return true if the operation was successful, false otherwise
+     */
+    public abstract boolean copyOrMove(
+            List<AbstractExplorerFileStore> fileStores,
+            AbstractExplorerFileStore targetDir, boolean performMove);
 }

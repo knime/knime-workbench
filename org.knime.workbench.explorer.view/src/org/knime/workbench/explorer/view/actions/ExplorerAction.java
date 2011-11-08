@@ -101,9 +101,18 @@ public abstract class ExplorerAction extends Action {
      * @return a map associating the selected file store(s) to the corresponding
      *         content provider(s)
      */
-    protected Map<AbstractContentProvider, 
+    protected Map<AbstractContentProvider,
             List<AbstractExplorerFileStore>> getSelectedFiles() {
         return DragAndDropUtils.getProviderMap(getSelection());
+    }
+
+    /**
+     * Returns the selected file stores.
+     *
+     * @return a list containing all selected file store(s)
+     */
+    protected List<AbstractExplorerFileStore> getAllSelectedFiles() {
+        return DragAndDropUtils.getExplorerFileStores(getSelection());
     }
 
     /**

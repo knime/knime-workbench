@@ -51,6 +51,7 @@
 package org.knime.workbench.explorer.filesystem;
 
 import java.io.File;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.eclipse.core.filesystem.EFS;
@@ -67,6 +68,7 @@ import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
+import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
 
@@ -103,7 +105,6 @@ public final class ExplorerFileSystemUtils {
         for (LocalExplorerFileStore wf : workflowsToLock) {
             boolean locked = lockWorkflow(wf);
             if (locked) {
-                LOGGER.debug("Locked workflow " + wf);
                 lockedWF.add(wf);
             } else {
                 unlockableWF.add(wf);
@@ -257,6 +258,48 @@ public final class ExplorerFileSystemUtils {
             }
         }
         return false;
+    }
+
+    /**
+     * Checks whether the file stores are lockable. Therefore all contained
+     * workflows must be closed and not used by any other instance.
+     *
+     * @param fileStores the file stores to check
+     * @return an error message describing the problem or null, if the stores
+     *      can be locked
+     */
+    public static String isLockable(
+            final List<AbstractExplorerFileStore> fileStores) {
+        // find affected workflows
+        List<LocalExplorerFileStore> affectedFlows =
+                ExplorerAction.getContainedLocalWorkflows(fileStores);
+        if (ExplorerFileSystemUtils.hasOpenWorkflows(affectedFlows)) {
+            return "At least one of the workflows affected by the "
+                + "dragging is still open in the editor and has to be "
+                + "closed.";
+        }
+        // only lockable flows can be dragged
+        List<LocalExplorerFileStore> lockedFlows =
+                new LinkedList<LocalExplorerFileStore>();
+        LinkedList<LocalExplorerFileStore> unlockableFlows =
+                new LinkedList<LocalExplorerFileStore>();
+        ExplorerFileSystemUtils.lockWorkflows(affectedFlows, unlockableFlows,
+                lockedFlows);
+        // unlock flows locked in here
+        ExplorerFileSystemUtils.unlockWorkflows(lockedFlows);
+        if (!unlockableFlows.isEmpty()) {
+            StringBuilder sb =
+                    new StringBuilder("Dragging canceled. "
+                            + "At least one of the workflows affected by the "
+                            + "dragging is in use by another user/instance:\n");
+            String msg = sb.toString();
+            for (AbstractExplorerFileStore lockedFlow : unlockableFlows) {
+                sb.append("\t" + lockedFlow.getMountIDWithFullPath() + "\n");
+            }
+            LOGGER.warn(sb.toString());
+            return msg;
+        }
+        return null;
     }
 
     /**

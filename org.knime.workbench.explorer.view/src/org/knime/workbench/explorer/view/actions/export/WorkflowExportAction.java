@@ -108,8 +108,6 @@ public class WorkflowExportAction extends ExplorerAction {
         Map<AbstractContentProvider, List<AbstractExplorerFileStore>> sel =
                 getSelectedFiles();
         if (sel.size() != 1 || isMultipleSelection()) {
-            LOGGER.info("Please select only a single item to export its "
-                    + "workflow(s).");
             return false;
         }
         return true;

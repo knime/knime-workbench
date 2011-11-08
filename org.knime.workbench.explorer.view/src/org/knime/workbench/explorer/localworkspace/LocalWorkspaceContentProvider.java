@@ -21,6 +21,8 @@ package org.knime.workbench.explorer.localworkspace;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,6 +46,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.KnimeFileUtil;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -334,7 +337,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             IStructuredSelection ss = (IStructuredSelection)selection;
             List<AbstractExplorerFileStore> fileStores =
                     DragAndDropUtils.getExplorerFileStores(ss);
-
             return copyOrMove(fileStores, target, DND.DROP_MOVE == operation);
         } else if (data instanceof String[]) { // we have a file transfer
             String[] files = (String[])data;
@@ -377,24 +379,54 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     }
 
     /**
-     * @param fileStores
-     * @param target
-     * @param operation
-     * @return
+     * {@inheritDoc}
      */
+    @Override
     public boolean copyOrMove(final List<AbstractExplorerFileStore> fileStores,
-            final AbstractExplorerFileStore target, final boolean performMove) {
-        // check for existing files
+            final AbstractExplorerFileStore targetDir,
+            final boolean performMove) {
+        if (!targetDir.fetchInfo().isDirectory()) {
+            throw new IllegalArgumentException("Destination \""
+                    + targetDir.getFullName() +  "\" is no directory.");
+        }
+        if(!(targetDir instanceof LocalExplorerFileStore)) {
+            throw new IllegalArgumentException("Target file store \""
+                    + targetDir.getMountIDWithFullPath() + "\" is no "
+                    + "LocalExplorerFileStore.");
+        }
+
+        /* check for existing files and identical file names in the selected
+         * file stores. */
+        HashSet<String> toBeCopied = new LinkedHashSet<String>();
         for (AbstractExplorerFileStore fs : fileStores) {
             String childName = fs.getName();
-            //TODO: What if two selected stores have the same name?!?
-            if (target.getChild(childName).fetchInfo().exists()) {
+            if ("/".equals(childName)) {
+                /* If the mount point itself was selected we cannot
+                 * use the root "/" as name but choose the mount id. */
+                childName = fs.getMountID();
+            }
+            if (toBeCopied.contains(childName)) {
+                MessageBox mb =
+                    new MessageBox(Display.getCurrent()
+                            .getActiveShell(), SWT.ICON_ERROR | SWT.OK);
+                mb.setText("Operation Cancelled");
+                mb.setMessage(
+                        "Name conflict: Two resources with the same name \""
+                        + childName
+                        + "\" have been selected to be "
+                        + (performMove ? "moved" : "copied")
+                        + ". Cancelling operation...");
+                mb.open();
+                return false;
+            }
+            toBeCopied.add(childName);
+            if (targetDir.getChild(childName).fetchInfo().exists()) {
                 MessageBox mb =
                     new MessageBox(Display.getCurrent().getActiveShell(),
                             SWT.ICON_ERROR | SWT.OK);
                 mb.setText("Operation Cancelled");
                 mb.setMessage("A resource with the name \"" + childName
-                        +  "\" already exists in \"" + target.getFullName()
+                        +  "\" already exists in \"" + targetDir.getFullName()
                         + "\". Cancelling operation...");
                 mb.open();
                 return false;
@@ -407,10 +439,12 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     RemoteExplorerFileStore rfs = (RemoteExplorerFileStore)fs;
                     if (!rfs.fetchInfo().isWorkflow()) {
                         LOGGER.error("Can only download workflows. "
-                                + rfs.getMountIDWithFullPath() + " is no workflow.");
+                                + rfs.getMountIDWithFullPath()
+                                + " is no workflow.");
                         return false;
                     }
-                    if (performDownload(rfs, (LocalExplorerFileStore)target)) {
+                    if (performDownload(rfs,
+                            (LocalExplorerFileStore)targetDir)) {
                         if (performMove) {
                             rfs.delete(EFS.NONE, null);
                         }
@@ -418,25 +452,28 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                         return false;
                     }
                 } else {
-                    AbstractExplorerFileStore dest = target;
-                    if (target.fetchInfo().isDirectory()) {
-                        // drop on a dir (group) will move/copy it into the dir
-                        dest = target.getChild(fs.getName());
-                        if (dest.fetchInfo().exists()) {
-                            LOGGER.error("Destination "
-                                    + dest.getMountIDWithFullPath()
-                                    + " already exists. Not "
-                                    + (performMove ? "moved" : "copied")
-                                    + ". Skipped.");
-                            continue;
-                        }
+                    String name = fs.getName();
+                    if ("/".equals(name)) {
+                        /* If the mount point itself was selected we cannot
+                         * use the root "/" as name but choose the mount id. */
+                        name = fs.getMountID();
+                    }
+                    AbstractExplorerFileStore dest
+                            = targetDir.getChild(name);
+                    if (dest.fetchInfo().exists()) {
+                        LOGGER.error("Destination "
+                                + dest.getMountIDWithFullPath()
+                                + " already exists. Not "
+                                + (performMove ? "moved" : "copied")
+                                + ". Skipped.");
+                        continue;
                     }
                     if (performMove) {
                         move(fs, dest);
                     } else {
                         copy(fs, dest);
                     }
-                    DragAndDropUtils.refreshResource(target);
+                    DragAndDropUtils.refreshResource(targetDir);
                 }
             } catch (CoreException e) {
                 String msg = "An error occured when transfering the file \""
@@ -479,6 +516,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public boolean dragStart(final List<AbstractExplorerFileStore> fileStores) {
+        if (fileStores == null || fileStores.isEmpty()) {
+            return false;
+        }
         for (AbstractExplorerFileStore fs : fileStores) {
             if (DragAndDropUtils.isLinkedProject(fs)) {
                 LOGGER.warn("Linked workflow project cannot be copied from the"
@@ -486,8 +526,22 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 return false;
             }
         }
-        return true;
+        String msg = ExplorerFileSystemUtils.isLockable(fileStores);
+        if (msg != null) {
+            LOGGER.warn(msg);
+            MessageBox mb =
+                    new MessageBox(Display.getCurrent().getActiveShell(),
+                            SWT.ICON_ERROR | SWT.OK);
+            mb.setText("Dragging canceled");
+            mb.setMessage(msg);
+            mb.open();
+            return false;
+        } else {
+            return true;
+        }
     }
+
+
 
     private boolean performDownload(final RemoteExplorerFileStore source,
             final LocalExplorerFileStore parent) {

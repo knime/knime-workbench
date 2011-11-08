@@ -234,7 +234,8 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      */
     @Override
     public String getName() {
-        return new Path(m_fullPath).lastSegment();
+        String lastSegment  = new Path(m_fullPath).lastSegment();
+        return lastSegment == null ? "/" : lastSegment;
     }
 
     /** @return a human readable name including mount ID and path. */
