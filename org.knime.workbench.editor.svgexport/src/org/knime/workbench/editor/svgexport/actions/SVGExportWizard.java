@@ -89,7 +89,7 @@ import org.w3c.dom.Document;
  *
  *
  * @author Christoph Sieb, University of Konstanz
- * @author Fabian Dill, KNIME.com GmbH, Zurich, Switzerland
+ * @author Fabian Dill, KNIME.com AG, Zurich, Switzerland
  * @author Andreas Burger
  */
 @SuppressWarnings("restriction")

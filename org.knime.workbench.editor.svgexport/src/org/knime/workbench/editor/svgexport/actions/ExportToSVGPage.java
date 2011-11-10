@@ -71,7 +71,7 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  * Page to enter the destination to export the currently selected Workflow to.
  *
  * @author Christoph Sieb, University of Konstanz
- * @author Fabian Dill, KNIME.com GmbH, Zurich, Switzerland
+ * @author Fabian Dill, KNIME.com AG, Zurich, Switzerland
  * @author Andreas Burger
  */
 public class ExportToSVGPage extends WizardPage {
