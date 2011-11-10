@@ -85,6 +85,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
@@ -115,7 +116,6 @@ import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
 import org.knime.workbench.explorer.view.dnd.ExplorerDropListener;
-import org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializer;
 import org.knime.workbench.repository.view.FilterViewContributionItem;
 import org.knime.workbench.repository.view.LabeledFilterViewContributionItem;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -616,16 +616,17 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                         + "Can't restore state of view.");
             }
         } else { // freshly opened view
-            // add the local workspace by default
-            if (ExplorerMountTable.getAllMountIDs().contains(
-                    ExplorerPreferenceInitializer.DEFAULT_LOCAL_NAME)) {
-                m_contentDelegator.addMountPoint(
-                        ExplorerMountTable.getMountPoint(
-                             ExplorerPreferenceInitializer.DEFAULT_LOCAL_NAME));
-            } else {
-                LOGGER.info("Default local workspace "
-                        + ExplorerPreferenceInitializer.DEFAULT_LOCAL_NAME
-                        + " is not mounted.");
+            // add all mount points that are mounted by default
+            List<String> mountIDs = ExplorerMountTable.getAllMountIDs();
+            for (String id : mountIDs) {
+                MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
+                String defaultID =
+                    mountPoint.getProviderFactory().getDefaultMountID();
+                if (id.equals(defaultID)) {
+                    LOGGER.debug("Adding default mount point '" + id
+                            + "' to explorer view");
+                    m_contentDelegator.addMountPoint(mountPoint);
+                }
             }
         }
     }

@@ -66,6 +66,14 @@ public class LocalWorkspaceContentProviderFactory extends
      * {@inheritDoc}
      */
     @Override
+    public String getDefaultMountID() {
+        return "LOCAL";
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String toString() {
         return "Local Workspace";
     }

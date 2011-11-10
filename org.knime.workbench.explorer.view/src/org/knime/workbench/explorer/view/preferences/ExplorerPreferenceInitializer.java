@@ -22,11 +22,14 @@
 
 package org.knime.workbench.explorer.view.preferences;
 
+import java.util.List;
+
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.workbench.explorer.ExplorerActivator;
-import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
+import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
@@ -36,10 +39,6 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  */
 public class ExplorerPreferenceInitializer extends
         AbstractPreferenceInitializer {
-    /**
-     * The name of the local space mounted by default.
-     */
-    public static final String DEFAULT_LOCAL_NAME = "LOCAL";
 
     /**
      * {@inheritDoc}
@@ -47,14 +46,26 @@ public class ExplorerPreferenceInitializer extends
     @Override
     public void initializeDefaultPreferences() {
         IPreferenceStore prefStore =
-            ExplorerActivator.getDefault().getPreferenceStore();
-        LocalWorkspaceContentProviderFactory fac
-                = new LocalWorkspaceContentProviderFactory();
-        // Add the local workspace per default.
-        MountSettings ms = new MountSettings(fac.getContentProvider(
-                DEFAULT_LOCAL_NAME));
-        prefStore.setDefault(PreferenceConstants.P_EXPLORER_MOUNT_POINT,
-                ms.getSettingsString() + MountSettings.SETTINGS_SEPARATOR);
+                ExplorerActivator.getDefault().getPreferenceStore();
+        // Set the default mount points
+        String defMounts = "";
+        List<AbstractContentProviderFactory> factories =
+                ExplorerMountTable.getAddableContentProviders();
+        for (AbstractContentProviderFactory fac : factories) {
+            if (fac.getDefaultMountID() != null) {
+                MountSettings ms =
+                        new MountSettings(fac.getContentProvider(fac
+                                .getDefaultMountID()));
+                defMounts +=
+                        ms.getSettingsString()
+                                + MountSettings.SETTINGS_SEPARATOR;
+            }
+        }
+        if (!defMounts.isEmpty()) {
+            prefStore.setDefault(PreferenceConstants.P_EXPLORER_MOUNT_POINT,
+                    defMounts);
+        }
+        // Set the default behavior of "Do you want to link this meta node".
         prefStore.setDefault(
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
                 MessageDialogWithToggle.PROMPT);

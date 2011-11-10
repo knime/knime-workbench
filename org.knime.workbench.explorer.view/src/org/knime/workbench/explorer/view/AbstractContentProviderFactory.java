@@ -53,6 +53,17 @@ public abstract class AbstractContentProviderFactory {
     public abstract boolean multipleInstances();
 
     /**
+     * @return a unique mount ID if this mount point should appear by default in
+     *         the mount table and the explorer view. Or null, if it shouldn't
+     *         be mounted by default. If an ID is returned the instantiation of
+     *         the corresponding content provider must not open any dialog (or
+     *         cause any other interaction).
+     */
+    public String getDefaultMountID() {
+        return null;
+    }
+
+    /**
      * Not intended to be called. Rather go through the
      * {@link ExplorerMountTable}.
      *
