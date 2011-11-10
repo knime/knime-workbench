@@ -36,6 +36,8 @@ import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.Selecti
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.ContentObject;
 
 /**
  * Abstract base class for copy and move actions for the Explorer. It contains
@@ -101,11 +103,20 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                     mountIDs.add(mountID);
                 }
             }
+            ContentObject initialSelection = null;
+            if (fileStores.size() == 1) {
+                Object selection = ContentDelegator.getTreeObjectFor(
+                        fileStores.get(0).getParent());
+                if (selection instanceof ContentObject) {
+                    initialSelection = (ContentObject)selection;
+                }
+            }
+
             String[] shownMountIds = mountIDs.toArray(new String[0]);
             SpaceResourceSelectionDialog dialog =
                     new SpaceResourceSelectionDialog(Display
                             .getDefault().getActiveShell(),
-                            shownMountIds, null);
+                            shownMountIds, initialSelection);
             dialog.setTitle("Target workflow group selection");
             dialog.setDescription(
                     "Please select the location to "
