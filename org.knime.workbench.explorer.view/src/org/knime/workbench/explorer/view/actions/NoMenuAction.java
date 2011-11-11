@@ -50,7 +50,7 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
-import org.eclipse.jface.viewers.TreeViewer;
+import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  *
@@ -61,7 +61,7 @@ public class NoMenuAction extends ExplorerAction {
     /**
      *
      */
-    public NoMenuAction(final TreeViewer viewer) {
+    public NoMenuAction(final ExplorerView viewer) {
         super(viewer, "No visible content");
     }
 

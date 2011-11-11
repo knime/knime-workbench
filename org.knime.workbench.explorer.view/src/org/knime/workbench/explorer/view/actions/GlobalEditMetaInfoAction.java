@@ -29,12 +29,12 @@ import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.filesystem.local.LocalFile;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
@@ -59,7 +59,7 @@ public class GlobalEditMetaInfoAction extends ExplorerAction {
     /**
      * @param viewer the associated tree viewer
      */
-    public GlobalEditMetaInfoAction(final TreeViewer viewer) {
+    public GlobalEditMetaInfoAction(final ExplorerView viewer) {
         super(viewer, "Edit Meta Information...");
         setImageDescriptor(ICON);
     }

@@ -37,6 +37,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 
@@ -51,17 +52,17 @@ public abstract class ExplorerAction extends Action {
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(ExplorerAction.class);
 
-    private final TreeViewer m_viewer;
+    private final ExplorerView m_view;
 
     private boolean m_isRO;
 
     /**
-     * @param viewer of the space
+     * @param view of the space
      * @param menuText
      */
-    public ExplorerAction(final TreeViewer viewer, final String menuText) {
-        assert viewer != null;
-        m_viewer = viewer;
+    public ExplorerAction(final ExplorerView view, final String menuText) {
+        assert view != null;
+        m_view = view;
         setText(menuText);
         m_isRO = false;
     }
@@ -100,7 +101,7 @@ public abstract class ExplorerAction extends Action {
      * @return the first selected element - or null, if non is selected
      */
     protected Object getFirstSelection() {
-        ISelection selection = m_viewer.getSelection();
+        ISelection selection = m_view.getViewer().getSelection();
         if (selection == null) {
             return null;
         }
@@ -252,14 +253,21 @@ public abstract class ExplorerAction extends Action {
      * @return the viewer associated with the action.
      */
     protected TreeViewer getViewer() {
-        return m_viewer;
+        return m_view.getViewer();
+    }
+
+    /**
+     * @return the view for this action.
+     */
+    protected ExplorerView getView() {
+        return m_view;
     }
 
     /**
      * @return the parent shell of the viewer
      */
     protected Shell getParentShell() {
-        return m_viewer.getControl().getShell();
+        return m_view.getViewer().getControl().getShell();
     }
 
     /**

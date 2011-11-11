@@ -32,7 +32,6 @@ import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
@@ -44,6 +43,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -68,7 +68,7 @@ public class GlobalRenameAction extends ExplorerAction {
     /**
      * @param viewer the associated tree viewer
      */
-    public GlobalRenameAction(final TreeViewer viewer) {
+    public GlobalRenameAction(final ExplorerView viewer) {
         super(viewer, "Rename...");
         setImageDescriptor(ICON);
     }

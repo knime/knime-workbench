@@ -28,9 +28,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
+import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.LabelProviderChangedEvent;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.IMemento;
@@ -43,8 +45,7 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
- * calls to different content providers providing a view to different sources.
- * <br />
+ * calls to different content providers providing a view to different sources. <br />
  * The objects returned by the different providers are wrapped into a
  * {@link ContentObject} (associating the creating provider with it) and the
  * wrapper is placed in the tree view. <br />
@@ -54,7 +55,7 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  */
 public class ContentDelegator extends LabelProvider implements
         IStructuredContentProvider, ITreeContentProvider,
-        IPropertyChangeListener {
+        IPropertyChangeListener, ILabelProviderListener {
     /**
      * The property for changes in the content IPropertyChangeListener can
      * register for.
@@ -104,6 +105,7 @@ public class ContentDelegator extends LabelProvider implements
                 MountPoint mp = ExplorerMountTable.getMountPoint(id);
                 if (mp != null) {
                     m_provider.add(mp);
+                    mp.getProvider().addListener(this);
                 }
             }
         }
@@ -121,6 +123,7 @@ public class ContentDelegator extends LabelProvider implements
             throw new NullPointerException("Mount point can't be null");
         }
         m_provider.add(mountPoint);
+        mountPoint.getProvider().addListener(this);
         notifyListeners(new PropertyChangeEvent(mountPoint, CONTENT_CHANGED,
                 null, mountPoint.getMountID()));
     }
@@ -140,6 +143,9 @@ public class ContentDelegator extends LabelProvider implements
      * Clears the view content.
      */
     public void removeAllMountPoints() {
+        for (MountPoint mountPoint : m_provider) {
+            mountPoint.getProvider().removeListener(this);
+        }
         m_provider.clear();
     }
 
@@ -148,7 +154,7 @@ public class ContentDelegator extends LabelProvider implements
      */
     @Override
     public void dispose() {
-        m_provider.clear();
+        removeAllMountPoints();
         ExplorerMountTable.removePropertyChangeListener(this);
         super.dispose();
     }
@@ -204,14 +210,14 @@ public class ContentDelegator extends LabelProvider implements
         if (!(parentElement instanceof ContentObject)) {
             // all children should be of that type!
             LOGGER.coding("Unexpected object in tree view! (" + parentElement
-                    + " of type "
-                    + parentElement.getClass().getCanonicalName());
+                    + " of type " + parentElement.getClass().getCanonicalName());
             return NO_CHILDREN;
         }
         ContentObject c = ((ContentObject)parentElement);
         AbstractContentProvider prov = c.getProvider();
         return wrapObjects(prov, prov.getChildren(c.getObject()));
     }
+
     /**
      * {@inheritDoc}
      */
@@ -219,7 +225,6 @@ public class ContentDelegator extends LabelProvider implements
     public Object[] getElements(final Object inputElement) {
         return getChildren(inputElement);
     }
-
 
     /**
      * {@inheritDoc}
@@ -326,8 +331,7 @@ public class ContentDelegator extends LabelProvider implements
      * @return the (new but) same object that is stored in the view tree for the
      *         passed mount id.
      */
-    public static AbstractContentProvider getTreeObjectFor(
-            final String mountID) {
+    public static AbstractContentProvider getTreeObjectFor(final String mountID) {
         MountPoint mp = ExplorerMountTable.getMountPoint(mountID);
         return mp.getProvider();
     }
@@ -363,8 +367,7 @@ public class ContentDelegator extends LabelProvider implements
      * @return the file store corresponding to the passed treeviewer object or
      *         null, if the object passed is of unexpected type
      */
-    public static AbstractExplorerFileStore getFileStore(
-            final Object treeObject) {
+    public static AbstractExplorerFileStore getFileStore(final Object treeObject) {
         if (treeObject instanceof ContentObject) {
             return ((ContentObject)treeObject).getObject();
         } else if (treeObject instanceof AbstractContentProvider) {
@@ -505,23 +508,49 @@ public class ContentDelegator extends LabelProvider implements
      */
     @Override
     public void propertyChange(final PropertyChangeEvent event) {
-        if (!ExplorerMountTable.MOUNT_POINT_PROPERTY
-                .equals(event.getProperty())) {
+        if (ExplorerMountTable.MOUNT_POINT_PROPERTY.equals(event.getProperty())) {
+            if (event.getNewValue() == null) {
+                // mount point was removed
+                MountPoint mp = (MountPoint)event.getSource();
+                mp.getProvider().removeListener(this);
+                boolean removed = m_provider.remove(mp);
+                if (removed) {
+                    notifyListeners(new PropertyChangeEvent(mp,
+                            CONTENT_CHANGED, mp.getMountID(), null));
+                    LOGGER.warn("Removed mount point with id \""
+                            + mp.getMountID()
+                            + "\" from view because it was deleted in the "
+                            + "preferences.");
+                }
+            }
+            // The addition of mount points is ignored.
             return;
         }
-        if (event.getNewValue() == null) {
-            // mount point was removed
-            MountPoint mp = (MountPoint)event.getSource();
-            boolean removed = m_provider.remove(mp);
-            if (removed) {
-                notifyListeners(new PropertyChangeEvent(mp, CONTENT_CHANGED,
-                        mp.getMountID(), null));
-                LOGGER.warn("Removed mount point with id \"" + mp.getMountID()
-                        + "\" from view because it was deleted in the "
-                        + "preferences.");
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p />
+     * Mounted content providers notify listeners of new content with this. They
+     * should set themselves as source and a filestore as element (if that is
+     * null a global refresh is triggered)
+     */
+    @Override
+    public void labelProviderChanged(final LabelProviderChangedEvent event) {
+        if (event != null
+                && (event.getSource() instanceof AbstractContentProvider)) {
+            AbstractContentProvider source =
+                    (AbstractContentProvider)event.getSource();
+            Object refresh = event.getElement();
+            if (refresh instanceof AbstractExplorerFileStore) {
+                notifyListeners(new PropertyChangeEvent(source,
+                        CONTENT_CHANGED, null, refresh));
+            } else {
+                notifyListeners(new PropertyChangeEvent(source,
+                        CONTENT_CHANGED, null, refresh));
             }
         }
-        // The addition of mount points is ignored.
+
     }
 
     /*---------------------------------------------------------------*/
@@ -530,8 +559,7 @@ public class ContentDelegator extends LabelProvider implements
      *
      * @param listener the property change listener to add
      */
-    public void addPropertyChangeListener(
-            final IPropertyChangeListener listener) {
+    public void addPropertyChangeListener(final IPropertyChangeListener listener) {
         m_changeListener.add(listener);
     }
 

@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -46,6 +47,7 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
@@ -152,6 +154,10 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private Clipboard m_clipboard;
 
+    // selected after next refresh
+    private AtomicReference<AbstractExplorerFileStore> m_nextSelection =
+            new AtomicReference<AbstractExplorerFileStore>();
+
     /**
      * {@inheritDoc}
      */
@@ -198,9 +204,9 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     private void handleKeyReleased(final KeyEvent event) {
         final ExplorerAction action;
         if (event.keyCode == SWT.F2 && event.stateMask == 0) {
-            action = new GlobalRenameAction(m_viewer);
+            action = new GlobalRenameAction(this);
         } else if (event.keyCode == SWT.DEL && event.stateMask == 0) {
-            action = new GlobalDeleteAction(m_viewer);
+            action = new GlobalDeleteAction(this);
         } else {
             action = null;
         }
@@ -230,19 +236,19 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     private void createLocalToolBar() {
         IToolBarManager toolBarMgr =
             getViewSite().getActionBars().getToolBarManager();
-        Action exp = new ExpandAction(m_viewer);
+        Action exp = new ExpandAction(this);
         exp.setToolTipText("Expands fully the selected element");
         toolBarMgr.add(exp);
-        Action coll = new CollapseAction(m_viewer);
+        Action coll = new CollapseAction(this);
         coll.setToolTipText("Collapses the selected element.");
         toolBarMgr.add(coll);
-        Action collAll = new CollapseAllAction(m_viewer);
+        Action collAll = new CollapseAllAction(this);
         collAll.setToolTipText("Collapses the entire tree");
         toolBarMgr.add(collAll);
-        Action refresh = new GlobalRefreshAction(m_viewer);
+        Action refresh = new GlobalRefreshAction(this);
         toolBarMgr.add(new Separator());
         toolBarMgr.add(refresh);
-        Action synchronize = new SynchronizeExplorerViewAction(m_viewer,
+        Action synchronize = new SynchronizeExplorerViewAction(this,
                 m_contentDelegator);
         toolBarMgr.add(synchronize);
         toolBarMgr.add(new Separator());
@@ -250,7 +256,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             new LabeledFilterViewContributionItem(m_viewer,
                     new ExplorerFilter(), false);
         toolBarMgr.add(m_toolbarFilterCombo);
-        Action configure = new ConfigureExplorerViewAction(m_viewer,
+        Action configure = new ConfigureExplorerViewAction(this,
                 m_contentDelegator);
         toolBarMgr.add(configure);
     }
@@ -449,19 +455,53 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      */
     @Override
     public void propertyChange(final PropertyChangeEvent event) {
-        refreshAsync();
+        if (event != null
+                && ContentDelegator.CONTENT_CHANGED.equals(event.getProperty())) {
+            if (event.getNewValue() instanceof AbstractExplorerFileStore) {
+                refreshAsync(ContentDelegator.getTreeObjectFor((AbstractExplorerFileStore)event.getNewValue()));
+            } else {
+                refreshAsync();
+            }
+        } else {
+            refreshAsync();
+        }
     }
 
     private void refreshAsync() {
-        // TODO only call on possibly affected branches in the tree
+        refreshAsync((Object)null);
+    }
+
+    private void refreshAsync(final Object refreshRoot) {
         Display.getDefault().asyncExec(new Runnable() {
             @Override
             public void run() {
                 if (m_viewer != null && !m_viewer.getControl().isDisposed()) {
-                    m_viewer.refresh();
+                    if (refreshRoot != null) {
+                        m_viewer.refresh(refreshRoot);
+                    } else {
+                        m_viewer.refresh();
+                    }
+                    AbstractExplorerFileStore fs =
+                            m_nextSelection.getAndSet(null);
+                    if (fs != null) {
+                        Object treeObj = ContentDelegator.getTreeObjectFor(fs);
+                        if (treeObj != null) {
+                            m_viewer.setSelection(new StructuredSelection(
+                                    treeObj), true);
+                        }
+                    }
                 }
             }
         });
+    }
+
+    /**
+     * Sets the file that should be selected after the next refresh.
+     *
+     * @param sel the file to select
+     */
+    public void setNextSelection(final AbstractExplorerFileStore sel) {
+        m_nextSelection.set(sel);
     }
 
     /** The set/map of node IDs that need to be refreshed. Only if a new id is
@@ -516,7 +556,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     private void fillContextMenu(final IMenuManager manager) {
         Set<String> ids = m_contentDelegator.getMountedIds();
         if (ids.size() == 0) {
-            manager.add(new NoMenuAction(m_viewer));
+            manager.add(new NoMenuAction(this));
             return;
         }
         List<AbstractExplorerFileStore> fs = DragAndDropUtils
@@ -537,7 +577,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         /* All visible spaces with at least one selected file may contribute to
          * the menu. */
         for (AbstractContentProvider provider : selFiles.keySet()) {
-            provider.addContextMenuActions(m_viewer, manager, ids, selFiles);
+            provider.addContextMenuActions(this, manager, ids, selFiles);
         }
 
         manager.add(new Separator());
@@ -548,33 +588,33 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private void addGlobalActions(final IMenuManager manager,
             final List<AbstractExplorerFileStore> fs) {
-        manager.add(new NewWorkflowAction(m_viewer));
-        manager.add(new NewWorkflowGroupAction(m_viewer));
+        manager.add(new NewWorkflowAction(this));
+        manager.add(new NewWorkflowGroupAction(this));
         manager.add(new Separator());
-        manager.add(new WorkflowImportAction(m_viewer));
-        manager.add(new WorkflowExportAction(m_viewer));
+        manager.add(new WorkflowImportAction(this));
+        manager.add(new WorkflowExportAction(this));
         manager.add(new Separator());
-        manager.add(new GlobalDeleteAction(m_viewer));
-        manager.add(new GlobalRenameAction(m_viewer));
+        manager.add(new GlobalDeleteAction(this));
+        manager.add(new GlobalRenameAction(this));
         manager.add(new Separator());
-        manager.add(new GlobalConfigureWorkflowAction(m_viewer));
-        manager.add(new GlobalExecuteWorkflowAction(m_viewer));
-        manager.add(new GlobalCancelWorkflowExecutionAction(m_viewer));
-        manager.add(new GlobalResetWorkflowAction(m_viewer));
+        manager.add(new GlobalConfigureWorkflowAction(this));
+        manager.add(new GlobalExecuteWorkflowAction(this));
+        manager.add(new GlobalCancelWorkflowExecutionAction(this));
+        manager.add(new GlobalResetWorkflowAction(this));
         manager.add(new Separator());
-        manager.add(new GlobalCredentialVariablesDialogAction(m_viewer));
-        manager.add(new GlobalOpenWorkflowVariablesDialogAction(m_viewer));
+        manager.add(new GlobalCredentialVariablesDialogAction(this));
+        manager.add(new GlobalOpenWorkflowVariablesDialogAction(this));
         manager.add(new Separator());
-        manager.add(new GlobalEditMetaInfoAction(m_viewer));
+        manager.add(new GlobalEditMetaInfoAction(this));
         manager.add(new Separator());
-        manager.add(new GlobalCopyAction(m_viewer));
-        manager.add(new GlobalMoveAction(m_viewer));
+        manager.add(new GlobalCopyAction(this));
+        manager.add(new GlobalMoveAction(this));
         manager.add(new Separator());
-        manager.add(new CopyURLAction(m_viewer, m_clipboard));
-        manager.add(new CopyLocationAction(m_viewer, m_clipboard));
+        manager.add(new CopyURLAction(this, m_clipboard));
+        manager.add(new CopyLocationAction(this, m_clipboard));
         manager.add(new Separator());
         if (fs != null && !fs.isEmpty()) {
-            manager.add(new GlobalRefreshAction(m_viewer,
+            manager.add(new GlobalRefreshAction(this,
                     fs.toArray(new AbstractExplorerFileStore[0])));
         }
     }
@@ -589,6 +629,10 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     @Override
     public void setFocus() {
         m_viewer.getControl().setFocus();
+    }
+
+    public TreeViewer getViewer() {
+        return m_viewer;
     }
 
     /**

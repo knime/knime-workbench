@@ -22,8 +22,8 @@
 package org.knime.workbench.explorer.view.actions;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
@@ -41,7 +41,7 @@ public class ExpandAllAction extends ExplorerAction {
     /**
      * @param viewer the viewer
      */
-    public ExpandAllAction(final TreeViewer viewer) {
+    public ExpandAllAction(final ExplorerView viewer) {
         super(viewer, "Expand All");
         setImageDescriptor(IMG_EXPALL);
         setToolTipText(TOOLTIP);

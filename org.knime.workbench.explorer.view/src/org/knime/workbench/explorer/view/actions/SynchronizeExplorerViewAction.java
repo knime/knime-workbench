@@ -28,7 +28,6 @@ import java.util.Set;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.StructuredSelection;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.internal.ReferencedFile;
@@ -36,6 +35,7 @@ import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
 
@@ -59,7 +59,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
      * @param viewer the viewer this action is attached to
      * @param delegator the content delegator of the view
      */
-    public SynchronizeExplorerViewAction(final TreeViewer viewer,
+    public SynchronizeExplorerViewAction(final ExplorerView viewer,
             final ContentDelegator delegator) {
         super(viewer, "Synchronize...");
         m_delegator = delegator;
@@ -109,7 +109,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         Set<String> mountedIds = m_delegator.getMountedIds();
         for (String id : mountedIds) {
             MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
-            AbstractExplorerFileStore root 
+            AbstractExplorerFileStore root
                     = mountPoint.getProvider().getFileStore("/");
             File localRoot;
             try {

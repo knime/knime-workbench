@@ -55,7 +55,6 @@ import java.util.Map;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.StructuredSelection;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardDialog;
@@ -64,6 +63,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
@@ -90,7 +90,7 @@ public class NewWorkflowGroupAction extends ExplorerAction {
     /**
      * @param viewer underlying viewer
      */
-    public NewWorkflowGroupAction(final TreeViewer viewer) {
+    public NewWorkflowGroupAction(final ExplorerView viewer) {
         super(viewer, "New Workflow Group...");
         setImageDescriptor(ICON);
     }

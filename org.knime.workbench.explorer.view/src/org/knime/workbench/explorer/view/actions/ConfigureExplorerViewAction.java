@@ -29,6 +29,7 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -52,7 +53,7 @@ public class ConfigureExplorerViewAction extends ExplorerAction {
      * @param viewer the viewer this action is attached to
      * @param delegator the content delegator of the view
      */
-    public ConfigureExplorerViewAction(final TreeViewer viewer,
+    public ConfigureExplorerViewAction(final ExplorerView viewer,
             final ContentDelegator delegator) {
         super(viewer, "Configure Content...");
         m_delegator = delegator;

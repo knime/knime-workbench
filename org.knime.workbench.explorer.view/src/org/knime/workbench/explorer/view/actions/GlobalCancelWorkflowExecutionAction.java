@@ -25,11 +25,11 @@ package org.knime.workbench.explorer.view.actions;
 import java.util.List;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -53,7 +53,7 @@ public class GlobalCancelWorkflowExecutionAction extends ExplorerAction {
     /**
      * @param viewer the associated tree viewer
      */
-    public GlobalCancelWorkflowExecutionAction(final TreeViewer viewer) {
+    public GlobalCancelWorkflowExecutionAction(final ExplorerView viewer) {
         super(viewer, "Cancel execution");
         setToolTipText("Cancel the execution of the running workflow");
         setImageDescriptor(IMG_CANCEL);

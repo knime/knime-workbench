@@ -24,12 +24,12 @@ import java.util.Iterator;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -52,7 +52,7 @@ public class CopyURLAction extends ExplorerAction {
     /**
      * @param viewer the associated tree viewer
      */
-    public CopyURLAction(final TreeViewer viewer, final Clipboard cb) {
+    public CopyURLAction(final ExplorerView viewer, final Clipboard cb) {
         super(viewer, "Copy URL");
         m_cb = cb;
         setToolTipText("Copy URL to Clipboard");

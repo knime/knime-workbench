@@ -54,12 +54,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -85,10 +85,10 @@ public class WorkflowExportAction extends ExplorerAction {
     public static final String ID = "org.knime.explorer.view.actions.export";
 
     /**
-     * @param viewer underlying viewer
+     * @param view underlying view
      */
-    public WorkflowExportAction(final TreeViewer viewer) {
-        super(viewer, "Export KNIME Workflow...");
+    public WorkflowExportAction(final ExplorerView view) {
+        super(view, "Export KNIME Workflow...");
         setImageDescriptor(ICON);
     }
 

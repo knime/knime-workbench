@@ -22,10 +22,10 @@
 package org.knime.workbench.explorer.view.actions;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  *
@@ -48,7 +48,7 @@ public class GlobalRefreshAction extends ExplorerAction {
      * Refreshes all elements in the viewer.
      * @param viewer the viewer to refresh
      */
-    public GlobalRefreshAction(final TreeViewer viewer) {
+    public GlobalRefreshAction(final ExplorerView viewer) {
         this(viewer, (AbstractExplorerFileStore[])null);
     }
 
@@ -57,7 +57,7 @@ public class GlobalRefreshAction extends ExplorerAction {
      * @param viewer the viewer containing the file stores
      * @param fileStore the file stores to refresh
      */
-    public GlobalRefreshAction(final TreeViewer viewer,
+    public GlobalRefreshAction(final ExplorerView viewer,
             final AbstractExplorerFileStore ... fileStore) {
         super(viewer, "Refresh");
         setImageDescriptor(IMG_REFRESH);

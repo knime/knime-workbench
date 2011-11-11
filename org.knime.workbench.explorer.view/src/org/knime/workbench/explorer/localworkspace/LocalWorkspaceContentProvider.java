@@ -50,6 +50,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.IconFactory;
 import org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -234,7 +235,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public void addContextMenuActions(
-            final org.eclipse.jface.viewers.TreeViewer viewer,
+            final ExplorerView viewer,
             final org.eclipse.jface.action.IMenuManager manager,
             final Set<String> visibleIDs,
             final Map<AbstractContentProvider,

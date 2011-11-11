@@ -55,7 +55,6 @@ import java.util.Map;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.StructuredSelection;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardDialog;
@@ -65,6 +64,7 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  * Action to create a new workflow.
@@ -91,7 +91,7 @@ public class NewWorkflowAction extends ExplorerAction {
     /**
      * @param viewer underlying viewer
      */
-    public NewWorkflowAction(final TreeViewer viewer) {
+    public NewWorkflowAction(final ExplorerView viewer) {
         super(viewer, "New KNIME Workflow...");
         setImageDescriptor(ICON);
     }

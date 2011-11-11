@@ -26,9 +26,9 @@ import java.util.Iterator;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.AbstractTreeViewer;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  *
@@ -48,7 +48,7 @@ public class ExpandAction extends ExplorerAction {
     /**
      * @param viewer the viewer
      */
-    public ExpandAction(final TreeViewer viewer) {
+    public ExpandAction(final ExplorerView viewer) {
         super(viewer, "Expand ...");
         setImageDescriptor(IMG_EXP);
         setToolTipText(TOOLTIP);

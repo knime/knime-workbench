@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.NodeLogger;
@@ -39,6 +38,7 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
+import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  * Abstract base class for copy and move actions for the Explorer. It contains
@@ -61,7 +61,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
      * @param menuText the text to be displayed in the menu
      * @param performMove true to move the files, false to copy them
      */
-    public AbstractCopyMoveAction(final TreeViewer viewer,
+    public AbstractCopyMoveAction(final ExplorerView viewer,
             final String menuText, final boolean performMove) {
         this(viewer, menuText, null, performMove);
     }
@@ -75,7 +75,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
      * @param target the file store to copy/move the files to
      * @param performMove true to move the files, false to copy them
      */
-    public AbstractCopyMoveAction(final TreeViewer viewer,
+    public AbstractCopyMoveAction(final ExplorerView viewer,
             final String menuText, final AbstractExplorerFileStore target,
             final boolean performMove) {
         super(viewer, menuText);

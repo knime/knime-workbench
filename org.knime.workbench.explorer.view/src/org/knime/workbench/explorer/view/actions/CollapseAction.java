@@ -23,9 +23,9 @@ import java.util.Iterator;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.AbstractTreeViewer;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  *
@@ -46,7 +46,7 @@ public class CollapseAction extends ExplorerAction {
      *
      * @param viewer the viewer
      */
-    public CollapseAction(final TreeViewer viewer) {
+    public CollapseAction(final ExplorerView viewer) {
         super(viewer, "Collapse");
         setImageDescriptor(IMG_COLL);
         setToolTipText(TOOLTIP);

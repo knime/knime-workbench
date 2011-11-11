@@ -55,7 +55,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.ISharedImages;
@@ -66,6 +65,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 
 /**
@@ -90,7 +90,7 @@ public class GlobalDeleteAction extends ExplorerAction {
     /**
      * @param viewer the associated tree viewer
      */
-    public GlobalDeleteAction(final TreeViewer viewer) {
+    public GlobalDeleteAction(final ExplorerView viewer) {
         super(viewer, "Delete...");
         setImageDescriptor(IMG_DELETE);
     }

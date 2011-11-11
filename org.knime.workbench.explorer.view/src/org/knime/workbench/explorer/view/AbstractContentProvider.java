@@ -40,7 +40,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.jface.viewers.TreeViewer;
+import org.eclipse.jface.viewers.LabelProviderChangedEvent;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
@@ -123,11 +123,11 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     /**
-     *
+     * The refresh goes up and tells the view to refresh our content.
      */
     public final void refresh() {
-        // TODO: create an event!
-        fireLabelProviderChanged(null);
+        fireLabelProviderChanged(new LabelProviderChangedEvent(this,
+                getFileStore("/")));
     }
 
     /**
@@ -168,8 +168,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param fullPath the path to the item.
      * @return the file store for the specified path.
      */
-    public abstract AbstractExplorerFileStore getFileStore(
-            final String fullPath);
+    public abstract AbstractExplorerFileStore getFileStore(final String fullPath);
 
     /**
      * @param uri the uri of the item
@@ -179,23 +178,27 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         return new ExplorerFileSystem().getStore(uri);
     }
 
-    /** Implementation of {@link ExplorerFileSystem#fromLocalFile(File)}. If the
-     * file does not exist in this space or this is not a file based mount,
-     * null is returned.
+    /**
+     * Implementation of {@link ExplorerFileSystem#fromLocalFile(File)}. If the
+     * file does not exist in this space or this is not a file based mount, null
+     * is returned.
      *
      * @param file The file in question.
      * @return the file store or null.
      */
     public abstract LocalExplorerFileStore fromLocalFile(final File file);
 
-    /** Helper class to find the path segment for a given local (absolute) file.
+    /**
+     * Helper class to find the path segment for a given local (absolute) file.
      * It will traverse the file's parents until it finds the root file (which
      * is the root of the caller). If that matches, it will assemble the
      * relative path ("/" separated).
+     *
      * @param file The file to query, never null.
      * @param root The root file of the argument content provider, never null.
      * @return The path segments in a string or null if the argument file does
-     * not have the root argument as parent. */
+     *         not have the root argument as parent.
+     */
     public static String getRelativePath(final File file, final File root) {
         LinkedList<String> segments = new LinkedList<String>();
         File parent = file;
@@ -212,29 +215,27 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         StringBuilder path = new StringBuilder();
         for (String s : segments) {
             if (!s.isEmpty()) {
-            path.append("/").append(s);
-        }
+                path.append("/").append(s);
+            }
         }
         return path.toString();
     }
-
 
     /* ---------------- view context menu methods ------------------- */
     /**
      * Add items to the context menu.
      *
-     * @param viewer the tree viewer
+     * @param view the explorer viewer
      * @param manager the context menu manager
      * @param visibleMountIDs the ids of the mount points currently viewed
      * @param selection the current selection sorted by content provider (with
      *            all selected item for all providers!)
      */
     public abstract void addContextMenuActions(
-            final TreeViewer viewer,
+            final ExplorerView view,
             final IMenuManager manager,
             final Set<String> visibleMountIDs,
-            final Map<AbstractContentProvider,
-            List<AbstractExplorerFileStore>> selection);
+            final Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selection);
 
     /* ---------------- drag and drop methods ----------------------- */
 
@@ -244,8 +245,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param transferType the transfer type
      * @return true if the drop is valid, false otherwise
      */
-    public abstract boolean validateDrop(final AbstractExplorerFileStore target,
-            final int operation, TransferData transferType);
+    public abstract boolean validateDrop(
+            final AbstractExplorerFileStore target, final int operation,
+            TransferData transferType);
 
     /**
      * Performs any work associated with the drop. Drop data might be null. In
@@ -267,15 +269,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param fileStores the dragged file stores of the content provider
      * @return true if dragging is allowed for the selection, false otherwise
      */
-    public abstract boolean dragStart(
-            List<AbstractExplorerFileStore> fileStores);
+    public abstract boolean dragStart(List<AbstractExplorerFileStore> fileStores);
 
     /**
      * @param metaNode
      * @param target
      */
-    public boolean saveMetaNodeTemplate(final WorkflowManager
-        metaNode, final AbstractExplorerFileStore target) {
+    public boolean saveMetaNodeTemplate(final WorkflowManager metaNode,
+            final AbstractExplorerFileStore target) {
 
         if (!AbstractExplorerFileStore.isWorkflowGroup(target)) {
             return false;
@@ -298,8 +299,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             eMsg.append(" does not represent a workflow template.\n\n");
             eMsg.append("The new template will be saved to a different ");
             eMsg.append("folder instead.");
-            if (MessageDialog.openConfirm(
-                    shell, "Existing folder", eMsg.toString())) {
+            if (MessageDialog.openConfirm(shell, "Existing folder",
+                    eMsg.toString())) {
                 isOverwrite = false;
             } else {
                 return false;
@@ -310,9 +311,10 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             eMsg.append(mountIDWithFullPath).append("/");
             eMsg.append(uniqueName);
             eMsg.append("\" already exists.");
-            MessageDialog md = new MessageDialog(shell, "Existing folder",
-                    null, eMsg.toString(), MessageDialog.WARNING,
-                    new String[] {"&Overwrite", "&Rename", "&Cancel"}, 0);
+            MessageDialog md =
+                    new MessageDialog(shell, "Existing folder", null,
+                            eMsg.toString(), MessageDialog.WARNING,
+                            new String[]{"&Overwrite", "&Rename", "&Cancel"}, 0);
             switch (md.open()) {
             case 0: // Overwrite
                 isOverwrite = true;
@@ -327,11 +329,12 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         if (doesTargetExist && !isOverwrite) { // generate new name
             Set<String> set;
             try {
-                set = new HashSet<String>(
-                        Arrays.asList(target.childNames(EFS.NONE, null)));
+                set =
+                        new HashSet<String>(Arrays.asList(target.childNames(
+                                EFS.NONE, null)));
             } catch (CoreException e) {
-                LOGGER.warn("Can't query child elements of target \""
-                        + target + "\"", e);
+                LOGGER.warn("Can't query child elements of target \"" + target
+                        + "\"", e);
                 set = Collections.emptySet();
             }
             UniqueNameGenerator nameGen = new UniqueNameGenerator(set);
@@ -377,7 +380,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 }
             }
 
-            if (!metaTemplateDropPrepareForSave(templateLoc, directory, isOverwrite)) {
+            if (!metaTemplateDropPrepareForSave(templateLoc, directory,
+                    isOverwrite)) {
                 LOGGER.debug("Preparation for MetaTemplate save failed.");
                 return false;
             }
@@ -488,6 +492,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /**
      * Called after the meta template is stored in the temp dir. Implementations
      * can now synch the tempDir with the actual target file store.
+     *
      * @param target
      * @param tmpDir
      */
@@ -498,9 +503,10 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
     private int promptLinkMetaNodeTemplate() {
         IPreferenceStore prefStore =
-            ExplorerActivator.getDefault().getPreferenceStore();
-        String pref = prefStore.getString(
-                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
+                ExplorerActivator.getDefault().getPreferenceStore();
+        String pref =
+                prefStore
+                        .getString(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
         if (MessageDialogWithToggle.ALWAYS.equals(pref)) {
             return IDialogConstants.YES_ID;
         } else if (MessageDialogWithToggle.NEVER.equals(pref)) {
@@ -508,17 +514,18 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
         Shell activeShell = Display.getDefault().getActiveShell();
         MessageDialogWithToggle dlg =
-            MessageDialogWithToggle.openYesNoCancelQuestion(activeShell,
-                "Link Meta Node Template",
-                "Update meta node to link to the template?",
-                "Remember my decision", false, prefStore,
-                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
+                MessageDialogWithToggle.openYesNoCancelQuestion(activeShell,
+                        "Link Meta Node Template",
+                        "Update meta node to link to the template?",
+                        "Remember my decision", false, prefStore,
+                        PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
         return dlg.getReturnCode();
     }
 
-    /** @return whether this content provider is able to host meta node
-     * templates, this is true for server or team spaces but false for the
-     * local space (or the the RO public server)
+    /**
+     * @return whether this content provider is able to host meta node templates,
+     *         this is true for server or team spaces but false for the local
+     *         space (or the the RO public server)
      */
     public abstract boolean canHostMetaNodeTemplates();
 
@@ -528,15 +535,13 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * {@inheritDoc}
      */
     @Override
-    public abstract AbstractExplorerFileStore[] getChildren(
-            Object parentElement);
+    public abstract AbstractExplorerFileStore[] getChildren(Object parentElement);
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public abstract AbstractExplorerFileStore[] getElements(
-            Object inputElement);
+    public abstract AbstractExplorerFileStore[] getElements(Object inputElement);
 
     /**
      * {@inheritDoc}
@@ -605,7 +610,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
         try {
             AbstractExplorerFileStore[] childs =
-                workflowGroup.childStores(EFS.NONE, null);
+                    workflowGroup.childStores(EFS.NONE, null);
             if (childs == null || childs.length == 0) {
                 return NO_CHILD;
             }
@@ -615,8 +620,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 if (AbstractExplorerFileStore.isWorkflowGroup(c)
                         || AbstractExplorerFileStore.isWorkflow(c)
                         || AbstractExplorerFileStore.isWorkflowTemplate(c)
-                        || ContextAwareNodeFactoryMapper.getNodeFactory(
-                                c.getName()) != null) {
+                        || ContextAwareNodeFactoryMapper.getNodeFactory(c
+                                .getName()) != null) {
                     result.add(c);
                 }
             }
@@ -735,7 +740,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     @Override
     public Image getImage(final Object element) {
         if (element instanceof MessageFileStore) {
-            return ((MessageFileStore) element).getImage();
+            return ((MessageFileStore)element).getImage();
         }
         return null;
     }
@@ -750,9 +755,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      *
      * @param fileStores the file stores to copy or move
      * @param targetDir the target directory. Make sure to call the content
-     *      provider that can handle the target dir type.
+     *            provider that can handle the target dir type.
      * @param performMove true, if the file stores should be moved, false
-     *      otherwise
+     *            otherwise
      * @return true if the operation was successful, false otherwise
      */
     public abstract boolean copyOrMove(

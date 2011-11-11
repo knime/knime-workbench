@@ -22,7 +22,7 @@
 
 package org.knime.workbench.explorer.view.actions;
 
-import org.eclipse.jface.viewers.TreeViewer;
+import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  * Action to copy files to another location in KNIME Explorer.
@@ -38,7 +38,7 @@ public class GlobalCopyAction extends AbstractCopyMoveAction {
     /**
      * @param viewer the viewer
      */
-    public GlobalCopyAction(final TreeViewer viewer) {
+    public GlobalCopyAction(final ExplorerView viewer) {
         super(viewer, "Copy...", false);
     }
 

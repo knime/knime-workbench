@@ -26,13 +26,13 @@ import java.util.Iterator;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -53,9 +53,10 @@ public class CopyLocationAction extends ExplorerAction {
     private final Clipboard m_cb;
 
     /**
-     * @param viewer the associated tree viewer
+     * @param viewer the associated  view
+     * @param cb clipboard to copy the path in
      */
-    public CopyLocationAction(final TreeViewer viewer, final Clipboard cb) {
+    public CopyLocationAction(final ExplorerView viewer, final Clipboard cb) {
         super(viewer, "Copy Local Path");
         m_cb = cb;
         setToolTipText("Copy Local Abstract Path to Clipboard");
