@@ -53,13 +53,32 @@ public abstract class ExplorerAction extends Action {
 
     private final TreeViewer m_viewer;
 
+    private boolean m_isRO;
+
     /**
      * @param viewer of the space
+     * @param menuText
      */
     public ExplorerAction(final TreeViewer viewer, final String menuText) {
         assert viewer != null;
         m_viewer = viewer;
         setText(menuText);
+        m_isRO = false;
+    }
+
+    /**
+     * @param isRO determines whether the action is called on a read-only space
+     * or not. If true, all actions modifying the content should be disabled.
+     */
+    public void setReadOnly(final boolean isRO) {
+        m_isRO = isRO;
+    }
+
+    /**
+     * @return true, if this action is called/activated on a read-only space.
+     */
+    protected boolean isRO() {
+        return m_isRO;
     }
 
     /**

@@ -110,7 +110,7 @@ public class NewWorkflowAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         // if selections belong to one content provider
-        return getSelectedFiles().size() == 1;
+        return !isRO() && getSelectedFiles().size() == 1;
     }
 
     /**

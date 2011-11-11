@@ -81,7 +81,11 @@ public class NewWorkflowGroupAction extends ExplorerAction {
 
     private static final ImageDescriptor ICON = KNIMEUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/wf_group_new.png");;
+                    "icons/wf_group_new.png");
+
+    /** ID of the global new workflow group action in the explorer menu. */
+    public static final String ID = "org.knime.explorer.view.actions.newgroup";
+
 
     /**
      * @param viewer underlying viewer
@@ -96,7 +100,7 @@ public class NewWorkflowGroupAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-        return "org.knime.explorer.view.actions.newgroup";
+        return ID;
     }
 
     /**
@@ -105,7 +109,7 @@ public class NewWorkflowGroupAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         // if selections belong to one content provider
-        return getSelectedFiles().size() == 1;
+        return !isRO() && getSelectedFiles().size() == 1;
     }
 
     /**

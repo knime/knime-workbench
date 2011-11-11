@@ -262,7 +262,7 @@ public class GlobalDeleteAction extends ExplorerAction {
     public boolean isEnabled() {
         List<AbstractExplorerFileStore> selFiles =
                 DragAndDropUtils.getExplorerFileStores(getSelection());
-        return selFiles != null && selFiles.size() > 0;
+        return !isRO() && selFiles != null && selFiles.size() > 0;
     }
 
 }

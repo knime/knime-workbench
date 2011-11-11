@@ -239,7 +239,7 @@ public class GlobalRenameAction extends ExplorerAction {
         List<AbstractExplorerFileStore> selFiles =
                 DragAndDropUtils.getExplorerFileStores(getSelection());
 
-        return selFiles != null && selFiles.size() == 1
+        return !isRO() && selFiles != null && selFiles.size() == 1
                 && selFiles.get(0).getParent() != null ; // disable for root
     }
 

@@ -105,7 +105,7 @@ public class WorkflowImportAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        return true;
+        return !isRO();
     }
 
     /**

@@ -35,6 +35,7 @@ import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -157,9 +158,30 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        List<AbstractExplorerFileStore> selections = getAllSelectedFiles();
-        return selections != null && !selections.isEmpty()
-                && (ExplorerFileSystemUtils.isLockable(selections) == null);
+        if (isRO() && m_performMove) {
+            return false;
+        }
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selFiles =
+                getSelectedFiles();
+        if (selFiles.size()!= 1) {
+            // can only copy/move from one source content provider
+            return false;
+        }
+        List<AbstractExplorerFileStore> selections =
+                selFiles.values().iterator().next();
+        if (selections == null || selections.isEmpty()
+                || (ExplorerFileSystemUtils.isLockable(selections) != null)) {
+            return false;
+        }
+        if (selections.get(0) instanceof RemoteExplorerFileStore) {
+            // currently we can only download one workflow
+            if (selections.size() > 1) {
+                return false;
+            }
+            RemoteExplorerFileStore remotefs = (RemoteExplorerFileStore)selections.get(0);
+            return remotefs.fetchInfo().isWorkflow() || remotefs.fetchInfo().isWorkflowTemplate();
+        }
+        return true;
     }
 
 }
