@@ -300,7 +300,8 @@ public class WorkflowExportPage extends WizardPage {
                         .getAllMountIDs().toArray(new String[0]), initSel);
         dlg.setTitle("Source Selection");
         dlg.setHeader("Workflow selection.");
-        dlg.setDescription("Please select the workflow or directory to export.");
+        dlg.setDescription(
+                "Please select the workflow or directory to export.");
         dlg.setValidator(new SelectionValidator() {
             @Override
             public String isValid(final AbstractExplorerFileStore selection) {
@@ -371,8 +372,12 @@ public class WorkflowExportPage extends WizardPage {
                 fileDialog.setFileName(p.lastSegment());
             }
         }
-        String filePath = fileDialog.open().trim();
-        if (filePath == null || filePath.isEmpty()) {
+        String filePath = fileDialog.open();
+        if (filePath == null) {
+            return;
+        }
+        filePath = filePath.trim();
+        if (filePath.isEmpty()) {
             return;
         }
         if (!filePath.toLowerCase().endsWith(".zip")) {
