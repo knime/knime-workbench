@@ -273,9 +273,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /**
      * @param metaNode
      * @param target
-     * @return
      */
-    protected boolean performDropMetaNodeTemplate(final WorkflowManager
+    public boolean saveMetaNodeTemplate(final WorkflowManager
         metaNode, final AbstractExplorerFileStore target) {
 
         if (!AbstractExplorerFileStore.isWorkflowGroup(target)) {
@@ -516,6 +515,12 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
         return dlg.getReturnCode();
     }
+
+    /** @return whether this content provider is able to host meta node
+     * templates, this is true for server or team spaces but false for the
+     * local space (or the the RO public server)
+     */
+    public abstract boolean canHostMetaNodeTemplates();
 
     /* -------------- content provider methods ---------------------------- */
 

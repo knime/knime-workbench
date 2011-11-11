@@ -325,6 +325,12 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         return valid;
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public final boolean canHostMetaNodeTemplates() {
+        return false;
+    }
+
     /**
      * {@inheritDoc}
      */
