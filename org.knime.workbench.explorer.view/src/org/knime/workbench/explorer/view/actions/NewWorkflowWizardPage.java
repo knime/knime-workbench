@@ -208,6 +208,7 @@ public class NewWorkflowWizardPage extends WizardPage {
             newFile = m_parent.getChild(projectName);
         }
         m_projectNameUI.setText(projectName);
+        m_projectNameUI.setSelection(0, projectName.length());
         m_projectName = projectName;
     }
 
