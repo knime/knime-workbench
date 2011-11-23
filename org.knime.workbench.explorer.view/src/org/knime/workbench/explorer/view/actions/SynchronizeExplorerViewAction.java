@@ -31,6 +31,7 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.internal.ReferencedFile;
+import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -94,9 +95,14 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
                 // not a workflow editor
                 return;
             }
-            ReferencedFile wfFileRef =
-                    ((WorkflowEditorAdapter)adapter).getWorkflowManager()
-                            .getWorkingDir();
+            WorkflowManager wm =
+                ((WorkflowEditorAdapter)adapter).getWorkflowManager();
+            // might be a subflow editor, climb up to its project
+            while (wm.getParent() != WorkflowManager.ROOT) {
+                wm = wm.getParent();
+            }
+            ReferencedFile wfFileRef = wm.getWorkingDir();
+
             if (wfFileRef == null) {
                 // not saved yet
                 return;
