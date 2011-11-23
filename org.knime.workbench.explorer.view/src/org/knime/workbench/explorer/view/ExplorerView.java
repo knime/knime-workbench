@@ -181,6 +181,14 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         createLocalToolBar();
         hookContextMenu();
         hookKeyListener();
+        // schedule future selection (must populate tree content first)
+        Display.getCurrent().asyncExec(new Runnable() {
+            @Override
+            public void run() {
+                new SynchronizeExplorerViewAction(ExplorerView.this,
+                        m_contentDelegator).run();
+            }
+        });
     }
 
     private void hookKeyListener() {
