@@ -34,6 +34,7 @@ import org.knime.core.internal.ReferencedFile;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -81,7 +82,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
     @Override
     public void run() {
         // that's the local file to find in a content provider
-        String wfDir;
+        File wfDir;
 
         try {
             IEditorPart activeEditor =
@@ -100,7 +101,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
                 // not saved yet
                 return;
             }
-            wfDir = wfFileRef.getFile().getAbsolutePath().toLowerCase();
+            wfDir = wfFileRef.getFile();
         } catch (Throwable t) {
             // if anything is null or fails: don't sync
             return;
@@ -111,7 +112,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
             MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
             AbstractExplorerFileStore root
                     = mountPoint.getProvider().getFileStore("/");
-            File localRoot;
+            final File localRoot;
             try {
                 localRoot = root.toLocalFile();
             } catch (CoreException e) {
@@ -122,16 +123,13 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
                 // no corresponding local file
                 continue;
             }
-            if (!wfDir.startsWith(localRoot.getAbsolutePath().toLowerCase())) {
+            String relPath = AbstractContentProvider.getRelativePath(
+                    wfDir, localRoot);
+            if (relPath == null) {
                 // got the wrong content provider
                 continue;
             }
-            String relPath =
-                    wfDir.substring(localRoot.getAbsolutePath().length())
-                            .replace('\\', '/');
-            if (!relPath.startsWith("/")) {
-                relPath = "/" + relPath;
-            }
+
             AbstractExplorerFileStore store =
                     mountPoint.getProvider().getFileStore(relPath);
             getViewer().setSelection(new StructuredSelection(ContentDelegator
