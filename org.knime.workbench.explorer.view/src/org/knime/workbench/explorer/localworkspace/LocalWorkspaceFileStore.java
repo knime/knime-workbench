@@ -361,6 +361,12 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             throw new CoreException(new Status(IStatus.ERROR,
                     ExplorerActivator.PLUGIN_ID, message, e));
         }
+        IResource res = KnimeResourceUtil.getResourceForURI(srcFile.toURI());
+        if (res != null) {
+            res.delete(IResource.FORCE
+                   | IResource.ALWAYS_DELETE_PROJECT_CONTENT
+                   | IResource.DEPTH_INFINITE, monitor);
+        }
         refreshResource(getParent(), monitor);
     }
 

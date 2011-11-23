@@ -368,7 +368,8 @@ public final class ExplorerFileSystemUtils {
                 // delete the workflow directory itself
                 success &= FileUtil.deleteRecursively(loc);
                 if (wf instanceof LocalWorkspaceFileStore) {
-                    ((LocalWorkspaceFileStore)wf).refreshParentResource();
+                    // refreshes the IResources (e.g. .project files)
+                    ((LocalWorkspaceFileStore)wf).delete(EFS.NONE, null);
                 }
             } catch (CoreException e) {
                 success = false;
@@ -409,8 +410,8 @@ public final class ExplorerFileSystemUtils {
                             success &= FileUtil.deleteRecursively(loc);
                         }
                         if (f instanceof LocalWorkspaceFileStore) {
-                            ((LocalWorkspaceFileStore)f)
-                                    .refreshParentResource();
+                            // refreshes the IResources (e.g. .project files)
+                            ((LocalWorkspaceFileStore)f).delete(EFS.NONE, null);
                         }
                     }
                 }
