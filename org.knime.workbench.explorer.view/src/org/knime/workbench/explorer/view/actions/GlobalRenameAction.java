@@ -117,17 +117,17 @@ public class GlobalRenameAction extends ExplorerAction {
             }
         }
 
-        AbstractExplorerFileStore dstFileStore = queryTargetName(srcFileStore);
-        if (dstFileStore == null) {
-            // dialog was cancelled
-            ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
-            return;
-        }
-
         if (ExplorerFileSystemUtils.hasOpenWorkflows(affectedFlows)) {
             // release locks acquired for renaming
             ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
             showCantRenameOpenMessage();
+            return;
+        }
+
+        AbstractExplorerFileStore dstFileStore = queryTargetName(srcFileStore);
+        if (dstFileStore == null) {
+            // dialog was cancelled
+            ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
             return;
         }
 
