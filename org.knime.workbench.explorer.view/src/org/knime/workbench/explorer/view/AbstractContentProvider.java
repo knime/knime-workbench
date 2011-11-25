@@ -126,8 +126,12 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * The refresh goes up and tells the view to refresh our content.
      */
     public final void refresh() {
+        refresh(getFileStore("/"));
+    }
+
+    public final void refresh(final AbstractExplorerFileStore changedChild) {
         fireLabelProviderChanged(new LabelProviderChangedEvent(this,
-                getFileStore("/")));
+                changedChild));
     }
 
     /**
@@ -407,6 +411,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         } finally {
             metaTemplateDropCleanup(directory);
         }
+        target.refresh();
         return true;
     }
 

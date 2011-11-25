@@ -450,11 +450,13 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                                 + " is no workflow.");
                         return false;
                     }
-                    if (performDownload(rfs,
-                            (LocalExplorerFileStore)targetDir)) {
+                    LocalExplorerFileStore localTarget =
+                        (LocalExplorerFileStore)targetDir;
+                    if (performDownload(rfs, localTarget)) {
                         if (performMove) {
                             rfs.delete(EFS.NONE, null);
                         }
+                        localTarget.refresh();
                     } else {
                         return false;
                     }

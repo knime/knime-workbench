@@ -249,7 +249,10 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             throw new CoreException(new Status(IStatus.ERROR,
                     ExplorerActivator.PLUGIN_ID, message, e));
         }
-        refreshResource(destination.getParent(), monitor);
+        IFileStore destParent = destination.getParent();
+        if (destParent instanceof AbstractExplorerFileStore) {
+            ((AbstractExplorerFileStore)destParent).refresh();
+        }
     }
 
     /**
@@ -317,7 +320,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         }
     }
 
-    private void refreshResource(final IResource resource,
+    private static void refreshResource(final IResource resource,
             final IProgressMonitor monitor) {
         if (resource != null) {
             try {
@@ -330,7 +333,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         }
     }
 
-    private void refreshResource(final IFileStore fileStore,
+    private static void refreshResource(final LocalWorkspaceFileStore fileStore,
             final IProgressMonitor monitor) throws CoreException {
         if (fileStore == null) {
             return;
@@ -340,6 +343,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             refreshResource(KnimeResourceUtil.getResourceForURI(file.toURI()),
                     monitor);
         }
+        fileStore.getContentProvider().refresh(fileStore);
     }
 
     /**
@@ -405,7 +409,10 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
                 // if rename works: refresh
                 createProjectFile(destination, monitor);
                 refreshResource(getParent(), monitor);
-                refreshResource(destination.getParent(), monitor);
+                IFileStore destParent = destination.getParent();
+                if (destParent instanceof AbstractExplorerFileStore) {
+                    ((AbstractExplorerFileStore)destParent).refresh();
+                }
             } else {
                 copy(destination, options, monitor);
                 delete(options, monitor);
