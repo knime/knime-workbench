@@ -60,6 +60,7 @@ import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
@@ -108,8 +109,20 @@ public class NewWorkflowGroupAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        // if selections belong to one content provider
-        return !isRO() && getSelectedFiles().size() == 1;
+     // only enabled if exactly on file is selected
+        List<AbstractExplorerFileStore> files = getAllSelectedFiles();
+        if (isRO() || files.size() != 1) {
+            return false;
+        }
+        AbstractExplorerFileStore file = files.get(0);
+        AbstractExplorerFileInfo fileInfo = file.fetchInfo();
+        // for workflow groups check if it is writable
+        if (fileInfo.isWorkflowGroup() && fileInfo.isWriteable()) {
+            return true;
+        }
+        // for other items check if the parent is writable
+        return file.getParent() != null
+                && file.getParent().fetchInfo().isWriteable();
     }
 
     /**

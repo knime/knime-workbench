@@ -82,4 +82,19 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
      * @return true if the file is a KNIME meta node, false otherwise
      */
     public abstract boolean isMetaNode();
+
+    /**
+     * @return true if the file is readable, false otherwise
+     */
+    public boolean isReadable() {
+        return true;
+    }
+
+    /**
+     * @return true if the file is writable, false otherwise
+     */
+    public boolean isWriteable() {
+        return true;
+    }
+
 }

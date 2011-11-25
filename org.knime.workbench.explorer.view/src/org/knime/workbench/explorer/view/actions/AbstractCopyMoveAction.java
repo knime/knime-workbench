@@ -32,6 +32,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
@@ -163,7 +164,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         }
         Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selFiles =
                 getSelectedFiles();
-        if (selFiles.size()!= 1) {
+        if (selFiles.size() != 1) {
             // can only copy/move from one source content provider
             return false;
         }
@@ -178,8 +179,16 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             if (selections.size() > 1) {
                 return false;
             }
-            RemoteExplorerFileStore remotefs = (RemoteExplorerFileStore)selections.get(0);
-            return remotefs.fetchInfo().isWorkflow() || remotefs.fetchInfo().isWorkflowTemplate();
+            RemoteExplorerFileStore remotefs = (RemoteExplorerFileStore)
+                    selections.get(0);
+            AbstractExplorerFileInfo info = remotefs.fetchInfo();
+            AbstractExplorerFileStore parent = remotefs.getParent();
+            boolean copyOnlyOrParentWritable
+                = !m_performMove
+                    || parent == null || parent.fetchInfo().isWriteable();
+            return copyOnlyOrParentWritable
+                    && (info.isWorkflow()
+                    || remotefs.fetchInfo().isWorkflowTemplate());
         }
         return true;
     }
