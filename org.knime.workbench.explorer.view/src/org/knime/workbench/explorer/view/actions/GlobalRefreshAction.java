@@ -21,11 +21,15 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
+import java.util.List;
+
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
+import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 
 /**
  *
@@ -42,27 +46,14 @@ public class GlobalRefreshAction extends ExplorerAction {
 
     private static final String TOOLTIP = "Refresh the view";
 
-    private AbstractExplorerFileStore[] m_fileStore;
 
     /**
-     * Refreshes all elements in the viewer.
-     * @param viewer the viewer to refresh
+     * @param viewer the viewer containing the file stores
      */
     public GlobalRefreshAction(final ExplorerView viewer) {
-        this(viewer, (AbstractExplorerFileStore[])null);
-    }
-
-    /**
-     * Refreshes the passed elements in the viewer.
-     * @param viewer the viewer containing the file stores
-     * @param fileStore the file stores to refresh
-     */
-    public GlobalRefreshAction(final ExplorerView viewer,
-            final AbstractExplorerFileStore ... fileStore) {
         super(viewer, "Refresh");
         setImageDescriptor(IMG_REFRESH);
         setToolTipText(TOOLTIP);
-        m_fileStore = fileStore;
     }
 
     /**
@@ -78,10 +69,13 @@ public class GlobalRefreshAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        if (m_fileStore == null) {
+        IStructuredSelection selection = getSelection();
+        List<AbstractExplorerFileStore> stores =
+                DragAndDropUtils.getExplorerFileStores(selection);
+        if (stores == null) {
             getViewer().refresh();
         } else {
-            for (AbstractExplorerFileStore file : m_fileStore) {
+            for (AbstractExplorerFileStore file : stores) {
 //                getViewer().refresh(ContentDelegator.getTreeObjectFor(file));
                 file.refresh();
             }

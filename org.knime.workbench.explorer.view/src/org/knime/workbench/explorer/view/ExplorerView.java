@@ -213,6 +213,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         final ExplorerAction action;
         if (event.keyCode == SWT.F2 && event.stateMask == 0) {
             action = new GlobalRenameAction(this);
+        } else if (event.keyCode == SWT.F5 && event.stateMask == 0) {
+            action = new GlobalRefreshAction(this);
         } else if (event.keyCode == SWT.DEL && event.stateMask == 0) {
             action = new GlobalDeleteAction(this);
         } else {
@@ -567,19 +569,19 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             manager.add(new NoMenuAction(this));
             return;
         }
-        List<AbstractExplorerFileStore> fs = DragAndDropUtils
-            .getExplorerFileStores((TreeSelection) m_viewer.getSelection());
+        final TreeSelection selection = (TreeSelection) m_viewer.getSelection();
+        List<AbstractExplorerFileStore> fs =
+            DragAndDropUtils.getExplorerFileStores(selection);
         if ((fs != null) && (fs.size() == 1)
                 && (fs.get(0) instanceof MessageFileStore)) {
             return;
         }
 
-        addGlobalActions(manager, fs);
+        addGlobalActions(manager);
 
-        IStructuredSelection sel =
-                (IStructuredSelection)m_viewer.getSelection();
+
         Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selFiles =
-                DragAndDropUtils.getProviderMap(sel);
+                DragAndDropUtils.getProviderMap(selection);
 
         manager.add(new Separator());
         /* All visible spaces with at least one selected file may contribute to
@@ -594,8 +596,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     }
 
-    private void addGlobalActions(final IMenuManager manager,
-            final List<AbstractExplorerFileStore> fs) {
+    private void addGlobalActions(final IMenuManager manager) {
         manager.add(new NewWorkflowAction(this));
         manager.add(new NewWorkflowGroupAction(this));
         manager.add(new Separator());
@@ -621,10 +622,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new CopyURLAction(this, m_clipboard));
         manager.add(new CopyLocationAction(this, m_clipboard));
         manager.add(new Separator());
-        if (fs != null && !fs.isEmpty()) {
-            manager.add(new GlobalRefreshAction(this,
-                    fs.toArray(new AbstractExplorerFileStore[0])));
-        }
+        manager.add(new GlobalRefreshAction(this));
     }
 
     public Clipboard getClipboard() {
