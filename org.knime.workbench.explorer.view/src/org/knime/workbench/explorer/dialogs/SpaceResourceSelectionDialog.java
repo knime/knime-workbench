@@ -73,6 +73,7 @@ import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
+import org.knime.workbench.explorer.view.ExplorerViewComparator;
 import org.knime.workbench.ui.navigator.actions.selection.TreeSelectionControl;
 import org.knime.workbench.ui.navigator.actions.selection.TreeSelectionControl.TreeSelectionChangeListener;
 
@@ -258,6 +259,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
         m_tree = new TreeSelectionControl();
         m_tree.setContentProvider(m_treeInput);
         m_tree.setLabelProvider(m_treeInput);
+        m_tree.setComparator(new ExplorerViewComparator());
         if (m_initialSelection != null) {
             m_tree.setInitialSelection(new StructuredSelection(
                     m_initialSelection));
