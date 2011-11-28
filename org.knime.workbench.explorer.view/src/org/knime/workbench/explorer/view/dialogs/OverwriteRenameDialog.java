@@ -152,7 +152,7 @@ public class OverwriteRenameDialog extends Dialog {
         Label txt = new Label(header, SWT.NONE);
         txt.setBackground(white);
         txt.setText("The destination (" + m_destination.getName()
-                + ") already exists on the server. "
+                + ") already exists. "
                 + "Please select an option to proceed.");
         txt.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
     }
@@ -161,14 +161,14 @@ public class OverwriteRenameDialog extends Dialog {
         Group border = new Group(parent, SWT.SHADOW_IN);
         border.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false));
         border.setLayout(new GridLayout(1, true));
-        border.setText("Server name conflict resolution:");
+        border.setText("Name conflict resolution:");
 
         Composite overwritePanel = new Composite(border, SWT.NONE);
         overwritePanel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true,
                 false));
         overwritePanel.setLayout(new GridLayout(1, false));
         m_overwriteGUI = new Button(overwritePanel, SWT.RADIO);
-        m_overwriteGUI.setText("Overwrite the existing server item");
+        m_overwriteGUI.setText("Overwrite the existing item");
         m_overwriteGUI.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         m_overwriteGUI.addListener(SWT.Selection, new Listener() {
             @Override
@@ -254,7 +254,7 @@ public class OverwriteRenameDialog extends Dialog {
                 }
                 AbstractExplorerFileStore parent = m_destination.getParent();
                 if (parent.getChild(m_newName).fetchInfo().exists()) {
-                    errMsg = "New destination already exists on server.";
+                    errMsg = "New destination already exists.";
                     return;
                 }
             }
