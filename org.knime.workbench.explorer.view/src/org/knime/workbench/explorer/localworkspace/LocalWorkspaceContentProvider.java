@@ -377,7 +377,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 }
                 return true;
             } catch (IOException e) {
-                LOGGER.error("An error occured while copying files to the User"
+                LOGGER.error("An error occurred while copying files to the User"
                         + " Space.", e);
             } catch (CoreException e) {
                 LOGGER.error(
@@ -488,13 +488,13 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     DragAndDropUtils.refreshResource(targetDir);
                 }
             } catch (CoreException e) {
-                String msg = "An error occured when transfering the file \""
+                String msg = "An error occurred when transferring the file \""
                         + fs.getFullName() + "\". ";
                 LOGGER.error(msg, e);
                 MessageBox mb =
                     new MessageBox(Display.getCurrent().getActiveShell(),
                             SWT.ICON_ERROR | SWT.OK);
-                mb.setText("An error occured during transfer");
+                mb.setText("An error occurred during transfer");
                 mb.setMessage(msg);
                 mb.open();
                 return false;
