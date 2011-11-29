@@ -310,6 +310,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             List<AbstractExplorerFileStore> fileStores =
                     DragAndDropUtils.getExplorerFileStores(
                             (IStructuredSelection)selection);
+            if (fileStores == null) {
+                return false;
+            }
             for (AbstractExplorerFileStore fs : fileStores) {
                 if (!(AbstractExplorerFileStore.isWorkflow(fs)
                         || AbstractExplorerFileStore.isWorkflowGroup(fs))) {
