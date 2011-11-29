@@ -274,9 +274,11 @@ public final class ExplorerFileSystemUtils {
         List<LocalExplorerFileStore> affectedFlows =
                 ExplorerAction.getContainedLocalWorkflows(fileStores);
         if (ExplorerFileSystemUtils.hasOpenWorkflows(affectedFlows)) {
-            return "At least one of the workflows affected by the "
-                + "dragging is still open in the editor and has to be "
+            String msg = "At least one of the workflows affected by the "
+                + "operation is still open in the editor and has to be "
                 + "closed.";
+            LOGGER.warn(msg);
+            return msg;
         }
         // only lockable flows can be dragged
         List<LocalExplorerFileStore> lockedFlows =
@@ -290,8 +292,8 @@ public final class ExplorerFileSystemUtils {
         if (!unlockableFlows.isEmpty()) {
             StringBuilder sb =
                     new StringBuilder("Dragging canceled. "
-                            + "At least one of the workflows affected by the "
-                            + "dragging is in use by another user/instance:\n");
+                           + "At least one of the workflows affected by the "
+                           + "operation is in use by another user/instance:\n");
             String msg = sb.toString();
             for (AbstractExplorerFileStore lockedFlow : unlockableFlows) {
                 sb.append("\t" + lockedFlow.getMountIDWithFullPath() + "\n");

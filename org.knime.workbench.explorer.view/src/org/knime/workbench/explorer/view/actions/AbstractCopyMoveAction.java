@@ -27,7 +27,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jface.window.Window;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
@@ -92,6 +94,20 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
     public void run() {
         List<AbstractExplorerFileStore> fileStores = removeSelectedChildren(
                 getAllSelectedFiles());
+
+
+        String message = ExplorerFileSystemUtils.isLockable(fileStores);
+        if (fileStores == null || fileStores.isEmpty()
+                || message != null) {
+            MessageBox mb =
+                new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
+            String action = m_performMove ? "Move" : "Copy";
+            mb.setText("Can't " + action + " All Selected Items");
+            mb.setMessage(message);
+            mb.open();
+            return;
+        }
+
         // open browse dialog for target selection if necessary
         if (m_target == null) {
             boolean showServer = !isMultipleSelection();
@@ -170,8 +186,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         }
         List<AbstractExplorerFileStore> selections =
                 selFiles.values().iterator().next();
-        if (selections == null || selections.isEmpty()
-                || (ExplorerFileSystemUtils.isLockable(selections) != null)) {
+        if (selections == null || selections.isEmpty()) {
             return false;
         }
         if (selections.get(0) instanceof RemoteExplorerFileStore) {

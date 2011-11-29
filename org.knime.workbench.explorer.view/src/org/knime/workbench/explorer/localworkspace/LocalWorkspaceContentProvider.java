@@ -540,7 +540,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         }
         String msg = ExplorerFileSystemUtils.isLockable(fileStores);
         if (msg != null) {
-            LOGGER.warn(msg);
             MessageBox mb =
                     new MessageBox(Display.getCurrent().getActiveShell(),
                             SWT.ICON_ERROR | SWT.OK);
