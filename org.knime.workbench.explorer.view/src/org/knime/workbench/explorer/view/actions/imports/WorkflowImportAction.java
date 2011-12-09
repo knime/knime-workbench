@@ -54,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -127,13 +128,13 @@ public class WorkflowImportAction extends ExplorerAction {
         // dialog.getShell().setSize(
         // Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x),
         // SIZING_WIZARD_HEIGHT);
-        dialog.open();
-
-        AbstractExplorerFileStore destination =
+        if (Window.CANCEL != dialog.open()) {
+            AbstractExplorerFileStore destination =
                 impWiz.getDestinationContainer();
-        Object object = ContentDelegator.getTreeObjectFor(destination);
-        getViewer().refresh(object);
-        getViewer().reveal(object);
+            Object object = ContentDelegator.getTreeObjectFor(destination);
+            getViewer().refresh(object);
+            getViewer().reveal(object);
+        }
     }
 
 }
