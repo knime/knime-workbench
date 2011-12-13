@@ -120,4 +120,19 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      */
     public abstract RemoteFlowUploadStream openWorkflowUploadStream()
             throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public RemoteExplorerFileInfo fetchInfo(final int options,
+            final IProgressMonitor monitor) throws CoreException {
+        return fetchInfo();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract RemoteExplorerFileInfo fetchInfo();
 }
