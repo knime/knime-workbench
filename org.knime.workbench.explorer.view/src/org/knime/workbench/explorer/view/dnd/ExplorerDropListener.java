@@ -181,6 +181,10 @@ public class ExplorerDropListener extends ViewerDropAdapter {
      *      false otherwise
      */
     private boolean isSameMountPoint(final DropTargetEvent event) {
+        if (event.item == null) {
+            // happens if drag is leaving the window
+            return false;
+        }
         TransferData transferType = event.currentDataType;
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
         boolean isLocalTransfer = transfer.isSupportedType(transferType);
