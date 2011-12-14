@@ -145,7 +145,7 @@ public class GlobalRenameAction extends ExplorerAction {
         } catch (CoreException e) {
             String message =
                     "Could not rename \"" + srcFileStore + "\" to \""
-                            + dstFileStore + "\".";
+                            + dstFileStore + "\": " + e.getMessage();
             LOGGER.error(message, e);
             ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
             MessageDialog.openError(getParentShell(), "Renaming failed",
@@ -261,4 +261,5 @@ public class GlobalRenameAction extends ExplorerAction {
                     && parent != null
                     && parent.fetchInfo().isWriteable();
     }
+
 }

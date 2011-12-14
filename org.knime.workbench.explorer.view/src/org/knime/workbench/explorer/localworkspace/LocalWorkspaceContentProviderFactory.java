@@ -50,7 +50,7 @@ public class LocalWorkspaceContentProviderFactory extends
      * {@inheritDoc}
      */
     @Override
-    public AbstractContentProvider getContentProvider(final String id) {
+    public AbstractContentProvider createContentProvider(final String id) {
         return new LocalWorkspaceContentProvider(this, id);
     }
 
@@ -90,7 +90,7 @@ public class LocalWorkspaceContentProviderFactory extends
      * {@inheritDoc}
      */
     @Override
-    public AbstractContentProvider getContentProvider(final String mountID,
+    public AbstractContentProvider createContentProvider(final String mountID,
             final String content) {
         return new LocalWorkspaceContentProvider(this, mountID);
     }

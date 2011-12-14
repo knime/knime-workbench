@@ -144,7 +144,9 @@ public class ContentDelegator extends LabelProvider implements
      */
     public void removeAllMountPoints() {
         for (MountPoint mountPoint : m_provider) {
-            mountPoint.getProvider().removeListener(this);
+            final AbstractContentProvider provider = mountPoint.getProvider();
+            provider.removeListener(this);
+            provider.dispose();
         }
         m_provider.clear();
     }

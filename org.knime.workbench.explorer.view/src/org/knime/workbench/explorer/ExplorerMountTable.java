@@ -313,13 +313,13 @@ public final class ExplorerMountTable {
             AbstractContentProvider newProvider = null;
             if (storage == null) {
                 // may open a dialog for the user to provide parameters
-                newProvider = fac.getContentProvider(mountID);
+                newProvider = fac.createContentProvider(mountID);
                 if (newProvider == null) {
                     // user probably canceled.
                     return null;
                 }
             } else {
-                newProvider = fac.getContentProvider(mountID, storage);
+                newProvider = fac.createContentProvider(mountID, storage);
                 if (newProvider == null) {
                     // something went wrong
                     return null;

@@ -67,20 +67,25 @@ public abstract class AbstractContentProviderFactory {
      * Not intended to be called. Rather go through the
      * {@link ExplorerMountTable}.
      *
-     * @param id the mount ID the new content provider is mounted with
+     * <p>The caller needs to make sure the returned value is disposed when
+     * no longer needed!
+     *
+     * @param mountID the mount ID the new content provider is mounted with
      *
      * @return a new, fully parameterized instance for a specific content
      *         provider.
      */
-    public abstract AbstractContentProvider getContentProvider(final String id);
+    public abstract AbstractContentProvider
+        createContentProvider(final String mountID);
 
-    /**
-    *
-    * @param mountID the id of the mount to restore
+    /** Restore content provider. Caller needs to dispose returned value when
+     * no longer needed!
+     *
+     * @param mountID the id of the mount to restore
      * @param content the string content representing the state of the content
-    *       provider
-    * @return a new instance with its state restored from the passed structure
-    */
-   public abstract AbstractContentProvider getContentProvider(
+     *            provider
+     * @return a new instance with its state restored from the passed structure
+     */
+   public abstract AbstractContentProvider createContentProvider(
            final String mountID, final String content);
 }

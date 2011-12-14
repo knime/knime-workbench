@@ -29,6 +29,7 @@ import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -53,12 +54,15 @@ public class ExplorerPreferenceInitializer extends
                 ExplorerMountTable.getAddableContentProviders();
         for (AbstractContentProviderFactory fac : factories) {
             if (fac.getDefaultMountID() != null) {
-                MountSettings ms =
-                        new MountSettings(fac.getContentProvider(fac
-                                .getDefaultMountID()));
-                defMounts +=
-                        ms.getSettingsString()
-                                + MountSettings.SETTINGS_SEPARATOR;
+                final AbstractContentProvider cntProvider =
+                    fac.createContentProvider(fac.getDefaultMountID());
+                try {
+                    MountSettings ms = new MountSettings(cntProvider);
+                    defMounts += ms.getSettingsString()
+                        + MountSettings.SETTINGS_SEPARATOR;
+                } finally {
+                    cntProvider.dispose();
+                }
             }
         }
         if (!defMounts.isEmpty()) {

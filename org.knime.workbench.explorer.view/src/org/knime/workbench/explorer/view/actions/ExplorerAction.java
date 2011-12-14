@@ -148,7 +148,7 @@ public abstract class ExplorerAction extends Action {
      * @throws IllegalArgumentException if the files are not from the same
      *             content provider (have a different mount ID)
      */
-    protected List<AbstractExplorerFileStore> removeSelectedChildren(
+    protected static List<AbstractExplorerFileStore> removeSelectedChildren(
             final List<AbstractExplorerFileStore> selection)
             throws IllegalArgumentException {
         List<AbstractExplorerFileStore> result =
