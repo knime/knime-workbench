@@ -364,7 +364,8 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         if (resourceList == null) {
             throw new NullPointerException("Result list can't be null");
         }
-        if (AbstractExplorerFileStore.isWorkflow(flowOrGroup)) {
+        if (AbstractExplorerFileStore.isWorkflow(flowOrGroup)
+                || AbstractExplorerFileStore.isWorkflowTemplate(flowOrGroup)) {
             addResourcesRec(resourceList, flowOrGroup, excludeData);
         } else if (AbstractExplorerFileStore.isWorkflowGroup(flowOrGroup)) {
             addFiles(resourceList, flowOrGroup);
@@ -405,10 +406,14 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
             final AbstractExplorerFileStore store, final boolean excludeData)
             throws CoreException {
 
-        // if this resource must be excluded do not add to resource list and
-        // return
-        if (excludeData && excludeResource(store)) {
-            return;
+        if (!AbstractExplorerFileStore.isWorkflow(store)
+                && !AbstractExplorerFileStore.isMetaNode(store)
+                && !AbstractExplorerFileStore.isWorkflowTemplate(store)) {
+            // make sure flows and templates named like excluded resource (e.g.
+            // "internal" or "drop" are not accidently excluded!
+            if ( excludeData && excludeResource(store)) {
+                return;
+            }
         }
 
         // if this is a file add it to the list
