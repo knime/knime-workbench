@@ -103,6 +103,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     }
 
     private void onResourceChanged(final IResourceChangeEvent event) {
+        if (getListeners().length == 0) { // no view registered, nothing to do
+             return;
+        }
         final IResourceDelta delta = event.getDelta();
         final List<IResource> refreshList = new ArrayList<IResource>();
 
