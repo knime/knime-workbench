@@ -178,7 +178,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         if (isRO() && m_performMove) {
             return false;
         }
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> 
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>>
                 selProviders = getSelectedFiles();
         if (selProviders.size() != 1) {
             // can only copy/move from one source content provider
@@ -197,7 +197,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             }
 
             AbstractExplorerFileInfo info = fileStore.fetchInfo();
-            if (!info.isWorkflow() || !info.isWorkflowTemplate()) {
+            if (!(info.isWorkflow() || info.isWorkflowTemplate())) {
                 return false;
             }
         }
