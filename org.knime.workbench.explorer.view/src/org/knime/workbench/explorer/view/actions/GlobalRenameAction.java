@@ -42,7 +42,6 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -151,8 +150,6 @@ public class GlobalRenameAction extends ExplorerAction {
             MessageDialog.openError(getParentShell(), "Renaming failed",
                     message);
         }
-        getViewer().refresh(
-                ContentDelegator.getTreeObjectFor(dstFileStore.getParent()));
     }
 
     /**
@@ -242,24 +239,6 @@ public class GlobalRenameAction extends ExplorerAction {
             return false;
         }
         AbstractExplorerFileStore fs = selFiles.get(0);
-        // check if a workflow has running instances
-        if (fs.fetchInfo().isWorkflow()) {
-            try {
-                if (fs.childNames(EFS.NONE, null).length > 0) {
-                    return false;
-                }
-            } catch (CoreException e) {
-                /* Action is only disabled if there are children for sure.*/
-                LOGGER.warn("Could not retrieve children for \""
-                        + fs.getFullName());
-                return false;
-            }
-        }
-
-        AbstractExplorerFileStore parent = fs.getParent();
-        return fs.fetchInfo().isWriteable()
-                    && parent != null
-                    && parent.fetchInfo().isWriteable();
+        return fs.canRename();
     }
-
 }

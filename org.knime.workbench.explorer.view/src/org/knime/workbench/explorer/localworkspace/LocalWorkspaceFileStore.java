@@ -58,7 +58,6 @@ import java.util.ArrayList;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
@@ -162,21 +161,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      */
     @Override
     public LocalWorkspaceFileInfo fetchInfo() {
-        LocalWorkspaceFileInfo info = new LocalWorkspaceFileInfo(m_file);
-        IFileInfo fileInfo = m_file.fetchInfo();
-        if (fileInfo.exists()) {
-            info.setExists(true);
-            info.setDirectory(fileInfo.isDirectory());
-            info.setLastModified(fileInfo.getLastModified());
-            info.setLength(fileInfo.getLength());
-            info.setAttribute(EFS.ATTRIBUTE_READ_ONLY,
-                    fileInfo.getAttribute(EFS.ATTRIBUTE_READ_ONLY));
-            info.setAttribute(EFS.ATTRIBUTE_HIDDEN,
-                    fileInfo.getAttribute(EFS.ATTRIBUTE_HIDDEN));
-        } else {
-            info.setExists(false);
-        }
-        return info;
+        return new LocalWorkspaceFileInfo(m_file);
     }
 
     /**

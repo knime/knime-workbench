@@ -84,17 +84,13 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
     public abstract boolean isMetaNode();
 
     /**
-     * @return true if the file is readable, false otherwise
+     * @return true if the file store can be modified, false otherwise
      */
-    public boolean isReadable() {
-        return true;
-    }
+    public abstract boolean isModifiable();
 
     /**
-     * @return true if the file is writable, false otherwise
+     * @return true if the file store can be read, false otherwise
      */
-    public boolean isWriteable() {
-        return true;
-    }
+    public abstract boolean isReadable();
 
 }

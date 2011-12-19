@@ -117,12 +117,12 @@ public class NewWorkflowGroupAction extends ExplorerAction {
         AbstractExplorerFileStore file = files.get(0);
         AbstractExplorerFileInfo fileInfo = file.fetchInfo();
         // for workflow groups check if it is writable
-        if (fileInfo.isWorkflowGroup() && fileInfo.isWriteable()) {
+        if (fileInfo.isWorkflowGroup() && fileInfo.isModifiable()) {
             return true;
         }
         // for other items check if the parent is writable
         return file.getParent() != null
-                && file.getParent().fetchInfo().isWriteable();
+                && file.getParent().fetchInfo().isModifiable();
     }
 
     /**

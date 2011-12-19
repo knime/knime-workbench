@@ -362,4 +362,40 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     public AbstractExplorerFileStore getMessageFileStore(final String msg) {
         return new MessageFileStore(getMountID(), msg);
     }
+
+    /**
+     * @return true if the file store can be renamed, false otherwise
+     */
+    public boolean canRename() {
+        return canModifyFileAndParent();
+    }
+
+    /**
+     * @return true if the file store can be deleted, false otherwise
+     */
+    public boolean canDelete() {
+        return canModifyFileAndParent();
+    }
+
+    /**
+     * @return true if the file store can be renamed, false otherwise
+     */
+    public boolean canMove() {
+        return canModifyFileAndParent();
+    }
+
+    /**
+     * @return true if the file store can be read, false otherwise
+     */
+    public boolean canCopy() {
+        AbstractExplorerFileStore parent = getParent();
+        return fetchInfo().isReadable()
+                && (parent == null || getParent().fetchInfo().isReadable());
+    }
+
+    private boolean canModifyFileAndParent() {
+        AbstractExplorerFileStore parent = getParent();
+        return fetchInfo().isModifiable()
+                && (parent == null || parent.fetchInfo().isModifiable());
+    }
 }
