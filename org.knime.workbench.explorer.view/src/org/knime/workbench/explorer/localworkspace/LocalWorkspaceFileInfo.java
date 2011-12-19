@@ -22,6 +22,7 @@
 
 package org.knime.workbench.explorer.localworkspace;
 
+import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.knime.core.node.workflow.SingleNodeContainerPersistorVersion200;
 import org.knime.core.node.workflow.WorkflowPersistor;
@@ -49,6 +50,46 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
     @Override
     public boolean exists() {
         return m_file.fetchInfo().exists();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isDirectory() {
+        return m_file.fetchInfo().isDirectory();
+    };
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public long getLastModified() {
+        return m_file.fetchInfo().getLastModified();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public long getLength() {
+       return m_file.fetchInfo().getLength();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean getAttribute(final int attribute) {
+        return m_file.fetchInfo().getAttribute(attribute);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public final void setAttribute(final int attribute, final boolean value) {
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -146,5 +187,21 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
                 SingleNodeContainerPersistorVersion200.NODE_FILE);
         return containerFile.fetchInfo().exists()
                 && isWorkflow(file.getParent());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isModifiable() {
+        return !m_file.fetchInfo().getAttribute(EFS.ATTRIBUTE_READ_ONLY);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isReadable() {
+        return true;
     }
 }

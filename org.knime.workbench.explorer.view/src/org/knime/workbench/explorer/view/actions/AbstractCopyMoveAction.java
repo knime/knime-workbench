@@ -178,34 +178,34 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         if (isRO() && m_performMove) {
             return false;
         }
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selFiles =
-                getSelectedFiles();
-        if (selFiles.size() != 1) {
+        Map<AbstractContentProvider, List<AbstractExplorerFileStore>>
+                selProviders = getSelectedFiles();
+        if (selProviders.size() != 1) {
             // can only copy/move from one source content provider
             return false;
         }
         List<AbstractExplorerFileStore> selections =
-                selFiles.values().iterator().next();
+                selProviders.values().iterator().next();
         if (selections == null || selections.isEmpty()) {
             return false;
         }
-        if (selections.get(0) instanceof RemoteExplorerFileStore) {
-            // currently we can only download one workflow
+        AbstractExplorerFileStore fileStore = selections.get(0);
+        if (fileStore instanceof RemoteExplorerFileStore) {
+            // currently we can only download one workflow or metanode template
             if (selections.size() > 1) {
                 return false;
             }
-            RemoteExplorerFileStore remotefs = (RemoteExplorerFileStore)
-                    selections.get(0);
-            AbstractExplorerFileInfo info = remotefs.fetchInfo();
-            AbstractExplorerFileStore parent = remotefs.getParent();
-            boolean copyOnlyOrParentWritable
-                = !m_performMove
-                    || parent == null || parent.fetchInfo().isWriteable();
-            return copyOnlyOrParentWritable
-                    && (info.isWorkflow()
-                    || remotefs.fetchInfo().isWorkflowTemplate());
+
+            AbstractExplorerFileInfo info = fileStore.fetchInfo();
+            if (!(info.isWorkflow() || info.isWorkflowTemplate())) {
+                return false;
+            }
         }
-        return true;
+        if (m_performMove) {
+            return fileStore.canMove();
+        } else {
+            return fileStore.canCopy();
+        }
     }
 
 }

@@ -113,4 +113,20 @@ public final class MessageFileInfo extends AbstractExplorerFileInfo {
     public boolean isMetaNode() {
         return false;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isModifiable() {
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isReadable() {
+        return true;
+    }
 }

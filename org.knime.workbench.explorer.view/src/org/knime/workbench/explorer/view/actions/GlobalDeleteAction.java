@@ -54,8 +54,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
@@ -268,26 +266,9 @@ public class GlobalDeleteAction extends ExplorerAction {
             return false;
         }
         for (AbstractExplorerFileStore fs : selFiles) {
-            // check if a workflow has running instances
-            if (fs.fetchInfo().isWorkflow()) {
-                try {
-                    if (fs.childNames(EFS.NONE, null).length > 0) {
-                        return false;
-                    }
-                } catch (CoreException e) {
-                    /* Action is only disabled if there are children for sure.*/
-                    LOGGER.warn("Could not retrieve children for \""
-                            + fs.getFullName());
-                    return false;
-                }
-            }
-            AbstractExplorerFileStore parent = fs.getParent();
-            if (!fs.fetchInfo().isWriteable()
-                    || parent == null
-                    || !parent.fetchInfo().isWriteable()) {
+            if (!fs.canDelete()) {
                 return false;
             }
-
         }
         return true;
     }
