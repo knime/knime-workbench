@@ -87,28 +87,7 @@ public class ContentDelegator extends LabelProvider implements
      * this constructor.
      */
     public ContentDelegator() {
-        this(false);
-    }
-
-    /**
-     * Creates a new content delegator and registers it for property changes of
-     * the explorer mount table. All of the currently mounted content is visible
-     * if the parameter is set true.
-     *
-     * @param showAll if true all currently mounted content is visible through
-     *            this content provider. If false, the content is empty.
-     */
-    public ContentDelegator(final boolean showAll) {
         m_provider = new LinkedHashSet<MountPoint>();
-        if (showAll) {
-            for (String id : ExplorerMountTable.getAllMountIDs()) {
-                MountPoint mp = ExplorerMountTable.getMountPoint(id);
-                if (mp != null) {
-                    m_provider.add(mp);
-                    mp.getProvider().addListener(this);
-                }
-            }
-        }
         m_changeListener = new CopyOnWriteArrayList<IPropertyChangeListener>();
         ExplorerMountTable.addPropertyChangeListener(this);
     }
@@ -144,7 +123,9 @@ public class ContentDelegator extends LabelProvider implements
      */
     public void removeAllMountPoints() {
         for (MountPoint mountPoint : m_provider) {
-            mountPoint.getProvider().removeListener(this);
+            final AbstractContentProvider provider = mountPoint.getProvider();
+            provider.removeListener(this);
+            // don't dispose provider (owned by the mount table)
         }
         m_provider.clear();
     }

@@ -145,7 +145,7 @@ public class GlobalRenameAction extends ExplorerAction {
         } catch (CoreException e) {
             String message =
                     "Could not rename \"" + srcFileStore + "\" to \""
-                            + dstFileStore + "\".";
+                            + dstFileStore + "\": " + e.getMessage();
             LOGGER.error(message, e);
             ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
             MessageDialog.openError(getParentShell(), "Renaming failed",
@@ -238,9 +238,28 @@ public class GlobalRenameAction extends ExplorerAction {
         // only a single selected file store can be renamed
         List<AbstractExplorerFileStore> selFiles =
                 DragAndDropUtils.getExplorerFileStores(getSelection());
+        if (isRO() || selFiles == null || selFiles.size() != 1) {
+            return false;
+        }
+        AbstractExplorerFileStore fs = selFiles.get(0);
+        // check if a workflow has running instances
+        if (fs.fetchInfo().isWorkflow()) {
+            try {
+                if (fs.childNames(EFS.NONE, null).length > 0) {
+                    return false;
+                }
+            } catch (CoreException e) {
+                /* Action is only disabled if there are children for sure.*/
+                LOGGER.warn("Could not retrieve children for \""
+                        + fs.getFullName());
+                return false;
+            }
+        }
 
-        return !isRO() && selFiles != null && selFiles.size() == 1
-                && selFiles.get(0).getParent() != null ; // disable for root
+        AbstractExplorerFileStore parent = fs.getParent();
+        return fs.fetchInfo().isWriteable()
+                    && parent != null
+                    && parent.fetchInfo().isWriteable();
     }
 
 }

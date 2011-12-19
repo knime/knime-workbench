@@ -154,7 +154,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             }
             return rootChilds.toArray(new String[rootChilds.size()]);
         }
-        return m_file.childNames(options, monitor);
+        return children;
     }
 
     /**
@@ -324,7 +324,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             final IProgressMonitor monitor) {
         if (resource != null) {
             try {
-                resource.refreshLocal(1, monitor);
+                resource.refreshLocal(IResource.DEPTH_INFINITE, monitor);
                 LOGGER.debug("Refreshed resource " + resource);
             } catch (Exception e) {
                 // do not refresh
@@ -408,9 +408,11 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             if (srcFile.renameTo(dstFile)) {
                 // if rename works: refresh
                 createProjectFile(destination, monitor);
-                refreshResource(getParent(), monitor);
+                final LocalWorkspaceFileStore srcParent = getParent();
+                refreshResource(srcParent, monitor);
                 IFileStore destParent = destination.getParent();
-                if (destParent instanceof AbstractExplorerFileStore) {
+                if (!srcParent.equals(destParent)
+                        && destParent instanceof AbstractExplorerFileStore) {
                     ((AbstractExplorerFileStore)destParent).refresh();
                 }
             } else {

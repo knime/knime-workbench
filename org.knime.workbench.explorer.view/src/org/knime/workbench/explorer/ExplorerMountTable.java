@@ -219,23 +219,6 @@ public final class ExplorerMountTable {
     }
 
     /**
-     * Activates the mount point.
-     *
-     * @param mountID name under which the content is mounted
-     * @return a new content provider instance
-     */
-    public static AbstractContentProvider commitMount(final String mountID) {
-        MountPoint mountPoint = PREPARED.remove(mountID);
-        if (mountPoint == null) {
-            throw new IllegalArgumentException("MountID \"" + mountID
-                    + "\" has not been prepared for mounting.");
-        }
-        MOUNTED.put(mountID, mountPoint);
-        return mountPoint.getProvider();
-    }
-
-
-    /**
      * @param mountID the prepared mount id to clear
      * @return true if clearing was successful, false otherwise
      */
@@ -313,13 +296,13 @@ public final class ExplorerMountTable {
             AbstractContentProvider newProvider = null;
             if (storage == null) {
                 // may open a dialog for the user to provide parameters
-                newProvider = fac.getContentProvider(mountID);
+                newProvider = fac.createContentProvider(mountID);
                 if (newProvider == null) {
                     // user probably canceled.
                     return null;
                 }
             } else {
-                newProvider = fac.getContentProvider(mountID, storage);
+                newProvider = fac.createContentProvider(mountID, storage);
                 if (newProvider == null) {
                     // something went wrong
                     return null;

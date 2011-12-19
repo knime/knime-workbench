@@ -231,6 +231,10 @@ public abstract class AbstractDownloadAction extends Action {
      */
     protected boolean isSourceSupported() {
         return AbstractExplorerFileStore.isWorkflow(getSourceFile());
+// copying of workflow jobs is disabled until implemented on server
+//        RemoteExplorerFileInfo info = getSourceFile().fetchInfo();
+//        return info.isWorkflow()
+//            || (info.isWorkflowJob() && !info.isExecuting());
     }
 
     /**

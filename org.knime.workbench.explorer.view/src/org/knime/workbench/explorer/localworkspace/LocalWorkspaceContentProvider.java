@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,13 @@ import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.internal.events.ResourceChangeEvent;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IResourceChangeEvent;
+import org.eclipse.core.resources.IResourceChangeListener;
+import org.eclipse.core.resources.IResourceDelta;
+import org.eclipse.core.resources.IResourceDeltaVisitor;
+import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -62,9 +70,11 @@ import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
  * @author ohl, University of Konstanz
  */
 public class LocalWorkspaceContentProvider extends AbstractContentProvider {
+
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(LocalWorkspaceContentProvider.class);
 
+    private IResourceChangeListener m_workspaceResourceListener;
 
     /**
      * @param factory the factory that created us.
@@ -74,6 +84,83 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             final LocalWorkspaceContentProviderFactory factory,
             final String id) {
         super(factory, id);
+        registerListeners();
+    }
+
+    /**
+     *  */
+    private void registerListeners() {
+        final IWorkspace workspace = ResourcesPlugin.getWorkspace();
+        m_workspaceResourceListener = new IResourceChangeListener() {
+
+            @Override
+            public void resourceChanged(final IResourceChangeEvent event) {
+                onResourceChanged(event);
+            }
+        };
+        workspace.addResourceChangeListener(m_workspaceResourceListener,
+                ResourceChangeEvent.POST_CHANGE);
+    }
+
+    private void onResourceChanged(final IResourceChangeEvent event) {
+        if (getListeners().length == 0) { // no view registered, nothing to do
+             return;
+        }
+        final IResourceDelta delta = event.getDelta();
+        final List<IResource> refreshList = new ArrayList<IResource>();
+
+        try {
+            delta.accept(new IResourceDeltaVisitor() {
+                @Override
+                public boolean visit(final IResourceDelta delta) {
+                    IResource res = delta.getResource();
+                    IResource refreshCandidate = res.getParent();
+                    switch (delta.getKind()) {
+                    case IResourceDelta.ADDED:
+                    case IResourceDelta.REMOVED:
+                        boolean isChild = false;
+                        Iterator<IResource> iter = refreshList.iterator();
+                        while (iter.hasNext()) {
+                            IResource current = iter.next();
+                            if (isChildOfOrSame(refreshCandidate, current)) {
+                                isChild = true;
+                                break;
+                            }
+                            if (isChildOfOrSame(current, refreshCandidate)) {
+                                iter.remove();
+                            }
+                        }
+                        if (!isChild) {
+                            refreshList.add(refreshCandidate);
+                            return false;
+                        }
+                        break;
+                    default:
+                    }
+                    return true;
+                }
+            });
+        } catch (CoreException e) {
+            LOGGER.error("Failed to process resource events", e);
+        }
+        for (IResource r : refreshList) {
+            final String path = r.getFullPath().toString();
+            LOGGER.debug("Refreshing \"" + path + "\"");
+            refresh(getFileStore(path));
+        }
+    }
+
+
+    private static boolean isChildOfOrSame(
+            final IResource candidate, final IResource parent) {
+        if (candidate.equals(parent)) {
+            return true;
+        }
+        IResource candidateParent = candidate.getParent();
+        if (candidateParent == null) {
+            return false;
+        }
+        return isChildOfOrSame(candidateParent, parent);
     }
 
     /*
@@ -273,6 +360,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public void dispose() {
+        final IWorkspace workspace = ResourcesPlugin.getWorkspace();
+        workspace.removeResourceChangeListener(m_workspaceResourceListener);
     }
 
     /**
@@ -399,7 +488,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             throw new IllegalArgumentException("Destination \""
                     + targetDir.getFullName() +  "\" is no directory.");
         }
-        if(!(targetDir instanceof LocalExplorerFileStore)) {
+        if (!(targetDir instanceof LocalExplorerFileStore)) {
             throw new IllegalArgumentException("Target file store \""
                     + targetDir.getMountIDWithFullPath() + "\" is no "
                     + "LocalExplorerFileStore.");

@@ -209,15 +209,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             File dir = fileElement.getFile();
             FileUtil.copyDir(dir, destinationDir);
         } else {
-
             m_missingMetaInfoLocations.add(destination);
-            // import all sub elements
-            for (IWorkflowImportElement wieff : fileElement.getChildren()) {
-                AbstractExplorerFileStore dest
-                        = destination.getChild(wieff.getName());
-                importWorkflowFromFile((WorkflowImportElementFromFile)wieff,
-                        dest, monitor);
-            }
         }
 
         // we operated on the file system directly. Refresh file stores.
@@ -251,12 +243,6 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                 throw new IOException(e.getMessage(), e);
             }
             m_missingMetaInfoLocations.add(destination);
-            // import all sub elements
-            for (IWorkflowImportElement wie : zipElement.getChildren()) {
-                AbstractExplorerFileStore dest = destination.getChild(wie.getName());
-                importWorkflowFromArchive(
-                        (WorkflowImportElementFromArchive)wie, dest, monitor);
-            }
         }
 
     }
