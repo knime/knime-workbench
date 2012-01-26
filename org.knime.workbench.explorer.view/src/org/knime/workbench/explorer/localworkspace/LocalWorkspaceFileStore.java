@@ -54,6 +54,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.util.ArrayList;
 
 import org.apache.commons.io.FileUtils;
@@ -390,10 +391,17 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         File dstFile = destination.toLocalFile(options, monitor);
 
         try {
+            URI srcURI = srcFile.toURI();
             if (srcFile.renameTo(dstFile)) {
                 // if rename works: refresh
                 createProjectFile(destination, monitor);
                 final LocalWorkspaceFileStore srcParent = getParent();
+                IResource res = KnimeResourceUtil.getResourceForURI(srcURI);
+                if (res != null) {
+                    res.delete(IResource.FORCE
+                            | IResource.ALWAYS_DELETE_PROJECT_CONTENT
+                            | IResource.DEPTH_INFINITE, monitor);
+                }
                 refreshResource(srcParent, monitor);
                 IFileStore destParent = destination.getParent();
                 if (!srcParent.equals(destParent)

@@ -105,9 +105,7 @@ public class GlobalEditMetaInfoAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         // only a single selected workflow or workflow group can be used
-        List<AbstractExplorerFileStore> fileStores
-                = DragAndDropUtils.getExplorerFileStores(
-                getSelection());
+        List<AbstractExplorerFileStore> fileStores = getAllSelectedFiles();
         if (fileStores == null || fileStores.size() != 1) {
             return false;
         }

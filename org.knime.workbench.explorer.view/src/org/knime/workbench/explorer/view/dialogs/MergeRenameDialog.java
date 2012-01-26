@@ -62,7 +62,7 @@ public class MergeRenameDialog extends Dialog {
 
     private Button m_skipGUI;
 
-    private boolean m_skip;
+//    private boolean m_skip;
 
     private Button m_overwriteGUI;
 
@@ -89,9 +89,8 @@ public class MergeRenameDialog extends Dialog {
     /**
      *
      * @param parentShell parent for the dialog
-     * @param destination
-     * @param dontMerge
-     * @param canWriteDest
+     * @param destination the destination to merge to
+     * @param canWriteDest true if the caller can write to the destination
      */
     public MergeRenameDialog(final Shell parentShell,
             final AbstractExplorerFileStore destination,
@@ -184,21 +183,21 @@ public class MergeRenameDialog extends Dialog {
         mergeOptionsPanel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true,
                 false));
         mergeOptionsPanel.setLayout(new GridLayout(1, false));
-        m_skipGUI = new Button(mergeOptionsPanel, SWT.CHECK);
-        m_skipGUI.setText("ignore groups/flows without "
-                + "read/download permissions");
-        m_skipGUI.setToolTipText("If the source contains items you have no"
-                + " access to, copy doesn't start without this option");
-        m_skipGUI.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-        m_skipGUI.addListener(SWT.Modify, new Listener() {
-            @Override
-            public void handleEvent(final Event event) {
-                m_skip = m_skipGUI.getSelection();
-            }
-        });
-        m_skipGUI.setEnabled(false);
-        m_skipGUI.setSelection(false);
-        m_skip = false;
+//        m_skipGUI = new Button(mergeOptionsPanel, SWT.CHECK);
+//        m_skipGUI.setText("ignore groups/flows without "
+//                + "read/download permissions");
+//        m_skipGUI.setToolTipText("If the source contains items you have no"
+//                + " access to, copy doesn't start without this option");
+//        m_skipGUI.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+//        m_skipGUI.addListener(SWT.Modify, new Listener() {
+//            @Override
+//            public void handleEvent(final Event event) {
+//                m_skip = m_skipGUI.getSelection();
+//            }
+//        });
+//        m_skipGUI.setEnabled(false);
+//        m_skipGUI.setSelection(false);
+//        m_skip = false;
         m_overwriteGUI = new Button(mergeOptionsPanel, SWT.CHECK);
         m_overwriteGUI.setText("overwrite existing workflows");
         m_overwriteGUI.setToolTipText("If workflows already exist, copy "
@@ -302,8 +301,8 @@ public class MergeRenameDialog extends Dialog {
                 if (!ExplorerFileSystem.isValidFilename(m_newName)) {
                     errMsg =
                             "New destination name contains invalid characters ("
-                                    + ExplorerFileSystem.getIllegalFilenameChars()
-                                    + ")";
+                                  + ExplorerFileSystem.getIllegalFilenameChars()
+                                  + ")";
                     return;
                 }
                 AbstractExplorerFileStore parent = m_destination.getParent();
@@ -343,6 +342,9 @@ public class MergeRenameDialog extends Dialog {
         return name;
     }
 
+    /**
+     * @return the new name or null if not applicable
+     */
     public String rename() {
         if (m_rename) {
             return m_newName;
@@ -351,17 +353,23 @@ public class MergeRenameDialog extends Dialog {
         }
     }
 
+    /**
+     * @return true if merging has been selected, false otherwise
+     */
     public boolean merge() {
         return m_merge;
     }
 
+    /**
+     * @return true if overwriting has been selected, false otherwise
+     */
     public boolean overwrite() {
         return m_merge && m_overwrite;
     }
 
-    public boolean skip() {
-        return m_merge && m_overwrite;
-    }
+//    public boolean skip() {
+//        return m_merge && m_overwrite;
+//    }
 
     /**
      * {@inheritDoc}

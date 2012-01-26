@@ -46,7 +46,9 @@ import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -63,11 +65,13 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MessageBox;
+import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IViewSite;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
@@ -95,16 +99,15 @@ import org.knime.workbench.explorer.view.actions.CollapseAllAction;
 import org.knime.workbench.explorer.view.actions.ConfigureExplorerViewAction;
 import org.knime.workbench.explorer.view.actions.CopyLocationAction;
 import org.knime.workbench.explorer.view.actions.CopyURLAction;
+import org.knime.workbench.explorer.view.actions.CutCopyToClipboardAction;
 import org.knime.workbench.explorer.view.actions.ExpandAction;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.explorer.view.actions.GlobalCancelWorkflowExecutionAction;
 import org.knime.workbench.explorer.view.actions.GlobalConfigureWorkflowAction;
-import org.knime.workbench.explorer.view.actions.GlobalCopyAction;
 import org.knime.workbench.explorer.view.actions.GlobalCredentialVariablesDialogAction;
 import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
 import org.knime.workbench.explorer.view.actions.GlobalEditMetaInfoAction;
 import org.knime.workbench.explorer.view.actions.GlobalExecuteWorkflowAction;
-import org.knime.workbench.explorer.view.actions.GlobalMoveAction;
 import org.knime.workbench.explorer.view.actions.GlobalOpenWorkflowVariablesDialogAction;
 import org.knime.workbench.explorer.view.actions.GlobalRefreshAction;
 import org.knime.workbench.explorer.view.actions.GlobalRenameAction;
@@ -112,6 +115,7 @@ import org.knime.workbench.explorer.view.actions.GlobalResetWorkflowAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowGroupAction;
 import org.knime.workbench.explorer.view.actions.NoMenuAction;
+import org.knime.workbench.explorer.view.actions.PasteFromClipboardAction;
 import org.knime.workbench.explorer.view.actions.SynchronizeExplorerViewAction;
 import org.knime.workbench.explorer.view.actions.export.WorkflowExportAction;
 import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
@@ -130,10 +134,11 @@ import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
  */
 public class ExplorerView extends ViewPart implements WorkflowListener,
         NodeStateChangeListener, NodeMessageListener,
-        NodePropertyChangedListener, IPropertyChangeListener {
+        NodePropertyChangedListener, IPropertyChangeListener,
+        ISelectionChangedListener {
 
     /** The ID of the view as specified by the extension. */
-    public static final String ID = "com.knime.workbench.userspace.view";
+    public static final String ID = "org.knime.workbench.explorer.view";
 
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(ExplorerView.class);
@@ -154,8 +159,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private Clipboard m_clipboard;
 
+    private CutCopyToClipboardAction m_copyAction;
+    private CutCopyToClipboardAction m_cutAction;
+    private PasteFromClipboardAction m_pasteAction;
+
     // selected after next refresh
-    private AtomicReference<AbstractExplorerFileStore> m_nextSelection =
+    private final AtomicReference<AbstractExplorerFileStore> m_nextSelection =
             new AtomicReference<AbstractExplorerFileStore>();
 
     /**
@@ -175,12 +184,18 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         // needed by the toolbar and the menus
         m_clipboard = new Clipboard(Display.getCurrent()); // used by copy actions
         m_dragListener = new ExplorerDragListener(m_viewer);
-        m_dropListener = new ExplorerDropListener(m_viewer);
+        m_dropListener = new ExplorerDropListener(this);
         initDragAndDrop();
-        makeGlobalActions();
         createLocalToolBar();
         hookContextMenu();
         hookKeyListener();
+
+        m_copyAction = new CutCopyToClipboardAction(this, "Copy", false);
+        m_cutAction = new CutCopyToClipboardAction(this, "Move", true);
+        m_pasteAction = new PasteFromClipboardAction(this);
+        m_copyAction.setPasteAction(m_pasteAction);
+        m_cutAction.setPasteAction(m_pasteAction);
+        hookGlobalActions();
         // schedule future selection (must populate tree content first)
         Display.getCurrent().asyncExec(new Runnable() {
             @Override
@@ -239,8 +254,17 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 fileTransfer, wfmTransfer}, m_dropListener);
     }
 
-    private void makeGlobalActions() {
+    private void hookGlobalActions() {
+        IActionBars bars = getViewSite().getActionBars();
+        bars.setGlobalActionHandler(ActionFactory.COPY.getId(), m_copyAction);
+        bars.setGlobalActionHandler(ActionFactory.CUT.getId(), m_cutAction);
+        bars.setGlobalActionHandler(ActionFactory.PASTE.getId(), m_pasteAction);
+    }
 
+    private void updateGlobalActions(final IStructuredSelection selection) {
+        m_copyAction.updateSelection(selection);
+        m_cutAction.updateSelection(selection);
+        m_pasteAction.updateSelection();
     }
 
     private void createLocalToolBar() {
@@ -387,6 +411,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 }
             }
         });
+        m_viewer.addSelectionChangedListener(this);
         ProjectWorkflowMap.addStateListener(this);
         ProjectWorkflowMap.addWorkflowListener(this);
         //ProjectWorkflowMap.addNodeMessageListener(this);
@@ -616,13 +641,10 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new Separator());
         manager.add(new GlobalEditMetaInfoAction(this));
         manager.add(new Separator());
-        manager.add(new GlobalCopyAction(this));
-        manager.add(new GlobalMoveAction(this));
+        manager.add(new GlobalRefreshAction(this));
         manager.add(new Separator());
         manager.add(new CopyURLAction(this, m_clipboard));
         manager.add(new CopyLocationAction(this, m_clipboard));
-        manager.add(new Separator());
-        manager.add(new GlobalRefreshAction(this));
     }
 
     public Clipboard getClipboard() {
@@ -696,6 +718,21 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             // some times we get a NPE if the view is not fully initialized
             m_clipboard.dispose();
         }
+    }
+
+    /**
+     * @return the IDs of the mount points that are shown in this view
+     */
+    public Set<String> getMountedIds() {
+        return m_contentDelegator.getMountedIds();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void selectionChanged(final SelectionChangedEvent event) {
+        updateGlobalActions((IStructuredSelection)event.getSelection());
     }
 
 }

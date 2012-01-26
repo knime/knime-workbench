@@ -21,6 +21,10 @@
  */
 package org.knime.workbench.explorer.view.dialogs;
 
+
+import java.util.Collections;
+import java.util.Set;
+
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.swt.SWT;
@@ -47,7 +51,6 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
  * @author Peter Ohl, KNIME.com, Zurich, Switzerland
  */
 public class OverwriteRenameDialog extends Dialog {
-
     private final AbstractExplorerFileStore m_destination;
 
     private String m_newName = "";
@@ -66,10 +69,14 @@ public class OverwriteRenameDialog extends Dialog {
 
     private final boolean m_canWriteDestination;
 
+    private final boolean m_multiple;
+
+    private final Set<AbstractExplorerFileStore> m_forbiddenStores;
+
     /**
      *
      * @param parentShell parent for the dialog
-     * @param destination
+     * @param destination the destination to select
      */
     public OverwriteRenameDialog(final Shell parentShell,
             final AbstractExplorerFileStore destination) {
@@ -77,16 +84,52 @@ public class OverwriteRenameDialog extends Dialog {
     }
 
     /**
+    *
+    * @param parentShell parent for the dialog
+     * @param destination the destination to select
+     * @param canWriteDest true, if the destination is writable
+    */
+   public OverwriteRenameDialog(final Shell parentShell,
+           final AbstractExplorerFileStore destination,
+           final boolean canWriteDest) {
+       this(parentShell, destination, canWriteDest, false);
+   }
+    /**
      *
      * @param parentShell parent for the dialog
-     * @param destination
+     * @param destination the destination to select
+     * @param canWriteDest true, if the destination is writable
+     * @param multiple true, if the dialog is potentially show for multiple
+     *      files. For this case the cancel button is named cancel all and an
+     *      additional skip option is added.
      */
     public OverwriteRenameDialog(final Shell parentShell,
             final AbstractExplorerFileStore destination,
-            final boolean canWriteDest) {
+            final boolean canWriteDest, final boolean multiple) {
+        this(parentShell, destination, canWriteDest, multiple,
+                Collections.EMPTY_SET);
+    }
+
+    /**
+    *
+    * @param parentShell parent for the dialog
+    * @param destination the destination to select
+    * @param canWriteDest true, if the destination is writable
+    * @param multiple true, if the dialog is potentially show for multiple
+    *      files. For this case the cancel button is named cancel all and an
+    *      additional skip option is added.
+     * @param forbiddenStores stores that cannot be chosen as destination
+    */
+    public OverwriteRenameDialog(final Shell parentShell,
+            final AbstractExplorerFileStore destination,
+            final boolean canWriteDest,
+            final boolean multiple,
+            final Set<AbstractExplorerFileStore> forbiddenStores) {
         super(parentShell);
         m_destination = destination;
         m_canWriteDestination = canWriteDest;
+        m_multiple = multiple;
+        m_forbiddenStores = forbiddenStores;
     }
 
     /**
@@ -197,7 +240,8 @@ public class OverwriteRenameDialog extends Dialog {
         });
         m_newNameGUI =
                 new Text(renamePanel, SWT.FILL | SWT.SINGLE | SWT.BORDER);
-        m_newNameGUI.setText(getAlternativeName());
+        m_newNameGUI.setText(getAlternativeName(m_destination,
+                m_forbiddenStores));
         m_newNameGUI.setLayoutData(new GridData(SWT.BEGINNING
                 | GridData.GRAB_HORIZONTAL | GridData.FILL_HORIZONTAL));
         m_newNameGUI.addListener(SWT.Modify, new Listener() {
@@ -221,10 +265,43 @@ public class OverwriteRenameDialog extends Dialog {
      */
     @Override
     protected void createButtonsForButtonBar(final Composite parent) {
-        super.createButtonsForButtonBar(parent);
+        if (m_multiple) {
+            createButton(parent, IDialogConstants.YES_TO_ALL_ID, "Apply to all",
+                    false);
+        }
+
+        createButton(parent, IDialogConstants.OK_ID, IDialogConstants.OK_LABEL,
+                true);
+
+        String cancelLabel = IDialogConstants.CANCEL_LABEL;
+        if (m_multiple) {
+            cancelLabel = "Skip";
+        }
+        createButton(parent, IDialogConstants.CANCEL_ID,
+                cancelLabel, false);
+        if (m_multiple) {
+            createButton(parent, IDialogConstants.ABORT_ID,
+                    IDialogConstants.ABORT_LABEL, false);
+        }
         // default: choice rename
         setSelectedAndValidate(m_renameGUI);
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void buttonPressed(final int buttonId) {
+        super.buttonPressed(buttonId);
+        if (IDialogConstants.YES_TO_ALL_ID == buttonId) {
+            setReturnCode(IDialogConstants.YES_TO_ALL_ID);
+            close();
+        } else if (IDialogConstants.ABORT_ID == buttonId) {
+            setReturnCode(IDialogConstants.ABORT_ID);
+            close();
+        }
+    }
+
 
     private void setSelectedAndValidate(final Button choice) {
         String errMsg = "unknown error";
@@ -235,6 +312,7 @@ public class OverwriteRenameDialog extends Dialog {
             m_overwriteGUI.setSelection(choice == m_overwriteGUI);
         }
         m_overwrite = m_overwriteGUI != null && m_overwriteGUI.getSelection();
+
         m_rename = m_renameGUI.getSelection();
         m_newName = m_newNameGUI.getText().trim();
 
@@ -248,13 +326,18 @@ public class OverwriteRenameDialog extends Dialog {
                 if (!ExplorerFileSystem.isValidFilename(m_newName)) {
                     errMsg =
                             "New destination name contains invalid characters ("
-                                    + ExplorerFileSystem.getIllegalFilenameChars()
-                                    + ")";
+                                  + ExplorerFileSystem.getIllegalFilenameChars()
+                                  + ")";
                     return;
                 }
                 AbstractExplorerFileStore parent = m_destination.getParent();
-                if (parent.getChild(m_newName).fetchInfo().exists()) {
+                AbstractExplorerFileStore dest = parent.getChild(m_newName);
+                if (dest.fetchInfo().exists()) {
                     errMsg = "New destination already exists.";
+                    return;
+                } else if (m_forbiddenStores.contains(dest)) {
+                    errMsg = "New destination has already been selected in a"
+                        + " previous operation.";
                     return;
                 }
             }
@@ -266,29 +349,51 @@ public class OverwriteRenameDialog extends Dialog {
             }
             return;
         } finally {
+            Button yesToAllButton = getButton(IDialogConstants.YES_TO_ALL_ID);
             if (errMsg == null || errMsg.isEmpty()) {
                 m_errMsg.setText("");
                 getButton(IDialogConstants.OK_ID).setEnabled(true);
+                if (yesToAllButton != null) {
+                    yesToAllButton.setEnabled(m_overwrite);
+                }
             } else {
                 m_errMsg.setText(errMsg);
                 getButton(IDialogConstants.OK_ID).setEnabled(false);
+                if (yesToAllButton != null) {
+                     getButton(IDialogConstants.YES_TO_ALL_ID).setEnabled(
+                             m_overwrite);
+                }
             }
         }
     }
 
-    private String getAlternativeName() {
-        String name = m_destination.getName();
-        AbstractExplorerFileStore parent = m_destination.getParent();
+    /**
+     * @param fileStore the file store to get an alternative name for
+     * @param forbiddenStores an optional list of file stores that should not
+     *      be used, can be null
+     * @return an alternative name for the filestore that does not exist yet
+     */
+    public static String getAlternativeName(
+            final AbstractExplorerFileStore fileStore,
+            final Set<AbstractExplorerFileStore> forbiddenStores) {
+        String name = fileStore.getName();
+        AbstractExplorerFileStore parent = fileStore.getParent();
         if (parent == null) {
             return name;
         }
         int cnt = 1;
-        while (parent.getChild(name).fetchInfo().exists()) {
-            name = m_destination.getName() + "(" + (++cnt) + ")";
+        AbstractExplorerFileStore child = parent.getChild(name);
+        while (child.fetchInfo().exists() || (forbiddenStores != null
+                        && forbiddenStores.contains(child))) {
+            name = fileStore.getName() + "(" + (++cnt) + ")";
+            child = parent.getChild(name);
         }
         return name;
     }
 
+    /**
+     * @return the new name or null if not applicable
+     */
     public String rename() {
         if (m_rename) {
             return m_newName;
@@ -297,6 +402,9 @@ public class OverwriteRenameDialog extends Dialog {
         }
     }
 
+    /**
+     * @return true if overwrite was selected, false otherwise
+     */
     public boolean overwrite() {
         return m_overwrite;
     }

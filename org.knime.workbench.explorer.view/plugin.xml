@@ -49,4 +49,12 @@
             restorable="true">
       </view>
    </extension>      
+   
+    <extension point="org.eclipse.ui.menus">
+        <menuContribution locationURI="popup:org.knime.workbench.explorer.view?after=additions">
+            <command commandId="org.eclipse.ui.edit.cut"/>
+            <command commandId="org.eclipse.ui.edit.copy"/>
+            <command commandId="org.eclipse.ui.edit.paste"/>
+        </menuContribution>
+    </extension>
 </plugin>

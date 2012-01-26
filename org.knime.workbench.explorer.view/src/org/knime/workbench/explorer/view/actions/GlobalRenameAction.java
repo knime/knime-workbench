@@ -233,8 +233,7 @@ public class GlobalRenameAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         // only a single selected file store can be renamed
-        List<AbstractExplorerFileStore> selFiles =
-                DragAndDropUtils.getExplorerFileStores(getSelection());
+        List<AbstractExplorerFileStore> selFiles = getAllSelectedFiles();
         if (isRO() || selFiles == null || selFiles.size() != 1) {
             return false;
         }
