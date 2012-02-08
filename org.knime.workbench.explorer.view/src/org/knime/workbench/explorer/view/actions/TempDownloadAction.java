@@ -24,6 +24,7 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.io.File;
 
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.core.util.FileUtil;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
@@ -36,8 +37,7 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
  */
 public class TempDownloadAction extends AbstractDownloadAction {
 
-    /**
-    *
+   /**
     * Creates a new action with the given text.
     *
     * @param text the string used as the text for the action, or null if there
@@ -47,7 +47,22 @@ public class TempDownloadAction extends AbstractDownloadAction {
     */
     public TempDownloadAction(final RemoteExplorerFileStore source,
             final File targetDir) {
-       super("Download", source, targetDir);
+       this(source, targetDir, null);
+    }
+
+    /**
+    *
+    * Creates a new action with the given text.
+    *
+    * @param text the string used as the text for the action, or null if there
+    *            is no text
+    * @param source the source file store containing the workflow
+    * @param targetDir the target directory to download the workflow to
+    * @param monitor the progress monitor to use
+    */
+    public TempDownloadAction(final RemoteExplorerFileStore source,
+            final File targetDir, final IProgressMonitor monitor) {
+       super("Download", source, targetDir, monitor);
     }
 
     /**

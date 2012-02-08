@@ -24,7 +24,6 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -35,9 +34,6 @@ import java.util.zip.ZipFile;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.jface.operation.IRunnableWithProgress;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
 import org.eclipse.ui.internal.wizards.datatransfer.ZipLeveledStructureProvider;
 import org.knime.core.node.NodeLogger;
@@ -70,19 +66,24 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
      * @param source the source file store containing the workflow
      * @param target the target directory to download the workflow to
      */
-    public LocalDownloadWorkflowAction(
-            final RemoteExplorerFileStore source,
+    public LocalDownloadWorkflowAction(final RemoteExplorerFileStore source,
             final File target) {
-        super("Download", source, target);
-        LocalExplorerFileStore parent = new ExplorerFileSystem()
+        this(source, target, null);
+    }
+
+    /**
+     * Creates a action with the source and parent directory.
+     *
+     * @param source the source file store containing the workflow
+     * @param target the target directory to download the workflow to
+     * @param monitor the progress monitor to use
+     */
+    public LocalDownloadWorkflowAction(final RemoteExplorerFileStore source,
+            final File target, final IProgressMonitor monitor) {
+        super("Download", source, target, monitor);
+        LocalExplorerFileStore fs = new ExplorerFileSystem()
                 .fromLocalFile(getTargetDir());
-        String name = source.getName();
-        if ("/".equals(name)) {
-            /* If the mount point itself was selected we cannot
-             * use the root "/" as name but choose the mount id. */
-            name = source.getMountID();
-        }
-        m_targetFileStore = parent.getChild(name);
+        m_targetFileStore = fs;
     }
 
     /**
@@ -154,32 +155,27 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
             // the zipped workflow normally contains only one dir
             rootEntry = rootChild.get(0);
         }
-        LOGGER.debug("Unpacking workflow. Destination:"
-                + destWorkflowDir.getMountIDWithFullPath());
         WorkflowImportElementFromArchive root =
                 collectWorkflowsFromZipFile(zippedWorkflow);
         List<IWorkflowImportElement> flows =
                 new LinkedList<IWorkflowImportElement>();
+        IWorkflowImportElement element = null;
         if (root.getChildren().size() == 1) {
-            flows.add(root.getChildren().iterator().next());
+            element = root.getChildren().iterator().next();
         } else {
-            flows.add(root);
+            element = root;
         }
+        // rename the import element
+        element.setName(getTargetFileStore().getName());
+        flows.add(element);
+        LOGGER.debug("Unpacking workflow \"" + element.getName()
+                + "\" into destination: "
+            + destWorkflowDir.getMountIDWithFullPath());
         final WorkflowImportOperation importOp =
-                new WorkflowImportOperation(flows, destWorkflowDir,
-                        Display.getDefault().getActiveShell());
+                new WorkflowImportOperation(flows, destWorkflowDir, null);
 
         try {
-            PlatformUI.getWorkbench().getProgressService()
-                    .busyCursorWhile(new IRunnableWithProgress() {
-
-                        @Override
-                        public void run(final IProgressMonitor monitor)
-                                throws InvocationTargetException,
-                                InterruptedException {
-                            importOp.run(monitor);
-                        }
-                    });
+            importOp.run(getMonitor());
         } finally {
             importStructureProvider.closeArchive();
         }

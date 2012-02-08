@@ -21,9 +21,7 @@ package org.knime.workbench.explorer.localworkspace;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +38,7 @@ import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -60,6 +59,9 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.IconFactory;
+import org.knime.workbench.explorer.view.actions.AbstractCopyMoveAction;
+import org.knime.workbench.explorer.view.actions.GlobalCopyAction;
+import org.knime.workbench.explorer.view.actions.GlobalMoveAction;
 import org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 
@@ -428,7 +430,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public boolean performDrop(final Object data,
+    public boolean performDrop(final ExplorerView view, final Object data,
             final AbstractExplorerFileStore target, final int operation) {
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
         ISelection selection = transfer.getSelection();
@@ -436,7 +438,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             IStructuredSelection ss = (IStructuredSelection)selection;
             List<AbstractExplorerFileStore> fileStores =
                     DragAndDropUtils.getExplorerFileStores(ss);
-            return copyOrMove(fileStores, target, DND.DROP_MOVE == operation);
+            return copyOrMove(view, fileStores, target,
+                    DND.DROP_MOVE == operation);
         } else if (data instanceof String[]) { // we have a file transfer
             String[] files = (String[])data;
             try {
@@ -481,7 +484,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public boolean copyOrMove(final List<AbstractExplorerFileStore> fileStores,
+    public boolean copyOrMove(final ExplorerView view,
+            final List<AbstractExplorerFileStore> fileStores,
             final AbstractExplorerFileStore targetDir,
             final boolean performMove) {
         if (!targetDir.fetchInfo().isDirectory()) {
@@ -493,124 +497,45 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     + targetDir.getMountIDWithFullPath() + "\" is no "
                     + "LocalExplorerFileStore.");
         }
-
-        /* check for existing files and identical file names in the selected
-         * file stores. */
-        HashSet<String> toBeCopied = new LinkedHashSet<String>();
-        for (AbstractExplorerFileStore fs : fileStores) {
-            String childName = fs.getName();
-            if ("/".equals(childName)) {
-                /* If the mount point itself was selected we cannot
-                 * use the root "/" as name but choose the mount id. */
-                childName = fs.getMountID();
-            }
-            if (toBeCopied.contains(childName)) {
-                MessageBox mb =
-                    new MessageBox(Display.getCurrent()
-                            .getActiveShell(), SWT.ICON_ERROR | SWT.OK);
-                mb.setText("Operation Cancelled");
-                mb.setMessage(
-                        "Name conflict: Two resources with the same name \""
-                        + childName
-                        + "\" have been selected to be "
-                        + (performMove ? "moved" : "copied")
-                        + ". Cancelling operation...");
-                mb.open();
-                return false;
-            }
-            toBeCopied.add(childName);
-            if (targetDir.getChild(childName).fetchInfo().exists()) {
-                MessageBox mb =
-                    new MessageBox(Display.getCurrent().getActiveShell(),
-                            SWT.ICON_ERROR | SWT.OK);
-                mb.setText("Operation Cancelled");
-                mb.setMessage("A resource with the name \"" + childName
-                        +  "\" already exists in \"" + targetDir.getFullName()
-                        + "\". Cancelling operation...");
-                mb.open();
-                return false;
-            }
+        AbstractCopyMoveAction action;
+        if (performMove) {
+            action = new GlobalMoveAction(view, fileStores,
+                    targetDir);
+        } else {
+            action = new GlobalCopyAction(view, fileStores,
+                    targetDir);
         }
-
-        for (AbstractExplorerFileStore fs : fileStores) {
-            try {
-                if (fs instanceof RemoteExplorerFileStore) {
-                    RemoteExplorerFileStore rfs = (RemoteExplorerFileStore)fs;
-                    if (!rfs.fetchInfo().isWorkflow()) {
-                        LOGGER.error("Can only download workflows. "
-                                + rfs.getMountIDWithFullPath()
-                                + " is no workflow.");
-                        return false;
-                    }
-                    LocalExplorerFileStore localTarget =
-                        (LocalExplorerFileStore)targetDir;
-                    if (performDownload(rfs, localTarget)) {
-                        if (performMove) {
-                            rfs.delete(EFS.NONE, null);
-                        }
-                        localTarget.refresh();
-                    } else {
-                        return false;
-                    }
-                } else {
-                    String name = fs.getName();
-                    if ("/".equals(name)) {
-                        /* If the mount point itself was selected we cannot
-                         * use the root "/" as name but choose the mount id. */
-                        name = fs.getMountID();
-                    }
-                    AbstractExplorerFileStore dest
-                            = targetDir.getChild(name);
-                    if (dest.fetchInfo().exists()) {
-                        LOGGER.error("Destination "
-                                + dest.getMountIDWithFullPath()
-                                + " already exists. Not "
-                                + (performMove ? "moved" : "copied")
-                                + ". Skipped.");
-                        continue;
-                    }
-                    if (performMove) {
-                        move(fs, dest);
-                    } else {
-                        copy(fs, dest);
-                    }
-                    DragAndDropUtils.refreshResource(targetDir);
-                }
-            } catch (CoreException e) {
-                String msg = "An error occurred when transferring the file \""
-                        + fs.getFullName() + "\". ";
-                LOGGER.error(msg, e);
-                MessageBox mb =
-                    new MessageBox(Display.getCurrent().getActiveShell(),
-                            SWT.ICON_ERROR | SWT.OK);
-                mb.setText("An error occurred during transfer");
-                mb.setMessage(msg);
-                mb.open();
-                return false;
-            }
-        }
-        return true;
+        action.run();
+        return action.isSuccessful();
     }
 
     /**
-     * @param src the explorer file store to copy
-     * @param the destination file store
-     * @throws CoreException
+     * {@inheritDoc}
      */
-    private void copy(final AbstractExplorerFileStore src,
-            final AbstractExplorerFileStore dest) throws CoreException {
-        src.copy(dest, EFS.NONE, null);
+    @Override
+    public void performDownload(final RemoteExplorerFileStore source,
+            final LocalExplorerFileStore target, final IProgressMonitor monitor)
+            throws CoreException {
+        File parentDir = target.toLocalFile();
+        LocalDownloadWorkflowAction downloadAction =
+            new LocalDownloadWorkflowAction(
+                    source, parentDir, monitor);
+        downloadAction.run();
     }
 
     /**
-     * @param src the explorer file store to copy
-     * @param the destination file store
-     * @throws CoreException
+     * {@inheritDoc}
      */
-    private void move(final AbstractExplorerFileStore src,
-            final AbstractExplorerFileStore dest) throws CoreException {
-        src.move(dest, EFS.NONE, null);
+    @Override
+    public void performUpload(final LocalExplorerFileStore source,
+            final RemoteExplorerFileStore target,
+            final IProgressMonitor monitor)
+            throws CoreException {
+        throw new UnsupportedOperationException("Cannot upload files to a local"
+                + " content provider.");
     }
+
+
 
     /**
      * {@inheritDoc}
@@ -641,24 +566,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         }
     }
 
-
-
-    private boolean performDownload(final RemoteExplorerFileStore source,
-            final LocalExplorerFileStore parent) {
-        File parentDir;
-        try {
-            parentDir = parent.toLocalFile();
-        } catch (CoreException e) {
-            LOGGER.error("Could not get local target directory for download.",
-                    e);
-            return false;
-        }
-        LocalDownloadWorkflowAction downloadAction =
-                new LocalDownloadWorkflowAction(source, parentDir);
-        downloadAction.run();
-        return true;
-    }
-
     /**
      * {@inheritDoc}
      */
@@ -667,4 +574,11 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isWritable() {
+        return true;
+    }
 }

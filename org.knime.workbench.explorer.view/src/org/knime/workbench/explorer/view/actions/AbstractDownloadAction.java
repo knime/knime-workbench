@@ -25,17 +25,11 @@ package org.knime.workbench.explorer.view.actions;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.Action;
-import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.jface.dialogs.ProgressMonitorDialog;
-import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -60,9 +54,11 @@ public abstract class AbstractDownloadAction extends Action {
     private final File m_targetDir;
     private final RemoteExplorerFileStore m_source;
 
+    private IProgressMonitor m_monitor;
+
     /**
      *
-     * Creates a new action with the given text and the active shell.
+     * Creates a new action with the given text without a progress monitor.
      *
      * @param text the string used as the text for the action, or null if there
      *            is no text
@@ -71,17 +67,35 @@ public abstract class AbstractDownloadAction extends Action {
      */
     public AbstractDownloadAction(final String text,
             final RemoteExplorerFileStore source, final File targetDir) {
-        super(text);
-        m_targetDir = targetDir;
-        m_source = source;
+        this(text, source, targetDir, null);
     }
+
+    /**
+    *
+    * Creates a new action with the given text and the active shell.
+    *
+    * @param text the string used as the text for the action, or null if there
+    *            is no text
+    * @param source the source file store containing the workflow
+    * @param targetDir the target directory to download the workflow to
+    * @param monitor the progress monitor to use
+    */
+   public AbstractDownloadAction(final String text,
+           final RemoteExplorerFileStore source, final File targetDir,
+           final IProgressMonitor monitor) {
+       super(text);
+       m_targetDir = targetDir;
+       m_source = source;
+       m_monitor = monitor;
+   }
+
+
 
     /**
      * {@inheritDoc}
      */
     @Override
     public final void run() {
-        Shell shell = Display.getDefault().getActiveShell();
 
         String srcIdentifier = getSourceFile().getMountIDWithFullPath();
         if (!isSourceSupported()) {
@@ -94,26 +108,11 @@ public abstract class AbstractDownloadAction extends Action {
 
         final DownloadRunnable dwnLoader = new DownloadRunnable(
                 getSourceFile());
-        final IRunnableWithProgress rwp = new IRunnableWithProgress() {
-            @Override
-            public void run(final IProgressMonitor monitor)
-                    throws InvocationTargetException, InterruptedException {
-                dwnLoader.run(monitor);
-            }
-        };
-        try {
-            new ProgressMonitorDialog(shell).run(true, true, rwp);
-        } catch (InvocationTargetException e) {
-            LOGGER.info("Download failed.", e);
-            return;
-        } catch (InterruptedException e) {
-            LOGGER.info("Download cancelled by user.");
-            return;
-        }
+        dwnLoader.run(m_monitor);
 
         // now wait for the download to finish
         boolean success = false;
-        LOGGER.info("Waiting for download to finish... ("+ srcIdentifier + ")");
+        LOGGER.info("Waiting for download to finish...(" + srcIdentifier + ")");
         success = dwnLoader.waitUntilDone();
 
         // error handling if download failed
@@ -123,8 +122,6 @@ public abstract class AbstractDownloadAction extends Action {
             if (success) {
                 msg += dwnLoader.getErrorMessage();
                 LOGGER.error(msg);
-                MessageDialog.openError(shell, "Download Error",
-                        msg);
             } else {
                 msg += " Download interrupted.";
                 LOGGER.warn(msg);
@@ -251,6 +248,19 @@ public abstract class AbstractDownloadAction extends Action {
         return new File(m_targetDir, m_source.getName());
     }
 
+    /**
+     * @return the progress monitor
+     */
+    protected IProgressMonitor getMonitor() {
+        return m_monitor;
+    }
+
+    /**
+     * @param monitor the progress monitor to use
+     */
+    public void setMonitor(final IProgressMonitor monitor) {
+        m_monitor = monitor;
+    }
 
 
 

@@ -22,6 +22,9 @@
 
 package org.knime.workbench.explorer.view.actions;
 
+import java.util.List;
+
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
@@ -40,6 +43,20 @@ public class GlobalCopyAction extends AbstractCopyMoveAction {
      */
     public GlobalCopyAction(final ExplorerView viewer) {
         super(viewer, "Copy...", false);
+    }
+
+    /**
+     * Creates a new copy action that copies/moves the source files to
+     * the target file store.
+     *
+     * @param view viewer of the space
+     * @param sources the file stores to copy
+     * @param target the file store to copy/move the files to
+     */
+    public GlobalCopyAction(final ExplorerView view,
+            final List<AbstractExplorerFileStore> sources,
+            final AbstractExplorerFileStore target) {
+        super(view, "Copy...", sources, target, false);
     }
 
     /**

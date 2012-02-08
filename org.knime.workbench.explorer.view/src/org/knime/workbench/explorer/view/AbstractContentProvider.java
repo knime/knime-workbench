@@ -32,6 +32,7 @@ import java.util.Set;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -60,6 +61,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
@@ -259,6 +261,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * the {@link LocalSelectionTransfer}. Implementors must finish the drop!
      * I.e. if the operation is a move, the source should be deleted!
      *
+     * @param view the view that displays the content
      * @param data the drop data, might be null
      * @param operation the operation to be performed as received from
      *            {@link ViewerDropAdapter#getCurrentOperation()}
@@ -266,8 +269,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @return true if the drop was successful, false otherwise
      * @see ViewerDropAdapter#getCurrentOperation()
      */
-    public abstract boolean performDrop(final Object data,
-            final AbstractExplorerFileStore target, int operation);
+    public abstract boolean performDrop(final ExplorerView view,
+            Object data, final AbstractExplorerFileStore target, int operation);
 
     /**
      * @param fileStores the dragged file stores of the content provider
@@ -534,6 +537,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public abstract boolean canHostMetaNodeTemplates();
 
+
+
+
     /* -------------- content provider methods ---------------------------- */
 
     /**
@@ -755,9 +761,22 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public abstract boolean isRemote();
 
+
+    /**
+     * Checks whether it is possible to add items to the content provider or
+     * change its content. This might not be the case, for example, if
+     * authentification is required but the user is not authenticated yet or on
+     * a read-only server like the public server is accessed.
+     *
+     * @return true if the provider's content cannot be modified, false
+     *      otherwise
+     */
+    public abstract boolean isWritable();
+
     /**
      * Copies or moves one or multiple file stores into the target directory.
      *
+     * @param view the view that displays the content
      * @param fileStores the file stores to copy or move
      * @param targetDir the target directory. Make sure to call the content
      *            provider that can handle the target dir type.
@@ -765,7 +784,35 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      *            otherwise
      * @return true if the operation was successful, false otherwise
      */
-    public abstract boolean copyOrMove(
+    public abstract boolean copyOrMove(final ExplorerView view,
             List<AbstractExplorerFileStore> fileStores,
             AbstractExplorerFileStore targetDir, boolean performMove);
+
+    /**
+     * Downloads a file store from a remote provider to a local provider.
+     *
+     * @param source the file store to be downloaded
+     * @param target the file store to download to
+     * @param monitor the monitor to report progress
+     * @throws CoreException if this method fails. Reasons include: A
+     *         corresponding file could not be created in the local file system.
+     */
+    public abstract void performDownload(RemoteExplorerFileStore source,
+            LocalExplorerFileStore target, IProgressMonitor monitor)
+            throws CoreException;
+
+    /**
+     * Uploads a file store from a local provider to a remote provider.
+     *
+     * @param source the file store to be uploaded
+     * @param target the file store to upload to
+     * @param monitor the monitor to report progress
+     * @throws CoreException if this method fails. Reasons include: A
+     *         corresponding file could not be created in the local file system.
+     */
+    public abstract void performUpload(final LocalExplorerFileStore source,
+            final RemoteExplorerFileStore target,
+            final IProgressMonitor monitor)
+            throws CoreException;
+
 }

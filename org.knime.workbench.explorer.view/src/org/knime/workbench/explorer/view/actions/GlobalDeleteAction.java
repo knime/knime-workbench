@@ -66,7 +66,6 @@ import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 
 /**
  *
@@ -260,8 +259,7 @@ public class GlobalDeleteAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        List<AbstractExplorerFileStore> selFiles =
-                DragAndDropUtils.getExplorerFileStores(getSelection());
+        List<AbstractExplorerFileStore> selFiles = getAllSelectedFiles();
         if (isRO() || selFiles == null || selFiles.size() == 0) {
             return false;
         }

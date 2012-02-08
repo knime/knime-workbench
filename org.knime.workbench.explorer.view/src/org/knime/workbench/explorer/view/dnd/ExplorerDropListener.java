@@ -24,7 +24,6 @@ package org.knime.workbench.explorer.view.dnd;
 
 import java.util.List;
 
-import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -40,6 +39,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
+import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  *
@@ -50,13 +50,16 @@ public class ExplorerDropListener extends ViewerDropAdapter {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
             ExplorerDropListener.class);
     private String m_srcMountID;
+    private final ExplorerView m_view;
 
     /**
      * @param viewer the viewer to which this drop support has been added
      */
-    public ExplorerDropListener(final TreeViewer viewer) {
-        super(viewer);
+    public ExplorerDropListener(final ExplorerView view) {
+        super(view.getViewer());
+        m_view = view;
     }
+
 
     /**
      * {@inheritDoc}
@@ -67,7 +70,8 @@ public class ExplorerDropListener extends ViewerDropAdapter {
         AbstractExplorerFileStore dstFS = DragAndDropUtils.getFileStore(target);
         AbstractContentProvider acp = DragAndDropUtils.getContentProvider(
                 target);
-        boolean result = acp.performDrop(data, dstFS, getCurrentOperation());
+        boolean result = acp.performDrop(m_view, data, dstFS,
+                getCurrentOperation());
         getViewer().refresh(ContentDelegator.getTreeObjectFor(dstFS));
         return result;
     }
@@ -93,9 +97,7 @@ public class ExplorerDropListener extends ViewerDropAdapter {
                 return false;
             }
             if (isLocalTransfer) {
-                IFileStore parent = ((ContentObject)
-                        getSelectedObject()).getObject().getParent();
-                if (getSelectedObject() == target || dstFS.equals(parent)) {
+                if (getSelectedObject() == target) {
                     return false;
                 }
             }

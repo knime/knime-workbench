@@ -20,10 +20,11 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -61,7 +62,9 @@ public abstract class ExplorerAction extends Action {
      * @param menuText
      */
     public ExplorerAction(final ExplorerView view, final String menuText) {
-        assert view != null;
+        if (view == null) {
+            throw new IllegalArgumentException("view must not be null");
+        }
         m_view = view;
         setText(menuText);
         m_isRO = false;
@@ -112,7 +115,8 @@ public abstract class ExplorerAction extends Action {
      * @return true if multiple items have been selected, false otherwise
      */
     protected boolean isMultipleSelection() {
-        return getSelection().size() > 1;
+        IStructuredSelection selection = getSelection();
+        return selection != null && selection.size() > 1;
     }
 
     /**
@@ -132,7 +136,11 @@ public abstract class ExplorerAction extends Action {
      * @return a list containing all selected file store(s)
      */
     protected List<AbstractExplorerFileStore> getAllSelectedFiles() {
-        return DragAndDropUtils.getExplorerFileStores(getSelection());
+        IStructuredSelection selection = getSelection();
+        if (selection == null) {
+            return null;
+        }
+        return DragAndDropUtils.getExplorerFileStores(selection);
     }
 
     /**
@@ -159,31 +167,56 @@ public abstract class ExplorerAction extends Action {
 
         String mountID = selection.get(0).getMountID();
 
+        Set<AbstractExplorerFileStore> dir
+                = new HashSet<AbstractExplorerFileStore>();
         for (AbstractExplorerFileStore file : selection) {
             if (!mountID.equals(file.getMountID())) {
                 LOGGER.coding("Method must be called with identical mountIDs"
                         + " in the files.");
             }
-            // don't be case sensitive
-            String p = file.getFullName().toLowerCase();
-            boolean isChild = false;
-            Iterator<AbstractExplorerFileStore> iter = result.iterator();
-            while (iter.hasNext()) {
-                AbstractExplorerFileStore resultF = iter.next();
-                String resultP = resultF.getFullName().toLowerCase();
-                if (p.startsWith(resultP)) {
-                    isChild = true;
+
+            AbstractExplorerFileStore parent = file.getParent();
+            boolean contained = false;
+            while (parent != null) {
+                if (dir.contains(parent)) {
+                    contained = true;
                     break;
                 }
-                if (resultP.startsWith(p)) {
-                    iter.remove();
-                }
+                parent = parent.getParent();
             }
-            if (!isChild) {
+
+            if (AbstractExplorerFileStore.isWorkflowGroup(file)) {
+                dir.add(file);
+            }
+
+            if (!contained) {
                 result.add(file);
             }
         }
         return result;
+    }
+
+    /**
+     * Checks if a file store is a child of any file store in the selection.
+     *
+     * @param child the file store to check if it is a child of a file store
+     *      in the selection
+     * @param selection the selection of files to check against
+     * @return true if child is a child of a file store in the selection,
+     *      false otherwise
+     */
+    protected static boolean isChildOf(final AbstractExplorerFileStore child,
+            final Set<AbstractExplorerFileStore> selection) {
+        Set<AbstractExplorerFileStore> parents
+                = new HashSet<AbstractExplorerFileStore>();
+        AbstractExplorerFileStore parent = child;
+        while (parent != null) {
+            parents.add(parent);
+            parent = parent.getParent();
+        }
+
+        parents.retainAll(selection);
+        return !parents.isEmpty();
     }
 
     /**
@@ -275,8 +308,12 @@ public abstract class ExplorerAction extends Action {
      *         stores are selected or the file stores are not opened
      */
     protected WorkflowManager getWorkflow() {
+        IStructuredSelection selection = getSelection();
+        if (selection == null) {
+            return null;
+        }
         List<AbstractExplorerFileStore> fileStores =
-                DragAndDropUtils.getExplorerFileStores(getSelection());
+                DragAndDropUtils.getExplorerFileStores(selection);
         if (fileStores == null || fileStores.size() != 1) {
             return null;
         }
