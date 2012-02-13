@@ -32,10 +32,15 @@
                class="org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializer">
          </initializer>
       </extension>
-           <extension point="org.eclipse.ui.perspectiveExtensions">
+   <extension point="org.eclipse.ui.perspectiveExtensions">
       <perspectiveExtension targetID="org.knime.workbench.ui.ModellerPerspective">
-         <viewShortcut id="org.knime.workbench.explorer.view">
-         </viewShortcut>
+         <viewShortcut id="org.knime.workbench.explorer.view"></viewShortcut>
+         <newWizardShortcut
+               id="org.knime.workbench.ui.wizards.project.NewProjectWizard">
+         </newWizardShortcut>
+         <newWizardShortcut
+               id="org.knime.workbench.ui.newworkflowgroup">
+         </newWizardShortcut>
       </perspectiveExtension>
    </extension>
    <extension point="org.eclipse.ui.views">
@@ -56,5 +61,13 @@
             <command commandId="org.eclipse.ui.edit.copy"/>
             <command commandId="org.eclipse.ui.edit.paste"/>
         </menuContribution>
+    </extension>
+    <extension point="org.eclipse.ui.newWizards">
+        <primaryWizard
+            id="org.knime.workbench.ui.wizards.project.NewProjectWizard">
+        </primaryWizard>
+        <primaryWizard
+            id="org.knime.workbench.ui.newworkflowgroup">
+        </primaryWizard>
     </extension>
 </plugin>
