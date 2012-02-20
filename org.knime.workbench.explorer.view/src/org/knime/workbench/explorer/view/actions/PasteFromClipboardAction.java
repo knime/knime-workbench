@@ -165,9 +165,10 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
         }
 
         // check if all affected flows can be copied/moved
-        String message = ExplorerFileSystemUtils.isLockable(srcFileStores);
+        String message = ExplorerFileSystemUtils.isLockable(srcFileStores,
+                !transfer.isCut());
         if (message != null) {
-            LOGGER.warn("Can't copy to clipboard: " + message);
+            LOGGER.warn("Can't paste from clipboard: " + message);
             MessageBox mb = new MessageBox(
                     Display.getCurrent().getActiveShell(),
                     SWT.ICON_ERROR | SWT.OK);

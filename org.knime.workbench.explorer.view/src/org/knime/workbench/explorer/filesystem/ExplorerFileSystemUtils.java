@@ -221,6 +221,19 @@ public final class ExplorerFileSystemUtils {
      */
     public static boolean hasOpenWorkflows(
             final List<? extends AbstractExplorerFileStore> workflows) {
+        return  hasOpenWorkflows(workflows, false);
+    }
+
+    /**
+     * @param workflows the workflows to check
+     * @param ignoreSavedFlows set to true if only dirty open flows shall
+     *      be reported
+     * @return true if at least one of the specified workflows are open, false
+     *         otherwise
+     */
+    private static boolean hasOpenWorkflows(
+            final List<? extends AbstractExplorerFileStore> workflows,
+            final boolean ignoreSavedFlows) {
         IWorkbenchPage page =
                 PlatformUI.getWorkbench().getActiveWorkbenchWindow()
                         .getActivePage();
@@ -239,8 +252,9 @@ public final class ExplorerFileSystemUtils {
             if (wfm != null) {
                 for (IEditorReference editRef : page.getEditorReferences()) {
                     IEditorPart editor = editRef.getEditor(false);
-                    if (editor == null) {
-                        // got closed in the mean time
+                    if (editor == null
+                            || (ignoreSavedFlows && !editor.isDirty())) {
+                        // got closed in the mean time or is not dirty
                         continue;
                     }
                     WorkflowEditorAdapter wea =
@@ -265,22 +279,26 @@ public final class ExplorerFileSystemUtils {
      * workflows must be closed and not used by any other instance.
      *
      * @param fileStores the file stores to check
+     * @param ignoreSavedFlows set to true if only dirty open flows shall
+     *      be reported
      * @return an error message describing the problem or null, if the stores
      *      can be locked
      */
     public static String isLockable(
-            final List<AbstractExplorerFileStore> fileStores) {
-        // find affected workflows
+            final List<AbstractExplorerFileStore> fileStores,
+            final boolean ignoreSavedFlows) {
+        // find affected workflows that are opened (and dirty)
         List<LocalExplorerFileStore> affectedFlows =
                 ExplorerAction.getContainedLocalWorkflows(fileStores);
-        if (ExplorerFileSystemUtils.hasOpenWorkflows(affectedFlows)) {
+        if (ExplorerFileSystemUtils.hasOpenWorkflows(affectedFlows,
+                ignoreSavedFlows)) {
             String msg = "At least one of the workflows affected by the "
                 + "operation is still open in the editor and has to be "
-                + "closed.";
+                + (ignoreSavedFlows ? "saved" : "closed") + " first.";
             LOGGER.warn(msg);
             return msg;
         }
-        // only lockable flows can be dragged
+        // check for unlockable flows
         List<LocalExplorerFileStore> lockedFlows =
                 new LinkedList<LocalExplorerFileStore>();
         LinkedList<LocalExplorerFileStore> unlockableFlows =
@@ -291,9 +309,11 @@ public final class ExplorerFileSystemUtils {
         ExplorerFileSystemUtils.unlockWorkflows(lockedFlows);
         if (!unlockableFlows.isEmpty()) {
             StringBuilder sb =
-                    new StringBuilder("Dragging canceled. "
-                           + "At least one of the workflows affected by the "
-                           + "operation is in use by another user/instance:\n");
+                    new StringBuilder(
+                            "At least one of the workflows affected by the "
+                           + "operation is in use by another user/instance or "
+                           + "has been deleted:\n");
+
             String msg = sb.toString();
             for (AbstractExplorerFileStore lockedFlow : unlockableFlows) {
                 sb.append("\t" + lockedFlow.getMountIDWithFullPath() + "\n");
