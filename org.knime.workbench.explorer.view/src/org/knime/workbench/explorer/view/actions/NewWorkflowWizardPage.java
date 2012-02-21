@@ -50,8 +50,6 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
-import java.util.List;
-
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -69,11 +67,11 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
 
 /**
@@ -106,36 +104,22 @@ public class NewWorkflowWizardPage extends WizardPage {
 
     private final String m_elementName;
 
-    private final AbstractContentProvider m_contentProvider;
+    private final String[] m_mountIDs;
 
     /**
      * Create and init the page.
      *
-     * @param contentProvider the shared space content provider a new item is
-     *            created for
-     *
+     * @param mountIDs the IDs of the mount points to show
      * @param selection the initial selection
      * @param isWorkflow true if used to create a workflow, false if used to
      *            create a workflow group
      *
      */
-    public NewWorkflowWizardPage(final AbstractContentProvider contentProvider,
-            final List<AbstractExplorerFileStore> selection,
+    public NewWorkflowWizardPage(final String[] mountIDs,
+            final AbstractExplorerFileStore selection,
             final boolean isWorkflow) {
-        super("TeamSpaceNewItemWizardPage");
-        if (contentProvider == null) {
-            throw new NullPointerException(
-                    "Need to provide a non-null content provider");
-        }
-        if (selection.size() > 0) {
-            AbstractExplorerFileStore f = selection.get(0);
-            if (!f.getMountID().equals(contentProvider.getMountID())) {
-                throw new IllegalArgumentException(
-                        "MountID of content provider"
-                                + " and file selection doesn't match");
-            }
-        }
-        m_contentProvider = contentProvider;
+        super("NewWorkflowWizardPage");
+
         m_isWorkflow = isWorkflow;
         if (m_isWorkflow) {
             m_elementName = WORKFLOW;
@@ -146,24 +130,14 @@ public class NewWorkflowWizardPage extends WizardPage {
         setDescription("Create a new KNIME " + m_elementName.toLowerCase()
                 + ".");
         setImageDescriptor(ICON);
-        extractInitiallySelectedResource(selection);
-    }
-
-    private void extractInitiallySelectedResource(
-            final List<AbstractExplorerFileStore> selection) {
-        if (selection.size() != 1) {
-            m_parent = m_contentProvider.getFileStore("/");
-            return;
+        if (selection != null) {
+            m_parent = selection;
+        } else {
+            // set the parent to the root of the first selected content provider
+            m_parent = ExplorerMountTable.getMountPoint(mountIDs[0])
+                    .getProvider().getFileStore("/");
         }
-        AbstractExplorerFileStore sel = selection.get(0);
-        while (!AbstractExplorerFileStore.isWorkflowGroup(sel)) {
-            AbstractExplorerFileStore parent = sel.getParent();
-            if (parent == null) {
-                break;
-            }
-            sel = parent;
-        }
-        m_parent = sel;
+        m_mountIDs = mountIDs;
     }
 
     /**
@@ -222,7 +196,7 @@ public class NewWorkflowWizardPage extends WizardPage {
                 + m_elementName.toLowerCase() + " :");
         m_destinationUI = new Text(destGroup, SWT.BORDER | SWT.READ_ONLY);
         m_destinationUI.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-        m_destinationUI.setText(m_parent.getFullName());
+        m_destinationUI.setText(m_parent.getMountIDWithFullPath());
         Button browseBtn = new Button(destGroup, SWT.PUSH);
         browseBtn.setText("Browse...");
         browseBtn.addSelectionListener(new SelectionListener() {
@@ -241,7 +215,7 @@ public class NewWorkflowWizardPage extends WizardPage {
     private void handleBrowseButton() {
         SpaceResourceSelectionDialog dlg =
                 new SpaceResourceSelectionDialog(getShell(),
-                        new String[]{m_contentProvider.getMountID()},
+                        m_mountIDs,
                         ContentObject.forFile(m_parent));
         dlg.setTitle("Destination Selection");
         dlg.setHeader("Select a new destination.");
@@ -251,10 +225,6 @@ public class NewWorkflowWizardPage extends WizardPage {
             @Override
             public String isValid(final AbstractExplorerFileStore selection) {
                 String msg = "Please select a directory or workflow group.";
-                if (!selection.getMountID().equals(
-                        m_contentProvider.getMountID())) {
-                    return msg;
-                }
                 if (AbstractExplorerFileStore.isWorkflowGroup(selection)) {
                     return null;
                 } else {
@@ -266,7 +236,7 @@ public class NewWorkflowWizardPage extends WizardPage {
             return;
         }
         m_parent = dlg.getSelection();
-        m_destinationUI.setText(m_parent.getFullName());
+        m_destinationUI.setText(m_parent.getMountIDWithFullPath());
         dialogChanged();
     }
 

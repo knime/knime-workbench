@@ -54,12 +54,14 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.internal.filesystem.local.LocalFile;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -77,10 +79,13 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.ContentObject;
+import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+import org.knime.workbench.ui.navigator.KnimeResourceUtil;
 
 /**
  *
@@ -90,24 +95,21 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
 
     private NewWorkflowWizardPage m_page;
 
-    private final AbstractContentProvider m_contentProvider;
-
-    private List<AbstractExplorerFileStore> m_initialSelection;
+    private AbstractExplorerFileStore m_initialSelection;
+    private String[] m_mountIDs;
 
     /**
      * Creates the wizard.
      */
-    public NewWorkflowWizard(final AbstractContentProvider spaceProvider) {
-        m_contentProvider = spaceProvider;
+    public NewWorkflowWizard() {
         setNeedsProgressMonitor(true);
     }
 
-    protected AbstractContentProvider getContentProvider() {
-        return m_contentProvider;
-    }
-
-    protected List<AbstractExplorerFileStore> getInitialSelection() {
-        return m_initialSelection;
+    /**
+     * @return true if a workflow is created, false otherwise
+     */
+    protected boolean isWorkflowCreated() {
+        return true;
     }
 
     /**
@@ -116,23 +118,57 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
     @Override
     public void init(final IWorkbench workbench,
             final IStructuredSelection selection) {
-        m_initialSelection = new LinkedList<AbstractExplorerFileStore>();
         if (selection != null && selection.size() > 0) {
-            String mountID = m_contentProvider.getMountID();
-            @SuppressWarnings("rawtypes")
-            Iterator iter = selection.iterator();
-            while (iter.hasNext()) {
-                Object n = iter.next();
-                AbstractExplorerFileStore file = null;
-                if (n instanceof ContentObject) {
-                    file = ((ContentObject)n).getObject();
-                } else if (n instanceof AbstractContentProvider) {
-                    file = ((AbstractContentProvider)n).getFileStore("/");
+            Map<AbstractContentProvider, List<AbstractExplorerFileStore>>
+                    providerMap = DragAndDropUtils.getProviderMap(selection);
+            if (providerMap != null) {
+                m_mountIDs = new String[providerMap.size()];
+                Iterator<AbstractContentProvider> iter
+                        = providerMap.keySet().iterator();
+                for (int i = 0; i < m_mountIDs.length; i++) {
+                    AbstractContentProvider cp = iter.next();
+                    m_mountIDs[i] = cp.getMountID();
                 }
-                if (file != null && file.getMountID().equals(mountID)) {
-                    m_initialSelection.add(file);
+                if (selection.size() == 1) {
+                    AbstractExplorerFileStore firstSelectedItem
+                            = providerMap.values().iterator().next().get(0);
+                    if (firstSelectedItem.fetchInfo().isWorkflowGroup()) {
+                        m_initialSelection = firstSelectedItem;
+                    } else {
+                        m_initialSelection = firstSelectedItem.getParent();
+                    }
+                }
+            } else {
+                Object selectedObj = selection.getFirstElement();
+                if (selectedObj instanceof IResource) {
+                    // selection of a resource in the old navigator
+                    IResource resource  = (IResource)selectedObj;
+                    if (KnimeResourceUtil.isWorkflow(resource)) {
+                        resource =  resource.getParent();
+                    }
+                    String defaultLocalID
+                            = new LocalWorkspaceContentProviderFactory()
+                            .getDefaultMountID();
+                    m_initialSelection = ExplorerMountTable.getMountPoint(
+                            defaultLocalID).getProvider().getFileStore(
+                                    resource.getFullPath().toString());
                 }
             }
+        }
+        if (m_mountIDs == null) {
+         // add the ids of all mounted, writable content provider
+            List<String> validMountPointList
+                    = new ArrayList<String>();
+            for (Map.Entry<String, AbstractContentProvider> entry
+                  : ExplorerMountTable.getMountedContent().entrySet()) {
+                AbstractContentProvider cp = entry.getValue();
+                if (cp.isWritable()
+                        && (!(isWorkflowCreated() && cp.isRemote()))) {
+                    // no remote creation of workflows is supported
+                    validMountPointList.add(entry.getKey());
+                }
+            }
+            m_mountIDs = validMountPointList.toArray(new String[0]);
         }
     }
 
@@ -141,9 +177,8 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
      */
     @Override
     public void addPages() {
-        NewWorkflowWizardPage page =
-                new NewWorkflowWizardPage(m_contentProvider,
-                        m_initialSelection, true);
+        NewWorkflowWizardPage page = new NewWorkflowWizardPage(m_mountIDs,
+                m_initialSelection, true);
         addPage(page);
     }
 
@@ -166,12 +201,6 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
     @Override
     public boolean performFinish() {
         final AbstractExplorerFileStore newitem = m_page.getNewFile();
-        if (!newitem.getMountID().equals(m_contentProvider.getMountID())) {
-            MessageDialog.openError(getShell(), "Internal Error",
-                    "Internal Error: Unable to create a new item in this "
-                            + "context (wrong content mount id).");
-            return false;
-        }
         // Create new runnable
         IRunnableWithProgress op = new IRunnableWithProgress() {
             @Override
@@ -270,6 +299,21 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                 new Status(IStatus.ERROR, "org.knime.workbench.ui", IStatus.OK,
                         message, t);
         throw new CoreException(status);
+    }
+
+    /**
+     * @return the initially selected file or null if multiple files or no file
+     *      is selected
+     */
+    protected AbstractExplorerFileStore getInitialSelection() {
+        return m_initialSelection;
+    }
+
+    /**
+     * @return the involved mount ids
+     */
+    protected String[] getMountIDs() {
+        return m_mountIDs;
     }
 
 }

@@ -32,14 +32,14 @@
                class="org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializer">
          </initializer>
       </extension>
-   <extension point="org.eclipse.ui.perspectiveExtensions">
+     <extension point="org.eclipse.ui.perspectiveExtensions">
       <perspectiveExtension targetID="org.knime.workbench.ui.ModellerPerspective">
          <viewShortcut id="org.knime.workbench.explorer.view"></viewShortcut>
          <newWizardShortcut
-               id="org.knime.workbench.ui.wizards.project.NewProjectWizard">
+               id="org.knime.workbench.explorer.view.actions.NewWorkflowWizard">
          </newWizardShortcut>
          <newWizardShortcut
-               id="org.knime.workbench.ui.newworkflowgroup">
+               id="org.knime.workbench.explorer.view.actions.NewWorkflowGroupWizard">
          </newWizardShortcut>
       </perspectiveExtension>
    </extension>
@@ -62,12 +62,64 @@
             <command commandId="org.eclipse.ui.edit.paste"/>
         </menuContribution>
     </extension>
-    <extension point="org.eclipse.ui.newWizards">
-        <primaryWizard
-            id="org.knime.workbench.ui.wizards.project.NewProjectWizard">
-        </primaryWizard>
-        <primaryWizard
-            id="org.knime.workbench.ui.newworkflowgroup">
-        </primaryWizard>
+    <!-- Removing extensions contributed by other plugins -->
+    <extension
+          point="org.eclipse.ui.activities">
+       <activity
+             id="org.knime.workbench.explorer.view.activity"
+             name="Explorer Activity">
+       </activity>
+       <category
+             id="org.knime.workbench.explorer.view.category"
+             name="Explorer Category">
+       </category>
+       <categoryActivityBinding
+             activityId="org.knime.workbench.explorer.view.activity"
+             categoryId="org.knime.workbench.explorer.view.category">
+       </categoryActivityBinding>
+       <!-- Removing the wizards contributed by the workbench plugin -->
+       <activityPatternBinding
+             activityId="org.knime.workbench.explorer.view.activity"
+             pattern="org.knime.workbench.ui/org.knime.workbench.ui.wizards.*">
+       </activityPatternBinding>
+       <activityPatternBinding
+             activityId="org.knime.workbench.explorer.view.activity"
+             pattern="org.eclipse.birt.*wizard.*">
+       </activityPatternBinding>   
     </extension>
+    <extension point="org.eclipse.ui.newWizards">
+      <wizard
+            name="New KNIME Project"
+            id="org.knime.workbench.explorer.view.actions.NewWorkflowWizard"
+            category="org.knime.workbench.ui.wizards.category"
+            class="org.knime.workbench.explorer.view.actions.NewWorkflowWizard"
+            descriptionImage="icons/new_knime55.png"
+            icon="icons/new_knime16.png"
+            finalPerspective="org.knime.workbench.ui.ModellerPerspective"
+            project="true"
+            preferredPerspectives="org.knime.workbench.ui.ModellerPerspective">
+         <description>
+            This wizard creates a new KNIME workflow project.
+         </description>
+      </wizard>
+      <wizard
+            id="org.knime.workbench.explorer.view.actions.NewWorkflowGroupWizard"
+            category="org.knime.workbench.ui.wizards.category"
+            class="org.knime.workbench.explorer.view.actions.NewWorkflowGroupWizard"
+            descriptionImage="icons/new_knime55.png"
+            finalPerspective="org.knime.workbench.ui.ModellerPerspective"
+            icon="icons/new_knime16.png"
+            name="New Workflow Group"
+            preferredPerspectives="org.knime.workbench.ui.ModellerPerspective">
+         <description>
+            Creates a new workflow group helping to organize your workflows
+         </description>
+      </wizard>
+      <primaryWizard
+            id="org.knime.workbench.explorer.view.actions.NewWorkflowWizard">
+      </primaryWizard>
+      <primaryWizard
+            id="org.knime.workbench.explorer.view.actions.NewWorkflowGroupWizard">
+      </primaryWizard>
+   </extension>
 </plugin>
