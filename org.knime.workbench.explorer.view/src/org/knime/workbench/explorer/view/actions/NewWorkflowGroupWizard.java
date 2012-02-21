@@ -58,7 +58,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
@@ -72,8 +71,8 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
      *
      * @param spaceProvider the content provider to create a group in
      */
-    public NewWorkflowGroupWizard(final AbstractContentProvider spaceProvider) {
-        super(spaceProvider);
+    public NewWorkflowGroupWizard() {
+        super();
     }
 
     /**
@@ -81,8 +80,8 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
      */
     @Override
     public void addPages() {
-        NewWorkflowWizardPage page = new NewWorkflowWizardPage(
-                getContentProvider(), getInitialSelection(),
+        NewWorkflowWizardPage page = new NewWorkflowWizardPage(getMountIDs(),
+                getInitialSelection(),
                 /* isWorkflow= */false);
         addPage(page);
     }
@@ -121,6 +120,14 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
             }
         }
         // TODO handle meta file creation for remote files
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean isWorkflowCreated() {
+        return false;
     }
 
 }

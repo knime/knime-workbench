@@ -117,7 +117,8 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         if (m_sources == null) {
             // retrieve the selected file stores
             m_sources = removeSelectedChildren(getAllSelectedFiles());
-            String message = ExplorerFileSystemUtils.isLockable(m_sources);
+            String message = ExplorerFileSystemUtils.isLockable(m_sources,
+                    !m_performMove);
             if (m_sources == null || m_sources.isEmpty()
                     || message != null) {
                 MessageBox mb =
@@ -327,10 +328,6 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             List<Object> treeObjects = ContentDelegator.getTreeObjectList(
                     destChecker.getMappings().values());
             if (treeObjects != null && treeObjects.size() > 0) {
-                for (Object object : treeObjects) {
-                    LOGGER.debug(
-                            ((ContentObject)object).getObject().toString());
-                }
                 getViewer().setSelection(new StructuredSelection(treeObjects),
                         true);
             }

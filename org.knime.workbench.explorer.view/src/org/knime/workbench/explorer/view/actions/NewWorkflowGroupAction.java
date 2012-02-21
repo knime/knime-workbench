@@ -148,7 +148,7 @@ public class NewWorkflowGroupAction extends ExplorerAction {
             LOGGER.error("Internal Error: wrong file type selected.");
             return;
         }
-        NewWorkflowWizard newWiz = new NewWorkflowGroupWizard(provider);
+        NewWorkflowWizard newWiz = new NewWorkflowGroupWizard();
 
         newWiz.init(PlatformUI.getWorkbench(), getSelection());
 

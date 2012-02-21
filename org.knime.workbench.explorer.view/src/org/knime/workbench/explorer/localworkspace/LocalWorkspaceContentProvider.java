@@ -432,12 +432,29 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     @Override
     public boolean performDrop(final ExplorerView view, final Object data,
             final AbstractExplorerFileStore target, final int operation) {
+
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
         ISelection selection = transfer.getSelection();
         if (selection instanceof IStructuredSelection) {
             IStructuredSelection ss = (IStructuredSelection)selection;
             List<AbstractExplorerFileStore> fileStores =
                     DragAndDropUtils.getExplorerFileStores(ss);
+            boolean performMove = DND.DROP_MOVE == operation;
+            if (performMove) {
+                // even saved editors are note allowed when moving
+                String msg = ExplorerFileSystemUtils.isLockable(fileStores,
+                        !performMove);
+                if (msg != null) {
+                    LOGGER.warn(msg);
+                    MessageBox mb =
+                            new MessageBox(Display.getCurrent().getActiveShell(),
+                                    SWT.ICON_ERROR | SWT.OK);
+                    mb.setText("Dragging canceled");
+                    mb.setMessage(msg);
+                    mb.open();
+                    return false;
+                }
+            }
             return copyOrMove(view, fileStores, target,
                     DND.DROP_MOVE == operation);
         } else if (data instanceof String[]) { // we have a file transfer
@@ -451,7 +468,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                                     || KnimeFileUtil.isWorkflowGroup(src);
                     if (!isWorkflowOrGroup) {
                         LOGGER.warn("Only workflows or workflow groups can be"
-                                + " copied into the User Space. Aborting "
+                                + " copied into the local workspace. Aborting "
                                 + "operation.");
                         return false;
                     }
@@ -552,7 +569,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 return false;
             }
         }
-        String msg = ExplorerFileSystemUtils.isLockable(fileStores);
+        String msg = ExplorerFileSystemUtils.isLockable(fileStores, true);
         if (msg != null) {
             MessageBox mb =
                     new MessageBox(Display.getCurrent().getActiveShell(),
