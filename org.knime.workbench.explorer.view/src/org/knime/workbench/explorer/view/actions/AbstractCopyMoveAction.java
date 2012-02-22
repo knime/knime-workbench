@@ -230,7 +230,8 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         final DestinationChecker <AbstractExplorerFileStore,
                 AbstractExplorerFileStore> destChecker = new DestinationChecker
                 <AbstractExplorerFileStore, AbstractExplorerFileStore>(
-                getParentShell(), m_cmd, srcFileStores.size() > 1, true);
+                getParentShell(), m_cmd, srcFileStores.size() > 1,
+                !m_performMove);
         for (final AbstractExplorerFileStore srcFS : srcFileStores) {
             final AbstractExplorerFileStore destFS =
                     destChecker.getAndCheckDestinationFlow(srcFS, m_target);
