@@ -51,9 +51,10 @@ public class ExplorerDropListener extends ViewerDropAdapter {
             ExplorerDropListener.class);
     private String m_srcMountID;
     private final ExplorerView m_view;
+    private int m_default;
 
     /**
-     * @param viewer the viewer to which this drop support has been added
+     * @param view the viewer to which this drop support has been added
      */
     public ExplorerDropListener(final ExplorerView view) {
         super(view.getViewer());
@@ -123,21 +124,26 @@ public class ExplorerDropListener extends ViewerDropAdapter {
      */
     @Override
     public void dragEnter(final DropTargetEvent event) {
-        super.dragEnter(event);
-        if (!isSameMountPoint(event)
-                && (event.detail == DND.DROP_DEFAULT
-                        || event.detail == DND.DROP_MOVE)) {
+        /* Set move as default DND operation within a mount point and copy
+         * as default operation between different mount points. */
+        if (!isSameMountPoint(event)) {
               event.detail = DND.DROP_COPY;
+              m_default = DND.DROP_COPY;
+        } else {
+            event.detail = DND.DROP_MOVE;
+            m_default = DND.DROP_MOVE;
         }
+        super.dragEnter(event);
     }
+
     /**
      * {@inheritDoc}
      */
     @Override
     public void dragLeave(final DropTargetEvent event) {
-        super.dragLeave(event);
         // reset the cached source mount id
         m_srcMountID = null;
+        super.dragLeave(event);
     }
 
 
@@ -146,17 +152,19 @@ public class ExplorerDropListener extends ViewerDropAdapter {
      */
     @Override
     public void dragOver(final DropTargetEvent event) {
-        super.dragOver(event);
+        int previousDefault = m_default;
+        // change the default operation on mount point changes if necessary
         if (!isSameMountPoint(event)) {
-            if (event.detail == DND.DROP_DEFAULT
-                        || event.detail == DND.DROP_MOVE) {
-                event.detail = DND.DROP_COPY;
-            }
+            m_default = DND.DROP_COPY;
         } else { // same mount point
-            if (event.detail == DND.DROP_COPY) {
-                event.detail = DND.DROP_MOVE;
-            }
+            m_default = DND.DROP_MOVE;
         }
+        if (m_default != previousDefault && event.detail == previousDefault) {
+            /* If the default operation was performed change the event to the
+             * new default, otherwise keep the current one. */
+            event.detail = m_default;
+        }
+        super.dragOver(event);
     }
 
     /**
@@ -164,18 +172,34 @@ public class ExplorerDropListener extends ViewerDropAdapter {
      */
     @Override
     public void dragOperationChanged(final DropTargetEvent event) {
-        super.dragOperationChanged(event);
-        /* Swap copy and move operations when entering (modifier pressed or
-         * released). */
-        if (!isSameMountPoint(event)) {
-            if (event.detail == DND.DROP_DEFAULT
-                    || event.detail == DND.DROP_MOVE) {
-                event.detail = DND.DROP_COPY;
-            } else if (event.detail == DND.DROP_COPY) {
-                event.detail = DND.DROP_MOVE;
-            }
+            // modifier key released
+        if (m_default == DND.DROP_COPY && event.detail == DND.DROP_MOVE) {
+            /* Keep copy as default operation for DND operations between
+             * different mount points. */
+            event.detail = DND.DROP_COPY;
+//            int prevDetail = event.detail;
+//            LOGGER.debug("dragOperationChanged changed event.detail from "
+//                    + getDNDOp(prevDetail) + " to "
+//                    + getDNDOp(event.detail));
         }
+
+        super.dragOperationChanged(event);
     }
+
+//    private String getDNDOp(final int operation) {
+//        switch (operation) {
+//        case DND.DROP_DEFAULT:
+//            return "DND.DROP_DEFAULT";
+//        case DND.DROP_COPY:
+//            return "DND.DROP_COPY";
+//        case DND.DROP_MOVE:
+//            return "DND.DROP_MOVE";
+//        case DND.DROP_NONE:
+//            return "DND.DROP_NONE";
+//        default:
+//            return operation + "";
+//        }
+//    }
 
     /**
      * @param event the drop target event
