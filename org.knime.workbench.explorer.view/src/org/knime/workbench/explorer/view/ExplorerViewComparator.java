@@ -70,7 +70,8 @@ public class ExplorerViewComparator extends ViewerComparator {
             AbstractExplorerFileStore efs2 = ((ContentObject)e2).getObject();
             int cmp = rank(efs2) - rank(efs1);
             if (cmp == 0) {
-                return efs1.getName().compareTo(efs2.getName());
+                return efs1.getName().toLowerCase().compareTo(
+                        efs2.getName().toLowerCase());
             }
             return cmp;
         }
