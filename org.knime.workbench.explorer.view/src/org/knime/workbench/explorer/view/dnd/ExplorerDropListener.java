@@ -159,10 +159,14 @@ public class ExplorerDropListener extends ViewerDropAdapter {
         } else { // same mount point
             m_default = DND.DROP_MOVE;
         }
-        if (m_default != previousDefault
+        if (m_default != previousDefault // default has changed
+                // option key is not pressed
+                && (event.operations & DND.DROP_MOVE) != 0
+                // detail was default or none
                 && (event.detail == previousDefault
                         || event.detail == DND.DROP_NONE)) {
-            /* If the default operation was performed change the event to the
+            /* If the default operation was performed and no option key was
+             * pressed change the event to the
              * new default, otherwise keep the current one. */
             event.detail = m_default;
         }
