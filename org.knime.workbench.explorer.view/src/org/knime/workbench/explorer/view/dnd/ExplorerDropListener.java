@@ -159,7 +159,9 @@ public class ExplorerDropListener extends ViewerDropAdapter {
         } else { // same mount point
             m_default = DND.DROP_MOVE;
         }
-        if (m_default != previousDefault && event.detail == previousDefault) {
+        if (m_default != previousDefault
+                && (event.detail == previousDefault
+                        || event.detail == DND.DROP_NONE)) {
             /* If the default operation was performed change the event to the
              * new default, otherwise keep the current one. */
             event.detail = m_default;
