@@ -53,6 +53,10 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
      */
     public PasteFromClipboardAction(final ExplorerView viewer) {
         super(viewer, "Paste", false);
+        // Disable by default to make sure an event is fired when enabled the
+        // first time. Otherwise an inconsistent state is possible when the
+        // (system) clipboard contains already a valid object at the KNIME start
+        setEnabled(false);
     }
 
     /** The id of this action. */
@@ -128,7 +132,12 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
             return fileInfo.isModifiable();
         } else {
             // for other types check if the parent is a writable workflow group
-            AbstractExplorerFileInfo parentInfo = file.getParent().fetchInfo();
+            final AbstractExplorerFileStore parent = file.getParent();
+            if (parent == null) {
+                // no parent = root
+                return false;
+            }
+            AbstractExplorerFileInfo parentInfo = parent.fetchInfo();
             return parentInfo.isWorkflowGroup() && parentInfo.isModifiable();
         }
 

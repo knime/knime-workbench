@@ -60,7 +60,7 @@ public class MergeRenameDialog extends Dialog {
 
     private boolean m_merge;
 
-    private Button m_skipGUI;
+//    private Button m_skipGUI;
 
 //    private boolean m_skip;
 
@@ -284,7 +284,7 @@ public class MergeRenameDialog extends Dialog {
         m_newNameGUI.setEnabled(m_renameGUI.getSelection());
         if (m_mergeGUI != null && m_mergeGUI.isEnabled()) {
             m_mergeGUI.setSelection(choice == m_mergeGUI);
-            m_skipGUI.setEnabled(m_mergeGUI.getSelection());
+//            m_skipGUI.setEnabled(m_mergeGUI.getSelection());
             m_overwriteGUI.setEnabled(m_mergeGUI.getSelection());
         }
         m_merge = m_mergeGUI != null && m_mergeGUI.getSelection();

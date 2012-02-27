@@ -84,12 +84,14 @@
        </activityPatternBinding>
        <activityPatternBinding
              activityId="org.knime.workbench.explorer.view.activity"
-             pattern="org.eclipse.birt.*wizard.*">
-       </activityPatternBinding>   
+             isEqualityPattern="true"
+             pattern="org.knime.workbench.ui/org.knime.workbench.ui.newworkflowgroup">
+       </activityPatternBinding>
+       
     </extension>
     <extension point="org.eclipse.ui.newWizards">
       <wizard
-            name="New KNIME Project"
+            name="New KNIME Workflow"
             id="org.knime.workbench.explorer.view.actions.NewWorkflowWizard"
             category="org.knime.workbench.ui.wizards.category"
             class="org.knime.workbench.explorer.view.actions.NewWorkflowWizard"
@@ -109,10 +111,10 @@
             descriptionImage="icons/new_knime55.png"
             finalPerspective="org.knime.workbench.ui.ModellerPerspective"
             icon="icons/new_knime16.png"
-            name="New Workflow Group"
+            name="New KNIME Workflow Group"
             preferredPerspectives="org.knime.workbench.ui.ModellerPerspective">
          <description>
-            Creates a new workflow group helping to organize your workflows
+             This wizard creates a new workflow group helping to organize your workflows.
          </description>
       </wizard>
       <primaryWizard
