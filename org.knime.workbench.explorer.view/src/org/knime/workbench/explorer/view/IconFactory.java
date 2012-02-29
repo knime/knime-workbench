@@ -124,7 +124,7 @@ public final class IconFactory {
 
     private static final Image LOCAL_WS_IMG =
         KNIMEUIPlugin.getDefault().getImage(
-                KNIMEUIPlugin.PLUGIN_ID, "icons/knime_default.png");
+                KNIMEUIPlugin.PLUGIN_ID, "icons/workflow_projects.png");
 
     private static final Image FILE_IMG =
         KNIMEUIPlugin.getDefault().getImage(ExplorerActivator.PLUGIN_ID,
