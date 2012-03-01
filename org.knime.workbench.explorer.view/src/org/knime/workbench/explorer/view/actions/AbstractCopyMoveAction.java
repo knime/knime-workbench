@@ -33,6 +33,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.MultiStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.viewers.StructuredSelection;
@@ -42,6 +46,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
@@ -246,7 +251,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             }
         }
 
-        final List<String> result = new LinkedList<String>();
+        final List<IStatus> result = new LinkedList<IStatus>();
         final AtomicBoolean success = new AtomicBoolean(true);
         try {
             // perform the copy/move operations en-bloc in the background
@@ -285,6 +290,17 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                                 = srcFS instanceof RemoteExplorerFileStore;
                             boolean isDstRemote
                                 = destFS instanceof RemoteExplorerFileStore;
+                            if (srcFS.fetchInfo().isWorkflowTemplate()
+                                    && !destFS.getContentProvider()
+                                            .canHostMetaNodeTemplates()) {
+                                throw new UnsupportedOperationException(
+                                        "Cannot " + m_cmd
+                                        + " Meta Node template '"
+                                        + srcFS.getFullName() + "' to "
+                                        + destFS.getMountID() + "."
+                                        + ". Unsupported operation.");
+                            }
+
                             if (!isSrcRemote && isDstRemote) { // upload
                                 destFS.getContentProvider().performUpload(
                                         (LocalExplorerFileStore)srcFS,
@@ -294,7 +310,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                                     srcFS.delete(options, monitor);
                                 }
                             } else if (isSrcRemote && !isDstRemote) {
-                                // dowload
+                                // download
                                 destFS.getContentProvider().performDownload(
                                         (RemoteExplorerFileStore)srcFS,
                                         (LocalExplorerFileStore)destFS,
@@ -312,14 +328,22 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                         } catch (CoreException e) {
                             LOGGER.debug(m_cmd + " failed: "
                                     + e.getStatus().getMessage(), e);
-                            result.add("ERROR");
-                            result.add(e.getStatus().getMessage());
+                            result.add(e.getStatus());
                             success.set(false);
+                        } catch (UnsupportedOperationException e) {
+                            // illegal operation
+                            LOGGER.debug(m_cmd + " failed: "
+                                    + e.getMessage());
+                            result.add(new Status(IStatus.WARNING,
+                                    ExplorerActivator.PLUGIN_ID,
+                                    e.getMessage()));
+                            success.set(true);
                         } catch (Exception e) {
                             LOGGER.debug(m_cmd + " failed: "
                                     + e.getMessage(), e);
-                            result.add("ERROR");
-                            result.add(e.getMessage());
+                            result.add(new Status(IStatus.ERROR,
+                                    ExplorerActivator.PLUGIN_ID,
+                                    e.getMessage(), e));
                             success.set(false);
                         }
                         monitor.worked(1);
@@ -334,41 +358,26 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             }
         } catch (InvocationTargetException e) {
             LOGGER.debug("Invocation exception, " + e.getMessage(), e);
-            result.add("ERROR");
-            result.add("invocation error: " + e.getMessage());
+            result.add(new Status(IStatus.ERROR,
+                    ExplorerActivator.PLUGIN_ID,
+                    "invocation error: " + e.getMessage(), e));
+            success.set(false);
         } catch (InterruptedException e) {
             LOGGER.debug(m_cmd + " failed: interrupted, " + e.getMessage(),
                     e);
-            result.add("ERROR");
-            result.add("interrupted: " + e.getMessage());
+            result.add(new Status(IStatus.ERROR,
+                    ExplorerActivator.PLUGIN_ID,
+                    "interrupted: " + e.getMessage(), e));
+            success.set(false);
         }
         if (result.size() > 0) {
-            boolean openDlg = false;
-            int kind = MessageDialog.INFORMATION;
-            String msg = null;
-            if ("ERROR".equals(result.get(0))) {
-                kind = MessageDialog.ERROR;
-                openDlg = true; // always display an error
-            }
-            if (result.size() > 1) {
-                // we have a message
-                msg = result.get(1);
-                openDlg = true; // always show that message
-            } else {
-                msg = "<no details available>";
-            }
-            if (openDlg) {
-                if (kind == MessageDialog.ERROR) {
-                    msg = m_cmd + " failed: " + msg;
-                }
-                if (kind == MessageDialog.ERROR) {
-                    MessageDialog.openError(Display.getDefault()
-                            .getActiveShell(), m_cmd + " Workflow", msg);
-                } else if (kind == MessageDialog.INFORMATION) {
-                    MessageDialog.openInformation(Display.getDefault()
-                            .getActiveShell(), m_cmd + " Workflow", msg);
-                }
-            }
+            IStatus multiStatus = new MultiStatus(ExplorerActivator.PLUGIN_ID,
+                    IStatus.ERROR, result.toArray(new IStatus[0]),
+                    "Could not " + m_cmd + " all files.", null);
+            ErrorDialog.openError(Display.getDefault().getActiveShell(),
+                    m_cmd + " item",
+                    "Some problems occurred during the operation.",
+                    multiStatus);
         }
         return success.get();
     }
