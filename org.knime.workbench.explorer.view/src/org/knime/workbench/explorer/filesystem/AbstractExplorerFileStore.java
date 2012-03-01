@@ -396,6 +396,6 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     private boolean canModifyFileAndParent() {
         AbstractExplorerFileStore parent = getParent();
         return fetchInfo().isModifiable()
-                && (parent == null || parent.fetchInfo().isModifiable());
+                && parent != null && parent.fetchInfo().isModifiable();
     }
 }
