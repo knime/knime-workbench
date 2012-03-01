@@ -70,6 +70,7 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
      * Creates the wizard.
      *
      * @param spaceProvider the content provider to create a group in
+     * @since 3.0
      */
     public NewWorkflowGroupWizard() {
         super();
