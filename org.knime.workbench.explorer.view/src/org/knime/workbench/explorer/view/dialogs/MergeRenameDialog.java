@@ -60,10 +60,6 @@ public class MergeRenameDialog extends Dialog {
 
     private boolean m_merge;
 
-//    private Button m_skipGUI;
-
-//    private boolean m_skip;
-
     private Button m_overwriteGUI;
 
     private boolean m_overwrite;
@@ -71,8 +67,6 @@ public class MergeRenameDialog extends Dialog {
     private Button m_renameGUI;
 
     private boolean m_rename;
-
-    private Button m_cancel;
 
     private final boolean m_canWriteDestination;
 
@@ -149,11 +143,11 @@ public class MergeRenameDialog extends Dialog {
         txt.setBackground(white);
         if (m_canWriteDestination) {
             txt.setText("The destination (" + m_destination.getName()
-                    + ") already exists on the server. "
+                    + ") already exists. "
                     + "Please select an option to proceed.");
         } else {
             txt.setText("The destination (" + m_destination.getName()
-                    + ") already exists on the server and you can't "
+                    + ") already exists and you can't "
                     + "write into. Please provide a new destination name.");
         }
         txt.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
@@ -163,7 +157,6 @@ public class MergeRenameDialog extends Dialog {
         Group border = new Group(parent, SWT.SHADOW_IN);
         border.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false));
         border.setLayout(new GridLayout(1, true));
-        border.setText("Server name conflict resolution:");
 
         Composite mergePanel = new Composite(border, SWT.NONE);
         mergePanel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false));
@@ -183,27 +176,12 @@ public class MergeRenameDialog extends Dialog {
         mergeOptionsPanel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true,
                 false));
         mergeOptionsPanel.setLayout(new GridLayout(1, false));
-//        m_skipGUI = new Button(mergeOptionsPanel, SWT.CHECK);
-//        m_skipGUI.setText("ignore groups/flows without "
-//                + "read/download permissions");
-//        m_skipGUI.setToolTipText("If the source contains items you have no"
-//                + " access to, copy doesn't start without this option");
-//        m_skipGUI.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-//        m_skipGUI.addListener(SWT.Modify, new Listener() {
-//            @Override
-//            public void handleEvent(final Event event) {
-//                m_skip = m_skipGUI.getSelection();
-//            }
-//        });
-//        m_skipGUI.setEnabled(false);
-//        m_skipGUI.setSelection(false);
-//        m_skip = false;
         m_overwriteGUI = new Button(mergeOptionsPanel, SWT.CHECK);
         m_overwriteGUI.setText("overwrite existing workflows");
         m_overwriteGUI.setToolTipText("If workflows already exist, copy "
                 + "doesn't start without this option.");
         m_overwriteGUI.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-        m_overwriteGUI.addListener(SWT.Modify, new Listener() {
+        m_overwriteGUI.addListener(SWT.Selection, new Listener() {
             @Override
             public void handleEvent(final Event event) {
                 m_overwrite = m_overwriteGUI.getSelection();
@@ -242,20 +220,6 @@ public class MergeRenameDialog extends Dialog {
                 setSelectedAndValidate(m_renameGUI);
             }
         });
-
-        Composite cancelPanel = new Composite(border, SWT.NONE);
-        cancelPanel
-                .setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false));
-        cancelPanel.setLayout(new GridLayout(2, false));
-        m_cancel = new Button(cancelPanel, SWT.RADIO);
-        m_cancel.setText("Cancel the operation");
-        m_cancel.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-        m_cancel.addListener(SWT.Selection, new Listener() {
-            @Override
-            public void handleEvent(final Event event) {
-                setSelectedAndValidate(m_cancel);
-            }
-        });
     }
 
     private void createError(final Composite parent) {
@@ -279,7 +243,6 @@ public class MergeRenameDialog extends Dialog {
     private void setSelectedAndValidate(final Button choice) {
         String errMsg = "unknown error";
 
-        m_cancel.setSelection(choice == m_cancel);
         m_renameGUI.setSelection(choice == m_renameGUI);
         m_newNameGUI.setEnabled(m_renameGUI.getSelection());
         if (m_mergeGUI != null && m_mergeGUI.isEnabled()) {
@@ -307,7 +270,7 @@ public class MergeRenameDialog extends Dialog {
                 }
                 AbstractExplorerFileStore parent = m_destination.getParent();
                 if (parent.getChild(m_newName).fetchInfo().exists()) {
-                    errMsg = "New destination already exists on server.";
+                    errMsg = "New destination already exists.";
                     return;
                 }
             }
@@ -366,10 +329,6 @@ public class MergeRenameDialog extends Dialog {
     public boolean overwrite() {
         return m_merge && m_overwrite;
     }
-
-//    public boolean skip() {
-//        return m_merge && m_overwrite;
-//    }
 
     /**
      * {@inheritDoc}
