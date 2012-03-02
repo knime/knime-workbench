@@ -395,6 +395,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (!(DND.DROP_COPY == operation || DND.DROP_MOVE == operation)) {
             return false;
         }
+        if (!target.fetchInfo().isModifiable()) {
+            return false;
+        }
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
         ISelection selection = transfer.getSelection();
         if (selection != null && selection instanceof IStructuredSelection) {

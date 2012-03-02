@@ -119,6 +119,9 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
      */
     @Override
     public void run() {
+        if (!isEnabled()) {
+            return;
+        }
         if (m_sources == null) {
             // retrieve the selected file stores
             m_sources = removeSelectedChildren(getAllSelectedFiles());
@@ -387,7 +390,8 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        return isCopyOrMovePossible(getSelectedFiles(), m_performMove);
+        return m_target.fetchInfo().isModifiable()
+                && isCopyOrMovePossible(getSelectedFiles(), m_performMove);
     }
 
     /**
