@@ -25,11 +25,21 @@ package org.knime.workbench.explorer.view.actions;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.MultiStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -54,7 +64,7 @@ public abstract class AbstractDownloadAction extends Action {
     private final File m_targetDir;
     private final RemoteExplorerFileStore m_source;
 
-    private IProgressMonitor m_monitor;
+    private final IProgressMonitor m_monitor;
 
     /**
      *
@@ -96,7 +106,44 @@ public abstract class AbstractDownloadAction extends Action {
      */
     @Override
     public final void run() {
+        if (m_monitor == null) {
+            try {
+                PlatformUI.getWorkbench().getProgressService()
+                        .busyCursorWhile(new IRunnableWithProgress() {
+                            /**
+                             * {@inheritDoc}
+                             */
+                            @Override
+                            public void run(final IProgressMonitor monitor)
+                                    throws InvocationTargetException,
+                                    InterruptedException {
+                                try {
+                                    runSync(monitor);
+                                } catch (Exception e) {
+                                    // handled outside
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        });
+            } catch (Exception e) {
+                LOGGER.error("Upload error: " + e.getMessage(), e);
+            }
+        } else {
+            try {
+                runSync(m_monitor);
+            } catch (Exception e) {
+                // handled outside
+                throw new RuntimeException(e);
+            }
+        }
+    }
 
+    /**
+     * @param monitor the monitor to report progress
+     * @throws CoreException if the download does not complete without warnings
+     */
+    public final void runSync(final IProgressMonitor monitor)
+            throws CoreException {
         String srcIdentifier = getSourceFile().getMountIDWithFullPath();
         if (!isSourceSupported()) {
             throw new IllegalArgumentException("Download source \""
@@ -108,7 +155,7 @@ public abstract class AbstractDownloadAction extends Action {
 
         final DownloadRunnable dwnLoader = new DownloadRunnable(
                 getSourceFile());
-        dwnLoader.run(m_monitor);
+        dwnLoader.run(monitor);
 
         // now wait for the download to finish
         boolean success = false;
@@ -144,6 +191,10 @@ public abstract class AbstractDownloadAction extends Action {
         }
 
         refreshTarget();
+        Status status = dwnLoader.getStatus();
+        if (status != null) {
+            throw new CoreException(status);
+        }
     }
 
     /**
@@ -227,7 +278,9 @@ public abstract class AbstractDownloadAction extends Action {
      *      represents a workflow
      */
     protected boolean isSourceSupported() {
-        return AbstractExplorerFileStore.isWorkflow(getSourceFile());
+        RemoteExplorerFileStore sourceFile = getSourceFile();
+        return AbstractExplorerFileStore.isWorkflow(sourceFile)
+                || AbstractExplorerFileStore.isWorkflowGroup(sourceFile);
 // copying of workflow jobs is disabled until implemented on server
 //        RemoteExplorerFileInfo info = getSourceFile().fetchInfo();
 //        return info.isWorkflow()
@@ -255,14 +308,6 @@ public abstract class AbstractDownloadAction extends Action {
         return m_monitor;
     }
 
-    /**
-     * @param monitor the progress monitor to use
-     */
-    public void setMonitor(final IProgressMonitor monitor) {
-        m_monitor = monitor;
-    }
-
-
 
     //=========================================================================
 
@@ -276,7 +321,6 @@ public abstract class AbstractDownloadAction extends Action {
         private static final NodeLogger LOGGER = NodeLogger.getLogger(
                 DownloadRunnable.class);
 
-
         private final RemoteExplorerFileStore m_source;
 
         private final AtomicBoolean m_cancel = new AtomicBoolean(false);
@@ -287,6 +331,19 @@ public abstract class AbstractDownloadAction extends Action {
         private File m_tmpFile;
 
         private String m_errorMsg;
+
+        private MultiStatus m_status = null;
+
+        /**
+         * Returns the collected status of the download operation. If some
+         * items could not be downloaded, e.g. due to missing permissions,
+         * they are collected as a MultiStatus.
+         *
+         * @return the status of the download or null if no status messages are available
+         */
+        public Status getStatus() {
+            return m_status;
+        }
 
         /**
          * @param source the file store to download
@@ -304,7 +361,7 @@ public abstract class AbstractDownloadAction extends Action {
          */
         @Override
         public void run() {
-            run(null);
+        	run(null);
         }
 
         /**
@@ -337,7 +394,7 @@ public abstract class AbstractDownloadAction extends Action {
                         in.close();
                         return;
                     }
-                    Thread.sleep(1000);
+                   Thread.sleep(1000);
                 }
                 if (monitor != null) {
                     int kbyte = IProgressMonitor.UNKNOWN;
@@ -397,6 +454,26 @@ public abstract class AbstractDownloadAction extends Action {
                     }
                 }
                 m_errorMsg = null;
+                List<String> messages = null;
+                try {
+                    messages = in.getMessages();
+                } catch (Exception e) {
+                    messages = Collections.emptyList();
+                    LOGGER.error("Could not retrieve download messages.", e);
+                }
+
+                if (messages.size() > 0) {
+                    final List<IStatus> result = new LinkedList<IStatus>();
+                    for (String msg : messages) {
+                        result.add(new Status(IStatus.WARNING,
+                                ExplorerActivator.PLUGIN_ID, msg));
+                    }
+                    m_status = new MultiStatus(
+                            ExplorerActivator.PLUGIN_ID,
+                            IStatus.WARNING, result.toArray(new IStatus[0]),
+                            "Could not download all contained files due to "
+                            + "missing permissions. Skipped items:", null);
+                }
             } catch (Throwable e) {
                 m_tmpFile = null;
                 m_errorMsg = e.getMessage();

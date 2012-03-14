@@ -120,11 +120,7 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
         AbstractExplorerFileStore file = files.get(0);
         AbstractExplorerFileInfo fileInfo = file.fetchInfo();
         AbstractContentProvider cp = file.getContentProvider();
-        AbstractExplorerFileStore srcStore = new ExplorerFileSystem().getStore(
-                sourceURI[0]);
-        if ((cp.isRemote() && (sourceURI.length > 1
-                    || srcStore.fetchInfo().isWorkflowGroup()))
-                || !cp.isWritable()) {
+        if ((cp.isRemote() && sourceURI.length > 1) || !cp.isWritable()) {
             return false;
         }
         // for workflow groups check if it is writable

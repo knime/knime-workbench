@@ -71,6 +71,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -144,10 +145,12 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         String[] children = m_file.childNames(options, monitor);
         if (getFullName().equals("/")) {
             // TODO: We MUST rewrite this if we change to IResources!!!
-            // remove .metadata from the list of shown childs
+            // remove .metadata and workflowset.meta from the list of shown 
+            // childs
             ArrayList<String> rootChilds = new ArrayList<String>(children.length);
             for (String c : children) {
-                if (c.equals(".metadata")) {
+                if (c.equals(".metadata")
+                        || c.equals(WorkflowPersistor.METAINFO_FILE)) {
                     continue;
                 }
                 rootChilds.add(c);
@@ -214,6 +217,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     @Override
     public void copy(final IFileStore destination, final int options,
             final IProgressMonitor monitor) throws CoreException {
+        super.cleanupDestination(destination, options, monitor);
         File srcFile = toLocalFile(options, monitor);
         File dstFile = destination.toLocalFile(options, monitor);
         if (dstFile == null) {
@@ -387,6 +391,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     @Override
     public void move(final IFileStore destination, final int options,
             final IProgressMonitor monitor) throws CoreException {
+        super.cleanupDestination(destination, options, monitor);
         File srcFile = toLocalFile(options, monitor);
         File dstFile = destination.toLocalFile(options, monitor);
 

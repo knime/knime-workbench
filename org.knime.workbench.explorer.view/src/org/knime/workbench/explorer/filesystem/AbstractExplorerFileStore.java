@@ -153,8 +153,15 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * {@inheritDoc}
      */
     @Override
-    public abstract void copy(IFileStore destination, int options,
-            IProgressMonitor monitor) throws CoreException;
+    public abstract void copy(final IFileStore destination, final int options,
+            final IProgressMonitor monitor) throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract void move(final IFileStore destination, final int options,
+            final IProgressMonitor monitor) throws CoreException;
 
     /**
      * {@inheritDoc}
@@ -162,7 +169,32 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     @Override
     public abstract void delete(int options, IProgressMonitor monitor)
             throws CoreException;
-
+    
+    /**
+     * @param destination the destination to clean up
+     * @param options bit-wise or of option flag constants (EFS.OVERWRITE).
+     * @param monitor a progress monitor, or null if progress reporting and
+     *            cancellation are not desired
+     * @throws CoreException if this method fails. Reasons include:
+     *          Files or directories could not be deleted.
+     */
+    protected void cleanupDestination(final IFileStore destination,
+            final int options, final IProgressMonitor monitor)
+            throws CoreException {
+        /* Delete workflows and meta node templates if they exist at the
+         * destination. Otherwise we may end up with somehow merged workflows
+         * containing obsolete node folders, reports etc. */
+        if (destination instanceof AbstractExplorerFileStore) {
+            AbstractExplorerFileStore dest
+                    = (AbstractExplorerFileStore)destination;
+            AbstractExplorerFileInfo info = dest.fetchInfo();
+            if (info.exists() && (info.isWorkflow()
+                    || info.isWorkflowTemplate())) {
+                destination.delete(options, monitor);
+            }
+        }
+    }
+    
     /**
      * {@inheritDoc}
      */

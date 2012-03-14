@@ -50,7 +50,6 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -381,6 +380,9 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                     m_cmd + " item",
                     "Some problems occurred during the operation.",
                     multiStatus);
+            /* Don't show it as failure if only some of the items could not be
+             * copied. */
+            success.set(true);
         }
         return success.get();
     }
@@ -424,11 +426,6 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         if (fileStore instanceof RemoteExplorerFileStore) {
             // currently we can only download one workflow or metanode template
             if (selections.size() > 1) {
-                return false;
-            }
-
-            AbstractExplorerFileInfo info = fileStore.fetchInfo();
-            if (!(info.isWorkflow() || info.isWorkflowTemplate())) {
                 return false;
             }
         }

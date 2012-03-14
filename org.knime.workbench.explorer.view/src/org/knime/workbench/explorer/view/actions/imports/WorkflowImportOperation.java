@@ -231,20 +231,11 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             final AbstractExplorerFileStore destination, final IProgressMonitor monitor)
             throws IOException {
 
-        if (zipElement.isWorkflow() || zipElement.isTemplate()) {
+        if (zipElement.isWorkflow() || zipElement.isTemplate()
+                || zipElement.isWorkflowGroup()) {
             importZipEntry(zipElement.getProvider(),
                     (ZipEntry)zipElement.getEntry(), destination, monitor);
-        } else {
-
-            // first create the destination
-            try {
-                destination.mkdir(EFS.SHALLOW, monitor);
-            } catch (CoreException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-            m_missingMetaInfoLocations.add(destination);
         }
-
     }
 
     /**

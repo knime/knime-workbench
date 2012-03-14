@@ -538,9 +538,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             throws CoreException {
         File parentDir = target.toLocalFile();
         LocalDownloadWorkflowAction downloadAction =
-            new LocalDownloadWorkflowAction(
-                    source, parentDir, monitor);
-        downloadAction.run();
+            new LocalDownloadWorkflowAction(source, parentDir);
+        downloadAction.runSync(monitor);
     }
 
     /**
