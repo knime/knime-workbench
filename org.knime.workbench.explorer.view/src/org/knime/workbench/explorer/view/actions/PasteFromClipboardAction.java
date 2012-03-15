@@ -162,11 +162,10 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
         }
 
         URI[] fileURI = (URI[]) c;
-        ExplorerFileSystem efs = new ExplorerFileSystem();
         List<AbstractExplorerFileStore> srcFileStores
         = new ArrayList<AbstractExplorerFileStore>(fileURI.length);
         for (URI uri : fileURI) {
-            srcFileStores.add(efs.getStore(uri));
+            srcFileStores.add(ExplorerFileSystem.instance.getStore(uri));
         }
 
         // check if all affected flows can be copied/moved

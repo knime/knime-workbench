@@ -193,7 +193,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (!(parentElement instanceof LocalWorkspaceFileStore)) {
             return NO_CHILD;
         }
-        LocalWorkspaceFileStore parent = (LocalWorkspaceFileStore)parentElement;
+        LocalExplorerFileStore parent = (LocalExplorerFileStore)parentElement;
 
         if (AbstractExplorerFileStore.isNode(parent)) {
             return NO_CHILD;
@@ -234,7 +234,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * @return the content of the workflow group
      */
     public static AbstractExplorerFileStore[] getWorkflowgroupChildren(
-            final LocalWorkspaceFileStore workflowGroup) {
+            final LocalExplorerFileStore workflowGroup) {
 
         assert AbstractExplorerFileStore.isWorkflowGroup(workflowGroup);
 
@@ -267,7 +267,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (!(element instanceof LocalWorkspaceFileStore)) {
             return null;
         }
-        LocalWorkspaceFileStore e = (LocalWorkspaceFileStore)element;
+        LocalExplorerFileStore e = (LocalExplorerFileStore)element;
         return e.getParent();
     }
 
@@ -291,7 +291,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (!(element instanceof LocalWorkspaceFileStore)) {
             return IconFactory.instance.unknownRed();
         }
-        LocalWorkspaceFileStore e = (LocalWorkspaceFileStore)element;
+        LocalExplorerFileStore e = (LocalExplorerFileStore)element;
         Image img = getWorkspaceImage(e);
         if (img != null) {
             return img;
@@ -308,7 +308,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (!(element instanceof LocalWorkspaceFileStore)) {
             return element.toString();
         }
-        LocalWorkspaceFileStore f = (LocalWorkspaceFileStore)element;
+        LocalExplorerFileStore f = (LocalExplorerFileStore)element;
         return f.fetchInfo().getName();
     }
 

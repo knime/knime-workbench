@@ -84,12 +84,16 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      */
     public AbstractExplorerFileStore(final String mountID,
             final String fullPath) {
-        m_fullPath = fullPath;
-        m_mountID = mountID;
         if (fullPath == null) {
             throw new NullPointerException("Path can't be null (mountID = "
                     + getMountID() + ")");
         }
+        String temp = fullPath;
+        while ((temp.length() > 1) && (temp.endsWith("/"))) {
+                temp = temp.substring(0, temp.length() - 1);
+        }
+        m_fullPath = temp;
+        m_mountID = mountID;
     }
 
 

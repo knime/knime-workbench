@@ -512,7 +512,7 @@ public final class ExplorerMountTable {
      * @return the file system representing the content of the mount table.
      */
     public static ExplorerFileSystem getFileSystem() {
-        return new ExplorerFileSystem();
+        return ExplorerFileSystem.instance;
     }
 
     /* ------------- read the extension point ------------------------------ */

@@ -393,7 +393,7 @@ public final class ExplorerFileSystemUtils {
                 success &= FileUtil.deleteRecursively(loc);
                 if (wf instanceof LocalWorkspaceFileStore) {
                     // refreshes the IResources (e.g. .project files)
-                    ((LocalWorkspaceFileStore)wf).delete(EFS.NONE, null);
+                    ((LocalExplorerFileStore)wf).delete(EFS.NONE, null);
                 }
             } catch (CoreException e) {
                 success = false;
@@ -435,7 +435,7 @@ public final class ExplorerFileSystemUtils {
                         }
                         if (f instanceof LocalWorkspaceFileStore) {
                             // refreshes the IResources (e.g. .project files)
-                            ((LocalWorkspaceFileStore)f).delete(EFS.NONE, null);
+                            ((LocalExplorerFileStore)f).delete(EFS.NONE, null);
                         }
                     }
                 }

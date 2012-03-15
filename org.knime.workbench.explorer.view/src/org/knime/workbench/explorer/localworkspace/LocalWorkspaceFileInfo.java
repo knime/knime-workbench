@@ -22,8 +22,11 @@
 
 package org.knime.workbench.explorer.localworkspace;
 
+import java.io.File;
+
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.runtime.CoreException;
 import org.knime.core.node.workflow.SingleNodeContainerPersistorVersion200;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
@@ -194,7 +197,12 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
      */
     @Override
     public boolean isModifiable() {
-        return !m_file.fetchInfo().getAttribute(EFS.ATTRIBUTE_READ_ONLY);
+        try {
+            File f = m_file.toLocalFile(EFS.NONE, null);
+            return f.canRead() && f.canWrite();
+        } catch (CoreException ex) {
+            return false;
+        }
     }
 
     /**
@@ -202,6 +210,10 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
      */
     @Override
     public boolean isReadable() {
-        return true;
+        try {
+            return m_file.toLocalFile(EFS.NONE, null).canRead();
+        } catch (CoreException ex) {
+            return false;
+        }
     }
 }

@@ -181,7 +181,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @return the file store for the specified uri
      */
     public final AbstractExplorerFileStore getFileStore(final URI uri) {
-        return new ExplorerFileSystem().getStore(uri);
+        return ExplorerFileSystem.instance.getStore(uri);
     }
 
     /**
