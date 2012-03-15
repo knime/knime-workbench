@@ -165,7 +165,7 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
         List<AbstractExplorerFileStore> srcFileStores
         = new ArrayList<AbstractExplorerFileStore>(fileURI.length);
         for (URI uri : fileURI) {
-            srcFileStores.add(ExplorerFileSystem.instance.getStore(uri));
+            srcFileStores.add(ExplorerFileSystem.INSTANCE.getStore(uri));
         }
 
         // check if all affected flows can be copied/moved

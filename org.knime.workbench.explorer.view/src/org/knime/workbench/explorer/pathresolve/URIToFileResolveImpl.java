@@ -86,7 +86,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         if (scheme.equalsIgnoreCase(ExplorerFileSystem.SCHEME)) {
             try {
                 AbstractExplorerFileStore s
-                        = ExplorerFileSystem.instance.getStore(uri);
+                        = ExplorerFileSystem.INSTANCE.getStore(uri);
                 if (s == null) {
                     throw new IOException("Can't resolve file to URI \"" + uri
                             + "\"; the corresponding mount point is probably "
@@ -114,7 +114,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
 
         // we have a remote file
         RemoteExplorerFileStore source
-            = (RemoteExplorerFileStore) ExplorerFileSystem.instance.getStore(uri);
+            = (RemoteExplorerFileStore) ExplorerFileSystem.INSTANCE.getStore(uri);
         if (source == null) {
             throw new IOException("Can't resolve file to URI \"" + uri
                     + "\"; the corresponding mount point is probably "
