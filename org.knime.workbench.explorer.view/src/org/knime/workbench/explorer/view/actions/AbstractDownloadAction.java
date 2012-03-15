@@ -141,6 +141,8 @@ public abstract class AbstractDownloadAction extends Action {
     /**
      * @param monitor the monitor to report progress
      * @throws CoreException if the download does not complete without warnings
+     *
+     * @since 3.0
      */
     public final void runSync(final IProgressMonitor monitor)
             throws CoreException {
@@ -339,7 +341,10 @@ public abstract class AbstractDownloadAction extends Action {
          * items could not be downloaded, e.g. due to missing permissions,
          * they are collected as a MultiStatus.
          *
-         * @return the status of the download or null if no status messages are available
+         * @return the status of the download or null if no status messages
+         *      are available
+         *
+         * @since 3.0
          */
         public Status getStatus() {
             return m_status;

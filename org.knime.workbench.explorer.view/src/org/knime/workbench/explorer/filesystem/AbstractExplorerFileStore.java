@@ -169,7 +169,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     @Override
     public abstract void delete(int options, IProgressMonitor monitor)
             throws CoreException;
-    
+
     /**
      * @param destination the destination to clean up
      * @param options bit-wise or of option flag constants (EFS.OVERWRITE).
@@ -177,6 +177,8 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      *            cancellation are not desired
      * @throws CoreException if this method fails. Reasons include:
      *          Files or directories could not be deleted.
+     *
+     * @since 3.0
      */
     protected void cleanupDestination(final IFileStore destination,
             final int options, final IProgressMonitor monitor)
@@ -194,7 +196,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
             }
         }
     }
-    
+
     /**
      * {@inheritDoc}
      */

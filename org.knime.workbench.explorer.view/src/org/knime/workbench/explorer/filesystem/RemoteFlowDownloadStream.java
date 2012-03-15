@@ -47,6 +47,8 @@ public abstract class RemoteFlowDownloadStream extends InputStream {
     /**
      * @return messages that were created during download if available, or an
      *      empty list otherwise
+     *
+     * @since 3.0
      */
     public abstract List<String> getMessages();
 
