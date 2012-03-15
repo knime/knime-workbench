@@ -28,7 +28,6 @@ import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.internal.events.ResourceChangeEvent;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceChangeEvent;
 import org.eclipse.core.resources.IResourceChangeListener;
@@ -101,7 +100,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             }
         };
         workspace.addResourceChangeListener(m_workspaceResourceListener,
-                ResourceChangeEvent.POST_CHANGE);
+                IResourceChangeEvent.POST_CHANGE);
     }
 
     private void onResourceChanged(final IResourceChangeEvent event) {
@@ -232,6 +231,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      *
      * @param workflowGroup the workflow group to return the children for
      * @return the content of the workflow group
+     * @since 3.0
      */
     public static AbstractExplorerFileStore[] getWorkflowgroupChildren(
             final LocalExplorerFileStore workflowGroup) {

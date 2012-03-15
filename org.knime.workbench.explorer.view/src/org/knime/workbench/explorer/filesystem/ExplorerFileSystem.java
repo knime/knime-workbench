@@ -69,6 +69,7 @@ import org.knime.workbench.explorer.view.AbstractContentProvider;
 public class ExplorerFileSystem extends FileSystem {
     /**
      * Singleton instance of the file system.
+     * @since 3.0
      */
     public static final ExplorerFileSystem instance = new ExplorerFileSystem();
 
