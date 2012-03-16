@@ -543,6 +543,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      * Sets the files that should be selected after the next refresh.
      *
      * @param sel the files to select
+     * @since 3.0
      */
     public void setNextSelection(final Collection<AbstractExplorerFileStore> sel) {
         m_nextSelection.set(sel);
