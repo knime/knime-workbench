@@ -21,6 +21,8 @@ package org.knime.workbench.explorer.view;
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -164,8 +166,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     private PasteFromClipboardAction m_pasteAction;
 
     // selected after next refresh
-    private final AtomicReference<AbstractExplorerFileStore> m_nextSelection =
-            new AtomicReference<AbstractExplorerFileStore>();
+    private final AtomicReference<Collection<AbstractExplorerFileStore>> m_nextSelection =
+            new AtomicReference<Collection<AbstractExplorerFileStore>>();
 
     /**
      * {@inheritDoc}
@@ -516,14 +518,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                     } else {
                         m_viewer.refresh();
                     }
-                    AbstractExplorerFileStore fs =
+                    Collection<AbstractExplorerFileStore> fs =
                             m_nextSelection.getAndSet(null);
                     if (fs != null) {
-                        Object treeObj = ContentDelegator.getTreeObjectFor(fs);
-                        if (treeObj != null) {
-                            m_viewer.setSelection(new StructuredSelection(
-                                    treeObj), true);
-                        }
+                        List<Object> sel = ContentDelegator.getTreeObjectList(fs);
+                        m_viewer.setSelection(new StructuredSelection(sel),
+                                true);
                     }
                 }
             }
@@ -536,6 +536,15 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      * @param sel the file to select
      */
     public void setNextSelection(final AbstractExplorerFileStore sel) {
+        m_nextSelection.set(Collections.singletonList(sel));
+    }
+
+    /**
+     * Sets the files that should be selected after the next refresh.
+     *
+     * @param sel the files to select
+     */
+    public void setNextSelection(final Collection<AbstractExplorerFileStore> sel) {
         m_nextSelection.set(sel);
     }
 
