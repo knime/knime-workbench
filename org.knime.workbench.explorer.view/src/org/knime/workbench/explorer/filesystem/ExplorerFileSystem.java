@@ -67,6 +67,11 @@ import org.knime.workbench.explorer.view.AbstractContentProvider;
  * @author ohl, University of Konstanz
  */
 public class ExplorerFileSystem extends FileSystem {
+    /**
+     * Singleton instance of the file system.
+     * @since 3.0
+     */
+    public static final ExplorerFileSystem INSTANCE = new ExplorerFileSystem();
 
     /**
      * The scheme this file system is registered with (see extension point
@@ -94,6 +99,13 @@ public class ExplorerFileSystem extends FileSystem {
         ILLEGAL_FILENAME_CHARS_PATTERN =
             Pattern.compile("[" + ILLEGAL_FILENAME_CHARS.replace(
                     "\\", "\\\\") + "]+");
+    }
+
+    /**
+     * Please consider using the singleton instance {@link #INSTANCE} instead.
+     */
+    public ExplorerFileSystem() {
+        // needed by the Eclipse framework (EFS)
     }
 
     /**

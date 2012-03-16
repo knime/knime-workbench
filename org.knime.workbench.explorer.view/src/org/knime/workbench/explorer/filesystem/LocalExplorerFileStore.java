@@ -51,9 +51,16 @@
 package org.knime.workbench.explorer.filesystem;
 
 import java.io.File;
+import java.io.IOException;
 
+import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.knime.workbench.explorer.ExplorerActivator;
 
 /**
  *
@@ -106,4 +113,50 @@ public abstract class LocalExplorerFileStore extends AbstractExplorerFileStore {
     public File resolveToLocalFile() throws CoreException {
         return toLocalFile();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void copy(final IFileStore destination, final int options, final IProgressMonitor monitor)
+            throws CoreException {
+                if (this.equals(destination)) {
+                    throw new CoreException(new Status(IStatus.ERROR,
+                            ExplorerActivator.PLUGIN_ID,
+                            "Filestore cannot be copied to itself"));
+                }
+                File srcFile = toLocalFile(options, monitor);
+                File dstFile = destination.toLocalFile(options, monitor);
+
+                if (dstFile == null) {
+                    throw new UnsupportedOperationException("The local workspace "
+                            + "filestore only allows copying to local destinations but"
+                            + " \"" + destination.getName() + "\" is not local.");
+                }
+                if (dstFile.exists() && ((options & EFS.OVERWRITE) == 0)) {
+                    throw new CoreException(new Status(IStatus.ERROR,
+                            ExplorerActivator.PLUGIN_ID,
+                            "A file of the same name already exists at the copy "
+                            + "destination"));
+                }
+
+                super.cleanupDestination(destination, options, monitor);
+                try {
+                    if (srcFile.isDirectory()) {
+                        FileUtils.copyDirectory(srcFile, dstFile);
+                    } else if (srcFile.isFile()) {
+                        FileUtils.copyFile(srcFile, dstFile);
+                    }
+                } catch (IOException e) {
+                    String message =
+                            "Could not copy \"" + srcFile.getAbsolutePath()
+                                    + "\" to \"" + dstFile.getAbsolutePath() + "\".";
+                    throw new CoreException(new Status(IStatus.ERROR,
+                            ExplorerActivator.PLUGIN_ID, message, e));
+                }
+                IFileStore destParent = destination.getParent();
+                if (destParent instanceof AbstractExplorerFileStore) {
+                    ((AbstractExplorerFileStore)destParent).refresh();
+                }
+            }
 }

@@ -56,6 +56,7 @@ import java.util.List;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IEditorReference;
@@ -283,6 +284,7 @@ public final class ExplorerFileSystemUtils {
      *      be reported
      * @return an error message describing the problem or null, if the stores
      *      can be locked
+     * @since 3.0
      */
     public static String isLockable(
             final List<AbstractExplorerFileStore> fileStores,
@@ -352,7 +354,7 @@ public final class ExplorerFileSystemUtils {
                 File[] children = loc.listFiles();
                 if (children == null) {
                     throw new CoreException(
-                            new Status(Status.ERROR,
+                            new Status(IStatus.ERROR,
                                     ExplorerActivator.PLUGIN_ID,
                                     "Can't read location."));
                 }
@@ -391,7 +393,7 @@ public final class ExplorerFileSystemUtils {
                 success &= FileUtil.deleteRecursively(loc);
                 if (wf instanceof LocalWorkspaceFileStore) {
                     // refreshes the IResources (e.g. .project files)
-                    ((LocalWorkspaceFileStore)wf).delete(EFS.NONE, null);
+                    ((LocalExplorerFileStore)wf).delete(EFS.NONE, null);
                 }
             } catch (CoreException e) {
                 success = false;
@@ -433,7 +435,7 @@ public final class ExplorerFileSystemUtils {
                         }
                         if (f instanceof LocalWorkspaceFileStore) {
                             // refreshes the IResources (e.g. .project files)
-                            ((LocalWorkspaceFileStore)f).delete(EFS.NONE, null);
+                            ((LocalExplorerFileStore)f).delete(EFS.NONE, null);
                         }
                     }
                 }

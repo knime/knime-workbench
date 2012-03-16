@@ -84,12 +84,16 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      */
     public AbstractExplorerFileStore(final String mountID,
             final String fullPath) {
-        m_fullPath = fullPath;
-        m_mountID = mountID;
         if (fullPath == null) {
             throw new NullPointerException("Path can't be null (mountID = "
                     + getMountID() + ")");
         }
+        String temp = fullPath;
+        while ((temp.length() > 1) && (temp.endsWith("/"))) {
+                temp = temp.substring(0, temp.length() - 1);
+        }
+        m_fullPath = temp;
+        m_mountID = mountID;
     }
 
 
@@ -153,8 +157,15 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * {@inheritDoc}
      */
     @Override
-    public abstract void copy(IFileStore destination, int options,
-            IProgressMonitor monitor) throws CoreException;
+    public abstract void copy(final IFileStore destination, final int options,
+            final IProgressMonitor monitor) throws CoreException;
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract void move(final IFileStore destination, final int options,
+            final IProgressMonitor monitor) throws CoreException;
 
     /**
      * {@inheritDoc}
@@ -162,6 +173,33 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     @Override
     public abstract void delete(int options, IProgressMonitor monitor)
             throws CoreException;
+
+    /**
+     * @param destination the destination to clean up
+     * @param options bit-wise or of option flag constants (EFS.OVERWRITE).
+     * @param monitor a progress monitor, or null if progress reporting and
+     *            cancellation are not desired
+     * @throws CoreException if this method fails. Reasons include:
+     *          Files or directories could not be deleted.
+     *
+     * @since 3.0
+     */
+    protected void cleanupDestination(final IFileStore destination,
+            final int options, final IProgressMonitor monitor)
+            throws CoreException {
+        /* Delete workflows and meta node templates if they exist at the
+         * destination. Otherwise we may end up with somehow merged workflows
+         * containing obsolete node folders, reports etc. */
+        if (destination instanceof AbstractExplorerFileStore) {
+            AbstractExplorerFileStore dest
+                    = (AbstractExplorerFileStore)destination;
+            AbstractExplorerFileInfo info = dest.fetchInfo();
+            if (info.exists() && (info.isWorkflow()
+                    || info.isWorkflowTemplate())) {
+                destination.delete(options, monitor);
+            }
+        }
+    }
 
     /**
      * {@inheritDoc}
@@ -396,6 +434,6 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     private boolean canModifyFileAndParent() {
         AbstractExplorerFileStore parent = getParent();
         return fetchInfo().isModifiable()
-                && (parent == null || parent.fetchInfo().isModifiable());
+                && parent != null && parent.fetchInfo().isModifiable();
     }
 }

@@ -28,7 +28,6 @@ import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.internal.events.ResourceChangeEvent;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceChangeEvent;
 import org.eclipse.core.resources.IResourceChangeListener;
@@ -101,7 +100,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             }
         };
         workspace.addResourceChangeListener(m_workspaceResourceListener,
-                ResourceChangeEvent.POST_CHANGE);
+                IResourceChangeEvent.POST_CHANGE);
     }
 
     private void onResourceChanged(final IResourceChangeEvent event) {
@@ -193,7 +192,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (!(parentElement instanceof LocalWorkspaceFileStore)) {
             return NO_CHILD;
         }
-        LocalWorkspaceFileStore parent = (LocalWorkspaceFileStore)parentElement;
+        LocalExplorerFileStore parent = (LocalExplorerFileStore)parentElement;
 
         if (AbstractExplorerFileStore.isNode(parent)) {
             return NO_CHILD;
@@ -232,9 +231,10 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      *
      * @param workflowGroup the workflow group to return the children for
      * @return the content of the workflow group
+     * @since 3.0
      */
     public static AbstractExplorerFileStore[] getWorkflowgroupChildren(
-            final LocalWorkspaceFileStore workflowGroup) {
+            final LocalExplorerFileStore workflowGroup) {
 
         assert AbstractExplorerFileStore.isWorkflowGroup(workflowGroup);
 
@@ -267,7 +267,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (!(element instanceof LocalWorkspaceFileStore)) {
             return null;
         }
-        LocalWorkspaceFileStore e = (LocalWorkspaceFileStore)element;
+        LocalExplorerFileStore e = (LocalExplorerFileStore)element;
         return e.getParent();
     }
 
@@ -291,7 +291,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (!(element instanceof LocalWorkspaceFileStore)) {
             return IconFactory.instance.unknownRed();
         }
-        LocalWorkspaceFileStore e = (LocalWorkspaceFileStore)element;
+        LocalExplorerFileStore e = (LocalExplorerFileStore)element;
         Image img = getWorkspaceImage(e);
         if (img != null) {
             return img;
@@ -308,7 +308,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (!(element instanceof LocalWorkspaceFileStore)) {
             return element.toString();
         }
-        LocalWorkspaceFileStore f = (LocalWorkspaceFileStore)element;
+        LocalExplorerFileStore f = (LocalExplorerFileStore)element;
         return f.fetchInfo().getName();
     }
 
@@ -393,6 +393,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     public boolean validateDrop(final AbstractExplorerFileStore target,
             final int operation, final TransferData transferType) {
         if (!(DND.DROP_COPY == operation || DND.DROP_MOVE == operation)) {
+            return false;
+        }
+        if (!target.fetchInfo().isModifiable()) {
             return false;
         }
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
@@ -535,9 +538,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             throws CoreException {
         File parentDir = target.toLocalFile();
         LocalDownloadWorkflowAction downloadAction =
-            new LocalDownloadWorkflowAction(
-                    source, parentDir, monitor);
-        downloadAction.run();
+            new LocalDownloadWorkflowAction(source, parentDir);
+        downloadAction.runSync(monitor);
     }
 
     /**

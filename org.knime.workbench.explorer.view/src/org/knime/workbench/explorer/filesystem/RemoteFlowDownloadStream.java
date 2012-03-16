@@ -21,6 +21,7 @@
 package org.knime.workbench.explorer.filesystem;
 
 import java.io.InputStream;
+import java.util.List;
 
 /**
  * Used to download workflows from a remote store location. The stream provides
@@ -42,5 +43,13 @@ public abstract class RemoteFlowDownloadStream extends InputStream {
      *         known).
      */
     public abstract long length();
+
+    /**
+     * @return messages that were created during download if available, or an
+     *      empty list otherwise
+     *
+     * @since 3.0
+     */
+    public abstract List<String> getMessages();
 
 }

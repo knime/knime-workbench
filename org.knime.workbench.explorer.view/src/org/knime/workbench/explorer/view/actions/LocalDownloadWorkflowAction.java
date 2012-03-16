@@ -81,7 +81,7 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
     public LocalDownloadWorkflowAction(final RemoteExplorerFileStore source,
             final File target, final IProgressMonitor monitor) {
         super("Download", source, target, monitor);
-        LocalExplorerFileStore fs = new ExplorerFileSystem()
+        LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE
                 .fromLocalFile(getTargetDir());
         m_targetFileStore = fs;
     }

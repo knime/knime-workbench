@@ -100,6 +100,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
 
     /**
      * Creates the wizard.
+     * @since 3.0
      */
     public NewWorkflowWizard() {
         setNeedsProgressMonitor(true);
@@ -107,6 +108,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
 
     /**
      * @return true if a workflow is created, false otherwise
+     * @since 3.0
      */
     protected boolean isWorkflowCreated() {
         return true;
@@ -304,6 +306,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
     /**
      * @return the initially selected file or null if multiple files or no file
      *      is selected
+     * @since 3.0
      */
     protected AbstractExplorerFileStore getInitialSelection() {
         return m_initialSelection;
@@ -311,6 +314,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
 
     /**
      * @return the involved mount ids
+     * @since 3.0
      */
     protected String[] getMountIDs() {
         return m_mountIDs;

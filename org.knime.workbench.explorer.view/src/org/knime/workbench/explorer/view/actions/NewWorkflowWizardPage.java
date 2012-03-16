@@ -113,6 +113,7 @@ public class NewWorkflowWizardPage extends WizardPage {
      * @param selection the initial selection
      * @param isWorkflow true if used to create a workflow, false if used to
      *            create a workflow group
+     * @since 3.0
      *
      */
     public NewWorkflowWizardPage(final String[] mountIDs,

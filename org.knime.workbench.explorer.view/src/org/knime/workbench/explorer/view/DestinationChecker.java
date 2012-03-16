@@ -30,9 +30,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.widgets.Shell;
+import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.dialogs.MergeRenameDialog;
@@ -50,6 +53,9 @@ import org.knime.workbench.explorer.view.dialogs.OverwriteRenameDialog;
  */
 public final class DestinationChecker <S extends AbstractExplorerFileStore,
         T extends AbstractExplorerFileStore> {
+
+        private static final NodeLogger LOGGER = NodeLogger.getLogger(
+                DestinationChecker.class);
 
         private final Shell m_shell;
         private boolean m_overwriteAll;
@@ -170,7 +176,7 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                                      destination.getChild(source.getName()),
                                      forbiddenStores));
                     } else {
-                        result = openMergeDialog(result);
+                        result = openMergeDialog(source, result);
                     }
                 } else {
                     /* Skip the rename dialog if a file is copied into its own
@@ -193,8 +199,7 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
             return result;
         }
 
-        private T openMergeDialog(
-                final T dest) {
+        private T openMergeDialog(final S source, final T dest) {
             MergeRenameDialog dlg =
                     new MergeRenameDialog(m_shell, dest,
                             dest.fetchInfo().isModifiable());
@@ -202,8 +207,8 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                 return null;
             }
             if (dlg.merge()) {
-                m_overwriteFS.add(dest);
-                return dest;
+                collectChildMappings(source, dest, dlg.overwrite());
+                return null;
             }
             String newName = dlg.rename();
             if (newName == null) {
@@ -215,6 +220,41 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
             T newDest = (T)dest.getParent().getChild(newName);
             return newDest;
         }
+
+        private void collectChildMappings(final S source, final T dest,
+                final boolean overwrite) {
+            S[] childs = null;
+            try {
+                childs = (S[])source.childStores(EFS.NONE, null);
+            } catch (CoreException e) {
+               LOGGER.error("Could not collect children for \""
+                       + source.getMountIDWithFullPath() + "\".");
+            }
+            if (childs == null) {
+                return;
+            }
+            for (S child : childs) {
+                T destChild = (T)dest.getChild(child.getName());
+                AbstractExplorerFileInfo info = destChild.fetchInfo();
+                boolean exists = info.exists();
+                if (child.fetchInfo().isWorkflowGroup() && exists) {
+                    collectChildMappings(child, destChild, overwrite);
+                } else { // workflows, meta node templates and files
+                    if (exists) {
+                        if (overwrite) { // overwrite existing
+                            m_overwriteFS.add(destChild);
+                            m_mappings.put(child, destChild);
+                        } else { // skip existing
+                            m_mappings.put(child, null);
+                        }
+                    } else { // new store
+                        m_mappings.put(child, destChild);
+                    }
+                }
+            }
+        }
+
+
 
         private T openOverwriteDialog(
                 final T dest,
