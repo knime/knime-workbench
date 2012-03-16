@@ -39,7 +39,6 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
-import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
@@ -352,12 +351,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                     }
                 }
             });
-            List<Object> treeObjects = ContentDelegator.getTreeObjectList(
-                    destChecker.getMappings().values());
-            if (treeObjects != null && treeObjects.size() > 0) {
-                getViewer().setSelection(new StructuredSelection(treeObjects),
-                        true);
-            }
+            getView().setNextSelection(destChecker.getMappings().values());
         } catch (InvocationTargetException e) {
             LOGGER.debug("Invocation exception, " + e.getMessage(), e);
             result.add(new Status(IStatus.ERROR,

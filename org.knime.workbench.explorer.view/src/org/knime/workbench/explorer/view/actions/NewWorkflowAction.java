@@ -54,7 +54,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardDialog;
@@ -165,10 +164,8 @@ public class NewWorkflowAction extends ExplorerAction {
                 NewWorkflowWizardPage nwwp = (NewWorkflowWizardPage)currentPage;
                 AbstractExplorerFileStore file = nwwp.getNewFile();
                 Object p = ContentDelegator.getTreeObjectFor(file.getParent());
-                Object o = ContentDelegator.getTreeObjectFor(file);
+                getView().setNextSelection(file);
                 getViewer().refresh(p);
-                getViewer().setSelection(new StructuredSelection(o), true);
-
             }
         }
     }
