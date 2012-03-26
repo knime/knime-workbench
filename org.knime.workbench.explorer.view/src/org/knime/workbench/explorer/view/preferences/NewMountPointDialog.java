@@ -61,6 +61,7 @@ import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.Viewer;
@@ -154,6 +155,7 @@ public class NewMountPointDialog extends ListDialog {
             // disabled by default until validated
             b.setEnabled(false);
             m_ok = b;
+            m_ok.setText("Next");
         }
         return b;
     }
@@ -252,6 +254,21 @@ public class NewMountPointDialog extends ListDialog {
                     @Override
                     public void selectionChanged(
                             final SelectionChangedEvent event) {
+                        Object selection = ((IStructuredSelection)
+                                event.getSelection()).getFirstElement();
+                        if (selection != null && selection
+                                instanceof AbstractContentProviderFactory) {
+                            AbstractContentProviderFactory factory
+                            = (AbstractContentProviderFactory)selection;
+                           if (!factory.isAdditionalInformationNeeded()) {
+                                /* No additional information is needed. Hence
+                                 * change the button ok button text from ok to
+                                 * next. */
+                                m_ok.setText("Ok");
+                            } else {
+                                m_ok.setText("Next");
+                            }
+                        }
                         validate(null);
                     }
                 });

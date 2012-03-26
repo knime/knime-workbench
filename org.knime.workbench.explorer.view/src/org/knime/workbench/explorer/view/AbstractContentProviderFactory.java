@@ -88,4 +88,17 @@ public abstract class AbstractContentProviderFactory {
      */
    public abstract AbstractContentProvider createContentProvider(
            final String mountID, final String content);
+
+    /**
+     * Indicates if additional information is needed by the factory for
+     * creating a content provider. In general this information is gathered
+     * by the factory in the {@link #createContentProvider(String)} by opening
+     * a dialog.
+     *
+     * @return true, if additional information is needed by the factory for
+     *      creating a content provider, false otherwise
+     *      
+     * @since 3.0
+     */
+    public abstract boolean isAdditionalInformationNeeded();
 }

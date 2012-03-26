@@ -95,4 +95,12 @@ public class LocalWorkspaceContentProviderFactory extends
         return new LocalWorkspaceContentProvider(this, mountID);
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isAdditionalInformationNeeded() {
+        return false;
+    }
+
 }
