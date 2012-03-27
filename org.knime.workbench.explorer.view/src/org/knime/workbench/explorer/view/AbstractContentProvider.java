@@ -43,9 +43,11 @@ import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.LabelProviderChangedEvent;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
@@ -814,5 +816,28 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             final RemoteExplorerFileStore target,
             final IProgressMonitor monitor)
             throws CoreException;
+
+    /**
+     * @param fileStores the file stores to be copied / moved
+     * @param performMove true if moving, false for copying
+     * @return an error message describing the problem or null, if the no open
+     *      editor blocks the operation
+     */
+    protected String checkOpenEditors(
+            final List<AbstractExplorerFileStore> fileStores, 
+            final boolean performMove) {
+        // even saved editors are note allowed when moving
+        String msg = ExplorerFileSystemUtils.isLockable(fileStores,
+                !performMove);
+        if (msg != null) {
+            MessageBox mb =
+                    new MessageBox(Display.getCurrent().getActiveShell(),
+                            SWT.ICON_ERROR | SWT.OK);
+            mb.setText("Dragging canceled");
+            mb.setMessage(msg);
+            mb.open();
+        } 
+        return msg;
+    }
 
 }

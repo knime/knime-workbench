@@ -435,7 +435,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     @Override
     public boolean performDrop(final ExplorerView view, final Object data,
             final AbstractExplorerFileStore target, final int operation) {
-
+        // read current selection and check whether it comes from the very same
+        // view - disregard selection from other views (not ExploreFileStore)
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
         ISelection selection = transfer.getSelection();
         if (selection instanceof IStructuredSelection) {
@@ -443,23 +444,12 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             List<AbstractExplorerFileStore> fileStores =
                     DragAndDropUtils.getExplorerFileStores(ss);
             boolean performMove = DND.DROP_MOVE == operation;
-            if (performMove) {
-                // even saved editors are note allowed when moving
-                String msg = ExplorerFileSystemUtils.isLockable(fileStores,
-                        !performMove);
-                if (msg != null) {
-                    LOGGER.warn(msg);
-                    MessageBox mb =
-                            new MessageBox(Display.getCurrent().getActiveShell(),
-                                    SWT.ICON_ERROR | SWT.OK);
-                    mb.setText("Dragging canceled");
-                    mb.setMessage(msg);
-                    mb.open();
-                    return false;
-                }
+            String msg = checkOpenEditors(fileStores, performMove);
+            if (msg != null) {
+                LOGGER.warn(msg);
+                return false;
             }
-            return copyOrMove(view, fileStores, target,
-                    DND.DROP_MOVE == operation);
+            return copyOrMove(view, fileStores, target, performMove);
         } else if (data instanceof String[]) { // we have a file transfer
             String[] files = (String[])data;
             try {
