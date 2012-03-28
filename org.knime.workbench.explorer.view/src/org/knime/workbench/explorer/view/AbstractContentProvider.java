@@ -822,9 +822,10 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param performMove true if moving, false for copying
      * @return an error message describing the problem or null, if the no open
      *      editor blocks the operation
+     * @since 3.0
      */
     protected String checkOpenEditors(
-            final List<AbstractExplorerFileStore> fileStores, 
+            final List<AbstractExplorerFileStore> fileStores,
             final boolean performMove) {
         // even saved editors are note allowed when moving
         String msg = ExplorerFileSystemUtils.isLockable(fileStores,
@@ -836,7 +837,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             mb.setText("Dragging canceled");
             mb.setMessage(msg);
             mb.open();
-        } 
+        }
         return msg;
     }
 
