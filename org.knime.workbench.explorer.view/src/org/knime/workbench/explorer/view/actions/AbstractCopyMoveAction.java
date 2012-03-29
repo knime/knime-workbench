@@ -24,10 +24,14 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.filesystem.EFS;
@@ -252,6 +256,35 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             }
         }
 
+        /* Check for unlockable local destinations. Unfortunately this cannot
+         * be done in the copy loop below as this runs in a non SWT-thread
+         * but needs access to the workbench pages. */
+        final Set<LocalExplorerFileStore> notOverwritableDest
+                = new HashSet<LocalExplorerFileStore>();
+        final List<LocalExplorerFileStore> lockedDest
+                = new ArrayList<LocalExplorerFileStore>();
+        for (AbstractExplorerFileStore aefs : destChecker.getOverwriteFS()) {
+            if (aefs instanceof LocalExplorerFileStore) {
+                LocalExplorerFileStore lfs = (LocalExplorerFileStore)aefs;
+                if (lfs.fetchInfo().isWorkflow()) {
+                    if (ExplorerFileSystemUtils.lockWorkflow(lfs)) {
+                        lockedDest.add(lfs);
+                        /* Flows opened in an editor cannot be overwritten as
+                            well. */
+                        if (ExplorerFileSystemUtils.hasOpenWorkflows(
+                                Arrays.asList(lfs))) {
+                            notOverwritableDest.add(lfs);
+                        }
+                    } else {
+                        notOverwritableDest.add(lfs);
+                    }
+                }
+            }
+        }
+
+        final Collection<AbstractExplorerFileStore> processedTargets
+                = new HashSet<AbstractExplorerFileStore>(
+                        destChecker.getMappings().values());
         final List<IStatus> result = new LinkedList<IStatus>();
         final AtomicBoolean success = new AtomicBoolean(true);
         try {
@@ -284,6 +317,14 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                         monitor.subTask(operation);
                         LOGGER.debug(operation);
                         try {
+                            if (notOverwritableDest.contains(destFS)) {
+                                throw new UnsupportedOperationException(
+                                        "Cannot override \""
+                                        + destFS.getFullName()
+                                        + "\". Probably it is opened in the"
+                                        + " editor or it is in use by another "
+                                        + "user.");
+                            }
                             int options = destChecker.getOverwriteFS()
                                     .contains(destFS) ?
                                             EFS.OVERWRITE : EFS.NONE;
@@ -331,6 +372,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                                     + e.getStatus().getMessage(), e);
                             result.add(e.getStatus());
                             success.set(false);
+                            processedTargets.remove(destFS);
                         } catch (UnsupportedOperationException e) {
                             // illegal operation
                             LOGGER.debug(m_cmd + " failed: "
@@ -339,6 +381,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                                     ExplorerActivator.PLUGIN_ID,
                                     e.getMessage()));
                             success.set(true);
+                            processedTargets.remove(destFS);
                         } catch (Exception e) {
                             LOGGER.debug(m_cmd + " failed: "
                                     + e.getMessage(), e);
@@ -346,12 +389,14 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                                     ExplorerActivator.PLUGIN_ID,
                                     e.getMessage(), e));
                             success.set(false);
+                            processedTargets.remove(destFS);
                         }
                         monitor.worked(1);
                     }
                 }
             });
-            getView().setNextSelection(destChecker.getMappings().values());
+            getView().setNextSelection(processedTargets);
+            m_target.refresh();
         } catch (InvocationTargetException e) {
             LOGGER.debug("Invocation exception, " + e.getMessage(), e);
             result.add(new Status(IStatus.ERROR,
@@ -365,7 +410,11 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                     ExplorerActivator.PLUGIN_ID,
                     "interrupted: " + e.getMessage(), e));
             success.set(false);
+        } finally {
+            // unlock all locked destinations
+            ExplorerFileSystemUtils.unlockWorkflows(lockedDest);
         }
+
         if (result.size() > 0) {
             IStatus multiStatus = new MultiStatus(ExplorerActivator.PLUGIN_ID,
                     IStatus.ERROR, result.toArray(new IStatus[0]),

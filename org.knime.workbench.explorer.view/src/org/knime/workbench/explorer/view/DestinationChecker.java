@@ -22,6 +22,7 @@
 
 package org.knime.workbench.explorer.view;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -38,6 +39,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.dialogs.MergeRenameDialog;
 import org.knime.workbench.explorer.view.dialogs.OverwriteRenameDialog;
 
@@ -190,8 +192,12 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                                      destination.getChild(source.getName()),
                                      forbiddenStores));
                     } else {
+                        boolean isModifiable = resultInfo.isModifiable()
+                                && ExplorerFileSystemUtils.isLockable(
+                                        (List<AbstractExplorerFileStore>)
+                                        Arrays.asList(result), false) == null;
                         result = openOverwriteDialog(result,
-                                resultInfo.isModifiable(), forbiddenStores);
+                                isModifiable, forbiddenStores);
                     }
                 }
             }
@@ -314,7 +320,7 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
          */
         public Map<S, T>
                 getMappings() {
-            return m_mappings;
+            return Collections.unmodifiableMap(m_mappings);
         }
 
 }
