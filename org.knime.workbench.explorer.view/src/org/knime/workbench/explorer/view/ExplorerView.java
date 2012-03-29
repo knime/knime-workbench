@@ -95,7 +95,6 @@ import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
 import org.knime.workbench.explorer.view.actions.ConfigureExplorerViewAction;
@@ -605,15 +604,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             return;
         }
         final TreeSelection selection = (TreeSelection) m_viewer.getSelection();
-        List<AbstractExplorerFileStore> fs =
-            DragAndDropUtils.getExplorerFileStores(selection);
-        if ((fs != null) && (fs.size() == 1)
-                && (fs.get(0) instanceof MessageFileStore)) {
-            return;
-        }
-
         addGlobalActions(manager);
-
 
         Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selFiles =
                 DragAndDropUtils.getProviderMap(selection);
