@@ -325,9 +325,35 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                                         + " editor or it is in use by another "
                                         + "user.");
                             }
-                            int options = destChecker.getOverwriteFS()
-                                    .contains(destFS) ?
+                            boolean isOverwritten = destChecker.getOverwriteFS()
+                                    .contains(destFS);
+                            int options = isOverwritten ?
                                             EFS.OVERWRITE : EFS.NONE;
+
+                            /* Make sure that a workflow group is not
+                             * overwritten by a workflow or template and vice
+                             * versa. */
+                            if (isOverwritten && (
+                                    srcFS.fetchInfo().isWorkflowGroup()
+                                    != destFS.fetchInfo().isWorkflowGroup())) {
+                                String msg = null;
+                                if (srcFS.fetchInfo().isWorkflowGroup()) {
+                                    msg = "Cannot override \""
+                                        + destFS.getFullName()
+                                        + "\". Workflows and MetaNode Templates"
+                                        + " cannot be overwritten by a Workflow"
+                                        + " Group.";
+                                } else {
+                                    msg = "Cannot override \""
+                                        + destFS.getFullName()
+                                        + "\". Workflow Groups can only be "
+                                        + "overwritten by other Workflow"
+                                        + " Groups.";
+                                }
+                                throw new UnsupportedOperationException(msg);
+                            }
+
+
                             boolean isSrcRemote
                                 = srcFS instanceof RemoteExplorerFileStore;
                             boolean isDstRemote

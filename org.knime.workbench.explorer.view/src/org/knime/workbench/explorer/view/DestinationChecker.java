@@ -170,34 +170,32 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                 Set<AbstractExplorerFileStore> forbiddenStores
                     = new HashSet<AbstractExplorerFileStore>(
                             m_mappings.values());
-                if (srcInfo.isWorkflowGroup()) {
-                    if (m_fastDuplicate
-                            && source.getParent().equals(destination)) {
-                        result = (T)destination.getChild(
-                             OverwriteRenameDialog.getAlternativeName(
-                                     destination.getChild(source.getName()),
-                                     forbiddenStores));
-                    } else {
-                        result = openMergeDialog(source, result);
-                    }
-                } else {
+
+                if (m_fastDuplicate
+                        && source.getParent().equals(destination)) {
                     /* Skip the rename dialog if a file is copied into its own
                      * parent. Overwriting makes no sense in this case and
                      * chances are good that the user just wanted to duplicate
                      * the file. */
-                    if (m_fastDuplicate
-                            && source.getParent().equals(destination)) {
-                        result = (T)destination.getChild(
-                             OverwriteRenameDialog.getAlternativeName(
-                                     destination.getChild(source.getName()),
-                                     forbiddenStores));
+                    result = (T)destination.getChild(
+                            OverwriteRenameDialog.getAlternativeName(
+                                    destination.getChild(source.getName()),
+                                    forbiddenStores));
+                } else {
+                    if (srcInfo.isWorkflowGroup()
+                            && resultInfo.isWorkflowGroup()) {
+                        result = openMergeDialog(source, result);
                     } else {
                         boolean isModifiable = resultInfo.isModifiable()
                                 && ExplorerFileSystemUtils.isLockable(
                                         (List<AbstractExplorerFileStore>)
                                         Arrays.asList(result), false) == null;
+                        /* Make sure that a workflow group is not overwritten by
+                         * a workflow, a template or a file or vice versa */
+                        boolean overwriteOk = !srcInfo.isWorkflowGroup()
+                                && !resultInfo.isWorkflowGroup();
                         result = openOverwriteDialog(result,
-                                isModifiable, forbiddenStores);
+                                isModifiable && overwriteOk, forbiddenStores);
                     }
                 }
             }
@@ -241,9 +239,12 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
             }
             for (S child : childs) {
                 T destChild = (T)dest.getChild(child.getName());
-                AbstractExplorerFileInfo info = destChild.fetchInfo();
-                boolean exists = info.exists();
-                if (child.fetchInfo().isWorkflowGroup() && exists) {
+                AbstractExplorerFileInfo destInfo = destChild.fetchInfo();
+                boolean exists = destInfo.exists();
+                if (child.fetchInfo().isWorkflowGroup() && exists
+                        /* Workflow groups can only overwrite other workflow
+                            groups. */
+                        && destInfo.isWorkflowGroup()) {
                     collectChildMappings(child, destChild, overwrite);
                 } else { // workflows, meta node templates and files
                     if (exists) {
