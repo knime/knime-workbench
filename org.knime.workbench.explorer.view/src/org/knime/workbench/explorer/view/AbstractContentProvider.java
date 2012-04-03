@@ -21,9 +21,7 @@ package org.knime.workbench.explorer.view;
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +33,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
@@ -55,7 +54,6 @@ import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeMessage;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.util.UniqueNameGenerator;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -64,6 +62,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
@@ -284,6 +283,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param metaNode
      * @param target
      */
+    @SuppressWarnings("unchecked")
     public boolean saveMetaNodeTemplate(final WorkflowManager metaNode,
             final AbstractExplorerFileStore target) {
 
@@ -291,70 +291,49 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             return false;
         }
 
+        final String originalName = metaNode.getName();
+
         String mountIDWithFullPath = target.getMountIDWithFullPath();
         Shell shell = Display.getDefault().getActiveShell();
-        String uniqueName = metaNode.getName();
-        // remove weird chars - word chars (\w), spaces & dashes are OK
-        uniqueName = uniqueName.replaceAll("[^\\w \\-]", "_");
+        String uniqueName = originalName;
+        if (new FileStoreNameValidator().isValid(uniqueName) != null) {
+            InputDialog dialog = new InputDialog(shell, "Metanode rename",
+                    "The name \"" + uniqueName + "\" is not a valid "
+                    + "template name.\n\nChoose a new name under which the "
+                    + "template will be saved.", uniqueName,
+                    new FileStoreNameValidator());
+            dialog.setBlockOnOpen(true);
+            if (dialog.open() == InputDialog.CANCEL) {
+                return false;
+            }
+            uniqueName = dialog.getValue();
+        }
         AbstractExplorerFileStore templateLoc = target.getChild(uniqueName);
         boolean doesTargetExist = templateLoc.fetchInfo().exists();
+        // don't allow to overwrite existing workflow groups with a template
+        final boolean overwriteOK = doesTargetExist
+            && !AbstractExplorerFileStore.isWorkflowGroup(templateLoc);
         boolean isOverwrite = false;
-        if (doesTargetExist
-                && !AbstractExplorerFileStore.isWorkflowTemplate(templateLoc)) {
-            StringBuilder eMsg = new StringBuilder();
-            eMsg.append("The target directory \"");
-            eMsg.append(mountIDWithFullPath).append("/").append(uniqueName);
-            eMsg.append("\" already exists and can't be overwritten as it");
-            eMsg.append(" does not represent a workflow template.\n\n");
-            eMsg.append("The new template will be saved to a different ");
-            eMsg.append("folder instead.");
-            if (MessageDialog.openConfirm(shell, "Existing folder",
-                    eMsg.toString())) {
-                isOverwrite = false;
-            } else {
+        if (doesTargetExist) {
+            DestinationChecker<AbstractExplorerFileStore,
+                AbstractExplorerFileStore> dc = new DestinationChecker
+                    <AbstractExplorerFileStore, AbstractExplorerFileStore>(
+                            shell, "create template", false, false);
+            dc.setIsOverwriteEnabled(overwriteOK);
+            dc.setIsOverwriteDefault(overwriteOK);
+
+            AbstractExplorerFileStore old = templateLoc;
+            templateLoc = dc.openOverwriteDialog(
+                    templateLoc, overwriteOK, Collections.EMPTY_SET);
+            if (templateLoc == null) { // canceled
                 return false;
             }
-        } else if (doesTargetExist) {
-            StringBuilder eMsg = new StringBuilder();
-            eMsg.append("A template folder with the name \"");
-            eMsg.append(mountIDWithFullPath).append("/");
-            eMsg.append(uniqueName);
-            eMsg.append("\" already exists.");
-            MessageDialog md =
-                    new MessageDialog(shell, "Existing folder", null,
-                            eMsg.toString(), MessageDialog.WARNING,
-                            new String[]{"&Overwrite", "&Rename", "&Cancel"}, 0);
-            switch (md.open()) {
-            case 0: // Overwrite
-                isOverwrite = true;
-                break;
-            case 1: // Rename
-                isOverwrite = false;
-                break;
-            case 2: // Cancel
-                return false;
-            }
-        }
-        if (doesTargetExist && !isOverwrite) { // generate new name
-            Set<String> set;
-            try {
-                set =
-                        new HashSet<String>(Arrays.asList(target.childNames(
-                                EFS.NONE, null)));
-            } catch (CoreException e) {
-                LOGGER.warn("Can't query child elements of target \"" + target
-                        + "\"", e);
-                set = Collections.emptySet();
-            }
-            UniqueNameGenerator nameGen = new UniqueNameGenerator(set);
-            String newName = nameGen.newName(uniqueName);
-            // the generator appends a "(#x)" - and # is invalid!
-            uniqueName = newName.replace("#", "");
-            templateLoc = target.getChild(uniqueName);
+            isOverwrite = old.equals(templateLoc);
         }
 
+        String newName = templateLoc.getName();
         boolean linkMetaNodeToNewTemplate;
-        switch (promptLinkMetaNodeTemplate()) {
+        switch (promptLinkMetaNodeTemplate(originalName, newName)) {
         case IDialogConstants.YES_ID:
             linkMetaNodeToNewTemplate = true;
             break;
@@ -399,6 +378,11 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                         metaNode.saveAsMetaNodeTemplate(directory,
                                 new ExecutionMonitor());
                 if (linkMetaNodeToNewTemplate) {
+                    // TODO this needs to be done via the command stack,
+                    // the rename can currently not be undone.
+                    if (!originalName.equals(newName)) {
+                        metaNode.setName(newName);
+                    }
                     URI uri = templateLoc.toURI();
                     MetaNodeTemplateInformation link = template.createLink(uri);
                     metaNode.getParent().setTemplateInformation(
@@ -511,22 +495,25 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         // default local implementation doesn't need to do nothing
     }
 
-    private int promptLinkMetaNodeTemplate() {
+    private int promptLinkMetaNodeTemplate(
+            final String oldName, final String newName) {
         IPreferenceStore prefStore =
                 ExplorerActivator.getDefault().getPreferenceStore();
-        String pref =
-                prefStore
-                        .getString(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
+        String pref = prefStore.getString(
+                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
         if (MessageDialogWithToggle.ALWAYS.equals(pref)) {
             return IDialogConstants.YES_ID;
         } else if (MessageDialogWithToggle.NEVER.equals(pref)) {
             return IDialogConstants.NO_ID;
         }
         Shell activeShell = Display.getDefault().getActiveShell();
+        String msg = "Update meta node to link to the template?";
+        if (!oldName.equals(newName)) {
+            msg = msg + "\n(The node will be renamed to \"" + newName + "\".)";
+        }
         MessageDialogWithToggle dlg =
                 MessageDialogWithToggle.openYesNoCancelQuestion(activeShell,
-                        "Link Meta Node Template",
-                        "Update meta node to link to the template?",
+                        "Link Meta Node Template", msg,
                         "Remember my decision", false, prefStore,
                         PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
         return dlg.getReturnCode();

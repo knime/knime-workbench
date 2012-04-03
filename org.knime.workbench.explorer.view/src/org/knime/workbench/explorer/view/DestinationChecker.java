@@ -70,6 +70,8 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
         private final boolean m_fastDuplicate;
         private final String m_cmd;
         private final boolean m_isMultiple;
+        private boolean m_isOverwriteDefault = false;
+        private boolean m_isOverwriteEnabled = true;
 
         /**
          * Creates a new destination checker that allows to determine a
@@ -193,7 +195,8 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                         /* Make sure that a workflow group is not overwritten by
                          * a workflow, a template or a file or vice versa */
                         boolean overwriteOk = !srcInfo.isWorkflowGroup()
-                                && !resultInfo.isWorkflowGroup();
+                                && !resultInfo.isWorkflowGroup()
+                                && m_isOverwriteEnabled;
                         result = openOverwriteDialog(result,
                                 isModifiable && overwriteOk, forbiddenStores);
                     }
@@ -263,13 +266,21 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
 
 
 
-        private T openOverwriteDialog(
+        /** Open overwrite dialog.
+         * @return new destination (same as <code>dest</code> if to overwrite)
+         * or <code>null</code> if canceled
+         * @since 3.0
+         */
+        public T openOverwriteDialog(
                 final T dest,
                 final boolean canOverwrite,
                 final Set<AbstractExplorerFileStore> forbiddenStores) {
             OverwriteRenameDialog dlg =
                     new OverwriteRenameDialog(m_shell, dest, canOverwrite,
                             m_isMultiple, forbiddenStores);
+            if (canOverwrite && m_isOverwriteDefault) {
+                dlg.setOverwriteAsDefault(true);
+            }
             int returnCode = dlg.open();
 
             switch (returnCode) {
@@ -296,6 +307,23 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                 T newDest = (T)dest.getParent().getChild(newName);
                 return newDest;
             }
+        }
+
+        /** Can be called right after construction to programmatically make
+         * the overwrite action the default. This option is ignored
+         * when {@link #setIsOverwriteDefault(boolean)} is set to false.
+         * @param isOverwriteDefault the isOverwriteDefault to set
+         * @since 3.0*/
+        public void setIsOverwriteDefault(final boolean isOverwriteDefault) {
+            m_isOverwriteDefault = isOverwriteDefault;
+        }
+
+        /** Can be called right after construction to programmatically disable
+         * the overwrite option.
+         * @param isOverwriteEnabled the isOverwriteEnabled to set
+         * @since 3.0*/
+        public void setIsOverwriteEnabled(final boolean isOverwriteEnabled) {
+            m_isOverwriteEnabled = isOverwriteEnabled;
         }
 
         /**

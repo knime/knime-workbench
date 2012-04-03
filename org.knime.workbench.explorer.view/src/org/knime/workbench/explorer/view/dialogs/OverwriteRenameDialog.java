@@ -71,6 +71,8 @@ public class OverwriteRenameDialog extends Dialog {
 
     private final boolean m_multiple;
 
+    private boolean m_isOverwriteDefault;
+
     private final Set<AbstractExplorerFileStore> m_forbiddenStores;
 
     /**
@@ -130,6 +132,14 @@ public class OverwriteRenameDialog extends Dialog {
         m_canWriteDestination = canWriteDest;
         m_multiple = multiple;
         m_forbiddenStores = forbiddenStores;
+    }
+
+    /** Can be called right after construction to programmatically set the
+     * overwrite action to be the default (default is rename).
+     * @param value ...
+     * @since 3.0*/
+    public void setOverwriteAsDefault(final boolean value) {
+        m_isOverwriteDefault = value;
     }
 
     /**
@@ -283,8 +293,8 @@ public class OverwriteRenameDialog extends Dialog {
             createButton(parent, IDialogConstants.ABORT_ID,
                     IDialogConstants.ABORT_LABEL, false);
         }
-        // default: choice rename
-        setSelectedAndValidate(m_renameGUI);
+        Button defButton = m_isOverwriteDefault ? m_overwriteGUI : m_renameGUI;
+        setSelectedAndValidate(defButton);
     }
 
     /**
