@@ -59,6 +59,7 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.util.KnimeFileUtil;
 
 /**
  * Represents a workflow import element from a directory or file.
@@ -173,22 +174,7 @@ public class WorkflowImportElementFromFile
      */
     @Override
     public boolean isWorkflow() {
-        File dir = getFile();
-        if (!dir.isDirectory()) {
-            return false;
-        }
-        File workflowFile = new File(dir, WorkflowPersistor.WORKFLOW_FILE);
-        // if itself contains a .knime file -> return this
-        if (workflowFile.exists()) {
-            File parentWorkflowFile = new File(dir.getParent(),
-                    WorkflowPersistor.WORKFLOW_FILE);
-            if (!parentWorkflowFile.exists()) {
-                // check whether the parent does not contain a workflow file
-                // in order to prevent importing of meta nodes
-                return true;
-            }
-        }
-        return false;
+        return KnimeFileUtil.isWorkflow(getFile());
     }
 
     /**
@@ -197,16 +183,7 @@ public class WorkflowImportElementFromFile
      */
     @Override
     public boolean isWorkflowGroup() {
-        File dir = getFile();
-        if (!dir.isDirectory()) {
-            return false;
-        }
-        File workflowGroupFile = new File(dir, WorkflowPersistor.METAINFO_FILE);
-        // if itself contains a .knime file -> return this
-        if (workflowGroupFile.exists()) {
-            return true;
-        }
-        return false;
+        return KnimeFileUtil.isWorkflowGroup(getFile());
     }
 
     /**
@@ -214,14 +191,6 @@ public class WorkflowImportElementFromFile
      */
     @Override
     public boolean isTemplate() {
-        File dir = getFile();
-        if (!dir.isDirectory()) {
-            return false;
-        }
-        File templateFile = new File(dir, WorkflowPersistor.TEMPLATE_FILE);
-        if (templateFile.exists()) {
-            return true;
-        }
-        return false;
+        return KnimeFileUtil.isMetaNodeTemplate(getFile());
     }
 }

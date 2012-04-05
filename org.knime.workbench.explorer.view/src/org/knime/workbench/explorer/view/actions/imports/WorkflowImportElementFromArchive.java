@@ -56,6 +56,7 @@ import java.util.zip.ZipFile;
 
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
 import org.eclipse.ui.internal.wizards.datatransfer.TarFile;
+import org.knime.core.node.workflow.SingleNodeContainerPersistorVersion200;
 import org.knime.core.node.workflow.WorkflowPersistor;
 
 /**
@@ -99,19 +100,33 @@ public class WorkflowImportElementFromArchive
     public boolean isWorkflowGroup() {
         ILeveledImportStructureProvider provider = getProvider();
         Object zipEntry = getEntry();
-        if (provider.isFolder(zipEntry)) {
-            List children = provider.getChildren(zipEntry);
-            if (children == null) {
+        if (!provider.isFolder(zipEntry)) {
+            return false;
+        }
+        List children = provider.getChildren(zipEntry);
+        if (children == null) {
+            return false;
+        }
+
+        for (Object o : children) {
+            String elementLabel = provider.getLabel(o);
+            if (elementLabel.equals(
+                    WorkflowPersistor.METAINFO_FILE)) {
+                return true;
+            } else if (
+                    // workflow or meta node
+                    elementLabel.equals(WorkflowPersistor.WORKFLOW_FILE)
+                    // workflow template
+                    || elementLabel.equals(
+                            WorkflowPersistor.TEMPLATE_FILE)
+                    // node
+                    || elementLabel.equals(
+                        SingleNodeContainerPersistorVersion200.NODE_FILE)) {
                 return false;
             }
-            for (Object o : children) {
-                String elementLabel = provider.getLabel(o);
-                if (elementLabel.equals(WorkflowPersistor.METAINFO_FILE)) {
-                    return true;
-                }
-            }
         }
-        return false;
+        // all other folders are a workflow group
+        return true;
     }
 
     /**

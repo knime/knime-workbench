@@ -179,7 +179,8 @@ public abstract class AbstractDownloadAction extends Action {
                 LOGGER.info("Existing destination not modified ("
                         + getTargetIdentifier() + ") ");
             }
-            return;
+            throw new CoreException(new Status(IStatus.WARNING,
+                                ExplorerActivator.PLUGIN_ID, msg));
         }
 
         prepareTarget();

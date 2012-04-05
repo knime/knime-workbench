@@ -119,8 +119,11 @@ public class NewWorkflowGroupAction extends ExplorerAction {
         if (fileInfo.isWorkflowGroup() && fileInfo.isModifiable()) {
             return true;
         }
-        // for other items check if the parent is writable
-        return file.getParent() != null
+        /* for other items check if the parent is writable and not a workflow
+         * (cannot create workflow groups on workflow jobs) */
+        AbstractExplorerFileStore parent = file.getParent();
+        return parent != null
+                && !parent.fetchInfo().isWorkflow()
                 && file.getParent().fetchInfo().isModifiable();
     }
 
