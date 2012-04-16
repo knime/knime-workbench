@@ -427,13 +427,15 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      */
     public boolean canCopy() {
         AbstractExplorerFileStore parent = getParent();
-        return fetchInfo().isReadable()
+        AbstractExplorerFileInfo info = fetchInfo();
+        return info.exists() && info.isReadable()
                 && (parent == null || getParent().fetchInfo().isReadable());
     }
 
     private boolean canModifyFileAndParent() {
         AbstractExplorerFileStore parent = getParent();
-        return fetchInfo().isModifiable()
+        AbstractExplorerFileInfo info = fetchInfo();
+        return info.exists() && info.isModifiable()
                 && parent != null && parent.fetchInfo().isModifiable();
     }
 }

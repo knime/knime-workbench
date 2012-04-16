@@ -30,6 +30,23 @@ package org.knime.workbench.explorer.filesystem;
  */
 public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
     /**
+     * Creates a new file information object with default values.
+     */
+    protected RemoteExplorerFileInfo() {
+        super();
+    }
+
+    /**
+     * Creates a new file information object. All values except the file name
+     * will have default values.
+     *
+     * @param name The name of this file
+     */
+    protected RemoteExplorerFileInfo(final String name) {
+        super(name);
+    }
+
+    /**
      * Checks whether a file represents a workflow job.
      *
      * @return true if the file is a workflow job, false otherwise

@@ -126,7 +126,7 @@ public abstract class AbstractDownloadAction extends Action {
                             }
                         });
             } catch (Exception e) {
-                LOGGER.error("Upload error: " + e.getMessage(), e);
+                LOGGER.error("Download error: " + e.getMessage(), e);
             }
         } else {
             try {
