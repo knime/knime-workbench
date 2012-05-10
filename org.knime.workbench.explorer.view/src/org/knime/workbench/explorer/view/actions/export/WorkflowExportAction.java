@@ -51,14 +51,13 @@
 package org.knime.workbench.explorer.view.actions.export;
 
 import java.util.List;
-import java.util.Map;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -105,9 +104,12 @@ public class WorkflowExportAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> sel =
-                getSelectedFiles();
-        if (sel.size() != 1 || isMultipleSelection()) {
+        List<AbstractExplorerFileStore> selection = getAllSelectedFiles();
+        if (selection == null || selection.size() != 1) {
+            return false;
+        }
+        AbstractExplorerFileInfo info = selection.get(0).fetchInfo();
+        if (!info.isWorkflowGroup() && !info.isWorkflow()) {
             return false;
         }
         return true;
