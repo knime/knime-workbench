@@ -185,7 +185,7 @@ public class GlobalRenameAction extends ExplorerAction {
         InputDialog dialog =
                 new InputDialog(shell, "Rename",
                         "Please enter the new name for \"" + name + "\"", name,
-                        new FileStoreNameValidator());
+                        new FileStoreNameValidator(name));
         dialog.setBlockOnOpen(true);
 
         if (dialog.open() == InputDialog.CANCEL) {

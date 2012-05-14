@@ -378,10 +378,14 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     @Override
     public void move(final IFileStore destination, final int options,
             final IProgressMonitor monitor) throws CoreException {
-        super.cleanupDestination(destination, options, monitor);
         File srcFile = toLocalFile(options, monitor);
         File dstFile = destination.toLocalFile(options, monitor);
-
+        if (srcFile.equals(dstFile)) {
+            LOGGER.debug("Cannot move file store on itself. "
+                    + "Ignoring operation...");
+            return;
+        }
+        super.cleanupDestination(destination, options, monitor);
         try {
             URI srcURI = srcFile.toURI();
             if (srcFile.renameTo(dstFile)) {
