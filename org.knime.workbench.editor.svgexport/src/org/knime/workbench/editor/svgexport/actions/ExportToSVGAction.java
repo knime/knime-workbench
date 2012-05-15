@@ -16,7 +16,7 @@ import org.eclipse.ui.PlatformUI;
 public class ExportToSVGAction implements IWorkbenchWindowActionDelegate {
     private static final int SIZING_WIZARD_WIDTH = 470;
 
-    private static final int SIZING_WIZARD_HEIGHT = 350;
+    private static final int SIZING_WIZARD_HEIGHT = 300;
 
     /**
      * Creates a new action.
