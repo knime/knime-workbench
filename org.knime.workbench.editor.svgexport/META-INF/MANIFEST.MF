@@ -5,9 +5,6 @@ Bundle-SymbolicName: org.knime.workbench.editor.svgexport;singleton:=true
 Bundle-Version: 2.6.0.qualifier
 Bundle-Vendor: KNIME GmbH, Konstanz, Germany
 Fragment-Host: org.knime.workbench.editor;bundle-version="2.3.0"
-Export-Package: org.knime.workbench.editor.svgexport,
- org.knime.workbench.editor.svgexport.actions,
- org.knime.workbench.editor.svgexport.figures
 Require-Bundle: org.apache.batik.bridge;bundle-version="[1.6.0,1.7.0)",
  org.apache.batik.css;bundle-version="[1.6.0,1.7.0)",
  org.apache.batik.dom;bundle-version="[1.6.0,1.7.0)",
@@ -19,6 +16,8 @@ Require-Bundle: org.apache.batik.bridge;bundle-version="[1.6.0,1.7.0)",
  org.apache.batik.transcoder;bundle-version="[1.6.0,1.7.0)",
  org.apache.batik.util;bundle-version="[1.6.0,1.7.0)",
  org.apache.batik.util.gui;bundle-version="[1.6.0,1.7.0)",
- org.apache.batik.xml;bundle-version="[1.6.0,1.7.0)"
+ org.apache.batik.xml;bundle-version="[1.6.0,1.7.0)",
+ org.eclipse.gmf.runtime.draw2d.ui.render.awt;bundle-version="1.4.2",
+ org.eclipse.gmf.runtime.common.ui;bundle-version="1.4.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ActivationPolicy: lazy

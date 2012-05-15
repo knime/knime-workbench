@@ -50,18 +50,29 @@
  */
 package org.knime.workbench.editor.svgexport.actions;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.util.LinkedList;
+import java.io.IOException;
+import java.io.Writer;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import org.apache.batik.dom.GenericDOMImplementation;
-import org.apache.batik.svggen.CachedImageHandlerBase64Encoder;
-import org.apache.batik.svggen.CachedImageHandlerPNGEncoder;
-import org.apache.batik.svggen.GenericImageHandler;
-import org.apache.batik.svggen.SVGGeneratorContext;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
+import org.apache.batik.transcoder.TranscoderException;
+import org.apache.batik.transcoder.TranscoderInput;
+import org.apache.batik.transcoder.TranscoderOutput;
+import org.apache.batik.transcoder.svg2svg.SVGTranscoder;
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.gef.EditPart;
+import org.eclipse.gmf.runtime.common.ui.util.DisplayUtils;
+import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.export.GraphicsSVG;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.swt.SWT;
@@ -71,22 +82,16 @@ import org.eclipse.ui.IExportWizard;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.dialogs.ExportWizard;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.editor.svgexport.BatikGraphics2DWrapper;
-import org.knime.workbench.editor.svgexport.figures.AnnotationSVGFigure;
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.editparts.AbstractWorkflowEditPart;
-import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
-import org.knime.workbench.editor2.editparts.SubworkflowEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
-import org.w3c.dom.DOMImplementation;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 
 /**
- * This wizard exports KNIME workflows and workflow groups if workflows are
- * selected which are in different workflow groups.
- *
+ * This wizard exports KNIME workflows as SVG images.
  *
  * @author Christoph Sieb, University of Konstanz
  * @author Fabian Dill, KNIME.com AG, Zurich, Switzerland
@@ -97,23 +102,16 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(SVGExportWizard.class);
 
-    private List<ConnectionContainerEditPart> drawnConnections =
-            new LinkedList<ConnectionContainerEditPart>();
-
-    // private static final NodeLogger LOGGER =
-    // NodeLogger.getLogger(WorkflowExportWizard.class);
-
     private ExportToSVGPage m_page;
 
     private ISelection m_selection;
 
     /**
-     * Constructor.
+     * Creates a new export wizard.
      */
     public SVGExportWizard() {
         super();
-        setWindowTitle("Export SVG-Image");
-        // setNeedsProgressMonitor(true);
+        setWindowTitle("Export workflow as SVG");
     }
 
     /**
@@ -138,13 +136,14 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
      * This method is called when 'Finish' button is pressed in the wizard. We
      * will create an operation and run it using wizard as execution context.
      *
-     * @return If finished successfully
+     * @return <code>true</code> if finished successfully, <code>false</code>
+     *         otherwise
      */
     @Override
     public boolean performFinish() {
         try {
             return export();
-        } catch (RuntimeException ex) {
+        } catch (Exception ex) {
             LOGGER.error("Error during SVG export: " + ex.getMessage(), ex);
             MessageBox mb =
                     new MessageBox(Display.getDefault().getActiveShell(),
@@ -157,8 +156,7 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
         }
     }
 
-    private boolean export() {
-
+    private boolean export() throws IOException, TranscoderException {
         String fileDestination = m_page.getFileDestination();
 
         if (fileDestination.isEmpty()) {
@@ -166,13 +164,10 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
             return false;
         }
 
-        if (fileDestination != null && fileDestination.trim().length() > 0) {
-            if (fileDestination.length() < 5
-                    || fileDestination.lastIndexOf('.') < fileDestination
-                            .length() - 4) {
-                fileDestination += ".svg";
-            }
-
+        if ((fileDestination.trim().length() > 0)
+                && ((fileDestination.length() < 5) || (fileDestination
+                        .lastIndexOf('.') < fileDestination.length() - 4))) {
+            fileDestination += ".svg";
         }
 
         File outFile = new File(fileDestination);
@@ -194,29 +189,6 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
             }
         }
 
-        DOMImplementation domImpl =
-                GenericDOMImplementation.getDOMImplementation();
-        String svgNS = "http://www.w3.org/2000/svg";
-        Document document = domImpl.createDocument(svgNS, "svg", null);
-        SVGGeneratorContext ctx = SVGGeneratorContext.createDefault(document);
-
-        ctx.setComment("SVG-export of a KNIME-workflow generated by Batik SVG-Generator");
-        GenericImageHandler iHandler;
-
-        try {
-            if (m_page.embedData()) {
-                iHandler = new CachedImageHandlerBase64Encoder();
-            } else {
-                iHandler =
-                        new CachedImageHandlerPNGEncoder(outFile.getParent(),
-                                outFile.getParent());
-            }
-            ctx.setGenericImageHandler(iHandler);
-
-        } catch (Exception e1) {
-            e1.printStackTrace();
-        }
-
         // Obtain currently active workflow editor
         WorkflowEditor editor =
                 (WorkflowEditor)PlatformUI.getWorkbench()
@@ -228,111 +200,65 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
                 (WorkflowRootEditPart)editor.getViewer().getRootEditPart()
                         .getChildren().get(0);
 
-        // Obtain the bounds of the workflow by searching for the biggest
-        // existing x and y values of the painted Figures. Add nodewidth + 10px
-        // for good measure.
-        // Also obtain the minimum x and y values used in the Workflow and pass
-        // them on to the wrapper, since Rectangles with negative x and y can't
-        // be created.
+        // export workflow (unfortunately without connections)
+        IFigure figure = part.getFigure();
+        Rectangle bounds = figure.getBounds();
+        GraphicsSVG svgExporter = GraphicsSVG.getInstance(bounds);
+        svgExporter.pushState();
+        figure.paint(svgExporter);
 
-        int xCoords = 0, xMin = 0, xMax = 0, minWidth = 0, maxWidth = 0;
-        int yCoords = 0, yMin = 0, yMax = 0, minHeight = 0, maxHeight = 0;
-
-        for (Object node : part.getChildren()) {
-            IFigure figure = ((AbstractWorkflowEditPart)node).getFigure();
-            xCoords = figure.getBounds().x;
-            yCoords = figure.getBounds().y;
-            if (xCoords >= xMax) {
-                xMax = xCoords;
-                maxWidth = figure.getBounds().width;
-            }
-            if (xCoords <= xMin) {
-                xMin = xCoords;
-                minWidth = figure.getBounds().width;
-            }
-            if (yCoords >= yMax) {
-                yMax = yCoords;
-                maxHeight = figure.getBounds().height;
-            }
-            if (yCoords <= yMin) {
-                yMin = yCoords;
-                minHeight = figure.getBounds().height;
-            }
-        }
-
-        int xOffset = Math.abs(xMin) + minWidth;
-        int yOffset = Math.abs(yMin) + minHeight;
-        int xBounds = xMax + xOffset + maxWidth;
-        int yBounds = yMax + yOffset + maxHeight;
-
-        Rectangle bounds = new Rectangle(0, 0, xBounds, yBounds);
-
-        BatikGraphics2DWrapper graphics =
-                new BatikGraphics2DWrapper(PlatformUI.getWorkbench()
-                        .getDisplay(), ctx, false, xOffset, yOffset, bounds);
-
-        // First, obtain the figure of the RootEditPart, its children are the
-        // figures of the nodes. Now each child paints itself to the wrapped
-        // generator and resets the foreground colour afterwards. This approach
-        // is necessary to prevent drawing each node twice and colour-errors.
-
-        for (Object node : part.getChildren()) {
-            if (node instanceof AnnotationEditPart) {
-                if (m_page.includeAnnotations()) {
-                    AnnotationSVGFigure figure =
-                            new AnnotationSVGFigure(PlatformUI.getWorkbench()
-                                    .getDisplay(), (AnnotationEditPart)node);
-                    figure.paint(graphics);
-                    graphics.resetColors();
-                }
-            } else {
-                ((AbstractWorkflowEditPart)node).getFigure().paint(graphics);
-                graphics.resetColors();
-            }
-        }
-
-        // Now we need to paint the connections. In order to do this we get all
-        // nodes to which the user may add connections and draw these
-        // connections while keeping track of those already drawn.
-        for (Object child : part.getChildren()) {
-            if (child instanceof NodeContainerEditPart) {
-                for (ConnectionContainerEditPart connection : ((NodeContainerEditPart)child)
+        // export all connections
+        Set<ConnectionContainerEditPart> connections =
+                new HashSet<ConnectionContainerEditPart>();
+        @SuppressWarnings("unchecked")
+        List<EditPart> children = part.getChildren();
+        for (EditPart ep : children) {
+            if (ep instanceof NodeContainerEditPart) {
+                for (ConnectionContainerEditPart c : ((NodeContainerEditPart)ep)
                         .getAllConnections()) {
-                    if (!drawnConnections.contains(connection)) {
-                        connection.getFigure().paint(graphics);
-                        graphics.resetColors();
-                        drawnConnections.add(connection);
-                    }
-
+                    connections.add(c);
                 }
             }
-            if (child instanceof SubworkflowEditPart) {
-                for (ConnectionContainerEditPart connection : ((SubworkflowEditPart)child)
-                        .getAllConnections()) {
-                    if (!drawnConnections.contains(connection)) {
-                        connection.getFigure().paint(graphics);
-                        graphics.resetColors();
-                        drawnConnections.add(connection);
+        }
+        for (ConnectionContainerEditPart ep : connections) {
+            ep.getFigure().paint(svgExporter);
+        }
+
+        SVGTranscoder transcoder = new SVGTranscoder();
+        Writer fileOut = new BufferedWriter(new FileWriter(outFile));
+        TranscoderOutput out = new TranscoderOutput(fileOut);
+        Document doc = svgExporter.getDocument();
+        doc.replaceChild(svgExporter.getRoot(), doc.getDocumentElement());
+
+        // fix font sizes
+        int dpix = DisplayUtils.getDisplay().getDPI().x;
+        if (dpix > 72) {
+            try {
+                XPathExpression xpath =
+                        XPathFactory.newInstance().newXPath()
+                                .compile("//@font-size");
+                NodeList fontSizes =
+                        (NodeList)xpath.evaluate(doc, XPathConstants.NODESET);
+                for (int i = 0; i < fontSizes.getLength(); i++) {
+                    Attr attribute = (Attr)fontSizes.item(i);
+                    String value = attribute.getNodeValue();
+                    try {
+                        double size = Double.parseDouble(value);
+                        size = Math.floor(size / dpix * 72.0) * dpix / 72.0;
+                        attribute.setNodeValue(Integer.toString((int)size));
+                    } catch (NumberFormatException ex) {
+                        // ignore it
                     }
                 }
+            } catch (XPathExpressionException ex) {
+                LOGGER.error("XPath error while exporting SVG", ex);
             }
         }
 
-        // Use CSS-Style attributes. Currently disabled (= always false)
-        boolean useCSS = m_page.useCSS();
-
-        // Finally, create a FileWriter and stream the SVG into it.
-        FileWriter out;
-        try {
-            out = new FileWriter(outFile);
-            graphics.stream(out, useCSS);
-            out.flush();
-            out.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        TranscoderInput in = new TranscoderInput(doc);
+        transcoder.transcode(in, out);
+        fileOut.close();
 
         return true;
     }
-
 }

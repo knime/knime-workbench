@@ -77,12 +77,6 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 public class ExportToSVGPage extends WizardPage {
     private Text m_fileDestination;
 
-    private Button m_embedImages;
-
-    // private Button m_useCSS;
-
-    // private Button m_includeAnnotations;
-
     private String m_filename;
 
     private static final ImageDescriptor ICON = AbstractUIPlugin
@@ -90,9 +84,9 @@ public class ExportToSVGPage extends WizardPage {
                     "icons/knime_export55.png");
 
     /**
-     * Constructor for NewWorkflowPage.
+     * Creates a new export-to-SVG page.
      *
-     * @param selection The initial selection
+     * @param selection the initial selection
      */
     public ExportToSVGPage(final ISelection selection) {
         super("wizardPage");
@@ -153,50 +147,13 @@ public class ExportToSVGPage extends WizardPage {
             }
         });
 
-        final Group group = new Group(container, SWT.NONE);
-        final GridLayout gridLayout1 = new GridLayout();
-        group.setLayout(gridLayout1);
-        group.setText("Options");
-        final GridData gridData = new GridData(GridData.FILL_HORIZONTAL);
-        gridData.horizontalSpan = 2;
-        group.setLayoutData(gridData);
-
-        m_embedImages = new Button(group, SWT.CHECK);
-        m_embedImages.setSelection(true);
-        m_embedImages.setText("Embed images in the SVG-file.");
-        // m_useCSS = new Button(group, SWT.CHECK);
-        // m_useCSS.setSelection(false);
-        // m_useCSS.setText("Use CSS-style attributes.");
-        // m_includeAnnotations = new Button(group, SWT.CHECK);
-        // m_includeAnnotations.setSelection(false);
-        // m_includeAnnotations.setText("Include workflow-annotations in SVG-Export.");
-
         setControl(container);
     }
 
     /**
-     * @return true if the check box for embedding images is checked
-     */
-    boolean embedData() {
-
-        return m_embedImages.getSelection();
-    }
-
-    /**
-     * @return true if the check box for using CSS-style attributes is checked
-     */
-    boolean useCSS() {
-        // return m_useCSS.getSelection();
-        return false;
-    }
-
-    boolean includeAnnotations() {
-        // return m_includeAnnotations.getSelection();
-        return false;
-    }
-
-    /**
-     * @return The destination of the SVG-export
+     * Returns the destination SVG file.
+     *
+     * @return a filename
      */
     public String getFileDestination() {
         return m_fileDestination.getText();

@@ -14,23 +14,26 @@ import org.eclipse.ui.PlatformUI;
  * @author Andreas Burger
  */
 public class ExportToSVGAction implements IWorkbenchWindowActionDelegate {
-	private static final int SIZING_WIZARD_WIDTH = 470;
+    private static final int SIZING_WIZARD_WIDTH = 470;
 
-    private static final int SIZING_WIZARD_HEIGHT = 550;
+    private static final int SIZING_WIZARD_HEIGHT = 350;
 
+    /**
+     * Creates a new action.
+     */
     public ExportToSVGAction() {
-	}
+    }
 
-	/**
-	 * The action has been activated. The argument of the
-	 * method represents the 'real' action sitting
-	 * in the workbench UI.
-	 * @see IWorkbenchWindowActionDelegate#run
-	 */
-	@Override
+    /**
+     * The action has been activated. The argument of the method represents the
+     * 'real' action sitting in the workbench UI.
+     *
+     * @see IWorkbenchWindowActionDelegate#run
+     */
+    @Override
     public void run(final IAction action) {
-		IWorkbenchWindow workbenchWindow =
-            PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        IWorkbenchWindow workbenchWindow =
+                PlatformUI.getWorkbench().getActiveWorkbenchWindow();
         if (workbenchWindow == null) {
             // action has been disposed
             return;
@@ -49,18 +52,16 @@ public class ExportToSVGAction implements IWorkbenchWindowActionDelegate {
         dialog.open();
     }
 
+    @Override
+    public void selectionChanged(final IAction action,
+            final ISelection selection) {
+    }
 
-	@Override
-    public void selectionChanged(final IAction action, final ISelection selection) {
-	}
-
-
-	@Override
+    @Override
     public void dispose() {
-	}
+    }
 
-
-	@Override
+    @Override
     public void init(final IWorkbenchWindow window) {
-	}
+    }
 }

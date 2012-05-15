@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.4"?>
-<fragment plugin-id="org.knime.workbench.editor">
+<fragment>
    <extension
          point="org.eclipse.ui.actionSets">
       <actionSet
