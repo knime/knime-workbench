@@ -56,7 +56,6 @@ import java.util.Map;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.WizardDialog;
-import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
@@ -71,12 +70,12 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  */
 public class WorkflowImportAction extends ExplorerAction {
 
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(WorkflowImportAction.class);
+//    private static final NodeLogger LOGGER = NodeLogger
+//            .getLogger(WorkflowImportAction.class);
 
-    private static final int SIZING_WIZARD_WIDTH = 470;
+//    private static final int SIZING_WIZARD_WIDTH = 470;
 
-    private static final int SIZING_WIZARD_HEIGHT = 550;
+//    private static final int SIZING_WIZARD_HEIGHT = 550;
 
     private static final ImageDescriptor ICON = KNIMEUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,

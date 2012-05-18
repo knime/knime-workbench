@@ -47,7 +47,7 @@ import org.knime.workbench.explorer.view.ExplorerView;
 public class PasteFromClipboardAction extends AbstractCopyMoveAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
             PasteFromClipboardAction.class);
-    private AbstractExplorerFileStore RemoteExplorerFileStore;
+//    private AbstractExplorerFileStore RemoteExplorerFileStore;
     /**
      * @param viewer the viewer
      */

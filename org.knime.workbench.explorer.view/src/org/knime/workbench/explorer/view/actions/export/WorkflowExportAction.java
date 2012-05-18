@@ -55,7 +55,6 @@ import java.util.List;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.PlatformUI;
-import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
@@ -69,8 +68,8 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  */
 public class WorkflowExportAction extends ExplorerAction {
 
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(WorkflowExportAction.class);
+//    private static final NodeLogger LOGGER = NodeLogger
+//            .getLogger(WorkflowExportAction.class);
 
     private static final int SIZING_WIZARD_WIDTH = 470;
 

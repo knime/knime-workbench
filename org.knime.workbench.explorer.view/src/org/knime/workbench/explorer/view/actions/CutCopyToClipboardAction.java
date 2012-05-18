@@ -29,7 +29,6 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.ui.actions.SelectionListenerAction;
-import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerFileStoreTransfer;
 import org.knime.workbench.explorer.view.ExplorerView;
@@ -41,8 +40,8 @@ import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
  *
  */
 public class CutCopyToClipboardAction extends SelectionListenerAction {
-    private final static NodeLogger LOGGER = NodeLogger.getLogger(
-            CutCopyToClipboardAction.class);
+//    private final static NodeLogger LOGGER = NodeLogger.getLogger(
+//            CutCopyToClipboardAction.class);
     /** The id of this action. */
     public final String ID;
 

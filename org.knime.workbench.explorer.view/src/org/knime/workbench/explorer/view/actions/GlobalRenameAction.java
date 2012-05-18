@@ -22,7 +22,6 @@
 
 package org.knime.workbench.explorer.view.actions;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -41,7 +40,6 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -159,24 +157,24 @@ public class GlobalRenameAction extends ExplorerAction {
      * @param srcFileStore the file store selected for renaming
      * @param lockedWFs the locked workflows
      */
-    @SuppressWarnings("unused")
-    // might be needed later
-    private void unlockDstWorkflows(final AbstractContentProvider acp,
-            final AbstractExplorerFileStore srcFileStore,
-            final AbstractExplorerFileStore dstFileStore,
-            final List<LocalExplorerFileStore> lockedWFs) {
-        String srcName = srcFileStore.getFullName();
-        String dstName = dstFileStore.getFullName();
-        List<LocalExplorerFileStore> dstStores =
-                new ArrayList<LocalExplorerFileStore>();
-        for (LocalExplorerFileStore fs : lockedWFs) {
-            String dstStoreName = fs.getFullName().replace(srcName, dstName);
-            LocalExplorerFileStore dstFs =
-                    (LocalExplorerFileStore)acp.getFileStore(dstStoreName);
-            dstStores.add(dstFs);
-        }
-        ExplorerFileSystemUtils.unlockWorkflows(dstStores);
-    }
+//    @SuppressWarnings("unused")
+//    // might be needed later
+//    private void unlockDstWorkflows(final AbstractContentProvider acp,
+//            final AbstractExplorerFileStore srcFileStore,
+//            final AbstractExplorerFileStore dstFileStore,
+//            final List<LocalExplorerFileStore> lockedWFs) {
+//        String srcName = srcFileStore.getFullName();
+//        String dstName = dstFileStore.getFullName();
+//        List<LocalExplorerFileStore> dstStores =
+//                new ArrayList<LocalExplorerFileStore>();
+//        for (LocalExplorerFileStore fs : lockedWFs) {
+//            String dstStoreName = fs.getFullName().replace(srcName, dstName);
+//            LocalExplorerFileStore dstFs =
+//                    (LocalExplorerFileStore)acp.getFileStore(dstStoreName);
+//            dstStores.add(dstFs);
+//        }
+//        ExplorerFileSystemUtils.unlockWorkflows(dstStores);
+//    }
 
     private AbstractExplorerFileStore queryTargetName(
             final AbstractExplorerFileStore fileStore) {
