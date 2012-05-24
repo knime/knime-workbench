@@ -108,6 +108,7 @@ import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
 import org.knime.workbench.explorer.view.actions.GlobalEditMetaInfoAction;
 import org.knime.workbench.explorer.view.actions.GlobalExecuteWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalOpenWorkflowVariablesDialogAction;
+import org.knime.workbench.explorer.view.actions.GlobalQuickformWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalRefreshAction;
 import org.knime.workbench.explorer.view.actions.GlobalRenameAction;
 import org.knime.workbench.explorer.view.actions.GlobalResetWorkflowAction;
@@ -633,6 +634,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new GlobalExecuteWorkflowAction(this));
         manager.add(new GlobalCancelWorkflowExecutionAction(this));
         manager.add(new GlobalResetWorkflowAction(this));
+        manager.add(new Separator());
+        manager.add(new GlobalQuickformWorkflowAction(this));
         manager.add(new Separator());
         manager.add(new GlobalCredentialVariablesDialogAction(this));
         manager.add(new GlobalOpenWorkflowVariablesDialogAction(this));
