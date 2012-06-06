@@ -48,19 +48,32 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
+import java.awt.FlowLayout;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.wizard.IWizard;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardPage;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Label;
+import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.workflow.NodeID;
+import org.knime.core.quickform.AbstractQuickFormConfiguration;
+import org.knime.core.quickform.AbstractQuickFormValueInConfiguration;
+import org.knime.core.quickform.QuickFormConfigurationPanel;
 import org.knime.core.quickform.in.QuickFormInputNode;
+import org.knime.core.util.Pair;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.ui.wrapper.Panel2CompositeWrapper;
 
 /**
  *
@@ -76,6 +89,10 @@ public class QuickformExecuteWizardPage extends WizardPage {
     private final int m_index;
     
     private final QuickformExecuteWizard m_wizard;
+    
+    private final Map<Pair<NodeID, QuickFormInputNode>, 
+            QuickFormConfigurationPanel
+                <? extends AbstractQuickFormValueInConfiguration>> m_nodes;
 
     /**
      * Create a new quickform wizard page.
@@ -85,18 +102,21 @@ public class QuickformExecuteWizardPage extends WizardPage {
     QuickformExecuteWizardPage(final QuickformExecuteWizard wizard,
             final int index) {
         super("QuickformExecuteWizardPage_" + index);
-        setTitle("QuickForm Execution Wizard " + index);
+        setTitle("QuickForm Execution Wizard");
         setDescription(
             "Stepwise Execution of a Workflow using QuickForm nodes.");
         setImageDescriptor(ICON);
         m_index = index + 1;
         m_wizard = wizard;
+        m_nodes = new LinkedHashMap<Pair<NodeID, QuickFormInputNode>,
+                QuickFormConfigurationPanel
+                    <? extends AbstractQuickFormValueInConfiguration>>();
     }
     
     /** {@inheritDoc} */
     @Override
     public boolean canFlipToNextPage() {
-        return true;
+        return !m_wizard.findQuickformNodes().isEmpty();
     }
     
     /** {@inheritDoc} */
@@ -115,14 +135,71 @@ public class QuickformExecuteWizardPage extends WizardPage {
     /** {@inheritDoc} */
     @Override
     public void createControl(final Composite parent) {
-        Composite overall = new Composite(parent, SWT.NULL);
-        overall.setLayout(new GridLayout(1, false));
         Map<NodeID, QuickFormInputNode> nodes = m_wizard.findQuickformNodes();
+        setControl(setQuickformNodes(parent, nodes));
+    }
+    
+    /**
+     * Set quickform nodes into this dialog; called just before
+     * {@link #loadSettingsFrom(NodeSettingsRO,
+     * org.knime.core.data.DataTableSpec[])} is called.
+     * @param nodes the quickform nodes to show settings for
+     */
+    private Composite setQuickformNodes(final Composite parent, 
+            final Map<NodeID, QuickFormInputNode> nodes) {
+        // create a new panel holding all Swing/AWT quickform components
+        final JPanel panel = new JPanel();
+        new BoxLayout(panel, BoxLayout.Y_AXIS);
+        
+        List<Pair<Integer, QuickFormConfigurationPanel<?>>> sortedPanelList =
+            new ArrayList<Pair<Integer, QuickFormConfigurationPanel<?>>>();
+
+        // a list of quick form elements that will sorted below according to
+        // the weight values
         for (Map.Entry<NodeID, QuickFormInputNode> e : nodes.entrySet()) {
-            new Label(overall, SWT.NONE).setText(
-                    e.getKey() + " : " + e.getValue());
+            AbstractQuickFormConfiguration
+                <? extends AbstractQuickFormValueInConfiguration> config =
+                    e.getValue().getConfiguration();
+            if (config == null) { // quickform nodes has no valid configuration
+                continue;
+            }
+            QuickFormConfigurationPanel
+                <? extends AbstractQuickFormValueInConfiguration> quickform =
+                    config.createController();
+            m_nodes.put(new Pair<NodeID, QuickFormInputNode>(
+                    e.getKey(), e.getValue()), quickform);
+            Pair<Integer, QuickFormConfigurationPanel<?>> weightPanelPair =
+                new Pair<Integer, QuickFormConfigurationPanel<?>>(
+                        config.getWeight(), quickform);
+            sortedPanelList.add(weightPanelPair);
         }
-        setControl(overall);
+        Collections.sort(sortedPanelList, new Comparator<
+                Pair<Integer, QuickFormConfigurationPanel<?>>>() {
+            /** {@inheritDoc} */
+            @Override
+            public int compare(
+                    final Pair<Integer, QuickFormConfigurationPanel<?>> o1,
+                    final Pair<Integer, QuickFormConfigurationPanel<?>> o2) {
+                return o1.getFirst() - o2.getFirst();
+            }
+        });
+        for (Pair<Integer, QuickFormConfigurationPanel<?>> weightPanelPair
+                    : sortedPanelList) {
+
+            JPanel qpanel = new JPanel();
+            final BoxLayout boxLayout2 = new BoxLayout(qpanel,
+                    BoxLayout.Y_AXIS);
+            qpanel.setLayout(boxLayout2);
+
+            JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            p.add(weightPanelPair.getSecond());
+            qpanel.add(p);
+            panel.add(qpanel);
+        }
+        if (m_nodes.isEmpty()) {
+            panel.add(new JLabel("No valid Quickform configurations."));
+        }
+        return new Panel2CompositeWrapper(parent, panel, 0);
     }
 
 }

@@ -83,7 +83,7 @@ public class QuickformExecuteWizard extends Wizard {
     @Override
     public void addPages() {
         m_wfm.stepExecutionUpToNodeType(QuickFormInputNode.class);
-        addPage(new QuickformExecuteWizardPage(this, 0));
+        addPage(new QuickformExecuteStartWizardPage(this));
         // show/init credentials and global variables
     }
     
@@ -98,7 +98,7 @@ public class QuickformExecuteWizard extends Wizard {
     }
     
     private final WorkflowManager m_wfm;
-    private Map<NodeID, QuickFormInputNode> m_qnodes = Collections.EMPTY_MAP;
+    private Map<NodeID, QuickFormInputNode> m_qnodes = Collections.emptyMap();
     private WorkflowManager m_localWFM = null;
     
     /**
@@ -149,7 +149,7 @@ public class QuickformExecuteWizard extends Wizard {
         m_localWFM = 
             m_wfm.findNextWaitingWorkflowManager(QuickFormInputNode.class);
         if (m_localWFM == null) {
-            m_qnodes = Collections.EMPTY_MAP;
+            m_qnodes = Collections.emptyMap();
         } else {
             // find all quickform input nodes and update meta dialog
             m_qnodes = m_localWFM.findWaitingNodes(QuickFormInputNode.class);
@@ -161,6 +161,13 @@ public class QuickformExecuteWizard extends Wizard {
      */
     Map<NodeID, QuickFormInputNode> findQuickformNodes() {
         return m_qnodes;
+    }
+    
+    /**
+     * @return underlying workflow manager (parent)
+     */
+    WorkflowManager getWorkflowManager() {
+        return m_wfm;
     }
 
     /** {@inheritDoc} */

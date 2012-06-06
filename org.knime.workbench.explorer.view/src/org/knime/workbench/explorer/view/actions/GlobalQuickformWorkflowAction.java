@@ -26,7 +26,6 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.NodeContainer.State;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -62,7 +61,7 @@ public class GlobalQuickformWorkflowAction extends ExplorerAction {
      * @param viewer the associated tree viewer
      */
     public GlobalQuickformWorkflowAction(final ExplorerView viewer) {
-        super(viewer, "QuickForm Execute...");
+        super(viewer, "QuickForm Execution...");
         setImageDescriptor(IMG);
     }
 
@@ -117,8 +116,8 @@ public class GlobalQuickformWorkflowAction extends ExplorerAction {
     /** {@inheritDoc} */
     @Override
     public boolean isEnabled() {
-        WorkflowManager wfm = getWorkflow();
-        return wfm != null && State.CONFIGURED.equals(wfm.getState());
+        final WorkflowManager wfm = getWorkflow();
+        return (wfm != null);
     }
     
 }
