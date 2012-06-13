@@ -74,7 +74,6 @@ import org.eclipse.gef.EditPart;
 import org.eclipse.gmf.runtime.common.ui.util.DisplayUtils;
 import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.export.GraphicsSVG;
 import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
@@ -82,6 +81,7 @@ import org.eclipse.ui.IExportWizard;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.dialogs.ExportWizard;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.core.util.ExportToFilePage;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
@@ -102,9 +102,9 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(SVGExportWizard.class);
 
-    private ExportToSVGPage m_page;
-
-    private ISelection m_selection;
+    private final ExportToFilePage m_page =
+            new ExportToFilePage("Export KNIME workflows",
+                    "Exports a KNIME workflow as SVG.");
 
     /**
      * Creates a new export wizard.
@@ -112,6 +112,7 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
     public SVGExportWizard() {
         super();
         setWindowTitle("Export workflow as SVG");
+        m_page.addFileExtensionFilter("*.svg", "Scalable vector graphics");
     }
 
     /**
@@ -119,7 +120,6 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
      */
     @Override
     public void addPages() {
-        m_page = new ExportToSVGPage(m_selection);
         addPage(m_page);
     }
 
@@ -157,7 +157,7 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
     }
 
     private boolean export() throws IOException, TranscoderException {
-        String fileDestination = m_page.getFileDestination();
+        String fileDestination = m_page.getFile();
 
         if (fileDestination.isEmpty()) {
             m_page.setErrorMessage("No file specified!");
