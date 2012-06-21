@@ -59,7 +59,6 @@ import java.util.List;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.dialogs.IDialogSettings;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.CheckStateChangedEvent;
 import org.eclipse.jface.viewers.CheckboxTreeViewer;
 import org.eclipse.jface.viewers.ICheckStateListener;
@@ -78,13 +77,13 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
-import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
-import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  * Page to enter the select the workflows to export and enter the destination.
@@ -110,10 +109,6 @@ public class WorkflowExportPage extends WizardPage {
 
     private static String lastSelectedTargetLocation;
 
-    private static final ImageDescriptor ICON = ExplorerActivator
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/knime_export55.png");
-
     /**
      * Constructor for NewWorkflowPage.
      *
@@ -123,7 +118,8 @@ public class WorkflowExportPage extends WizardPage {
         super("wizardPage");
         setTitle("Export KNIME workflow(s)");
         setDescription("Exports KNIME workflows.");
-        setImageDescriptor(ICON);
+        setImageDescriptor(ImageRepository
+                .getImageDescriptor(SharedImages.ExportBig));
         this.m_selection = selection;
     }
 
@@ -231,8 +227,8 @@ public class WorkflowExportPage extends WizardPage {
                 boolean isChecked = event.getChecked();
                 m_treeViewer.setSubtreeChecked(o, isChecked);
                 if (o instanceof AbstractExplorerFileStore) {
-                    AbstractExplorerFileStore sel
-                            = (AbstractExplorerFileStore)o;
+                    AbstractExplorerFileStore sel =
+                            (AbstractExplorerFileStore)o;
                     setParentTreeChecked(sel, isChecked);
                 }
                 dialogChanged();
@@ -300,13 +296,12 @@ public class WorkflowExportPage extends WizardPage {
                         .getAllMountIDs().toArray(new String[0]), initSel);
         dlg.setTitle("Source Selection");
         dlg.setHeader("Workflow selection.");
-        dlg.setDescription(
-                "Please select the workflow or directory to export.");
+        dlg.setDescription("Please select the workflow or directory to export.");
         dlg.setValidator(new SelectionValidator() {
             @Override
             public String isValid(final AbstractExplorerFileStore selection) {
-                if (!(AbstractExplorerFileStore.isWorkflowGroup(selection)
-                        || AbstractExplorerFileStore.isWorkflow(selection))) {
+                if (!(AbstractExplorerFileStore.isWorkflowGroup(selection) || AbstractExplorerFileStore
+                        .isWorkflow(selection))) {
                     return "Please select a workflow or workflow group";
                 }
                 return null;
@@ -328,9 +323,9 @@ public class WorkflowExportPage extends WizardPage {
      * Updates the tree visibility, and container text field, etc.
      */
     private void containerSelectionChanged() {
-//        // reset checked elements
-//        m_treeViewer.expandAll();
-//        m_treeViewer.setAllChecked(false);
+        // // reset checked elements
+        // m_treeViewer.expandAll();
+        // m_treeViewer.setAllChecked(false);
 
         if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
             m_treeViewer.getTree().setVisible(false);
@@ -460,8 +455,8 @@ public class WorkflowExportPage extends WizardPage {
      */
     public Collection<AbstractExplorerFileStore> getWorkflowsOrGroups() {
 
-        List<AbstractExplorerFileStore> workflows
-                = new ArrayList<AbstractExplorerFileStore>();
+        List<AbstractExplorerFileStore> workflows =
+                new ArrayList<AbstractExplorerFileStore>();
 
         if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
             workflows.add(m_selection);
