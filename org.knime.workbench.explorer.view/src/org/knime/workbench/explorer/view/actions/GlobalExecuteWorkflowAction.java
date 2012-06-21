@@ -24,18 +24,18 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.List;
 
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContainer.State;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
-import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  *
@@ -46,10 +46,6 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(GlobalExecuteWorkflowAction.class);
 
-    private static final ImageDescriptor IMG = KNIMEUIPlugin
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "/icons/actions/execute.gif");
-
     /** ID of the global rename action in the explorer menu. */
     public static final String EXECUTEWF_ACTION_ID =
             "org.knime.workbench.explorer.action.execute-workflow";
@@ -59,7 +55,8 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
      */
     public GlobalExecuteWorkflowAction(final ExplorerView viewer) {
         super(viewer, "Execute...");
-        setImageDescriptor(IMG);
+        setImageDescriptor(ImageRepository
+                .getImageDescriptor(SharedImages.Execute));
     }
 
     /**

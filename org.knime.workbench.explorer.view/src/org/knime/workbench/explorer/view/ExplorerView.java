@@ -142,10 +142,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(ExplorerView.class);
 
-//    private static final ImageDescriptor IMG_COLLALL =
-//        AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-//                "icons/fav/collapseall.png");
-
     private TreeViewer m_viewer;
 
     private final ContentDelegator m_contentDelegator = new ContentDelegator();

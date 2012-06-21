@@ -52,6 +52,8 @@ package org.knime.workbench.explorer.view;
 
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -94,12 +96,6 @@ public final class IconFactory {
     private static final Image WORKFLOW_GROUP = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/wf_set.png").createImage();
-
-    /** Icon representing a workflow template in the resource navigator. */
-    private static final Image FLOW_TEMPLATE = AbstractUIPlugin
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/meta/metanode_template_repository.png")
-            .createImage();
 
     private static final Image DEFAULT = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
@@ -186,7 +182,7 @@ public final class IconFactory {
     }
 
     public Image workflowtemplate() {
-        return FLOW_TEMPLATE;
+        return ImageRepository.getImage(SharedImages.MetanodeRepository);
     }
 
     public Image info() {

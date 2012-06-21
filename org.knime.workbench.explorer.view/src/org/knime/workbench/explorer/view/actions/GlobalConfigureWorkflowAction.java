@@ -25,19 +25,19 @@ package org.knime.workbench.explorer.view.actions;
 import java.util.List;
 
 import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
-import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.wrapper.WrappedNodeDialog;
 
 /**
@@ -49,10 +49,6 @@ public class GlobalConfigureWorkflowAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(GlobalConfigureWorkflowAction.class);
 
-    private static final ImageDescriptor IMG = KNIMEUIPlugin
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/actions/configure.gif");
-
     /** ID of the global rename action in the explorer menu. */
     public static final String CONFIGUREWF_ACTION_ID =
             "org.knime.workbench.explorer.action.configure-workflow";
@@ -62,7 +58,8 @@ public class GlobalConfigureWorkflowAction extends ExplorerAction {
      */
     public GlobalConfigureWorkflowAction(final ExplorerView viewer) {
         super(viewer, "Configure...");
-        setImageDescriptor(IMG);
+        setImageDescriptor(ImageRepository
+                .getImageDescriptor(SharedImages.ConfigureNode));
     }
 
     /**

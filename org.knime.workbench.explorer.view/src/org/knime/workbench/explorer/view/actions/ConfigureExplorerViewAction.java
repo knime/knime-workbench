@@ -24,14 +24,14 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.List;
 
-import org.eclipse.jface.dialogs.InputDialog;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.TreeViewer;
+import org.eclipse.jface.window.Window;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
-import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  *
@@ -41,11 +41,6 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 public class ConfigureExplorerViewAction extends ExplorerAction {
     private static final String TOOLTIP
             = "Configure the visible content of the Explorer View";
-
-    private static final ImageDescriptor IMG
-            = KNIMEUIPlugin.imageDescriptorFromPlugin(
-                    KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/actions/configure.gif");
 
     private final ContentDelegator m_delegator;
     /**
@@ -58,7 +53,8 @@ public class ConfigureExplorerViewAction extends ExplorerAction {
         super(viewer, "Configure Content...");
         m_delegator = delegator;
         setToolTipText(TOOLTIP);
-        setImageDescriptor(IMG);
+        setImageDescriptor(ImageRepository
+                .getImageDescriptor(SharedImages.ConfigureNode));
     }
 
     /**
@@ -79,7 +75,7 @@ public class ConfigureExplorerViewAction extends ExplorerAction {
                     new SelectMountPointDialog(viewer.getControl().getShell(),
                             m_delegator.getMountedIds());
             selectDlg.setBlockOnOpen(true);
-            if (selectDlg.open() != InputDialog.OK) {
+            if (selectDlg.open() != Window.OK) {
                 return;
             }
             m_delegator.removeAllMountPoints();

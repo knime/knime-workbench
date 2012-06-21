@@ -469,7 +469,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
                     } else if (wf.isWorkflowGroup()) {
                         return KnimeResourceLabelProvider.WORKFLOW_GROUP;
                     } else if (wf.isTemplate()) {
-                        return KnimeResourceLabelProvider.TEMPLATE;
+                        return ImageRepository
+                                .getImage(SharedImages.MetanodeRepository);
                     }
                 }
                 return super.getImage(element);

@@ -21,21 +21,15 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
-import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  *
  * @author ohl, KNIME.com, Zurich, Switzerland
  */
 public class CollapseAllAction extends ExplorerAction {
-
-    private static final ImageDescriptor IMG_COLLALL =
-        AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                "icons/fav/collapseall.png");
-
     private static final String TOOLTIP = "Collapses the entire tree";
 
     /**
@@ -43,7 +37,8 @@ public class CollapseAllAction extends ExplorerAction {
      */
     public CollapseAllAction(final ExplorerView viewer) {
         super(viewer, "Collapse All");
-        setImageDescriptor(IMG_COLLALL);
+        setImageDescriptor(ImageRepository
+                .getImageDescriptor(SharedImages.CollapseAll));
         setToolTipText(TOOLTIP);
     }
 
