@@ -94,5 +94,13 @@ public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
      */
     public abstract boolean isIdle();
 
+    /**
+     * Checks whether a file represents a workflow containing a report
+     * @return true if the file is a workflow and contains a report, false
+     *      otherwise
+     * @since 3.1
+     */
+    public abstract boolean isReportWorkflow();
+
 
 }
