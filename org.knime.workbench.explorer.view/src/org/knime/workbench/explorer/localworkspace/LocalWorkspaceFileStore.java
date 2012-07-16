@@ -382,6 +382,13 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         File srcFile = toLocalFile(options, monitor);
         File dstFile = destination.toLocalFile(options, monitor);
 
+        if (srcFile.equals(destination)) {
+            throw new IllegalArgumentException(
+                    "Unable to move file. \"" + srcFile.getAbsolutePath()
+                    + "\" and \"" + dstFile.getAbsolutePath()
+                    + "\" are the same file.");
+        }
+
         try {
             URI srcURI = srcFile.toURI();
             if (srcFile.renameTo(dstFile)) {
