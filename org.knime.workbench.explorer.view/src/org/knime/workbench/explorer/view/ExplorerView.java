@@ -53,6 +53,7 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
+import org.eclipse.jface.viewers.ViewerFilter;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.DND;
@@ -124,6 +125,7 @@ import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
 import org.knime.workbench.explorer.view.dnd.ExplorerDropListener;
 import org.knime.workbench.repository.view.FilterViewContributionItem;
 import org.knime.workbench.repository.view.LabeledFilterViewContributionItem;
+import org.knime.workbench.repository.view.TextualViewFilter;
 import org.knime.workbench.ui.SyncExecQueueDispatcher;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 
@@ -517,6 +519,14 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                         List<Object> sel = ContentDelegator.getTreeObjectList(fs);
                         m_viewer.setSelection(new StructuredSelection(sel),
                                 true);
+                    }
+
+                    for (ViewerFilter vf : m_viewer.getFilters()) {
+                        if ((vf instanceof TextualViewFilter)
+                                && ((TextualViewFilter) vf).hasNonEmptyQuery()) {
+                            m_viewer.expandAll();
+                            break;
+                        }
                     }
                 }
             }
