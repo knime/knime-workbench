@@ -53,8 +53,10 @@ import org.eclipse.jface.wizard.IWizard;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Group;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.ui.masterkey.CredentialVariablesDialog;
@@ -110,6 +112,7 @@ public class QuickformExecuteStartWizardPage extends WizardPage {
                 new QuickformExecuteWizardPage(m_wizard, 0));
     }
     
+    /** {@inheritDoc} */
     @Override
     public IWizard getWizard() {
         return m_wizard;
@@ -122,15 +125,23 @@ public class QuickformExecuteStartWizardPage extends WizardPage {
         overall.setLayout(new GridLayout(1, false));
         final WorkflowManager wfm = m_wizard.getWorkflowManager();
         if (wfm != null) {
-    //        Group group1 = new Group(overall, SWT.SHADOW_ETCHED_IN);
-    //        group1.setText("Workflow Variables");
             m_wfmVars = new WorkflowVariablesDialog(getShell(), wfm);
-            m_wfmVars.createDialogArea(overall);
-    //        Group group2 = new Group(overall, SWT.SHADOW_ETCHED_IN);
-    //        group2.setText("Workflow Credentials");
+            if (!wfm.getWorkflowVariables().isEmpty()) {
+                Group group1 = new Group(overall, SWT.SHADOW_ETCHED_IN);
+                group1.setText("Workflow Variables");
+                group1.setLayout(new GridLayout(1, true));
+                group1.setLayoutData(new GridData(SWT.FILL));
+                m_wfmVars.createDialogArea(group1);
+            }
             m_credDialog = new CredentialVariablesDialog(getShell(), 
                     wfm.getCredentialsStore());
-            m_credDialog.createDialogArea(overall);
+            if (!wfm.getCredentialsStore().listNames().isEmpty()) {
+                Group group2 = new Group(overall, SWT.SHADOW_ETCHED_IN);
+                group2.setText("Workflow Credentials");
+                group2.setLayout(new GridLayout(1, true));
+                group2.setLayoutData(new GridData(SWT.FILL));
+                m_credDialog.createDialogArea(group2);
+            }
         }
         setControl(overall);
     }
