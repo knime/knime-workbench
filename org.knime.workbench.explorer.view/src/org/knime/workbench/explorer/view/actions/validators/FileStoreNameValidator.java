@@ -34,7 +34,7 @@ public class FileStoreNameValidator implements IInputValidator {
     public String isValid(final String name) {
         if (name == null || name.isEmpty()) {
             return "Please choose a name";
-        } else if (name.equals(m_initialName)) {
+        } else if (name.trim().equals(m_initialName)) {
             return "Please choose a new name";
         } else if (!ExplorerFileSystem.isValidFilename(name.trim())) {
             return "One of the following illegal characters is used: "

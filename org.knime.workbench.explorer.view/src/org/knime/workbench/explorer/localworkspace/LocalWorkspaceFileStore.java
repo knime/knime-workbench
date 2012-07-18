@@ -378,16 +378,16 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     @Override
     public void move(final IFileStore destination, final int options,
             final IProgressMonitor monitor) throws CoreException {
-        super.cleanupDestination(destination, options, monitor);
         File srcFile = toLocalFile(options, monitor);
         File dstFile = destination.toLocalFile(options, monitor);
 
-        if (srcFile.equals(destination)) {
+        if (srcFile.equals(dstFile)) {
             throw new IllegalArgumentException(
                     "Unable to move file. \"" + srcFile.getAbsolutePath()
                     + "\" and \"" + dstFile.getAbsolutePath()
                     + "\" are the same file.");
         }
+        super.cleanupDestination(destination, options, monitor);
 
         try {
             URI srcURI = srcFile.toURI();
