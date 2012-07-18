@@ -118,6 +118,14 @@ public abstract class LocalExplorerFileStore extends AbstractExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
+    public File resolveToLocalFile(final IProgressMonitor pm) throws CoreException {
+        return toLocalFile(EFS.NONE, pm);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void copy(final IFileStore destination, final int options, final IProgressMonitor monitor)
             throws CoreException {
                 if (this.equals(destination)) {

@@ -54,6 +54,8 @@ import java.net.URI;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.knime.core.util.pathresolve.URIToFileResolve;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
@@ -67,6 +69,23 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     /** {@inheritDoc} */
     @Override
     public File resolveToFile(final URI uri) throws IOException {
+        return resolveToFile(uri, new NullProgressMonitor());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public File resolveToLocalOrTempFile(final URI uri) throws IOException {
+        return resolveToLocalOrTempFile(uri, new NullProgressMonitor());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public File resolveToFile(final URI uri, final IProgressMonitor monitor)
+            throws IOException {
         if (uri == null) {
             throw new IOException("Can't resolve null URI to file");
         }
@@ -85,14 +104,14 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         }
         if (scheme.equalsIgnoreCase(ExplorerFileSystem.SCHEME)) {
             try {
-                AbstractExplorerFileStore s
-                        = ExplorerFileSystem.INSTANCE.getStore(uri);
+                AbstractExplorerFileStore s =
+                        ExplorerFileSystem.INSTANCE.getStore(uri);
                 if (s == null) {
                     throw new IOException("Can't resolve file to URI \"" + uri
                             + "\"; the corresponding mount point is probably "
                             + "not defined or the resource has been (re)moved");
                 }
-                return s.toLocalFile(EFS.NONE, null);
+                return s.toLocalFile(EFS.NONE, monitor);
             } catch (Exception e) {
                 throw new IOException("Can't resolve knime URI \"" + uri
                         + "\" to file", e);
@@ -106,25 +125,26 @@ public class URIToFileResolveImpl implements URIToFileResolve {
      * {@inheritDoc}
      */
     @Override
-    public File resolveToLocalOrTempFile(final URI uri) throws IOException {
-        File localFile = resolveToFile(uri);
+    public File resolveToLocalOrTempFile(final URI uri, final IProgressMonitor monitor)
+            throws IOException {
+        File localFile = resolveToFile(uri, monitor);
         if (localFile != null) {
             return localFile;
         }
 
         // we have a remote file
-        RemoteExplorerFileStore source
-            = (RemoteExplorerFileStore) ExplorerFileSystem.INSTANCE.getStore(uri);
+        RemoteExplorerFileStore source =
+                (RemoteExplorerFileStore)ExplorerFileSystem.INSTANCE
+                        .getStore(uri);
         if (source == null) {
             throw new IOException("Can't resolve file to URI \"" + uri
                     + "\"; the corresponding mount point is probably "
                     + "not defined or the resource has been (re)moved");
         }
         try {
-            return source.resolveToLocalFile();
+            return source.resolveToLocalFile(monitor);
         } catch (CoreException e) {
             throw new IOException(e);
         }
     }
-
 }

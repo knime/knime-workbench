@@ -235,15 +235,40 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * to {@link #toLocalFile()} implementors can not only return the local file
      * when implementing {@link LocalExplorerFileStore}, but also return
      * a temporary copy of remote files.<br/>
-     * <b>Please note: The returned file should be read only! It can be only a
-     * copy of the file stores content and there is no guarantee that changes
-     * are propagated.</b>
+     * <b>Please note: The returned file should be treated read only! It can be
+     * only a copy of the file stores content and there is no guarantee that
+     * changes are propagated.</b>
      *
-     * @return the local file, the temporary remote file, or null if not
-     *      supported
+     * @return the local file, the temporary remote file, or <code>null</code>
+     *      if not supported
      * @throws CoreException if this method fails
      */
     public abstract File resolveToLocalFile() throws CoreException;
+
+
+    /**
+     * Returns the local file corresponding to the file store. In contrast
+     * to {@link #toLocalFile()} implementors can not only return the local file
+     * when implementing {@link LocalExplorerFileStore}, but also return
+     * a temporary copy of remote files.<br/>
+     * <b>Please note: The returned file should be treated read only! It can be
+     * only a copy of the file stores content and there is no guarantee that
+     * changes are propagated.</b>
+     *
+     * This implementation delegates to {@link #resolveToLocalFile()} by ignoring the
+     * passed progress monitor. Subclasses should override this method an use the
+     * progress monitor if applicable.
+     *
+     * @param pm a progress monitor, must not be <code>null</code>
+     * @return the local file, the temporary remote file, or <code>null</code>
+     *      if not supported or the user canceled the operation
+     * @throws CoreException if this method fails
+     * @since 3.5
+     */
+    public File resolveToLocalFile(final IProgressMonitor pm) throws CoreException {
+        return resolveToLocalFile();
+    }
+
 
     /**
      * {@inheritDoc}
