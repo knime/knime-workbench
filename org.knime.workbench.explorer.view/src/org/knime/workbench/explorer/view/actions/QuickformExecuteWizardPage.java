@@ -60,7 +60,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.BorderFactory;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
@@ -68,6 +67,9 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.wizard.IWizard;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardPage;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CLabel;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.workflow.NodeID;
@@ -76,6 +78,8 @@ import org.knime.core.quickform.AbstractQuickFormValueInConfiguration;
 import org.knime.core.quickform.QuickFormConfigurationPanel;
 import org.knime.core.quickform.in.QuickFormInputNode;
 import org.knime.core.util.Pair;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.ui.wrapper.Panel2CompositeWrapper;
 
@@ -207,19 +211,30 @@ public class QuickformExecuteWizardPage extends WizardPage {
             c.gridy++;
         }
 
-        JPanel buffer = new JPanel();
-        c.fill = GridBagConstraints.BOTH;
-        c.weighty = 1;
-        buffer.setBackground(bgColor);
-        panel.add(buffer, c);
         if (m_nodes.isEmpty()) {
-            panel.add(new JLabel("No valid Quickform configurations. You probably need "
-                    + "to reset the quickform nodes first."));
-        }
+            Composite comp = new Composite(parent, SWT.NULL);
+            comp.setLayout(new GridLayout(1, false));
+            CLabel l = new CLabel(comp, SWT.CENTER);
+            if (m_index <= 1) {
+                l.setText("No valid Quickform configurations. You probably need "
+                        + "to reset the quickform nodes first.");
+                l.setImage(ImageRepository.getImage(SharedImages.Warning));
+            } else {
+                l.setText("No more quickform configurations.");
+                l.setImage(ImageRepository.getImage(SharedImages.Info));
+            }
+            return comp;
+        } else {
+            JPanel buffer = new JPanel();
+            c.fill = GridBagConstraints.BOTH;
+            c.weighty = 1;
+            buffer.setBackground(bgColor);
+            panel.add(buffer, c);
 
-        JScrollPane sp = new JScrollPane(panel);
-        sp.setBorder(BorderFactory.createEmptyBorder());
-        sp.setBackground(bgColor);
-        return new Panel2CompositeWrapper(parent, sp, 0);
+            JScrollPane sp = new JScrollPane(panel);
+            sp.setBorder(BorderFactory.createEmptyBorder());
+            sp.setBackground(bgColor);
+            return new Panel2CompositeWrapper(parent, sp, 0);
+        }
     }
 }

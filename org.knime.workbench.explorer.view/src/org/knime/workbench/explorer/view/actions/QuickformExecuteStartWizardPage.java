@@ -53,11 +53,14 @@ import org.eclipse.jface.wizard.IWizard;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CLabel;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Group;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.ui.masterkey.CredentialVariablesDialog;
 import org.knime.workbench.ui.wfvars.WorkflowVariablesDialog;
@@ -141,6 +144,11 @@ public class QuickformExecuteStartWizardPage extends WizardPage {
                 group2.setLayout(new GridLayout(1, true));
                 group2.setLayoutData(new GridData(SWT.FILL));
                 m_credDialog.createDialogArea(group2, true);
+            }
+            if ((m_wfmVars == null) && (m_credDialog == null)) {
+                CLabel l = new CLabel(overall, SWT.CENTER);
+                l.setText("No workflow variables for credentials are defined for the current workflow.");
+                l.setImage(ImageRepository.getImage(SharedImages.Info));
             }
         }
         setControl(overall);
