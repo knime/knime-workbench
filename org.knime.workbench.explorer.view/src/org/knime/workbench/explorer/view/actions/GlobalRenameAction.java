@@ -31,6 +31,7 @@ import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
@@ -139,6 +140,8 @@ public class GlobalRenameAction extends ExplorerAction {
             // unlockDstWorkflows(acp, srcFileStore, dstFileStore, lockedWFs);
             LOGGER.debug("Renamed \"" + srcFileStore + "\" to \""
                     + dstFileStore + "\".");
+            getView().setNextSelection(dstFileStore);
+            dstFileStore.getParent().refresh();
         } catch (CoreException e) {
             String message =
                     "Could not rename \"" + srcFileStore + "\" to \""
@@ -186,7 +189,7 @@ public class GlobalRenameAction extends ExplorerAction {
                         new FileStoreNameValidator(name));
         dialog.setBlockOnOpen(true);
 
-        if (dialog.open() == InputDialog.CANCEL) {
+        if (dialog.open() == Window.CANCEL) {
             return null;
         }
         String newName = dialog.getValue().trim();
