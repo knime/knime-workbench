@@ -71,6 +71,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CLabel;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.quickform.AbstractQuickFormConfiguration;
@@ -78,6 +79,7 @@ import org.knime.core.quickform.AbstractQuickFormValueInConfiguration;
 import org.knime.core.quickform.QuickFormConfigurationPanel;
 import org.knime.core.quickform.in.QuickFormInputNode;
 import org.knime.core.util.Pair;
+import org.knime.core.util.node.quickform.in.AbstractQuickFormInElement;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -130,6 +132,7 @@ public class QuickformExecuteWizardPage extends WizardPage {
     /** {@inheritDoc} */
     @Override
     public IWizardPage getNextPage() {
+        saveQuickformNodes();
         m_wizard.stepExecution();
         return m_wizard.getNextPage(
                 new QuickformExecuteWizardPage(m_wizard, m_index));
@@ -147,6 +150,22 @@ public class QuickformExecuteWizardPage extends WizardPage {
         setControl(setQuickformNodes(parent, nodes));
     }
 
+    private void saveQuickformNodes() {
+        for (Map.Entry<Pair<NodeID, QuickFormInputNode>, QuickFormConfigurationPanel
+                <? extends AbstractQuickFormValueInConfiguration>> entry : m_nodes.entrySet()) {
+            QuickFormConfigurationPanel<? extends AbstractQuickFormValueInConfiguration> panel = entry.getValue();
+            QuickFormInputNode node = entry.getKey().getSecond();
+            AbstractQuickFormInElement element = node.getQuickFormElement();
+            try {
+                panel.updateQuickFormInElement(element);
+                node.loadFromQuickFormElement(element);
+            } catch (InvalidSettingsException ise) {
+                // ignored.
+            }
+        }
+        
+    }
+    
     /**
      * Set quickform nodes into this dialog; called just before
      * {@link #loadSettingsFrom(NodeSettingsRO,
@@ -217,10 +236,10 @@ public class QuickformExecuteWizardPage extends WizardPage {
             CLabel l = new CLabel(comp, SWT.CENTER);
             if (m_index <= 1) {
                 l.setText("No valid Quickform configurations. You probably need "
-                        + "to reset the quickform nodes first.");
+                        + "to reset the QuickForm nodes first.");
                 l.setImage(ImageRepository.getImage(SharedImages.Warning));
             } else {
-                l.setText("No more quickform configurations.");
+                l.setText("No more QuickForm configurations.");
                 l.setImage(ImageRepository.getImage(SharedImages.Info));
             }
             return comp;
