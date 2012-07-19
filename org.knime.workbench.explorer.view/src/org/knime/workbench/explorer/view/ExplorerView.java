@@ -403,9 +403,14 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         m_viewer.addDoubleClickListener(new IDoubleClickListener() {
             @Override
             public void doubleClick(final DoubleClickEvent event) {
-                if (!openSelected()) {
-                    expandSelected();
-                }
+                Display.getCurrent().asyncExec(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!openSelected()) {
+                            expandSelected();
+                        }
+                    }
+                });
             }
         });
         m_viewer.addSelectionChangedListener(this);
