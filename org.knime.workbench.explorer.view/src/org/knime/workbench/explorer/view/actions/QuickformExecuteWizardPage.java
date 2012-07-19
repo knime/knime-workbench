@@ -48,7 +48,10 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
-import java.awt.FlowLayout;
+import java.awt.Color;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -56,9 +59,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.BoxLayout;
+import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.wizard.IWizard;
@@ -85,12 +89,12 @@ public class QuickformExecuteWizardPage extends WizardPage {
     private static final ImageDescriptor ICON = ExplorerActivator
             .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
                     "icons/new_knime55.png");
-    
+
     private final int m_index;
-    
+
     private final QuickformExecuteWizard m_wizard;
-    
-    private final Map<Pair<NodeID, QuickFormInputNode>, 
+
+    private final Map<Pair<NodeID, QuickFormInputNode>,
             QuickFormConfigurationPanel
                 <? extends AbstractQuickFormValueInConfiguration>> m_nodes;
 
@@ -112,13 +116,13 @@ public class QuickformExecuteWizardPage extends WizardPage {
                 QuickFormConfigurationPanel
                     <? extends AbstractQuickFormValueInConfiguration>>();
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public boolean canFlipToNextPage() {
         return !m_wizard.findQuickformNodes().isEmpty();
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public IWizardPage getNextPage() {
@@ -126,31 +130,29 @@ public class QuickformExecuteWizardPage extends WizardPage {
         return m_wizard.getNextPage(
                 new QuickformExecuteWizardPage(m_wizard, m_index));
     }
-    
+
     @Override
     public IWizard getWizard() {
         return m_wizard;
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public void createControl(final Composite parent) {
         Map<NodeID, QuickFormInputNode> nodes = m_wizard.findQuickformNodes();
         setControl(setQuickformNodes(parent, nodes));
     }
-    
+
     /**
      * Set quickform nodes into this dialog; called just before
      * {@link #loadSettingsFrom(NodeSettingsRO,
      * org.knime.core.data.DataTableSpec[])} is called.
      * @param nodes the quickform nodes to show settings for
      */
-    private Composite setQuickformNodes(final Composite parent, 
+    private Composite setQuickformNodes(final Composite parent,
             final Map<NodeID, QuickFormInputNode> nodes) {
         // create a new panel holding all Swing/AWT quickform components
-        final JPanel panel = new JPanel();
-        new BoxLayout(panel, BoxLayout.Y_AXIS);
-        
+
         List<Pair<Integer, QuickFormConfigurationPanel<?>>> sortedPanelList =
             new ArrayList<Pair<Integer, QuickFormConfigurationPanel<?>>>();
 
@@ -183,23 +185,41 @@ public class QuickformExecuteWizardPage extends WizardPage {
                 return o1.getFirst() - o2.getFirst();
             }
         });
+
+        final JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.gridy = 0;
+        c.insets = new Insets(0, 0, 0, 0);
+        c.anchor = GridBagConstraints.NORTHWEST;
+
+        org.eclipse.swt.graphics.Color wizardPageBgColor = parent.getBackground();
+        Color bgColor = new Color(wizardPageBgColor.getRed(),
+                wizardPageBgColor.getGreen(), wizardPageBgColor.getBlue());
+        panel.setBackground(bgColor);
+
+
         for (Pair<Integer, QuickFormConfigurationPanel<?>> weightPanelPair
                     : sortedPanelList) {
-
-            JPanel qpanel = new JPanel();
-            final BoxLayout boxLayout2 = new BoxLayout(qpanel,
-                    BoxLayout.Y_AXIS);
-            qpanel.setLayout(boxLayout2);
-
-            JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            p.add(weightPanelPair.getSecond());
-            qpanel.add(p);
-            panel.add(qpanel);
+            QuickFormConfigurationPanel<?> p = weightPanelPair.getSecond();
+            p.setBackground(bgColor);
+            panel.add(weightPanelPair.getSecond(), c);
+            c.gridy++;
         }
+
+        JPanel buffer = new JPanel();
+        c.fill = GridBagConstraints.BOTH;
+        c.weighty = 1;
+        buffer.setBackground(bgColor);
+        panel.add(buffer, c);
         if (m_nodes.isEmpty()) {
-            panel.add(new JLabel("No valid Quickform configurations."));
+            panel.add(new JLabel("No valid Quickform configurations. You probably need "
+                    + "to reset the quickform nodes first."));
         }
-        return new Panel2CompositeWrapper(parent, panel, 0);
-    }
 
+        JScrollPane sp = new JScrollPane(panel);
+        sp.setBorder(BorderFactory.createEmptyBorder());
+        sp.setBackground(bgColor);
+        return new Panel2CompositeWrapper(parent, sp, 0);
+    }
 }

@@ -78,29 +78,30 @@ public class QuickformExecuteWizard extends Wizard {
         super();
         m_wfm = wfm;
         addPages();
+        setWindowTitle("Quickform wizard for " + wfm.getDisplayLabel());
     }
-    
+
     @Override
     public void addPages() {
         m_wfm.stepExecutionUpToNodeType(QuickFormInputNode.class);
         addPage(new QuickformExecuteStartWizardPage(this));
         // show/init credentials and global variables
     }
-    
+
     @Override
     public boolean canFinish() {
         return true;
     }
-    
+
     @Override
     public IWizardPage getNextPage(final IWizardPage page) {
-        return (QuickformExecuteWizardPage) page;
+        return page;
     }
-    
+
     private final WorkflowManager m_wfm;
     private Map<NodeID, QuickFormInputNode> m_qnodes = Collections.emptyMap();
     private WorkflowManager m_localWFM = null;
-    
+
     /**
      * Performs one execution step. First, execute all waiting quickform nodes
      * and secondly, all non-quickform nodes before finding the next set of
@@ -146,7 +147,7 @@ public class QuickformExecuteWizard extends Wizard {
             }
         };
         runRun(op);
-        m_localWFM = 
+        m_localWFM =
             m_wfm.findNextWaitingWorkflowManager(QuickFormInputNode.class);
         if (m_localWFM == null) {
             m_qnodes = Collections.emptyMap();
@@ -155,14 +156,14 @@ public class QuickformExecuteWizard extends Wizard {
             m_qnodes = m_localWFM.findWaitingNodes(QuickFormInputNode.class);
         }
     }
-    
+
     /**
      * @return all QuickForm nodes currently waiting for being executed
      */
     Map<NodeID, QuickFormInputNode> findQuickformNodes() {
         return m_qnodes;
     }
-    
+
     /**
      * @return underlying workflow manager (parent)
      */
@@ -188,7 +189,7 @@ public class QuickformExecuteWizard extends Wizard {
         };
         return runRun(op);
     }
-    
+
     private boolean runRun(final IRunnableWithProgress op) {
         try {
             getContainer().run(true, true, op);
