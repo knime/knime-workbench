@@ -54,8 +54,8 @@ public class GlobalQuickformWorkflowAction extends ExplorerAction {
     public static final String QUICKFORM_ACTION_ID =
             "org.knime.workbench.explorer.action.quickform-execute-workflow";
     
-    private static final int SIZING_WIZARD_WIDTH = 470;
-    private static final int SIZING_WIZARD_HEIGHT = 550;
+    private static final int SIZING_WIZARD_WIDTH  = 800;
+    private static final int SIZING_WIZARD_HEIGHT = 600;
 
     /**
      * @param viewer the associated tree viewer
