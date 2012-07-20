@@ -151,25 +151,33 @@ public class Zipper {
                     path = path.removeFirstSegments(stripOff);
                 }
                 String entryName = path.makeRelative().toString();
-                InputStream in = null;
-                try {
-                    in =
-                            new BufferedInputStream(new FileInputStream(f),
-                                    BUFFSIZE);
+                if (f.length() == 0) {
+                	// this is mainly for the .knimeLock file of open workflows; the file is locked and windows forbids
+                	// mmap-ing locked files but FileInputStream seems to mmap files which leads to exceptions while
+                	// reading the (non-existing) contents of the file
                     zout.putNextEntry(new ZipEntry(entryName));
-                    int read;
-                    while ((read = in.read(buf)) >= 0) {
-                        if (monitor.isCanceled()) {
-                            ioException =
-                                    new IOException("Canceled.");
-                            // cleanup done in the finally block
-                            return;
-                        }
-                        zout.write(buf, 0, read);
-                    }
-                } finally {
                     zout.closeEntry();
-                    in.close();
+                } else {
+	                InputStream in = null;
+	                try {
+	                    in =
+	                            new BufferedInputStream(new FileInputStream(f),
+	                                    BUFFSIZE);
+	                    zout.putNextEntry(new ZipEntry(entryName));
+	                    int read;
+	                    while ((read = in.read(buf)) >= 0) {
+	                        if (monitor.isCanceled()) {
+	                            ioException =
+	                                    new IOException("Canceled.");
+	                            // cleanup done in the finally block
+	                            return;
+	                        }
+	                        zout.write(buf, 0, read);
+	                    }
+	                } finally {
+	                    zout.closeEntry();
+	                    in.close();
+	                }
                 }
                 int megaBytes = (int)(f.length() >>> 20);
                 monitor.worked(megaBytes + 1);
