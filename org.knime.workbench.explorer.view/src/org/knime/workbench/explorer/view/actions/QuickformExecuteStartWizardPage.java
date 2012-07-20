@@ -49,7 +49,6 @@
 package org.knime.workbench.explorer.view.actions;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.wizard.IWizard;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
@@ -68,15 +67,17 @@ import org.knime.workbench.ui.wfvars.WorkflowVariablesDialog;
 /**
  *
  * @author Thomas Gabriel, KNIME.com AG, Zurich
+ * @author Dominik Morent, KNIME.com AG, Zurich
  * @since 3.1
  */
 public class QuickformExecuteStartWizardPage extends WizardPage {
 
+    /** The name of this page. */
+    static final String PAGE_NAME = "QuickformExecuteStartWizardPage";
+
     private static final ImageDescriptor ICON = ExplorerActivator
             .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
                     "icons/new_knime55.png");
-
-    private final QuickformExecuteWizard m_wizard;
 
     private WorkflowVariablesDialog m_wfmVars;
     private CredentialVariablesDialog m_credDialog;
@@ -86,13 +87,13 @@ public class QuickformExecuteStartWizardPage extends WizardPage {
      * @param wizard parent wizard
      */
     QuickformExecuteStartWizardPage(final QuickformExecuteWizard wizard) {
-        super("QuickformExecuteStartWizardPage");
+        super(PAGE_NAME);
         setTitle("QuickForm Execution Wizard");
         setDescription("Stepwise Execution of a Workflow using QuickForm "
                 + "nodes.\nShows global variables and credentials defined on "
                 + "the workflow.");
         setImageDescriptor(ICON);
-        m_wizard = wizard;
+        setWizard(wizard);
     }
 
     /** {@inheritDoc} */
@@ -110,15 +111,7 @@ public class QuickformExecuteStartWizardPage extends WizardPage {
         if (m_credDialog != null) {
             m_credDialog.okPressed();
         }
-        m_wizard.stepExecution();
-        return m_wizard.getNextPage(
-                new QuickformExecuteWizardPage(m_wizard, 0));
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public IWizard getWizard() {
-        return m_wizard;
+        return super.getNextPage();
     }
 
     /** {@inheritDoc} */
@@ -126,7 +119,7 @@ public class QuickformExecuteStartWizardPage extends WizardPage {
     public void createControl(final Composite parent) {
         Composite overall = new Composite(parent, SWT.NULL);
         overall.setLayout(new GridLayout(1, false));
-        final WorkflowManager wfm = m_wizard.getWorkflowManager();
+        final WorkflowManager wfm = getWizard().getWorkflowManager();
         if (wfm != null) {
             if (!wfm.getWorkflowVariables().isEmpty()) {
                 m_wfmVars = new WorkflowVariablesDialog(getShell(), wfm);
@@ -147,11 +140,20 @@ public class QuickformExecuteStartWizardPage extends WizardPage {
             }
             if ((m_wfmVars == null) && (m_credDialog == null)) {
                 CLabel l = new CLabel(overall, SWT.CENTER);
-                l.setText("No workflow variables or credentials are defined for the current workflow.");
+                l.setText("No workflow variables or credentials are defined "
+                        + "for the current workflow.");
                 l.setImage(ImageRepository.getImage(SharedImages.Info));
             }
         }
         setControl(overall);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public QuickformExecuteWizard getWizard() {
+        return (QuickformExecuteWizard)super.getWizard();
     }
 
 }

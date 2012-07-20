@@ -50,6 +50,7 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -58,17 +59,24 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
+import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.quickform.in.QuickFormInputNode;
+import org.knime.core.util.Pair;
 
 /**
  *
  * @author Thomas Gabriel, KNIME.com AG, Zurich
+ * @author Dominik Morent, KNIME.com AG, Zurich
  * @since 3.1
  */
 public class QuickformExecuteWizard extends Wizard {
-
+    private static final String EXEC_PAGE_NAME = "QuickformExecuteWizardPage_";
+    private final WorkflowManager m_wfm;
+    private int m_numExecPages = 0;
+    private final Map<String,
+            Pair<WorkflowManager,Map<NodeID,QuickFormInputNode>>> m_execPageMap;
 
     /**
      * Creates the wizard.
@@ -76,51 +84,128 @@ public class QuickformExecuteWizard extends Wizard {
      */
     public QuickformExecuteWizard(final WorkflowManager wfm) {
         super();
-        m_wfm = wfm;
-        addPages();
         setWindowTitle("Quickform wizard for " + wfm.getDisplayLabel());
+        m_wfm = wfm;
+        m_execPageMap = new HashMap<String,
+                Pair<WorkflowManager,Map<NodeID,QuickFormInputNode>>>();
+        setForcePreviousAndNextButtons(true);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void addPages() {
-        m_wfm.stepExecutionUpToNodeType(QuickFormInputNode.class);
-        addPage(new QuickformExecuteStartWizardPage(this));
         // show/init credentials and global variables
+        addPage(new QuickformExecuteStartWizardPage(this));
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean canFinish() {
+        /* The wizard can be finished at any point. In this case the default
+         * values are used for all remaining quickform nodes. */
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public IWizardPage getNextPage(final IWizardPage page) {
-        addPage(page);
-        return page;
+        if (m_execPageMap.containsKey(page.getName())) {
+            Pair<WorkflowManager, Map<NodeID, QuickFormInputNode>> prevWaiting
+                    = m_execPageMap.get(page.getName());
+            WorkflowManager wfm = prevWaiting.getFirst();
+            Map<NodeID, QuickFormInputNode> nodes = prevWaiting.getSecond();
+            if (wfm != null && nodes != null) {
+                executeUpToNodes(wfm, nodes.keySet().toArray(new NodeID[0]));
+            }
+        }
+        Pair<WorkflowManager, Map<NodeID, QuickFormInputNode>> waiting
+                = stepExecution();
+        IWizardPage nextPage = super.getNextPage(page);
+        if (nextPage == null) {
+            // dynamically create new pages if necessary
+            nextPage = new QuickformExecuteWizardPage(this, waiting.getSecond(),
+                    EXEC_PAGE_NAME + m_numExecPages++);
+            addPage(nextPage);
+            m_execPageMap.put(nextPage.getName(), waiting);
+        }
+        return nextPage;
     }
 
-    private final WorkflowManager m_wfm;
-    private Map<NodeID, QuickFormInputNode> m_qnodes = Collections.emptyMap();
-    private WorkflowManager m_localWFM = null;
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public IWizardPage getPreviousPage(final IWizardPage page) {
+        IWizardPage previousPage = super.getPreviousPage(page);
+        if (previousPage != null) {
+            String name = previousPage.getName();
+            if (m_execPageMap.containsKey(name)) {
+                Pair<WorkflowManager, Map<NodeID, QuickFormInputNode>> pair
+                        = m_execPageMap.get(name);
+                resetNodes(pair.getFirst(),
+                        pair.getSecond().keySet().toArray(new NodeID[0]));
+            }
+        }
+        return previousPage;
+    }
+
+
+
+
 
     /**
-     * Performs one execution step. First, execute all waiting quickform nodes
-     * and secondly, all non-quickform nodes before finding the next set of
-     * quickform nodes.
+     * Performs one execution step. First, execute all non-quickform nodes
+     * before finding the next set of quickform nodes.
      */
-    void stepExecution() {
-        final NodeID[] qnodes = m_qnodes.keySet().toArray(new NodeID[0]);
-        if (qnodes.length > 0 && m_localWFM != null) {
-            m_localWFM.executeUpToHere(qnodes);
+    private Pair<WorkflowManager, Map<NodeID, QuickFormInputNode>>
+            stepExecution() {
+        m_wfm.stepExecutionUpToNodeType(QuickFormInputNode.class);
+        // create new runnable
+        final IRunnableWithProgress op = new IRunnableWithProgress() {
+            @Override
+            public void run(final IProgressMonitor monitor)
+                    throws InvocationTargetException {
+                try {
+                    // call the worker method
+                    m_wfm.waitWhileInExecution(0, TimeUnit.SECONDS);
+                } catch (InterruptedException ie) {
+                    // no op
+                } finally {
+                    monitor.done();
+                }
+            }
+        };
+        runRun(op);
+        WorkflowManager localWFM = m_wfm.findNextWaitingWorkflowManager(
+                QuickFormInputNode.class);
+        Map<NodeID, QuickFormInputNode> waitingNodes = Collections.emptyMap();
+        if (localWFM != null) {
+            // find all quickform input nodes and update meta dialog
+            waitingNodes = localWFM.findWaitingNodes(
+                    QuickFormInputNode.class);
+        }
+        return new Pair<WorkflowManager, Map<NodeID, QuickFormInputNode>>(
+                localWFM, waitingNodes);
+    }
+
+    private void executeUpToNodes(final WorkflowManager wfm,
+            final NodeID[] qnodes) {
+        if (qnodes.length > 0 && wfm != null) {
+            wfm.executeUpToHere(qnodes);
             // create new runnable
             final IRunnableWithProgress op = new IRunnableWithProgress() {
-                private final WorkflowManager localWFM = m_localWFM;
                 @Override
                 public void run(final IProgressMonitor monitor)
                         throws InvocationTargetException {
                     try {
                         // call the worker method
-                        localWFM.waitWhileInExecution(0, TimeUnit.SECONDS);
+                        wfm.waitWhileInExecution(0, TimeUnit.SECONDS);
                     } catch (InterruptedException ie) {
                         // no op
                     } finally {
@@ -130,46 +215,36 @@ public class QuickformExecuteWizard extends Wizard {
             };
             runRun(op);
         }
-        m_wfm.stepExecutionUpToNodeType(QuickFormInputNode.class);
-        // create new runnable
-        final IRunnableWithProgress op = new IRunnableWithProgress() {
-           private final WorkflowManager wfm = m_wfm;
-            @Override
-            public void run(final IProgressMonitor monitor)
-                    throws InvocationTargetException {
-                try {
-                    // call the worker method
-                    wfm.waitWhileInExecution(0, TimeUnit.SECONDS);
-                } catch (InterruptedException ie) {
-                    // no op
-                } finally {
-                    monitor.done();
-                }
+    }
+
+    /**
+     * Performs one execution step backwards. Reset the last set of
+     * quickform nodes.
+     */
+    private void resetNodes(final WorkflowManager wfm,
+            final NodeID[] qnodes) {
+        if (wfm != null && qnodes != null) {
+            for (NodeID nodeID : qnodes) {
+                NodeContainer nc = wfm.findNodeContainer(nodeID);
+                nc.getParent().resetAndConfigureNode(nodeID);
             }
-        };
-        runRun(op);
-        m_localWFM =
-            m_wfm.findNextWaitingWorkflowManager(QuickFormInputNode.class);
-        if (m_localWFM == null) {
-            m_qnodes = Collections.emptyMap();
-        } else {
-            // find all quickform input nodes and update meta dialog
-            m_qnodes = m_localWFM.findWaitingNodes(QuickFormInputNode.class);
+            // create new runnable
+            final IRunnableWithProgress op = new IRunnableWithProgress() {
+                @Override
+                public void run(final IProgressMonitor monitor)
+                        throws InvocationTargetException {
+                    try {
+                        // call the worker method
+                        wfm.waitWhileInExecution(0, TimeUnit.SECONDS);
+                    } catch (InterruptedException ie) {
+                        // no op
+                    } finally {
+                        monitor.done();
+                    }
+                }
+            };
+            runRun(op);
         }
-    }
-
-    /**
-     * @return all QuickForm nodes currently waiting for being executed
-     */
-    Map<NodeID, QuickFormInputNode> findQuickformNodes() {
-        return m_qnodes;
-    }
-
-    /**
-     * @return underlying workflow manager (parent)
-     */
-    WorkflowManager getWorkflowManager() {
-        return m_wfm;
     }
 
     /** {@inheritDoc} */
@@ -204,6 +279,13 @@ public class QuickformExecuteWizard extends Wizard {
             return true;
         }
         return true;
+    }
+
+    /**
+     * @return the root workflow manager
+     */
+    WorkflowManager getWorkflowManager() {
+        return m_wfm;
     }
 
 }
