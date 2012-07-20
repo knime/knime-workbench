@@ -95,6 +95,7 @@ public class QuickformExecuteWizard extends Wizard {
 
     @Override
     public IWizardPage getNextPage(final IWizardPage page) {
+        addPage(page);
         return page;
     }
 

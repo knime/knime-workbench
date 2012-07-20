@@ -133,6 +133,9 @@ public class QuickformExecuteWizardPage extends WizardPage {
     @Override
     public IWizardPage getNextPage() {
         saveQuickformNodes();
+        if (getErrorMessage() != null) {
+            return this; // stay on the same page if there are errors
+        }
         m_wizard.stepExecution();
         return m_wizard.getNextPage(
                 new QuickformExecuteWizardPage(m_wizard, m_index));
@@ -151,6 +154,7 @@ public class QuickformExecuteWizardPage extends WizardPage {
     }
 
     private void saveQuickformNodes() {
+        StringBuffer sb = new StringBuffer();
         for (Map.Entry<Pair<NodeID, QuickFormInputNode>, QuickFormConfigurationPanel
                 <? extends AbstractQuickFormValueInConfiguration>> entry : m_nodes.entrySet()) {
             QuickFormConfigurationPanel<? extends AbstractQuickFormValueInConfiguration> panel = entry.getValue();
@@ -161,11 +165,19 @@ public class QuickformExecuteWizardPage extends WizardPage {
                 node.loadFromQuickFormElement(element);
             } catch (InvalidSettingsException ise) {
                 // ignored.
+                sb.append("\t");
+                sb.append(ise.getMessage());
+                sb.append("\n");
             }
         }
-        
+        String msg = sb.toString();
+        if (!msg.isEmpty()) {
+            setErrorMessage(msg);
+        } else {
+            setErrorMessage(null);
+        }
     }
-    
+
     /**
      * Set quickform nodes into this dialog; called just before
      * {@link #loadSettingsFrom(NodeSettingsRO,
