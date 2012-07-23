@@ -125,6 +125,7 @@ public class QuickformExecuteWizardPage extends WizardPage {
         if (getErrorMessage() != null) {
             return this; // stay on the same page if there are errors
         }
+        saveQuickformNodes();
         return super.getNextPage();
     }
 
@@ -230,6 +231,7 @@ public class QuickformExecuteWizardPage extends WizardPage {
             setControl(new Panel2CompositeWrapper(parent, sp, 0));
         }
     }
+
 
     private void saveQuickformNodes() {
         StringBuffer sb = new StringBuffer();
