@@ -192,6 +192,9 @@ public class QuickformExecuteWizard extends Wizard {
     private void executeUpToNodes(final WorkflowManager wfm,
             final NodeID[] qnodes) {
         if (qnodes.length > 0 && wfm != null) {
+            for (NodeID nodeID : qnodes) {
+                wfm.resetAndConfigureNode(nodeID);
+            }
             wfm.executeUpToHere(qnodes);
             // create new runnable
             final IRunnableWithProgress op = new IRunnableWithProgress() {

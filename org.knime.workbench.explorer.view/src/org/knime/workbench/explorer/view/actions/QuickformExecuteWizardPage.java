@@ -122,10 +122,10 @@ public class QuickformExecuteWizardPage extends WizardPage {
     /** {@inheritDoc} */
     @Override
     public IWizardPage getNextPage() {
+        saveQuickformNodes();
         if (getErrorMessage() != null) {
             return this; // stay on the same page if there are errors
         }
-        saveQuickformNodes();
         return super.getNextPage();
     }
 
