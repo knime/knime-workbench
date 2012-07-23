@@ -138,10 +138,9 @@ public class QuickformExecuteWizard extends Wizard {
     }
 
     /**
-     * {@inheritDoc}
+     * @param page the wizard page to reset its predecessor nodes
      */
-    @Override
-    public IWizardPage getPreviousPage(final IWizardPage page) {
+    public void resetNodesOfPreviousPage(final IWizardPage page) {
         IWizardPage previousPage = super.getPreviousPage(page);
         if (previousPage != null) {
             String name = previousPage.getName();
@@ -152,11 +151,7 @@ public class QuickformExecuteWizard extends Wizard {
                         pair.getSecond().keySet().toArray(new NodeID[0]));
             }
         }
-        return previousPage;
     }
-
-
-
 
 
     /**

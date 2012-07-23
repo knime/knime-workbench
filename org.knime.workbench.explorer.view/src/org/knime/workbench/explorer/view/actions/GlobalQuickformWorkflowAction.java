@@ -24,7 +24,6 @@ import java.util.List;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
-import org.eclipse.jface.wizard.WizardDialog;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -42,7 +41,7 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  * @since 3.1
  */
 public class GlobalQuickformWorkflowAction extends ExplorerAction {
-    
+
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(GlobalQuickformWorkflowAction.class);
 
@@ -53,7 +52,7 @@ public class GlobalQuickformWorkflowAction extends ExplorerAction {
     /** ID of the global rename action in the explorer menu. */
     public static final String QUICKFORM_ACTION_ID =
             "org.knime.workbench.explorer.action.quickform-execute-workflow";
-    
+
     private static final int SIZING_WIZARD_WIDTH  = 800;
     private static final int SIZING_WIZARD_HEIGHT = 600;
 
@@ -90,13 +89,14 @@ public class GlobalQuickformWorkflowAction extends ExplorerAction {
             if (ExplorerFileSystemUtils.lockWorkflow(
                     (LocalExplorerFileStore) wfStore)) {
                 final WorkflowManager wfm = getWorkflow();
-                
+
                 QuickformExecuteWizard newWiz = new QuickformExecuteWizard(wfm);
                 // newWiz.init(PlatformUI.getWorkbench(), getSelection());
-                final WizardDialog dialog = new WizardDialog(
+                final QuickformExecuteWizardDialog dialog
+                        = new QuickformExecuteWizardDialog(
                         getParentShell(), newWiz);
                 dialog.create();
-                dialog.getShell().setSize(Math.max(SIZING_WIZARD_WIDTH, 
+                dialog.getShell().setSize(Math.max(SIZING_WIZARD_WIDTH,
                         dialog.getShell().getSize().x),
                         SIZING_WIZARD_HEIGHT);
                 if (dialog.open() == Window.OK) {
@@ -119,5 +119,5 @@ public class GlobalQuickformWorkflowAction extends ExplorerAction {
         final WorkflowManager wfm = getWorkflow();
         return (wfm != null);
     }
-    
+
 }
