@@ -247,7 +247,6 @@ public class QuickformExecuteWizardPage extends WizardPage {
                 panel.updateQuickFormInElement(element);
                 node.loadFromQuickFormElement(element);
             } catch (InvalidSettingsException ise) {
-                // ignored.
                 sb.append("\t");
                 sb.append(ise.getMessage());
                 sb.append("\n");
