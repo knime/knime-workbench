@@ -128,10 +128,8 @@ public final class ExplorerFileSystemUtils {
             loc = null;
         }
         if (loc != null && VMFileLocker.lockForVM(loc)) {
-            LOGGER.debug("Locked workflow " + workflow);
             return true;
         } else {
-            LOGGER.debug("Could not lock workflow " + workflow);
             return false;
         }
     }
@@ -161,12 +159,9 @@ public final class ExplorerFileSystemUtils {
             return;
         }
         if (!VMFileLocker.isLockedForVM(loc)) {
-            LOGGER.debug("Nothing to unlock. \"" + workflow.getFullName()
-                    + "\" is not locked.");
             return;
         }
         assert AbstractExplorerFileStore.isWorkflow(workflow);
-        LOGGER.debug("Unlocking workflow " + workflow);
         VMFileLocker.unlockForVM(loc);
     }
 
