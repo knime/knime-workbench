@@ -174,8 +174,11 @@ public final class DragAndDropUtils {
         try {
             AbstractExplorerFileStore fs
                     = DragAndDropUtils.getFileStore(selection);
+            if (fs == null) {
+                return;
+            }
             File localFile = fs.toLocalFile(EFS.NONE, null);
-            if (fs == null || localFile == null) {
+            if (localFile == null) {
                 return;
             }
             r = KnimeResourceUtil.getResourceForURI(localFile.toURI());

@@ -132,7 +132,7 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
      */
     @Override
     public boolean isMetaNode() {
-        return exists() & isMetaNode(m_file);
+        return exists() && isMetaNode(m_file);
     }
 
     private static boolean isWorkflow(final IFileStore file) {

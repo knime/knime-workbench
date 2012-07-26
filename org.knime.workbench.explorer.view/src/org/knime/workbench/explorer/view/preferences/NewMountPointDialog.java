@@ -83,6 +83,8 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.dialogs.ListDialog;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -100,10 +102,6 @@ public class NewMountPointDialog extends ListDialog {
     private static final ImageDescriptor IMG_NEWITEM = AbstractUIPlugin
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/new_knime55.png");
-
-    private static final ImageDescriptor IMG_ERR = AbstractUIPlugin
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/error.png");
 
     private static final String INVALID_MSG = "A valid mount id contains only"
         + " characters a-z, A-Z, 0-9, '.' or '-' (it must start with a "
@@ -354,7 +352,7 @@ public class NewMountPointDialog extends ListDialog {
         // third row
         m_errIcon = new Label(header, SWT.NONE);
         m_errIcon.setVisible(true);
-        m_errIcon.setImage(IMG_ERR.createImage());
+        m_errIcon.setImage(ImageRepository.getImage(SharedImages.Error));
         m_errIcon.setLayoutData(new GridData(
                 GridData.HORIZONTAL_ALIGN_BEGINNING));
         m_errIcon.setBackground(white);
@@ -428,7 +426,7 @@ public class NewMountPointDialog extends ListDialog {
 
     }
 
-    private final class ContentFactoryProvider implements
+    private static final class ContentFactoryProvider implements
             IStructuredContentProvider {
         private final List<AbstractContentProviderFactory> m_elements;
 

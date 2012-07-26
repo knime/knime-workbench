@@ -86,21 +86,15 @@ import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.explorer.view.preferences.ExplorerPreferencePage;
-import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  *
  * @author ohl, University of Konstanz
  */
 public class SelectMountPointDialog extends Dialog {
-
     private static final ImageDescriptor IMG_NEWMOUNT = AbstractUIPlugin
             .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
                     "icons/new_mountpoint55.png");
-
-    private static final ImageDescriptor IMG_ERR = AbstractUIPlugin
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/error.png");
 
     private Table m_table;
 

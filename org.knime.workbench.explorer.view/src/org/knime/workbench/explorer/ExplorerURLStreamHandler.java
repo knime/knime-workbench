@@ -94,7 +94,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      * @author ohl, University of Konstanz
      *
      */
-    class ExplorerURLConnection extends URLConnection {
+    static class ExplorerURLConnection extends URLConnection {
         private final AbstractExplorerFileStore m_file;
 
         /**

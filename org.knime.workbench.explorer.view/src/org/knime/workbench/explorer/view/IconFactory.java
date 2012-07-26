@@ -109,9 +109,6 @@ public final class IconFactory {
             .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/knime_unknown_red.png").createImage();
 
-    private static final Image ERROR = KNIMEUIPlugin.getDefault().getImage(
-            KNIMEUIPlugin.PLUGIN_ID, "icons/error.png");
-
     private static final Image SYNC = KNIMEUIPlugin.getDefault().getImage(
             KNIMEUIPlugin.PLUGIN_ID, "icons/sync.png");
 
@@ -134,7 +131,7 @@ public final class IconFactory {
     }
 
     public Image error() {
-        return ERROR;
+        return ImageRepository.getImage(SharedImages.Error);
     }
 
     public Image unknown() {

@@ -176,7 +176,9 @@ public class Zipper {
 	                    }
 	                } finally {
 	                    zout.closeEntry();
-	                    in.close();
+	                    if (in != null) {
+	                        in.close();
+	                    }
 	                }
                 }
                 int megaBytes = (int)(f.length() >>> 20);
