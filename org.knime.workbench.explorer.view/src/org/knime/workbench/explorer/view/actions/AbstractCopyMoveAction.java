@@ -441,7 +441,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             ExplorerFileSystemUtils.unlockWorkflows(lockedDest);
         }
 
-        if (result.size() > 0) {
+        if (result.size() > 1) {
             IStatus multiStatus = new MultiStatus(ExplorerActivator.PLUGIN_ID,
                     IStatus.ERROR, result.toArray(new IStatus[0]),
                     "Could not " + m_cmd + " all files.", null);
@@ -452,6 +452,11 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             /* Don't show it as failure if only some of the items could not be
              * copied. */
             success.set(true);
+        } else if (result.size() == 1) {
+            ErrorDialog.openError(Display.getDefault().getActiveShell(),
+                    m_cmd + " item",
+                    "Some problems occurred during the operation.",
+                    result.get(0));
         }
         return success.get();
     }
