@@ -50,6 +50,7 @@
  */
 package org.knime.workbench.editor.svgexport.actions;
 
+import java.awt.Dimension;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -203,7 +204,11 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
         // export workflow (unfortunately without connections)
         IFigure figure = part.getFigure();
         Rectangle bounds = figure.getBounds();
-        GraphicsSVG svgExporter = GraphicsSVG.getInstance(bounds);
+        // shift bounds and translate the image so that off-screen parts of the workflow
+        // are within the bounding box of the SVG
+        GraphicsSVG svgExporter = GraphicsSVG.getInstance(new Rectangle(0, 0, bounds.width - bounds.x, bounds.height - bounds.y));
+        svgExporter.translate(-bounds.x, -bounds.y);
+        svgExporter.getSVGGraphics2D().setSVGCanvasSize(new Dimension(bounds.width, bounds.height));
         svgExporter.pushState();
         figure.paint(svgExporter);
 
