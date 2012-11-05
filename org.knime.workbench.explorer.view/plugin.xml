@@ -34,7 +34,6 @@
       </extension>
      <extension point="org.eclipse.ui.perspectiveExtensions">
       <perspectiveExtension targetID="org.knime.workbench.ui.ModellerPerspective">
-         <viewShortcut id="org.knime.workbench.explorer.view"></viewShortcut>
          <newWizardShortcut
                id="org.knime.workbench.explorer.view.actions.NewWorkflowWizard">
          </newWizardShortcut>
