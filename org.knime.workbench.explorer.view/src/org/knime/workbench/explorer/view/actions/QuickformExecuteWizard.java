@@ -75,8 +75,7 @@ public class QuickformExecuteWizard extends Wizard {
     private static final String EXEC_PAGE_NAME = "QuickformExecuteWizardPage_";
     private final WorkflowManager m_wfm;
     private int m_numExecPages = 0;
-    private final Map<String,
-            Pair<WorkflowManager,Map<NodeID,QuickFormInputNode>>> m_execPageMap;
+    private final Map<String, Pair<WorkflowManager, Map<NodeID, QuickFormInputNode>>> m_execPageMap;
 
     /**
      * Creates the wizard.
@@ -86,8 +85,7 @@ public class QuickformExecuteWizard extends Wizard {
         super();
         setWindowTitle("Quickform wizard for " + wfm.getDisplayLabel());
         m_wfm = wfm;
-        m_execPageMap = new HashMap<String,
-                Pair<WorkflowManager,Map<NodeID,QuickFormInputNode>>>();
+        m_execPageMap = new HashMap<String, Pair<WorkflowManager, Map<NodeID, QuickFormInputNode>>>();
         setForcePreviousAndNextButtons(true);
     }
 
@@ -160,7 +158,7 @@ public class QuickformExecuteWizard extends Wizard {
      */
     private Pair<WorkflowManager, Map<NodeID, QuickFormInputNode>>
             stepExecution() {
-        m_wfm.stepExecutionUpToNodeType(QuickFormInputNode.class);
+        m_wfm.stepExecutionUpToNodeType(QuickFormInputNode.class,  QuickFormInputNode.NOT_HIDDEN_FILTER);
         // create new runnable
         final IRunnableWithProgress op = new IRunnableWithProgress() {
             @Override
