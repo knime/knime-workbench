@@ -178,12 +178,11 @@ public class QuickformExecuteWizard extends Wizard {
         };
         runRun(op);
         WorkflowManager localWFM = m_wfm.findNextWaitingWorkflowManager(
-                QuickFormInputNode.class);
+                QuickFormInputNode.class, QuickFormInputNode.NOT_HIDDEN_FILTER);
         Map<NodeID, QuickFormInputNode> waitingNodes = Collections.emptyMap();
         if (localWFM != null) {
             // find all quickform input nodes and update meta dialog
-            waitingNodes = localWFM.findWaitingNodes(
-                    QuickFormInputNode.class);
+            waitingNodes = localWFM.findWaitingNodes(QuickFormInputNode.class, QuickFormInputNode.NOT_HIDDEN_FILTER);
         }
         return new Pair<WorkflowManager, Map<NodeID, QuickFormInputNode>>(
                 localWFM, waitingNodes);
