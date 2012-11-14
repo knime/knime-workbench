@@ -388,6 +388,19 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     }
 
     /**
+     * Checks whether a file represents a data file.
+     * @param file the file to check
+     * @return true if it is a plain data file.
+     */
+    public static boolean isDataFile(final AbstractExplorerFileStore file) {
+        if (file == null || !file.fetchInfo().exists()) {
+            return false;
+        }
+        AbstractExplorerFileInfo info = file.fetchInfo();
+        return !info.isMetaNode() && !info.isNode() && !info.isWorkflow() && !info.isWorkflowGroup()
+                && !info.isWorkflowTemplate();
+    }
+    /**
      * {@inheritDoc}
      */
     @Override

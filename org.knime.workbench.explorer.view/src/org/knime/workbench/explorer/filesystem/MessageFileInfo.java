@@ -129,4 +129,12 @@ public final class MessageFileInfo extends AbstractExplorerFileInfo {
     public boolean isReadable() {
         return true;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isFile() {
+        return false;
+    }
 }

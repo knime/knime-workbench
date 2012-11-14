@@ -46,7 +46,7 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.RemoteFlowDownloadStream;
+import org.knime.workbench.explorer.filesystem.RemoteDownloadStream;
 
 /**
  *
@@ -165,8 +165,8 @@ public abstract class AbstractDownloadAction extends Action {
         success = dwnLoader.waitUntilDone();
 
         // error handling if download failed
-        File tmpZip = dwnLoader.getTempFile();
-        if (tmpZip == null || !success) {
+        File tmpLoc = dwnLoader.getTempFile();
+        if (tmpLoc == null || !success) {
             String msg = "Unable to download workflow: ";
             if (success) {
                 msg += dwnLoader.getErrorMessage();
@@ -186,11 +186,11 @@ public abstract class AbstractDownloadAction extends Action {
         prepareTarget();
 
         try {
-            extractDownloadToTarget(tmpZip);
+            extractDownloadToTarget(tmpLoc);
         } catch (Exception e) {
             LOGGER.error("Unable to extract the download. ", e);
         } finally {
-            tmpZip.delete();
+            tmpLoc.delete();
         }
 
         refreshTarget();
@@ -386,8 +386,8 @@ public abstract class AbstractDownloadAction extends Action {
                     monitor.beginTask(progMsg.toString(),
                             IProgressMonitor.UNKNOWN);
                 }
-                RemoteFlowDownloadStream in =
-                        m_source.openWorkflowDownloadStream();
+                RemoteDownloadStream in =
+                        m_source.openDownloadStream();
                 // wait for the server to finish zipping
                 while (!in.readyForDownload()) {
                     if (monitor != null && monitor.isCanceled()) {

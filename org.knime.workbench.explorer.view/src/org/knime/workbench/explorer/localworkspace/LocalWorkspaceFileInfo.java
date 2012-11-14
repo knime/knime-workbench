@@ -131,6 +131,14 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
      * {@inheritDoc}
      */
     @Override
+    public boolean isFile() {
+        return exists() && isDataFile(m_file);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean isMetaNode() {
         return exists() && isMetaNode(m_file);
     }
@@ -190,6 +198,11 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
                 SingleNodeContainerPersistorVersion200.NODE_FILE);
         return containerFile.fetchInfo().exists()
                 && isWorkflow(file.getParent());
+    }
+
+    private static boolean isDataFile(final IFileStore file) {
+        // local workspace doesn't hold data files.
+        return false;
     }
 
     /**

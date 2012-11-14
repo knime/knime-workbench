@@ -123,6 +123,10 @@ public final class IconFactory {
         KNIMEUIPlugin.getDefault().getImage(ExplorerActivator.PLUGIN_ID,
             "icons/file.png");
 
+    private static final Image ANY_FILE_IMG =
+        KNIMEUIPlugin.getDefault().getImage(ExplorerActivator.PLUGIN_ID,
+            "icons/any_file.png");
+
     private static final Image DIR_IMG =
         KNIMEUIPlugin.getDefault().getImage(ExplorerActivator.PLUGIN_ID,
             "icons/folder.png");
@@ -192,6 +196,10 @@ public final class IconFactory {
 
     public Image file() {
         return FILE_IMG;
+    }
+
+    public Image any_file() {
+        return ANY_FILE_IMG;
     }
 
     public Image directory() {
