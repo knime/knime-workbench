@@ -106,6 +106,7 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      *
      * @return a stream containing the zipped workflow or unzipped file content.
      * @throws CoreException if this doesn't exist
+     * @since 4.0
      */
     public abstract RemoteDownloadStream openDownloadStream()
             throws CoreException;
@@ -117,6 +118,7 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * @return an open stream, that stores the content as a workflow on the
      *         server.
      * @throws CoreException
+     * @since 4.0
      */
     public abstract RemoteUploadStream openWorkflowUploadStream()
             throws CoreException;
@@ -125,6 +127,7 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * Stores the content send through the stream as file on the server (doesn't unzip it).
      * @return an open stream that stores the content (unzipped) in a file on the server.
      * @throws CoreException
+     * @since 4.0
      */
     public abstract RemoteUploadStream openFileUploadStream()
             throws CoreException;
