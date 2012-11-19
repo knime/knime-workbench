@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="org.knime.features.explorer.view"
+      label="KNIME Explorer view (do not install!)"
+      version="3.0.2.qualifier"
+      provider-name="KNIME GmbH, Konstanz, Germany">
+
+   <description>
+      Feature containing the Explorer view plug-in. This is only used for internal purposes and must not be installed into KNIME.
+   </description>
+
+   <copyright>
+      Copyright, 2003 - 2012
+University of Konstanz, Germany
+KNIME GmbH, Konstanz, Germany
+   </copyright>
+
+   <plugin
+         id="org.knime.workbench.explorer.view"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>
