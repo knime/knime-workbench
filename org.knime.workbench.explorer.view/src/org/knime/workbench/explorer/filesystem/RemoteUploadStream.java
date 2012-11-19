@@ -28,6 +28,7 @@ import java.io.OutputStream;
  * in the format expected by the server for that item.
  *
  * @author Peter Ohl, KNIME.com AG, Zurich, Switzerland
+ * @since 4.0
  */
 public abstract class RemoteUploadStream extends OutputStream {
 

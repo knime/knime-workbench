@@ -391,6 +391,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * Checks whether a file represents a data file.
      * @param file the file to check
      * @return true if it is a plain data file.
+     * @since 4.0
      */
     public static boolean isDataFile(final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().exists()) {

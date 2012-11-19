@@ -27,6 +27,7 @@ import java.util.List;
  * Used to download server items from a remote store location.
  *
  * @author Peter Ohl, KNIME.com AG, Zurich, Switzerland
+ * @since 4.0
  */
 public abstract class RemoteDownloadStream extends InputStream {
 

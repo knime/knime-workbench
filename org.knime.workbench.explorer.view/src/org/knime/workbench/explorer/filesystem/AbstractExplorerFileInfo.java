@@ -84,7 +84,8 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
     public abstract boolean isMetaNode();
 
     /**
-     * @return true, if the file is a file (not a workflow, group, templare, etc., but a plain file)
+     * @return <code>true</code>, if the file is a file (not a workflow, group, template, etc., but a plain file)
+     * @since 4.0
      */
     public abstract boolean isFile();
 

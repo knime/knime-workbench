@@ -198,6 +198,9 @@ public final class IconFactory {
         return FILE_IMG;
     }
 
+    /**
+     * @since 4.0
+     */
     public Image any_file() {
         return ANY_FILE_IMG;
     }
