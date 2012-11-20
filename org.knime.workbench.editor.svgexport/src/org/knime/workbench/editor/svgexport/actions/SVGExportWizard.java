@@ -142,6 +142,15 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
      */
     @Override
     public boolean performFinish() {
+        if (!(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()
+                .getActiveEditor() instanceof WorkflowEditor)) {
+            MessageBox mb = new MessageBox(Display.getDefault().getActiveShell(), SWT.ICON_ERROR | SWT.OK);
+            mb.setText("Error during export");
+            mb.setMessage("Current editor is not a KNIME workflow.");
+            mb.open();
+            return false;
+        }
+
         try {
             return export();
         } catch (Exception ex) {
