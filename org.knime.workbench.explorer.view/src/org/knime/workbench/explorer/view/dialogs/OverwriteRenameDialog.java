@@ -378,6 +378,8 @@ public class OverwriteRenameDialog extends Dialog {
     }
 
     /**
+     * Adds an index to the file name to make it unique. If the file store represents a file the index is inserted in
+     * front of the last dot (to not change the file name extension).
      * @param fileStore the file store to get an alternative name for
      * @param forbiddenStores an optional list of file stores that should not
      *      be used, can be null
@@ -386,19 +388,30 @@ public class OverwriteRenameDialog extends Dialog {
     public static String getAlternativeName(
             final AbstractExplorerFileStore fileStore,
             final Set<AbstractExplorerFileStore> forbiddenStores) {
-        String name = fileStore.getName();
+        String newName = fileStore.getName();
         AbstractExplorerFileStore parent = fileStore.getParent();
         if (parent == null) {
-            return name;
+            return newName;
+        }
+
+        String origName = newName;
+        String extension = "";
+        if (fileStore.fetchInfo().isFile()) {
+            // do not modify the extension of files
+            int dotIdx = origName.lastIndexOf('.');
+            if (dotIdx > 0 && dotIdx < origName.length() - 1) {
+                extension = origName.substring(dotIdx); // including the dot
+                origName = origName.substring(0, dotIdx);
+            }
         }
         int cnt = 1;
-        AbstractExplorerFileStore child = parent.getChild(name);
+        AbstractExplorerFileStore child = parent.getChild(newName);
         while (child.fetchInfo().exists() || (forbiddenStores != null
                         && forbiddenStores.contains(child))) {
-            name = fileStore.getName() + "(" + (++cnt) + ")";
-            child = parent.getChild(name);
+            newName = origName + "(" + (++cnt) + ")" + extension;
+            child = parent.getChild(newName);
         }
-        return name;
+        return newName;
     }
 
     /**
