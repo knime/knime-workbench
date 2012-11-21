@@ -21,6 +21,7 @@ package org.knime.workbench.explorer.view;
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,6 +43,7 @@ import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.LabelProviderChangedEvent;
 import org.eclipse.jface.viewers.ViewerDropAdapter;
+import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
@@ -82,6 +84,15 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     protected static final AbstractExplorerFileStore[] NO_CHILD =
             new AbstractExplorerFileStore[0];
+
+    /**
+     * Files not displayed if contained in a workflow group
+     */
+    protected static final Collection<String> HIDDEN_FILENAMES = new ArrayList<String>();
+    static {
+        HIDDEN_FILENAMES.add("workflowset.meta");
+        HIDDEN_FILENAMES.add(".project");
+    }
 
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(AbstractContentProvider.class);
@@ -303,7 +314,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     + "template will be saved.", uniqueName,
                     new FileStoreNameValidator());
             dialog.setBlockOnOpen(true);
-            if (dialog.open() == InputDialog.CANCEL) {
+            if (dialog.open() == Window.CANCEL) {
                 return false;
             }
             uniqueName = dialog.getValue();
@@ -619,10 +630,13 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             for (AbstractExplorerFileStore c : childs) {
                 if (AbstractExplorerFileStore.isWorkflowGroup(c)
                         || AbstractExplorerFileStore.isWorkflow(c)
-                        || AbstractExplorerFileStore.isWorkflowTemplate(c)
-                        || ContextAwareNodeFactoryMapper.getNodeFactory(c
-                                .getName()) != null) {
+                        || AbstractExplorerFileStore.isWorkflowTemplate(c)) {
                     result.add(c);
+                }
+                if (AbstractExplorerFileStore.isDataFile(c)) {
+                    if (!HIDDEN_FILENAMES.contains(c.getName())) {
+                        result.add(c);
+                    }
                 }
             }
             return result.toArray(new AbstractExplorerFileStore[result.size()]);
@@ -684,6 +698,13 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
         if (AbstractExplorerFileStore.isWorkflowTemplate(efs)) {
             return IconFactory.instance.workflowtemplate();
+        }
+        if (AbstractExplorerFileStore.isDataFile(efs)) {
+            Image img = ContextAwareNodeFactoryMapper.getImage(efs.getName());
+            if (img != null) {
+                return img;
+            }
+            return IconFactory.instance.any_file();
         }
         if (!AbstractExplorerFileStore.isWorkflow(efs)) {
             return null;
