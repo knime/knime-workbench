@@ -86,7 +86,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             new AbstractExplorerFileStore[0];
 
     /**
-     * Files not displayed if contained in a workflow group
+     * Files not displayed if contained in a workflow group.
+     * @since 4.0
      */
     protected static final Collection<String> HIDDEN_FILENAMES = new ArrayList<String>();
     static {
