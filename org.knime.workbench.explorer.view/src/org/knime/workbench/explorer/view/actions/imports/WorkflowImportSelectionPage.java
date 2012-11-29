@@ -103,6 +103,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -671,11 +672,19 @@ public class WorkflowImportSelectionPage extends WizardPage {
     }
 
     private void handleWorkflowGroupBrowseButtonPressed() {
-        // get the value from the text field
-
+        // get mounted local destinations to select from
+        List<String> mountIDs = ExplorerMountTable.getAllMountIDs();
+        Iterator<String> it = mountIDs.iterator();
+        while (it.hasNext()) {
+            String m = it.next();
+            MountPoint mp = ExplorerMountTable.getMountPoint(m);
+            if (mp.getProvider().isRemote()) {
+                // can't import to remote locations
+                it.remove();
+            }
+        }
         SpaceResourceSelectionDialog dlg =
-                new SpaceResourceSelectionDialog(getShell(), ExplorerMountTable
-                        .getAllMountIDs().toArray(new String[0]),
+                new SpaceResourceSelectionDialog(getShell(), mountIDs.toArray(new String[0]),
                         ContentObject.forFile(m_target));
         dlg.setTitle("Import Destination");
         dlg.setHeader("Select the import destination");
@@ -1019,6 +1028,11 @@ public class WorkflowImportSelectionPage extends WizardPage {
             return;
         }
         setErrorMessage(null);
+        if (m_target == null) {
+            setPageComplete(false);
+            setErrorMessage("Please select a destination folder");
+            return;
+        }
 
         // clear invalid list
         m_invalidAndCheckedImports.clear();
