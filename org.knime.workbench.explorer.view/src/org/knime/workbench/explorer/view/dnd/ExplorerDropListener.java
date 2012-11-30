@@ -98,15 +98,22 @@ public class ExplorerDropListener extends ViewerDropAdapter {
                 return false;
             }
             if (isLocalTransfer) {
-                if (getSelectedObject() == target) {
-                    return false;
+                Object selObj = getSelectedObject();
+                if (selObj instanceof ContentObject) {
+                    ContentObject selContent = (ContentObject)selObj;
+                    if (selContent == target) {
+                        return false;
+                    }
+                    if (operation == DND.DROP_MOVE && dstFS.equals(selContent.getObject().getParent())) {
+                        //don't move to the own parent
+                        return false;
+                    }
                 }
             }
             // delegate the validation to the content provider
             return acp.validateDrop(dstFS, operation, transferType);
         } else {
-            LOGGER.warn("Only files and items of the KNIME Explorer can be "
-                    + "dropped.");
+            LOGGER.warn("Only files and items of the KNIME Explorer or the filesystem can be dropped.");
             return false;
         }
     }

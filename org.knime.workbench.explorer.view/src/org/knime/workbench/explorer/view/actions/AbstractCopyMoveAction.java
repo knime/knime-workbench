@@ -26,6 +26,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -121,9 +122,6 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        if (!isEnabled()) {
-            return;
-        }
         if (m_sources == null) {
             // retrieve the selected file stores
             m_sources = removeSelectedChildren(getAllSelectedFiles());
@@ -141,6 +139,22 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             }
         }
 
+        // sort sources by providers - needed for the checks done later
+        HashMap<AbstractContentProvider, List<AbstractExplorerFileStore>> sourceProviders =
+            new HashMap<AbstractContentProvider, List<AbstractExplorerFileStore>>();
+        for (AbstractExplorerFileStore f : m_sources) {
+            AbstractContentProvider acp = f.getContentProvider(); // could be null for local tmp files
+            List<AbstractExplorerFileStore> files = sourceProviders.get(acp);
+            if (files == null) {
+                files = new LinkedList<AbstractExplorerFileStore>();
+                sourceProviders.put(acp, files);
+            }
+            files.add(f);
+        }
+        if (!isEnabled(sourceProviders)) {
+            return;
+        }
+
         // open browse dialog for target selection if necessary
         if (m_target == null) {
             openTargetSelectionDialog();
@@ -153,12 +167,9 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
 
         m_success = copyOrMove(m_sources);
         if (!m_success) {
-            LOGGER.error(m_performMove ? "Moving" : "Copying" + " to \""
-                    + m_target.getFullName() + "\" failed.");
+            LOGGER.debug((m_performMove ? "Moving" : "Copying") + " to \"" + m_target.getFullName() + "\" failed.");
         } else {
-            LOGGER.debug("Successfully "
-                    + (m_performMove ? "moved " : "copied ")
-                    + m_sources.size() + " item(s) to \""
+            LOGGER.debug("Successfully " + (m_performMove ? "moved " : "copied ") + m_sources.size() + " item(s) to \""
                     + m_target.getFullName() + "\".");
         }
     }
@@ -466,8 +477,12 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        return m_target.fetchInfo().isModifiable()
-                && isCopyOrMovePossible(getSelectedFiles(), m_performMove);
+        // checks whether copy/move is possible based on the current selection
+        return isEnabled(getSelectedFiles());
+    }
+
+    private boolean isEnabled(final Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selectedProviders) {
+        return m_target.fetchInfo().isModifiable() && isCopyOrMovePossible(selectedProviders, m_performMove);
     }
 
     /**
@@ -484,8 +499,8 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             // can only copy/move from one source content provider
             return false;
         }
-        if (!selProviders.keySet().iterator().next().isWritable()
-                && performMove) {
+        AbstractContentProvider acp = selProviders.keySet().iterator().next();
+        if (acp != null && !acp.isWritable() && performMove) {
             return false;
         }
         List<AbstractExplorerFileStore> selections =
