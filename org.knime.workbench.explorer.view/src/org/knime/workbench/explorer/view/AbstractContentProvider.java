@@ -538,7 +538,12 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public abstract boolean canHostMetaNodeTemplates();
 
-
+    /**
+     * @return whether this content provider is able to host data files. This is true for server or team spaces, but
+     *         false for the local space.
+     * @since 4.0
+     */
+    public abstract boolean canHostDataFiles();
 
 
     /* -------------- content provider methods ---------------------------- */

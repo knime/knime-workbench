@@ -433,6 +433,14 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
+    public final boolean canHostDataFiles() {
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean performDrop(final ExplorerView view, final Object data,
             final AbstractExplorerFileStore target, final int operation) {
         // read current selection and check whether it comes from the very same
