@@ -54,6 +54,7 @@ import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.NodeContainerState;
 import org.knime.core.node.workflow.NodeMessage;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.VMFileLocker;
@@ -739,18 +740,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                         .equals(NodeMessage.Type.ERROR)) {
                     return IconFactory.instance.workflowError();
                 }
-                switch (nc.getState()) {
-                case EXECUTED:
+                NodeContainerState ncState = nc.getNodeContainerState();
+                if (ncState.isExecuted()) {
                     return IconFactory.instance.workflowExecuted();
-                case PREEXECUTE:
-                case EXECUTING:
-                case EXECUTINGREMOTELY:
-                case POSTEXECUTE:
+                } else if (ncState.isExecutionInProgress()) {
                     return IconFactory.instance.workflowExecuting();
-                case CONFIGURED:
-                case IDLE:
+                } else if (ncState.isConfigured()) {
                     return IconFactory.instance.workflowConfigured();
-                default:
+                } else {
                     return IconFactory.instance.workflowConfigured();
                 }
             } else {

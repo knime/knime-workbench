@@ -27,7 +27,6 @@ import java.util.List;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.NodeContainer.State;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
@@ -104,7 +103,7 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         WorkflowManager wfm = getWorkflow();
-        return wfm != null && State.CONFIGURED.equals(wfm.getState());
+        return wfm != null && wfm.getNodeContainerState().isConfigured();
     }
 
     private void showCantExecuteLockMessage() {

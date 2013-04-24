@@ -71,7 +71,7 @@ public class GlobalCancelWorkflowExecutionAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         WorkflowManager wfm = getWorkflow();
-        return wfm != null && wfm.getState().executionInProgress();
+        return wfm != null && wfm.getNodeContainerState().isExecutionInProgress();
     }
 
     /**
