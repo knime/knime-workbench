@@ -528,7 +528,7 @@ public class ContentDelegator extends LabelProvider implements
                         CONTENT_CHANGED, null, refresh));
             } else {
                 notifyListeners(new PropertyChangeEvent(source,
-                        CONTENT_CHANGED, null, refresh));
+                        CONTENT_CHANGED, null, null));
             }
         }
 
