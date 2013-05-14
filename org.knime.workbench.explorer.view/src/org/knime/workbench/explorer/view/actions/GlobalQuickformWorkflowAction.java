@@ -23,7 +23,6 @@ package org.knime.workbench.explorer.view.actions;
 import java.util.List;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.window.Window;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -99,10 +98,7 @@ public class GlobalQuickformWorkflowAction extends ExplorerAction {
                 dialog.getShell().setSize(Math.max(SIZING_WIZARD_WIDTH,
                         dialog.getShell().getSize().x),
                         SIZING_WIZARD_HEIGHT);
-                if (dialog.open() == Window.OK) {
-                    // execute all remaining nodes
-                    // wfm.executeAllAndWaitUntilDone();
-                }
+                dialog.open(); // wizard executes the flow
             } else {
                 LOGGER.info("The workflow cannot be executed as "
                         + "is still in use by another user/instance.");
