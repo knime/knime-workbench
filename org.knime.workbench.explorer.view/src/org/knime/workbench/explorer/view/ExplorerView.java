@@ -414,6 +414,9 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             }
         });
         m_viewer.addSelectionChangedListener(this);
+        // this allows other plugins to see our selection.
+        getSite().setSelectionProvider(m_viewer);
+
         ProjectWorkflowMap.addStateListener(this);
         ProjectWorkflowMap.addWorkflowListener(this);
         //ProjectWorkflowMap.addNodeMessageListener(this);
