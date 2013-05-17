@@ -11,7 +11,8 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.graphics.Image;
-import org.knime.workbench.explorer.view.IconFactory;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 
 /**
  * Placeholder store in the tree for string messages.
@@ -31,7 +32,7 @@ public final class MessageFileStore extends AbstractExplorerFileStore {
      * @see AbstractExplorerFileStore#AbstractExplorerFileStore(String, String)
      */
     public MessageFileStore(final String mountID, final String message) {
-        this(mountID, message, IconFactory.instance.info());
+        this(mountID, message, ImageRepository.getImage(SharedImages.InfoButton));
     }
 
     /**

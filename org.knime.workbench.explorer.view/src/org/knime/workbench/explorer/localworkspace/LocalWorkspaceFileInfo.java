@@ -139,6 +139,14 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
      * {@inheritDoc}
      */
     @Override
+    public boolean isReservedSystemItem() {
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean isMetaNode() {
         return exists() && isMetaNode(m_file);
     }

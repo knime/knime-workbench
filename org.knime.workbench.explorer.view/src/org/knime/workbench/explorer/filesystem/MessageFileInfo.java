@@ -137,4 +137,12 @@ public final class MessageFileInfo extends AbstractExplorerFileInfo {
     public boolean isFile() {
         return false;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isReservedSystemItem() {
+        return true;
+    }
 }

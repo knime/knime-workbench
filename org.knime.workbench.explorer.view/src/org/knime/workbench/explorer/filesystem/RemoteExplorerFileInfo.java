@@ -95,7 +95,19 @@ public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
     public abstract boolean isIdle();
 
     /**
-     * Checks whether a file represents a workflow containing a report
+     * @return true, if the workflow of this job got overwritten after the job was created
+     * @since 5.0
+     */
+    public abstract boolean isOutDated();
+
+    /**
+     * @return true, if the workflow of this job got deleted after the job was created
+     * @since 5.0
+     */
+    public abstract boolean isOrphaned();
+
+    /**
+     * Checks whether a file represents a workflow containing a report.
      * @return true if the file is a workflow and contains a report, false
      *      otherwise
      * @since 3.1

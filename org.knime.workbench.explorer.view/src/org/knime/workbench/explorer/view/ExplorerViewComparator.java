@@ -82,21 +82,25 @@ public class ExplorerViewComparator extends ViewerComparator {
     private int rank(final AbstractExplorerFileStore f) {
         // we want to see workflow groups at the top
         if (AbstractExplorerFileStore.isWorkflowGroup(f)) {
-            return 4;
+            if (f.fetchInfo().isReservedSystemItem()) {
+                // but system items are the last ones
+                return 0;
+            }
+            return 5;
         }
         // then flows
         if (AbstractExplorerFileStore.isWorkflow(f)) {
-            return 3;
+            return 4;
         }
         // then templates
         if (AbstractExplorerFileStore.isWorkflowTemplate(f)) {
-            return 2;
+            return 3;
         }
         // down there directories
         if (f.fetchInfo().isDirectory()) {
-            return 1;
+            return 2;
         }
-        // last: the files
-        return 0;
+        // (almost) last: the files
+        return 1;
     }
 }

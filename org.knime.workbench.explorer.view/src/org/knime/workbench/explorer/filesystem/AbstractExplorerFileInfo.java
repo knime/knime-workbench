@@ -90,6 +90,12 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
     public abstract boolean isFile();
 
     /**
+     * @return <code>true</code>, if the item (file/flow/dir) is a system created item.
+     * @since 5.0
+     */
+    public abstract boolean isReservedSystemItem();
+
+    /**
      * @return true if the file store can be modified, false otherwise
      */
     public abstract boolean isModifiable();

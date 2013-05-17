@@ -19,9 +19,10 @@
 package org.knime.workbench.explorer.localworkspace;
 
 import org.eclipse.swt.graphics.Image;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
-import org.knime.workbench.explorer.view.IconFactory;
 
 
 /**
@@ -83,7 +84,7 @@ public class LocalWorkspaceContentProviderFactory extends
      */
     @Override
     public Image getImage() {
-        return IconFactory.instance.localWorkspace();
+        return ImageRepository.getImage(SharedImages.LocalSpaceIcon);
     }
 
     /**

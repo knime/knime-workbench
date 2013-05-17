@@ -51,13 +51,14 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.KnimeFileUtil;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.explorer.view.IconFactory;
 import org.knime.workbench.explorer.view.actions.AbstractCopyMoveAction;
 import org.knime.workbench.explorer.view.actions.GlobalCopyAction;
 import org.knime.workbench.explorer.view.actions.GlobalMoveAction;
@@ -289,14 +290,14 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     @Override
     public Image getImage(final Object element) {
         if (!(element instanceof LocalWorkspaceFileStore)) {
-            return IconFactory.instance.unknownRed();
+            return ImageRepository.getImage(SharedImages.WorkflowUnknownRed);
         }
         LocalExplorerFileStore e = (LocalExplorerFileStore)element;
         Image img = getWorkspaceImage(e);
         if (img != null) {
             return img;
         } else {
-            return IconFactory.instance.unknownRed();
+            return ImageRepository.getImage(SharedImages.WorkflowUnknownRed);
         }
     }
 
@@ -337,7 +338,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public Image getImage() {
-        return IconFactory.instance.localWorkspace();
+        return ImageRepository.getImage(SharedImages.LocalSpaceIcon);
     }
 
     /**

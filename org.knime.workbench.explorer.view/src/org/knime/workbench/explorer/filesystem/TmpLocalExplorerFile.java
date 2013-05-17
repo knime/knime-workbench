@@ -177,6 +177,14 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
                 public boolean exists() {
                     return m_wrappedFile.exists();
                 }
+
+                /**
+                 * {@inheritDoc}
+                 */
+                @Override
+                public boolean isReservedSystemItem() {
+                    return false;
+                }
             };
         }
         return m_info;

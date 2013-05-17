@@ -58,6 +58,8 @@ import org.knime.core.node.workflow.NodeContainerState;
 import org.knime.core.node.workflow.NodeMessage;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.VMFileLocker;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
@@ -695,23 +697,23 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public static Image getWorkspaceImage(final AbstractExplorerFileStore efs) {
 
         if (AbstractExplorerFileStore.isNode(efs)) {
-            return IconFactory.instance.node();
+            return ImageRepository.getImage(SharedImages.Node);
         }
         if (AbstractExplorerFileStore.isMetaNode(efs)) {
-            return IconFactory.instance.node();
+            return ImageRepository.getImage(SharedImages.Node);
         }
         if (AbstractExplorerFileStore.isWorkflowGroup(efs)) {
-            return IconFactory.instance.workflowgroup();
+            return ImageRepository.getImage(SharedImages.WorkflowGroup);
         }
         if (AbstractExplorerFileStore.isWorkflowTemplate(efs)) {
-            return IconFactory.instance.workflowtemplate();
+            return ImageRepository.getImage(SharedImages.MetaNodeTemplate);
         }
         if (AbstractExplorerFileStore.isDataFile(efs)) {
             Image img = ContextAwareNodeFactoryMapper.getImage(efs.getName());
             if (img != null) {
                 return img;
             }
-            return IconFactory.instance.any_file();
+            return ImageRepository.getImage(SharedImages.File);
         }
         if (!AbstractExplorerFileStore.isWorkflow(efs)) {
             return null;
@@ -722,39 +724,39 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         try {
             f = efs.toLocalFile(EFS.NONE, null);
         } catch (CoreException ce) {
-            return IconFactory.instance.workflowClosed();
+            return ImageRepository.getImage(SharedImages.WorkflowClosed);
         }
 
         if (f == null) {
-            return IconFactory.instance.workflowClosed();
+            return ImageRepository.getImage(SharedImages.WorkflowClosed);
         }
         URI wfURI = f.toURI();
         NodeContainer nc = ProjectWorkflowMap.getWorkflow(wfURI);
         if (nc == null) {
-            return IconFactory.instance.workflowClosed();
+            return ImageRepository.getImage(SharedImages.WorkflowClosed);
         }
         if (nc instanceof WorkflowManager) {
             if (nc.getID().hasSamePrefix(WorkflowManager.ROOT.getID())) {
                 // only show workflow directly off the root
                 if (nc.getNodeMessage().getMessageType()
                         .equals(NodeMessage.Type.ERROR)) {
-                    return IconFactory.instance.workflowError();
+                    return ImageRepository.getImage(SharedImages.WorkflowError);
                 }
                 NodeContainerState ncState = nc.getNodeContainerState();
                 if (ncState.isExecuted()) {
-                    return IconFactory.instance.workflowExecuted();
+                    return ImageRepository.getImage(SharedImages.WorkflowExecuted);
                 } else if (ncState.isExecutionInProgress()) {
-                    return IconFactory.instance.workflowExecuting();
+                    return ImageRepository.getImage(SharedImages.WorkflowExecuting);
                 } else if (ncState.isConfigured()) {
-                    return IconFactory.instance.workflowConfigured();
+                    return ImageRepository.getImage(SharedImages.WorkflowConfigured);
                 } else {
-                    return IconFactory.instance.workflowConfigured();
+                    return ImageRepository.getImage(SharedImages.WorkflowConfigured);
                 }
             } else {
-                return IconFactory.instance.node();
+                return ImageRepository.getImage(SharedImages.Node);
             }
         } else {
-            return IconFactory.instance.unknown();
+            return ImageRepository.getImage(SharedImages.WorkflowUnknown);
         }
     }
 
