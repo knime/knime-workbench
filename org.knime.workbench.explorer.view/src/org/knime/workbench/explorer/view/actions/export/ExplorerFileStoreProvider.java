@@ -59,9 +59,10 @@ import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.graphics.Image;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.IconFactory;
 
 /**
  *
@@ -161,9 +162,9 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
             }
             IFileInfo info = e.fetchInfo();
             if (info.isDirectory()) {
-                return IconFactory.instance.directory();
+                return ImageRepository.getImage(SharedImages.Folder);
             } else {
-                return IconFactory.instance.file();
+                return ImageRepository.getImage(SharedImages.File2);
             }
         }
         return null;
