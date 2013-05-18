@@ -262,6 +262,8 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             try {
                 MetaInfoFile.createKnimeProject(dstDir.getName(),
                         KNIMEProjectNature.ID);
+            } catch (CoreException e) {
+                throw e;
             } catch (Exception e) {
                 String message =
                         "Could not create KNIME project in "
