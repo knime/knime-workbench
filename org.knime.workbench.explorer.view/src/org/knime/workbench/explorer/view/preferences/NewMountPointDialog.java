@@ -105,7 +105,8 @@ public class NewMountPointDialog extends ListDialog {
 
     private static final String INVALID_MSG = "A valid mount id contains only"
         + " characters a-z, A-Z, 0-9, '.' or '-' (it must start with a "
-        + "character and not end with a dot nor hyphen).";
+        + "character and not end with a dot nor hyphen). Additionally, mount point names starting with 'knime.' are "
+        + "reserved for internal use.";
 
     private String m_mountIDval;
 

@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,10 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.internal.filesystem.local.LocalFile;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
@@ -68,6 +64,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.IActionBars;
+import org.eclipse.ui.IEditorDescriptor;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IViewSite;
 import org.eclipse.ui.IWorkbenchActionConstants;
@@ -296,11 +293,10 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         IStructuredSelection selection =
                 (IStructuredSelection)m_viewer.getSelection();
         // for now we open only local files
-        LinkedList<LocalFile> selFiles = new LinkedList<LocalFile>();
         if (selection.isEmpty()) {
             return false;
         }
-        List<ContentObject> refreshs = new ArrayList<ContentObject>();
+        List<ContentObject> workflowsToOpen = new ArrayList<ContentObject>();
         Iterator<?> iter = selection.iterator();
         while (iter.hasNext()) {
             Object sel = iter.next();
@@ -309,8 +305,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                     ContentObject co = (ContentObject)sel;
                     File f = co.getObject().toLocalFile(EFS.NONE, null);
                     if (f != null) {
-                        selFiles.add(new LocalFile(f));
-                        refreshs.add(co);
+                        workflowsToOpen.add(co);
                     }
                 } catch (CoreException ce) {
                     // then don't add it
@@ -318,7 +313,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             }
         }
 
-        if (selFiles.size() > 5) {
+        if (workflowsToOpen.size() > 5) {
             MessageBox mb =
                     new MessageBox(getViewSite().getShell(), SWT.ICON_QUESTION
                             | SWT.CANCEL | SWT.OK);
@@ -330,52 +325,34 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             }
         }
         boolean opened = false;
-        for (LocalFile lf : selFiles) {
-            opened |= openEditor(lf);
+        for (ContentObject co : workflowsToOpen) {
+            opened |= openEditor(co);
         }
-        m_viewer.update(refreshs.toArray(), null);
+        m_viewer.update(workflowsToOpen.toArray(), null);
         return opened;
     }
 
-    private boolean openEditor(final LocalFile lf) {
-        if (lf.fetchInfo().isDirectory()) {
-            IFileStore wf = lf.getChild(WorkflowPersistor.WORKFLOW_FILE);
-            if (wf.fetchInfo().exists()) {
-                return openWorkflow(lf);
+    private boolean openEditor(final ContentObject co) {
+        AbstractExplorerFileStore filestore = co.getObject();
+
+        if (filestore.fetchInfo().isDirectory()) {
+            AbstractExplorerFileStore workflowFile = filestore.getChild(WorkflowPersistor.WORKFLOW_FILE);
+            if (workflowFile.fetchInfo().exists()) {
+                filestore = workflowFile;
             } else {
-                // we open no other than workflow directories
-                return false;
-            }
-        } else {
-            try {
-                PlatformUI
-                        .getWorkbench()
-                        .getActiveWorkbenchWindow()
-                        .getActivePage()
-                        .openEditor(new FileStoreEditorInput(lf),
-                                "org.eclipse.ui.DefaultTextEditor");
-                return true;
-            } catch (PartInitException e) {
-                LOGGER.warn("Unable to open editor for " + lf.getName() + ": "
-                        + e.getMessage(), e);
+                // directories that are not workflows cannot be opened
                 return false;
             }
         }
-    }
 
-    private boolean openWorkflow(final LocalFile wfDirectory) {
-        String wfName = new Path(wfDirectory.getName()).lastSegment();
+        IEditorDescriptor editorDescriptor;
         try {
-            LocalFile wfFile =
-                    (LocalFile)wfDirectory
-                            .getChild(WorkflowPersistor.WORKFLOW_FILE);
-            IDE.openEditorOnFileStore(PlatformUI.getWorkbench()
-                    .getActiveWorkbenchWindow().getActivePage(), wfFile);
+            editorDescriptor = IDE.getEditorDescriptor(filestore.getName());
+            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()
+                .openEditor(new FileStoreEditorInput(filestore), editorDescriptor.getId());
             return true;
-        } catch (PartInitException e) {
-            LOGGER.warn(
-                    "Unable to open editor for " + wfName + ": "
-                            + e.getMessage(), e);
+        } catch (PartInitException ex) {
+            LOGGER.warn("Cannot open editor for " + filestore + ": " + ex.getMessage(), ex);
             return false;
         }
     }

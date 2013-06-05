@@ -50,47 +50,144 @@
  */
 package org.knime.workbench.explorer;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
+import org.knime.core.node.workflow.NodeContext;
+import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.osgi.service.url.AbstractURLStreamHandlerService;
 
-
 /**
+ * Handler for the <tt>knime</tt> protocol. It can resolved three types of URLs:
+ * <ul>
+ *      <li>workflow-relative URLs using the magic hostname <tt>knime.workflow</tt> (see {@link #WORKFLOW_RELATIVE})</li>
+ *      <li>mountpoint-relative URLs using the magic hostname <tt>knime.mountpoint</tt> (see {@link #MOUNTPOINT_RELATIVE})</li>
+ *      <li>mount point in the KNIME Explorer using the mount point name as hostname</li>
+ * </ul>
  *
  * @author ohl, University of Konstanz
+ * @author Thorsten Meinl, KNIME.com, Zurich, Switzerland
  */
 public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
+    /**
+     * Return the magic hostname for workflow-relative URLs.
+     *
+     * @since 5.0
+     */
+    public static final String WORKFLOW_RELATIVE = "knime.workflow";
+
+    /**
+     * Return the magic hostname for mountpoint-relative URLs.
+     *
+     * @since 5.0
+     */
+    public static final String MOUNTPOINT_RELATIVE = "knime.mountpoint";
+
     /**
      * {@inheritDoc}
      */
     @Override
     public URLConnection openConnection(final URL url) throws IOException {
-        if (!ExplorerFileSystem.SCHEME.equalsIgnoreCase(url
-                .getProtocol())) {
-            throw new IOException("Unexpected protocol: " + url.getProtocol()
-                    + ". Only " + ExplorerFileSystem.SCHEME
-                    + " is supported by this handler.");
+        if (!ExplorerFileSystem.SCHEME.equalsIgnoreCase(url.getProtocol())) {
+            throw new IOException("Unexpected protocol: " + url.getProtocol() + ". Only " + ExplorerFileSystem.SCHEME
+                + " is supported by this handler.");
         }
+
+        if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost())) {
+            return openWorkflowRelativeConnection(url);
+        } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())) {
+            return openMountpointRelativeConnection(url);
+        } else {
+            return openExternalMountConnection(url);
+        }
+    }
+
+    private URLConnection openMountpointRelativeConnection(final URL url) throws IOException {
+        assert MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost()) : "Wrong magic hostname for mountpoint-relative URLs: "
+            + url.getHost();
+
+        NodeContext context = NodeContext.getContext();
+        if (context == null) {
+            throw new IOException("No context for mountpoint-relative URL available");
+        }
+
+        WorkflowContext workflowContext = context.getWorkflowManager().getContext();
+
+        File mountpointRoot = workflowContext.getMountpointRoot();
+        File resolvedPath = new File(mountpointRoot, url.getPath());
+
+        URI normalizedPath = resolvedPath.toURI().normalize();
+        URI normalizedRoot = mountpointRoot.toURI().normalize();
+
+        if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
+            throw new IOException("Leaving the mount point is not allowed for mount point relative URLs: "
+                + resolvedPath.getAbsolutePath() + " is not in " + mountpointRoot.getAbsolutePath());
+        }
+        // FIXME add permission check if run on the server
+        return resolvedPath.toURI().toURL().openConnection();
+    }
+
+    private URLConnection openWorkflowRelativeConnection(final URL url) throws IOException {
+        assert WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost()) : "Wrong magic hostname for workflow-relative URLs: "
+            + url.getHost();
+
+        NodeContext context = NodeContext.getContext();
+        if (context == null) {
+            throw new IOException("No context for workflow-relative URL available");
+        }
+
+        WorkflowContext workflowContext = context.getWorkflowManager().getContext();
+        if (workflowContext == null) {
+            throw new IOException("No workflow context available");
+        }
+
+        File currentLocation = workflowContext.getCurrentLocation();
+        File resolvedPath = new File(currentLocation, url.getPath());
+        if ((workflowContext.getOriginalLocation() != null)
+            && !currentLocation.equals(workflowContext.getOriginalLocation())
+            && !resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())) {
+            // we are outside the current workflow directory => use the original location in the server repository
+            resolvedPath = new File(workflowContext.getOriginalLocation(), url.getPath());
+        }
+
+        if (workflowContext.getMountpointRoot() != null) {
+            URI normalizedPath = resolvedPath.toURI().normalize();
+            URI normalizedRoot = workflowContext.getMountpointRoot().toURI().normalize();
+
+            if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
+                throw new IOException("Leaving the mount point is not allowed for mount point relative URLs: "
+                    + resolvedPath.getAbsolutePath() + " is not in "
+                    + workflowContext.getMountpointRoot().getAbsolutePath());
+            }
+        }
+
+        // FIXME add permission check if run on the server
+        return resolvedPath.toURI().toURL().openConnection();
+    }
+
+    private URLConnection openExternalMountConnection(final URL url) throws IOException {
         AbstractExplorerFileStore efs;
         try {
             efs = ExplorerMountTable.getFileSystem().getStore(url.toURI());
+            return new ExplorerURLConnection(url, efs);
         } catch (URISyntaxException e) {
             throw new IOException(e.getMessage(), e);
         }
-        return new ExplorerURLConnection(url, efs);
     }
 
     /**
      * Allows the communication with a "knime" URL.
+     *
      * @author ohl, University of Konstanz
      *
      */
@@ -101,8 +198,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
          * @param url the specified url
          * @param file the specified file
          */
-        public ExplorerURLConnection(final URL url,
-                final AbstractExplorerFileStore file) {
+        public ExplorerURLConnection(final URL url, final AbstractExplorerFileStore file) {
             super(url);
             m_file = file;
         }
@@ -148,7 +244,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             if (length > Integer.MAX_VALUE) {
                 length = Integer.MAX_VALUE;
             }
-            return EFS.NONE == length ? -1 : (int) length;
+            return EFS.NONE == length ? -1 : (int)length;
         }
     }
 }

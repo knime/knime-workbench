@@ -146,7 +146,7 @@ public final class ExplorerMountTable {
         if (id == null || id.isEmpty()) {
             return false;
         }
-        return MOUNTID_PATTERN.matcher(id).find();
+        return !id.startsWith("knime.") && MOUNTID_PATTERN.matcher(id).find();
     }
 
     /**
