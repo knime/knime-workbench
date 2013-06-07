@@ -82,10 +82,6 @@ public class ExplorerViewComparator extends ViewerComparator {
     private int rank(final AbstractExplorerFileStore f) {
         // we want to see workflow groups at the top
         if (AbstractExplorerFileStore.isWorkflowGroup(f)) {
-            if (f.fetchInfo().isReservedSystemItem()) {
-                // but system items are the last ones
-                return 0;
-            }
             return 5;
         }
         // then flows
@@ -100,7 +96,7 @@ public class ExplorerViewComparator extends ViewerComparator {
         if (f.fetchInfo().isDirectory()) {
             return 2;
         }
-        // (almost) last: the files
+        // last: the files
         return 1;
     }
 }
