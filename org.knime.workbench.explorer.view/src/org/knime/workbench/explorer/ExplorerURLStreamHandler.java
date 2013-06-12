@@ -58,6 +58,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLDecoder;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -124,7 +125,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         WorkflowContext workflowContext = context.getWorkflowManager().getContext();
 
         File mountpointRoot = workflowContext.getMountpointRoot();
-        File resolvedPath = new File(mountpointRoot, url.getPath());
+        File resolvedPath = new File(mountpointRoot, URLDecoder.decode(url.getPath(), "UTF-8"));
 
         URI normalizedPath = resolvedPath.toURI().normalize();
         URI normalizedRoot = mountpointRoot.toURI().normalize();
@@ -152,7 +153,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
 
         File currentLocation = workflowContext.getCurrentLocation();
-        File resolvedPath = new File(currentLocation, url.getPath());
+        File resolvedPath = new File(currentLocation, URLDecoder.decode(url.getPath(), "UTF-8"));
         if ((workflowContext.getOriginalLocation() != null)
             && !currentLocation.equals(workflowContext.getOriginalLocation())
             && !resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())) {
