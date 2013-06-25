@@ -159,6 +159,9 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         }
 
         WorkflowContext workflowContext = context.getWorkflowManager().getContext();
+        if (workflowContext == null) {
+            throw new IOException("Workflow " + context.getWorkflowManager() + " does not have context");
+        }
 
         File mountpointRoot = workflowContext.getMountpointRoot();
         File resolvedPath = new File(mountpointRoot, URLDecoder.decode(uri.getPath(), "UTF-8"));
@@ -196,7 +199,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
 
         WorkflowContext workflowContext = context.getWorkflowManager().getContext();
         if (workflowContext == null) {
-            throw new IOException("No workflow context available");
+            throw new IOException("Workflow " + context.getWorkflowManager() + " does not have context");
         }
 
         File currentLocation = workflowContext.getCurrentLocation();
