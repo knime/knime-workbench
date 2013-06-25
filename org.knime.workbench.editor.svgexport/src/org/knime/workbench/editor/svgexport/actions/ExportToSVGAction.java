@@ -10,10 +10,11 @@ import org.eclipse.ui.PlatformUI;
 
 /**
  * Action which initiates the SVG-export wizard.
- *
+ * 
  * @author Andreas Burger
  */
 public class ExportToSVGAction implements IWorkbenchWindowActionDelegate {
+
     private static final int SIZING_WIZARD_WIDTH = 470;
 
     private static final int SIZING_WIZARD_HEIGHT = 300;
@@ -25,36 +26,31 @@ public class ExportToSVGAction implements IWorkbenchWindowActionDelegate {
     }
 
     /**
-     * The action has been activated. The argument of the method represents the
-     * 'real' action sitting in the workbench UI.
-     *
+     * The action has been activated. The argument of the method represents the 'real' action sitting in the workbench
+     * UI.
+     * 
+     * @param action the action proxy that handles the presentation portion of the action
      * @see IWorkbenchWindowActionDelegate#run
      */
+    @SuppressWarnings("restriction")
     @Override
     public void run(final IAction action) {
-        IWorkbenchWindow workbenchWindow =
-                PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
         if (workbenchWindow == null) {
             // action has been disposed
             return;
         }
-
         SVGExportWizard wizard = new SVGExportWizard();
-
         wizard.init(workbenchWindow.getWorkbench(), null);
-
         Shell parent = workbenchWindow.getShell();
         WizardDialog dialog = new WizardDialog(parent, wizard);
         dialog.create();
-        dialog.getShell().setSize(
-                Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x),
-                SIZING_WIZARD_HEIGHT);
+        dialog.getShell().setSize(Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x), SIZING_WIZARD_HEIGHT);
         dialog.open();
     }
 
     @Override
-    public void selectionChanged(final IAction action,
-            final ISelection selection) {
+    public void selectionChanged(final IAction action, final ISelection selection) {
     }
 
     @Override
