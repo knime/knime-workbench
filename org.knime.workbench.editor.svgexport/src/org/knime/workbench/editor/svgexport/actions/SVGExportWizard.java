@@ -60,9 +60,9 @@ import org.eclipse.ui.IExportWizard;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.dialogs.ExportWizard;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.svgexport.SVGExportException;
 import org.knime.workbench.core.util.ExportToFilePage;
 import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.svgexport.SVGExportException;
 
 /**
  * This wizard exports KNIME workflows as SVG images.

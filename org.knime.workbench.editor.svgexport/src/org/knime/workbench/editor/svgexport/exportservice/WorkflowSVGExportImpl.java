@@ -52,10 +52,10 @@ package org.knime.workbench.editor.svgexport.exportservice;
 import java.io.File;
 
 
-import org.knime.core.node.workflow.svgexport.SVGExportException;
-import org.knime.core.node.workflow.svgexport.WorkflowSVGExport;
 import org.knime.workbench.editor.svgexport.actions.SVGExporter;
 import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.svgexport.SVGExportException;
+import org.knime.workbench.editor2.svgexport.WorkflowSVGExport;
 
 /**
  * Service implementation of the {@link WorkflowSVGExport}. This service is registered in the editor bundle activator
