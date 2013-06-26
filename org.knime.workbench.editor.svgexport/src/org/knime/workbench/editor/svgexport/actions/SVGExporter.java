@@ -69,21 +69,12 @@ import org.apache.batik.transcoder.TranscoderException;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.svg2svg.SVGTranscoder;
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.gef.EditPart;
 import org.eclipse.gef.editparts.AbstractGraphicalEditPart;
 import org.eclipse.gmf.runtime.common.ui.util.DisplayUtils;
 import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.export.GraphicsSVG;
-import org.eclipse.ui.IEditorPart;
-import org.eclipse.ui.IEditorReference;
-import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.progress.UIJob;
-import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.svgexport.SVGExportException;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
@@ -110,77 +101,22 @@ public final class SVGExporter {
      * This method will search for the corresponding workflow editor to the given workflow manager. It will also
      * schedule the execution of the export method in the UI thread.
      *
-     * @param wfm The workflow manager of the workflow that should be exported
+     * @param editor The editor of the workflow being exported as SVG.
      * @param file The file to save to
-     * @throws SVGExportException If the export failed (e.g. IO or XML problems)
+     * @throws SVGExportException Wraps potential I/O or batik exceptions.
      */
-    public static void exportDuringSave(final WorkflowManager wfm, final File file) throws SVGExportException {
-        // Exception reference in case an exception occurs
-        final SVGExportException[] exception = new SVGExportException[1];
-        // UI job that executes the actual export
-        Job job = new UIJob("SVG export") {
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public IStatus runInUIThread(final IProgressMonitor monitor) {
-                try {
-                    // Remember the correct editor in this variable if found
-                    WorkflowEditor correctEditor = null;
-                    // Get reference for all open editors
-                    IEditorReference[] editorRefs =
-                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getEditorReferences();
-                    for (int i = 0; i < editorRefs.length; i++) {
-                        // Only look at loaded editors, do not load others
-                        IEditorPart editor = editorRefs[i].getEditor(false);
-                        if (editor != null) {
-                            WorkflowEditor workflowEditor = (WorkflowEditor)editor;
-                            // Check if the workflow manager is the same as the one given
-                            if (workflowEditor.getWorkflowManager() == wfm) {
-                                // Remember editor and stop searching
-                                correctEditor = workflowEditor;
-                                break;
-                            }
-                        }
-                    }
-                    if (correctEditor != null) {
-                        // Create SVG
-                        export(correctEditor, file);
-                    } else {
-                        // No editor to the workflow was found
-                        exception[0] = new SVGExportException(SVGExportException.NO_EDITOR_OPEN_MSG);
-                    }
-                } catch (Exception e) {
-                    exception[0] = new SVGExportException(e);
-                }
-                return Status.OK_STATUS;
-            }
-        };
-        // Execute job and wait for its execution
-        job.schedule();
+    public static void export(final WorkflowEditor editor, final File file) throws SVGExportException {
         try {
-            job.join();
-        } catch (InterruptedException e) {
-            // If interrupted continue execution
-        }
-        // Throw exception if one occured
-        if (exception[0] != null) {
-            throw exception[0];
+            exportInternal(editor, file);
+        } catch (IOException ioe) {
+            throw new SVGExportException(ioe);
+        } catch (TranscoderException te) {
+            throw new SVGExportException(te);
         }
     }
 
-    /**
-     * Export the content of the workflow editor as SVG image.
-     *
-     * <b>Must be run in the UI thread.</b>
-     *
-     * @param editor The workflow editor that will be exported
-     * @param outFile The SVG file to save to
-     * @throws IOException If an I/O error occurs
-     * @throws TranscoderException If a transcoding error occurs
-     */
-    @SuppressWarnings("restriction")
-    static void export(final WorkflowEditor editor, final File outFile) throws IOException, TranscoderException {
+    private static void exportInternal(final WorkflowEditor editor, final File file)
+            throws IOException, TranscoderException {
         // Obtain WorkflowRootEditPart, which holds all the nodes
         WorkflowRootEditPart part = (WorkflowRootEditPart)editor.getViewer().getRootEditPart().getChildren().get(0);
         // export workflow (unfortunately without connections)
@@ -237,7 +173,7 @@ public final class SVGExporter {
             ep.getFigure().paint(svgExporter);
         }
         SVGTranscoder transcoder = new SVGTranscoder();
-        Writer fileOut = new BufferedWriter(new FileWriter(outFile));
+        Writer fileOut = new BufferedWriter(new FileWriter(file));
         TranscoderOutput out = new TranscoderOutput(fileOut);
         Document doc = svgExporter.getDocument();
         doc.replaceChild(svgExporter.getRoot(), doc.getDocumentElement());

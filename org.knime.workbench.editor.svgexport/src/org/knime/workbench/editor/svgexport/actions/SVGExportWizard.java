@@ -51,9 +51,7 @@
 package org.knime.workbench.editor.svgexport.actions;
 
 import java.io.File;
-import java.io.IOException;
 
-import org.apache.batik.transcoder.TranscoderException;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
@@ -62,12 +60,13 @@ import org.eclipse.ui.IExportWizard;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.dialogs.ExportWizard;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.svgexport.SVGExportException;
 import org.knime.workbench.core.util.ExportToFilePage;
 import org.knime.workbench.editor2.WorkflowEditor;
 
 /**
  * This wizard exports KNIME workflows as SVG images.
- * 
+ *
  * @author Christoph Sieb, University of Konstanz
  * @author Fabian Dill, KNIME.com AG, Zurich, Switzerland
  * @author Andreas Burger
@@ -98,7 +97,7 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
     }
 
     /**
-     * 
+     *
      * {@inheritDoc}
      */
     @Override
@@ -109,7 +108,7 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
     /**
      * This method is called when 'Finish' button is pressed in the wizard. We will create an operation and run it using
      * wizard as execution context.
-     * 
+     *
      * @return <code>true</code> if finished successfully, <code>false</code> otherwise
      */
     @Override
@@ -133,7 +132,7 @@ public class SVGExportWizard extends ExportWizard implements IExportWizard {
         }
     }
 
-    private boolean export() throws IOException, TranscoderException {
+    private boolean export() throws SVGExportException {
         String fileDestination = m_page.getFile();
         if (fileDestination.isEmpty()) {
             m_page.setErrorMessage("No file specified!");

@@ -51,10 +51,11 @@ package org.knime.workbench.editor.svgexport.exportservice;
 
 import java.io.File;
 
-import org.knime.core.node.workflow.WorkflowManager;
+
 import org.knime.core.node.workflow.svgexport.SVGExportException;
 import org.knime.core.node.workflow.svgexport.WorkflowSVGExport;
 import org.knime.workbench.editor.svgexport.actions.SVGExporter;
+import org.knime.workbench.editor2.WorkflowEditor;
 
 /**
  * Service implementation of the {@link WorkflowSVGExport}. This service is registered in the editor bundle activator
@@ -66,8 +67,8 @@ public final class WorkflowSVGExportImpl implements WorkflowSVGExport {
 
     /** {@inheritDoc} */
     @Override
-    public void exportToSVG(final WorkflowManager wfm, final File svgOutputFile) throws SVGExportException {
-        SVGExporter.exportDuringSave(wfm, svgOutputFile);
+    public void exportToSVG(final WorkflowEditor editor, final File svgOutputFile) throws SVGExportException {
+        SVGExporter.export(editor, svgOutputFile);
     }
 
 }
