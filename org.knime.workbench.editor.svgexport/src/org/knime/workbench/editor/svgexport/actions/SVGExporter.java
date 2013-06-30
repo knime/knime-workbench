@@ -72,9 +72,11 @@ import org.apache.batik.transcoder.svg2svg.SVGTranscoder;
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.gef.EditPart;
+import org.eclipse.gef.GraphicalViewer;
 import org.eclipse.gef.editparts.AbstractGraphicalEditPart;
 import org.eclipse.gmf.runtime.common.ui.util.DisplayUtils;
 import org.eclipse.gmf.runtime.draw2d.ui.render.awt.internal.svg.export.GraphicsSVG;
+import org.knime.core.node.NodeLogger;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
@@ -118,7 +120,12 @@ public final class SVGExporter {
     private static void exportInternal(final WorkflowEditor editor, final File file)
             throws IOException, TranscoderException {
         // Obtain WorkflowRootEditPart, which holds all the nodes
-        WorkflowRootEditPart part = (WorkflowRootEditPart)editor.getViewer().getRootEditPart().getChildren().get(0);
+        final GraphicalViewer viewer = editor.getViewer();
+        if (viewer == null) {
+            NodeLogger.getLogger(SVGExporter.class).debug("Not saving SVG to workflow (viewer is null)");
+            return;
+        }
+        WorkflowRootEditPart part = (WorkflowRootEditPart)viewer.getRootEditPart().getChildren().get(0);
         // export workflow (unfortunately without connections)
         IFigure figure = part.getFigure();
         Rectangle bounds = new Rectangle(figure.getBounds());
