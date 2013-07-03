@@ -60,7 +60,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.internal.filesystem.local.LocalFile;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -72,12 +71,14 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IEditorDescriptor;
 import org.eclipse.ui.INewWizard;
 import org.eclipse.ui.IWorkbench;
-import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -236,13 +237,52 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
     /**
      * Worker method, creates the project using the given options.
      *
-     * @param workflowPath path of the workflow to create in workspace
-     * @param monitor Progress monitor
-     * @throws CoreException if error while creating the project
+     * @param newItem filestore for the new workflow directory
+     * @param monitor a progress monitor
+     * @throws CoreException if an error occurs while creating the workflow
      */
     protected void doFinish(final AbstractExplorerFileStore newItem,
             final IProgressMonitor monitor) throws CoreException {
+        createNewWorkflow(newItem, monitor);
+    }
 
+    protected static void throwCoreException(final String message,
+            final Throwable t) throws CoreException {
+        IStatus status =
+                new Status(IStatus.ERROR, "org.knime.workbench.ui", IStatus.OK,
+                        message, t);
+        throw new CoreException(status);
+    }
+
+    /**
+     * @return the initially selected file or null if multiple files or no file
+     *      is selected
+     * @since 3.0
+     */
+    protected AbstractExplorerFileStore getInitialSelection() {
+        return m_initialSelection;
+    }
+
+    /**
+     * @return the involved mount ids
+     * @since 3.0
+     */
+    protected String[] getMountIDs() {
+        return m_mountIDs;
+    }
+
+
+    /**
+     * Creates a new workflow.
+     *
+     * @param newItem the destination of the new workflow
+     * @param monitor a progress monitor, must not be <code>null</code>
+     * @throws CoreException if an error occurs
+     *
+     * @since 5.0
+     */
+    public static void createNewWorkflow(final AbstractExplorerFileStore newItem, final IProgressMonitor monitor)
+        throws CoreException {
         if (newItem.fetchInfo().exists()) {
             throwCoreException("Resource \"" + newItem.getFullName()
                     + "\" already exists.", null);
@@ -276,17 +316,17 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
             // only local workflows can be opened
             return;
         }
-        final LocalFile editorFile = new LocalFile(locFile);
         Display.getDefault().asyncExec(new Runnable() {
             @Override
             public void run() {
-                IWorkbenchPage page =
-                        PlatformUI.getWorkbench().getActiveWorkbenchWindow()
-                                .getActivePage();
+                IEditorDescriptor editorDescriptor;
                 try {
-                    IDE.openEditorOnFileStore(page, editorFile);
-                } catch (PartInitException e) {
-                    // ignore it
+                    editorDescriptor = IDE.getEditorDescriptor(workflowFile.getName());
+                    PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()
+                        .openEditor(new FileStoreEditorInput(workflowFile), editorDescriptor.getId());
+                } catch (PartInitException ex) {
+                    NodeLogger.getLogger(NewWorkflowWizard.class).info("Could not open editor for new workflow "
+                        + newItem.getFullName() + ": " + ex.getMessage(), ex);
                 }
             }
         });
@@ -294,30 +334,4 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
             ((LocalWorkspaceFileStore)newItem).refreshParentResource();
         }
     }
-
-    protected static void throwCoreException(final String message,
-            final Throwable t) throws CoreException {
-        IStatus status =
-                new Status(IStatus.ERROR, "org.knime.workbench.ui", IStatus.OK,
-                        message, t);
-        throw new CoreException(status);
-    }
-
-    /**
-     * @return the initially selected file or null if multiple files or no file
-     *      is selected
-     * @since 3.0
-     */
-    protected AbstractExplorerFileStore getInitialSelection() {
-        return m_initialSelection;
-    }
-
-    /**
-     * @return the involved mount ids
-     * @since 3.0
-     */
-    protected String[] getMountIDs() {
-        return m_mountIDs;
-    }
-
 }
