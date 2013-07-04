@@ -141,7 +141,6 @@ public class GlobalRenameAction extends ExplorerAction {
             LOGGER.debug("Renamed \"" + srcFileStore + "\" to \""
                     + dstFileStore + "\".");
             getView().setNextSelection(dstFileStore);
-            dstFileStore.getParent().refresh();
         } catch (CoreException e) {
             String message =
                     "Could not rename \"" + srcFileStore + "\" to \""
