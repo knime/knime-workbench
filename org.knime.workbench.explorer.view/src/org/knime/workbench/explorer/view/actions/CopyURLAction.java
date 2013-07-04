@@ -22,27 +22,22 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.Iterator;
 
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
-import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
-import org.knime.workbench.ui.KNIMEUIPlugin;
+import org.osgi.framework.FrameworkUtil;
 
 /**
+ * Action for copying the mount-point relative URL of an item in the explorer tree to the clipboard.
  *
  * @author Peter Ohl, KNIME.com AG, Zurich, Switzerland
  */
 public class CopyURLAction extends ExplorerAction {
-
-    private static final ImageDescriptor IMG = KNIMEUIPlugin
-            .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
-                    "/icons/url.png");
-
     /** ID of the global rename action in the explorer menu. */
     public static final String URLCOPY_ACTION_ID =
             "org.knime.workbench.explorer.action.copy-url";
@@ -50,13 +45,17 @@ public class CopyURLAction extends ExplorerAction {
     private final Clipboard m_cb;
 
     /**
+     * Creates a new action.
+     *
      * @param viewer the associated tree viewer
+     * @param cb the clipboard into which the URL is copied
      */
     public CopyURLAction(final ExplorerView viewer, final Clipboard cb) {
         super(viewer, "Copy URL");
         m_cb = cb;
-        setToolTipText("Copy URL to Clipboard");
-        setImageDescriptor(IMG);
+        setToolTipText("Copy URL to clipboard");
+        setImageDescriptor(ImageRepository.getImageDescriptor(FrameworkUtil.getBundle(getClass()).getSymbolicName(),
+                "/icons/url.png"));
     }
 
     /**
@@ -73,7 +72,7 @@ public class CopyURLAction extends ExplorerAction {
     @Override
     public void run() {
         IStructuredSelection sel = getSelection();
-        Iterator i = sel.iterator();
+        Iterator<?> i = sel.iterator();
         StringBuilder url = new StringBuilder();
         while (i.hasNext()) {
             AbstractExplorerFileStore fs = DragAndDropUtils.getFileStore(i.next());

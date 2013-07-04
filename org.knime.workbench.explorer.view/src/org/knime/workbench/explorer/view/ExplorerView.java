@@ -55,8 +55,8 @@ import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
-import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
@@ -95,6 +95,7 @@ import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
 import org.knime.workbench.explorer.view.actions.ConfigureExplorerViewAction;
 import org.knime.workbench.explorer.view.actions.CopyLocationAction;
+import org.knime.workbench.explorer.view.actions.CopyMountpointRelativeURLAction;
 import org.knime.workbench.explorer.view.actions.CopyURLAction;
 import org.knime.workbench.explorer.view.actions.CutCopyToClipboardAction;
 import org.knime.workbench.explorer.view.actions.ExpandAction;
@@ -120,7 +121,6 @@ import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
 import org.knime.workbench.explorer.view.dnd.ExplorerDropListener;
-import org.knime.workbench.repository.view.FilterViewContributionItem;
 import org.knime.workbench.repository.view.LabeledFilterViewContributionItem;
 import org.knime.workbench.repository.view.TextualViewFilter;
 import org.knime.workbench.ui.SyncExecQueueDispatcher;
@@ -144,8 +144,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     private TreeViewer m_viewer;
 
     private final ContentDelegator m_contentDelegator = new ContentDelegator();
-
-    private FilterViewContributionItem m_toolbarFilterCombo;
 
     private ExplorerDragListener m_dragListener;
 
@@ -201,21 +199,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     }
 
     private void hookKeyListener() {
-        m_viewer.getControl().addKeyListener(new KeyListener() {
-            @Override
-            public void keyPressed(final KeyEvent event) {
-                handleKeyPressed(event);
-            }
-
+        m_viewer.getControl().addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(final KeyEvent event) {
                 handleKeyReleased(event);
             }
         });
-    }
-
-    private void handleKeyPressed(final KeyEvent event) {
-        // nothing
     }
 
     private void handleKeyReleased(final KeyEvent event) {
@@ -280,10 +269,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 m_contentDelegator);
         toolBarMgr.add(synchronize);
         toolBarMgr.add(new Separator());
-        m_toolbarFilterCombo =
-            new LabeledFilterViewContributionItem(m_viewer,
-                    new ExplorerFilter(), false);
-        toolBarMgr.add(m_toolbarFilterCombo);
+        toolBarMgr.add(new LabeledFilterViewContributionItem(m_viewer, new ExplorerFilter(), false));
         Action configure = new ConfigureExplorerViewAction(this,
                 m_contentDelegator);
         toolBarMgr.add(configure);
@@ -636,9 +622,15 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new GlobalRefreshAction(this));
         manager.add(new Separator());
         manager.add(new CopyURLAction(this, m_clipboard));
+        manager.add(new CopyMountpointRelativeURLAction(this, m_clipboard));
         manager.add(new CopyLocationAction(this, m_clipboard));
     }
 
+    /**
+     * Returns the clipboard for the current display.
+     *
+     * @return a clipboard
+     */
     public Clipboard getClipboard() {
         return m_clipboard;
     }
@@ -651,6 +643,11 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         m_viewer.getControl().setFocus();
     }
 
+    /**
+     * Returns the tree viewer component.
+     *
+     * @return a tree viewer
+     */
     public TreeViewer getViewer() {
         return m_viewer;
     }
