@@ -320,7 +320,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      */
     protected void updateResultPanel() {
         if (m_selectedContainer != null) {
-            m_path.setText(m_selectedContainer.getMountIDWithFullPath());
+            m_path.setText("knime://" + m_selectedContainer.getMountID() + m_selectedContainer.getFullName());
         } else {
             m_path.setText("");
         }

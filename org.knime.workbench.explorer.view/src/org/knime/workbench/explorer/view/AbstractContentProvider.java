@@ -19,7 +19,9 @@
 package org.knime.workbench.explorer.view;
 
 import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -81,6 +83,20 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  */
 public abstract class AbstractContentProvider extends LabelProvider implements
         ITreeContentProvider, Comparable<AbstractContentProvider> {
+
+    /**
+     * Enumeration for the different link types for metanode templates.
+     *
+     * @since 5.0
+     */
+    public enum LinkType {
+        /** Link with absolute URI, i.e. with mountpoint name. */
+        Absolute,
+        /** Link with mountpoint-relative URI, i.e. <tt>knime://knime.mountpoint/...</tt>. */
+        MountpointRelative,
+        /** Link with workflow-relative URI, i.e. <tt>knime://knime.workflow/...</tt>. */
+        WorkflowRelative
+    }
 
     /**
      * Empty result array.
@@ -294,13 +310,33 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public abstract boolean dragStart(List<AbstractExplorerFileStore> fileStores);
 
+
     /**
-     * @param metaNode
-     * @param target
+     * Saves the given metanode as template into the given file store. The metanode is marked as linked metanode
+     * in its parent workflow manager. The metanode is linked with an absolute URI to its template.
+     *
+     * @param metaNode the meta node
+     * @param target the target for the template
+     * @return <code>true</code> if the operation was successful, <code>false</code> otherwise
+     */
+    public boolean saveMetaNodeTemplate(final WorkflowManager metaNode,
+            final AbstractExplorerFileStore target) {
+        return saveMetaNodeTemplate(metaNode, target, LinkType.Absolute);
+    }
+
+    /**
+     * Saves the given metanode as template into the given file store. The metanode is marked as linked metanode
+     * in its parent workflow manager. You can specify how the metanode should be linked to the template.
+     *
+     * @param metaNode the meta node
+     * @param target the target for the template
+     * @param linkType the link type
+     * @return <code>true</code> if the operation was successful, <code>false</code> otherwise
+     * @since 5.0
      */
     @SuppressWarnings("unchecked")
     public boolean saveMetaNodeTemplate(final WorkflowManager metaNode,
-            final AbstractExplorerFileStore target) {
+            final AbstractExplorerFileStore target, final LinkType linkType) {
 
         if (!AbstractExplorerFileStore.isWorkflowGroup(target)) {
             return false;
@@ -398,7 +434,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     if (!originalName.equals(newName)) {
                         metaNode.setName(newName);
                     }
-                    URI uri = templateLoc.toURI();
+
+                    URI uri = createMetanodeLinkUri(metaNode, templateLoc, linkType);
                     MetaNodeTemplateInformation link = template.createLink(uri);
                     metaNode.getParent().setTemplateInformation(
                             metaNode.getID(), link);
@@ -417,6 +454,61 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
         target.refresh();
         return true;
+    }
+
+
+    private static URI createMetanodeLinkUri(final WorkflowManager metaNode, final AbstractExplorerFileStore templateLocation, final LinkType linkType) throws CoreException, URISyntaxException, UnsupportedEncodingException {
+        URI originalUri = templateLocation.toURI();
+        if (linkType.equals(LinkType.Absolute)) {
+            return originalUri;
+        } else {
+            File templateMountpointRoot = templateLocation.getContentProvider().getFileStore("/").toLocalFile();
+            if (templateMountpointRoot == null) {
+                LOGGER.warn("Cannot determine mountpoint for template, using absolute link instead of relative link");
+                return originalUri;
+            }
+
+            WorkflowManager wfm = metaNode;
+            while (!wfm.isProject()) {
+                wfm = wfm.getParent();
+            }
+            File workflowMountpointRoot = wfm.getContext().getMountpointRoot();
+            if (workflowMountpointRoot == null) {
+                LOGGER.warn("Cannot determine mountpoint for workflow, using absolute link instead of relative link");
+                return originalUri;
+            }
+
+            if (!templateMountpointRoot.equals(workflowMountpointRoot)) {
+                LOGGER.warn("Template and workflow are not in same mountpoint, using absolute link instead");
+                return originalUri;
+            }
+
+            if (linkType.equals(LinkType.MountpointRelative)) {
+                return new URI(originalUri.getScheme(), originalUri.getUserInfo(), "knime.mountpoint", -1,
+                    originalUri.getPath(), originalUri.getQuery(), originalUri.getFragment());
+            } else if (linkType.equals(LinkType.WorkflowRelative)) {
+                String[] templatePathParts = templateLocation.toLocalFile().getAbsolutePath().split("[/\\\\]");
+                String[] workflowPathParts = wfm.getContext().getCurrentLocation().getAbsolutePath().split("[/\\\\]");
+
+                int indexWhereDifferent = 0;
+                while ((indexWhereDifferent < templatePathParts.length)
+                    && (indexWhereDifferent < workflowPathParts.length)
+                    && templatePathParts[indexWhereDifferent].equals(workflowPathParts[indexWhereDifferent])) {
+                    indexWhereDifferent++;
+                }
+
+                StringBuilder relPath = new StringBuilder();
+                for (int i = indexWhereDifferent; i < workflowPathParts.length; i++) {
+                    relPath.append("/..");
+                }
+                for (int i = indexWhereDifferent; i < templatePathParts.length; i++) {
+                    relPath.append('/').append(templatePathParts[i]);
+                }
+                return new URI(ExplorerFileSystem.SCHEME, "knime.workflow", relPath.toString(), "");
+            } else {
+                throw new IllegalArgumentException("Unknown metanode link type: " + linkType);
+            }
+        }
     }
 
     /**
