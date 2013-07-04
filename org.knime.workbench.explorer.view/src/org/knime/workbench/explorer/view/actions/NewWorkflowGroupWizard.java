@@ -57,7 +57,6 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
@@ -116,10 +115,8 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
                 return;
             }
             MetaInfoFile.createMetaInfoFile(locFile, false);
-            if (newItem instanceof LocalWorkspaceFileStore) {
-                ((LocalWorkspaceFileStore)newItem).refreshParentResource();
-            }
         }
+        newItem.refresh();
         // TODO handle meta file creation for remote files
     }
 

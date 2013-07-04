@@ -280,28 +280,18 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     @Override
     public void refresh() {
         try {
-            refreshResource(this, null);
+            refreshResource(this, IResource.DEPTH_INFINITE, null);
         } catch (CoreException e) {
             // too bad
         }
     }
 
-    /**
-     * Refreshes the parent resource if it exists.
-     */
-    public void refreshParentResource() {
-        try {
-            refreshResource(getParent(), null);
-        } catch (CoreException e) {
-            // do nothing if it cannot be refreshed
-        }
-    }
-
     private static void refreshResource(final IResource resource,
+            final int depth,
             final IProgressMonitor monitor) {
         if (resource != null) {
             try {
-                resource.refreshLocal(IResource.DEPTH_INFINITE, monitor);
+                resource.refreshLocal(depth, monitor);
                 LOGGER.debug("Refreshed resource " + resource);
             } catch (Exception e) {
                 // do not refresh
@@ -312,14 +302,14 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
 
     private static void refreshResource(
             final LocalExplorerFileStore fileStore,
+            final int depth,
             final IProgressMonitor monitor) throws CoreException {
         if (fileStore == null) {
             return;
         }
         File file = fileStore.toLocalFile(EFS.NONE, null);
         if (file != null) {
-            refreshResource(KnimeResourceUtil.getResourceForURI(file.toURI()),
-                    monitor);
+            refreshResource(KnimeResourceUtil.getResourceForURI(file.toURI()), depth, monitor);
         }
         fileStore.getContentProvider().refresh(fileStore);
     }
@@ -349,7 +339,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
                     | IResource.ALWAYS_DELETE_PROJECT_CONTENT
                     | IResource.DEPTH_INFINITE, monitor);
         }
-        refreshResource(getParent(), monitor);
+        refreshResource(getParent(), IResource.DEPTH_ZERO, monitor);
     }
 
     /**
@@ -360,7 +350,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             final IProgressMonitor monitor) throws CoreException {
         m_file.mkdir(options, monitor);
         createProjectFile(this, monitor);
-        refreshResource(getParent(), monitor);
+        refreshResource(getParent(), IResource.DEPTH_ZERO, monitor);
         return this;
     }
 
@@ -402,7 +392,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
                             | IResource.ALWAYS_DELETE_PROJECT_CONTENT
                             | IResource.DEPTH_INFINITE, monitor);
                 }
-                refreshResource(srcParent, monitor);
+                refreshResource(srcParent, IResource.DEPTH_ZERO, monitor);
                 IFileStore destParent = destination.getParent();
                 if (!srcParent.equals(destParent)
                         && destParent instanceof AbstractExplorerFileStore) {

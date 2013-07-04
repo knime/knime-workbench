@@ -83,7 +83,6 @@ import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
-import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.ui.navigator.KnimeResourceUtil;
@@ -308,6 +307,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
             // don't close - don't open editor
             return;
         }
+        newItem.refresh();
 
         // open workflow in a new editor
         monitor.setTaskName("Opening new workflow for editing...");
@@ -330,8 +330,5 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                 }
             }
         });
-        if (newItem instanceof LocalWorkspaceFileStore) {
-            ((LocalWorkspaceFileStore)newItem).refreshParentResource();
-        }
     }
 }
