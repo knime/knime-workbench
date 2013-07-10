@@ -169,7 +169,7 @@ public class GlobalDeleteAction extends ExplorerAction {
      * @param toDel files to delete
      * @param toDelWFs flows contained in the files to delete (directly or indirectly)
      * @return true if user confirmed, false if user cancels.
-     * @since 3.7
+     * @since 5.0
      */
     protected boolean confirmDeletion(
             final List<AbstractExplorerFileStore> toDel,
