@@ -272,8 +272,7 @@ public abstract class ExplorerAction extends Action {
                 try {
                     AbstractExplorerFileStore[] children =
                             f.childStores(EFS.NONE, null);
-                    result.addAll(getContainedLocalWorkflows(Arrays
-                            .asList(children)));
+                    result.addAll(getAllContainedWorkflows(Arrays.asList(children)));
                 } catch (CoreException e) {
                     // ignore - no workflows contained.
                 }

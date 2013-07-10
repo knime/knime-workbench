@@ -165,7 +165,13 @@ public class GlobalDeleteAction extends ExplorerAction {
         }
     }
 
-    private boolean confirmDeletion(
+    /**
+     * @param toDel files to delete
+     * @param toDelWFs flows contained in the files to delete (directly or indirectly)
+     * @return true if user confirmed, false if user cancels.
+     * @since 3.7
+     */
+    protected boolean confirmDeletion(
             final List<AbstractExplorerFileStore> toDel,
             final List<AbstractExplorerFileStore> toDelWFs) {
 
@@ -179,7 +185,7 @@ public class GlobalDeleteAction extends ExplorerAction {
                 msg = "Do you want to delete the file ";
             }
             msg += "\"" + toDel.get(0).getName() + "\"?\n";
-            if (toDelWFs.size() > 0) {
+            if (AbstractExplorerFileStore.isWorkflowGroup(toDel.get(0)) && (toDelWFs.size() > 0)) {
                 msg += "It contains " + toDelWFs.size() + " workflow";
                 if (toDelWFs.size() > 1) {
                     msg += "s";
@@ -216,7 +222,7 @@ public class GlobalDeleteAction extends ExplorerAction {
                 }
             }
         }
-        msg += "\nThis operation cannot be undone.";
+        msg += "\nPlease confirm the deletion.";
 
         MessageBox mb =
                 new MessageBox(getParentShell(), SWT.ICON_QUESTION | SWT.OK
