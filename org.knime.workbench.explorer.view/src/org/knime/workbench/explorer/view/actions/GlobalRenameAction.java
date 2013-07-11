@@ -194,6 +194,14 @@ public class GlobalRenameAction extends ExplorerAction {
         String newName = dialog.getValue().trim();
         AbstractExplorerFileStore dstFileStore =
                 fileStore.getParent().getChild(newName);
+
+        // Disallow case correction
+        if (dstFileStore.fetchInfo().exists()
+          && dstFileStore.getName().toLowerCase().equals(newName.toLowerCase())) {
+            showDisallowCaseCorrectionMessage();
+            return null;
+        }
+
         if (dstFileStore.fetchInfo().exists() && !confirmOverride(newName)) {
             return queryTargetName(dstFileStore);
         }
@@ -225,6 +233,14 @@ public class GlobalRenameAction extends ExplorerAction {
                         + "deleted/overwritten!\n\n"
                         + "Click 'Ok' to overwrite existing target.\n"
                         + "Click 'Cancel' to enter a new target name.");
+    }
+
+    private void showDisallowCaseCorrectionMessage() {
+        MessageBox mb =
+                new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
+        mb.setText("Can't Rename");
+        mb.setMessage("The new name matches the old name.");
+        mb.open();
     }
 
     /**
