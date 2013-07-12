@@ -196,8 +196,7 @@ public class GlobalRenameAction extends ExplorerAction {
                 fileStore.getParent().getChild(newName);
 
         // Disallow case correction
-        if (dstFileStore.fetchInfo().exists()
-          && dstFileStore.getName().toLowerCase().equals(newName.toLowerCase())) {
+        if (dstFileStore.fetchInfo().exists() && dstFileStore.getName().equalsIgnoreCase(newName)) {
             showDisallowCaseCorrectionMessage();
             return null;
         }
