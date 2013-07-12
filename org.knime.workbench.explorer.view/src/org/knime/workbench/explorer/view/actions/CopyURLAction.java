@@ -51,9 +51,9 @@ public class CopyURLAction extends ExplorerAction {
      * @param cb the clipboard into which the URL is copied
      */
     public CopyURLAction(final ExplorerView viewer, final Clipboard cb) {
-        super(viewer, "Copy URL");
+        super(viewer, "Absolute URL");
         m_cb = cb;
-        setToolTipText("Copy URL to clipboard");
+        setToolTipText("Copy absolute URL to clipboard");
         setImageDescriptor(ImageRepository.getImageDescriptor(FrameworkUtil.getBundle(getClass()).getSymbolicName(),
                 "/icons/url.png"));
     }

@@ -57,9 +57,9 @@ public class CopyLocationAction extends ExplorerAction {
      * @param cb clipboard to copy the path in
      */
     public CopyLocationAction(final ExplorerView viewer, final Clipboard cb) {
-        super(viewer, "Copy Local Path");
+        super(viewer, "Local path");
         m_cb = cb;
-        setToolTipText("Copy Local Abstract Path to Clipboard");
+        setToolTipText("Copy local abstract path to clipboard");
         setImageDescriptor(IMG);
     }
 

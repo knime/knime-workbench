@@ -621,9 +621,13 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new Separator());
         manager.add(new GlobalRefreshAction(this));
         manager.add(new Separator());
-        manager.add(new CopyURLAction(this, m_clipboard));
-        manager.add(new CopyMountpointRelativeURLAction(this, m_clipboard));
-        manager.add(new CopyLocationAction(this, m_clipboard));
+
+        IMenuManager copyUrlSubmenu = new MenuManager("Copy Location", "copy-url");
+        manager.add(copyUrlSubmenu);
+
+        copyUrlSubmenu.add(new CopyURLAction(this, m_clipboard));
+        copyUrlSubmenu.add(new CopyMountpointRelativeURLAction(this, m_clipboard));
+        copyUrlSubmenu.add(new CopyLocationAction(this, m_clipboard));
     }
 
     /**
