@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -921,6 +922,48 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             final RemoteExplorerFileStore target,
             final IProgressMonitor monitor)
             throws CoreException;
+
+    /**
+     * Allows the content provider to open a 'special' confirmation dialog. Server is currently the only one confirming
+     * deletion of jobs and sched execs. Default implementation accepts deletion without user confirmation.
+     * @param parentShell the parent shell for dialogs
+     * @param toDelWFs  workflows contained in toDel
+     * @return true if deletion is confirmed, false, if user canceled, null if no confirm dialog was shown (standard #
+     *         confirm will do). If not-null is returned the standard confirmation dialog will not show.
+     * @since 5.0
+     */
+    public AtomicBoolean confirmDeletion(final Shell parentShell,
+        final Collection<AbstractExplorerFileStore> toDelWFs) {
+        return null;
+    }
+
+    /**
+     * Allows the content provider to open a dialog warning the user of overwrite in a copy/move operation.
+     * Currently the server is the only one if jobs or sched execs exist. Default implementation accepts the overwrite
+     * without user confirmation.
+     * @param parentShell the parent shell for dialogs
+     * @param flowsToOverWrite list of flows of this content provider being overwritten.
+     * @return true if overwrite is confirmed, false, if user canceled, null if no confirm dialog was shown.
+     * @since 5.0
+     */
+    public AtomicBoolean confirmOverwrite(final Shell parentShell,
+        final Collection<AbstractExplorerFileStore> flowsToOverWrite) {
+        return null;
+    }
+
+    /**
+     * Allows the content provider to open a dialog warning the user of the move (and deletion of flows in the source
+     * location). Currently the server is the only one if jobs or sched execs exist. Default implementation accepts
+     * the move without user confirmation.
+     * @param parentShell the parent shell for dialogs
+     * @param flowsToMove list of flows of this content provider being moved.
+     * @return true if move is confirmed, false, if user canceled, null if no confirm dialog was shown.
+     * @since 5.0
+     */
+    public AtomicBoolean confirmMove(final Shell parentShell,
+        final Collection<AbstractExplorerFileStore> flowsToMove) {
+        return null;
+    }
 
     /**
      * @param fileStores the file stores to be copied / moved

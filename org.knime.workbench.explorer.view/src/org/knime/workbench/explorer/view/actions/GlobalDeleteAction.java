@@ -53,6 +53,7 @@ package org.knime.workbench.explorer.view.actions;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
@@ -141,12 +142,30 @@ public class GlobalDeleteAction extends ExplorerAction {
         }
 
         assert lockedWFs.size() == toDelLocalFlows.size();
-        if (!confirmDeletion(allFiles, toDelWorkflows)) {
-            // release locks acquired for deletion
-            ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
-            return;
+        // ask all affected providers if it is OK to delete
+        boolean ok = false;
+        // TODO: avoid multiple dialogs bothering the user multiple times (is becomes an issue only when multiple
+        // providers pop dialogs - currently the server is the only provides).
+        for (AbstractContentProvider acp : selectedFiles.keySet()) {
+            AtomicBoolean confirmed = acp.confirmDeletion(getParentShell(), toDelWorkflows);
+            if (confirmed != null) {
+                if (!confirmed.get()) {
+                    LOGGER.info("User canceled deletion of " + allFiles.size() + " files incl. "
+                        + toDelWorkflows.size() + " workflows");
+                    ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
+                    return;
+                } else {
+                    ok = true;
+                }
+            }
         }
-
+        if (!ok) { // none of the providers popped a confirm dialog
+            if (!confirmDeletion(allFiles, toDelWorkflows)) {
+                // release locks acquired for deletion
+                ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
+                return;
+            }
+        }
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelWorkflows);
 
         // delete Workflows first (unlocks them too)

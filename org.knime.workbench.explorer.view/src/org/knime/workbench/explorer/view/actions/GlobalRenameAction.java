@@ -24,6 +24,7 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -41,6 +42,7 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -129,6 +131,19 @@ public class GlobalRenameAction extends ExplorerAction {
             return;
         }
 
+        // rename only works on single selection - all flows are from the same content provider
+        AbstractContentProvider cp = null;
+        if (affectedFlows.size() > 0) {
+            cp = affectedFlows.get(0).getContentProvider();
+        }
+        if (cp != null) {
+            AtomicBoolean confirmed = cp.confirmMove(getParentShell(), affectedFlows);
+            if (confirmed != null && !confirmed.get()) {
+                ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
+                return;
+            }
+        }
+
         /*
          * Unfortunately we have to unlock the workflows before moving. If we
          * move the workflows including the locks, we loose the possibility to
@@ -196,7 +211,7 @@ public class GlobalRenameAction extends ExplorerAction {
                 fileStore.getParent().getChild(newName);
 
         // Disallow case correction
-        if (dstFileStore.fetchInfo().exists() && dstFileStore.getName().equalsIgnoreCase(newName)) {
+        if (dstFileStore.fetchInfo().exists() && fileStore.getName().equalsIgnoreCase(newName)) {
             showDisallowCaseCorrectionMessage();
             return null;
         }

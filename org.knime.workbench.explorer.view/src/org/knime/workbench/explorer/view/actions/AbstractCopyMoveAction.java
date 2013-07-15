@@ -54,6 +54,7 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -270,25 +271,70 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         /* Check for unlockable local destinations. Unfortunately this cannot
          * be done in the copy loop below as this runs in a non SWT-thread
          * but needs access to the workbench pages. */
-        final Set<LocalExplorerFileStore> notOverwritableDest
-                = new HashSet<LocalExplorerFileStore>();
-        final List<LocalExplorerFileStore> lockedDest
-                = new ArrayList<LocalExplorerFileStore>();
+        final Set<LocalExplorerFileStore> notOverwritableDest = new HashSet<LocalExplorerFileStore>();
+        final List<LocalExplorerFileStore> lockedDest = new ArrayList<LocalExplorerFileStore>();
+        HashMap<AbstractContentProvider, List<AbstractExplorerFileStore>> overWrittenFlows =
+            new HashMap<AbstractContentProvider, List<AbstractExplorerFileStore>>();
         for (AbstractExplorerFileStore aefs : destChecker.getOverwriteFS()) {
+            AbstractExplorerFileInfo info = aefs.fetchInfo();
+            if (!info.isWorkflow()) {
+                continue;
+            }
             if (aefs instanceof LocalExplorerFileStore) {
                 LocalExplorerFileStore lfs = (LocalExplorerFileStore)aefs;
-                if (lfs.fetchInfo().isWorkflow()) {
-                    if (ExplorerFileSystemUtils.lockWorkflow(lfs)) {
-                        lockedDest.add(lfs);
-                        /* Flows opened in an editor cannot be overwritten as
-                            well. */
-                        if (ExplorerFileSystemUtils.hasOpenWorkflows(
-                                Arrays.asList(lfs))) {
-                            notOverwritableDest.add(lfs);
-                        }
-                    } else {
+                if (ExplorerFileSystemUtils.lockWorkflow(lfs)) {
+                    lockedDest.add(lfs);
+                    /* Flows opened in an editor cannot be overwritten as
+                        well. */
+                    if (ExplorerFileSystemUtils.hasOpenWorkflows(Arrays.asList(lfs))) {
                         notOverwritableDest.add(lfs);
                     }
+                } else {
+                    notOverwritableDest.add(lfs);
+                }
+            }
+            // collect all overwritten flows for each content provider
+            AbstractContentProvider acp = aefs.getContentProvider();
+            List<AbstractExplorerFileStore> flowList = overWrittenFlows.get(acp);
+            if (flowList == null) {
+                flowList = new LinkedList<AbstractExplorerFileStore>();
+                overWrittenFlows.put(acp, flowList);
+            }
+            flowList.add(aefs);
+        }
+        // confirm overwrite with each content provider (server is currently only one that pops up a dialog)
+        for (AbstractContentProvider prov : overWrittenFlows.keySet()) {
+            // TODO: how can we avoid that multiple confirm dialogs pop up?
+            // Becomes only an issue of the server is not the only one popping up a dialog.
+            AtomicBoolean confirm = prov.confirmOverwrite(getParentShell(), overWrittenFlows.get(prov));
+            if (confirm != null && !confirm.get()) {
+                LOGGER.info("User canceled overwrite in " + prov);
+                return false;
+            }
+        }
+        // confirm move (deletion of flows in source location)
+        if (m_performMove) {
+            HashMap<AbstractContentProvider, List<AbstractExplorerFileStore>> movedFlows =
+                    new HashMap<AbstractContentProvider, List<AbstractExplorerFileStore>>();
+            Map<AbstractExplorerFileStore, AbstractExplorerFileStore> srcToDest = destChecker.getMappings();
+            for (AbstractExplorerFileStore aefs : srcFileStores) {
+                if (srcToDest.get(aefs) == null) {
+                    // user chose to skip this file during move/copy
+                    continue;
+                }
+                AbstractContentProvider cp = aefs.getContentProvider();
+                List<AbstractExplorerFileStore> list = movedFlows.get(cp);
+                if (list == null) {
+                    list = new LinkedList<AbstractExplorerFileStore>();
+                    movedFlows.put(cp, list);
+                }
+                list.add(aefs);
+            }
+            for (AbstractContentProvider acp : movedFlows.keySet()) {
+                AtomicBoolean confirmed = acp.confirmMove(getParentShell(), movedFlows.get(acp));
+                if (confirmed != null && !confirmed.get()) {
+                    LOGGER.info("User canceled move (flow del in source) in " + acp);
+                    return false;
                 }
             }
         }

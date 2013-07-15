@@ -21,10 +21,12 @@ package org.knime.workbench.explorer.localworkspace;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
@@ -49,6 +51,7 @@ import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
+import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.KnimeFileUtil;
 import org.knime.workbench.core.util.ImageRepository;
@@ -411,6 +414,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             for (AbstractExplorerFileStore fs : fileStores) {
                 if (!(AbstractExplorerFileStore.isWorkflow(fs)
                         || AbstractExplorerFileStore.isWorkflowGroup(fs))) {
+                    return false;
+                }
+                if (!fs.fetchInfo().isReadable()) {
                     return false;
                 }
             }
