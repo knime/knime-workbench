@@ -250,4 +250,22 @@ public class URIToFileResolveImpl implements URIToFileResolve {
             throw new IOException(e);
         }
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isMountpointRelative(final URI uri) {
+        return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
+                && ExplorerURLStreamHandler.MOUNTPOINT_RELATIVE.equalsIgnoreCase(uri.getHost());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isWorkflowRelative(final URI uri) {
+        return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
+                && ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equalsIgnoreCase(uri.getHost());
+    }
 }

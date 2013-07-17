@@ -39,8 +39,6 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.jface.dialogs.MessageDialogWithToggle;
-import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
@@ -49,8 +47,16 @@ import org.eclipse.jface.viewers.ViewerDropAdapter;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.TransferData;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.ExecutionMonitor;
@@ -63,7 +69,6 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
-import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
@@ -73,7 +78,6 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
  * Content and label provider for one source in the user space view. One
@@ -91,6 +95,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @since 5.0
      */
     public enum LinkType {
+        /** Don't create a link. */
+        None,
         /** Link with absolute URI, i.e. with mountpoint name. */
         Absolute,
         /** Link with mountpoint-relative URI, i.e. <tt>knime://knime.mountpoint/...</tt>. */
@@ -314,30 +320,16 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
     /**
      * Saves the given metanode as template into the given file store. The metanode is marked as linked metanode
-     * in its parent workflow manager. The metanode is linked with an absolute URI to its template.
+     * in its parent workflow manager. The user is queried if s/he wants to link back to the tamples and what kind
+     * of link it should be.
      *
      * @param metaNode the meta node
      * @param target the target for the template
      * @return <code>true</code> if the operation was successful, <code>false</code> otherwise
-     */
-    public boolean saveMetaNodeTemplate(final WorkflowManager metaNode,
-            final AbstractExplorerFileStore target) {
-        return saveMetaNodeTemplate(metaNode, target, LinkType.Absolute);
-    }
-
-    /**
-     * Saves the given metanode as template into the given file store. The metanode is marked as linked metanode
-     * in its parent workflow manager. You can specify how the metanode should be linked to the template.
-     *
-     * @param metaNode the meta node
-     * @param target the target for the template
-     * @param linkType the link type
-     * @return <code>true</code> if the operation was successful, <code>false</code> otherwise
-     * @since 5.0
      */
     @SuppressWarnings("unchecked")
     public boolean saveMetaNodeTemplate(final WorkflowManager metaNode,
-            final AbstractExplorerFileStore target, final LinkType linkType) {
+            final AbstractExplorerFileStore target) {
 
         if (!AbstractExplorerFileStore.isWorkflowGroup(target)) {
             return false;
@@ -384,15 +376,21 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
 
         String newName = templateLoc.getName();
-        boolean linkMetaNodeToNewTemplate;
-        switch (promptLinkMetaNodeTemplate(originalName, newName)) {
-        case IDialogConstants.YES_ID:
-            linkMetaNodeToNewTemplate = true;
-            break;
-        case IDialogConstants.NO_ID:
-            linkMetaNodeToNewTemplate = false;
-            break;
-        default: // Cancel
+
+        WorkflowManager wfm = metaNode;
+        while (!wfm.isProject()) {
+            wfm = wfm.getParent();
+        }
+        AbstractContentProvider workflowMountPoint = null;
+        LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE.fromLocalFile(wfm.getContext().getMountpointRoot());
+        if (fs != null) {
+            workflowMountPoint = fs.getContentProvider();
+        }
+        boolean sameMountPoint = target.getContentProvider().equals(workflowMountPoint);
+
+        LinkType linkType = promptLinkMetaNodeTemplate(originalName, newName, sameMountPoint);
+        if (linkType == null) {
+            // user canceled
             return false;
         }
 
@@ -429,7 +427,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 MetaNodeTemplateInformation template =
                         metaNode.saveAsMetaNodeTemplate(directory,
                                 new ExecutionMonitor());
-                if (linkMetaNodeToNewTemplate) {
+                if (!linkType.equals(LinkType.None)) {
                     // TODO this needs to be done via the command stack,
                     // the rename can currently not be undone.
                     if (!originalName.equals(newName)) {
@@ -458,7 +456,21 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
 
-    private static URI createMetanodeLinkUri(final WorkflowManager metaNode, final AbstractExplorerFileStore templateLocation, final LinkType linkType) throws CoreException, URISyntaxException, UnsupportedEncodingException {
+    /**
+     * Creates a URI from the metaNode to the template location. Honors the link type. If the template location is
+     * in a different mount point, only absolute paths are allowed (LinkType.Absolute).
+     * @param metaNode the meta node for whome the link is created
+     * @param templateLocation the template to link the metanode to
+     * @param linkType the type of link
+     * @return the URI pointing to the template - honoring the passed type
+     * @throws CoreException
+     * @throws URISyntaxException
+     * @throws UnsupportedEncodingException
+     * @since 5.0
+     */
+    public static URI createMetanodeLinkUri(final WorkflowManager metaNode,
+        final AbstractExplorerFileStore templateLocation, final LinkType linkType) throws CoreException,
+        URISyntaxException, UnsupportedEncodingException {
         URI originalUri = templateLocation.toURI();
         if (linkType.equals(LinkType.Absolute)) {
             return originalUri;
@@ -603,28 +615,132 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         // default local implementation doesn't need to do nothing
     }
 
-    private int promptLinkMetaNodeTemplate(
-            final String oldName, final String newName) {
-        IPreferenceStore prefStore =
-                ExplorerActivator.getDefault().getPreferenceStore();
-        String pref = prefStore.getString(
-                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
-        if (MessageDialogWithToggle.ALWAYS.equals(pref)) {
-            return IDialogConstants.YES_ID;
-        } else if (MessageDialogWithToggle.NEVER.equals(pref)) {
-            return IDialogConstants.NO_ID;
-        }
+    private LinkType promptLinkMetaNodeTemplate(final String oldName, final String newName,
+        final boolean enableAllLinkTypes) {
+
         Shell activeShell = Display.getDefault().getActiveShell();
-        String msg = "Update meta node to link to the template?";
+        String msg = "Update meta node to link to the template";
+        if (!enableAllLinkTypes) {
+            msg += " (with an absolute link)?";
+        } else {
+            msg += "?";
+        }
         if (!oldName.equals(newName)) {
             msg = msg + "\n(The node will be renamed to \"" + newName + "\".)";
         }
-        MessageDialogWithToggle dlg =
-                MessageDialogWithToggle.openYesNoCancelQuestion(activeShell,
-                        "Link Meta Node Template", msg,
-                        "Remember my decision", false, prefStore,
-                        PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
-        return dlg.getReturnCode();
+
+        if (!enableAllLinkTypes) {
+            // simple dialog because only absolute links are supported/allowed
+            boolean ok =
+                MessageDialog.open(MessageDialog.QUESTION_WITH_CANCEL, activeShell, "Link Meta Node Template", msg,
+                    SWT.NONE);
+            if (ok) {
+                return LinkType.Absolute;
+            } else {
+                return null;
+            }
+        } else {
+            LinkPrompt dlg = new LinkPrompt(activeShell, msg);
+            dlg.open();
+            if (dlg.getReturnCode() == Window.CANCEL) {
+                return null;
+            }
+            return dlg.getLinkType();
+        }
+    }
+
+    private final class LinkPrompt extends MessageDialog {
+        private Button m_absoluteLink;
+
+        private Button m_mountpointRelativeLink;
+
+        private Button m_workflowRelativeLink;
+
+        private Button m_noLink;
+
+        private LinkType m_linkType = LinkType.Absolute;
+
+
+        /**
+         *
+         */
+        public LinkPrompt(final Shell parentShell, final String message) {
+            super(parentShell, "Link Meta Node Template", null, message, MessageDialog.QUESTION_WITH_CANCEL,
+                new String[]{IDialogConstants.OK_LABEL, IDialogConstants.CANCEL_LABEL}, 0);
+            setShellStyle(getShellStyle() | SWT.SHEET);
+        }
+
+        /**
+         * After the dialog closes get the selected link type.
+         *
+         * @return null, if no link should be created, otherwise the selected link type.
+         */
+        public LinkType getLinkType() {
+            return m_linkType;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected Control createCustomArea(final Composite parent) {
+            Composite group = new Composite(parent, SWT.NONE);
+            group.setLayout(new GridLayout(2, true));
+            group.setLayoutData(new GridData(SWT.RIGHT, SWT.TOP, false, false));
+
+            Label l1 = new Label(group, SWT.NONE);
+            l1.setText("Select the type of link to be created:");
+            m_absoluteLink = new Button(group, SWT.RADIO);
+            m_absoluteLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
+            m_absoluteLink.setText("Create absolute link");
+            m_absoluteLink.setToolTipText("If you move the workflow to a new location it will "
+                + "always link back to this template");
+            m_absoluteLink.setSelection(true);
+            m_absoluteLink.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(final SelectionEvent e) {
+                    m_linkType = LinkType.Absolute;
+                }
+            });
+
+            new Label(group, SWT.NONE);
+            m_mountpointRelativeLink = new Button(group, SWT.RADIO);
+            m_mountpointRelativeLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
+            m_mountpointRelativeLink.setText("Create mountpoint-relative link");
+            m_mountpointRelativeLink.setToolTipText("If you move the workflow to a new workspace - the meta node "
+                + "template must be available on this new workspace as well");
+            m_mountpointRelativeLink.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(final SelectionEvent e) {
+                    m_linkType = LinkType.MountpointRelative;
+                }
+            });
+
+            new Label(group, SWT.NONE);
+            m_workflowRelativeLink = new Button(group, SWT.RADIO);
+            m_workflowRelativeLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
+            m_workflowRelativeLink.setText("Create workflow-relative link");
+            m_workflowRelativeLink.setToolTipText("Workflow and meta node should always be moved together");
+            m_workflowRelativeLink.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(final SelectionEvent e) {
+                    m_linkType = LinkType.WorkflowRelative;
+                }
+            });
+
+            new Label(group, SWT.NONE);
+            m_noLink = new Button(group, SWT.RADIO);
+            m_noLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
+            m_noLink.setText("Don't link MetaNode with saved template");
+            m_noLink.setToolTipText("You will not be able to update the meta node from the template.");
+            m_noLink.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(final SelectionEvent e) {
+                    m_linkType = LinkType.None;
+                }
+            });
+            return group;
+        }
     }
 
     /**
