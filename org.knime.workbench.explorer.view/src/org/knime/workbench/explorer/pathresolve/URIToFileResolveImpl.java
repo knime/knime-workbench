@@ -253,6 +253,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
 
     /**
      * {@inheritDoc}
+     * @since 5.0
      */
     @Override
     public boolean isMountpointRelative(final URI uri) {
@@ -262,6 +263,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
 
     /**
      * {@inheritDoc}
+     * @since 5.0
      */
     @Override
     public boolean isWorkflowRelative(final URI uri) {
