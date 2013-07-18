@@ -318,6 +318,9 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                     new HashMap<AbstractContentProvider, List<AbstractExplorerFileStore>>();
             Map<AbstractExplorerFileStore, AbstractExplorerFileStore> srcToDest = destChecker.getMappings();
             for (AbstractExplorerFileStore aefs : srcFileStores) {
+                if (!AbstractExplorerFileStore.isWorkflow(aefs)) {
+                    continue;
+                }
                 if (srcToDest.get(aefs) == null) {
                     // user chose to skip this file during move/copy
                     continue;
