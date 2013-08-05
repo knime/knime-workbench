@@ -43,8 +43,6 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  *
  */
 public class ExplorerPrefsSyncer implements IPropertyChangeListener {
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            ExplorerPrefsSyncer.class);
     /**
      * {@inheritDoc}
      */
@@ -53,10 +51,9 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
     public void propertyChange(final PropertyChangeEvent event) {
         if (PreferenceConstants.P_EXPLORER_MOUNT_POINT.equals(
                 event.getProperty())) {
-            // TODO handle null values
             String oldValue = (String)event.getOldValue();
             String newValue = (String)event.getNewValue();
-            if (oldValue.equals(newValue)) {
+            if ((oldValue == newValue) || ((oldValue != null) && oldValue.equals(newValue))) {
                 return;
             }
 
@@ -66,7 +63,7 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
                         oldValue);
                 oldSettings = new LinkedHashSet<MountSettings>(oldMS);
             } else {
-                oldSettings = Collections.EMPTY_SET;
+                oldSettings = Collections.emptySet();
             }
 
             Set<MountSettings> newSettings;
@@ -77,8 +74,8 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
                 // leave unchanged values untouched
                 newSettings.removeAll(oldSettings);
             } else {
-                newSettings = Collections.EMPTY_SET;
-                newMS = Collections.EMPTY_LIST;
+                newSettings = Collections.emptySet();
+                newMS = Collections.emptyList();
             }
             oldSettings.removeAll(new LinkedHashSet<MountSettings>(newMS));
 
@@ -88,7 +85,7 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
                     ExplorerMountTable.mount(ms.getMountID(),
                             ms.getFactoryID(), ms.getContent());
                 } catch (IOException e) {
-                    LOGGER.error("Mount point \"" + ms.getDisplayName()
+                    NodeLogger.getLogger(this.getClass()).error("Mount point \"" + ms.getDisplayName()
                             + "\" could not be mounted.", e);
                 }
             }
@@ -98,7 +95,7 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
                 boolean successful = ExplorerMountTable.unmount(
                         ms.getMountID());
                 if (!successful) {
-                    LOGGER.warn("Mount point \"" + ms.getDisplayName()
+                    NodeLogger.getLogger(this.getClass()).warn("Mount point \"" + ms.getDisplayName()
                             + "\" could not be unmounted.");
                 }
             }
