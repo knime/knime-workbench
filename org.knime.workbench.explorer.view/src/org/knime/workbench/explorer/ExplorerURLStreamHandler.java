@@ -159,6 +159,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
          */
         @Override
         public InputStream getInputStream() throws IOException {
+            if (m_file == null) {
+                throw new IOException("Resource associated with \"" + getURL() + "\" does not exist");
+            }
             try {
                 return m_file.openInputStream(EFS.NONE, null);
             } catch (CoreException e) {
@@ -171,6 +174,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
          */
         @Override
         public OutputStream getOutputStream() throws IOException {
+            if (m_file == null) {
+                throw new IOException("Resource associated with \"" + getURL() + "\" does not exist");
+            }
             try {
                 return m_file.openOutputStream(EFS.NONE, null);
             } catch (CoreException e) {
@@ -183,11 +189,23 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
          */
         @Override
         public int getContentLength() {
-            long length = m_file.fetchInfo().getLength();
+            long length = getContentLengthLong();
             if (length > Integer.MAX_VALUE) {
-                length = Integer.MAX_VALUE;
+                return -1;
             }
-            return EFS.NONE == length ? -1 : (int)length;
+            return (int)length;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public long getContentLengthLong() {
+            if (m_file == null) {
+                return -1L;
+            }
+            long length = m_file.fetchInfo().getLength();
+            return EFS.NONE == length ? -1L : length;
         }
     }
 }
