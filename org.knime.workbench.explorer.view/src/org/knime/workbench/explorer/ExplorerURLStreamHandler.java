@@ -189,23 +189,15 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
          */
         @Override
         public int getContentLength() {
-            long length = getContentLengthLong();
+            if (m_file == null) {
+                return -1;
+            }
+            long length = m_file.fetchInfo().getLength();
             if (length > Integer.MAX_VALUE) {
                 return -1;
             }
-            return (int)length;
+            return EFS.NONE == length ? -1 : (int)length;
         }
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public long getContentLengthLong() {
-            if (m_file == null) {
-                return -1L;
-            }
-            long length = m_file.fetchInfo().getLength();
-            return EFS.NONE == length ? -1L : length;
-        }
     }
 }
