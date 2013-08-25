@@ -88,22 +88,19 @@ public class URIToFileResolveImpl implements URIToFileResolve {
      * {@inheritDoc}
      */
     @Override
-    public File resolveToFile(final URI uri, final IProgressMonitor monitor)
-            throws IOException {
+    public File resolveToFile(final URI uri, final IProgressMonitor monitor) throws IOException {
         if (uri == null) {
             throw new IOException("Can't resolve null URI to file");
         }
         String scheme = uri.getScheme();
         if (scheme == null) {
-            throw new IOException("Can't resolve URI \"" + uri
-                    + "\": it does not have a scheme");
+            throw new IOException("Can't resolve URI \"" + uri + "\": it does not have a scheme");
         }
         if (scheme.equalsIgnoreCase("file")) {
             try {
                 return new File(uri);
             } catch (IllegalArgumentException e) {
-                throw new IOException("Can't resolve file URI \"" + uri
-                        + "\" to file", e);
+                throw new IOException("Can't resolve file URI \"" + uri + "\" to file", e);
             }
         }
         if (scheme.equalsIgnoreCase(ExplorerFileSystem.SCHEME)) {
@@ -116,24 +113,20 @@ public class URIToFileResolveImpl implements URIToFileResolve {
                 return resolveStandardUri(uri, monitor);
             }
         }
-        throw new IOException("Unable to resolve URI \"" + uri
-                + "\" to local file, unknown scheme");
+        throw new IOException("Unable to resolve URI \"" + uri + "\" to local file, unknown scheme");
     }
-
 
     private File resolveStandardUri(final URI uri, final IProgressMonitor monitor) throws IOException {
         try {
-            AbstractExplorerFileStore s =
-                    ExplorerFileSystem.INSTANCE.getStore(uri);
+            AbstractExplorerFileStore s = ExplorerFileSystem.INSTANCE.getStore(uri);
             if (s == null) {
                 throw new IOException("Can't resolve file to URI \"" + uri
-                        + "\"; the corresponding mount point is probably "
-                        + "not defined or the resource has been (re)moved");
+                    + "\"; the corresponding mount point is probably "
+                    + "not defined or the resource has been (re)moved");
             }
             return s.toLocalFile(EFS.NONE, monitor);
         } catch (Exception e) {
-            throw new IOException("Can't resolve knime URI \"" + uri
-                    + "\" to file", e);
+            throw new IOException("Can't resolve knime URI \"" + uri + "\" to file", e);
         }
     }
 
@@ -211,12 +204,14 @@ public class URIToFileResolveImpl implements URIToFileResolve {
             resolvedPath = new File(workflowContext.getOriginalLocation(), URLDecoder.decode(uri.getPath(), "UTF-8"));
         }
 
-        if (workflowContext.getMountpointRoot() != null) {
+        // if resolved path is outside the workflow, check whether it is still inside the mountpoint
+        if (!resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())
+            && (workflowContext.getMountpointRoot() != null)) {
             URI normalizedPath = resolvedPath.toURI().normalize();
             URI normalizedRoot = workflowContext.getMountpointRoot().toURI().normalize();
 
             if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
-                throw new IOException("Leaving the mount point is not allowed for mount point relative URLs: "
+                throw new IOException("Leaving the mount point is not allowed for workflow relative URLs: "
                     + resolvedPath.getAbsolutePath() + " is not in "
                     + workflowContext.getMountpointRoot().getAbsolutePath());
             }
@@ -228,21 +223,17 @@ public class URIToFileResolveImpl implements URIToFileResolve {
      * {@inheritDoc}
      */
     @Override
-    public File resolveToLocalOrTempFile(final URI uri, final IProgressMonitor monitor)
-            throws IOException {
+    public File resolveToLocalOrTempFile(final URI uri, final IProgressMonitor monitor) throws IOException {
         File localFile = resolveToFile(uri, monitor);
         if (localFile != null) {
             return localFile;
         }
 
         // we have a remote file
-        RemoteExplorerFileStore source =
-                (RemoteExplorerFileStore)ExplorerFileSystem.INSTANCE
-                        .getStore(uri);
+        RemoteExplorerFileStore source = (RemoteExplorerFileStore)ExplorerFileSystem.INSTANCE.getStore(uri);
         if (source == null) {
             throw new IOException("Can't resolve file to URI \"" + uri
-                    + "\"; the corresponding mount point is probably "
-                    + "not defined or the resource has been (re)moved");
+                + "\"; the corresponding mount point is probably " + "not defined or the resource has been (re)moved");
         }
         try {
             return source.resolveToLocalFile(monitor);
@@ -253,21 +244,23 @@ public class URIToFileResolveImpl implements URIToFileResolve {
 
     /**
      * {@inheritDoc}
+     *
      * @since 5.0
      */
     @Override
     public boolean isMountpointRelative(final URI uri) {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
-                && ExplorerURLStreamHandler.MOUNTPOINT_RELATIVE.equalsIgnoreCase(uri.getHost());
+            && ExplorerURLStreamHandler.MOUNTPOINT_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 
     /**
      * {@inheritDoc}
+     *
      * @since 5.0
      */
     @Override
     public boolean isWorkflowRelative(final URI uri) {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
-                && ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equalsIgnoreCase(uri.getHost());
+            && ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 }
