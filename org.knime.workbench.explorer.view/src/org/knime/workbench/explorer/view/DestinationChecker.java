@@ -40,6 +40,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
+import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.explorer.view.dialogs.MergeRenameDialog;
 import org.knime.workbench.explorer.view.dialogs.OverwriteRenameDialog;
 
@@ -245,20 +246,24 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                 AbstractExplorerFileInfo destInfo = destChild.fetchInfo();
                 boolean exists = destInfo.exists();
                 if (child.fetchInfo().isWorkflowGroup() && exists
-                        /* Workflow groups can only overwrite other workflow
-                            groups. */
+                        /* Workflow groups can only overwrite other workflow groups. */
                         && destInfo.isWorkflowGroup()) {
                     collectChildMappings(child, destChild, overwrite);
                 } else { // workflows, meta node templates and files
-                    if (exists) {
-                        if (overwrite) { // overwrite existing
-                            m_overwriteFS.add(destChild);
-                            m_mappings.put(child, destChild);
-                        } else { // skip existing
+                    if (child instanceof LocalWorkspaceFileStore && ".project".equals(child.getName())) {
+                            // skip .project files
                             m_mappings.put(child, null);
+                    } else {
+                        if (exists) {
+                            if (overwrite) { // overwrite existing
+                                m_overwriteFS.add(destChild);
+                                m_mappings.put(child, destChild);
+                            } else { // skip existing
+                                m_mappings.put(child, null);
+                            }
+                        } else { // new store
+                            m_mappings.put(child, destChild);
                         }
-                    } else { // new store
-                        m_mappings.put(child, destChild);
                     }
                 }
             }
