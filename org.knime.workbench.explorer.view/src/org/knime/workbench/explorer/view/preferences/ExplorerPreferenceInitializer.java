@@ -56,12 +56,14 @@ public class ExplorerPreferenceInitializer extends
             if (fac.getDefaultMountID() != null) {
                 final AbstractContentProvider cntProvider =
                     fac.createContentProvider(fac.getDefaultMountID());
-                try {
-                    MountSettings ms = new MountSettings(cntProvider);
-                    defMounts += ms.getSettingsString()
-                        + MountSettings.SETTINGS_SEPARATOR;
-                } finally {
-                    cntProvider.dispose();
+                if (cntProvider != null) {
+                    try {
+                        MountSettings ms = new MountSettings(cntProvider);
+                        defMounts += ms.getSettingsString()
+                            + MountSettings.SETTINGS_SEPARATOR;
+                    } finally {
+                        cntProvider.dispose();
+                    }
                 }
             }
         }

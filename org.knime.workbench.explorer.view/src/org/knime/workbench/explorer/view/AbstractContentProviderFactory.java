@@ -73,7 +73,7 @@ public abstract class AbstractContentProviderFactory {
      * @param mountID the mount ID the new content provider is mounted with
      *
      * @return a new, fully parameterized instance for a specific content
-     *         provider.
+     *         provider or <code>null</code> if no provider can be created
      */
     public abstract AbstractContentProvider
         createContentProvider(final String mountID);
@@ -97,7 +97,7 @@ public abstract class AbstractContentProviderFactory {
      *
      * @return true, if additional information is needed by the factory for
      *      creating a content provider, false otherwise
-     *      
+     *
      * @since 3.0
      */
     public abstract boolean isAdditionalInformationNeeded();
