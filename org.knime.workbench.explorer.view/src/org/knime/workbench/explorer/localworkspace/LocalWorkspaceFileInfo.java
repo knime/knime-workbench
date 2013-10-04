@@ -27,7 +27,7 @@ import java.io.File;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
-import org.knime.core.node.workflow.SingleNodeContainerPersistorVersion200;
+import org.knime.core.node.workflow.SingleNodeContainerPersistorVersion1xx;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 
@@ -203,7 +203,7 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
             return false;
         }
         IFileStore containerFile = file.getChild(
-                SingleNodeContainerPersistorVersion200.NODE_FILE);
+                SingleNodeContainerPersistorVersion1xx.SETTINGS_FILE_NAME);
         return containerFile.fetchInfo().exists()
                 && isWorkflow(file.getParent());
     }

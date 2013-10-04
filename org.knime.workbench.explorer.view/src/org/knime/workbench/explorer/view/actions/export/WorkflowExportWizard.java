@@ -62,6 +62,7 @@ import java.util.List;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubProgressMonitor;
@@ -75,7 +76,7 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodePersistor;
-import org.knime.core.node.NodePersistorVersion200;
+import org.knime.core.node.NodePersistorVersion1xx;
 import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.VMFileLocker;
@@ -270,13 +271,13 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         }
         if (store.fetchInfo().isDirectory()) {
             // directories to exclude:
-            if (name.startsWith(NodePersistorVersion200.PORT_FOLDER_PREFIX)) {
+            if (name.startsWith(NodePersistorVersion1xx.PORT_FOLDER_PREFIX)) {
                 return true;
             }
-            if (name.startsWith(NodePersistorVersion200.INTERNAL_TABLE_FOLDER_PREFIX)) {
+            if (name.startsWith(NodePersistorVersion1xx.INTERNAL_TABLE_FOLDER_PREFIX)) {
                 return true;
             }
-            if (name.startsWith(NodePersistorVersion200.FILESTORE_FOLDER_PREFIX)) {
+            if (name.startsWith(NodePersistorVersion1xx.FILESTORE_FOLDER_PREFIX)) {
                 return true;
             }
             if (name.startsWith(NodePersistor.INTERN_FILE_DIR)) {
@@ -326,7 +327,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
 
             File parentLoc = m_commonParent.toLocalFile();
             if (parentLoc == null) {
-                throw new CoreException(new Status(Status.ERROR,
+                throw new CoreException(new Status(IStatus.ERROR,
                         ExplorerActivator.PLUGIN_ID,
                         "Only local files can be exported ("
                                 + m_commonParent.getFullName()
@@ -343,7 +344,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         } catch (final IOException t) {
             LOGGER.debug(
                     "Export of KNIME workflow(s) failed: " + t.getMessage(), t);
-            throw new CoreException(new Status(Status.ERROR,
+            throw new CoreException(new Status(IStatus.ERROR,
                     ExplorerActivator.PLUGIN_ID,
                     t.getMessage(), t));
         }
@@ -394,7 +395,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
             if (!child.fetchInfo().isDirectory()) {
                 File loc = child.toLocalFile();
                 if (loc == null) {
-                    throw new CoreException(new Status(Status.ERROR,
+                    throw new CoreException(new Status(IStatus.ERROR,
                             ExplorerActivator.PLUGIN_ID,
                             "Only local files can be exported ("
                                     + child.getFullName()
@@ -462,6 +463,6 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
     }
 
     private static Status getErrorStatus(final String msg, final Throwable e) {
-        return new Status(Status.ERROR, ExplorerActivator.PLUGIN_ID, msg, e);
+        return new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID, msg, e);
     }
 }
