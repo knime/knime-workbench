@@ -56,7 +56,7 @@ import java.util.zip.ZipFile;
 
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
 import org.eclipse.ui.internal.wizards.datatransfer.TarFile;
-import org.knime.core.node.workflow.SingleNodeContainerPersistorVersion1xx;
+import org.knime.core.node.workflow.FileSingleNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowPersistor;
 
 /**
@@ -121,7 +121,7 @@ public class WorkflowImportElementFromArchive
                             WorkflowPersistor.TEMPLATE_FILE)
                     // node
                     || elementLabel.equals(
-                        SingleNodeContainerPersistorVersion1xx.SETTINGS_FILE_NAME)) {
+                        FileSingleNodeContainerPersistor.SETTINGS_FILE_NAME)) {
                 return false;
             }
         }

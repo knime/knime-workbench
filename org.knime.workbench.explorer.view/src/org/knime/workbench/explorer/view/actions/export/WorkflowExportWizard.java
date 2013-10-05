@@ -76,7 +76,7 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodePersistor;
-import org.knime.core.node.NodePersistorVersion1xx;
+import org.knime.core.node.FileNodePersistor;
 import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.VMFileLocker;
@@ -271,13 +271,13 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         }
         if (store.fetchInfo().isDirectory()) {
             // directories to exclude:
-            if (name.startsWith(NodePersistorVersion1xx.PORT_FOLDER_PREFIX)) {
+            if (name.startsWith(FileNodePersistor.PORT_FOLDER_PREFIX)) {
                 return true;
             }
-            if (name.startsWith(NodePersistorVersion1xx.INTERNAL_TABLE_FOLDER_PREFIX)) {
+            if (name.startsWith(FileNodePersistor.INTERNAL_TABLE_FOLDER_PREFIX)) {
                 return true;
             }
-            if (name.startsWith(NodePersistorVersion1xx.FILESTORE_FOLDER_PREFIX)) {
+            if (name.startsWith(FileNodePersistor.FILESTORE_FOLDER_PREFIX)) {
                 return true;
             }
             if (name.startsWith(NodePersistor.INTERN_FILE_DIR)) {
