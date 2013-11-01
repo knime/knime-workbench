@@ -631,11 +631,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
         if (!enableAllLinkTypes) {
             // simple dialog because only absolute links are supported/allowed
-            boolean ok =
-                MessageDialog.open(MessageDialog.QUESTION_WITH_CANCEL, activeShell, "Link Meta Node Template", msg,
-                    SWT.NONE);
-            if (ok) {
+            MessageDialog dialog = new MessageDialog(activeShell, "Link Meta Node Template", null,
+                "Link Meta Node Template", MessageDialog.QUESTION_WITH_CANCEL, new String[]{
+                IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL, IDialogConstants.CANCEL_LABEL}, 0);
+            int result = dialog.open();
+            if (result == 0) { // first in array above
                 return LinkType.Absolute;
+            } else if (result == 1) { // second in array above
+                return LinkType.None;
             } else {
                 return null;
             }
