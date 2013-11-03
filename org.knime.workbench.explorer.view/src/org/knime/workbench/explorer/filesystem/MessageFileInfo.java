@@ -145,4 +145,12 @@ public final class MessageFileInfo extends AbstractExplorerFileInfo {
     public boolean isReservedSystemItem() {
         return true;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isSnapshot() {
+        return false;
+    }
 }

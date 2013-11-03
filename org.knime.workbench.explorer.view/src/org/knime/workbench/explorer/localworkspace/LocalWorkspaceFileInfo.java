@@ -237,4 +237,12 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
             return false;
         }
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isSnapshot() {
+        return false;
+    }
 }

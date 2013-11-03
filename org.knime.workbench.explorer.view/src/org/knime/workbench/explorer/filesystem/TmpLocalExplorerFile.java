@@ -185,6 +185,11 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
                 public boolean isReservedSystemItem() {
                     return false;
                 }
+
+                @Override
+                public boolean isSnapshot() {
+                    return false;
+                }
             };
         }
         return m_info;
