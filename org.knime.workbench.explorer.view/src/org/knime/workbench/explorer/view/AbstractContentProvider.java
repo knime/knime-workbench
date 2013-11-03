@@ -760,6 +760,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public abstract boolean canHostDataFiles();
 
+    /**
+     * Returns whether this content provider supports snapshots. Currently only a server supports snapshots and only
+     * since version 3.8.
+     *
+     * @return <code>true</code> when snapshots are supported, <code>false</code> otherwise
+     */
+    public abstract boolean supportsSnapshots();
+
 
     /* -------------- content provider methods ---------------------------- */
 

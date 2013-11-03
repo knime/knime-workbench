@@ -146,4 +146,14 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      */
     @Override
     public abstract RemoteExplorerFileInfo fetchInfo();
+
+    /**
+     * Creates a new snapshot for this file store. The operation may fail if the user does not have sufficient
+     * permissions or if the filesystem does not support snapshots.
+     *
+     * @param comment an optional comment for the snapshot, may be <code>null</code>
+     * @return the name of the created snapshot
+     * @throws CoreException if the snapshot could not be created
+     */
+    public abstract String createSnapshot(String comment) throws CoreException;
 }
