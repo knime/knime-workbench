@@ -23,10 +23,9 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.List;
 
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.ui.plugin.AbstractUIPlugin;
-import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -36,14 +35,6 @@ import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
  * @author morent, KNIME.com, Zurich, Switzerland
  */
 public class GlobalRefreshAction extends ExplorerAction {
-
-    /**
-     * The icon for the refresh action.
-     */
-    public static final ImageDescriptor IMG_REFRESH =
-        AbstractUIPlugin.imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
-        "icons/refresh_nav.gif");
-
     private static final String TOOLTIP = "Refresh the view";
 
 
@@ -52,7 +43,7 @@ public class GlobalRefreshAction extends ExplorerAction {
      */
     public GlobalRefreshAction(final ExplorerView viewer) {
         super(viewer, "Refresh");
-        setImageDescriptor(IMG_REFRESH);
+        setImageDescriptor(ImageRepository.getImageDescriptor(SharedImages.Refresh));
         setToolTipText(TOOLTIP);
     }
 
