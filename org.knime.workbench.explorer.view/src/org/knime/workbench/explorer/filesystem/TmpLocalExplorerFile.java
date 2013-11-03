@@ -275,4 +275,12 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
     public String toString() {
         return m_wrappedFile.getAbsolutePath();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public IFileStore getNativeFilestore() {
+        return this;
+    }
 }

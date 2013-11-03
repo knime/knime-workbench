@@ -323,4 +323,12 @@ public final class MessageFileStore extends AbstractExplorerFileStore {
     public File resolveToLocalFile() throws CoreException {
         return null;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public IFileStore getNativeFilestore() {
+        return this;
+    }
 }

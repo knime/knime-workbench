@@ -413,4 +413,11 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public IFileStore getNativeFilestore() {
+        return m_file;
+    }
 }

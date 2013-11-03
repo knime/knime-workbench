@@ -477,4 +477,12 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         return info.exists() && info.isModifiable()
                 && parent != null && parent.fetchInfo().isModifiable();
     }
+
+    /**
+     * Returns the native filestore that is encapsulated by this filestore. If this filestores does not encapsulate
+     * another filestore, is returns itself.
+     *
+     * @return a file store
+     */
+    public abstract IFileStore getNativeFilestore();
 }
