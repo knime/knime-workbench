@@ -765,6 +765,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * since version 3.8.
      *
      * @return <code>true</code> when snapshots are supported, <code>false</code> otherwise
+     * @since 5.1
      */
     public abstract boolean supportsSnapshots();
 

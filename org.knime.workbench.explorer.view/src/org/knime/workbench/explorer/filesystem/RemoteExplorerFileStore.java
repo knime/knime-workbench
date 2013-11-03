@@ -154,6 +154,7 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * @param comment an optional comment for the snapshot, may be <code>null</code>
      * @return the name of the created snapshot
      * @throws CoreException if the snapshot could not be created
+     * @since 5.1
      */
     public abstract String createSnapshot(String comment) throws CoreException;
 }

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<component id="org.knime.workbench.explorer.view" version="2">
+    <resource path="src/org/knime/workbench/explorer/filesystem/AbstractExplorerFileInfo.java" type="org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo">
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo"/>
+                <message_argument value="isSnapshot()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/filesystem/AbstractExplorerFileStore.java" type="org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore">
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore"/>
+                <message_argument value="getNativeFilestore()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/filesystem/RemoteExplorerFileStore.java" type="org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore">
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore"/>
+                <message_argument value="createSnapshot(String)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/AbstractContentProvider.java" type="org.knime.workbench.explorer.view.AbstractContentProvider">
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProvider"/>
+                <message_argument value="supportsSnapshots()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/GlobalRefreshAction.java" type="org.knime.workbench.explorer.view.actions.GlobalRefreshAction">
+        <filter id="338755678">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.GlobalRefreshAction"/>
+                <message_argument value="IMG_REFRESH"/>
+            </message_arguments>
+        </filter>
+    </resource>
+</component>
