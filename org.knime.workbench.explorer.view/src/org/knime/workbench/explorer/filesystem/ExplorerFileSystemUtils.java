@@ -334,6 +334,7 @@ public final class ExplorerFileSystemUtils {
      * @return true if that was successful, i.e. the workflow directory does not
      *         exist when this method returns, false if that fails (e.g. not
      *         locked by this VM)
+     * @since 6.0
      **/
     public static boolean deleteLockedWorkflows(final List<? extends AbstractExplorerFileStore> toDelWFs,
         final Map<AbstractContentProvider, DeletionConfirmationResult> confirmationResults) {
@@ -412,6 +413,7 @@ public final class ExplorerFileSystemUtils {
      * @param delConfs deletion confirmation results from the corresponding providers
      * @return true if the files/directories don't exist when this method
      *         returns.
+     * @since 6.0
      */
     public static boolean deleteTheRest(final List<? extends AbstractExplorerFileStore> toDel,
         final Map<AbstractContentProvider, DeletionConfirmationResult> delConfs) {
