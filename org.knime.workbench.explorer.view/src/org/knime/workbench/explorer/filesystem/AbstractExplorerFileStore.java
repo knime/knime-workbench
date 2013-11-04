@@ -401,6 +401,22 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         return !info.isMetaNode() && !info.isNode() && !info.isWorkflow() && !info.isWorkflowGroup()
                 && !info.isWorkflowTemplate();
     }
+
+
+    /**
+     * Checks whether a file represents a snapshot.
+     *
+     * @param file the file to check if it represents a snapshot
+     * @return <code>true</code> if the file is a snapshot, <code>false</code> otherwise
+     * @since 6.0
+     */
+    public static boolean isSnapshot(final AbstractExplorerFileStore file) {
+        if ((file == null) || !file.fetchInfo().exists()) {
+            return false;
+        }
+        return file.fetchInfo().isSnapshot();
+    }
+
     /**
      * {@inheritDoc}
      */

@@ -45,8 +45,8 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteDownloadStream;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 
 /**
  *
@@ -148,12 +148,12 @@ public abstract class AbstractDownloadAction extends Action {
             throws CoreException {
         String srcIdentifier = getSourceFile().getMountIDWithFullPath();
         if (!isSourceSupported()) {
-            throw new IllegalArgumentException("Download source \""
+            throw new IllegalArgumentException("Type of download source '"
                     + srcIdentifier
-                    + "\" is not supported.");
+                    + "' is not supported.");
         }
-        LOGGER.debug("Downloading " + srcIdentifier
-                + " into local destination " + getTargetIdentifier());
+        LOGGER.debug("Downloading '" + srcIdentifier
+                + "' into local destination '" + getTargetIdentifier() + "'");
 
         final DownloadRunnable dwnLoader = new DownloadRunnable(
                 getSourceFile());
@@ -283,7 +283,8 @@ public abstract class AbstractDownloadAction extends Action {
     protected boolean isSourceSupported() {
         RemoteExplorerFileStore sourceFile = getSourceFile();
         return AbstractExplorerFileStore.isWorkflow(sourceFile)
-                || AbstractExplorerFileStore.isWorkflowGroup(sourceFile);
+                || AbstractExplorerFileStore.isWorkflowGroup(sourceFile)
+                || AbstractExplorerFileStore.isSnapshot(sourceFile);
 // copying of workflow jobs is disabled until implemented on server
 //        RemoteExplorerFileInfo info = getSourceFile().fetchInfo();
 //        return info.isWorkflow()

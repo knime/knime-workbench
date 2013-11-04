@@ -116,7 +116,8 @@ public class SpaceResourceSelectionDialog extends Dialog {
      *
      * @param parentShell the parent shell
      * @param mountIDs the ids of the mount points to show
-     * @param initialSelection the object to select initially
+     * @param initialSelection the object to select initially, maybe <code>null</code> if no group should be selected
+     *            initially
      */
     public SpaceResourceSelectionDialog(final Shell parentShell,
             final String[] mountIDs, final ContentObject initialSelection) {
