@@ -110,7 +110,7 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
      * Returns whether the files store is a snapshot or not.
      *
      * @return <code>true</code> if it is a snapshot, <code>false</code> otherwise
-     * @since 5.1
+     * @since 6.0
      */
     public abstract boolean isSnapshot();
 }

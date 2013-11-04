@@ -154,7 +154,18 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * @param comment an optional comment for the snapshot, may be <code>null</code>
      * @return the name of the created snapshot
      * @throws CoreException if the snapshot could not be created
-     * @since 5.1
+     * @since 6.0
      */
     public abstract String createSnapshot(String comment) throws CoreException;
+
+
+    /**
+     * Replaces this item (a workflow, template, or file) with one of its snapshots. The snapshot will be removed
+     * afterwards.
+     *
+     * @param snapshotName the name of the snapshot (usually the name of the file store representing the snapshot)
+     * @throws CoreException if an error occurs
+     * @since 6.0
+     */
+    public abstract void replaceWithSnapshot(String snapshotName) throws CoreException;
 }

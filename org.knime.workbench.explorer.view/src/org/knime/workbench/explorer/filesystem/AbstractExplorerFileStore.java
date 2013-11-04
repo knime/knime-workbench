@@ -483,7 +483,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * another filestore, is returns itself.
      *
      * @return a file store
-     * @since 5.1
+     * @since 6.0
      */
     public abstract IFileStore getNativeFilestore();
 }
