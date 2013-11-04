@@ -53,6 +53,7 @@ package org.knime.workbench.explorer.filesystem;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -69,6 +70,8 @@ import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.DeletionConfirmationResult;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
@@ -326,12 +329,14 @@ public final class ExplorerFileSystemUtils {
      * VM, they will be unlocked after this method returns.
      *
      * @param toDelWFs The list of directories associate with the workflows.
+     * @param confirmationResults the result returned from the corresponding confirmation dialogs, can be empty, must
+     *         not be null
      * @return true if that was successful, i.e. the workflow directory does not
      *         exist when this method returns, false if that fails (e.g. not
      *         locked by this VM)
      **/
-    public static boolean deleteLockedWorkflows(
-            final List<? extends AbstractExplorerFileStore> toDelWFs) {
+    public static boolean deleteLockedWorkflows(final List<? extends AbstractExplorerFileStore> toDelWFs,
+        final Map<AbstractContentProvider, DeletionConfirmationResult> confirmationResults) {
         boolean success = true;
         for (AbstractExplorerFileStore wf : toDelWFs) {
             assert AbstractExplorerFileStore.isWorkflow(wf)
@@ -340,7 +345,7 @@ public final class ExplorerFileSystemUtils {
                 File loc = wf.toLocalFile(EFS.NONE, null);
                 if (loc == null) {
                     // can't do any locking or fancy deletion
-                    wf.delete(EFS.NONE, null);
+                    wf.delete(confirmationResults.get(wf.getContentProvider()), null);
                     continue;
                 }
                 assert VMFileLocker.isLockedForVM(loc);
@@ -404,11 +409,12 @@ public final class ExplorerFileSystemUtils {
      * Delete the files denoted by the argument list.
      *
      * @param toDel The list of files to be deleted.
+     * @param delConfs deletion confirmation results from the corresponding providers
      * @return true if the files/directories don't exist when this method
      *         returns.
      */
-    public static boolean deleteTheRest(
-            final List<? extends AbstractExplorerFileStore> toDel) {
+    public static boolean deleteTheRest(final List<? extends AbstractExplorerFileStore> toDel,
+        final Map<AbstractContentProvider, DeletionConfirmationResult> delConfs) {
         boolean success = true;
         for (AbstractExplorerFileStore f : toDel) {
             // go by the local file. (Does EFS.delete() delete recursively??)
@@ -422,7 +428,7 @@ public final class ExplorerFileSystemUtils {
                 if (f.fetchInfo().exists()) {
                     File loc = f.toLocalFile(EFS.NONE, null);
                     if (loc == null) {
-                        f.delete(EFS.NONE, null);
+                        f.delete(delConfs.get(f.getContentProvider()), null);
                     } else {
                         // if it is a workflow it would be gone already
                         if (loc.exists()) {

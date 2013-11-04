@@ -57,6 +57,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileStore;
 import org.eclipse.core.runtime.CoreException;
@@ -65,6 +66,7 @@ import org.eclipse.core.runtime.Path;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.DeletionConfirmationResult;
 
 /**
  * Abstract base class for all explorer file stores.
@@ -173,6 +175,21 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     @Override
     public abstract void delete(int options, IProgressMonitor monitor)
             throws CoreException;
+
+    /**
+     * Called after an interactive user deletion. The object passed contains the result of the confirmation dialog that
+     * was opened by the corresponding content provider (or null, if no dialog opened). The default implementation
+     * ignores the confirmation object and calls the standard delete ({@link #delete(int, IProgressMonitor)}).
+     *
+     * @param confResult this is the object returned by the confirmation dialog of the corresponding content provider.
+     *            It could be null!
+     * @param monitor ...
+     * @throws CoreException ...
+     */
+    public void delete(final DeletionConfirmationResult confResult, final IProgressMonitor monitor)
+        throws CoreException {
+        delete(EFS.NONE, monitor);
+    }
 
     /**
      * @param destination the destination to clean up

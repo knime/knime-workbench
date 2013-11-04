@@ -596,8 +596,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 }
             }
             assert VMFileLocker.isLockedForVM(tmpDir);
-            ExplorerFileSystemUtils.deleteLockedWorkflows(Collections
-                    .singletonList(target));
+            ExplorerFileSystemUtils.deleteLockedWorkflows(Collections.singletonList(target), Collections.EMPTY_MAP);
             // the deletion method unlocks
         }
         return true;
@@ -1053,15 +1052,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
     /**
      * Allows the content provider to open a 'special' confirmation dialog. Server is currently the only one confirming
-     * deletion of jobs and sched execs. Default implementation accepts deletion without user confirmation.
+     * deletion of jobs and sched execs. Default implementation accepts deletion with default user confirmation dialog.
+     *
      * @param parentShell the parent shell for dialogs
-     * @param toDelWFs  workflows contained in toDel
-     * @return true if deletion is confirmed, false, if user canceled, null if no confirm dialog was shown (standard #
-     *         confirm will do). If not-null is returned the standard confirmation dialog will not show.
+     * @param allFiles list of all files to be deleted.
+     * @param toDelWFs workflows contained in toDel
+     * @return an object if the provided opened a dialog, null if no confirm dialog was shown (standard confirm dialog
+     *         will open then). If not-null is returned the standard confirmation dialog will not show.
      * @since 5.0
      */
-    public AtomicBoolean confirmDeletion(final Shell parentShell,
-        final Collection<AbstractExplorerFileStore> toDelWFs) {
+    public DeletionConfirmationResult confirmDeletion(final Shell parentShell,
+        final Collection<AbstractExplorerFileStore> allFiles, final Collection<AbstractExplorerFileStore> toDelWFs) {
         return null;
     }
 

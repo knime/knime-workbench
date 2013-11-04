@@ -53,7 +53,7 @@ package org.knime.workbench.explorer.view.actions;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.TreeMap;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
@@ -66,6 +66,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.DeletionConfirmationResult;
 import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
@@ -146,16 +147,19 @@ public class GlobalDeleteAction extends ExplorerAction {
         boolean ok = false;
         // TODO: avoid multiple dialogs bothering the user multiple times (is becomes an issue only when multiple
         // providers pop dialogs - currently the server is the only provides).
+        Map<AbstractContentProvider, DeletionConfirmationResult> confResults =
+            new TreeMap<AbstractContentProvider, DeletionConfirmationResult>();
         for (AbstractContentProvider acp : selectedFiles.keySet()) {
-            AtomicBoolean confirmed = acp.confirmDeletion(getParentShell(), toDelWorkflows);
+            DeletionConfirmationResult confirmed = acp.confirmDeletion(getParentShell(), allFiles, toDelWorkflows);
             if (confirmed != null) {
-                if (!confirmed.get()) {
+                if (!confirmed.confirmed()) {
                     LOGGER.info("User canceled deletion of " + allFiles.size() + " files incl. "
                         + toDelWorkflows.size() + " workflows");
                     ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
                     return;
                 } else {
                     ok = true;
+                    confResults.put(acp, confirmed);
                 }
             }
         }
@@ -169,9 +173,8 @@ public class GlobalDeleteAction extends ExplorerAction {
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelWorkflows);
 
         // delete Workflows first (unlocks them too)
-        boolean success =
-                ExplorerFileSystemUtils.deleteLockedWorkflows(lockedWFs);
-        success &= ExplorerFileSystemUtils.deleteTheRest(allFiles);
+        boolean success = ExplorerFileSystemUtils.deleteLockedWorkflows(lockedWFs, confResults);
+        success &= ExplorerFileSystemUtils.deleteTheRest(allFiles, confResults);
 
         if (!success) {
             showUnsuccessfulMessage();
