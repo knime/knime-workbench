@@ -764,7 +764,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * since version 3.8.
      *
      * @return <code>true</code> when snapshots are supported, <code>false</code> otherwise
-     * @since 5.1
+     * @since 6.0
      */
     public abstract boolean supportsSnapshots();
 
@@ -1059,7 +1059,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param toDelWFs workflows contained in toDel
      * @return an object if the provided opened a dialog, null if no confirm dialog was shown (standard confirm dialog
      *         will open then). If not-null is returned the standard confirmation dialog will not show.
-     * @since 5.0
+     * @since 6.0
      */
     public DeletionConfirmationResult confirmDeletion(final Shell parentShell,
         final Collection<AbstractExplorerFileStore> allFiles, final Collection<AbstractExplorerFileStore> toDelWFs) {

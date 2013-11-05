@@ -185,6 +185,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      *            It could be null!
      * @param monitor ...
      * @throws CoreException ...
+     * @since 6.0
      */
     public void delete(final DeletionConfirmationResult confResult, final IProgressMonitor monitor)
         throws CoreException {

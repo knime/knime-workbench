@@ -52,6 +52,7 @@ package org.knime.workbench.explorer.view;
 /**
  * Object returned by deletion confirmation dialogs and forwarded to the delete method.
  * @author ohl
+ * @since 6.0
  */
 public abstract class DeletionConfirmationResult {
 
