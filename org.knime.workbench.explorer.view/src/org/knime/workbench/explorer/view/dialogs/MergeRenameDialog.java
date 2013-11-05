@@ -24,6 +24,7 @@ package org.knime.workbench.explorer.view.dialogs;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CLabel;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
@@ -39,6 +40,8 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 
@@ -54,7 +57,7 @@ public class MergeRenameDialog extends Dialog {
 
     private Text m_newNameGUI;
 
-    private Label m_errMsg;
+    private CLabel m_errMsg;
 
     private Button m_mergeGUI;
 
@@ -68,6 +71,8 @@ public class MergeRenameDialog extends Dialog {
 
     private boolean m_rename;
 
+    private SnapshotPanel m_snapshotPanel;
+
     private final boolean m_canWriteDestination;
 
     /**
@@ -75,8 +80,7 @@ public class MergeRenameDialog extends Dialog {
      * @param parentShell parent for the dialog
      * @param destination
      */
-    public MergeRenameDialog(final Shell parentShell,
-            final AbstractExplorerFileStore destination) {
+    public MergeRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination) {
         this(parentShell, destination, true);
     }
 
@@ -86,9 +90,8 @@ public class MergeRenameDialog extends Dialog {
      * @param destination the destination to merge to
      * @param canWriteDest true if the caller can write to the destination
      */
-    public MergeRenameDialog(final Shell parentShell,
-            final AbstractExplorerFileStore destination,
-            final boolean canWriteDest) {
+    public MergeRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
+        final boolean canWriteDest) {
         super(parentShell);
         m_destination = destination;
         m_canWriteDestination = canWriteDest;
@@ -115,7 +118,11 @@ public class MergeRenameDialog extends Dialog {
 
         createHeader(overall);
         createTextPanel(overall);
+        createSnapshotPanel(overall);
         createError(overall);
+
+        int height = (m_snapshotPanel != null) ? 370 : 280;
+        getShell().setMinimumSize(490, height);
 
         return overall;
     }
@@ -142,19 +149,17 @@ public class MergeRenameDialog extends Dialog {
         Label txt = new Label(header, SWT.NONE);
         txt.setBackground(white);
         if (m_canWriteDestination) {
-            txt.setText("The destination (" + m_destination.getName()
-                    + ") already exists. "
-                    + "Please select an option to proceed.");
+            txt.setText("The destination (" + m_destination.getName() + ") already exists. "
+                + "Please select an option to proceed.");
         } else {
-            txt.setText("The destination (" + m_destination.getName()
-                    + ") already exists and you can't "
-                    + "write into. Please provide a new destination name.");
+            txt.setText("The destination (" + m_destination.getName() + ") already exists and you can't "
+                + "write into. Please provide a new destination name.");
         }
         txt.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
     }
 
     private void createTextPanel(final Composite parent) {
-        Group border = new Group(parent, SWT.SHADOW_IN);
+        Group border = new Group(parent, SWT.SHADOW_NONE);
         border.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false));
         border.setLayout(new GridLayout(1, true));
 
@@ -164,7 +169,7 @@ public class MergeRenameDialog extends Dialog {
         m_mergeGUI = new Button(mergePanel, SWT.RADIO);
         m_mergeGUI.setText("Merge destination and source workflow group");
         m_mergeGUI.setToolTipText("Not existing items will be added to the "
-                + "destination, existing ones may be overwritten.");
+            + "destination, existing ones may be overwritten.");
         m_mergeGUI.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         m_mergeGUI.addListener(SWT.Selection, new Listener() {
             @Override
@@ -173,13 +178,11 @@ public class MergeRenameDialog extends Dialog {
             }
         });
         Composite mergeOptionsPanel = new Composite(mergePanel, SWT.NONE);
-        mergeOptionsPanel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true,
-                false));
+        mergeOptionsPanel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false));
         mergeOptionsPanel.setLayout(new GridLayout(1, false));
         m_overwriteGUI = new Button(mergeOptionsPanel, SWT.CHECK);
         m_overwriteGUI.setText("overwrite existing workflows");
-        m_overwriteGUI.setToolTipText("If workflows already exist, copy "
-                + "doesn't start without this option.");
+        m_overwriteGUI.setToolTipText("If workflows already exist, copy " + "doesn't start without this option.");
         m_overwriteGUI.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         m_overwriteGUI.addListener(SWT.Selection, new Listener() {
             @Override
@@ -192,13 +195,11 @@ public class MergeRenameDialog extends Dialog {
         m_overwrite = false;
         if (!m_canWriteDestination) {
             m_mergeGUI.setEnabled(false);
-            m_mergeGUI.setToolTipText("You don't have the permissions "
-                    + "to write to the destination");
+            m_mergeGUI.setToolTipText("You don't have the permissions " + "to write to the destination");
         }
 
         Composite renamePanel = new Composite(border, SWT.NONE);
-        renamePanel
-                .setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false));
+        renamePanel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false));
         renamePanel.setLayout(new GridLayout(2, false));
         m_renameGUI = new Button(renamePanel, SWT.RADIO);
         m_renameGUI.setText("Store it with the new name:");
@@ -209,11 +210,9 @@ public class MergeRenameDialog extends Dialog {
                 setSelectedAndValidate(m_renameGUI);
             }
         });
-        m_newNameGUI =
-                new Text(renamePanel, SWT.FILL | SWT.SINGLE | SWT.BORDER);
+        m_newNameGUI = new Text(renamePanel, SWT.FILL | SWT.SINGLE | SWT.BORDER);
         m_newNameGUI.setText(getAlternativeName());
-        m_newNameGUI.setLayoutData(new GridData(SWT.BEGINNING
-                | GridData.GRAB_HORIZONTAL | GridData.FILL_HORIZONTAL));
+        m_newNameGUI.setLayoutData(new GridData(SWT.BEGINNING | GridData.GRAB_HORIZONTAL | GridData.FILL_HORIZONTAL));
         m_newNameGUI.addListener(SWT.Modify, new Listener() {
             @Override
             public void handleEvent(final Event event) {
@@ -222,12 +221,26 @@ public class MergeRenameDialog extends Dialog {
         });
     }
 
+    private void createSnapshotPanel(final Composite parent) {
+        if (m_destination.getContentProvider().supportsSnapshots()) {
+            m_snapshotPanel = new SnapshotPanel(parent, SWT.NONE);
+            m_snapshotPanel.setEnabled(m_overwriteGUI.getSelection());
+            m_overwriteGUI.addListener(SWT.Selection, new Listener() {
+                @Override
+                public void handleEvent(final Event event) {
+                    m_snapshotPanel.setEnabled(m_overwriteGUI.getSelection());
+                }
+            });
+        }
+    }
+
     private void createError(final Composite parent) {
-        m_errMsg = new Label(parent, SWT.LEFT);
-        m_errMsg.setLayoutData(new GridData(GridData.FILL_BOTH));
+        m_errMsg = new CLabel(parent, SWT.LEFT);
+        m_errMsg.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         m_errMsg.setText("");
-        m_errMsg.setForeground(Display.getDefault().getSystemColor(
-                SWT.COLOR_RED));
+        m_errMsg.setForeground(Display.getDefault().getSystemColor(SWT.COLOR_RED));
+        m_errMsg.setImage(ImageRepository.getImage(SharedImages.Error));
+        m_errMsg.setVisible(false);
     }
 
     /**
@@ -247,7 +260,7 @@ public class MergeRenameDialog extends Dialog {
         m_newNameGUI.setEnabled(m_renameGUI.getSelection());
         if (m_mergeGUI != null && m_mergeGUI.isEnabled()) {
             m_mergeGUI.setSelection(choice == m_mergeGUI);
-//            m_skipGUI.setEnabled(m_mergeGUI.getSelection());
+            //            m_skipGUI.setEnabled(m_mergeGUI.getSelection());
             m_overwriteGUI.setEnabled(m_mergeGUI.getSelection());
         }
         m_merge = m_mergeGUI != null && m_mergeGUI.getSelection();
@@ -263,9 +276,8 @@ public class MergeRenameDialog extends Dialog {
                 }
                 if (!ExplorerFileSystem.isValidFilename(m_newName)) {
                     errMsg =
-                            "New destination name contains invalid characters ("
-                                  + ExplorerFileSystem.getIllegalFilenameChars()
-                                  + ")";
+                        "New destination name contains invalid characters ("
+                            + ExplorerFileSystem.getIllegalFilenameChars() + ")";
                     return;
                 }
                 AbstractExplorerFileStore parent = m_destination.getParent();
@@ -283,9 +295,11 @@ public class MergeRenameDialog extends Dialog {
             return;
         } finally {
             if (errMsg == null || errMsg.isEmpty()) {
+                m_errMsg.setVisible(false);
                 m_errMsg.setText("");
                 getButton(IDialogConstants.OK_ID).setEnabled(true);
             } else {
+                m_errMsg.setVisible(true);
                 m_errMsg.setText(errMsg);
                 getButton(IDialogConstants.OK_ID).setEnabled(false);
             }
@@ -306,31 +320,6 @@ public class MergeRenameDialog extends Dialog {
     }
 
     /**
-     * @return the new name or null if not applicable
-     */
-    public String rename() {
-        if (m_rename) {
-            return m_newName;
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * @return true if merging has been selected, false otherwise
-     */
-    public boolean merge() {
-        return m_merge;
-    }
-
-    /**
-     * @return true if overwriting has been selected, false otherwise
-     */
-    public boolean overwrite() {
-        return m_merge && m_overwrite;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -338,4 +327,15 @@ public class MergeRenameDialog extends Dialog {
         return true;
     }
 
+    /**
+     * Returns information about the user selection.
+     *
+     * @return an overwrite-and-merge information object
+     * @since 6.0
+     */
+    public OverwriteAndMergeInfo getInfo() {
+        return new OverwriteAndMergeInfo(m_rename ? m_newName : null, m_merge, m_merge && m_overwrite,
+            m_snapshotPanel != null ? m_snapshotPanel.createSnapshot() : false, m_snapshotPanel != null
+                ? m_snapshotPanel.getComment() : null);
+    }
 }

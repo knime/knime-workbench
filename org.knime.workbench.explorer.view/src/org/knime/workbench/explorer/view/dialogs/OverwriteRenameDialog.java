@@ -28,6 +28,7 @@ import java.util.Set;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CLabel;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
@@ -43,6 +44,8 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 
@@ -57,7 +60,7 @@ public class OverwriteRenameDialog extends Dialog {
 
     private Text m_newNameGUI;
 
-    private Label m_errMsg;
+    private CLabel m_errMsg;
 
     private Button m_overwriteGUI;
 
@@ -72,6 +75,8 @@ public class OverwriteRenameDialog extends Dialog {
     private final boolean m_multiple;
 
     private boolean m_isOverwriteDefault;
+
+    private SnapshotPanel m_snapshotPanel;
 
     private final Set<AbstractExplorerFileStore> m_forbiddenStores;
 
@@ -178,7 +183,11 @@ public class OverwriteRenameDialog extends Dialog {
 
         createHeader(overall);
         createTextPanel(overall);
+        createSnapshotPanel(overall);
         createError(overall);
+
+        int height = (m_snapshotPanel != null) ? 370 : 280;
+        getShell().setMinimumSize(470, height);
 
         return overall;
     }
@@ -205,13 +214,13 @@ public class OverwriteRenameDialog extends Dialog {
         Label txt = new Label(header, SWT.NONE);
         txt.setBackground(white);
         txt.setText("The destination (" + m_destination.getName()
-                + ") already exists. "
+                + ") already exists.\n"
                 + "Please select an option to proceed.");
         txt.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
     }
 
     private void createTextPanel(final Composite parent) {
-        Group border = new Group(parent, SWT.SHADOW_IN);
+        Group border = new Group(parent, SWT.NONE);
         border.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false));
         border.setLayout(new GridLayout(1, true));
         border.setText("Name conflict resolution:");
@@ -262,12 +271,28 @@ public class OverwriteRenameDialog extends Dialog {
         });
     }
 
+
+    private void createSnapshotPanel(final Composite parent) {
+        if (m_destination.getContentProvider().supportsSnapshots()) {
+            m_snapshotPanel = new SnapshotPanel(parent, SWT.NONE);
+            m_snapshotPanel.setEnabled(m_overwriteGUI.getSelection());
+            m_overwriteGUI.addListener(SWT.Selection, new Listener() {
+                @Override
+                public void handleEvent(final Event event) {
+                    m_snapshotPanel.setEnabled(m_overwriteGUI.getSelection());
+                }
+            });
+        }
+    }
+
     private void createError(final Composite parent) {
-        m_errMsg = new Label(parent, SWT.LEFT);
+        m_errMsg = new CLabel(parent, SWT.LEFT);
         m_errMsg.setLayoutData(new GridData(GridData.FILL_BOTH));
         m_errMsg.setText("");
         m_errMsg.setForeground(Display.getDefault().getSystemColor(
                 SWT.COLOR_RED));
+        m_errMsg.setImage(ImageRepository.getImage(SharedImages.Error));
+        m_errMsg.setVisible(false);
     }
 
     /**
@@ -361,12 +386,13 @@ public class OverwriteRenameDialog extends Dialog {
         } finally {
             Button yesToAllButton = getButton(IDialogConstants.YES_TO_ALL_ID);
             if (errMsg == null || errMsg.isEmpty()) {
-                m_errMsg.setText("");
+                m_errMsg.setVisible(false);
                 getButton(IDialogConstants.OK_ID).setEnabled(true);
                 if (yesToAllButton != null) {
                     yesToAllButton.setEnabled(m_overwrite);
                 }
             } else {
+                m_errMsg.setVisible(true);
                 m_errMsg.setText(errMsg);
                 getButton(IDialogConstants.OK_ID).setEnabled(false);
                 if (yesToAllButton != null) {
@@ -415,24 +441,6 @@ public class OverwriteRenameDialog extends Dialog {
     }
 
     /**
-     * @return the new name or null if not applicable
-     */
-    public String rename() {
-        if (m_rename) {
-            return m_newName;
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * @return true if overwrite was selected, false otherwise
-     */
-    public boolean overwrite() {
-        return m_overwrite;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -440,4 +448,14 @@ public class OverwriteRenameDialog extends Dialog {
         return true;
     }
 
+    /**
+     * Returns information about the user selection.
+     *
+     * @return an overwrite-and-merge information object
+     * @since 6.0
+     */
+    public OverwriteAndMergeInfo getInfo() {
+        return new OverwriteAndMergeInfo(m_rename ? m_newName : null, false, m_overwrite, m_snapshotPanel != null
+            ? m_snapshotPanel.createSnapshot() : false, m_snapshotPanel != null ? m_snapshotPanel.getComment() : null);
+    }
 }

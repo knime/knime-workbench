@@ -65,6 +65,7 @@ import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.DestinationChecker;
 import org.knime.workbench.explorer.view.ExplorerView;
+import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
 
 /**
  * Abstract base class for copy and move actions for the Explorer. It contains
@@ -427,6 +428,11 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                                         + srcFS.getFullName() + "' to "
                                         + destFS.getMountID() + "."
                                         + ". Unsupported operation.");
+                            }
+
+                            OverwriteAndMergeInfo info = destChecker.getOverwriteAndMergeInfos().get(destFS);
+                            if ((info != null) && (destFS instanceof RemoteExplorerFileStore) && info.createSnapshot()) {
+                                ((RemoteExplorerFileStore)destFS).createSnapshot(info.getComment());
                             }
 
                             if (!isSrcRemote && isDstRemote) { // upload
