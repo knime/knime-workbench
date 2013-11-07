@@ -28,7 +28,6 @@ import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.knime.workbench.explorer.ExplorerActivator;
-import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
@@ -43,7 +42,7 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
     /** The id of this preference page. */
     public static final String ID
             = "org.knime.workbench.explorer.view.explorer";
-    private MountPointListEditor m_mountPoints;
+    private MountPointTableEditor m_mountEditor;
 
     /**
     *
@@ -66,8 +65,8 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
      */
     @Override
     protected void createFieldEditors() {
-        m_mountPoints = new MountPointListEditor(getFieldEditorParent());
-        addField(m_mountPoints);
+        m_mountEditor = new MountPointTableEditor(getFieldEditorParent());
+        addField(m_mountEditor);
         ComboFieldEditor linkTemplateEditor = new ComboFieldEditor(
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
                 "Link meta node when defining new template",
@@ -79,30 +78,4 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
         addField(linkTemplateEditor);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void performApply() {
-        ExplorerMountTable.clearPreparedMounts();
-        super.performApply();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean performOk() {
-        ExplorerMountTable.clearPreparedMounts();
-        return super.performOk();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean performCancel() {
-        ExplorerMountTable.clearPreparedMounts();
-        return super.performCancel();
-    }
 }

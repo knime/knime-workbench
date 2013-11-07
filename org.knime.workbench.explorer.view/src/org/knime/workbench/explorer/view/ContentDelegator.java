@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.ILabelProviderListener;
@@ -41,7 +43,12 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.preferences.ExplorerPreferencePage;
+import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.knime.workbench.ui.KNIMEUIPlugin;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.service.prefs.BackingStoreException;
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
@@ -451,14 +458,8 @@ public class ContentDelegator extends LabelProvider implements
      * @param storage store information in order to restore state
      */
     public void saveState(final IMemento storage) {
-        StringBuilder sb = new StringBuilder();
-        for (MountPoint mp : m_provider) {
-            if (sb.length() > 0) {
-                sb.append(':');
-            }
-            sb.append(mp.getMountID());
-        }
-        storage.putString(KEY, sb.toString());
+        // don't save state, so it is restored directly from preferences
+        storage.putString(KEY, "");
     }
 
     /**
@@ -470,17 +471,76 @@ public class ContentDelegator extends LabelProvider implements
      */
     public void restoreState(final IMemento storage) {
         String displayed = storage.getString(KEY);
-        if (displayed != null) {
-            String[] ids = displayed.split(String.valueOf(ID_SEP));
+        if (displayed != null && !displayed.isEmpty()) {
+            restoreStateFromStorage(displayed);
+            saveStateToPreferences();
+            // make sure state is read from preferences next time
+            storage.putString(KEY, "");
+        } else {
+            restoreStateFromPreferences();
+        }
+    }
+
+    private void restoreStateFromStorage(final String storageString) {
+        if (storageString != null) {
+            String[] ids = storageString.split(String.valueOf(ID_SEP));
             for (String id : ids) {
-                MountPoint mp = ExplorerMountTable.getMountPoint(id);
-                if (mp != null) {
-                    addMountPoint(mp);
-                } else {
-                    LOGGER.info("Can't restore mount point to display: " + id);
-                    continue;
-                }
+                tryAddMountPoint(id);
             }
+        }
+    }
+
+    private void saveStateToPreferences() {
+        List<MountSettings> settingsList = getMountSettingsFromPreferences();
+        Set<String> activeIDs = getMountedIds();
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < settingsList.size(); i++) {
+            MountSettings settings = settingsList.get(i);
+            settings.setActive(activeIDs.contains(settings.getMountID()));
+            if (i > 0) {
+                builder.append(MountSettings.SETTINGS_SEPARATOR);
+            }
+            builder.append(settings.getSettingsString());
+        }
+        writeToPreferences(builder.toString());
+    }
+
+    private void restoreStateFromPreferences() {
+        List<MountSettings> settingsList = getMountSettingsFromPreferences();
+        for (MountSettings settings : settingsList) {
+            if (settings.isActive()) {
+                tryAddMountPoint(settings.getMountID());
+            }
+        }
+    }
+
+    private List<MountSettings> getMountSettingsFromPreferences() {
+        IEclipsePreferences preferences = InstanceScope.INSTANCE
+                .getNode(FrameworkUtil.getBundle(ExplorerPreferencePage.class).getSymbolicName());
+        String prefString = preferences.get(PreferenceConstants.P_EXPLORER_MOUNT_POINT, "");
+        List<MountSettings> settingsList = MountSettings.parseSettings(prefString);
+        return settingsList;
+    }
+
+    private void writeToPreferences(final String settings) {
+        IEclipsePreferences preferences = InstanceScope.INSTANCE
+                .getNode(ExplorerPreferencePage.ID);
+        preferences.put(PreferenceConstants.P_EXPLORER_MOUNT_POINT, settings);
+        try {
+            preferences.flush();
+        } catch (BackingStoreException e) {
+            LOGGER.error("Could not save current active state of mount points to preferences store! "
+                    + e.getMessage(), e);
+        }
+    }
+
+    private void tryAddMountPoint(final String mountID) {
+        MountPoint mp = ExplorerMountTable.getMountPoint(mountID);
+        if (mp != null) {
+            addMountPoint(mp);
+        } else {
+            LOGGER.info("Can't restore mount point to display: " + mountID);
+            return;
         }
     }
 
@@ -490,21 +550,23 @@ public class ContentDelegator extends LabelProvider implements
     @Override
     public void propertyChange(final PropertyChangeEvent event) {
         if (ExplorerMountTable.MOUNT_POINT_PROPERTY.equals(event.getProperty())) {
+            MountPoint mp = (MountPoint)event.getSource();
             if (event.getNewValue() == null) {
                 // mount point was removed
-                MountPoint mp = (MountPoint)event.getSource();
                 mp.getProvider().removeListener(this);
                 boolean removed = m_provider.remove(mp);
                 if (removed) {
                     notifyListeners(new PropertyChangeEvent(mp,
                             CONTENT_CHANGED, mp.getMountID(), null));
-                    LOGGER.warn("Removed mount point with id \""
+                    LOGGER.debug("Removed mount point with id \""
                             + mp.getMountID()
                             + "\" from view because it was deleted in the "
                             + "preferences.");
                 }
+            } else {
+                tryAddMountPoint(((MountPoint)event.getSource()).getMountID());
+                LOGGER.debug("Added mount point with id \"" + mp.getMountID() + ".");
             }
-            // The addition of mount points is ignored.
             return;
         }
     }

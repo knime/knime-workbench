@@ -66,8 +66,10 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.KeyEvent;
-import org.eclipse.swt.events.KeyListener;
+import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
@@ -86,27 +88,32 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
+import org.knime.workbench.explorer.view.AbstractContentProviderFactory.AdditionalInformationPanel;
+import org.knime.workbench.explorer.view.AbstractContentProviderFactory.ValidationRequiredListener;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
-
 /**
- * Dialog for selecting a new resource/item to be displayed in the KNIME
- * Explorer view.
+ * Dialog for selecting a new resource/item to be displayed in the KNIME Explorer view.
  *
  * @author ohl, University of Konstanz
  */
 
-public class NewMountPointDialog extends ListDialog {
+public class EditMountPointDialog extends ListDialog {
 
-    private static final ImageDescriptor IMG_NEWITEM = AbstractUIPlugin
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/new_knime55.png");
 
-    private static final String INVALID_MSG = "A valid mount id contains only"
-        + " characters a-z, A-Z, 0-9, '.' or '-' (it must start with a "
-        + "character and not end with a dot nor hyphen). Additionally, mount point names starting with 'knime.' are "
-        + "reserved for internal use.";
+    private static final ImageDescriptor IMG_NEWITEM = AbstractUIPlugin.imageDescriptorFromPlugin(
+        KNIMEUIPlugin.PLUGIN_ID, "icons/new_knime55.png");
+
+    private static final String INVALID_MSG = "A valid mount id contains only characters a-z, A-Z, 0-9, '.' or '-'.\n"
+        + "It must start with a character and not end with a dot nor hyphen.\n"
+        + "Additionally, mount point names starting with 'knime.' are reserved\n"
+        + "for internal use.";
+
+    private static final String MOUNT_ID_HEADER_TEXT = "Enter the name that is used to reference the new content.";
+
+    private final ValidationRequiredListener m_validationListener;
 
     private String m_mountIDval;
 
@@ -122,18 +129,31 @@ public class NewMountPointDialog extends ListDialog {
 
     private Text m_mountID;
 
+    private AdditionalInformationPanel m_additionalPanel;
+
+    private AbstractContentProvider m_contentProvider;
+
+    private boolean m_isNew;
+
     private AbstractContentProviderFactory m_factory;
 
+    private String m_additionalContent;
+
+    private Label m_mountIDHeader;
+
+    private String m_defaultMountID;
 
     /**
+     * Creates a new mount point dialog for creating a new mount point.
+     *
      * @param parentShell the parent shell
      * @param input list of selectable items
      * @param invalidIDs list of invalid ids - rejected in the mountID field.
      */
-    public NewMountPointDialog(final Shell parentShell,
-            final List<AbstractContentProviderFactory> input,
-            final Collection<String> invalidIDs) {
+    public EditMountPointDialog(final Shell parentShell, final List<AbstractContentProviderFactory> input,
+        final Collection<String> invalidIDs) {
         super(parentShell);
+        m_validationListener = createValidationListener();
         m_invalidIDs = new HashSet<String>(invalidIDs);
         setAddCancelButton(true);
         setContentProvider(new ContentFactoryProvider(input));
@@ -141,20 +161,61 @@ public class NewMountPointDialog extends ListDialog {
         setInput(input);
         setTitle("Select New Content");
         m_mountIDval = "";
+        m_isNew = true;
+    }
+
+    /**
+     * Creates a new mount point dialog for editing existing MountSettings.
+     *
+     * @param parentShell the parent shell
+     * @param input list of selectable items
+     * @param invalidIDs list of invalid ids - rejected in the mountID field.
+     * @param settings existing MountSettings to edit
+     */
+    public EditMountPointDialog(final Shell parentShell, final List<AbstractContentProviderFactory> input,
+        final Collection<String> invalidIDs, final MountSettings settings) {
+        super(parentShell);
+        m_validationListener = createValidationListener();
+        m_invalidIDs = new HashSet<String>(invalidIDs);
+        setAddCancelButton(true);
+        setContentProvider(new ContentFactoryProvider(input));
+        setLabelProvider(new ContentFactoryLabelProvider());
+        setInput(input);
+        setTitle("Edit Mount Point");
+        m_mountIDval = settings.getMountID();
+        m_additionalContent = settings.getContent();
+        m_isNew = false;
+    }
+
+    private ValidationRequiredListener createValidationListener() {
+        return new ValidationRequiredListener() {
+
+            @Override
+            public void validationRequired() {
+                validate();
+            }
+
+            @Override
+            public void defaultMountIDChanged(final String defaultMountID) {
+                m_defaultMountID = defaultMountID;
+                String id = defaultMountID == null ? "" : defaultMountID;
+                m_mountID.setText(id);
+            }
+        };
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected Button createButton(final Composite parent, final int id,
-            final String label, final boolean defaultButton) {
+    protected Button
+        createButton(final Composite parent, final int id, final String label, final boolean defaultButton) {
         Button b = super.createButton(parent, id, label, defaultButton);
         if (id == IDialogConstants.OK_ID) {
             // disabled by default until validated
             b.setEnabled(false);
             m_ok = b;
-            m_ok.setText("Next");
+            m_ok.setText("OK");
         }
         return b;
     }
@@ -166,13 +227,19 @@ public class NewMountPointDialog extends ListDialog {
     protected void okPressed() {
         // this method gets called through a double click (if cancel button is
         // added)
-        if (!validate(null)) {
+        if (!validate()) {
             return;
         }
-
+        Object selection = ((IStructuredSelection)getTableViewer().getSelection()).toArray()[0];
+        m_factory = (AbstractContentProviderFactory)selection;
         m_mountIDval = m_mountID.getText().trim();
+        if (m_additionalPanel != null) {
+            m_contentProvider = m_additionalPanel.createContentProvider();
+        } else {
+            m_contentProvider = m_factory.createContentProvider(m_mountIDval);
+        }
         super.okPressed();
-        m_factory = (AbstractContentProviderFactory)getResult()[0];
+
     }
 
     /**
@@ -183,11 +250,19 @@ public class NewMountPointDialog extends ListDialog {
     }
 
     /**
+     * @return an {@link AbstractContentProvider} if it can be created from the panel, null if not.
+     */
+    public AbstractContentProvider getContentProvider() {
+        return m_contentProvider;
+    }
+
+    /**
      * @return the selected factory (only valid after dialog is OKed)
      */
     public AbstractContentProviderFactory getFactory() {
         return m_factory;
     }
+
     /**
      * {@inheritDoc}
      */
@@ -196,95 +271,115 @@ public class NewMountPointDialog extends ListDialog {
 
         createHeader(parent);
 
+        final Composite additionalPanel = new Composite(parent, SWT.NONE);
         Composite mountHdr = new Composite(parent, SWT.FILL);
+        Composite mountInput = new Composite(mountHdr, SWT.FILL | SWT.BORDER);
+        m_mountID = new Text(mountInput, SWT.BORDER);
+
+        // insert the selection list
+
+        Control c = super.createDialogArea(parent);
+        TableViewer tableViewer = getTableViewer();
+        tableViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+
+            @Override
+            public void selectionChanged(final SelectionChangedEvent event) {
+                Object selection = ((IStructuredSelection)event.getSelection()).getFirstElement();
+                if (selection != null && selection instanceof AbstractContentProviderFactory) {
+                    AbstractContentProviderFactory factory = (AbstractContentProviderFactory)selection;
+                    for (Control cont : additionalPanel.getChildren()) {
+                        cont.dispose();
+                    }
+                    if (m_isNew && !m_mountID.getText().isEmpty()) {
+                        m_mountID.setText("");
+                    }
+                    m_defaultMountID = null;
+                    m_mountIDHeader.setText(MOUNT_ID_HEADER_TEXT);
+                    if (factory.isAdditionalInformationNeeded()) {
+                        m_additionalPanel =
+                            factory.createAdditionalInformationPanel(additionalPanel, m_mountID);
+                        if (m_additionalPanel != null) {
+                            m_additionalPanel.addValidationRequiredListener(m_validationListener);
+                            m_additionalPanel.createPanel(m_additionalContent);
+                        }
+                    } else {
+                        m_additionalPanel = null;
+                        String mountID = factory.getDefaultMountID() == null ? "" : factory.getDefaultMountID();
+                        m_mountID.setText(mountID);
+                    }
+                }
+                validate();
+            }
+        });
+
+        additionalPanel.moveBelow(c);
         GridLayout gl = new GridLayout(1, true);
-        gl.marginHeight =
-                convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
-        gl.marginWidth = convertHorizontalDLUsToPixels(
-                IDialogConstants.HORIZONTAL_MARGIN);
-        gl.verticalSpacing =
-                convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_SPACING);
-        gl.horizontalSpacing = convertHorizontalDLUsToPixels(
-                IDialogConstants.HORIZONTAL_SPACING);
+        gl.marginHeight = convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
+        gl.marginWidth = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
+        gl.verticalSpacing = convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_SPACING);
+        gl.horizontalSpacing = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_SPACING);
+        additionalPanel.setLayout(gl);
+        additionalPanel.setLayoutData(new GridData(GridData.FILL_BOTH));
+
+        mountHdr.moveBelow(additionalPanel);
+        gl = new GridLayout(1, true);
+        gl.marginHeight = convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
+        gl.marginWidth = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
+        gl.verticalSpacing = convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_SPACING);
+        gl.horizontalSpacing = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_SPACING);
         mountHdr.setLayout(gl);
         mountHdr.setLayoutData(new GridData(GridData.FILL_BOTH));
 
-        Label txt = new Label(mountHdr, SWT.NONE);
-        txt.setText(
-                "Enter the name that is used to reference the new content.");
+        m_mountIDHeader = new Label(mountHdr, SWT.NONE);
+        m_mountIDHeader.setText(MOUNT_ID_HEADER_TEXT);
 
-        Composite mountInput = new Composite(mountHdr, SWT.FILL | SWT.BORDER);
+        mountInput.moveBelow(m_mountIDHeader);
         gl = new GridLayout(2, false);
-        gl.marginHeight =
-                convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
-        gl.marginWidth = convertHorizontalDLUsToPixels(
-                IDialogConstants.HORIZONTAL_MARGIN);
+        gl.marginHeight = convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
+        gl.marginWidth = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
         // gl.verticalSpacing =
         // convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_SPACING);
-        gl.horizontalSpacing = convertHorizontalDLUsToPixels(
-                IDialogConstants.HORIZONTAL_SPACING);
+        gl.horizontalSpacing = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_SPACING);
         mountInput.setLayout(gl);
         GridData gd = new GridData(SWT.FILL, SWT.FILL, true, true);
         mountInput.setLayoutData(gd);
 
         Label l = new Label(mountInput, SWT.NONE);
         l.setText("Mount ID:");
-        m_mountID = new Text(mountInput, SWT.BORDER);
+        m_mountID.moveBelow(l);
+        if (m_mountIDval != null) {
+            m_mountID.setText(m_mountIDval);
+        }
         GridData gridData = new GridData(GridData.FILL_BOTH);
         m_mountID.setLayoutData(gridData);
-        m_mountID.addKeyListener(new KeyListener() {
-            @Override
-            public void keyReleased(final KeyEvent e) {
-                validate(e);
-            }
+
+        m_mountID.addModifyListener(new ModifyListener() {
 
             @Override
-            public void keyPressed(final KeyEvent e) {
-                validate(e);
+            public void modifyText(final ModifyEvent e) {
+                validate();
             }
         });
 
-        // insert the selection list
-        Control c = super.createDialogArea(parent);
-
-        TableViewer tableViewer = getTableViewer();
-        tableViewer.addSelectionChangedListener(
-                new ISelectionChangedListener() {
-                    @Override
-                    public void selectionChanged(
-                            final SelectionChangedEvent event) {
-                        Object selection = ((IStructuredSelection)
-                                event.getSelection()).getFirstElement();
-                        if (selection != null && selection
-                                instanceof AbstractContentProviderFactory) {
-                            AbstractContentProviderFactory factory
-                            = (AbstractContentProviderFactory)selection;
-                           if (!factory.isAdditionalInformationNeeded()) {
-                                /* No additional information is needed. Hence
-                                 * change the button ok button text from ok to
-                                 * next. */
-                                m_ok.setText("Ok");
-                            } else {
-                                m_ok.setText("Next");
-                            }
-                        }
-                        validate(null);
-                    }
-                });
         Object firstElement = tableViewer.getElementAt(0);
         if (firstElement != null) {
             tableViewer.getTable().select(0);
+            //force selectionChanged event
+            tableViewer.setSelection(tableViewer.getSelection());
         }
+        if (!m_isNew) {
+            tableViewer.getTable().setEnabled(false);
+        }
+
         return c;
     }
 
     /**
      * Enables the ok button and sets the error icon/message.
-     * @param keyEvent the key event or null
      *
      * @return true, if the selection/input is okay.
      */
-    protected boolean validate(final KeyEvent keyEvent) {
+    protected boolean validate() {
         boolean valid = true;
         String errMsg = "";
         if (getTableViewer().getSelection().isEmpty()) {
@@ -292,25 +387,44 @@ public class NewMountPointDialog extends ListDialog {
             errMsg = "Please select a resource to add.";
         }
 
-        String id = m_mountID.getText().trim();
-        if (id == null || id.isEmpty()) {
-            valid = false;
-            errMsg = "Please enter a valid mount ID.";
-        } else {
-            if (m_invalidIDs.contains(id)) {
+        if (m_additionalPanel != null) {
+            String additionalError = m_additionalPanel.validate();
+            if (additionalError != null && !additionalError.isEmpty()) {
                 valid = false;
-                errMsg =
-                        "Mount ID already in use. Please enter "
-                                + "a different ID.";
+                errMsg = additionalError;
             }
         }
-        if (!ExplorerMountTable.isValidMountID(id)) {
+
+        String id = m_mountID.getText().trim();
+        String mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
+        if (m_defaultMountID != null && !m_defaultMountID.equals(id)) {
+            mountIDHeaderText += "\nThe default ID is " + m_defaultMountID;
+        }
+        m_mountIDHeader.setText(mountIDHeaderText);
+        if (valid) {
+            if (id == null || id.isEmpty()) {
+                valid = false;
+                errMsg = "Please enter a valid mount ID.";
+            } else {
+                if (m_invalidIDs.contains(id)) {
+                    valid = false;
+                    errMsg = "Mount ID already in use. Please enter a different ID.";
+                }
+            }
+        }
+        if (valid && !ExplorerMountTable.isValidMountID(id)) {
             valid = false;
             errMsg = INVALID_MSG;
         }
+
         m_errText.setText(errMsg);
         m_errIcon.setVisible(!valid);
-        m_ok.setEnabled(valid);
+
+        if (m_ok != null) {
+            m_ok.setEnabled(valid);
+            layoutDialog();
+        }
+
         return valid;
     }
 
@@ -330,7 +444,11 @@ public class NewMountPointDialog extends ListDialog {
         new Label(header, SWT.NONE);
         Label exec = new Label(header, SWT.NONE);
         exec.setBackground(white);
-        exec.setText("Mounting a new Resource for Display in the KNIME Explorer");
+        if (m_isNew) {
+            exec.setText("Mounting a new resource for display in the KNIME Explorer");
+        } else {
+            exec.setText("Edit a resource for display in the KNIME Explorer");
+        }
         FontData[] fd = parent.getFont().getFontData();
         for (FontData f : fd) {
             f.setStyle(SWT.BOLD);
@@ -343,25 +461,38 @@ public class NewMountPointDialog extends ListDialog {
         execIcon.setImage(IMG_NEWITEM.createImage());
         execIcon.setLayoutData(new GridData(SWT.END, SWT.BEGINNING, true, true));
         // second row
-        new Label(header, SWT.None);
-        Label txt = new Label(header, SWT.NONE);
-        txt.setBackground(white);
-        txt.setText("Please select the type of resource that should "
-                + "be mounted.");
-        txt.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
-        new Label(header, SWT.None);
+        if (m_isNew) {
+            new Label(header, SWT.None);
+            Label txt = new Label(header, SWT.NONE);
+            txt.setBackground(white);
+            txt.setText("Please select the type of resource that should " + "be mounted.");
+            txt.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
+            new Label(header, SWT.None);
+        }
         // third row
         m_errIcon = new Label(header, SWT.NONE);
         m_errIcon.setVisible(true);
         m_errIcon.setImage(ImageRepository.getImage(SharedImages.Error));
-        m_errIcon.setLayoutData(new GridData(
-                GridData.HORIZONTAL_ALIGN_BEGINNING));
+        m_errIcon.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
         m_errIcon.setBackground(white);
         m_errText = new Label(header, SWT.WRAP);
         m_errText.setText("Please enter a mount id.");
         m_errText.setSize(SWT.DEFAULT, 100);
         m_errText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         m_errText.setBackground(white);
+        m_errText.addControlListener(new ControlListener() {
+
+            @Override
+            public void controlResized(final ControlEvent e) {
+                m_errIcon.setVisible(!m_errText.getText().isEmpty());
+            }
+
+            @Override
+            public void controlMoved(final ControlEvent e) {
+               controlResized(e);
+
+            }
+        });
         parent.layout();
         new Label(header, SWT.None);
     }
@@ -388,8 +519,7 @@ public class NewMountPointDialog extends ListDialog {
          * {@inheritDoc}
          */
         @Override
-        public boolean isLabelProperty(final Object element,
-                final String property) {
+        public boolean isLabelProperty(final Object element, final String property) {
             return false;
         }
 
@@ -427,12 +557,10 @@ public class NewMountPointDialog extends ListDialog {
 
     }
 
-    private static final class ContentFactoryProvider implements
-            IStructuredContentProvider {
+    private static final class ContentFactoryProvider implements IStructuredContentProvider {
         private final List<AbstractContentProviderFactory> m_elements;
 
-        private ContentFactoryProvider(
-                final List<AbstractContentProviderFactory> elements) {
+        private ContentFactoryProvider(final List<AbstractContentProviderFactory> elements) {
             m_elements = elements;
         }
 
@@ -440,8 +568,7 @@ public class NewMountPointDialog extends ListDialog {
         @Override
         public Object[] getElements(final Object inputElement) {
             if (inputElement == m_elements) {
-                return ((List<AbstractContentProviderFactory>)inputElement)
-                        .toArray();
+                return ((List<AbstractContentProviderFactory>)inputElement).toArray();
             }
             return new Object[0];
         }
@@ -458,9 +585,13 @@ public class NewMountPointDialog extends ListDialog {
          * {@inheritDoc}
          */
         @Override
-        public void inputChanged(final Viewer viewer, final Object oldInput,
-                final Object newInput) {
+        public void inputChanged(final Viewer viewer, final Object oldInput, final Object newInput) {
             // empty.
         }
+    }
+
+    private void layoutDialog() {
+        getShell().pack(true);
+        getShell().layout(true, true);
     }
 }

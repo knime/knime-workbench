@@ -45,6 +45,8 @@ public class MountSettings {
     private String m_content;
     private String m_state;
 
+    private boolean m_active;
+
     /**
      * Creates a new mount settings object based on the passed settings string.
      * @param settings a settings string
@@ -62,8 +64,8 @@ public class MountSettings {
         m_displayName = m_mountID + " (" + cp.toString() + ")";
         m_factoryID = cp.getFactory().getID();
         m_content = cp.saveState();
+        m_active = true;
     }
-
 
     /**
      * @param settings the settings string to be parsed
@@ -75,14 +77,28 @@ public class MountSettings {
                     "Invalid settings string provided.");
         }
         m_displayName = visibleSplit[0];
-        String[] settingsSplit = visibleSplit[1].split(ELEMENTS_SEPARATOR, 3);
-        if (3 != settingsSplit.length) {
+        String[] settingsSplit = visibleSplit[1].split(ELEMENTS_SEPARATOR, 4);
+        if (3 != settingsSplit.length && 4 != settingsSplit.length) {
             throw new IllegalArgumentException(
                     "Invalid settings string provided.");
         }
         m_mountID = settingsSplit[0];
         m_factoryID = settingsSplit[1];
-        m_content = settingsSplit[2];
+        // settings with active state
+        if (settingsSplit.length == 4) {
+            String possibleBoolean = settingsSplit[2];
+            // in case previous content contained ":", test for boolean value
+            if ("true".equalsIgnoreCase(possibleBoolean) || "false".equalsIgnoreCase(possibleBoolean)) {
+                m_active = Boolean.parseBoolean(possibleBoolean);
+                m_content = settingsSplit[3];
+            } else {
+                m_active = false;
+                m_content = settingsSplit[2] + ELEMENTS_SEPARATOR + settingsSplit[3];
+            }
+        } else {
+            m_active = false;
+            m_content = settingsSplit[2];
+        }
     }
 
     /**
@@ -122,6 +138,23 @@ public class MountSettings {
     }
 
     /**
+     * @return the active
+     */
+    public boolean isActive() {
+        return m_active;
+    }
+
+    /**
+     * @param active the active to set
+     */
+    public void setActive(final boolean active) {
+        if (m_active != active) {
+            m_state = null;
+        }
+        m_active = active;
+    }
+
+    /**
      * @return the state of this mount settings as preference string
      */
     public String getSettingsString() {
@@ -129,6 +162,7 @@ public class MountSettings {
             m_state = getDisplayName() + VISIBILITY_SEPARATOR
                     + m_mountID + ELEMENTS_SEPARATOR
                     + m_factoryID + ELEMENTS_SEPARATOR
+                    + Boolean.toString(m_active) + ELEMENTS_SEPARATOR
                     + m_content;
         }
         return m_state;

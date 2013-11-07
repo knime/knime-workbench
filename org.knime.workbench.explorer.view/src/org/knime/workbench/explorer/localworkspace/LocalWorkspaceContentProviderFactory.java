@@ -19,6 +19,8 @@
 package org.knime.workbench.explorer.localworkspace;
 
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Text;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -102,6 +104,16 @@ public class LocalWorkspaceContentProviderFactory extends
     @Override
     public boolean isAdditionalInformationNeeded() {
         return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public AdditionalInformationPanel createAdditionalInformationPanel(final Composite parent,
+        final Text mountPointIDInput) {
+        // no additional information needed
+        return null;
     }
 
 }

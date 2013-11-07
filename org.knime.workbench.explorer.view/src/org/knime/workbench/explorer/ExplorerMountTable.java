@@ -53,10 +53,12 @@ package org.knime.workbench.explorer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
@@ -112,13 +114,6 @@ public final class ExplorerMountTable {
             new LinkedHashMap<String, MountPoint>();
 
     /**
-     * Keeps all content that is prepared for mounting with the mountID
-     * (provided by the user).
-     */
-    private static final HashMap<String, MountPoint> PREPARED =
-            new LinkedHashMap<String, MountPoint>();
-
-    /**
      * Creates a new instance of the specified content provider. May open a user
      * dialog to get parameters needed by the provider factory. Returns null, if
      * the user canceled.
@@ -130,7 +125,7 @@ public final class ExplorerMountTable {
      */
     public static AbstractContentProvider mount(final String mountID,
             final String providerID) throws IOException {
-        return mountOrRestore(mountID, providerID, (String)null, false);
+        return mountOrRestore(mountID, providerID, (String)null);
     }
 
     /**
@@ -174,18 +169,45 @@ public final class ExplorerMountTable {
      * @param mountIDs a list of mount ids
      */
     public static void setMountOrder(final List<String> mountIDs) {
-        synchronized (MOUNTED) {
-            for (String mountID : mountIDs) {
-                MountPoint mountPoint = MOUNTED.get(mountID);
-                if (mountPoint != null) {
-                    /*
-                     * Remove the mount point and insert it again immediately to
-                     * get the same order as in the mount id list.
-                     */
-                    MOUNTED.remove(mountID);
-                    MOUNTED.put(mountID, mountPoint);
+        if (!compareSortOrder(mountIDs)) {
+            synchronized (MOUNTED) {
+                for (String mountID : mountIDs) {
+                    MountPoint mountPoint = MOUNTED.get(mountID);
+                    if (mountPoint != null) {
+                        /*
+                         * Remove the mount point and insert it again immediately to
+                         * get the same order as in the mount id list.
+                         */
+                        MOUNTED.remove(mountID);
+                        notifyListeners(new PropertyChangeEvent(mountPoint, MOUNT_POINT_PROPERTY,
+                            mountID, null));
+                        MOUNTED.put(mountID, mountPoint);
+                        notifyListeners(new PropertyChangeEvent(mountPoint,
+                            MOUNT_POINT_PROPERTY, null, mountID));
+                    }
                 }
             }
+        }
+    }
+
+    /**
+     * @param mountIDs a list of mount IDs in the expected order
+     * @return if the sort order of the passed list of mount IDs is the same as in the mount table
+     */
+    private static boolean compareSortOrder(final List<String> mountIDs) {
+        synchronized (MOUNTED) {
+            // sanity check
+            if (mountIDs.size() != MOUNTED.size()) {
+                return false;
+            }
+            // compare entry set with mount ID list
+            Iterator<Entry<String, MountPoint>> iterator = MOUNTED.entrySet().iterator();
+            for (int i = 0; i < mountIDs.size(); i++) {
+                if (!mountIDs.get(i).equals(iterator.next().getKey())) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 
@@ -200,45 +222,7 @@ public final class ExplorerMountTable {
      */
     public static AbstractContentProvider mount(final String mountID,
             final String providerID, final String storage) throws IOException {
-        return mountOrRestore(mountID, providerID, storage, false);
-    }
-
-    /**
-     * Creates a new instance of the specified content provider and prepares the
-     * mount point for commitment. May open a user dialog to get parameters
-     * needed by the provider factory. Returns null, if the user canceled.
-     *
-     * @param mountID name under which the content is mounted
-     * @param providerID the provider factory id
-     * @return a new content provider instance - or null if user canceled.
-     * @throws IOException if the preparation of the mount fails
-     */
-    public static AbstractContentProvider prepareMount(final String mountID,
-            final String providerID) throws IOException {
-        return mountOrRestore(mountID, providerID, (String)null, true);
-    }
-
-    /**
-     * @param mountID the prepared mount id to clear
-     * @return true if clearing was successful, false otherwise
-     */
-    public static synchronized boolean clearPreparedMount(
-            final String mountID) {
-        synchronized (PREPARED) {
-            MountPoint mp = PREPARED.remove(mountID);
-            if (mp == null) {
-                return false;
-            }
-            return true;
-        }
-    }
-
-
-    /**
-     * Clears all prepared mount points.
-     */
-    public static void clearPreparedMounts() {
-        PREPARED.clear();
+        return mountOrRestore(mountID, providerID, storage);
     }
 
     /**
@@ -249,19 +233,14 @@ public final class ExplorerMountTable {
      * @param mountID
      * @param providerID
      * @param storage
-     * @param prepare
      * @return
      */
     private static AbstractContentProvider mountOrRestore(final String mountID,
-            final String providerID, final String storage,
-            final boolean prepare) throws IOException {
+            final String providerID, final String storage) throws IOException {
         checkMountID(mountID);
         synchronized (MOUNTED) {
             // can't mount different providers with the same ID
             MountPoint existMp = MOUNTED.get(mountID);
-            if (existMp == null) {
-                existMp = PREPARED.get(mountID);
-            }
             if (existMp != null) {
                 if (existMp.getProviderFactory().getID().equals(providerID)) {
                     // re-use the provider
@@ -311,13 +290,8 @@ public final class ExplorerMountTable {
 
             MountPoint mp = new MountPoint(mountID, newProvider, fac);
             synchronized (MOUNTED) {
-                if (prepare) {
-                    PREPARED.put(mountID, mp);
-                } else {
-                    MOUNTED.put(mountID, mp);
-                    notifyListeners(new PropertyChangeEvent(mp,
-                            MOUNT_POINT_PROPERTY, null, mp.getMountID()));
-                }
+                MOUNTED.put(mountID, mp);
+                notifyListeners(new PropertyChangeEvent(mp, MOUNT_POINT_PROPERTY, null, mp.getMountID()));
             }
             return newProvider;
         }
@@ -370,9 +344,32 @@ public final class ExplorerMountTable {
                 String facID = e.getKey();
                 AbstractContentProviderFactory fac = e.getValue();
                 if (fac.multipleInstances()
-                        || !(isMounted(facID) || isPrepared(facID))) {
+                        || !(isMounted(facID))) {
                     result.add(fac);
                 }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Returns a list of content providers that could be added (that is that
+     * allow multiple instances or are not contained in a provided list). The list contains the
+     * factory objects. Their toString method should return a useful name.
+     * Use this method for intermediate determination of addable content providers (e.g. in preferences)
+     * @param existingProviderIDs a list with given content provider IDs
+     * @return a list of available content providers
+     */
+    public static List<AbstractContentProviderFactory>
+            getAddableContentProviders(final List<String> existingProviderIDs) {
+        LinkedList<AbstractContentProviderFactory> result =
+                new LinkedList<AbstractContentProviderFactory>();
+        for (Map.Entry<String, AbstractContentProviderFactory> e
+                : CONTENT_FACTORIES.entrySet()) {
+            String facID = e.getKey();
+            AbstractContentProviderFactory fac = e.getValue();
+            if (fac.multipleInstances() || !existingProviderIDs.contains(facID)) {
+                result.add(fac);
             }
         }
         return result;
@@ -442,19 +439,6 @@ public final class ExplorerMountTable {
 
     /**
      * Checks whether an instance created by the specified factory is already
-     * prepared for mounting.
-     *
-     *
-     * @param providerID the id of the provider factory
-     * @return true, if an instance created by the specified factory exists
-     *         already, false, if not.
-     */
-    public static boolean isPrepared(final String providerID) {
-        return !getPreparedMountIDs(providerID).isEmpty();
-    }
-
-    /**
-     * Checks whether an instance created by the specified factory is already
      * mounted and returns the mount IDs for it.
      *
      *
@@ -471,33 +455,6 @@ public final class ExplorerMountTable {
 
         synchronized (MOUNTED) {
             for (Map.Entry<String, MountPoint> e : MOUNTED.entrySet()) {
-                MountPoint mp = e.getValue();
-                if (providerID.equals(mp.getProviderFactory().getID())) {
-                    mountIDs.add(e.getKey());
-                }
-            }
-        }
-        return mountIDs;
-    }
-
-    /**
-     * Checks whether an instance created by the specified factory is already
-     * mounted and returns the mount IDs for it.
-     *
-     *
-     * @param providerID the id of the provider factory
-     * @return a list with mount IDs (or an empty list if provider is not
-     *         mounted).
-     */
-    private static List<String> getPreparedMountIDs(final String providerID) {
-        if (providerID == null || providerID.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Internal error: provider ID can't be null");
-        }
-        LinkedList<String> mountIDs = new LinkedList<String>();
-
-        synchronized (PREPARED) {
-            for (Map.Entry<String, MountPoint> e : PREPARED.entrySet()) {
                 MountPoint mp = e.getValue();
                 if (providerID.equals(mp.getProviderFactory().getID())) {
                     mountIDs.add(e.getKey());
@@ -618,7 +575,7 @@ public final class ExplorerMountTable {
                 }
 
                 try {
-                    if (mountOrRestore(mountID, factID, storage, false)
+                    if (mountOrRestore(mountID, factID, storage)
                             == null) {
                         LOGGER.error("Unable to restore mount point '"
                                 + mountID + "' (from " + factID

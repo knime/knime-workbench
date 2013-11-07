@@ -18,7 +18,12 @@
  */
 package org.knime.workbench.explorer.view;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Text;
 import org.knime.workbench.explorer.ExplorerMountTable;
 
 /**
@@ -101,4 +106,128 @@ public abstract class AbstractContentProviderFactory {
      * @since 3.0
      */
     public abstract boolean isAdditionalInformationNeeded();
+
+    /**
+     * If additional information is needed for creating a content provider,
+     * the factory has to provide a {@link Composite} to allow input to be
+     * included in other panels.
+     *
+     * @param parent the parent {@link Composite}
+     * information input.
+     * @param mountIDInput the input component which can be used to provide a default mount ID
+     * @param errorLabel an error label, which can be filled by the panel
+     * @return the additional information panel
+     */
+    public abstract AdditionalInformationPanel createAdditionalInformationPanel(
+            Composite parent, Text mountIDInput);
+
+    /**
+     *
+     */
+    public abstract static class AdditionalInformationPanel {
+
+        private Text m_mountIDInput;
+        private Composite m_parent;
+        private List<ValidationRequiredListener> m_listeners;
+
+        /**
+         * @param parent the parent composite
+         * @param mountIDInput the text input used to fill the default mount ID into
+         */
+        protected AdditionalInformationPanel(final Composite parent, final Text mountIDInput) {
+            m_parent = parent;
+            m_mountIDInput = mountIDInput;
+            m_listeners = new ArrayList<ValidationRequiredListener>();
+        }
+
+        /**
+         * Creates and fills the panel.
+         * @param content The settings content string or null if not present
+         */
+        public abstract void createPanel(String content);
+
+        /**
+         * Validate additional information.
+         * @return validation error message or null if validation succeeds
+         */
+        public abstract String validate();
+
+        /**
+         * @return an {@link AbstractContentProvider} if it can be created from the panel's information.
+         */
+        public abstract AbstractContentProvider createContentProvider();
+
+        /**
+         * @return the parent
+         */
+        protected Composite getParent() {
+            return m_parent;
+        }
+
+        /**
+         * @return the mount ID
+         */
+        protected String getMountIDValue() {
+            return m_mountIDInput.getText();
+        }
+
+        /**
+         * Notifies listeners of a new default mount ID value.
+         * @param value the mount ID
+         */
+        protected void setMountIDValue(final String value) {
+            for (ValidationRequiredListener listener : m_listeners) {
+                listener.defaultMountIDChanged(value);
+            }
+        }
+
+        /**
+         * @param listener
+         */
+        public void addValidationRequiredListener(final ValidationRequiredListener listener) {
+            m_listeners.add(listener);
+        }
+
+        /**
+         * @param listener
+         */
+        public void removeValidationRequiredListener(final ValidationRequiredListener listener) {
+            m_listeners.remove(listener);
+        }
+
+        /**
+         *
+         */
+        public void removeAllValidationRequiredListeners() {
+            m_listeners.clear();
+        }
+
+        /**
+         *
+         */
+        protected void notifyValidationListeners() {
+            for (ValidationRequiredListener listener : m_listeners) {
+                listener.validationRequired();
+            }
+        }
+    }
+
+    /**
+     * Interface for a listener which is called when validation is required
+     * on additional panels.
+     */
+    public static interface ValidationRequiredListener {
+
+        /**
+         * Called when validation is required.
+         */
+        public void validationRequired();
+
+        /**
+         * Called when the default mount ID changes.
+         * @param defaultMountID the new default mount ID
+         */
+        public void defaultMountIDChanged(String defaultMountID);
+
+    }
 }

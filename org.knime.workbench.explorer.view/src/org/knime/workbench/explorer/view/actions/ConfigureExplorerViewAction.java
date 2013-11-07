@@ -22,16 +22,13 @@
 
 package org.knime.workbench.explorer.view.actions;
 
-import java.util.List;
-
-import org.eclipse.jface.viewers.TreeViewer;
-import org.eclipse.jface.window.Window;
+import org.eclipse.jface.preference.PreferenceDialog;
+import org.eclipse.ui.dialogs.PreferencesUtil;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.explorer.view.dialogs.SelectMountPointDialog;
+import org.knime.workbench.explorer.view.preferences.ExplorerPreferencePage;
 
 /**
  *
@@ -70,19 +67,10 @@ public class ConfigureExplorerViewAction extends ExplorerAction {
      */
     @Override
     public void run() {
-            TreeViewer viewer = getViewer();
-            SelectMountPointDialog selectDlg =
-                    new SelectMountPointDialog(viewer.getControl().getShell(),
-                            m_delegator.getMountedIds());
-            selectDlg.setBlockOnOpen(true);
-            if (selectDlg.open() != Window.OK) {
-                return;
-            }
-            m_delegator.removeAllMountPoints();
-            List<MountPoint> result = selectDlg.getResult();
-            for (MountPoint mp : result) {
-                m_delegator.addMountPoint(mp);
-            }
-            viewer.refresh();
+        PreferenceDialog dialog =
+                PreferencesUtil.createPreferenceDialogOn(getViewer().getControl().getShell(),
+                        ExplorerPreferencePage.ID,
+                        new String[]{ExplorerPreferencePage.ID}, null);
+        dialog.open();
     }
 }

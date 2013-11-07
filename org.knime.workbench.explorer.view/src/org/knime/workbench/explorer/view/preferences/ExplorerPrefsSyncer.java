@@ -79,24 +79,28 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
             }
             oldSettings.removeAll(new LinkedHashSet<MountSettings>(newMS));
 
+            // remove deleted mount points
+            for (MountSettings ms : oldSettings) {
+                boolean successful = ExplorerMountTable.unmount(
+                        ms.getMountID());
+                if (!successful) {
+                    // most likely mount point was not present to begin with
+                    NodeLogger.getLogger(this.getClass()).debug("Mount point \"" + ms.getDisplayName()
+                            + "\" could not be unmounted.");
+                }
+            }
+
             // add all new mount points
             for (MountSettings ms : newSettings) {
+                if (!ms.isActive()) {
+                    continue;
+                }
                 try {
                     ExplorerMountTable.mount(ms.getMountID(),
                             ms.getFactoryID(), ms.getContent());
                 } catch (IOException e) {
                     NodeLogger.getLogger(this.getClass()).error("Mount point \"" + ms.getDisplayName()
                             + "\" could not be mounted.", e);
-                }
-            }
-
-            // remove deleted mount points
-            for (MountSettings ms : oldSettings) {
-                boolean successful = ExplorerMountTable.unmount(
-                        ms.getMountID());
-                if (!successful) {
-                    NodeLogger.getLogger(this.getClass()).warn("Mount point \"" + ms.getDisplayName()
-                            + "\" could not be unmounted.");
                 }
             }
 
@@ -107,6 +111,5 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
             }
             ExplorerMountTable.setMountOrder(newMountIds);
         }
-
     }
 }
