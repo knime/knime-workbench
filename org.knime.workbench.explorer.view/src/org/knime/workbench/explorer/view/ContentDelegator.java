@@ -524,7 +524,7 @@ public class ContentDelegator extends LabelProvider implements
 
     private void writeToPreferences(final String settings) {
         IEclipsePreferences preferences = InstanceScope.INSTANCE
-                .getNode(ExplorerPreferencePage.ID);
+                .getNode(FrameworkUtil.getBundle(ExplorerPreferencePage.class).getSymbolicName());
         preferences.put(PreferenceConstants.P_EXPLORER_MOUNT_POINT, settings);
         try {
             preferences.flush();
