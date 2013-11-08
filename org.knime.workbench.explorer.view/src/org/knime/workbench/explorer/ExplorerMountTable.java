@@ -359,6 +359,7 @@ public final class ExplorerMountTable {
      * Use this method for intermediate determination of addable content providers (e.g. in preferences)
      * @param existingProviderIDs a list with given content provider IDs
      * @return a list of available content providers
+     * @since 6.0
      */
     public static List<AbstractContentProviderFactory>
             getAddableContentProviders(final List<String> existingProviderIDs) {

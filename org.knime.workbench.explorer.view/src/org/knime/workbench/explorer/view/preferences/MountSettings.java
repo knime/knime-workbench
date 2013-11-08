@@ -139,6 +139,7 @@ public class MountSettings {
 
     /**
      * @return the active
+     * @since 6.0
      */
     public boolean isActive() {
         return m_active;
@@ -146,6 +147,7 @@ public class MountSettings {
 
     /**
      * @param active the active to set
+     * @since 6.0
      */
     public void setActive(final boolean active) {
         if (m_active != active) {

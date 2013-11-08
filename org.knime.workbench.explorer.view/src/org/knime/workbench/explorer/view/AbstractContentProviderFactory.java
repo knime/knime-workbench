@@ -117,12 +117,13 @@ public abstract class AbstractContentProviderFactory {
      * @param mountIDInput the input component which can be used to provide a default mount ID
      * @param errorLabel an error label, which can be filled by the panel
      * @return the additional information panel
+     * @since 6.0
      */
     public abstract AdditionalInformationPanel createAdditionalInformationPanel(
             Composite parent, Text mountIDInput);
 
     /**
-     *
+     * @since 6.0
      */
     public abstract static class AdditionalInformationPanel {
 
@@ -215,6 +216,7 @@ public abstract class AbstractContentProviderFactory {
     /**
      * Interface for a listener which is called when validation is required
      * on additional panels.
+     * @since 6.0
      */
     public static interface ValidationRequiredListener {
 

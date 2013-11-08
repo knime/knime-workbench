@@ -98,6 +98,7 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  * Dialog for selecting a new resource/item to be displayed in the KNIME Explorer view.
  *
  * @author ohl, University of Konstanz
+ * @since 6.0
  */
 
 public class EditMountPointDialog extends ListDialog {

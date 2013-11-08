@@ -96,6 +96,7 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
 /**
  *
  * @author Christian Albrecht, KNIME.com AG, Zurich, Switzerland
+ * @since 6.0
  */
 public class MountPointTableEditor extends FieldEditor {
 
