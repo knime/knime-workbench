@@ -223,7 +223,7 @@ public class ExplorerFileSystem extends FileSystem {
      * @param name to test.
      * @return null, if the specified filename doesn't contain invalid
      *         characters, error message otherwise
-     * @since 3.8
+     * @since 6.0
      */
     public static String validateFilename(final String name) {
         if (name == null || name.isEmpty()) {
