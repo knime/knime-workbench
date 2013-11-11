@@ -561,6 +561,10 @@ public final class ExplorerMountTable {
         unmountAll();
         synchronized (MOUNTED) {
             for (MountSettings ms : getMountSettings()) {
+                // ignore inactive
+                if (!ms.isActive()) {
+                    continue;
+                }
                 String mountID = ms.getMountID();
                 String storage = ms.getContent();
                 if (storage == null) {
