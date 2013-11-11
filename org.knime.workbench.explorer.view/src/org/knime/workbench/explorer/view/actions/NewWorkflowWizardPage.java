@@ -257,9 +257,9 @@ public class NewWorkflowWizardPage extends WizardPage {
                     + m_elementName.toLowerCase());
             return;
         }
-        if (!ExplorerFileSystem.isValidFilename(projectName)) {
-            updateStatus(projectName + " is not a valid "
-                    + m_elementName.toLowerCase() + " name");
+        String validMsg = ExplorerFileSystem.validateFilename(projectName);
+        if (validMsg != null) {
+            updateStatus(validMsg);
             return;
         }
         // check whether this container already exists

@@ -85,16 +85,11 @@ public class ExplorerFileSystem extends FileSystem {
      * guaranteed that these characters are not used but usage should be
      * avoided.
      */
-    private static final String ILLEGAL_DIR_CHARS;
     private static final String ILLEGAL_FILENAME_CHARS;
     private static final Pattern ILLEGAL_FILENAME_CHARS_PATTERN;
-    private static final Pattern ILLEGAL_DIR_CHARS_PATTERN;
 
     static {
-        ILLEGAL_DIR_CHARS = "*?#:\"<>%~|";
-        ILLEGAL_FILENAME_CHARS = ILLEGAL_DIR_CHARS + "/\\";
-        ILLEGAL_DIR_CHARS_PATTERN =
-            Pattern.compile("[" + ILLEGAL_DIR_CHARS + "]+");
+        ILLEGAL_FILENAME_CHARS = "*?#:\"<>%~|/\\";
         // double escape backslashes for regular expression
         ILLEGAL_FILENAME_CHARS_PATTERN =
             Pattern.compile("[" + ILLEGAL_FILENAME_CHARS.replace(
@@ -221,46 +216,30 @@ public class ExplorerFileSystem extends FileSystem {
         return false;
     }
 
-
-    /**
-     * Returns true, if the specified path doesn't contain invalid characters.
-     * Slashes and backslashes are valid, as they are considered separators -
-     * and the argument could contain a full path. See
-     * {@link #isValidFilename(String)}.
-     *
-     * @param path to test.
-     * @return true, if the specified path doesn't contain invalid characters.
-     */
-    public static boolean isValidPath(final String path) {
-        Matcher matcher = ILLEGAL_DIR_CHARS_PATTERN.matcher(path);
-        return !matcher.find();
-    }
-
-    /**
-     * @return the characters that are invalid for paths
-     */
-    public static String getIllegalPATHChars() {
-        return ILLEGAL_DIR_CHARS;
-    }
-
     /**
      * Returns true, if the specified filename doesn't contain invalid
-     * characters. This is the same method as {@link #isValidPath(String)},
-     * except slashes are not allowed either.
+     * characters.
      *
      * @param name to test.
-     * @return true, if the specified filename doesn't contain invalid
-     *         characters.
+     * @return null, if the specified filename doesn't contain invalid
+     *         characters, error message otherwise
      */
-    public static boolean isValidFilename(final String name) {
+    public static String validateFilename(final String name) {
         if (name == null || name.isEmpty()) {
-            return false;
+            return "No name provided.";
         }
-        if (".".equals(name) || "..".equals(name)) {
-            return false;
+        if (name.startsWith(".")) {
+            return "Name cannot start with dot.";
+        }
+        if (name.endsWith(".")) {
+            return "Name cannot end with dot.";
         }
         Matcher matcher = ILLEGAL_FILENAME_CHARS_PATTERN.matcher(name);
-        return !matcher.find();
+        if (matcher.find()) {
+            return "Name contains invalid characters ("
+                    + ExplorerFileSystem.getIllegalFilenameChars() + ").";
+        }
+        return null;
     }
 
     /**

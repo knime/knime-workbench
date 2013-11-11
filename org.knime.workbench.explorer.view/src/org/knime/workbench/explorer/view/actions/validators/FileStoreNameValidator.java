@@ -36,12 +36,8 @@ public class FileStoreNameValidator implements IInputValidator {
             return "Please choose a name";
         } else if (name.trim().equals(m_initialName)) {
             return "Please choose a new name";
-        } else if (!ExplorerFileSystem.isValidFilename(name.trim())) {
-            return "One of the following illegal characters is used: "
-                    + ExplorerFileSystem.getIllegalFilenameChars();
         } else {
-            return null;
+            return ExplorerFileSystem.validateFilename(name.trim());
         }
     }
-
 }

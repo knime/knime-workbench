@@ -160,16 +160,17 @@ public class RenameWorkflowImportPage extends WizardPage {
     }
 
     private boolean checkIsNameValid(final String name) {
-        m_isNameValid = ExplorerFileSystem.isValidFilename(name);
+        String errMsg = ExplorerFileSystem.validateFilename(name);
+        m_isNameValid = errMsg != null;
         if (!m_isNameValid) {
-            setErrorMessage(name + " is not a valid name!");
+            setErrorMessage(errMsg);
             setPageComplete(false);
         }
         return m_isNameValid;
     }
 
     private boolean checkNameExists(final String name) {
-        AbstractExplorerFileStore destination 
+        AbstractExplorerFileStore destination
                 = m_previousPage.getDestinationPath();
         AbstractExplorerFileStore newChild = destination.getChild(name);
         m_nameExists = newChild.fetchInfo().exists();

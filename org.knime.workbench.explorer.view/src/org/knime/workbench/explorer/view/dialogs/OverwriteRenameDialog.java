@@ -358,11 +358,8 @@ public class OverwriteRenameDialog extends Dialog {
                     // finalize sets the messages
                     return;
                 }
-                if (!ExplorerFileSystem.isValidFilename(m_newName)) {
-                    errMsg =
-                            "New destination name contains invalid characters ("
-                                  + ExplorerFileSystem.getIllegalFilenameChars()
-                                  + ")";
+                errMsg = ExplorerFileSystem.validateFilename(m_newName);
+                if (errMsg != null) {
                     return;
                 }
                 AbstractExplorerFileStore parent = m_destination.getParent();
