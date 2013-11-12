@@ -118,7 +118,6 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     protected static final Collection<String> HIDDEN_FILENAMES = new ArrayList<String>();
     static {
         HIDDEN_FILENAMES.add("workflowset.meta");
-        HIDDEN_FILENAMES.add(".project");
     }
 
     private static final NodeLogger LOGGER = NodeLogger
@@ -145,6 +144,18 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
         m_creator = myCreator;
         m_id = id;
+    }
+
+    /**
+     * @param fileName the file name to test
+     * @return true if a file is hidden, false otherwise
+     * @since 6.0
+     */
+    protected static final boolean isHiddenFile(final String fileName) {
+        if (fileName != null) {
+            return fileName.startsWith(".") || HIDDEN_FILENAMES.contains(fileName);
+        }
+        return false;
     }
 
     /**
@@ -863,7 +874,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     result.add(c);
                 }
                 if (AbstractExplorerFileStore.isDataFile(c)) {
-                    if (!HIDDEN_FILENAMES.contains(c.getName())) {
+                    if (!isHiddenFile(c.getName())) {
                         result.add(c);
                     }
                 }
