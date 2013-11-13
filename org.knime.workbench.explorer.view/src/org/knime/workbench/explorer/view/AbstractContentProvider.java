@@ -151,7 +151,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @return true if a file is hidden, false otherwise
      * @since 6.0
      */
-    protected static final boolean isHiddenFile(final String fileName) {
+    public static final boolean isHiddenFile(final String fileName) {
         if (fileName != null) {
             return fileName.startsWith(".") || HIDDEN_FILENAMES.contains(fileName);
         }

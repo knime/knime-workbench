@@ -71,10 +71,10 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 import org.knime.workbench.ui.nature.KNIMEProjectNature;
 import org.knime.workbench.ui.navigator.KnimeResourceUtil;
@@ -161,22 +161,15 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     public String[] childNames(final int options, final IProgressMonitor monitor)
             throws CoreException {
         String[] children = m_file.childNames(options, monitor);
-        if (getFullName().equals("/")) {
-            // TODO: We MUST rewrite this if we change to IResources!!!
-            // remove .metadata and workflowset.meta from the list of shown
-            // childs
-            ArrayList<String> rootChilds =
-                    new ArrayList<String>(children.length);
-            for (String c : children) {
-                if (c.equals(".metadata")
-                        || c.equals(WorkflowPersistor.METAINFO_FILE)) {
-                    continue;
-                }
-                rootChilds.add(c);
+        // TODO: We MUST rewrite this if we change to IResources!!!
+        // remove .metadata, .project and workflowset.meta from the list of shown children
+        ArrayList<String> filteredChildren = new ArrayList<String>(children.length);
+        for (String c : children) {
+            if (!AbstractContentProvider.isHiddenFile(c)) {
+                filteredChildren.add(c);
             }
-            return rootChilds.toArray(new String[rootChilds.size()]);
         }
-        return children;
+        return filteredChildren.toArray(new String[filteredChildren.size()]);
     }
 
     /**

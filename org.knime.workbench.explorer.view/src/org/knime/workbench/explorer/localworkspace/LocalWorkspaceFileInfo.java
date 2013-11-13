@@ -25,6 +25,7 @@ package org.knime.workbench.explorer.localworkspace;
 import java.io.File;
 
 import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.knime.core.node.workflow.FileSingleNodeContainerPersistor;
@@ -209,8 +210,11 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
     }
 
     private static boolean isDataFile(final IFileStore file) {
-        // local workspace doesn't hold data files.
-        return false;
+        if (file == null) {
+            return false;
+        }
+        final IFileInfo fileInfo = file.fetchInfo();
+        return fileInfo.exists() && !fileInfo.isDirectory();
     }
 
     /**

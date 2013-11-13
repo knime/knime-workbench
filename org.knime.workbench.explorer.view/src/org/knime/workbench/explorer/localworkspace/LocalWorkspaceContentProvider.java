@@ -20,6 +20,7 @@ package org.knime.workbench.explorer.localworkspace;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -38,6 +39,7 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -50,7 +52,6 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.util.KnimeFileUtil;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -64,6 +65,7 @@ import org.knime.workbench.explorer.view.actions.GlobalCopyAction;
 import org.knime.workbench.explorer.view.actions.GlobalMoveAction;
 import org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+import org.osgi.framework.Bundle;
 
 /**
  * Provides content for the user space view that shows the content (workflows
@@ -204,6 +206,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         if (AbstractExplorerFileStore.isWorkflowGroup(parent)) {
             return getWorkflowgroupChildren(parent);
         }
+        if (AbstractExplorerFileStore.isWorkflowTemplate(parent)) {
+            return getWorkflowTemplateChildren(parent);
+        }
         // everything else: return dirs only
         try {
             AbstractExplorerFileStore[] children
@@ -215,8 +220,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     result.add(c);
                     continue;
                 }
-                if (AbstractExplorerFileStore.isWorkflowGroup(
-                        c)) {
+                if (AbstractExplorerFileStore.isWorkflowGroup(c)) {
                     result.add(c);
                     continue;
                 }
@@ -236,7 +240,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     public static AbstractExplorerFileStore[] getWorkflowgroupChildren(
             final LocalExplorerFileStore workflowGroup) {
-
         assert AbstractExplorerFileStore.isWorkflowGroup(workflowGroup);
 
         try {
@@ -249,7 +252,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     new ArrayList<AbstractExplorerFileStore>();
             for (AbstractExplorerFileStore c : childs) {
                 if (AbstractExplorerFileStore.isWorkflowGroup(c)
-                        || AbstractExplorerFileStore.isWorkflow(c)) {
+                        || AbstractExplorerFileStore.isWorkflow(c)
+                        || AbstractExplorerFileStore.isWorkflowTemplate(c)
+                        || AbstractExplorerFileStore.isDataFile(c)) {
                     result.add(c);
                 }
             }
@@ -410,7 +415,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             }
             for (AbstractExplorerFileStore fs : fileStores) {
                 if (!(AbstractExplorerFileStore.isWorkflow(fs)
-                        || AbstractExplorerFileStore.isWorkflowGroup(fs))) {
+                        || AbstractExplorerFileStore.isWorkflowGroup(fs)
+                        || AbstractExplorerFileStore.isWorkflowTemplate(fs)
+                        || AbstractExplorerFileStore.isDataFile(fs))) {
                     return false;
                 }
                 if (!fs.fetchInfo().isReadable()) {
@@ -430,7 +437,39 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     /** {@inheritDoc} */
     @Override
     public final boolean canHostMetaNodeTemplates() {
-        return false;
+        return isTeamspaceLicenseAvailable();
+    }
+
+    private static Boolean isTeamspaceLicenseAvailable;
+
+
+    private boolean isTeamspaceLicenseAvailable() {
+        if (isTeamspaceLicenseAvailable == null) {
+            Bundle licenseBundle = Platform.getBundle("com.knime.licenses");
+            if (licenseBundle == null) {
+                isTeamspaceLicenseAvailable = false;
+                return isTeamspaceLicenseAvailable;
+            }
+            Class<?> licStoreCl;
+            try {
+                licStoreCl = licenseBundle.loadClass("com.knime.licenses.LicenseStore");
+            } catch (Exception e) {
+                isTeamspaceLicenseAvailable = false;
+                return isTeamspaceLicenseAvailable;
+            }
+            try {
+                Method method = licStoreCl.getMethod("validLicense", String.class);
+                Object isValid = method.invoke(null, "TeamSpace");
+                isTeamspaceLicenseAvailable = isValid instanceof Boolean ? ((Boolean)isValid).booleanValue() : false;
+                return isTeamspaceLicenseAvailable;
+            } catch (Exception e) {
+                LOGGER.coding("Couldn't resolve license check method, "
+                        + "disallowing meta node template saving", e);
+                isTeamspaceLicenseAvailable = false;
+                return isTeamspaceLicenseAvailable;
+            }
+        }
+        return isTeamspaceLicenseAvailable;
     }
 
     /**
@@ -438,7 +477,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public final boolean canHostDataFiles() {
-        return false;
+        return true;
     }
 
     /**
@@ -476,13 +515,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 File targetDir = target.toLocalFile(EFS.NONE, null);
                 for (String path : files) {
                     File src = new File(path);
-                    boolean isWorkflowOrGroup =
-                            KnimeFileUtil.isWorkflow(src)
-                                    || KnimeFileUtil.isWorkflowGroup(src);
-                    if (!isWorkflowOrGroup) {
-                        LOGGER.warn("Only workflows or workflow groups can be"
-                                + " copied into the local workspace. Aborting "
-                                + "operation.");
+                    if (!src.isFile()) {
+                        LOGGER.error("Only files can be dropped. " + path
+                                + " doesn't denote a file.");
                         return false;
                     }
                 }
@@ -491,7 +526,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     if (src.exists()
                             && !targetDir.equals(src.getParentFile())) {
                         File dir = new File(targetDir, src.getName());
-                        FileUtils.copyDirectory(src, dir);
+                        FileUtils.copyFile(src, dir);
                         LOGGER.debug("Copied directory "
                                 + src.getAbsolutePath() + " to directory "
                                 + dir.getAbsolutePath() + ".");
