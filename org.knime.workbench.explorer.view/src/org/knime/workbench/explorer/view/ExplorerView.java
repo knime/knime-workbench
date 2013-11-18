@@ -89,7 +89,6 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
@@ -671,29 +670,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     public void init(final IViewSite site, final IMemento memento)
             throws PartInitException {
         super.init(site, memento);
+        IMemento content = null;
         if (memento != null) {
             // restore visible mount points
-            IMemento content = memento.getChild("content");
-            if (content != null) {
-                m_contentDelegator.restoreState(content);
-            } else {
-                LOGGER.warn("Corrupted User Resource View state storage. "
-                        + "Can't restore state of view.");
-            }
-        } else { // freshly opened view
-            // add all mount points that are mounted by default
-            List<String> mountIDs = ExplorerMountTable.getAllMountIDs();
-            for (String id : mountIDs) {
-                MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
-                String defaultID =
-                    mountPoint.getProviderFactory().getDefaultMountID();
-                if (id.equals(defaultID)) {
-                    LOGGER.debug("Adding default mount point '" + id
-                            + "' to explorer view");
-                    m_contentDelegator.addMountPoint(mountPoint);
-                }
-            }
+            content = memento.getChild("content");
         }
+        m_contentDelegator.restoreState(content);
     }
 
     /**

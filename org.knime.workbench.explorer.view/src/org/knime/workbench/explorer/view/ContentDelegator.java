@@ -26,8 +26,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.eclipse.core.runtime.preferences.IEclipsePreferences;
-import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.ILabelProviderListener;
@@ -40,15 +39,13 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.view.preferences.ExplorerPreferencePage;
 import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
-import org.osgi.framework.FrameworkUtil;
-import org.osgi.service.prefs.BackingStoreException;
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
@@ -470,12 +467,16 @@ public class ContentDelegator extends LabelProvider implements
      *
      */
     public void restoreState(final IMemento storage) {
-        String displayed = storage.getString(KEY);
-        if (displayed != null && !displayed.isEmpty()) {
-            restoreStateFromStorage(displayed);
-            saveStateToPreferences();
-            // make sure state is read from preferences next time
-            storage.putString(KEY, "");
+        if (storage != null) {
+            String displayed = storage.getString(KEY);
+            if (displayed != null && !displayed.isEmpty()) {
+                restoreStateFromStorage(displayed);
+                saveStateToPreferences();
+                // make sure state is read from preferences next time
+                storage.putString(KEY, "");
+            } else {
+                restoreStateFromPreferences();
+            }
         } else {
             restoreStateFromPreferences();
         }
@@ -515,22 +516,19 @@ public class ContentDelegator extends LabelProvider implements
     }
 
     private List<MountSettings> getMountSettingsFromPreferences() {
-        IEclipsePreferences preferences = InstanceScope.INSTANCE
-                .getNode(FrameworkUtil.getBundle(ExplorerPreferencePage.class).getSymbolicName());
-        String prefString = preferences.get(PreferenceConstants.P_EXPLORER_MOUNT_POINT, "");
+        IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
+        String prefString = prefStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
+        if (prefString == null || prefString.isEmpty()) {
+            prefString = prefStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
+        }
         List<MountSettings> settingsList = MountSettings.parseSettings(prefString);
         return settingsList;
     }
 
     private void writeToPreferences(final String settings) {
-        IEclipsePreferences preferences = InstanceScope.INSTANCE
-                .getNode(FrameworkUtil.getBundle(ExplorerPreferencePage.class).getSymbolicName());
-        preferences.put(PreferenceConstants.P_EXPLORER_MOUNT_POINT, settings);
-        try {
-            preferences.flush();
-        } catch (BackingStoreException e) {
-            LOGGER.error("Could not save current active state of mount points to preferences store! "
-                    + e.getMessage(), e);
+        if (settings != null && !settings.isEmpty()) {
+            IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
+            prefStore.setValue(PreferenceConstants.P_EXPLORER_MOUNT_POINT, settings);
         }
     }
 
