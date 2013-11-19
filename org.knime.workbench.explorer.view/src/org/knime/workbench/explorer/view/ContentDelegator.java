@@ -494,16 +494,11 @@ public class ContentDelegator extends LabelProvider implements
     private void saveStateToPreferences() {
         List<MountSettings> settingsList = getMountSettingsFromPreferences();
         Set<String> activeIDs = getMountedIds();
-        StringBuilder builder = new StringBuilder();
         for (int i = 0; i < settingsList.size(); i++) {
             MountSettings settings = settingsList.get(i);
             settings.setActive(activeIDs.contains(settings.getMountID()));
-            if (i > 0) {
-                builder.append(MountSettings.SETTINGS_SEPARATOR);
-            }
-            builder.append(settings.getSettingsString());
         }
-        writeToPreferences(builder.toString());
+        writeToPreferences(MountSettings.getSettingsString(settingsList));
     }
 
     private void restoreStateFromPreferences() {

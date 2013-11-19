@@ -22,6 +22,7 @@
 
 package org.knime.workbench.explorer.view.preferences;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
@@ -49,27 +50,25 @@ public class ExplorerPreferenceInitializer extends
         IPreferenceStore prefStore =
                 ExplorerActivator.getDefault().getPreferenceStore();
         // Set the default mount points
-        String defMounts = "";
         List<AbstractContentProviderFactory> factories =
                 ExplorerMountTable.getAddableContentProviders();
+        List<MountSettings> settingsList = new ArrayList<MountSettings>();
         for (AbstractContentProviderFactory fac : factories) {
             if (fac.getDefaultMountID() != null) {
                 final AbstractContentProvider cntProvider =
                     fac.createContentProvider(fac.getDefaultMountID());
                 if (cntProvider != null) {
                     try {
-                        MountSettings ms = new MountSettings(cntProvider);
-                        defMounts += ms.getSettingsString()
-                            + MountSettings.SETTINGS_SEPARATOR;
+                        settingsList.add(new MountSettings(cntProvider));
                     } finally {
                         cntProvider.dispose();
                     }
                 }
             }
         }
-        if (!defMounts.isEmpty()) {
+        if (!settingsList.isEmpty()) {
             prefStore.setDefault(PreferenceConstants.P_EXPLORER_MOUNT_POINT,
-                    defMounts);
+                    MountSettings.getSettingsString(settingsList));
         }
         // Set the default behavior of "Do you want to link this meta node".
         prefStore.setDefault(

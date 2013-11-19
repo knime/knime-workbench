@@ -265,6 +265,13 @@ public class EditMountPointDialog extends ListDialog {
     }
 
     /**
+     * @return the defaultMountID
+     */
+    public String getDefaultMountID() {
+        return m_defaultMountID;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override

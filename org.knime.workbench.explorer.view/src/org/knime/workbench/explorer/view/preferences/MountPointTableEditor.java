@@ -137,7 +137,9 @@ public class MountPointTableEditor extends FieldEditor {
                 factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
                 AbstractContentProvider provider =
                         factory.createContentProvider(settings.getMountID(), settings.getContent());
-                return provider.toString();
+                String value = provider.toString();
+                provider.dispose();
+                return value;
 
             case TYPE_PROP:
                 factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
@@ -483,7 +485,11 @@ public class MountPointTableEditor extends FieldEditor {
         }
         AbstractContentProvider newCP = dlg.getContentProvider();
         if (newCP != null) {
-            return new MountSettings(newCP);
+            MountSettings mountSettings = new MountSettings(newCP);
+            if (mountSettings.getDefaultMountID() == null) {
+                mountSettings.setDefaultMountID(dlg.getDefaultMountID());
+            }
+            return mountSettings;
         }
         return null;
     }
@@ -529,6 +535,9 @@ public class MountPointTableEditor extends FieldEditor {
         AbstractContentProvider newCP = dlg.getContentProvider();
         if (newCP != null) {
             MountSettings mountSettings = new MountSettings(newCP);
+            if (mountSettings.getDefaultMountID() == null) {
+                mountSettings.setDefaultMountID(dlg.getDefaultMountID());
+            }
             return mountSettings;
         }
         return null;
@@ -561,16 +570,13 @@ public class MountPointTableEditor extends FieldEditor {
      */
     @Override
     protected void doStore() {
-        StringBuilder builder = new StringBuilder();
+        List<MountSettings> settingsList = new ArrayList<MountSettings>();
         TableItem[] tableItems = m_table.getItems();
-        for (int i = 0; i < tableItems.length; i++) {
-            if (i > 0) {
-                builder.append(MountSettings.SETTINGS_SEPARATOR);
-            }
-            MountSettings settings = (MountSettings)tableItems[i].getData();
-            builder.append(settings.getSettingsString());
+        for (TableItem item : m_table.getItems()) {
+            settingsList.add((MountSettings)item.getData());
         }
-        getPreferenceStore().setValue(getPreferenceName(), builder.toString());
+        String settingsString = MountSettings.getSettingsString(settingsList);
+        getPreferenceStore().setValue(getPreferenceName(), settingsString);
     }
 
     /**
