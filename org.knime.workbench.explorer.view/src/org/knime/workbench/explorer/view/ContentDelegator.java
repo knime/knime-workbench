@@ -151,7 +151,9 @@ public class ContentDelegator extends LabelProvider implements
         ArrayList<AbstractContentProvider> result =
                 new ArrayList<AbstractContentProvider>();
         for (MountPoint mp : m_provider) {
-            result.add(mp.getProvider());
+            if (mp.isActive()) {
+                result.add(mp.getProvider());
+            }
         }
         return result;
     }

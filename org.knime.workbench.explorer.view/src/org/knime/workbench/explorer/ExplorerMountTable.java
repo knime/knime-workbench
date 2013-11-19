@@ -120,12 +120,13 @@ public final class ExplorerMountTable {
      *
      * @param mountID name under which the content is mounted
      * @param providerID the provider factory id
+     * @param active true if mount point should be visible in explorer view
      * @return a new content provider instance - or null if user canceled.
      * @throws IOException if the mounting fails
      */
     public static AbstractContentProvider mount(final String mountID,
-            final String providerID) throws IOException {
-        return mountOrRestore(mountID, providerID, (String)null);
+            final String providerID, final boolean active) throws IOException {
+        return mountOrRestore(mountID, providerID, (String)null, active);
     }
 
     /**
@@ -217,12 +218,13 @@ public final class ExplorerMountTable {
      * @param mountID name under which the content is mounted
      * @param providerID the provider factory id
      * @param storage the stored data of the content provider
+     * @param active true if mount point should be visible in explorer view
      * @return a new content provider instance - or null if user canceled.
      * @throws IOException if the mounting fails
      */
     public static AbstractContentProvider mount(final String mountID,
-            final String providerID, final String storage) throws IOException {
-        return mountOrRestore(mountID, providerID, storage);
+            final String providerID, final String storage, final boolean active) throws IOException {
+        return mountOrRestore(mountID, providerID, storage, active);
     }
 
     /**
@@ -233,10 +235,11 @@ public final class ExplorerMountTable {
      * @param mountID
      * @param providerID
      * @param storage
+     * @param active
      * @return
      */
     private static AbstractContentProvider mountOrRestore(final String mountID,
-            final String providerID, final String storage) throws IOException {
+            final String providerID, final String storage, final boolean active) throws IOException {
         checkMountID(mountID);
         synchronized (MOUNTED) {
             // can't mount different providers with the same ID
@@ -288,7 +291,7 @@ public final class ExplorerMountTable {
                 }
             }
 
-            MountPoint mp = new MountPoint(mountID, newProvider, fac);
+            MountPoint mp = new MountPoint(mountID, newProvider, fac, active);
             synchronized (MOUNTED) {
                 MOUNTED.put(mountID, mp);
                 notifyListeners(new PropertyChangeEvent(mp, MOUNT_POINT_PROPERTY, null, mp.getMountID()));
@@ -578,9 +581,10 @@ public final class ExplorerMountTable {
                             + "Can't restore mount point '" + mountID + "'.");
                     continue;
                 }
+                boolean active = ms.isActive();
 
                 try {
-                    if (mountOrRestore(mountID, factID, storage)
+                    if (mountOrRestore(mountID, factID, storage, active)
                             == null) {
                         LOGGER.error("Unable to restore mount point '"
                                 + mountID + "' (from " + factID
