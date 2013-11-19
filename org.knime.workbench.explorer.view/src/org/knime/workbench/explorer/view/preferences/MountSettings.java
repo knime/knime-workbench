@@ -77,6 +77,7 @@ public class MountSettings {
      *
      * @param settings a NodeSettings object
      * @throws InvalidSettingsException if settings can't be retrieved
+     * @since 6.0
      */
     public MountSettings(final NodeSettingsRO settings) throws InvalidSettingsException {
         m_mountID = settings.getString("mountID");
@@ -173,6 +174,7 @@ public class MountSettings {
 
     /**
      * @return the defaultMountID
+     * @since 6.0
      */
     public String getDefaultMountID() {
         return m_defaultMountID;
@@ -180,6 +182,7 @@ public class MountSettings {
 
     /**
      * @param defaultMountID the defaultMountID to set
+     * @since 6.0
      */
     public void setDefaultMountID(final String defaultMountID) {
         if (!defaultMountID.equals(m_defaultMountID)) {
@@ -238,11 +241,11 @@ public class MountSettings {
      */
     public String getSettingsString() {
         if (m_state == null) {
-            m_state = getDisplayName() + VISIBILITY_SEPARATOR 
-                    + m_mountID + ELEMENTS_SEPARATOR 
-                    + m_factoryID + ELEMENTS_SEPARATOR 
+            m_state = getDisplayName() + VISIBILITY_SEPARATOR
+                    + m_mountID + ELEMENTS_SEPARATOR
+                    + m_factoryID + ELEMENTS_SEPARATOR
                     + Boolean.toString(m_active) + ELEMENTS_SEPARATOR
-                    + (m_defaultMountID == null ? "" : m_defaultMountID) + ELEMENTS_SEPARATOR 
+                    + (m_defaultMountID == null ? "" : m_defaultMountID) + ELEMENTS_SEPARATOR
                     + m_content;
         }
         return m_state;
@@ -283,6 +286,7 @@ public class MountSettings {
     /**
      * @param mountSettings a list of MountSettings
      * @return an XML string representing the given list of MountSettings
+     * @since 6.0
      */
     public static String getSettingsString(final List<MountSettings> mountSettings) {
         NodeSettings nodeSettings = new NodeSettings("mountSettings");

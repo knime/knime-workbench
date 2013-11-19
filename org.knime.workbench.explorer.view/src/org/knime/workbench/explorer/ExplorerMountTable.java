@@ -123,6 +123,7 @@ public final class ExplorerMountTable {
      * @param active true if mount point should be visible in explorer view
      * @return a new content provider instance - or null if user canceled.
      * @throws IOException if the mounting fails
+     * @since 6.0
      */
     public static AbstractContentProvider mount(final String mountID,
             final String providerID, final boolean active) throws IOException {
@@ -221,6 +222,7 @@ public final class ExplorerMountTable {
      * @param active true if mount point should be visible in explorer view
      * @return a new content provider instance - or null if user canceled.
      * @throws IOException if the mounting fails
+     * @since 6.0
      */
     public static AbstractContentProvider mount(final String mountID,
             final String providerID, final String storage, final boolean active) throws IOException {

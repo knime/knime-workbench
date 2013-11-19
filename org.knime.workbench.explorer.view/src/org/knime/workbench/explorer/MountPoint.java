@@ -104,6 +104,9 @@ public class MountPoint {
         return m_id;
     }
 
+    /** @return
+     * @since 6.0
+     */
     public boolean isActive() {
         return m_active;
     }
