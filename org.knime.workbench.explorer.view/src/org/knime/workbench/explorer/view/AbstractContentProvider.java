@@ -397,9 +397,15 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         if (fs != null) {
             workflowMountPoint = fs.getContentProvider();
         }
-        boolean sameMountPoint = target.getContentProvider().equals(workflowMountPoint);
+        Collection<LinkType> allowedLinkTypes = new ArrayList<LinkType>();
+        allowedLinkTypes.add(LinkType.None);
+        allowedLinkTypes.add(LinkType.Absolute);
+        if (target.getContentProvider().equals(workflowMountPoint)) {
+            allowedLinkTypes.add(LinkType.WorkflowRelative);
+            allowedLinkTypes.add(LinkType.MountpointRelative);
+        }
 
-        LinkType linkType = promptLinkMetaNodeTemplate(originalName, newName, sameMountPoint);
+        LinkType linkType = promptLinkMetaNodeTemplate(originalName, newName, allowedLinkTypes);
         if (linkType == null) {
             // user canceled
             return false;
@@ -626,43 +632,22 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     private LinkType promptLinkMetaNodeTemplate(final String oldName, final String newName,
-        final boolean enableAllLinkTypes) {
+        final Collection<LinkType> allowedLinkTypes) {
 
         Shell activeShell = Display.getDefault().getActiveShell();
-        String msg = "Update meta node to link to the template";
-        if (!enableAllLinkTypes) {
-            msg += " (with an absolute link)?";
-        } else {
-            msg += "?";
-        }
+        String msg = "Update meta node to link to the template?";
         if (!oldName.equals(newName)) {
             msg = msg + "\n(The node will be renamed to \"" + newName + "\".)";
         }
 
-        if (!enableAllLinkTypes) {
-            // simple dialog because only absolute links are supported/allowed
-            MessageDialog dialog = new MessageDialog(activeShell, "Link Meta Node Template", null,
-                "Link Meta Node Template", MessageDialog.QUESTION_WITH_CANCEL, new String[]{
-                IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL, IDialogConstants.CANCEL_LABEL}, 0);
-            int result = dialog.open();
-            if (result == 0) { // first in array above
-                return LinkType.Absolute;
-            } else if (result == 1) { // second in array above
-                return LinkType.None;
-            } else {
-                return null;
-            }
-        } else {
-            LinkPrompt dlg = new LinkPrompt(activeShell, msg);
-            dlg.open();
-            if (dlg.getReturnCode() == Window.CANCEL) {
-                return null;
-            }
-            return dlg.getLinkType();
+        LinkPrompt dlg = new LinkPrompt(activeShell, msg, allowedLinkTypes);
+        if (dlg.open() == Window.CANCEL) {
+            return null;
         }
+        return dlg.getLinkType();
     }
 
-    private final class LinkPrompt extends MessageDialog {
+    private static final class LinkPrompt extends MessageDialog {
         private Button m_absoluteLink;
 
         private Button m_mountpointRelativeLink;
@@ -671,16 +656,23 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
         private Button m_noLink;
 
+        private final Collection<LinkType> m_allowedLinkTypes;
+
         private LinkType m_linkType = LinkType.Absolute;
 
 
         /**
+         * Create a new dialog that prompts the user for the link type.
          *
+         * @param parentShell the dialog's parent shell
+         * @param message the message that is shown in the dialog
+         * @param allowedLinkTypes a collection of allowed linked types
          */
-        public LinkPrompt(final Shell parentShell, final String message) {
+        LinkPrompt(final Shell parentShell, final String message, final Collection<LinkType> allowedLinkTypes) {
             super(parentShell, "Link Meta Node Template", null, message, MessageDialog.QUESTION_WITH_CANCEL,
                 new String[]{IDialogConstants.OK_LABEL, IDialogConstants.CANCEL_LABEL}, 0);
             setShellStyle(getShellStyle() | SWT.SHEET);
+            m_allowedLinkTypes = allowedLinkTypes;
         }
 
         /**
@@ -698,14 +690,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         @Override
         protected Control createCustomArea(final Composite parent) {
             Composite group = new Composite(parent, SWT.NONE);
-            group.setLayout(new GridLayout(2, true));
-            group.setLayoutData(new GridData(SWT.RIGHT, SWT.TOP, false, false));
+            group.setLayout(new GridLayout());
+
+            GridData data = new GridData();
+            data.horizontalIndent = 5;
 
             Label l1 = new Label(group, SWT.NONE);
             l1.setText("Select the type of link to be created:");
+
             m_absoluteLink = new Button(group, SWT.RADIO);
-            m_absoluteLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
             m_absoluteLink.setText("Create absolute link");
+            m_absoluteLink.setLayoutData(data);
             m_absoluteLink.setToolTipText("If you move the workflow to a new location it will "
                 + "always link back to this template");
             m_absoluteLink.setSelection(true);
@@ -715,10 +710,10 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     m_linkType = LinkType.Absolute;
                 }
             });
+            m_absoluteLink.setEnabled(m_allowedLinkTypes.contains(LinkType.Absolute));
 
-            new Label(group, SWT.NONE);
             m_mountpointRelativeLink = new Button(group, SWT.RADIO);
-            m_mountpointRelativeLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
+            m_mountpointRelativeLink.setLayoutData(data);
             m_mountpointRelativeLink.setText("Create mountpoint-relative link");
             m_mountpointRelativeLink.setToolTipText("If you move the workflow to a new workspace - the meta node "
                 + "template must be available on this new workspace as well");
@@ -728,10 +723,10 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     m_linkType = LinkType.MountpointRelative;
                 }
             });
+            m_mountpointRelativeLink.setEnabled(m_allowedLinkTypes.contains(LinkType.MountpointRelative));
 
-            new Label(group, SWT.NONE);
             m_workflowRelativeLink = new Button(group, SWT.RADIO);
-            m_workflowRelativeLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
+            m_workflowRelativeLink.setLayoutData(data);
             m_workflowRelativeLink.setText("Create workflow-relative link");
             m_workflowRelativeLink.setToolTipText("Workflow and meta node should always be moved together");
             m_workflowRelativeLink.addSelectionListener(new SelectionAdapter() {
@@ -740,10 +735,10 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     m_linkType = LinkType.WorkflowRelative;
                 }
             });
+            m_workflowRelativeLink.setEnabled(m_allowedLinkTypes.contains(LinkType.WorkflowRelative));
 
-            new Label(group, SWT.NONE);
             m_noLink = new Button(group, SWT.RADIO);
-            m_noLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
+            m_noLink.setLayoutData(data);
             m_noLink.setText("Don't link MetaNode with saved template");
             m_noLink.setToolTipText("You will not be able to update the meta node from the template.");
             m_noLink.addSelectionListener(new SelectionAdapter() {
@@ -752,6 +747,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     m_linkType = LinkType.None;
                 }
             });
+            m_noLink.setEnabled(m_allowedLinkTypes.contains(LinkType.None));
             return group;
         }
     }
