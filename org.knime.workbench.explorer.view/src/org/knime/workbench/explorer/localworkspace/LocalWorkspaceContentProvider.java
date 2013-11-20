@@ -20,7 +20,6 @@ package org.knime.workbench.explorer.localworkspace;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -39,7 +38,6 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -65,7 +63,9 @@ import org.knime.workbench.explorer.view.actions.GlobalCopyAction;
 import org.knime.workbench.explorer.view.actions.GlobalMoveAction;
 import org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
-import org.osgi.framework.Bundle;
+
+import com.knime.licenses.LicenseStore;
+import com.knime.licenses.LicenseTypes;
 
 /**
  * Provides content for the user space view that shows the content (workflows
@@ -440,36 +440,20 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         return isTeamspaceLicenseAvailable();
     }
 
+    /** Init lazy. Checks whether teamspace license is available (enable meta node sharing only if avail). */
     private static Boolean isTeamspaceLicenseAvailable;
 
-
+    /** Lazy init and return of {@link #isTeamspaceLicenseAvailable}. */
     private boolean isTeamspaceLicenseAvailable() {
         if (isTeamspaceLicenseAvailable == null) {
-            Bundle licenseBundle = Platform.getBundle("com.knime.licenses");
-            if (licenseBundle == null) {
-                isTeamspaceLicenseAvailable = false;
-                return isTeamspaceLicenseAvailable;
-            }
-            Class<?> licStoreCl;
             try {
-                licStoreCl = licenseBundle.loadClass("com.knime.licenses.LicenseStore");
-            } catch (Exception e) {
-                isTeamspaceLicenseAvailable = false;
-                return isTeamspaceLicenseAvailable;
-            }
-            try {
-                Method method = licStoreCl.getMethod("validLicense", String.class);
-                Object isValid = method.invoke(null, "TeamSpace");
-                isTeamspaceLicenseAvailable = isValid instanceof Boolean ? ((Boolean)isValid).booleanValue() : false;
-                return isTeamspaceLicenseAvailable;
-            } catch (Exception e) {
-                LOGGER.coding("Couldn't resolve license check method, "
-                        + "disallowing meta node template saving", e);
-                isTeamspaceLicenseAvailable = false;
-                return isTeamspaceLicenseAvailable;
+                isTeamspaceLicenseAvailable = LicenseStore.validLicense(LicenseTypes.TeamSpace.name());
+            } catch (NoClassDefFoundError cnfe) {
+                // optional dependency to com.knime.license not met - no license
+                isTeamspaceLicenseAvailable = Boolean.FALSE;
             }
         }
-        return isTeamspaceLicenseAvailable;
+        return isTeamspaceLicenseAvailable.booleanValue();
     }
 
     /**
