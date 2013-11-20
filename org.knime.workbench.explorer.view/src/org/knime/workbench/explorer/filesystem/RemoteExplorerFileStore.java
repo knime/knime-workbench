@@ -160,8 +160,7 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
 
 
     /**
-     * Replaces this item (a workflow, template, or file) with one of its snapshots. The snapshot will be removed
-     * afterwards.
+     * Replaces this item (a workflow, template, or file) with one of its snapshots.
      *
      * @param snapshotName the name of the snapshot (usually the name of the file store representing the snapshot)
      * @throws CoreException if an error occurs
