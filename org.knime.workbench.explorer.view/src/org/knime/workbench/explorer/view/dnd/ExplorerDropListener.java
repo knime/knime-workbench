@@ -52,6 +52,7 @@ public class ExplorerDropListener extends ViewerDropAdapter {
     private String m_srcMountID;
     private final ExplorerView m_view;
     private int m_default;
+    private Boolean m_canMove = null;
 
     /**
      * @param view the viewer to which this drop support has been added
@@ -133,14 +134,21 @@ public class ExplorerDropListener extends ViewerDropAdapter {
     public void dragEnter(final DropTargetEvent event) {
         /* Set move as default DND operation within a mount point and copy
          * as default operation between different mount points. */
-        if (!isSameMountPoint(event)) {
-              event.detail = DND.DROP_COPY;
-              m_default = DND.DROP_COPY;
-        } else {
-            event.detail = DND.DROP_MOVE;
-            m_default = DND.DROP_MOVE;
-        }
+        m_default = getDefaultOperation(event);
+        event.detail = m_default;
         super.dragEnter(event);
+    }
+
+    private int getDefaultOperation(final DropTargetEvent event) {
+        if (!isSameMountPoint(event)) {
+            return DND.DROP_COPY;
+        } else {
+            if (srcCanMove(event)) {
+                return DND.DROP_MOVE;
+            } else {
+                return DND.DROP_COPY;
+            }
+        }
     }
 
     /**
@@ -150,6 +158,7 @@ public class ExplorerDropListener extends ViewerDropAdapter {
     public void dragLeave(final DropTargetEvent event) {
         // reset the cached source mount id
         m_srcMountID = null;
+        m_canMove = null;
         super.dragLeave(event);
     }
 
@@ -161,11 +170,7 @@ public class ExplorerDropListener extends ViewerDropAdapter {
     public void dragOver(final DropTargetEvent event) {
         int previousDefault = m_default;
         // change the default operation on mount point changes if necessary
-        if (!isSameMountPoint(event)) {
-            m_default = DND.DROP_COPY;
-        } else { // same mount point
-            m_default = DND.DROP_MOVE;
-        }
+        m_default = getDefaultOperation(event);
         if (m_default != previousDefault // default has changed
                 // option key is not pressed
                 && (event.operations & DND.DROP_MOVE) != 0
@@ -190,29 +195,10 @@ public class ExplorerDropListener extends ViewerDropAdapter {
             /* Keep copy as default operation for DND operations between
              * different mount points. */
             event.detail = DND.DROP_COPY;
-//            int prevDetail = event.detail;
-//            LOGGER.debug("dragOperationChanged changed event.detail from "
-//                    + getDNDOp(prevDetail) + " to "
-//                    + getDNDOp(event.detail));
         }
 
         super.dragOperationChanged(event);
     }
-
-//    private String getDNDOp(final int operation) {
-//        switch (operation) {
-//        case DND.DROP_DEFAULT:
-//            return "DND.DROP_DEFAULT";
-//        case DND.DROP_COPY:
-//            return "DND.DROP_COPY";
-//        case DND.DROP_MOVE:
-//            return "DND.DROP_MOVE";
-//        case DND.DROP_NONE:
-//            return "DND.DROP_NONE";
-//        default:
-//            return operation + "";
-//        }
-//    }
 
     /**
      * @param event the drop target event
@@ -264,4 +250,31 @@ public class ExplorerDropListener extends ViewerDropAdapter {
         }
         return null;
     }
+
+    private boolean srcCanMove(final DropTargetEvent event) {
+        if (m_canMove == null) {
+            if (event.item != null) {
+                TransferData transferType = event.currentDataType;
+                LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
+                boolean isLocalTransfer = transfer.isSupportedType(transferType);
+                if (isLocalTransfer || FileTransfer.getInstance().isSupportedType(transferType)
+                    || WorkflowManagerTransfer.getTransfer().isSupportedType(transferType)) {
+                    ISelection selection = transfer.getSelection();
+                    if (selection instanceof IStructuredSelection) {
+                        IStructuredSelection ss = (IStructuredSelection)selection;
+                        List<AbstractExplorerFileStore> srcFS = DragAndDropUtils.getExplorerFileStores(ss);
+                        if (srcFS != null && srcFS.size() == 1) {
+                            m_canMove = srcFS.get(0).canMove();
+                        }
+                    }
+                }
+            }
+            if (m_canMove == null) {
+                // default answer is yes
+                m_canMove = Boolean.TRUE;
+            }
+        }
+        return m_canMove.booleanValue();
+    }
+
 }
