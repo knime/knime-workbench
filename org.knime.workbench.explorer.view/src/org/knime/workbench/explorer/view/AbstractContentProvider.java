@@ -230,8 +230,13 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param uri the uri of the item
      * @return the file store for the specified uri
      */
-    public final AbstractExplorerFileStore getFileStore(final URI uri) {
-        return ExplorerFileSystem.INSTANCE.getStore(uri);
+    public AbstractExplorerFileStore getFileStore(final URI uri) {
+        String mountID = ExplorerFileSystem.getIDfromURI(uri);
+        if (m_id.equals(mountID)) {
+            return getFileStore(uri.getPath());
+        } else {
+            return ExplorerFileSystem.INSTANCE.getStore(uri);
+        }
     }
 
     /**

@@ -113,16 +113,18 @@ public class ExplorerFileSystem extends FileSystem {
         if (mountPoint == null) {
             return null;
         }
-        return mountPoint.getProvider().getFileStore(uri.getPath());
+        return mountPoint.getProvider().getFileStore(uri);
     }
 
     /**
      * The ID of the mount point (referred by in the URIs). As specified
      * (upper/lower cases) by the user.
      *
-     * @return
+     *@param uri of scheme &quot;knime&quot; to extract mount ID from
+     * @return the mount ID specified in the URI (must be with protocol/scheme &quot;knime&quot;)
+     * @since 5.0
      */
-    private static String getIDfromURI(final URI uri) {
+    public static String getIDfromURI(final URI uri) {
         if (SCHEME.equalsIgnoreCase(uri.getScheme())) {
             return uri.getHost();
         }
