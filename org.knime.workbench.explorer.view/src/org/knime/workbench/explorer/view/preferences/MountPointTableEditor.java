@@ -207,7 +207,8 @@ public class MountPointTableEditor extends FieldEditor {
     private SelectionListener m_selectionListener;
 
     /**
-     *
+     * Creates a new MountPointTableEditor.
+     * @param parent The parent component
      */
     public MountPointTableEditor(final Composite parent) {
         init(PreferenceConstants.P_EXPLORER_MOUNT_POINT, "List of configured mount points:");

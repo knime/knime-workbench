@@ -32,7 +32,9 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 
 /**
  * Stores all necessary information that is needed for creating mount points.
@@ -185,7 +187,9 @@ public class MountSettings {
      * @since 6.0
      */
     public void setDefaultMountID(final String defaultMountID) {
-        if (!defaultMountID.equals(m_defaultMountID)) {
+        if ((m_defaultMountID == null && defaultMountID != null)
+                || (m_defaultMountID != null && defaultMountID == null)
+                || (m_defaultMountID != null && defaultMountID != null && !defaultMountID.equals(m_defaultMountID))) {
             m_state = null;
         }
         m_defaultMountID = defaultMountID;
@@ -269,7 +273,12 @@ public class MountSettings {
                 int numSettings = nodeSettings.getInt("numSettings");
                 for (int i = 0; i < numSettings; i++) {
                     NodeSettingsRO singleSettings = nodeSettings.getNodeSettings("mountSettings_" + i);
-                    ms.add(new MountSettings(singleSettings));
+                    MountSettings singleMountSettings = new MountSettings(singleSettings);
+                    AbstractContentProviderFactory contentProviderFactory = 
+                            ExplorerMountTable.getContentProviderFactory(singleMountSettings.getFactoryID());
+                    if (contentProviderFactory != null) {
+                        ms.add(singleMountSettings);
+                    }
                 }
             } catch (Exception e) {
                 throw new IllegalArgumentException("Error parsing mount settings. ", e);

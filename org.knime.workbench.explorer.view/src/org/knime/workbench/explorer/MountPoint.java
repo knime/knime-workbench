@@ -73,22 +73,18 @@ public class MountPoint {
 
     private final AtomicInteger m_refCount = new AtomicInteger();
 
-    private final boolean m_active;
-
     /**
      * Creates a new mount point. Sets the ref count to one.
      *
      * @param id the mount id
      * @param contentProvider the content provider
      * @param factory the content provider factory
-     * @param active true if mount point should be visible in explorer view
      */
     MountPoint(final String id, final AbstractContentProvider contentProvider,
-            final AbstractContentProviderFactory factory, final boolean active) {
+            final AbstractContentProviderFactory factory) {
         m_id = id;
         m_parent = factory;
         m_contentProvider = contentProvider;
-        m_active = active;
         m_refCount.set(1);
     }
 
@@ -102,13 +98,6 @@ public class MountPoint {
 
     public String getMountID() {
         return m_id;
-    }
-
-    /** @return
-     * @since 6.0
-     */
-    public boolean isActive() {
-        return m_active;
     }
 
     /**

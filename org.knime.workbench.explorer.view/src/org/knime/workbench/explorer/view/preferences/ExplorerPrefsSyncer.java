@@ -92,9 +92,12 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
 
             // add all new mount points
             for (MountSettings ms : newSettings) {
+                if (!ms.isActive()) {
+                    continue;
+                }
                 try {
                     ExplorerMountTable.mount(ms.getMountID(),
-                            ms.getFactoryID(), ms.getContent(), ms.isActive());
+                            ms.getFactoryID(), ms.getContent());
                 } catch (IOException e) {
                     NodeLogger.getLogger(this.getClass()).error("Mount point \"" + ms.getDisplayName()
                             + "\" could not be mounted.", e);

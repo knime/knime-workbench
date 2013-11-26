@@ -66,6 +66,7 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CLabel;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.ModifyEvent;
@@ -140,7 +141,7 @@ public class EditMountPointDialog extends ListDialog {
 
     private String m_additionalContent;
 
-    private Label m_mountIDHeader;
+    private CLabel m_mountIDHeader;
 
     private String m_defaultMountID;
 
@@ -160,6 +161,7 @@ public class EditMountPointDialog extends ListDialog {
         setContentProvider(new ContentFactoryProvider(input));
         setLabelProvider(new ContentFactoryLabelProvider());
         setInput(input);
+        setHeightInChars(input.size() + 1);
         setTitle("Select New Content");
         m_mountIDval = "";
         m_isNew = true;
@@ -182,9 +184,11 @@ public class EditMountPointDialog extends ListDialog {
         setContentProvider(new ContentFactoryProvider(input));
         setLabelProvider(new ContentFactoryLabelProvider());
         setInput(input);
+        setHeightInChars(input.size() + 1);
         setTitle("Edit Mount Point");
         m_mountIDval = settings.getMountID();
         m_additionalContent = settings.getContent();
+        m_defaultMountID = settings.getDefaultMountID();
         m_isNew = false;
     }
 
@@ -200,7 +204,10 @@ public class EditMountPointDialog extends ListDialog {
             public void defaultMountIDChanged(final String defaultMountID) {
                 m_defaultMountID = defaultMountID;
                 String id = defaultMountID == null ? "" : defaultMountID;
-                m_mountID.setText(id);
+                if (m_mountID.getText().isEmpty()) {
+                    m_mountID.setText(id);
+                }
+                validate();
             }
         };
     }
@@ -299,9 +306,11 @@ public class EditMountPointDialog extends ListDialog {
                         cont.dispose();
                     }
                     if (m_isNew && !m_mountID.getText().isEmpty()) {
-                        m_mountID.setText("");
+                        m_defaultMountID = null;
+                        if (!m_mountID.getText().isEmpty()) {
+                            m_mountID.setText("");
+                        }
                     }
-                    m_defaultMountID = null;
                     m_mountIDHeader.setText(MOUNT_ID_HEADER_TEXT);
                     if (factory.isAdditionalInformationNeeded()) {
                         m_additionalPanel =
@@ -338,7 +347,7 @@ public class EditMountPointDialog extends ListDialog {
         mountHdr.setLayout(gl);
         mountHdr.setLayoutData(new GridData(GridData.FILL_BOTH));
 
-        m_mountIDHeader = new Label(mountHdr, SWT.NONE);
+        m_mountIDHeader = new CLabel(mountHdr, SWT.NONE);
         m_mountIDHeader.setText(MOUNT_ID_HEADER_TEXT);
 
         mountInput.moveBelow(m_mountIDHeader);
@@ -405,10 +414,13 @@ public class EditMountPointDialog extends ListDialog {
 
         String id = m_mountID.getText().trim();
         String mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
-        if (m_defaultMountID != null && !m_defaultMountID.equals(id)) {
+        Image mountIDHeaderImage = null;
+        if (m_defaultMountID != null && !m_defaultMountID.isEmpty() && !m_defaultMountID.equals(id)) {
             mountIDHeaderText += "\nThe default ID is " + m_defaultMountID;
+            mountIDHeaderImage = ImageRepository.getImage(SharedImages.InfoBalloon);
         }
         m_mountIDHeader.setText(mountIDHeaderText);
+        m_mountIDHeader.setImage(mountIDHeaderImage);
         if (valid) {
             if (id == null || id.isEmpty()) {
                 valid = false;
