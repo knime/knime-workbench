@@ -122,7 +122,7 @@ public class ExplorerFileSystem extends FileSystem {
      *
      *@param uri of scheme &quot;knime&quot; to extract mount ID from
      * @return the mount ID specified in the URI (must be with protocol/scheme &quot;knime&quot;)
-     * @since 5.0
+     * @since 6.0
      */
     public static String getIDfromURI(final URI uri) {
         if (SCHEME.equalsIgnoreCase(uri.getScheme())) {
