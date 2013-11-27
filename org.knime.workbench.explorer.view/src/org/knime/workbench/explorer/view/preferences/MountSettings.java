@@ -70,6 +70,7 @@ public class MountSettings {
      *
      * @param settings a settings string
      */
+    @Deprecated
     public MountSettings(final String settings) {
         parse(settings);
     }
@@ -104,25 +105,10 @@ public class MountSettings {
         m_active = true;
     }
 
-    private void parseBla(final String settings) {
-        if (settings == null || settings.isEmpty()) {
-            throw new IllegalArgumentException("Invalid settings string provided.");
-        }
-        if (!settings.startsWith("<?xml")) {
-            parse(settings);
-        } else {
-            try {
-                NodeSettingsRO nodeSettings = NodeSettings.loadFromXML(new ByteArrayInputStream(settings.getBytes()));
-
-            } catch (IOException e) {
-                throw new IllegalArgumentException("Invalid settings string provided.");
-            }
-        }
-    }
-
     /**
      * @param settings the settings string to be parsed
      */
+    @Deprecated
     private void parse(final String settings) {
         String[] visibleSplit = settings.split(VISIBILITY_SEPARATOR, 2);
         if (2 != visibleSplit.length) {
@@ -143,11 +129,11 @@ public class MountSettings {
                 m_active = Boolean.parseBoolean(possibleBoolean);
                 m_content = settingsSplit[3];
             } else {
-                m_active = false;
+                m_active = true;
                 m_content = settingsSplit[2] + ELEMENTS_SEPARATOR + settingsSplit[3];
             }
         } else {
-            m_active = false;
+            m_active = true;
             m_content = settingsSplit[2];
         }
     }
@@ -274,7 +260,7 @@ public class MountSettings {
                 for (int i = 0; i < numSettings; i++) {
                     NodeSettingsRO singleSettings = nodeSettings.getNodeSettings("mountSettings_" + i);
                     MountSettings singleMountSettings = new MountSettings(singleSettings);
-                    AbstractContentProviderFactory contentProviderFactory = 
+                    AbstractContentProviderFactory contentProviderFactory =
                             ExplorerMountTable.getContentProviderFactory(singleMountSettings.getFactoryID());
                     if (contentProviderFactory != null) {
                         ms.add(singleMountSettings);
