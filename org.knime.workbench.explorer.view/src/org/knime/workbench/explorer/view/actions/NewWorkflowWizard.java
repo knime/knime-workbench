@@ -55,7 +55,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -120,57 +119,48 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
     @Override
     public void init(final IWorkbench workbench,
             final IStructuredSelection selection) {
-        if (selection != null && selection.size() > 0) {
-            Map<AbstractContentProvider, List<AbstractExplorerFileStore>>
-                    providerMap = DragAndDropUtils.getProviderMap(selection);
+        // add the ids of all mounted, writable content provider
+        List<String> validMountPointList = new ArrayList<String>();
+        for (Map.Entry<String, AbstractContentProvider> entry : ExplorerMountTable.getMountedContent().entrySet()) {
+            AbstractContentProvider cp = entry.getValue();
+            if (cp.isWritable() && !(isWorkflowCreated() && cp.isRemote())) {
+                // no remote creation of workflows is supported
+                validMountPointList.add(entry.getKey());
+            }
+        }
+        m_mountIDs = validMountPointList.toArray(new String[0]);
+
+        if ((selection != null) && !selection.isEmpty()) {
+            String defaultLocalID = new LocalWorkspaceContentProviderFactory().getDefaultMountID();
+
+            Map<AbstractContentProvider, List<AbstractExplorerFileStore>> providerMap =
+                DragAndDropUtils.getProviderMap(selection);
             if (providerMap != null) {
-                m_mountIDs = new String[providerMap.size()];
-                Iterator<AbstractContentProvider> iter
-                        = providerMap.keySet().iterator();
-                for (int i = 0; i < m_mountIDs.length; i++) {
-                    AbstractContentProvider cp = iter.next();
-                    m_mountIDs[i] = cp.getMountID();
-                }
-                if (selection.size() == 1) {
-                    AbstractExplorerFileStore firstSelectedItem
-                            = providerMap.values().iterator().next().get(0);
-                    if (firstSelectedItem.fetchInfo().isWorkflowGroup()) {
-                        m_initialSelection = firstSelectedItem;
-                    } else {
-                        m_initialSelection = firstSelectedItem.getParent();
-                    }
+                AbstractExplorerFileStore firstSelectedItem = providerMap.values().iterator().next().get(0);
+                if (firstSelectedItem.getContentProvider().isRemote()) {
+                    m_initialSelection =
+                            ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getFileStore("/");
+                } else if (firstSelectedItem.fetchInfo().isWorkflowGroup()) {
+                    m_initialSelection = firstSelectedItem;
+                } else {
+                    m_initialSelection = firstSelectedItem.getParent();
                 }
             } else {
                 Object selectedObj = selection.getFirstElement();
                 if (selectedObj instanceof IResource) {
                     // selection of a resource in the old navigator
-                    IResource resource  = (IResource)selectedObj;
+                    IResource resource = (IResource)selectedObj;
                     if (KnimeResourceUtil.isWorkflow(resource)) {
-                        resource =  resource.getParent();
+                        resource = resource.getParent();
                     }
-                    String defaultLocalID
-                            = new LocalWorkspaceContentProviderFactory()
-                            .getDefaultMountID();
-                    m_initialSelection = ExplorerMountTable.getMountPoint(
-                            defaultLocalID).getProvider().getFileStore(
-                                    resource.getFullPath().toString());
+                    m_initialSelection =
+                        ExplorerMountTable.getMountPoint(defaultLocalID).getProvider()
+                            .getFileStore(resource.getFullPath().toString());
+                } else {
+                    m_initialSelection =
+                        ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getFileStore("/");
                 }
             }
-        }
-        if (m_mountIDs == null) {
-         // add the ids of all mounted, writable content provider
-            List<String> validMountPointList
-                    = new ArrayList<String>();
-            for (Map.Entry<String, AbstractContentProvider> entry
-                  : ExplorerMountTable.getMountedContent().entrySet()) {
-                AbstractContentProvider cp = entry.getValue();
-                if (cp.isWritable()
-                        && (!(isWorkflowCreated() && cp.isRemote()))) {
-                    // no remote creation of workflows is supported
-                    validMountPointList.add(entry.getKey());
-                }
-            }
-            m_mountIDs = validMountPointList.toArray(new String[0]);
         }
     }
 
