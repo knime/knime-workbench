@@ -89,6 +89,7 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Widget;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
@@ -134,12 +135,19 @@ public class MountPointTableEditor extends FieldEditor {
                 return settings.getMountID();
 
             case CONTENT_PROP:
-                factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
-                AbstractContentProvider provider =
-                        factory.createContentProvider(settings.getMountID(), settings.getContent());
-                String value = provider.toString();
-                provider.dispose();
-                return value;
+                String mID = settings.getMountID();
+                MountPoint mountPoint = ExplorerMountTable.getMountPoint(mID);
+                if (mountPoint != null) {
+                    AbstractContentProvider provider = mountPoint.getProvider();
+                    return provider.toString();
+                } else {
+                    factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
+                    AbstractContentProvider provider =
+                            factory.createContentProvider(settings.getMountID(), settings.getContent());
+                    String value = provider.toString();
+                    provider.dispose();
+                    return value;
+                }
 
             case TYPE_PROP:
                 factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
@@ -572,7 +580,6 @@ public class MountPointTableEditor extends FieldEditor {
     @Override
     protected void doStore() {
         List<MountSettings> settingsList = new ArrayList<MountSettings>();
-        TableItem[] tableItems = m_table.getItems();
         for (TableItem item : m_table.getItems()) {
             settingsList.add((MountSettings)item.getData());
         }

@@ -260,9 +260,7 @@ public class MountSettings {
                 for (int i = 0; i < numSettings; i++) {
                     NodeSettingsRO singleSettings = nodeSettings.getNodeSettings("mountSettings_" + i);
                     MountSettings singleMountSettings = new MountSettings(singleSettings);
-                    AbstractContentProviderFactory contentProviderFactory =
-                            ExplorerMountTable.getContentProviderFactory(singleMountSettings.getFactoryID());
-                    if (contentProviderFactory != null) {
+                    if (isMountSettingsAddable(singleMountSettings)) {
                         ms.add(singleMountSettings);
                     }
                 }
@@ -272,10 +270,19 @@ public class MountSettings {
         } else {
             String[] split = settings.split(SETTINGS_SEPARATOR);
             for (String setting : split) {
-                ms.add(new MountSettings(setting));
+                MountSettings singleMountSettings = new MountSettings(setting);
+                if (isMountSettingsAddable(singleMountSettings)) {
+                    ms.add(singleMountSettings);
+                }
             }
         }
         return ms;
+    }
+
+    private static boolean isMountSettingsAddable(final MountSettings mountSettings) {
+        AbstractContentProviderFactory contentProviderFactory =
+                ExplorerMountTable.getContentProviderFactory(mountSettings.getFactoryID());
+        return contentProviderFactory != null;
     }
 
     /**
