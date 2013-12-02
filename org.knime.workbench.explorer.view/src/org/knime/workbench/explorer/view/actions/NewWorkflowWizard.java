@@ -121,11 +121,15 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
             final IStructuredSelection selection) {
         // add the ids of all mounted, writable content provider
         List<String> validMountPointList = new ArrayList<String>();
+        AbstractContentProvider localCP = null; // keep a local content provider (needed later)
         for (Map.Entry<String, AbstractContentProvider> entry : ExplorerMountTable.getMountedContent().entrySet()) {
             AbstractContentProvider cp = entry.getValue();
             if (cp.isWritable() && !(isWorkflowCreated() && cp.isRemote())) {
                 // no remote creation of workflows is supported
                 validMountPointList.add(entry.getKey());
+            }
+            if (!cp.isRemote()) {
+                localCP = cp;
             }
         }
         m_mountIDs = validMountPointList.toArray(new String[0]);
@@ -137,9 +141,16 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                 DragAndDropUtils.getProviderMap(selection);
             if (providerMap != null) {
                 AbstractExplorerFileStore firstSelectedItem = providerMap.values().iterator().next().get(0);
-                if (firstSelectedItem.getContentProvider().isRemote()) {
-                    m_initialSelection =
-                            ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getFileStore("/");
+                if (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote()) {
+                    // can't create workflow on the selected item (it is remote)
+                    if (ExplorerMountTable.getMountPoint(defaultLocalID) != null) {
+                        m_initialSelection =
+                                ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getFileStore("/");
+                    } else if (localCP != null) {
+                        m_initialSelection = localCP.getFileStore("/");
+                    } else {
+                        m_initialSelection = null;
+                    }
                 } else if (firstSelectedItem.fetchInfo().isWorkflowGroup()) {
                     m_initialSelection = firstSelectedItem;
                 } else {
