@@ -275,13 +275,6 @@ public class OverwriteRenameDialog extends Dialog {
     private void createSnapshotPanel(final Composite parent) {
         if (m_destination.getContentProvider().supportsSnapshots()) {
             m_snapshotPanel = new SnapshotPanel(parent, SWT.NONE);
-            m_snapshotPanel.setEnabled(m_overwriteGUI.getSelection());
-            m_overwriteGUI.addListener(SWT.Selection, new Listener() {
-                @Override
-                public void handleEvent(final Event event) {
-                    m_snapshotPanel.setEnabled(m_overwriteGUI.getSelection());
-                }
-            });
         }
     }
 
@@ -347,6 +340,7 @@ public class OverwriteRenameDialog extends Dialog {
             m_overwriteGUI.setSelection(choice == m_overwriteGUI);
         }
         m_overwrite = m_overwriteGUI != null && m_overwriteGUI.getSelection();
+        m_snapshotPanel.setEnabled(m_overwrite);
 
         m_rename = m_renameGUI.getSelection();
         m_newName = m_newNameGUI.getText().trim();
