@@ -340,7 +340,9 @@ public class OverwriteRenameDialog extends Dialog {
             m_overwriteGUI.setSelection(choice == m_overwriteGUI);
         }
         m_overwrite = m_overwriteGUI != null && m_overwriteGUI.getSelection();
-        m_snapshotPanel.setEnabled(m_overwrite);
+        if (m_snapshotPanel != null) {
+            m_snapshotPanel.setEnabled(m_overwrite);
+        }
 
         m_rename = m_renameGUI.getSelection();
         m_newName = m_newNameGUI.getText().trim();
