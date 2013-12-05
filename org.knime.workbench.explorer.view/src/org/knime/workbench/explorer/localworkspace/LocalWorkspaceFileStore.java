@@ -377,7 +377,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             URI srcURI = srcFile.toURI();
             if (srcFile.renameTo(dstFile)) {
                 // if rename works: refresh
-                if (fetchInfo().isWorkflow()) {
+                if (!fetchInfo().isFile()) {
                     createProjectFile(destination, monitor);
                 }
                 final LocalExplorerFileStore srcParent = getParent();
