@@ -43,10 +43,11 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteDownloadStream;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
  *
@@ -281,10 +282,12 @@ public abstract class AbstractDownloadAction extends Action {
      *      represents a workflow
      */
     protected boolean isSourceSupported() {
-        RemoteExplorerFileStore sourceFile = getSourceFile();
-        return AbstractExplorerFileStore.isWorkflow(sourceFile)
-                || AbstractExplorerFileStore.isWorkflowGroup(sourceFile)
-                || AbstractExplorerFileStore.isSnapshot(sourceFile);
+        RemoteExplorerFileInfo sourceInfo = getSourceFile().fetchInfo();
+        AbstractContentProvider targetContentProvider = getTargetFileStore().getContentProvider();
+
+        return sourceInfo.isWorkflow() || sourceInfo.isWorkflowGroup() || sourceInfo.isSnapshot()
+                || (sourceInfo.isFile() && targetContentProvider.canHostDataFiles())
+                || (sourceInfo.isMetaNode() && targetContentProvider.canHostMetaNodeTemplates());
 // copying of workflow jobs is disabled until implemented on server
 //        RemoteExplorerFileInfo info = getSourceFile().fetchInfo();
 //        return info.isWorkflow()

@@ -31,12 +31,12 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.runtime.CoreException;
+import org.apache.commons.io.FileUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
 import org.eclipse.ui.internal.wizards.datatransfer.ZipLeveledStructureProvider;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
@@ -102,33 +102,17 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
         return m_targetFileStore;
     }
 
-    /**
+     /**
      * {@inheritDoc}
      */
     @Override
-    protected void prepareTarget() {
-        // blow away everything in our way
-        LocalExplorerFileStore target = getTargetFileStore();
-        if (target.fetchInfo().exists()) {
-            LOGGER.info("Download destination exists! Removing it! ("
-                    + target.getMountIDWithFullPath() + ")");
-            try {
-                target.delete(EFS.NONE, null);
-                target.toLocalFile().mkdirs();
-            } catch (CoreException e) {
-                LOGGER.warn("Could not clean up download directory \""
-                        + getTargetIdentifier() + "\"", e);
-            }
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void extractDownloadToTarget(final File zipFile)
+    protected void extractDownloadToTarget(final File downloadedFile)
             throws Exception {
-        unpackWorkflowIntoLocalDir(getTargetFileStore().getParent(), zipFile);
+        if (AbstractExplorerFileStore.isDataFile(getSourceFile())) {
+            FileUtils.copyFile(downloadedFile, getTargetDir());
+        } else {
+            unpackWorkflowIntoLocalDir(getTargetFileStore().getParent(), downloadedFile);
+        }
     }
 
     /**
@@ -187,17 +171,12 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
         ZipFile sourceFile = new ZipFile(zipFile);
         provider = new ZipLeveledStructureProvider(sourceFile);
         // TODO: store only the workflows (dirs are created automatically)
-        final ILeveledImportStructureProvider finalProvider = provider;
-        if (provider != null) {
-            Object child = finalProvider.getRoot();
-            WorkflowImportElementFromArchive root =
-                    new WorkflowImportElementFromArchive(finalProvider, child,
-                            0);
-            collectWorkflowsFromProvider(root);
-            return root;
-        }
-        throw new IllegalStateException(
-                "Didn't get a root structure from workflow zip archive");
+        Object child = provider.getRoot();
+        WorkflowImportElementFromArchive root =
+                new WorkflowImportElementFromArchive(provider, child,
+                        0);
+        collectWorkflowsFromProvider(root);
+        return root;
     }
 
     /**
