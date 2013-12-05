@@ -377,7 +377,9 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             URI srcURI = srcFile.toURI();
             if (srcFile.renameTo(dstFile)) {
                 // if rename works: refresh
-                createProjectFile(destination, monitor);
+                if (fetchInfo().isWorkflow()) {
+                    createProjectFile(destination, monitor);
+                }
                 final LocalExplorerFileStore srcParent = getParent();
                 IResource res = KnimeResourceUtil.getResourceForURI(srcURI);
                 if (res != null) {
