@@ -39,6 +39,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -196,7 +197,7 @@ public class GlobalRenameAction extends ExplorerAction {
     private AbstractExplorerFileStore queryTargetName(
             final AbstractExplorerFileStore fileStore) {
         Shell shell = Display.getDefault().getActiveShell();
-        String name = fileStore.getName();
+        final String name = fileStore.getName();
         InputDialog dialog =
                 new InputDialog(shell, "Rename",
                         "Please enter the new name for \"" + name + "\"", name,
@@ -209,15 +210,33 @@ public class GlobalRenameAction extends ExplorerAction {
         String newName = dialog.getValue().trim();
         AbstractExplorerFileStore dstFileStore =
                 fileStore.getParent().getChild(newName);
+        
+        AbstractExplorerFileInfo srcInfo = fileStore.fetchInfo();
+        AbstractExplorerFileInfo destInfo = dstFileStore.fetchInfo();
 
         // Disallow case correction
-        if (dstFileStore.fetchInfo().exists() && fileStore.getName().equalsIgnoreCase(newName)) {
+        if (destInfo.exists() && name.equalsIgnoreCase(newName)) {
             showDisallowCaseCorrectionMessage();
             return null;
         }
 
-        if (dstFileStore.fetchInfo().exists() && !confirmOverride(newName)) {
-            return queryTargetName(dstFileStore);
+
+        if (destInfo.exists()) {
+            if ((srcInfo.isDirectory() ^ destInfo.isDirectory()) || (srcInfo.isFile() ^ destInfo.isFile())
+                || (srcInfo.isMetaNode() ^ destInfo.isMetaNode()) || (srcInfo.isNode() ^ destInfo.isNode())
+                || (srcInfo.isSnapshot() ^ destInfo.isSnapshot()) || (srcInfo.isWorkflow() ^ destInfo.isWorkflow())
+                || (srcInfo.isWorkflowGroup() ^ destInfo.isWorkflowGroup())
+                || (srcInfo.isWorkflowTemplate() ^ destInfo.isWorkflowTemplate())) {
+                MessageBox mb =
+                        new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
+                mb.setText("Can't Rename");
+                mb.setMessage("An item with the same name but a different type already exists. Overriding items of a "
+                    + "different type is not allowed.");
+                mb.open();
+                return null;
+            } else if (!confirmOverride(newName)) {
+                return queryTargetName(dstFileStore);
+            }
         }
         return dstFileStore;
     }
