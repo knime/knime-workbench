@@ -287,7 +287,7 @@ public abstract class AbstractDownloadAction extends Action {
 
         return sourceInfo.isWorkflow() || sourceInfo.isWorkflowGroup() || sourceInfo.isSnapshot()
                 || (sourceInfo.isFile() && targetContentProvider.canHostDataFiles())
-                || (sourceInfo.isMetaNode() && targetContentProvider.canHostMetaNodeTemplates());
+                || (sourceInfo.isWorkflowTemplate() && targetContentProvider.canHostMetaNodeTemplates());
 // copying of workflow jobs is disabled until implemented on server
 //        RemoteExplorerFileInfo info = getSourceFile().fetchInfo();
 //        return info.isWorkflow()
