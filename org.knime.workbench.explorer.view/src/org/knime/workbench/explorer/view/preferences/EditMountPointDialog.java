@@ -56,6 +56,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
@@ -115,7 +116,7 @@ public class EditMountPointDialog extends ListDialog {
 
     private static final String MOUNT_ID_HEADER_TEXT = "Enter the name that is used to reference the new content.";
 
-    private final ValidationRequiredListener m_validationListener;
+    private ValidationRequiredListener m_validationListener;
 
     private String m_mountIDval;
 
@@ -125,7 +126,7 @@ public class EditMountPointDialog extends ListDialog {
 
     private Label m_errText;
 
-    private final Set<String> m_invalidIDs;
+    private Set<String> m_invalidIDs;
 
     /* --- the result (after ok) ---- */
 
@@ -143,6 +144,8 @@ public class EditMountPointDialog extends ListDialog {
 
     private CLabel m_mountIDHeader;
 
+    private String m_mountIDHeaderText;
+
     private String m_defaultMountID;
 
     /**
@@ -155,16 +158,7 @@ public class EditMountPointDialog extends ListDialog {
     public EditMountPointDialog(final Shell parentShell, final List<AbstractContentProviderFactory> input,
         final Collection<String> invalidIDs) {
         super(parentShell);
-        m_validationListener = createValidationListener();
-        m_invalidIDs = new HashSet<String>(invalidIDs);
-        setAddCancelButton(true);
-        setContentProvider(new ContentFactoryProvider(input));
-        setLabelProvider(new ContentFactoryLabelProvider());
-        setInput(input);
-        setHeightInChars(input.size() + 1);
-        setTitle("Select New Content");
-        m_mountIDval = "";
-        m_isNew = true;
+        init(input, invalidIDs, null);
     }
 
     /**
@@ -178,18 +172,31 @@ public class EditMountPointDialog extends ListDialog {
     public EditMountPointDialog(final Shell parentShell, final List<AbstractContentProviderFactory> input,
         final Collection<String> invalidIDs, final MountSettings settings) {
         super(parentShell);
+        init(input, invalidIDs, settings);
+    }
+
+    private void init(final List<AbstractContentProviderFactory> input,
+            final Collection<String> invalidIDs, final MountSettings settings) {
+        m_isNew = (settings == null);
         m_validationListener = createValidationListener();
         m_invalidIDs = new HashSet<String>(invalidIDs);
+        m_mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
         setAddCancelButton(true);
         setContentProvider(new ContentFactoryProvider(input));
         setLabelProvider(new ContentFactoryLabelProvider());
         setInput(input);
         setHeightInChars(input.size() + 1);
-        setTitle("Edit Mount Point");
-        m_mountIDval = settings.getMountID();
-        m_additionalContent = settings.getContent();
-        m_defaultMountID = settings.getDefaultMountID();
-        m_isNew = false;
+        if (settings == null) {
+            setTitle("Select New Content");
+            m_mountIDval = "";
+            m_isNew = true;
+        } else {
+            setTitle("Edit Mount Point");
+            m_mountIDval = settings.getMountID();
+            m_additionalContent = settings.getContent();
+            m_defaultMountID = settings.getDefaultMountID();
+            m_isNew = false;
+        }
     }
 
     private ValidationRequiredListener createValidationListener() {
@@ -207,7 +214,28 @@ public class EditMountPointDialog extends ListDialog {
                 if (m_mountID.getText().isEmpty()) {
                     m_mountID.setText(id);
                 }
+                if (defaultMountID != null && !defaultMountID.isEmpty()
+                        && !m_mountID.getText().equals(defaultMountID)) {
+                    String confirmTitle = "Overwrite Mount ID";
+                    String confirmMsg = "The default mount ID is " + defaultMountID
+                            + ". Do you want to overwrite your current mount ID?";
+                    if (MessageDialog.openQuestion(m_mountID.getShell(), confirmTitle, confirmMsg)) {
+                        m_mountID.setText(id);
+                    }
+                }
                 validate();
+            }
+
+            @Override
+            public void setMountIDLabel(final String label) {
+                String newLabel = label == null ? "" : label;
+                m_mountIDHeaderText = newLabel;
+                m_mountIDHeader.setText(newLabel);
+            }
+
+            @Override
+            public String getCurrentMountID() {
+                return m_mountID.getText();
             }
         };
     }
@@ -311,7 +339,8 @@ public class EditMountPointDialog extends ListDialog {
                             m_mountID.setText("");
                         }
                     }
-                    m_mountIDHeader.setText(MOUNT_ID_HEADER_TEXT);
+                    m_mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
+                    m_mountIDHeader.setText(m_mountIDHeaderText);
                     if (factory.isAdditionalInformationNeeded()) {
                         m_additionalPanel =
                             factory.createAdditionalInformationPanel(additionalPanel, m_mountID);
@@ -348,7 +377,7 @@ public class EditMountPointDialog extends ListDialog {
         mountHdr.setLayoutData(new GridData(GridData.FILL_BOTH));
 
         m_mountIDHeader = new CLabel(mountHdr, SWT.NONE);
-        m_mountIDHeader.setText(MOUNT_ID_HEADER_TEXT);
+        m_mountIDHeader.setText(m_mountIDHeaderText);
 
         mountInput.moveBelow(m_mountIDHeader);
         gl = new GridLayout(2, false);
@@ -413,7 +442,7 @@ public class EditMountPointDialog extends ListDialog {
         }
 
         String id = m_mountID.getText().trim();
-        String mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
+        String mountIDHeaderText = m_mountIDHeaderText;
         Image mountIDHeaderImage = null;
         if (m_defaultMountID != null && !m_defaultMountID.isEmpty() && !m_defaultMountID.equals(id)) {
             mountIDHeaderText += "\nThe default ID is " + m_defaultMountID;

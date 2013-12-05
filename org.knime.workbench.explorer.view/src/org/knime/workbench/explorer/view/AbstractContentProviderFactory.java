@@ -115,7 +115,6 @@ public abstract class AbstractContentProviderFactory {
      * @param parent the parent {@link Composite}
      * information input.
      * @param mountIDInput the input component which can be used to provide a default mount ID
-     * @param errorLabel an error label, which can be filled by the panel
      * @return the additional information panel
      * @since 6.0
      */
@@ -211,6 +210,25 @@ public abstract class AbstractContentProviderFactory {
                 listener.validationRequired();
             }
         }
+
+        /**
+         * @return the current mount ID
+         */
+        protected String getCurrentMountID() {
+            if (m_listeners.size() > 0) {
+                return m_listeners.get(0).getCurrentMountID();
+            }
+            return null;
+        }
+
+        /**
+         * @param label
+         */
+        protected void setMountIDLabel(final String label) {
+            for (ValidationRequiredListener listener: m_listeners) {
+                listener.setMountIDLabel(label);
+            }
+        }
     }
 
     /**
@@ -230,6 +248,17 @@ public abstract class AbstractContentProviderFactory {
          * @param defaultMountID the new default mount ID
          */
         public void defaultMountIDChanged(String defaultMountID);
+
+        /**
+         * @return the currently entered mount ID
+         */
+        public String getCurrentMountID();
+
+        /**
+         * Called when an additional panel wants to change the mount ID label.
+         * @param label the new label
+         */
+        public void setMountIDLabel(String label);
 
     }
 }
