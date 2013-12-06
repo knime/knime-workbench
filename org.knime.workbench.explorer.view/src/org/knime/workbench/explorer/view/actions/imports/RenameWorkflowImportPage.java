@@ -161,7 +161,7 @@ public class RenameWorkflowImportPage extends WizardPage {
 
     private boolean checkIsNameValid(final String name) {
         String errMsg = ExplorerFileSystem.validateFilename(name);
-        m_isNameValid = errMsg != null;
+        m_isNameValid = errMsg == null;
         if (!m_isNameValid) {
             setErrorMessage(errMsg);
             setPageComplete(false);

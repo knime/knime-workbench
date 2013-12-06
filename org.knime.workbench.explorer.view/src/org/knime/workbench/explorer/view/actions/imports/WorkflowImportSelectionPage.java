@@ -302,6 +302,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
                 if (m_fromDirTextUI.getText() != null
                         && !m_fromDirTextUI.getText().trim().isEmpty()) {
                     collectWorkflowsFromDir(m_fromDirTextUI.getText().trim());
+                    validateWorkflows();
                 }
             }
         });
@@ -343,6 +344,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
                         && !m_fromZipTextUI.getText().trim().isEmpty()) {
                     collectWorkflowsFromZipFile(m_fromZipTextUI.getText()
                             .trim());
+                    validateWorkflows();
                 }
             }
 
