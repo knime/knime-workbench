@@ -416,8 +416,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
             return false;
         }
         AbstractExplorerFileInfo info = file.fetchInfo();
-        return !info.isMetaNode() && !info.isNode() && !info.isWorkflow() && !info.isWorkflowGroup()
-                && !info.isWorkflowTemplate();
+        return info.isFile();
     }
 
 

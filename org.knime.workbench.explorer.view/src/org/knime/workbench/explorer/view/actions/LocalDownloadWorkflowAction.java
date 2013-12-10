@@ -36,6 +36,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
 import org.eclipse.ui.internal.wizards.datatransfer.ZipLeveledStructureProvider;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -108,10 +109,21 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
     @Override
     protected void extractDownloadToTarget(final File downloadedFile)
             throws Exception {
-        if (AbstractExplorerFileStore.isDataFile(getSourceFile())) {
+        AbstractExplorerFileStore source = getSourceFile();
+
+        AbstractExplorerFileInfo info = source.fetchInfo();
+        if (info.isSnapshot()) {
+            source = source.getParent();
+            info = source.fetchInfo();
+        }
+
+        if (info.isFile()) {
             FileUtils.copyFile(downloadedFile, getTargetDir());
-        } else {
+        } else if (info.isWorkflow() || info.isWorkflowTemplate()){
             unpackWorkflowIntoLocalDir(getTargetFileStore().getParent(), downloadedFile);
+        } else {
+            throw new IllegalArgumentException("Downloaded item '" + getSourceFile().getMountIDWithFullPath() + "'"
+                + " is neither a file nor a workflow or template.");
         }
     }
 
