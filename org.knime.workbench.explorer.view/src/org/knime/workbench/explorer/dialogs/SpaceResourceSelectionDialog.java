@@ -424,6 +424,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * Enable/disable the name field.
      *
      * @param enabled true if the name field should be shown, false otherwise
+     * @since 6.1
      */
     public void setNameFieldEnabled(final boolean enabled) {
         m_nameFieldEnabled = enabled;
@@ -433,6 +434,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * Set the default value for the name field.
      *
      * @param defaultValue The default value
+     * @since 6.1
      */
     public void setNameFieldDefaultValue(final String defaultValue) {
         m_nameFieldDefaultValue = defaultValue;
@@ -442,6 +444,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * Get the value of the name field.
      *
      * @return The value inside the name field or null if it is not valid according to the set validator
+     * @since 6.1
      */
     public String getNameFieldValue() {
         return m_nameFieldValue;
@@ -451,6 +454,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * Set the validator for the name field.
      *
      * @param validator Validator that checks if the current name is valid
+     * @since 6.1
      */
     public void setNameFieldValidator(final StringValidator validator) {
         m_nameFieldValidator = validator;
@@ -502,6 +506,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * Validator that checks if a string is valid.
      *
      * @author Patrick Winter, KNIME.com AG, Zurich, Switzerland
+     * @since 6.1
      */
     public interface StringValidator {
         /**
@@ -514,5 +519,4 @@ public class SpaceResourceSelectionDialog extends Dialog {
          */
         public String isValid(final String string);
     }
-
 }
