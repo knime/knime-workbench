@@ -55,6 +55,8 @@ import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
@@ -67,6 +69,7 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.dialogs.ISelectionValidator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
@@ -110,6 +113,16 @@ public class SpaceResourceSelectionDialog extends Dialog {
     private int m_xSizeFactor;
 
     private int m_ySizeFactor;
+
+    private boolean m_nameFieldEnabled = false;
+
+    private String m_nameFieldDefaultValue = "";
+
+    private String m_nameFieldValue = null;
+
+    private StringValidator m_nameFieldValidator = null;
+
+    private boolean m_nameFieldValid = true;
 
     /**
      * Creates a new dialog showing the passed mount ids.
@@ -209,6 +222,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
         createHeader(overall);
         createTreeControl(overall);
         createResultPanel(overall);
+        createNameField(overall);
         return overall;
 
     }
@@ -284,7 +298,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
                     // store it in case button is not created yet
                     m_valid = result == null;
                     if (b != null) {
-                        b.setEnabled(m_valid);
+                        b.setEnabled(m_valid && m_nameFieldValid);
                     }
                     return result;
                 }
@@ -352,9 +366,9 @@ public class SpaceResourceSelectionDialog extends Dialog {
     protected Button createButton(final Composite parent, final int id,
             final String label, final boolean defaultButton) {
         Button b = super.createButton(parent, id, label, defaultButton);
-        if (id == Window.OK && m_validator != null) {
+        if (id == Window.OK && (m_validator != null || m_nameFieldValidator != null)) {
             // sometimes the validator gets called before the button is created
-            b.setEnabled(m_valid);
+            b.setEnabled(m_valid && m_nameFieldValid);
         }
         return b;
     }
@@ -404,6 +418,101 @@ public class SpaceResourceSelectionDialog extends Dialog {
          *         invalid.
          */
         public String isValid(final AbstractExplorerFileStore selection);
+    }
+
+    /**
+     * Enable/disable the name field.
+     *
+     * @param enabled true if the name field should be shown, false otherwise
+     */
+    public void setNameFieldEnabled(final boolean enabled) {
+        m_nameFieldEnabled = enabled;
+    }
+
+    /**
+     * Set the default value for the name field.
+     *
+     * @param defaultValue The default value
+     */
+    public void setNameFieldDefaultValue(final String defaultValue) {
+        m_nameFieldDefaultValue = defaultValue;
+    }
+
+    /**
+     * Get the value of the name field.
+     *
+     * @return The value inside the name field or null if it is not valid according to the set validator
+     */
+    public String getNameFieldValue() {
+        return m_nameFieldValue;
+    }
+
+    /**
+     * Set the validator for the name field.
+     *
+     * @param validator Validator that checks if the current name is valid
+     */
+    public void setNameFieldValidator(final StringValidator validator) {
+        m_nameFieldValidator = validator;
+    }
+
+    /**
+     * Adds the name field to the parent (hiding it if it is not enabled).
+     *
+     * @param parent The composite to add the name field to
+     */
+    private void createNameField(final Composite parent) {
+        if (m_nameFieldEnabled) {
+            final Text nameField = new Text(parent, SWT.SINGLE | SWT.BORDER);
+            nameField.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+            final Label nameFieldError = new Label(parent, SWT.NONE);
+            Color red = Display.getDefault().getSystemColor(SWT.COLOR_RED);
+            nameFieldError.setForeground(red);
+            nameFieldError.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+            // Check if string is valid and save value every time it changes
+            nameField.addModifyListener(new ModifyListener() {
+                @Override
+                public void modifyText(final ModifyEvent e) {
+                    if (m_nameFieldValidator != null) {
+                        String result = m_nameFieldValidator.isValid(nameField.getText());
+                        Button b = getButton(IDialogConstants.OK_ID);
+                        m_nameFieldValid = result == null;
+                        if (m_nameFieldValid) {
+                            m_nameFieldValue = nameField.getText();
+                            nameFieldError.setText("");
+                        } else {
+                            // If string is invalid the value to return in the getter is null
+                            m_nameFieldValue = null;
+                            nameFieldError.setText(result);
+                        }
+                        if (b != null) {
+                            b.setEnabled(m_valid && m_nameFieldValid);
+                        }
+                    } else {
+                        m_nameFieldValid = true;
+                        m_nameFieldValue = nameField.getText();
+                    }
+                }
+            });
+            nameField.setText(m_nameFieldDefaultValue);
+        }
+    }
+
+    /**
+     * Validator that checks if a string is valid.
+     *
+     * @author Patrick Winter, KNIME.com AG, Zurich, Switzerland
+     */
+    public interface StringValidator {
+        /**
+         * Return null if the string is valid. A user message if it is
+         * invalid.
+         *
+         * @param string to validate
+         * @return null if the string is valid. A user message if it is
+         *         invalid.
+         */
+        public String isValid(final String string);
     }
 
 }
