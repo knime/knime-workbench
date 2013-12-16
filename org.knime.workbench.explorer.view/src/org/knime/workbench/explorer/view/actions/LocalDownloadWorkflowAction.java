@@ -119,7 +119,7 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
 
         if (info.isFile()) {
             FileUtils.copyFile(downloadedFile, getTargetDir());
-        } else if (info.isWorkflow() || info.isWorkflowTemplate()){
+        } else if (info.isWorkflow() || info.isWorkflowTemplate() || info.isWorkflowGroup()){
             unpackWorkflowIntoLocalDir(getTargetFileStore().getParent(), downloadedFile);
         } else {
             throw new IllegalArgumentException("Downloaded item '" + getSourceFile().getMountIDWithFullPath() + "'"
