@@ -246,9 +246,11 @@ public class MountSettings {
      * {@link MountSettings#SETTINGS_SEPARATOR}.
      *
      * @param settings the preference string to parse
+     * @param excludeUnknownContentProviders true if resulting list should only contain displayable settings
      * @return the parsed list of mount settings
      */
-    public static List<MountSettings> parseSettings(final String settings)  {
+    public static List<MountSettings> parseSettings(final String settings,
+            final boolean excludeUnknownContentProviders)  {
         List<MountSettings> ms = new ArrayList<MountSettings>();
         if (settings == null || settings.isEmpty()) {
             return ms;
@@ -260,7 +262,7 @@ public class MountSettings {
                 for (int i = 0; i < numSettings; i++) {
                     NodeSettingsRO singleSettings = nodeSettings.getNodeSettings("mountSettings_" + i);
                     MountSettings singleMountSettings = new MountSettings(singleSettings);
-                    if (isMountSettingsAddable(singleMountSettings)) {
+                    if (!excludeUnknownContentProviders || isMountSettingsAddable(singleMountSettings)) {
                         ms.add(singleMountSettings);
                     }
                 }
@@ -271,7 +273,7 @@ public class MountSettings {
             String[] split = settings.split(SETTINGS_SEPARATOR);
             for (String setting : split) {
                 MountSettings singleMountSettings = new MountSettings(setting);
-                if (isMountSettingsAddable(singleMountSettings)) {
+                if (!excludeUnknownContentProviders || isMountSettingsAddable(singleMountSettings)) {
                     ms.add(singleMountSettings);
                 }
             }
@@ -279,7 +281,13 @@ public class MountSettings {
         return ms;
     }
 
-    private static boolean isMountSettingsAddable(final MountSettings mountSettings) {
+    /**
+     * Checks if a given MountSettings object can be displayed.
+     * @param mountSettings the settings to check
+     * @return True, if the ContenProviderFactory of the given mountSettings is available.
+     * @since 6.1
+     */
+    public static boolean isMountSettingsAddable(final MountSettings mountSettings) {
         AbstractContentProviderFactory contentProviderFactory =
                 ExplorerMountTable.getContentProviderFactory(mountSettings.getFactoryID());
         return contentProviderFactory != null;
