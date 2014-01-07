@@ -248,7 +248,7 @@ public class MountSettings {
      * @param settings the preference string to parse
      * @param excludeUnknownContentProviders true if resulting list should only contain displayable settings
      * @return the parsed list of mount settings
-     * @since 6.1
+     * @since 6.2
      */
     public static List<MountSettings> parseSettings(final String settings,
             final boolean excludeUnknownContentProviders)  {
@@ -286,7 +286,7 @@ public class MountSettings {
      * Checks if a given MountSettings object can be displayed.
      * @param mountSettings the settings to check
      * @return True, if the ContenProviderFactory of the given mountSettings is available.
-     * @since 6.1
+     * @since 6.2
      */
     public static boolean isMountSettingsAddable(final MountSettings mountSettings) {
         AbstractContentProviderFactory contentProviderFactory =
