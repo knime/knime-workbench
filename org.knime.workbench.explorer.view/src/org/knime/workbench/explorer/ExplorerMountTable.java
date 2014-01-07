@@ -67,6 +67,7 @@ import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtensionPoint;
 import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.knime.core.node.NodeLogger;
@@ -74,6 +75,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
+import org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializer;
 import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -601,10 +603,17 @@ public final class ExplorerMountTable {
     }
 
     private static List<MountSettings> getMountSettings() {
-        String mpSettings =
-                ExplorerActivator.getDefault().getPreferenceStore()
-                        .getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
-        return MountSettings.parseSettings(mpSettings);
+        IPreferenceStore pStore = ExplorerActivator.getDefault().getPreferenceStore();
+        String mpSettings;
+        if (ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
+            mpSettings = pStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
+        } else {
+            mpSettings = pStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
+        }
+        if (mpSettings == null || mpSettings.isEmpty()) {
+            mpSettings = pStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
+        }
+        return MountSettings.parseSettings(mpSettings, true);
     }
 
     /*---------------------------------------------------------------*/

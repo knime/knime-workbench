@@ -219,7 +219,7 @@ public class MountPointTableEditor extends FieldEditor {
      * @param parent The parent component
      */
     public MountPointTableEditor(final Composite parent) {
-        init(PreferenceConstants.P_EXPLORER_MOUNT_POINT, "List of configured mount points:");
+        init(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, "List of configured mount points:");
         createControl(parent);
     }
 
@@ -417,7 +417,9 @@ public class MountPointTableEditor extends FieldEditor {
         int size = m_table.getItemCount();
 
         m_editButton.setEnabled(index >= 0);
-        m_removeButton.setEnabled(index >= 0);
+        // disable remove button for only one entry
+        // deleting all mount points, causes problems with updated pre 2.9 workspaces
+        m_removeButton.setEnabled(index >= 0 && size > 1);
         m_upButton.setEnabled(size > 1 && index > 0);
         m_downButton.setEnabled(size > 1 && index >= 0 && index < size - 1);
     }
@@ -558,7 +560,7 @@ public class MountPointTableEditor extends FieldEditor {
     @Override
     protected void doLoad() {
         String s = getPreferenceStore().getString(getPreferenceName());
-        m_mountSettings = MountSettings.parseSettings(s);
+        m_mountSettings = MountSettings.parseSettings(s, true);
         m_tableViewer.setInput(m_mountSettings);
         m_tableViewer.refresh();
     }
@@ -569,7 +571,7 @@ public class MountPointTableEditor extends FieldEditor {
     @Override
     protected void doLoadDefault() {
         String s = getPreferenceStore().getDefaultString(getPreferenceName());
-        m_mountSettings = MountSettings.parseSettings(s);
+        m_mountSettings = MountSettings.parseSettings(s, true);
         m_tableViewer.setInput(m_mountSettings);
         m_tableViewer.refresh();
     }

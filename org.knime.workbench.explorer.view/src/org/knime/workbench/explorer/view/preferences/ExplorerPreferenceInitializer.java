@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -33,6 +35,7 @@ import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.osgi.framework.FrameworkUtil;
 
 /**
  *
@@ -67,13 +70,24 @@ public class ExplorerPreferenceInitializer extends
             }
         }
         if (!settingsList.isEmpty()) {
-            prefStore.setDefault(PreferenceConstants.P_EXPLORER_MOUNT_POINT,
+            prefStore.setDefault(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML,
                     MountSettings.getSettingsString(settingsList));
         }
         // Set the default behavior of "Do you want to link this meta node".
         prefStore.setDefault(
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
                 MessageDialogWithToggle.PROMPT);
+    }
+
+    /**
+     * @return true, if mount settings have been stored in XML yet
+     * @since 6.2
+     */
+    public static boolean existsMountPreferencesXML() {
+        IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(FrameworkUtil.getBundle(
+            ExplorerActivator.class).getSymbolicName());
+        String mpSettings = preferences.get(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, null);
+        return (mpSettings != null && !mpSettings.isEmpty());
     }
 
 }

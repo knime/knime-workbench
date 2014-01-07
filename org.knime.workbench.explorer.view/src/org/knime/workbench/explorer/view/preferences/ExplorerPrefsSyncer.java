@@ -49,7 +49,7 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
 
     @Override
     public void propertyChange(final PropertyChangeEvent event) {
-        if (PreferenceConstants.P_EXPLORER_MOUNT_POINT.equals(
+        if (PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML.equals(
                 event.getProperty())) {
             String oldValue = (String)event.getOldValue();
             String newValue = (String)event.getNewValue();
@@ -60,7 +60,7 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
             Set<MountSettings> oldSettings;
             if (oldValue != null) {
                 List<MountSettings> oldMS = MountSettings.parseSettings(
-                        oldValue);
+                        oldValue, false);
                 oldSettings = new LinkedHashSet<MountSettings>(oldMS);
             } else {
                 oldSettings = Collections.emptySet();
@@ -69,7 +69,7 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener {
             Set<MountSettings> newSettings;
             List<MountSettings> newMS;
             if (newValue != null) {
-                newMS = MountSettings.parseSettings(newValue);
+                newMS = MountSettings.parseSettings(newValue, false);
                 newSettings = new LinkedHashSet<MountSettings>(newMS);
                 // leave unchanged values untouched
                 newSettings.removeAll(oldSettings);
