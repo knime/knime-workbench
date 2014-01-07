@@ -81,6 +81,7 @@ public class ExplorerPreferenceInitializer extends
 
     /**
      * @return true, if mount settings have been stored in XML yet
+     * @since 6.1
      */
     public static boolean existsMountPreferencesXML() {
         IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(FrameworkUtil.getBundle(

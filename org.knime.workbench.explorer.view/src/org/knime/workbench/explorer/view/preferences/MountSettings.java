@@ -248,6 +248,7 @@ public class MountSettings {
      * @param settings the preference string to parse
      * @param excludeUnknownContentProviders true if resulting list should only contain displayable settings
      * @return the parsed list of mount settings
+     * @since 6.1
      */
     public static List<MountSettings> parseSettings(final String settings,
             final boolean excludeUnknownContentProviders)  {
