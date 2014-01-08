@@ -478,10 +478,10 @@ public class ContentDelegator extends LabelProvider implements
         if (ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
             restoreStateFromPreferences();
         } else {
+            createMountPointXMLPreferences();
             if (storage != null) {
                 String displayed = storage.getString(KEY);
                 if (displayed != null && !displayed.isEmpty()) {
-                    createMountPointXMLPreferences();
                     restoreStateFromStorage(displayed);
                     saveStateToPreferences();
                 } else {
@@ -494,10 +494,13 @@ public class ContentDelegator extends LabelProvider implements
     }
 
     private void createMountPointXMLPreferences() {
+        String prefKey = PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML;
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
         String pre29PrefString = prefStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
         if (pre29PrefString != null && !pre29PrefString.isEmpty()) {
-            prefStore.setValue(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, pre29PrefString);
+            prefStore.setValue(prefKey, pre29PrefString);
+        } else {
+            prefStore.setValue(prefKey, prefStore.getDefaultString(prefKey));
         }
     }
 
