@@ -51,6 +51,8 @@
 package org.knime.workbench.explorer;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -143,7 +145,16 @@ public final class ExplorerMountTable {
         if (id == null || id.isEmpty()) {
             return false;
         }
-        return !id.startsWith("knime.") && MOUNTID_PATTERN.matcher(id).find();
+        if (id.startsWith("knime.") || !MOUNTID_PATTERN.matcher(id).find()) {
+            return false;
+        }
+        try {
+            // this is the way we build URIs to reference server items - this must not choke.
+            new URI(ExplorerFileSystem.SCHEME, id, "/test/path", null);
+            return true;
+        } catch (URISyntaxException e) {
+            return false;
+        }
     }
 
     /**
