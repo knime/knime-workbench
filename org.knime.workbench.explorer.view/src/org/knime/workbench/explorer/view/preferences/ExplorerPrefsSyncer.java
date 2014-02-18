@@ -29,11 +29,16 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.eclipse.core.runtime.preferences.DefaultScope;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.util.ConvenienceMethods;
+import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -45,6 +50,14 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  *
  */
 public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreferenceChangeListener {
+    private String m_previousValue;
+
+    /**
+     * Creates a new preference syncer.
+     */
+    public ExplorerPrefsSyncer() {
+        m_previousValue = getUserOrDefaultValue();
+    }
 
     /**
      * {@inheritDoc}
@@ -53,9 +66,9 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
     public void propertyChange(final PropertyChangeEvent event) {
         if (PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML.equals(
             event.getProperty())) {
-            String oldValue = (String)event.getOldValue();
-            String newValue = (String)event.getNewValue();
-            updateSettings(oldValue, newValue);
+            String newValue = getUserOrDefaultValue();
+            updateSettings(m_previousValue, newValue);
+            m_previousValue = newValue;
         }
     }
 
@@ -66,14 +79,14 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
     @Override
     public void preferenceChange(final PreferenceChangeEvent event) {
         if (PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML.equals(event.getKey())) {
-            String oldValue = (String)event.getOldValue();
-            String newValue = (String)event.getNewValue();
-            updateSettings(oldValue, newValue);
+            String newValue = getUserOrDefaultValue();
+            updateSettings(m_previousValue, newValue);
+            m_previousValue = newValue;
         }
     }
 
     private void updateSettings(final String oldValue, final String newValue) {
-        if ((oldValue == newValue) || ((oldValue != null) && oldValue.equals(newValue))) {
+        if (ConvenienceMethods.areEqual(oldValue, newValue)) {
             return;
         }
 
@@ -130,5 +143,15 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
             newMountIds.add(ms.getMountID());
         }
         ExplorerMountTable.setMountOrder(newMountIds);
+    }
+
+    private static String getUserOrDefaultValue() {
+        IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+        String value = preferences.get(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, null);
+        if (value == null) {
+            IEclipsePreferences defaultPreferences = DefaultScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+            value = defaultPreferences.get(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, null);
+        }
+        return value;
     }
 }
