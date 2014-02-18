@@ -22,6 +22,10 @@ package org.knime.workbench.explorer;
 import java.util.Hashtable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.core.runtime.preferences.DefaultScope;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.util.pathresolve.URIToFileResolve;
@@ -90,7 +94,11 @@ public class ExplorerActivator extends AbstractUIPlugin {
     public IPreferenceStore getPreferenceStore() {
         IPreferenceStore prefStore = super.getPreferenceStore();
         if (!m_prefSyncerAdded.getAndSet(true)) {
-            prefStore.addPropertyChangeListener(new ExplorerPrefsSyncer());
+            IPreferenceChangeListener prefsSyncer = new ExplorerPrefsSyncer();
+            IEclipsePreferences defaultPrefs = DefaultScope.INSTANCE.getNode(PLUGIN_ID);
+            defaultPrefs.addPreferenceChangeListener(prefsSyncer);
+            IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(PLUGIN_ID);
+            preferences.addPreferenceChangeListener(prefsSyncer);
         }
         return prefStore;
     }

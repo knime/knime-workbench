@@ -29,6 +29,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.knime.core.node.NodeLogger;
@@ -42,74 +44,91 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  * @author Dominik Morent, KNIME.com, Zurich, Switzerland
  *
  */
-public class ExplorerPrefsSyncer implements IPropertyChangeListener {
+public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreferenceChangeListener {
+
     /**
      * {@inheritDoc}
      */
-
     @Override
     public void propertyChange(final PropertyChangeEvent event) {
         if (PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML.equals(
-                event.getProperty())) {
+            event.getProperty())) {
             String oldValue = (String)event.getOldValue();
             String newValue = (String)event.getNewValue();
-            if ((oldValue == newValue) || ((oldValue != null) && oldValue.equals(newValue))) {
-                return;
-            }
-
-            Set<MountSettings> oldSettings;
-            if (oldValue != null) {
-                List<MountSettings> oldMS = MountSettings.parseSettings(
-                        oldValue, false);
-                oldSettings = new LinkedHashSet<MountSettings>(oldMS);
-            } else {
-                oldSettings = Collections.emptySet();
-            }
-
-            Set<MountSettings> newSettings;
-            List<MountSettings> newMS;
-            if (newValue != null) {
-                newMS = MountSettings.parseSettings(newValue, false);
-                newSettings = new LinkedHashSet<MountSettings>(newMS);
-                // leave unchanged values untouched
-                newSettings.removeAll(oldSettings);
-            } else {
-                newSettings = Collections.emptySet();
-                newMS = Collections.emptyList();
-            }
-            oldSettings.removeAll(new LinkedHashSet<MountSettings>(newMS));
-
-            // remove deleted mount points
-            for (MountSettings ms : oldSettings) {
-                boolean successful = ExplorerMountTable.unmount(
-                        ms.getMountID());
-                if (!successful) {
-                    // most likely mount point was not present to begin with
-                    NodeLogger.getLogger(this.getClass()).debug("Mount point \"" + ms.getDisplayName()
-                            + "\" could not be unmounted.");
-                }
-            }
-
-            // add all new mount points
-            for (MountSettings ms : newSettings) {
-                if (!ms.isActive()) {
-                    continue;
-                }
-                try {
-                    ExplorerMountTable.mount(ms.getMountID(),
-                            ms.getFactoryID(), ms.getContent());
-                } catch (IOException e) {
-                    NodeLogger.getLogger(this.getClass()).error("Mount point \"" + ms.getDisplayName()
-                            + "\" could not be mounted.", e);
-                }
-            }
-
-            // sync the ordering of the mount points
-            List<String> newMountIds = new ArrayList<String>();
-            for (MountSettings ms : newMS) {
-                newMountIds.add(ms.getMountID());
-            }
-            ExplorerMountTable.setMountOrder(newMountIds);
+            updateSettings(oldValue, newValue);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     * @since 6.2
+     */
+    @Override
+    public void preferenceChange(final PreferenceChangeEvent event) {
+        if (PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML.equals(event.getKey())) {
+            String oldValue = (String)event.getOldValue();
+            String newValue = (String)event.getNewValue();
+            updateSettings(oldValue, newValue);
+        }
+    }
+
+    private void updateSettings(final String oldValue, final String newValue) {
+        if ((oldValue == newValue) || ((oldValue != null) && oldValue.equals(newValue))) {
+            return;
+        }
+
+        Set<MountSettings> oldSettings;
+        if (oldValue != null) {
+            List<MountSettings> oldMS = MountSettings.parseSettings(
+                    oldValue, false);
+            oldSettings = new LinkedHashSet<MountSettings>(oldMS);
+        } else {
+            oldSettings = Collections.emptySet();
+        }
+
+        Set<MountSettings> newSettings;
+        List<MountSettings> newMS;
+        if (newValue != null) {
+            newMS = MountSettings.parseSettings(newValue, false);
+            newSettings = new LinkedHashSet<MountSettings>(newMS);
+            // leave unchanged values untouched
+            newSettings.removeAll(oldSettings);
+        } else {
+            newSettings = Collections.emptySet();
+            newMS = Collections.emptyList();
+        }
+        oldSettings.removeAll(new LinkedHashSet<MountSettings>(newMS));
+
+        // remove deleted mount points
+        for (MountSettings ms : oldSettings) {
+            boolean successful = ExplorerMountTable.unmount(
+                    ms.getMountID());
+            if (!successful) {
+                // most likely mount point was not present to begin with
+                NodeLogger.getLogger(this.getClass()).debug("Mount point \"" + ms.getDisplayName()
+                        + "\" could not be unmounted.");
+            }
+        }
+
+        // add all new mount points
+        for (MountSettings ms : newSettings) {
+            if (!ms.isActive()) {
+                continue;
+            }
+            try {
+                ExplorerMountTable.mount(ms.getMountID(),
+                        ms.getFactoryID(), ms.getContent());
+            } catch (IOException e) {
+                NodeLogger.getLogger(this.getClass()).error("Mount point \"" + ms.getDisplayName()
+                        + "\" could not be mounted.", e);
+            }
+        }
+
+        // sync the ordering of the mount points
+        List<String> newMountIds = new ArrayList<String>();
+        for (MountSettings ms : newMS) {
+            newMountIds.add(ms.getMountID());
+        }
+        ExplorerMountTable.setMountOrder(newMountIds);
     }
 }
