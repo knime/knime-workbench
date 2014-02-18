@@ -74,7 +74,7 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
 
     /**
      * {@inheritDoc}
-     * @since 6.2
+     * @since 6.3
      */
     @Override
     public void preferenceChange(final PreferenceChangeEvent event) {
