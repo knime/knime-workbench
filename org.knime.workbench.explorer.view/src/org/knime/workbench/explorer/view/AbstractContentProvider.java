@@ -76,6 +76,7 @@ import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
+import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
 import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 
@@ -374,6 +375,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         final boolean overwriteOK = doesTargetExist
             && !AbstractExplorerFileStore.isWorkflowGroup(templateLoc);
         boolean isOverwrite = false;
+
+        OverwriteAndMergeInfo info = null;
         if (doesTargetExist) {
             DestinationChecker<AbstractExplorerFileStore,
                 AbstractExplorerFileStore> dc = new DestinationChecker
@@ -389,6 +392,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 return false;
             }
             isOverwrite = old.equals(templateLoc);
+            info = dc.getOverwriteAndMergeInfos().get(templateLoc);
         }
 
         String newName = templateLoc.getName();
@@ -460,6 +464,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     MetaNodeTemplateInformation link = template.createLink(uri);
                     metaNode.getParent().setTemplateInformation(
                             metaNode.getID(), link);
+                }
+                if ((info != null) && (templateLoc instanceof RemoteExplorerFileStore) && info.createSnapshot()) {
+                    ((RemoteExplorerFileStore)templateLoc).createSnapshot(info.getComment());
                 }
             } catch (Exception e) {
                 String error = "Unable to save template: " + e.getMessage();
