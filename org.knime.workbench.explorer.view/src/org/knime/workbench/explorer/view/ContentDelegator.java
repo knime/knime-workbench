@@ -451,6 +451,7 @@ public class ContentDelegator extends LabelProvider implements
     private static final char ID_SEP = ':';
 
     private static final String KEY = "DisplayedMountIDs";
+    private static final String IGNORE_MEMENTO = "IgnoreMementoFor29Plus";
 
     private String m_pre29Storage;
 
@@ -458,9 +459,10 @@ public class ContentDelegator extends LabelProvider implements
      * @param storage store information in order to restore state
      */
     public void saveState(final IMemento storage) {
-        // save state for pre 2.9 workflows
+        // save state for pre 2.9 workspaces
         if (m_pre29Storage != null) {
             storage.putString(KEY, m_pre29Storage);
+            storage.putBoolean(IGNORE_MEMENTO, true);
         }
     }
 
@@ -472,10 +474,12 @@ public class ContentDelegator extends LabelProvider implements
      *
      */
     public void restoreState(final IMemento storage) {
+        boolean ignoreMemento = false;
         if (storage != null) {
             m_pre29Storage = storage.getString(KEY);
+            ignoreMemento = Boolean.TRUE.equals(storage.getBoolean(IGNORE_MEMENTO));
         }
-        if (ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
+        if (ignoreMemento || ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
             restoreStateFromPreferences();
         } else {
             createMountPointXMLPreferences();
