@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  *
- *  Copyright by 
+ *  Copyright by
  *  University of Konstanz, Germany and
  *  KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
@@ -57,6 +57,7 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.util.pathresolve.URIToFileResolve;
@@ -136,7 +137,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
      *
      * @param uri a mountpoint-relative URI
      * @return a file object
-     * @throws IOException if the resolution fails because of a missing node context or if the URI goes out of the
+     * @throws IOException if the resolution fails because of a missing node context or if the URI leaves the
      *             mountpoint root
      * @throws IllegalArgumentException if the URI is not a mountpoint-relative URI
      * @since 5.0
@@ -153,7 +154,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
 
         WorkflowContext workflowContext = context.getWorkflowManager().getContext();
         if (workflowContext == null) {
-            throw new IOException("Workflow " + context.getWorkflowManager() + " does not have context");
+            throw new IOException("Workflow " + context.getWorkflowManager() + " does not have a context");
         }
 
         File mountpointRoot = workflowContext.getMountpointRoot();
@@ -175,7 +176,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
      *
      * @param uri a workflow-relative URI
      * @return a file object
-     * @throws IOException if the resolution fails because of a missing node context or if the URI goes out of the
+     * @throws IOException if the resolution fails because of a missing node context or if the URI leaves the
      *             mountpoint root
      * @throws IllegalArgumentException if the URI is not a workflow-relative URI
      * @since 5.0
@@ -192,7 +193,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
 
         WorkflowContext workflowContext = context.getWorkflowManager().getContext();
         if (workflowContext == null) {
-            throw new IOException("Workflow " + context.getWorkflowManager() + " does not have context");
+            throw new IOException("Workflow " + context.getWorkflowManager() + " does not have a context");
         }
 
         File currentLocation = workflowContext.getCurrentLocation();
@@ -215,6 +216,49 @@ public class URIToFileResolveImpl implements URIToFileResolve {
                     + resolvedPath.getAbsolutePath() + " is not in "
                     + workflowContext.getMountpointRoot().getAbsolutePath());
             }
+        }
+        return resolvedPath;
+    }
+
+
+    /**
+     * Takes a node-relative knime URI (i.e. <tt>knime://knime.node/...</tt>) and resolves into its
+     * corresponding file object.
+     *
+     * @param uri a node-relative URI
+     * @return a file object
+     * @throws IOException if the resolution fails because of a missing node context or if the URI leaves the workflow
+     * @throws IllegalArgumentException if the URI is not a node-relative URI
+     * @since 6.4
+     */
+    public static File resolveNodeRelativeUri(final URI uri) throws IOException {
+        if (!ExplorerURLStreamHandler.NODE_RELATIVE.equalsIgnoreCase(uri.getHost())) {
+            throw new IllegalArgumentException("Wrong magic hostname for node-relative URLs: " + uri.getHost());
+        }
+
+        NodeContext context = NodeContext.getContext();
+        if (context == null) {
+            throw new IOException("No context for node-relative URL available");
+        }
+
+        WorkflowContext workflowContext = context.getWorkflowManager().getContext();
+        if (workflowContext == null) {
+            throw new IOException("Workflow " + context.getWorkflowManager() + " does not have a context");
+        }
+
+        ReferencedFile nodeDirectoryRef = context.getNodeContainer().getNodeContainerDirectory();
+        if (nodeDirectoryRef == null) {
+            throw new IOException("Workflow must be saved before node-relative URLs can be used");
+        }
+        File resolvedPath =
+            new File(nodeDirectoryRef.getFile().getAbsolutePath(), URLDecoder.decode(uri.getPath(), "UTF-8"));
+
+        File currentLocation = workflowContext.getCurrentLocation();
+
+        // check if resolved path leaves the workflow
+        if (!resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())) {
+            throw new IOException("Leaving the workflow is not allowed for node-relative URLs: "
+                + resolvedPath.getCanonicalPath() + " is not in " + currentLocation.getCanonicalPath());
         }
         return resolvedPath;
     }

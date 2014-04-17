@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: KNIME Explorer View
 Bundle-SymbolicName: org.knime.workbench.explorer.view;singleton:=true
-Bundle-Version: 6.3.2.qualifier
+Bundle-Version: 6.4.0.qualifier
 Bundle-Activator: org.knime.workbench.explorer.ExplorerActivator
 Bundle-Vendor: KNIME.com, Zurich, Switzerland
 Export-Package: org.knime.workbench.explorer,

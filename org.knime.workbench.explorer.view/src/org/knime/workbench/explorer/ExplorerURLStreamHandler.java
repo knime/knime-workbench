@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  *
- *  Copyright by 
+ *  Copyright by
  *  University of Konstanz, Germany and
  *  KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
@@ -78,18 +78,25 @@ import org.osgi.service.url.AbstractURLStreamHandlerService;
  */
 public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     /**
-     * Return the magic hostname for workflow-relative URLs.
+     * The magic hostname for workflow-relative URLs.
      *
      * @since 5.0
      */
     public static final String WORKFLOW_RELATIVE = "knime.workflow";
 
     /**
-     * Return the magic hostname for mountpoint-relative URLs.
+     * The magic hostname for mountpoint-relative URLs.
      *
      * @since 5.0
      */
     public static final String MOUNTPOINT_RELATIVE = "knime.mountpoint";
+
+    /**
+     * The magic hostname for node-relative URLs.
+     *
+     * @since 6.4
+     */
+    public static final String NODE_RELATIVE = "knime.node";
 
     /**
      * {@inheritDoc}
@@ -109,6 +116,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())) {
                 File resolvedPath = URIToFileResolveImpl.resolveMountpointRelativeUri(url.toURI());
                 // FIXME add permission check if run on the server
+                return resolvedPath.toURI().toURL().openConnection();
+            } else if (NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
+                File resolvedPath = URIToFileResolveImpl.resolveNodeRelativeUri(url.toURI());
                 return resolvedPath.toURI().toURL().openConnection();
             } else {
                 return openExternalMountConnection(url);
