@@ -307,4 +307,15 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
             && ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @since 6.4
+     */
+    @Override
+    public boolean isNodeRelative(final URI uri) {
+        return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
+                && ExplorerURLStreamHandler.NODE_RELATIVE.equalsIgnoreCase(uri.getHost());
+    }
 }
