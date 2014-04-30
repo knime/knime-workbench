@@ -2,7 +2,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright by 
+ * Copyright by
  * KNIME.com, Zurich, Switzerland
  *
  * You may not modify, publish, transmit, transfer or sell, reproduce,
@@ -38,7 +38,6 @@ import org.eclipse.ui.internal.wizards.datatransfer.ZipLeveledStructureProvider;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.imports.IWorkflowImportElement;
@@ -52,23 +51,21 @@ import org.knime.workbench.ui.navigator.ZipLeveledStructProvider;
  */
 public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
 
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(LocalDownloadWorkflowAction.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalDownloadWorkflowAction.class);
 
     /** The action's id. */
     public static final String ID = "com.knime.explorer.downloadaction";
 
-
-    private final LocalExplorerFileStore m_targetFileStore;
 
     /**
      * Creates a action with the source and parent directory.
      *
      * @param source the source file store containing the workflow
      * @param target the target directory to download the workflow to
+     * @since 6.4
      */
     public LocalDownloadWorkflowAction(final RemoteExplorerFileStore source,
-            final File target) {
+            final LocalExplorerFileStore target) {
         this(source, target, null);
     }
 
@@ -78,13 +75,11 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
      * @param source the source file store containing the workflow
      * @param target the target directory to download the workflow to
      * @param monitor the progress monitor to use
+     * @since 6.4
      */
-    public LocalDownloadWorkflowAction(final RemoteExplorerFileStore source,
-            final File target, final IProgressMonitor monitor) {
+    public LocalDownloadWorkflowAction(final RemoteExplorerFileStore source, final LocalExplorerFileStore target,
+            final IProgressMonitor monitor) {
         super("Download", source, target, monitor);
-        LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE
-                .fromLocalFile(getTargetDir());
-        m_targetFileStore = fs;
     }
 
     /**
@@ -93,14 +88,6 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
     @Override
     public String getId() {
         return ID;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected LocalExplorerFileStore getTargetFileStore() {
-        return m_targetFileStore;
     }
 
      /**
@@ -118,9 +105,9 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
         }
 
         if (info.isFile()) {
-            FileUtils.copyFile(downloadedFile, getTargetDir());
-        } else if (info.isWorkflow() || info.isWorkflowTemplate() || info.isWorkflowGroup()){
-            unpackWorkflowIntoLocalDir(getTargetFileStore().getParent(), downloadedFile);
+            FileUtils.copyFile(downloadedFile, getTargetDir().toLocalFile());
+        } else if (info.isWorkflow() || info.isWorkflowTemplate() || info.isWorkflowGroup()) {
+            unpackWorkflowIntoLocalDir(getTargetDir().getParent(), downloadedFile);
         } else {
             throw new IllegalArgumentException("Downloaded item '" + getSourceFile().getMountIDWithFullPath() + "'"
                 + " is neither a file nor a workflow or template.");
@@ -132,7 +119,7 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
      */
     @Override
     protected void refreshTarget() {
-        getTargetFileStore().refresh();
+        getTargetDir().refresh();
     }
 
     private void unpackWorkflowIntoLocalDir(
@@ -162,7 +149,7 @@ public class LocalDownloadWorkflowAction extends AbstractDownloadAction {
             element = root;
         }
         // rename the import element
-        element.setName(getTargetFileStore().getName());
+        element.setName(getTargetDir().getName());
         flows.add(element);
         LOGGER.debug("Unpacking workflow \"" + element.getName()
                 + "\" into destination: "

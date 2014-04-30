@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  *
- *  Copyright by 
+ *  Copyright by
  *  University of Konstanz, Germany and
  *  KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
@@ -155,7 +155,7 @@ public class ExplorerFileSystem extends FileSystem {
     @Override
     public LocalExplorerFileStore fromLocalFile(final File file) {
         for (AbstractContentProvider acp
-                : ExplorerMountTable.getMountedContent().values()) {
+                : ExplorerMountTable.getMountedContentInclTempSpace().values()) {
             LocalExplorerFileStore fromLocalFile = acp.fromLocalFile(file);
             if (fromLocalFile != null) {
                 return fromLocalFile;

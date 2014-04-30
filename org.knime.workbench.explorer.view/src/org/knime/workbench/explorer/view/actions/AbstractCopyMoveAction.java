@@ -2,7 +2,7 @@
   * This source code, its documentation and all appendant files
   * are protected by copyright law. All rights reserved.
   *
-  * Copyright by 
+  * Copyright by
   * KNIME.com, Zurich, Switzerland
   *
   * You may not modify, publish, transmit, transfer or sell, reproduce,
@@ -53,7 +53,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
-import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
+import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
@@ -209,16 +209,13 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                 "Please select the location to "
                 + (m_performMove ? "move" : "copy")
                 + " the selected files to.");
-        dialog.setValidator(new SelectionValidator() {
+        dialog.setValidator(new Validator() {
             @Override
-            public String isValid(
-                    final AbstractExplorerFileStore selection) {
+            public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {
                 boolean isWFG = selection.fetchInfo().isWorkflowGroup();
-                return isWFG ? null
-                        : "Only workflow groups can be selected as target.";
+                return isWFG ? null : "Only workflow groups can be selected as target.";
             }
         });
-        dialog.scaleDialogSize(1, 2);
         if (Window.OK == dialog.open()) {
             setTarget(dialog.getSelection());
         }

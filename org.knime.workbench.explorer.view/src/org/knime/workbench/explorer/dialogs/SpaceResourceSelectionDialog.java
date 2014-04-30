@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  *
- *  Copyright by 
+ *  Copyright by
  *  University of Konstanz, Germany and
  *  KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
@@ -70,7 +70,6 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
-import org.eclipse.ui.dialogs.ISelectionValidator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -88,7 +87,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     private final String[] m_mountIDs;
 
-    private TreeSelectionControl m_tree;
+    private ExplorerFileStoreSelectionControl m_tree;
 
     private ContentDelegator m_treeInput;
 
@@ -98,7 +97,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     private final ContentObject m_initialSelection;
 
-    private SelectionValidator m_validator = null;
+    private Validator m_validator = null;
 
     private String m_title = null;
 
@@ -110,9 +109,11 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     private boolean m_valid = true;
 
-    private int m_xSizeFactor;
+    private int m_minInitialX;
 
-    private int m_ySizeFactor;
+    private int m_minInitialY;
+
+    private Text m_nameField;
 
     private boolean m_nameFieldEnabled = false;
 
@@ -120,9 +121,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     private String m_nameFieldValue = null;
 
-    private StringValidator m_nameFieldValidator = null;
-
-    private boolean m_nameFieldValid = true;
+    private Label m_error;
 
     /**
      * Creates a new dialog showing the passed mount ids.
@@ -142,8 +141,8 @@ public class SpaceResourceSelectionDialog extends Dialog {
         } else {
             m_selectedContainer = null;
         }
-        m_xSizeFactor = 1;
-        m_ySizeFactor = 2;
+        m_minInitialX = 350;
+        m_minInitialY = 700;
     }
 
     /**
@@ -152,8 +151,14 @@ public class SpaceResourceSelectionDialog extends Dialog {
     @Override
     protected Point getInitialSize() {
         Point size = super.getInitialSize();
-        return  new Point(size.x * m_xSizeFactor,
-                size.y * m_ySizeFactor);
+        Point newsize = new Point(size.x, size.y);
+        if (size.x < m_minInitialX) {
+            newsize.x = m_minInitialX;
+        }
+        if (size.y < m_minInitialY) {
+            newsize.y = m_minInitialY;
+        }
+        return newsize;
     }
 
     /**
@@ -222,6 +227,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
         createHeader(overall);
         createTreeControl(overall);
         createResultPanel(overall);
+        createErrorPanel(overall);
         createNameField(overall);
         return overall;
 
@@ -271,7 +277,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
             }
         }
 
-        m_tree = new TreeSelectionControl();
+        m_tree = new ExplorerFileStoreSelectionControl();
         m_tree.setContentProvider(m_treeInput);
         m_tree.setLabelProvider(m_treeInput);
         m_tree.setComparator(new ExplorerViewComparator());
@@ -281,40 +287,70 @@ public class SpaceResourceSelectionDialog extends Dialog {
         }
         m_tree.setInput(m_treeInput);
         m_tree.setMessage(m_message);
-        m_tree.setValidator(new ISelectionValidator() {
-
-            @Override
-            public String isValid(final Object selection) {
-                if (m_validator != null) {
-                    AbstractExplorerFileStore selFile =
-                            getSelectedFile(selection);
-                    String result;
-                    if (selFile != null) {
-                        result = m_validator.isValid(selFile);
-                    } else {
-                        result = "Invalid selection";
-                    }
-                    Button b = getButton(IDialogConstants.OK_ID);
-                    // store it in case button is not created yet
-                    m_valid = result == null;
-                    if (b != null) {
-                        b.setEnabled(m_valid && m_nameFieldValid);
-                    }
-                    return result;
-                }
-                return null;
-            }
-        });
         m_tree.setChangeListener(new TreeSelectionChangeListener() {
             @Override
             public void treeSelectionChanged(final Object newSelection,
                     final boolean valid) {
-                m_selectedContainer = getSelectedFile(newSelection);
-                updateResultPanel();
+                handleTreeSelectionChanged(newSelection, valid);
             }
         });
         m_tree.createTreeControl(parent);
+
     }
+
+    private void handleTreeSelectionChanged(final Object newSelection, final boolean valid) {
+        m_selectedContainer = getSelectedFile(newSelection);
+        validateSelectionValue();
+        updateResultPanel();
+    }
+
+    private void handleNameFieldValueChanged() {
+        m_nameFieldValue = m_nameField.getText();
+        validateNameFieldValue();
+        updateResultPanel();
+    }
+
+    /**
+     * @since 6.4
+     */
+    protected void validateNameFieldValue() {
+        if (m_validator != null && m_nameFieldEnabled) {
+            String error = m_validator.validateNewNameValue(m_nameFieldValue, m_selectedContainer);
+            m_valid = error == null;
+            Button b = getButton(IDialogConstants.OK_ID);
+            if (b != null) {
+                b.setEnabled(m_valid);
+            }
+            updateErrorPanel(error);
+        }
+    }
+
+    /**
+     * @since 6.4
+     */
+    protected void validateSelectionValue() {
+        if (m_validator != null) {
+            String error = m_validator.validateSelectionValue(m_selectedContainer, m_nameFieldValue);
+            m_valid = error == null;
+            Button b = getButton(IDialogConstants.OK_ID);
+            if (b != null) {
+                b.setEnabled(m_valid);
+            }
+            updateErrorPanel(error);
+        }
+    }
+
+    /**
+     * @param newSel the new item to select in the tree
+     * @since 6.4
+     */
+    public void setTreeSelection(final AbstractExplorerFileStore newSel) {
+        m_tree.setSelection(newSel);
+        handleTreeSelectionChanged(newSel, false);
+        m_selectedContainer = newSel;
+        validateSelectionValue();
+    }
+
 
     /**
      * Creates the result panel.
@@ -334,12 +370,56 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * Update the result panel.
      */
     protected void updateResultPanel() {
-        if (m_selectedContainer != null) {
-            m_path.setText("knime://" + m_selectedContainer.getMountID() + m_selectedContainer.getFullName());
+        String path = null;
+        String name = null;
+        if (m_nameFieldEnabled) {
+            name = m_nameFieldValue;
+        }
+        if (m_validator != null) {
+            path = m_validator.getResultPath(m_selectedContainer, name);
+        } else {
+            if (m_selectedContainer != null) {
+                path = "knime://" + m_selectedContainer.getMountID() + m_selectedContainer.getFullName();
+            }
+        }
+        if (path != null && !path.isEmpty()) {
+            m_path.setText(path);
+            m_path.setToolTipText(path);
         } else {
             m_path.setText("");
+            m_path.setToolTipText(null);
         }
     }
+
+    /**
+     * @param parent panel
+     * @since 6.4
+     */
+    protected void createErrorPanel(final Composite parent) {
+        Composite panel = new Composite(parent, SWT.FILL);
+        panel.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+        panel.setLayout(new GridLayout(1, true));
+        m_error = new Label(parent, SWT.NONE);
+        m_error.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false));
+        m_error.setForeground(getParentShell().getDisplay().getSystemColor(SWT.COLOR_RED));
+        m_error.setText("");
+        m_error.setToolTipText(null);
+    }
+
+    /**
+     * @param error to display
+     * @since 6.4
+     */
+    protected void updateErrorPanel(final String error) {
+        if (error == null || error.isEmpty()) {
+            m_error.setText("");
+            m_error.setToolTipText(null);
+        } else {
+            m_error.setText(error);
+            m_error.setToolTipText(error);
+        }
+    }
+
 
 
     /**
@@ -366,9 +446,9 @@ public class SpaceResourceSelectionDialog extends Dialog {
     protected Button createButton(final Composite parent, final int id,
             final String label, final boolean defaultButton) {
         Button b = super.createButton(parent, id, label, defaultButton);
-        if (id == Window.OK && (m_validator != null || m_nameFieldValidator != null)) {
+        if (id == Window.OK && m_validator != null) {
             // sometimes the validator gets called before the button is created
-            b.setEnabled(m_valid && m_nameFieldValid);
+            b.setEnabled(m_valid);
         }
         return b;
     }
@@ -378,8 +458,9 @@ public class SpaceResourceSelectionDialog extends Dialog {
      *
      * @param validator the validator that is used to determin if a selected
      *          file is valid
+     * @since 6.4
      */
-    public void setValidator(final SelectionValidator validator) {
+    public void setValidator(final Validator validator) {
         m_validator = validator;
     }
 
@@ -392,36 +473,22 @@ public class SpaceResourceSelectionDialog extends Dialog {
     }
 
     /**
-     * Allows to scale the initial dialog size.
-     *
-     * @param xFactor the factor to multiply the width with
-     * @param yFactor the factor to multiply the height with
+     * Set the initial minimum size of the dialog.
+     * @param minInitialX negative (or zero) number for default/no change
+     * @param minInitialY negative (or zero) number for default/no change
+     * @since 6.4
      */
-    public void scaleDialogSize(final int xFactor, final int yFactor) {
-        m_xSizeFactor = xFactor;
-        m_ySizeFactor = yFactor;
+    public void setInitialSize(final int minInitialX, final int minInitialY) {
+        if (minInitialX > 0) {
+            m_minInitialX = minInitialX;
+        }
+        if (minInitialY > 0) {
+            m_minInitialY = minInitialY;
+        }
     }
 
     /**
-     * Used to validate a new selection in the
-     * {@link SpaceResourceSelectionDialog}.
-     *
-     * @author ohl, University of Konstanz
-     */
-    public interface SelectionValidator {
-        /**
-         * Return null if the selection is valid. A user message if it is
-         * invalid.
-         *
-         * @param selection to validate
-         * @return null if the selection is valid. A user message if it is
-         *         invalid.
-         */
-        public String isValid(final AbstractExplorerFileStore selection);
-    }
-
-    /**
-     * Enable/disable the name field.
+     * Enable/disable the name field. Must be set before dialog display/creation.
      *
      * @param enabled true if the name field should be shown, false otherwise
      * @since 6.2
@@ -443,21 +510,11 @@ public class SpaceResourceSelectionDialog extends Dialog {
     /**
      * Get the value of the name field.
      *
-     * @return The value inside the name field or null if it is not valid according to the set validator
+     * @return The value inside the name field
      * @since 6.2
      */
     public String getNameFieldValue() {
         return m_nameFieldValue;
-    }
-
-    /**
-     * Set the validator for the name field.
-     *
-     * @param validator Validator that checks if the current name is valid
-     * @since 6.2
-     */
-    public void setNameFieldValidator(final StringValidator validator) {
-        m_nameFieldValidator = validator;
     }
 
     /**
@@ -467,56 +524,44 @@ public class SpaceResourceSelectionDialog extends Dialog {
      */
     private void createNameField(final Composite parent) {
         if (m_nameFieldEnabled) {
-            final Text nameField = new Text(parent, SWT.SINGLE | SWT.BORDER);
-            nameField.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-            final Label nameFieldError = new Label(parent, SWT.NONE);
-            Color red = Display.getDefault().getSystemColor(SWT.COLOR_RED);
-            nameFieldError.setForeground(red);
-            nameFieldError.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+            m_nameField = new Text(parent, SWT.SINGLE | SWT.BORDER);
+            m_nameField.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
             // Check if string is valid and save value every time it changes
-            nameField.addModifyListener(new ModifyListener() {
+            m_nameField.addModifyListener(new ModifyListener() {
                 @Override
                 public void modifyText(final ModifyEvent e) {
-                    if (m_nameFieldValidator != null) {
-                        String result = m_nameFieldValidator.isValid(nameField.getText());
-                        Button b = getButton(IDialogConstants.OK_ID);
-                        m_nameFieldValid = result == null;
-                        if (m_nameFieldValid) {
-                            m_nameFieldValue = nameField.getText();
-                            nameFieldError.setText("");
-                        } else {
-                            // If string is invalid the value to return in the getter is null
-                            m_nameFieldValue = null;
-                            nameFieldError.setText(result);
-                        }
-                        if (b != null) {
-                            b.setEnabled(m_valid && m_nameFieldValid);
-                        }
-                    } else {
-                        m_nameFieldValid = true;
-                        m_nameFieldValue = nameField.getText();
-                    }
+                    handleNameFieldValueChanged();
                 }
             });
-            nameField.setText(m_nameFieldDefaultValue);
+            m_nameField.setText(m_nameFieldDefaultValue);
         }
     }
 
     /**
-     * Validator that checks if a string is valid.
-     *
-     * @author Patrick Winter, KNIME.com AG, Zurich, Switzerland
-     * @since 6.2
+     * @param val new value to set
+     * @since 6.4
      */
-    public interface StringValidator {
+    public void setNameFieldValue(final String val) {
+        if (m_nameFieldEnabled) {
+            m_nameField.setText(val);
+            handleNameFieldValueChanged();
+        }
+    }
+
+    /**
+     *
+     * @author ohl
+     * @since 6.4
+     */
+    public class ExplorerFileStoreSelectionControl extends TreeSelectionControl {
         /**
-         * Return null if the string is valid. A user message if it is
-         * invalid.
-         *
-         * @param string to validate
-         * @return null if the string is valid. A user message if it is
-         *         invalid.
+         * @param store the file to select
          */
-        public String isValid(final String string);
+        public void setSelection(final AbstractExplorerFileStore store) {
+            ContentObject sel = ContentObject.forFile(store);
+            if (sel != null) {
+                setTreeSelection(new StructuredSelection(sel));
+            }
+        }
     }
 }

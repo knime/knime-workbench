@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  *
- *  Copyright by 
+ *  Copyright by
  *  University of Konstanz, Germany and
  *  KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
@@ -81,7 +81,7 @@ import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
-import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
+import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
 
@@ -293,13 +293,15 @@ public class WorkflowExportPage extends WizardPage {
         ContentObject initSel = ContentObject.forFile(m_selection);
         SpaceResourceSelectionDialog dlg =
                 new SpaceResourceSelectionDialog(getShell(), ExplorerMountTable
-                        .getAllMountIDs().toArray(new String[0]), initSel);
+                        .getAllVisibleMountIDs().toArray(new String[0]), initSel);
         dlg.setTitle("Source Selection");
         dlg.setHeader("Workflow selection.");
         dlg.setDescription("Please select the workflow or directory to export.");
-        dlg.setValidator(new SelectionValidator() {
+        dlg.setValidator(
+
+            new Validator() {
             @Override
-            public String isValid(final AbstractExplorerFileStore selection) {
+            public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {
                 if (!(AbstractExplorerFileStore.isWorkflowGroup(selection) || AbstractExplorerFileStore
                         .isWorkflow(selection))) {
                     return "Please select a workflow or workflow group";

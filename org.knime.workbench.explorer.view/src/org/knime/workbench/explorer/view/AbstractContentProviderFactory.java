@@ -2,7 +2,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright by 
+ * Copyright by
  * KNIME.com, Zurich, Switzerland
  *
  * You may not modify, publish, transmit, transfer or sell, reproduce,
@@ -56,6 +56,16 @@ public abstract class AbstractContentProviderFactory {
      *         created.
      */
     public abstract boolean multipleInstances();
+
+    /**
+     * Always return false. Except for the one temp space provider implementation.
+     * @return false. Almost always.
+     * @since 6.4
+     */
+    public boolean isTempSpace() {
+        return false;
+    }
+
 
     /**
      * @return a unique mount ID if this mount point should appear by default in

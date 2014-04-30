@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  *
- *  Copyright by 
+ *  Copyright by
  *  University of Konstanz, Germany and
  *  KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
@@ -105,7 +105,7 @@ import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
-import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
+import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -675,7 +675,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
 
     private void handleWorkflowGroupBrowseButtonPressed() {
         // get mounted local destinations to select from
-        List<String> mountIDs = ExplorerMountTable.getAllMountIDs();
+        List<String> mountIDs = ExplorerMountTable.getAllVisibleMountIDs();
         Iterator<String> it = mountIDs.iterator();
         while (it.hasNext()) {
             String m = it.next();
@@ -691,9 +691,9 @@ public class WorkflowImportSelectionPage extends WizardPage {
         dlg.setTitle("Import Destination");
         dlg.setHeader("Select the import destination");
         dlg.setDescription("Please select the directory to store the new workflows in");
-        dlg.setValidator(new SelectionValidator() {
+        dlg.setValidator(new Validator() {
             @Override
-            public String isValid(final AbstractExplorerFileStore selection) {
+            public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {
                 if (!AbstractExplorerFileStore.isWorkflowGroup(selection)) {
                     return "Please select a workflow group.";
                 }

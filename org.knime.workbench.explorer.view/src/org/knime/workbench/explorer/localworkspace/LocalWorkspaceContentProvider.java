@@ -2,7 +2,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright by 
+ * Copyright by
  * KNIME.com, Zurich, Switzerland
  *
  * You may not modify, publish, transmit, transfer or sell, reproduce,
@@ -565,9 +565,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     public void performDownload(final RemoteExplorerFileStore source,
             final LocalExplorerFileStore target, final IProgressMonitor monitor)
             throws CoreException {
-        File parentDir = target.toLocalFile();
         LocalDownloadWorkflowAction downloadAction =
-            new LocalDownloadWorkflowAction(source, parentDir);
+            new LocalDownloadWorkflowAction(source, target);
         downloadAction.runSync(monitor);
     }
 

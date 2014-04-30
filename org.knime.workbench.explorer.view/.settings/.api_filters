@@ -20,6 +20,98 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="src/org/knime/workbench/explorer/ExplorerMountTable.java" type="org.knime.workbench.explorer.ExplorerMountTable">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.ExplorerMountTable"/>
+                <message_argument value="getAllMountIDs()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/dialogs/SpaceResourceSelectionDialog.java" type="org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog"/>
+                <message_argument value="scaleDialogSize(int, int)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog"/>
+                <message_argument value="setNameFieldValidator(SpaceResourceSelectionDialog.StringValidator)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog"/>
+                <message_argument value="setValidator(SpaceResourceSelectionDialog.SelectionValidator)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338886760">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator"/>
+                <message_argument value="org.knime.workbench.explorer.view_6.4.0"/>
+            </message_arguments>
+        </filter>
+        <filter id="338886760">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.StringValidator"/>
+                <message_argument value="org.knime.workbench.explorer.view_6.4.0"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/AbstractDownloadAction.java" type="org.knime.workbench.explorer.view.actions.AbstractDownloadAction">
+        <filter id="338722907">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.AbstractDownloadAction"/>
+                <message_argument value="AbstractDownloadAction(String, RemoteExplorerFileStore, File)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338722907">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.AbstractDownloadAction"/>
+                <message_argument value="AbstractDownloadAction(String, RemoteExplorerFileStore, File, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.AbstractDownloadAction"/>
+                <message_argument value="getDownload()"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.AbstractDownloadAction"/>
+                <message_argument value="getTargetDir()"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.AbstractDownloadAction"/>
+                <message_argument value="getTargetFileStore()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/LocalDownloadWorkflowAction.java" type="org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction">
+        <filter id="338722907">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction"/>
+                <message_argument value="LocalDownloadWorkflowAction(RemoteExplorerFileStore, File)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338722907">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction"/>
+                <message_argument value="LocalDownloadWorkflowAction(RemoteExplorerFileStore, File, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction"/>
+                <message_argument value="getTargetFileStore()"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="src/org/knime/workbench/explorer/view/preferences/MountSettings.java" type="org.knime.workbench.explorer.view.preferences.MountSettings">
         <filter id="338792546">
             <message_arguments>

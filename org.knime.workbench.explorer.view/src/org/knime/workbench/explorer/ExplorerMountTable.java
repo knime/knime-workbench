@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  *
- *  Copyright by 
+ *  Copyright by
  *  University of Konstanz, Germany and
  *  KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
@@ -50,6 +50,7 @@
  */
 package org.knime.workbench.explorer;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -65,21 +66,28 @@ import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtensionPoint;
 import org.eclipse.core.runtime.IExtensionRegistry;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.util.FileUtil;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializer;
 import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.osgi.framework.FrameworkUtil;
 
 /**
  *
@@ -94,6 +102,8 @@ public final class ExplorerMountTable {
 
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(ExplorerMountTable.class);
+
+    private static final String PLUGIN_ID = FrameworkUtil.getBundle(ExplorerMountTable.class).getSymbolicName();
 
     private static final List<IPropertyChangeListener> CHANGE_LISTENER =
             new CopyOnWriteArrayList<IPropertyChangeListener>();
@@ -333,7 +343,7 @@ public final class ExplorerMountTable {
      */
     public static void unmountAll() {
         synchronized (MOUNTED) {
-            List<String> ids = getAllMountIDs();
+            List<String> ids = getAllMountedIDs();
             for (String id : ids) {
                 unmount(id);
             }
@@ -383,7 +393,7 @@ public final class ExplorerMountTable {
                 : CONTENT_FACTORIES.entrySet()) {
             String facID = e.getKey();
             AbstractContentProviderFactory fac = e.getValue();
-            if (fac.multipleInstances() || !existingProviderIDs.contains(facID)) {
+            if (!fac.isTempSpace() && (fac.multipleInstances() || !existingProviderIDs.contains(facID))) {
                 result.add(fac);
             }
         }
@@ -403,24 +413,58 @@ public final class ExplorerMountTable {
     }
 
     /**
-     * @return a list of all mount IDs currently in use.
+     * @return a list of all mount IDs currently in use and not hidden.
+     * @since 6.4
      */
-    public static List<String> getAllMountIDs() {
+    public static List<String> getAllVisibleMountIDs() {
+        ArrayList<String> result = new ArrayList<String>();
+        synchronized (MOUNTED) {
+            for (Map.Entry<String, MountPoint> e : MOUNTED.entrySet()) {
+                if (!e.getValue().getProviderFactory().isTempSpace()) {
+                    result.add(e.getKey());
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @return a list of all mount IDs currently in use.
+     * @since 6.4
+     */
+    public static List<String> getAllMountedIDs() {
         synchronized (MOUNTED) {
             return new ArrayList<String>(MOUNTED.keySet());
         }
     }
 
     /**
-     * @return a map with all currently mounted content providers with their
-     *         mount ID.
+     * @return a map with all currently mounted content providers with their mount ID (including the temp space that
+     * should never be shown to the user).
+     * @since 6.4
+     */
+    public static Map<String, AbstractContentProvider> getMountedContentInclTempSpace() {
+        HashMap<String, AbstractContentProvider> result =
+                new LinkedHashMap<String, AbstractContentProvider>();
+        synchronized (MOUNTED) {
+            for (Map.Entry<String, MountPoint> e : MOUNTED.entrySet()) {
+                result.put(e.getKey(), e.getValue().getProvider());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @return a map with the currently mounted content providers with their mount ID (temp space is not included).
      */
     public static Map<String, AbstractContentProvider> getMountedContent() {
         HashMap<String, AbstractContentProvider> result =
                 new LinkedHashMap<String, AbstractContentProvider>();
         synchronized (MOUNTED) {
             for (Map.Entry<String, MountPoint> e : MOUNTED.entrySet()) {
-                result.put(e.getKey(), e.getValue().getProvider());
+                if (!e.getValue().getProviderFactory().isTempSpace()) {
+                    result.put(e.getKey(), e.getValue().getProvider());
+                }
             }
         }
         return result;
@@ -485,6 +529,52 @@ public final class ExplorerMountTable {
      */
     public static ExplorerFileSystem getFileSystem() {
         return ExplorerFileSystem.INSTANCE;
+    }
+
+    /**
+     * Creates a new dir in the explorer temp provider. The dir is deleted on exit. The returned file store has a valid
+     * mount id - which is not shown in the explorer view.
+     *
+     * @param prefix to the name of the returned file store
+     * @return a newly created temporary directory. Deleted on VM exit.
+     * @throws CoreException if it couldn't create the temp dir
+     * @since 6.4
+     */
+    public static LocalExplorerFileStore createExplorerTempDir(final String prefix) throws CoreException {
+        Map<String, AbstractContentProvider> allMounts = getMountedContentInclTempSpace();
+        AbstractContentProvider tempProvider = null;
+        for (Entry<String, AbstractContentProvider> e : allMounts.entrySet()) {
+            if (e.getValue().getFactory().isTempSpace()) {
+                tempProvider = e.getValue();
+                break;
+            }
+        }
+        if (tempProvider == null) {
+            throw new CoreException(new Status(IStatus.ERROR, PLUGIN_ID,
+                "No temporary space mounted. Temp dir can't be created."));
+        }
+        AbstractExplorerFileStore tmpRoot = tempProvider.getFileStore("/");
+        File localTmp;
+        try {
+            localTmp = tmpRoot.toLocalFile();
+        } catch (CoreException e1) {
+            throw new CoreException(new Status(IStatus.ERROR, PLUGIN_ID,
+                "Could not get the local file representation for " + tmpRoot));
+        }
+        try {
+            File tmpDir = FileUtil.createTempDir(prefix, localTmp,
+                false /* entire temp mount point is deleted on exit */);
+            AbstractExplorerFileStore tmpFileStore = tmpRoot.getChild(tmpDir.getName());
+            if (!(tmpFileStore instanceof LocalExplorerFileStore)) {
+                throw new CoreException(new Status(IStatus.ERROR, PLUGIN_ID,
+                    "Created temp dir is of incorrect type (internal implementation error!)"
+                            + tmpFileStore.getClass().getCanonicalName()));
+            }
+            return (LocalExplorerFileStore)tmpFileStore;
+        } catch (IOException e1) {
+            throw new CoreException(new Status(IStatus.ERROR, PLUGIN_ID,
+                "Could not create temporary directory in " + tmpRoot, e1));
+        }
     }
 
     /* ------------- read the extension point ------------------------------ */
@@ -573,6 +663,7 @@ public final class ExplorerMountTable {
      */
     public static void init() {
         unmountAll();
+        mountTempSpace();
         synchronized (MOUNTED) {
             for (MountSettings ms : getMountSettings()) {
                 // ignore inactive
@@ -625,6 +716,24 @@ public final class ExplorerMountTable {
             mpSettings = pStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
         }
         return MountSettings.parseSettings(mpSettings, true);
+    }
+
+    /* Mounts all hidden spaces that provide a default mount id. */
+    private static void mountTempSpace() {
+        List<AbstractContentProviderFactory> contentProviders = getAddableContentProviders();
+        for (AbstractContentProviderFactory fac : contentProviders) {
+            String mountID = fac.getDefaultMountID();
+            if (fac.isTempSpace() && mountID != null) {
+                try {
+                    mountOrRestore(mountID, fac.getID(), null);
+                    LOGGER.info("Mounted Explorer Temp Space '" + mountID + "' - " + fac.getID());
+                    return; // mounting only one temp space
+                } catch (IOException e) {
+                    LOGGER.error("Unable to mount the temp space '" + mountID + "' - " + fac.getID(), e);
+                }
+            }
+        }
+        LOGGER.error("No Explorer Temp Space available. Incorrect/Corrupted installation.");
     }
 
     /*---------------------------------------------------------------*/

@@ -2,7 +2,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright by 
+ * Copyright by
  * KNIME.com, Zurich, Switzerland
  *
  * You may not modify, publish, transmit, transfer or sell, reproduce,
@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -90,6 +91,7 @@ import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
 import org.knime.workbench.explorer.view.actions.ConfigureExplorerViewAction;
@@ -97,6 +99,7 @@ import org.knime.workbench.explorer.view.actions.CopyLocationAction;
 import org.knime.workbench.explorer.view.actions.CopyMountpointRelativeURLAction;
 import org.knime.workbench.explorer.view.actions.CopyURLAction;
 import org.knime.workbench.explorer.view.actions.CutCopyToClipboardAction;
+import org.knime.workbench.explorer.view.actions.DownloadAndOpenWorkflowAction;
 import org.knime.workbench.explorer.view.actions.ExpandAction;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.explorer.view.actions.GlobalCancelWorkflowExecutionAction;
@@ -277,20 +280,28 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     private boolean openSelected() {
         IStructuredSelection selection =
                 (IStructuredSelection)m_viewer.getSelection();
-        // for now we open only local files
         if (selection.isEmpty()) {
             return false;
         }
-        List<ContentObject> workflowsToOpen = new ArrayList<ContentObject>();
+        List<ContentObject> localWorkflowsToOpen = new ArrayList<ContentObject>();
+        List<ContentObject> remoteWorkflowsToOpen = new ArrayList<ContentObject>();
+
         Iterator<?> iter = selection.iterator();
         while (iter.hasNext()) {
             Object sel = iter.next();
             if (sel instanceof ContentObject) {
                 try {
                     ContentObject co = (ContentObject)sel;
-                    File f = co.getObject().toLocalFile(EFS.NONE, null);
-                    if (f != null) {
-                        workflowsToOpen.add(co);
+                    AbstractExplorerFileStore fs = co.getObject();
+                    if (fs.fetchInfo().isWorkflow()) {
+                        if (fs instanceof RemoteExplorerFileStore) {
+                            remoteWorkflowsToOpen.add(co);
+                        } else {
+                            File f = co.getObject().toLocalFile(EFS.NONE, null);
+                            if (f != null) {
+                                localWorkflowsToOpen.add(co);
+                            }
+                        }
                     }
                 } catch (CoreException ce) {
                     // then don't add it
@@ -298,22 +309,29 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             }
         }
 
-        if (workflowsToOpen.size() > 5) {
+        int numOfFlows = remoteWorkflowsToOpen.size() + localWorkflowsToOpen.size();
+        if (numOfFlows > 5) {
             MessageBox mb =
                     new MessageBox(getViewSite().getShell(), SWT.ICON_QUESTION
                             | SWT.CANCEL | SWT.OK);
-            mb.setText("Confirm creation of multiple edtiors");
-            mb.setMessage("Are you sure you want to open " + selection.size()
-                    + " editor windows?");
+            mb.setText("Confirm creation of multiple editors");
+            mb.setMessage("Are you sure you want to open " + numOfFlows + " editor windows?");
             if (mb.open() != SWT.OK) {
                 return false;
             }
         }
         boolean opened = false;
-        for (ContentObject co : workflowsToOpen) {
+        for (ContentObject co : localWorkflowsToOpen) {
             opened |= openEditor(co);
         }
-        m_viewer.update(workflowsToOpen.toArray(), null);
+        List<RemoteExplorerFileStore> remotes = new LinkedList<RemoteExplorerFileStore>();
+        for (ContentObject co : remoteWorkflowsToOpen) {
+            remotes.add((RemoteExplorerFileStore)co.getObject());
+        }
+        DownloadAndOpenWorkflowAction a;
+        a = new DownloadAndOpenWorkflowAction(getSite().getPage(), remotes);
+        a.run();
+        m_viewer.update(localWorkflowsToOpen.toArray(), null);
         return opened;
     }
 

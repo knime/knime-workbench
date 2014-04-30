@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  *
- *  Copyright by 
+ *  Copyright by
  *  University of Konstanz, Germany and
  *  KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
@@ -69,7 +69,7 @@ import org.eclipse.swt.widgets.Text;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
-import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.SelectionValidator;
+import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -222,9 +222,9 @@ public class NewWorkflowWizardPage extends WizardPage {
         dlg.setHeader("Select a new destination.");
         dlg.setDescription("Please select the destination directory in the "
                 + m_parent.getMountID() + " TeamSpace");
-        dlg.setValidator(new SelectionValidator() {
+        dlg.setValidator(new Validator() {
             @Override
-            public String isValid(final AbstractExplorerFileStore selection) {
+            public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {
                 String msg = "Please select a directory or workflow group.";
                 if (AbstractExplorerFileStore.isWorkflowGroup(selection)) {
                     return null;

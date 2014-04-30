@@ -2,7 +2,7 @@
   * This source code, its documentation and all appendant files
   * are protected by copyright law. All rights reserved.
   *
-  * Copyright by 
+  * Copyright by
   * KNIME.com, Zurich, Switzerland
   *
   * You may not modify, publish, transmit, transfer or sell, reproduce,
@@ -55,14 +55,13 @@ import org.knime.workbench.explorer.view.AbstractContentProvider;
  *
  */
 public abstract class AbstractDownloadAction extends Action {
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            AbstractDownloadAction.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(AbstractDownloadAction.class);
 
     private static final ImageDescriptor IMG_DOWNLOAD = AbstractUIPlugin
             .imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID,
             "icons/download_wf.png");
 
-    private final File m_targetDir;
+    private final LocalExplorerFileStore m_targetDir;
     private final RemoteExplorerFileStore m_source;
 
     private final IProgressMonitor m_monitor;
@@ -75,9 +74,10 @@ public abstract class AbstractDownloadAction extends Action {
      *            is no text
      * @param source the source file store containing the workflow
      * @param targetDir the target directory to download the workflow to
+     * @since 6.4
      */
     public AbstractDownloadAction(final String text,
-            final RemoteExplorerFileStore source, final File targetDir) {
+            final RemoteExplorerFileStore source, final LocalExplorerFileStore targetDir) {
         this(text, source, targetDir, null);
     }
 
@@ -90,9 +90,10 @@ public abstract class AbstractDownloadAction extends Action {
     * @param source the source file store containing the workflow
     * @param targetDir the target directory to download the workflow to
     * @param monitor the progress monitor to use
+     * @since 6.4
     */
    public AbstractDownloadAction(final String text,
-           final RemoteExplorerFileStore source, final File targetDir,
+           final RemoteExplorerFileStore source, final LocalExplorerFileStore targetDir,
            final IProgressMonitor monitor) {
        super(text);
        m_targetDir = targetDir;
@@ -176,7 +177,7 @@ public abstract class AbstractDownloadAction extends Action {
                 msg += " Download interrupted.";
                 LOGGER.warn(msg);
             }
-            if (getTargetDir().exists()) {
+            if (getTargetDir().fetchInfo().exists()) {
                 LOGGER.info("Existing destination not modified ("
                         + getTargetIdentifier() + ") ");
             }
@@ -245,29 +246,17 @@ public abstract class AbstractDownloadAction extends Action {
 
     /**
      * @return the directory to save the download to
+     * @since 6.4
      */
-    protected File getTargetDir() {
+    protected LocalExplorerFileStore getTargetDir() {
         return m_targetDir;
-    }
-
-    /**
-     * @return the local explorer file store corresponding to the target
-     *      directory, or null if none exists
-     */
-    protected LocalExplorerFileStore getTargetFileStore() {
-        return null;
     }
 
     /**
      * @return a string identifying the download target
      */
     protected String getTargetIdentifier() {
-        LocalExplorerFileStore fs = getTargetFileStore();
-        if (fs == null) {
-            return m_targetDir.getAbsolutePath();
-        } else {
-            return fs.getMountIDWithFullPath();
-        }
+        return m_targetDir.getMountIDWithFullPath();
     }
 
     /**
@@ -283,7 +272,7 @@ public abstract class AbstractDownloadAction extends Action {
      */
     protected boolean isSourceSupported() {
         RemoteExplorerFileInfo sourceInfo = getSourceFile().fetchInfo();
-        AbstractContentProvider targetContentProvider = getTargetFileStore().getContentProvider();
+        AbstractContentProvider targetContentProvider = getTargetDir().getContentProvider();
 
         return sourceInfo.isWorkflow() || sourceInfo.isWorkflowGroup() || sourceInfo.isSnapshot()
                 || (sourceInfo.isFile() && targetContentProvider.canHostDataFiles())
@@ -299,13 +288,6 @@ public abstract class AbstractDownloadAction extends Action {
      */
     protected String getUnsupportedSourceMessage() {
         return "Only worklows can be downloaded.";
-    }
-
-    /**
-     * @return the locally downloaded file
-     */
-    public File getDownload() {
-        return new File(m_targetDir, m_source.getName());
     }
 
     /**
