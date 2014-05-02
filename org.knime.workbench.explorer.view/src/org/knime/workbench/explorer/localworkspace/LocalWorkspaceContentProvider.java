@@ -565,9 +565,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     public void performDownload(final RemoteExplorerFileStore source,
             final LocalExplorerFileStore target, final IProgressMonitor monitor)
             throws CoreException {
-        LocalDownloadWorkflowAction downloadAction =
-            new LocalDownloadWorkflowAction(source, target);
-        downloadAction.runSync(monitor);
+        LocalDownloadWorkflowAction downloadAction = new LocalDownloadWorkflowAction(source, target);
+        downloadAction.schedule();
     }
 
     /**
