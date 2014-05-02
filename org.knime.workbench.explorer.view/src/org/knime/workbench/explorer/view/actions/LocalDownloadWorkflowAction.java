@@ -375,15 +375,14 @@ public class LocalDownloadWorkflowAction extends Action {
      * @since 6.4
      */
     public void schedule() {
-        ExplorerJob j = new ExplorerJob("Download of " + getSourceFile().getName()) {
+        ExplorerJob j = new ExplorerJob("Download of " + getSourceFile().getName() + " to "
+                + getTargetDir().getMountIDWithFullPath()) {
             @Override
             protected IStatus run(final IProgressMonitor monitor2) {
                 monitor2.beginTask("Downloading " + getSourceFile().getName() + " to "
                         + getTargetDir().getMountIDWithFullPath() , 1);
-                LocalDownloadWorkflowAction downloadAction =
-                    new LocalDownloadWorkflowAction(getSourceFile(), getTargetDir());
                 try {
-                    downloadAction.runSync(monitor2);
+                    runSync(monitor2);
                 } catch (CoreException e) {
                     LOGGER.info("Failed downloading " + getSourceFile().getMountIDWithFullPath() + " to "
                         + getTargetDir().getMountIDWithFullPath() + ": " + e.getMessage(), e);
