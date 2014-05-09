@@ -2,7 +2,7 @@
  * This source code, its documentation and all appendant files
  * are protected by copyright law. All rights reserved.
  *
- * Copyright by 
+ * Copyright by
  * KNIME.com, Zurich, Switzerland
  *
  * You may not modify, publish, transmit, transfer or sell, reproduce,
@@ -766,14 +766,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
     /**
      * @return whether this content provider is able to host meta node templates,
-     *         this is true for server or team spaces but false for the local
-     *         space (or the the RO public server)
+     *         this is true for KNIME Server or KNIME TeamSpace but false for the LOCAL
+     *         space (or the the read-only EXAMPLES KNIME Server)
      */
     public abstract boolean canHostMetaNodeTemplates();
 
     /**
-     * @return whether this content provider is able to host data files. This is true for server or team spaces, but
-     *         false for the local space.
+     * @return whether this content provider is able to host data files. This is true for KNIME Server or
+     *         KNIME TeamSpace, but false for the LOCAL space.
      * @since 4.0
      */
     public abstract boolean canHostDataFiles();
