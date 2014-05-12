@@ -733,7 +733,7 @@ public final class ExplorerMountTable {
                 }
             }
         }
-        LOGGER.error("No Explorer Temp Space available. Incorrect/Corrupted installation.");
+        LOGGER.debug("No Explorer Temp Space available.");
     }
 
     /*---------------------------------------------------------------*/
