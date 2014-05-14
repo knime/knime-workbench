@@ -20,6 +20,8 @@ package org.knime.workbench.explorer.localworkspace;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -63,8 +65,6 @@ import org.knime.workbench.explorer.view.actions.GlobalCopyAction;
 import org.knime.workbench.explorer.view.actions.GlobalMoveAction;
 import org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
-
-import com.knime.licenses.LicenseStore;
 
 /**
  * Provides content for the user space view that shows the content (workflows
@@ -436,23 +436,26 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     /** {@inheritDoc} */
     @Override
     public final boolean canHostMetaNodeTemplates() {
-        return isTeamspaceLicenseAvailable();
+        return isMetanodeRepositoryEnabled();
     }
 
     /** Init lazy. Checks whether teamspace license is available (enable meta node sharing only if avail). */
-    private static Boolean isTeamspaceLicenseAvailable;
+    private static Boolean isMetanodeRepositoryEnabled;
 
-    /** Lazy init and return of {@link #isTeamspaceLicenseAvailable}. */
-    private boolean isTeamspaceLicenseAvailable() {
-        if (isTeamspaceLicenseAvailable == null) {
+    /** Lazy init and return of {@link #isMetanodeRepositoryEnabled}. */
+    private boolean isMetanodeRepositoryEnabled() {
+        if (isMetanodeRepositoryEnabled == null) {
             try {
-                isTeamspaceLicenseAvailable = LicenseStore.validLicense("TeamSpace");
-            } catch (NoClassDefFoundError cnfe) {
+                Class<?> licenseStoreClass = Class.forName("com.knime.licenses.LicenseStore");
+                Method validLicense = licenseStoreClass.getMethod("validLicense", String.class);
+                isMetanodeRepositoryEnabled = (Boolean)validLicense.invoke(null, "MetanodeRepository");
+            } catch (NoClassDefFoundError | ClassNotFoundException | SecurityException | NoSuchMethodException
+                    | IllegalArgumentException | IllegalAccessException | InvocationTargetException cnfe) {
                 // optional dependency to com.knime.license not met - no license
-                isTeamspaceLicenseAvailable = Boolean.FALSE;
+                isMetanodeRepositoryEnabled = Boolean.FALSE;
             }
         }
-        return isTeamspaceLicenseAvailable.booleanValue();
+        return isMetanodeRepositoryEnabled.booleanValue();
     }
 
     /**
