@@ -65,7 +65,6 @@ import org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 
 import com.knime.licenses.LicenseStore;
-import com.knime.licenses.LicenseTypes;
 
 /**
  * Provides content for the user space view that shows the content (workflows
@@ -447,7 +446,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     private boolean isTeamspaceLicenseAvailable() {
         if (isTeamspaceLicenseAvailable == null) {
             try {
-                isTeamspaceLicenseAvailable = LicenseStore.validLicense(LicenseTypes.TeamSpace.name());
+                isTeamspaceLicenseAvailable = LicenseStore.validLicense("TeamSpace");
             } catch (NoClassDefFoundError cnfe) {
                 // optional dependency to com.knime.license not met - no license
                 isTeamspaceLicenseAvailable = Boolean.FALSE;
