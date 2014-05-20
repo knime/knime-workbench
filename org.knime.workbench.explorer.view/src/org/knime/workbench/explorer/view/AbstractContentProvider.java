@@ -65,6 +65,7 @@ import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerState;
 import org.knime.core.node.workflow.NodeMessage;
+import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.core.util.ImageRepository;
@@ -397,12 +398,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
         String newName = templateLoc.getName();
 
-        WorkflowManager wfm = metaNode;
-        while (!wfm.isProject()) {
-            wfm = wfm.getParent();
-        }
+        WorkflowContext wfc = metaNode.getProjectContext();
         AbstractContentProvider workflowMountPoint = null;
-        LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE.fromLocalFile(wfm.getContext().getMountpointRoot());
+        LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE.fromLocalFile(wfc.getMountpointRoot());
         if (fs != null) {
             workflowMountPoint = fs.getContentProvider();
         }
