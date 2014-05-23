@@ -40,6 +40,7 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -65,6 +66,8 @@ import org.knime.workbench.explorer.view.actions.GlobalCopyAction;
 import org.knime.workbench.explorer.view.actions.GlobalMoveAction;
 import org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.wiring.BundleWiring;
 
 /**
  * Provides content for the user space view that shows the content (workflows
@@ -446,13 +449,31 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     private boolean isMetanodeRepositoryEnabled() {
         if (isMetanodeRepositoryEnabled == null) {
             try {
-                Class<?> licenseStoreClass = Class.forName("com.knime.licenses.LicenseStore");
+                Bundle licensesBundle = Platform.getBundle("com.knime.licenses");
+                if (licensesBundle == null) {
+                    isMetanodeRepositoryEnabled = false;
+                    return false;
+                }
+
+                BundleWiring bundleWiring = licensesBundle.adapt(BundleWiring.class);
+                if (bundleWiring == null) {
+                    isMetanodeRepositoryEnabled = false;
+                    return false;
+                }
+
+                ClassLoader classLoader = bundleWiring.getClassLoader();
+                if (classLoader == null) {
+                    isMetanodeRepositoryEnabled = false;
+                    return false;
+                }
+
+                Class<?> licenseStoreClass = classLoader.loadClass("com.knime.licenses.LicenseStore");
                 Method validLicense = licenseStoreClass.getMethod("validLicense", String.class);
                 isMetanodeRepositoryEnabled = (Boolean)validLicense.invoke(null, "MetanodeRepository");
             } catch (NoClassDefFoundError | ClassNotFoundException | SecurityException | NoSuchMethodException
                     | IllegalArgumentException | IllegalAccessException | InvocationTargetException cnfe) {
                 // optional dependency to com.knime.license not met - no license
-                isMetanodeRepositoryEnabled = Boolean.FALSE;
+                isMetanodeRepositoryEnabled = false;
             }
         }
         return isMetanodeRepositoryEnabled.booleanValue();
