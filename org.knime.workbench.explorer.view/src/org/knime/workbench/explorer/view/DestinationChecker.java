@@ -42,6 +42,32 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.swt.widgets.Shell;
+import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
+import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
+import org.knime.workbench.explorer.view.dialogs.MergeRenameDialog;
+import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
+import org.knime.workbench.explorer.view.dialogs.OverwriteRenameDialog;
+
 public final class DestinationChecker <S extends AbstractExplorerFileStore,
     T extends AbstractExplorerFileStore> {
 

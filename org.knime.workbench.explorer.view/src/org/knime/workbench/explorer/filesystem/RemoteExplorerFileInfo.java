@@ -42,6 +42,8 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.filesystem;
+
 public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
     /**
      * Creates a new file information object with default values.

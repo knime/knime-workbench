@@ -42,6 +42,28 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.preferences;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.eclipse.core.runtime.preferences.DefaultScope;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
+import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.eclipse.jface.util.IPropertyChangeListener;
+import org.eclipse.jface.util.PropertyChangeEvent;
+import org.knime.core.node.NodeLogger;
+import org.knime.core.node.util.ConvenienceMethods;
+import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
+
 public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreferenceChangeListener {
     private String m_previousValue;
 

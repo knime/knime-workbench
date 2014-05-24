@@ -42,6 +42,10 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.filesystem;
+
+import org.eclipse.core.filesystem.provider.FileInfo;
+
 public abstract class AbstractExplorerFileInfo extends FileInfo {
 
     /**

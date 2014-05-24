@@ -42,3 +42,167 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.actions;
+
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.SubMonitor;
+import org.eclipse.jface.action.Action;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IEditorDescriptor;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.ide.IDE;
+import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
+import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.RemoteWorkflowInput;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerJob;
+import org.osgi.framework.FrameworkUtil;
+
+/**
+ * Action that downloads remote items to a temp location and opens them in an editor.
+ *
+ * @author Peter Ohl, KNIME.com AG, Zurich, Switzerland
+ * @since 6.4
+ */
+public class DownloadAndOpenWorkflowAction extends Action {
+
+    private static final String PLUGIN_ID = FrameworkUtil.getBundle(DownloadAndOpenWorkflowAction.class)
+        .getSymbolicName();
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(DownloadAndOpenWorkflowAction.class);
+
+    /*--------- inner job class -------------------------------------------------------------------------*/
+    private class DownloadAndOpenJob extends ExplorerJob {
+
+        private final IWorkbenchPage m_page;
+
+        private final RemoteExplorerFileStore m_source;
+
+        DownloadAndOpenJob(final IWorkbenchPage page, final RemoteExplorerFileStore filestore) {
+            super("Download and open remote items");
+            m_page = page;
+            m_source = filestore;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected IStatus run(final IProgressMonitor monitor) {
+            SubMonitor progress = SubMonitor.convert(monitor, 1);
+            progress.beginTask("Downloading " + m_source.getName(), 1);
+            LocalExplorerFileStore tmpDestDir;
+            try {
+                tmpDestDir = ExplorerMountTable.createExplorerTempDir(m_source.getName());
+                tmpDestDir = tmpDestDir.getChild(m_source.getName());
+                tmpDestDir.mkdir(EFS.NONE, progress);
+            } catch (CoreException e1) {
+                return new Status(e1.getStatus().getSeverity(), PLUGIN_ID, e1.getMessage(), e1);
+            }
+            final LocalDownloadWorkflowAction downloadAction =
+                    new LocalDownloadWorkflowAction(m_source, tmpDestDir, progress);
+            try {
+                downloadAction.runSync(monitor);
+            } catch (CoreException e) {
+                LOGGER.info("The (possibly partially) downloaded file is not deleted and might be still available: "
+                    + tmpDestDir);
+                return e.getStatus();
+            }
+
+            String[] content;
+            try {
+                content = tmpDestDir.childNames(EFS.NONE, monitor);
+            } catch (CoreException e) {
+                return new Status(e.getStatus().getSeverity(), PLUGIN_ID, e.getMessage(), e);
+
+            }
+            if (content == null || content.length == 0) {
+                try {
+                    tmpDestDir.delete(EFS.NONE, monitor);
+                } catch (CoreException e) {
+                    LOGGER.error("Unable to delete the empty temporary download directory: " + e.getMessage(), e);
+                    // ignore the deletion error
+                }
+                return new Status(IStatus.ERROR, PLUGIN_ID, 1, "Error during download: No content available.", null);
+            }
+            if (content.length == 1) {
+                // it is weird if the length is not 1 (because we downloaded one item)
+                tmpDestDir = tmpDestDir.getChild(content[0]);
+            }
+
+            if (tmpDestDir.fetchInfo().isDirectory()) {
+                LocalExplorerFileStore wf = tmpDestDir.getChild(WorkflowPersistor.WORKFLOW_FILE);
+                if (wf.fetchInfo().exists()) {
+                    tmpDestDir = wf;
+                } else {
+                    // directories that are not workflows cannot be opened
+                    LOGGER.info("The downloaded content is not deleted and is still available: " + tmpDestDir);
+                    return new Status(IStatus.ERROR, PLUGIN_ID, 1,
+                        "Cannot open downloaded content: Directory doesn't contain a workflow", null);
+                }
+            }
+
+            final LocalExplorerFileStore editorInput = tmpDestDir;
+            final AtomicReference<IStatus> returnStatus = new AtomicReference<IStatus>(Status.OK_STATUS);
+            Display.getDefault().syncExec(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        IEditorDescriptor editorDescriptor = IDE.getEditorDescriptor(editorInput.getName());
+                        m_page.openEditor(new RemoteWorkflowInput(editorInput, m_source.toURI()),
+                            editorDescriptor.getId());
+                    } catch (PartInitException ex) {
+                        LOGGER.info("Cannot open editor for the downloaded content. "
+                            + "It is not deleted and is still available: " + downloadAction.getTargetDir());
+                        returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID, 1,
+                            "Cannot open the editor for downloaded " + editorInput.getName(), null));
+                    }
+                }
+            });
+
+            return returnStatus.get();
+        }
+    }
+
+    /* --- end of inner job class -----------------------------------------------------------------------------------*/
+
+    private final List<RemoteExplorerFileStore> m_sources;
+
+    private final IWorkbenchPage m_page;
+    /**
+     * Downloads a remote item to a temp location and opens it in an editor.
+     *
+     * @param sources things to open
+     */
+    public DownloadAndOpenWorkflowAction(final IWorkbenchPage page, final List<RemoteExplorerFileStore> sources) {
+        setDescription("Download and open");
+        setToolTipText(getDescription());
+        setImageDescriptor(ImageRepository.getImageDescriptor(SharedImages.ServerDownload));
+        m_page = page;
+        m_sources = new LinkedList<RemoteExplorerFileStore>(sources);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void run() {
+        for (RemoteExplorerFileStore s : m_sources) {
+            LOGGER.info("Opening remote " + s.getFullName() + ", downloading it first into the temp mount point");
+            new DownloadAndOpenJob(m_page, s).schedule();
+        }
+    }
+}

@@ -42,6 +42,22 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.preferences;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.NodeSettings;
+import org.knime.core.node.NodeSettingsRO;
+import org.knime.core.node.NodeSettingsWO;
+import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
+
 public class MountSettings {
     /** Used for separating multiple mount settings in the preferences. */
     private static final String SETTINGS_SEPARATOR = "\n";

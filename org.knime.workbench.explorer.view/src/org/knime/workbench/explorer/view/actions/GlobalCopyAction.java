@@ -42,6 +42,14 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.actions;
+
+import java.util.List;
+
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerView;
+
+
 public class GlobalCopyAction extends AbstractCopyMoveAction {
 
     /** ID of the global copy action in the explorer menu. */

@@ -42,6 +42,19 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.actions;
+
+import java.util.List;
+
+import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerView;
+import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+
 public class GlobalCancelWorkflowExecutionAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
             GlobalCancelWorkflowExecutionAction.class);

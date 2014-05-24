@@ -42,6 +42,20 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.actions;
+
+import java.net.URI;
+import java.util.List;
+
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.ui.actions.SelectionListenerAction;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerFileStoreTransfer;
+import org.knime.workbench.explorer.view.ExplorerView;
+import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+
 public class CutCopyToClipboardAction extends SelectionListenerAction {
 //    private final static NodeLogger LOGGER = NodeLogger.getLogger(
 //            CutCopyToClipboardAction.class);

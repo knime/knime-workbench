@@ -42,6 +42,19 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.localworkspace;
+
+import java.io.File;
+
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileInfo;
+import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.runtime.CoreException;
+import org.knime.core.node.workflow.FileSingleNodeContainerPersistor;
+import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
+
+
 public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
     private final IFileStore m_file;
 

@@ -42,6 +42,25 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.actions;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.dnd.Clipboard;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.MessageBox;
+import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ExplorerFileStoreTransfer;
+import org.knime.workbench.explorer.view.ExplorerView;
+
 public class PasteFromClipboardAction extends AbstractCopyMoveAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
             PasteFromClipboardAction.class);

@@ -42,6 +42,20 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.preferences;
+
+import org.eclipse.core.runtime.preferences.DefaultScope;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
+import org.eclipse.jface.preference.ComboFieldEditor;
+import org.eclipse.jface.preference.FieldEditorPreferencePage;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.IWorkbenchPreferencePage;
+import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.osgi.framework.FrameworkUtil;
+
 public class ExplorerPreferencePage extends FieldEditorPreferencePage
         implements IWorkbenchPreferencePage, IPreferenceChangeListener {
     /** The id of this preference page. */

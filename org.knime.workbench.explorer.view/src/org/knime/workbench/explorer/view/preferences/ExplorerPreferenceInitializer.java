@@ -42,6 +42,23 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.preferences;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.osgi.framework.FrameworkUtil;
+
 public class ExplorerPreferenceInitializer extends
         AbstractPreferenceInitializer {
 

@@ -42,6 +42,53 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.actions;
+
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.MultiStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.dialogs.ErrorDialog;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.operation.IRunnableWithProgress;
+import org.eclipse.jface.window.Window;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.MessageBox;
+import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
+import org.knime.workbench.explorer.dialogs.Validator;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.MessageFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.ContentObject;
+import org.knime.workbench.explorer.view.DestinationChecker;
+import org.knime.workbench.explorer.view.ExplorerView;
+import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
+
 public abstract class AbstractCopyMoveAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
             AbstractCopyMoveAction.class);

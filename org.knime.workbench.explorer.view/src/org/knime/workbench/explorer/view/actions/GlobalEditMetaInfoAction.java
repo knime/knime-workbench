@@ -42,6 +42,25 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ------------------------------------------------------------------------
  */
+package org.knime.workbench.explorer.view.actions;
+
+import java.util.List;
+
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.internal.filesystem.local.LocalFile;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.IDE;
+import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerView;
+import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
+import org.knime.workbench.ui.KNIMEUIPlugin;
+import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
+
 public class GlobalEditMetaInfoAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
             GlobalEditMetaInfoAction.class);
