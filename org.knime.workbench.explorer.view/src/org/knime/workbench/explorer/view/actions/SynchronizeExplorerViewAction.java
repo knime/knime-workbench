@@ -46,22 +46,27 @@
 package org.knime.workbench.explorer.view.actions;
 
 import java.io.File;
+import java.net.URI;
 import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
 
 /**
@@ -72,10 +77,6 @@ import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
 public class SynchronizeExplorerViewAction extends ExplorerAction {
     private static final String TOOLTIP
             = "Selects the workflow displayed in the active editor";
-
-    private static final ImageDescriptor IMG
-            = KNIMEUIPlugin.imageDescriptorFromPlugin(
-                    KNIMEUIPlugin.PLUGIN_ID, "icons/sync.png");
 
     private final ContentDelegator m_delegator;
 
@@ -89,7 +90,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         super(viewer, "Synchronize...");
         m_delegator = delegator;
         setToolTipText(TOOLTIP);
-        setImageDescriptor(IMG);
+        setImageDescriptor(ImageRepository.getImageDescriptor(SharedImages.Synch));
     }
 
     /**
@@ -105,68 +106,83 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        // that's the local file to find in a content provider
-        File wfDir;
-
-        try {
-            IEditorPart activeEditor =
-                    PlatformUI.getWorkbench().getActiveWorkbenchWindow()
-                            .getActivePage().getActiveEditor();
-            if (activeEditor == null) {
-                return; // no editor open at all
-            }
-            Object adapter =
-                    activeEditor.getAdapter(WorkflowEditorAdapter.class);
-            if (adapter == null) {
-                // not a workflow editor
-                return;
-            }
-            WorkflowManager wm =
-                ((WorkflowEditorAdapter)adapter).getWorkflowManager();
-            // might be a subflow editor, climb up to its project
-            while (wm.getParent() != WorkflowManager.ROOT) {
-                wm = wm.getParent();
-            }
-            ReferencedFile wfFileRef = wm.getWorkingDir();
-
-            if (wfFileRef == null) {
-                // not saved yet
-                return;
-            }
-            wfDir = wfFileRef.getFile();
-        } catch (Throwable t) {
-            // if anything is null or fails: don't sync
+        IEditorPart activeEditor =
+            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+        if (activeEditor == null) {
+            return; // no editor open at all
+        }
+        IEditorPart rootEditor = findRootEditor(activeEditor);
+        if (rootEditor == null) {
+            // no workflow editor
             return;
         }
+
+
+        AbstractExplorerFileStore fs = resolveViaFilestore(rootEditor);
+        if (fs == null) {
+            fs = resolveViaPath(activeEditor);
+        }
+        if (fs != null) {
+            getViewer().setSelection(new StructuredSelection(ContentDelegator.getTreeObjectFor(fs)), true);
+        }
+    }
+
+
+    private AbstractExplorerFileStore resolveViaPath(final IEditorPart rootEditor) {
+        WorkflowEditorAdapter adapter = (WorkflowEditorAdapter)rootEditor.getAdapter(WorkflowEditorAdapter.class);
+        if (adapter == null) {
+            return null;
+        }
+        WorkflowManager wm = adapter.getWorkflowManager();
+        ReferencedFile wfFileRef = wm.getWorkingDir();
+        if (wfFileRef == null) {
+            return null;
+        }
+        File wfDir = wfFileRef.getFile();
 
         Set<String> mountedIds = m_delegator.getMountedIds();
         for (String id : mountedIds) {
             MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
-            AbstractExplorerFileStore root
-                    = mountPoint.getProvider().getFileStore("/");
-            final File localRoot;
+            AbstractExplorerFileStore root = mountPoint.getProvider().getFileStore("/");
             try {
-                localRoot = root.toLocalFile();
+                File localRoot = root.toLocalFile();
+                if (localRoot != null) {
+                    String relPath = AbstractContentProvider.getRelativePath(wfDir, localRoot);
+                    if (relPath != null) {
+                        return mountPoint.getProvider().getFileStore(relPath);
+                    }
+                }
             } catch (CoreException e) {
                 // no corresponding local file
-                continue;
             }
-            if (localRoot == null) {
-                // no corresponding local file
-                continue;
-            }
-            String relPath = AbstractContentProvider.getRelativePath(
-                    wfDir, localRoot);
-            if (relPath == null) {
-                // got the wrong content provider
-                continue;
-            }
+        }
+        return null;
+    }
 
-            AbstractExplorerFileStore store =
-                    mountPoint.getProvider().getFileStore(relPath);
-            getViewer().setSelection(new StructuredSelection(ContentDelegator
-                    .getTreeObjectFor(store)), true);
-            return;
+    private AbstractExplorerFileStore resolveViaFilestore(final IEditorPart rootEditor) {
+        IEditorInput editorInput = rootEditor.getEditorInput();
+        if (editorInput instanceof FileStoreEditorInput) {
+            URI uri = ((FileStoreEditorInput) editorInput).getURI();
+            if (uri.getPath().endsWith("/" + WorkflowPersistor.WORKFLOW_FILE)) {
+                String newUri = uri.toString();
+                newUri = newUri.substring(0, newUri.length() - WorkflowPersistor.WORKFLOW_FILE.length() - 1);
+                uri = URI.create(newUri);
+            }
+            return ExplorerFileSystem.INSTANCE.getStore(uri);
+        }
+        return null;
+    }
+
+    private IEditorPart findRootEditor(final IEditorPart editor) {
+        WorkflowEditorAdapter wfAdapter = (WorkflowEditorAdapter)editor.getAdapter(WorkflowEditorAdapter.class);
+        if (wfAdapter != null) {
+            if (wfAdapter.getParentEditor() == null) {
+                return editor;
+            } else {
+                return findRootEditor(wfAdapter.getParentEditor());
+            }
+        } else {
+            return null;
         }
     }
 }
