@@ -89,8 +89,10 @@ import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.NodeContainerParent;
 import org.knime.core.node.workflow.NodeContainerState;
 import org.knime.core.node.workflow.NodeMessage;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.VMFileLocker;
@@ -424,7 +426,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
         String newName = templateLoc.getName();
 
-        WorkflowContext wfc = metaNode.getProjectContext();
+        WorkflowContext wfc = metaNode.getProjectWFM().getContext();
         AbstractContentProvider workflowMountPoint = null;
         LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE.fromLocalFile(wfc.getMountpointRoot());
         if (fs != null) {
@@ -475,7 +477,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             }
             try {
                 MetaNodeTemplateInformation template =
-                        metaNode.saveAsMetaNodeTemplate(directory,
+                        metaNode.saveAsTemplate(directory,
                                 new ExecutionMonitor());
                 if (!linkType.equals(LinkType.None)) {
                     // TODO this needs to be done via the command stack,
@@ -524,6 +526,24 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public static URI createMetanodeLinkUri(final WorkflowManager metaNode,
         final AbstractExplorerFileStore templateLocation, final LinkType linkType) throws CoreException,
         URISyntaxException, UnsupportedEncodingException {
+        return createMetanodeLinkUri((NodeContainerParent)metaNode, templateLocation, linkType);
+    }
+
+    /**
+     * Creates a URI from the metaNode to the template location. Honors the link type. If the template location is
+     * in a different mount point, only absolute paths are allowed (LinkType.Absolute).
+     * @param node the node for whome the link is created
+     * @param templateLocation the template to link the metanode to
+     * @param linkType the type of link
+     * @return the URI pointing to the template - honoring the passed type
+     * @throws CoreException
+     * @throws URISyntaxException
+     * @throws UnsupportedEncodingException
+     * @since 6.4
+     */
+    public static URI createMetanodeLinkUri(final NodeContainerParent node,
+        final AbstractExplorerFileStore templateLocation, final LinkType linkType) throws CoreException,
+        URISyntaxException, UnsupportedEncodingException {
         URI originalUri = templateLocation.toURI();
         if (linkType.equals(LinkType.Absolute)) {
             return originalUri;
@@ -534,11 +554,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 return originalUri;
             }
 
-            WorkflowManager wfm = metaNode;
-            while (!wfm.isProject()) {
-                wfm = wfm.getParent();
-            }
-            File workflowMountpointRoot = wfm.getContext().getMountpointRoot();
+            WorkflowContext wfc = node.getProjectWFM().getContext();
+            File workflowMountpointRoot = wfc.getMountpointRoot();
             if (workflowMountpointRoot == null) {
                 LOGGER.warn("Cannot determine mountpoint for workflow, using absolute link instead of relative link");
                 return originalUri;
@@ -554,7 +571,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     originalUri.getPath(), originalUri.getQuery(), originalUri.getFragment());
             } else if (linkType.equals(LinkType.WorkflowRelative)) {
                 String[] templatePathParts = templateLocation.toLocalFile().getAbsolutePath().split("[/\\\\]");
-                String[] workflowPathParts = wfm.getContext().getCurrentLocation().getAbsolutePath().split("[/\\\\]");
+                String[] workflowPathParts = wfc.getCurrentLocation().getAbsolutePath().split("[/\\\\]");
 
                 int indexWhereDifferent = 0;
                 while ((indexWhereDifferent < templatePathParts.length)
@@ -786,6 +803,151 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             m_noLink.setEnabled(m_allowedLinkTypes.contains(LinkType.None));
             return group;
         }
+    }
+
+    /**
+     * Saves the given sub node as template into the given file store. The sub node is marked as linked sub node
+     * in its parent workflow manager. The user is queried if s/he wants to link back to the tamples and what kind
+     * of link it should be.
+     *
+     * @param subNode the sub node
+     * @param target the target for the template
+     * @return <code>true</code> if the operation was successful, <code>false</code> otherwise
+     * @since 6.4
+     */
+    @SuppressWarnings("unchecked")
+    public boolean saveSubNodeTemplate(final SubNodeContainer subNode,
+            final AbstractExplorerFileStore target) {
+
+        if (!AbstractExplorerFileStore.isWorkflowGroup(target)) {
+            return false;
+        }
+
+        final String originalName = subNode.getName();
+
+        String mountIDWithFullPath = target.getMountIDWithFullPath();
+        Shell shell = Display.getDefault().getActiveShell();
+        String uniqueName = originalName;
+        if (new FileStoreNameValidator().isValid(uniqueName) != null) {
+            InputDialog dialog = new InputDialog(shell, "Sub node rename",
+                    "The name \"" + uniqueName + "\" is not a valid "
+                    + "template name.\n\nChoose a new name under which the "
+                    + "template will be saved.", uniqueName,
+                    new FileStoreNameValidator());
+            dialog.setBlockOnOpen(true);
+            if (dialog.open() == Window.CANCEL) {
+                return false;
+            }
+            uniqueName = dialog.getValue();
+        }
+        AbstractExplorerFileStore templateLoc = target.getChild(uniqueName);
+        boolean doesTargetExist = templateLoc.fetchInfo().exists();
+        // don't allow to overwrite existing workflow groups with a template
+        final boolean overwriteOK = doesTargetExist
+            && !AbstractExplorerFileStore.isWorkflowGroup(templateLoc);
+        boolean isOverwrite = false;
+
+        OverwriteAndMergeInfo info = null;
+        if (doesTargetExist) {
+            DestinationChecker<AbstractExplorerFileStore,
+                AbstractExplorerFileStore> dc = new DestinationChecker
+                    <AbstractExplorerFileStore, AbstractExplorerFileStore>(
+                            shell, "create template", false, false);
+            dc.setIsOverwriteEnabled(overwriteOK);
+            dc.setIsOverwriteDefault(overwriteOK);
+
+            AbstractExplorerFileStore old = templateLoc;
+            templateLoc = dc.openOverwriteDialog(
+                    templateLoc, overwriteOK, Collections.EMPTY_SET);
+            if (templateLoc == null) { // canceled
+                return false;
+            }
+            isOverwrite = old.equals(templateLoc);
+            info = dc.getOverwriteAndMergeInfos().get(templateLoc);
+        }
+
+        String newName = templateLoc.getName();
+
+        WorkflowContext wfc = subNode.getProjectWFM().getContext();
+        AbstractContentProvider workflowMountPoint = null;
+        LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE.fromLocalFile(wfc.getMountpointRoot());
+        if (fs != null) {
+            workflowMountPoint = fs.getContentProvider();
+        }
+        Collection<LinkType> allowedLinkTypes = new ArrayList<LinkType>();
+        allowedLinkTypes.add(LinkType.None);
+        allowedLinkTypes.add(LinkType.Absolute);
+        if (target.getContentProvider().equals(workflowMountPoint)) {
+            allowedLinkTypes.add(LinkType.WorkflowRelative);
+            allowedLinkTypes.add(LinkType.MountpointRelative);
+        }
+
+        LinkType linkType = promptLinkMetaNodeTemplate(originalName, newName, allowedLinkTypes);
+        if (linkType == null) {
+            // user canceled
+            return false;
+        }
+
+        File directory = metaTemplateDropGetTempDir(templateLoc);
+
+        try {
+            if (directory == null) {
+                LOGGER.error("Unable to convert \"" + templateLoc
+                        + "\" to local path " + "(mount provider \""
+                        + toString() + "\"");
+                return false;
+            }
+            if (directory.exists()) {
+                if (!directory.isDirectory()) {
+                    LOGGER.error("Implementation error: Provided storage path"
+                            + " doesn't denote a directory!");
+                    return false;
+                }
+                if (!directory.canWrite()) {
+                    MessageDialog.openWarning(shell, "No write permission",
+                            "You don't have sufficient privileges to write "
+                                    + "to the target directory \""
+                                    + mountIDWithFullPath + "\"");
+                    return false;
+                }
+            }
+
+            if (!metaTemplateDropPrepareForSave(templateLoc, directory,
+                    isOverwrite)) {
+                LOGGER.debug("Preparation for MetaTemplate save failed.");
+                return false;
+            }
+            try {
+                MetaNodeTemplateInformation template = subNode.saveAsTemplate(directory, new ExecutionMonitor());
+                if (!linkType.equals(LinkType.None)) {
+                    // TODO this needs to be done via the command stack,
+                    // the rename can currently not be undone.
+                    if (!originalName.equals(newName)) {
+                        subNode.setName(newName);
+                    }
+
+                    URI uri = createMetanodeLinkUri(subNode, templateLoc, linkType);
+                    MetaNodeTemplateInformation link = template.createLink(uri);
+                    subNode.getParent().setTemplateInformation(
+                            subNode.getID(), link);
+                }
+                if ((info != null) && (templateLoc instanceof RemoteExplorerFileStore) && info.createSnapshot()) {
+                    ((RemoteExplorerFileStore)templateLoc).createSnapshot(info.getComment());
+                }
+            } catch (Exception e) {
+                String error = "Unable to save template: " + e.getMessage();
+                LOGGER.warn(error, e);
+                MessageDialog.openError(shell, "Error while writing template",
+                        error);
+            }
+
+            metaTemplateDropFinish(templateLoc, directory);
+
+        } finally {
+            metaTemplateDropCleanup(directory);
+        }
+        target.refresh();
+        return true;
     }
 
     /**
