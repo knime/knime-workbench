@@ -50,8 +50,9 @@ package org.knime.workbench.editor.svgexport.actions;
 import java.awt.Dimension;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.HashSet;
 import java.util.List;
@@ -177,7 +178,8 @@ public final class SVGExporter {
             ep.getFigure().paint(svgExporter);
         }
         SVGTranscoder transcoder = new SVGTranscoder();
-        Writer fileOut = new BufferedWriter(new FileWriter(file));
+        Writer fileOut =  new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "UTF-8"));
+        fileOut.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         TranscoderOutput out = new TranscoderOutput(fileOut);
         Document doc = svgExporter.getDocument();
         doc.replaceChild(svgExporter.getRoot(), doc.getDocumentElement());
