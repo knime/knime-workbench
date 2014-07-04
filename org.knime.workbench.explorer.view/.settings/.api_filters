@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <component id="org.knime.workbench.explorer.view" version="2">
     <resource path="META-INF/MANIFEST.MF">
+        <filter id="923795461">
+            <message_arguments>
+                <message_argument value="6.4.0"/>
+                <message_argument value="6.3.2"/>
+            </message_arguments>
+        </filter>
         <filter id="924844039">
             <message_arguments>
                 <message_argument value="6.3.0"/>
@@ -65,6 +71,46 @@
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog.StringValidator"/>
                 <message_argument value="org.knime.workbench.explorer.view_6.4.0"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/localworkspace/LocalWorkspaceContentProvider.java" type="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider"/>
+                <message_argument value="performDownload(RemoteExplorerFileStore, LocalExplorerFileStore, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider"/>
+                <message_argument value="performUpload(LocalExplorerFileStore, RemoteExplorerFileStore, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/AbstractContentProvider.java" type="org.knime.workbench.explorer.view.AbstractContentProvider">
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProvider"/>
+                <message_argument value="performDownload(RemoteExplorerFileStore, LocalExplorerFileStore, boolean, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProvider"/>
+                <message_argument value="performUpload(LocalExplorerFileStore, RemoteExplorerFileStore, boolean, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProvider"/>
+                <message_argument value="performDownload(RemoteExplorerFileStore, LocalExplorerFileStore, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProvider"/>
+                <message_argument value="performUpload(LocalExplorerFileStore, RemoteExplorerFileStore, IProgressMonitor)"/>
             </message_arguments>
         </filter>
     </resource>

@@ -1233,27 +1233,28 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      *
      * @param source the file store to be downloaded
      * @param target the file store to download to
+     * @param deleteSource if true the source is deleted after a successful download
      * @param monitor the monitor to report progress
      * @throws CoreException if this method fails. Reasons include: A
      *         corresponding file could not be created in the local file system.
+     * @since 6.4
      */
-    public abstract void performDownload(RemoteExplorerFileStore source,
-            LocalExplorerFileStore target, IProgressMonitor monitor)
-            throws CoreException;
+    public abstract void performDownload(RemoteExplorerFileStore source, LocalExplorerFileStore target,
+        boolean deleteSource, IProgressMonitor monitor) throws CoreException;
 
     /**
      * Uploads a file store from a local provider to a remote provider.
      *
      * @param source the file store to be uploaded
      * @param target the file store to upload to
+     * @param deleteSource if true the source is deleted after a successful upload
      * @param monitor the monitor to report progress
      * @throws CoreException if this method fails. Reasons include: A
      *         corresponding file could not be created in the local file system.
+     * @since 6.4
      */
-    public abstract void performUpload(final LocalExplorerFileStore source,
-            final RemoteExplorerFileStore target,
-            final IProgressMonitor monitor)
-            throws CoreException;
+    public abstract void performUpload(final LocalExplorerFileStore source, final RemoteExplorerFileStore target,
+        boolean deleteSource, final IProgressMonitor monitor) throws CoreException;
 
     /**
      * Allows the content provider to open a 'special' confirmation dialog. Server is currently the only one confirming

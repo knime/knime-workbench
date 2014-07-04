@@ -59,6 +59,7 @@ import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.io.FileUtils;
+import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -102,17 +103,19 @@ public class LocalDownloadWorkflowAction extends Action {
 
     private final LocalExplorerFileStore m_targetDir;
     private final RemoteExplorerFileStore m_source;
+    private final boolean m_deleteSource;
 
     /**
      * Creates a action with the source and parent directory.
      *
      * @param source the source file store containing the workflow
      * @param target the target directory to download the workflow to
+     * @param deleteSource if true the source is deleted after a successful download
      * @since 6.4
      */
     public LocalDownloadWorkflowAction(final RemoteExplorerFileStore source,
-            final LocalExplorerFileStore target) {
-        this(source, target, null);
+            final LocalExplorerFileStore target, final boolean deleteSource) {
+        this(source, target, deleteSource, null);
     }
 
     /**
@@ -120,14 +123,16 @@ public class LocalDownloadWorkflowAction extends Action {
      *
      * @param source the source file store containing the workflow
      * @param target the target directory to download the workflow to
+     * @param deleteSource if true the source is deleted after a successful download
      * @param monitor the progress monitor to use
      * @since 6.4
      */
     public LocalDownloadWorkflowAction(final RemoteExplorerFileStore source, final LocalExplorerFileStore target,
-            final IProgressMonitor monitor) {
+            final boolean deleteSource, final IProgressMonitor monitor) {
         super("Download");
         m_source = source;
         m_targetDir = target;
+        m_deleteSource = deleteSource;
         m_monitor = monitor;
     }
 
@@ -383,14 +388,17 @@ public class LocalDownloadWorkflowAction extends Action {
             extractDownloadToTarget(tmpLoc);
         } catch (Exception e) {
             LOGGER.error("Unable to extract the download. ", e);
+            success = false;
         } finally {
             tmpLoc.delete();
         }
-
         refreshTarget();
         Status status = dwnLoader.getStatus();
         if (status != null) {
             throw new CoreException(status);
+        }
+        if (success && m_deleteSource) {
+            m_source.delete(EFS.NONE, monitor);
         }
     }
 

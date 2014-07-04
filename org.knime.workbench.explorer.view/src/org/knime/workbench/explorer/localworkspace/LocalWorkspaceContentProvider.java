@@ -611,10 +611,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public void performDownload(final RemoteExplorerFileStore source,
-            final LocalExplorerFileStore target, final IProgressMonitor monitor)
-            throws CoreException {
-        LocalDownloadWorkflowAction downloadAction = new LocalDownloadWorkflowAction(source, target);
+    public void performDownload(final RemoteExplorerFileStore source, final LocalExplorerFileStore target,
+        final boolean deleteSource, final IProgressMonitor monitor) throws CoreException {
+        LocalDownloadWorkflowAction downloadAction = new LocalDownloadWorkflowAction(source, target, deleteSource);
         downloadAction.schedule();
     }
 
@@ -622,15 +621,10 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public void performUpload(final LocalExplorerFileStore source,
-            final RemoteExplorerFileStore target,
-            final IProgressMonitor monitor)
-            throws CoreException {
-        throw new UnsupportedOperationException("Cannot upload files to a local"
-                + " content provider.");
+    public void performUpload(final LocalExplorerFileStore source, final RemoteExplorerFileStore target,
+        final boolean deleteSource, final IProgressMonitor monitor) throws CoreException {
+        throw new UnsupportedOperationException("Cannot upload files to a local content provider.");
     }
-
-
 
     /**
      * {@inheritDoc}

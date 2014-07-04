@@ -444,27 +444,19 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                             }
 
                             OverwriteAndMergeInfo info = destChecker.getOverwriteAndMergeInfos().get(destFS);
-                            if ((info != null) && (destFS instanceof RemoteExplorerFileStore) && info.createSnapshot()) {
+                            if ((info != null)
+                                    && (destFS instanceof RemoteExplorerFileStore)
+                                    && info.createSnapshot()) {
                                 ((RemoteExplorerFileStore)destFS).createSnapshot(info.getComment());
                             }
 
                             if (!isSrcRemote && isDstRemote) { // upload
-                                destFS.getContentProvider().performUpload(
-                                        (LocalExplorerFileStore)srcFS,
-                                        (RemoteExplorerFileStore)destFS,
-                                        monitor);
-                                if (m_performMove) {
-                                    srcFS.delete(options, monitor);
-                                }
+                                destFS.getContentProvider().performUpload((LocalExplorerFileStore)srcFS,
+                                    (RemoteExplorerFileStore)destFS, m_performMove, monitor);
                             } else if (isSrcRemote && !isDstRemote) {
                                 // download
-                                destFS.getContentProvider().performDownload(
-                                        (RemoteExplorerFileStore)srcFS,
-                                        (LocalExplorerFileStore)destFS,
-                                        monitor);
-                                if (m_performMove) {
-                                    srcFS.delete(options, monitor);
-                                }
+                                destFS.getContentProvider().performDownload((RemoteExplorerFileStore)srcFS,
+                                    (LocalExplorerFileStore)destFS, m_performMove, monitor);
                             } else { // regular copy
                                 if (m_performMove) {
                                     srcFS.move(destFS, options, monitor);
