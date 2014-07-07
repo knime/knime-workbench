@@ -80,7 +80,7 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
     @Override
     public boolean isDirectory() {
         return m_file.fetchInfo().isDirectory();
-    };
+    }
 
     /**
      * {@inheritDoc}
@@ -174,15 +174,22 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
         if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
-        IFileStore wfFile = file.getChild(WorkflowPersistor.WORKFLOW_FILE);
+        IFileStore tmplateFile = file.getChild(WorkflowPersistor.TEMPLATE_FILE); // metanode, no workflow
+        if (tmplateFile.fetchInfo().exists()) {
+            return false;
+        }
+
+        IFileStore wfFile = file.getChild(WorkflowPersistor.WORKFLOW_FILE); // no workflow at all
+        if (!wfFile.fetchInfo().exists()) {
+            return false;
+        }
+
         IFileStore parentFile = file.getParent();
         if (parentFile == null) {
             return false;
         }
-        IFileStore parentWfFile = parentFile.getChild(
-                WorkflowPersistor.WORKFLOW_FILE);
-        return wfFile.fetchInfo().exists()
-                && !parentWfFile.fetchInfo().exists();
+        IFileStore parentWfFile = parentFile.getChild(WorkflowPersistor.WORKFLOW_FILE); // metanode inside a workflow
+        return !parentWfFile.fetchInfo().exists();
     }
 
     private static boolean isWorkflowGroup(final IFileStore file) {
