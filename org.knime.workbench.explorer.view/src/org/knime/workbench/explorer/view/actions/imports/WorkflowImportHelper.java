@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
  *
@@ -42,70 +43,45 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * Created: May 19, 2011
- * Author: ohl
+ * History
+ *   07.07.2014 (thor): created
  */
 package org.knime.workbench.explorer.view.actions.imports;
 
-import java.util.List;
-import java.util.Map;
-
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.window.Window;
+import org.eclipse.jface.wizard.WizardDialog;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.ContentDelegator;
-import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.explorer.view.actions.ExplorerAction;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
- * Action to export workflow(s).
+ * Utility class for workflow import actions.
  *
- * @author ohl, University of Konstanz
+ * @author Thorsten Meinl, KNIME.com, Zurich, Switzerland
  */
-public class WorkflowImportAction extends ExplorerAction {
-    /** id of the action. */
-    public static final String ID = "org.knime.explorer.view.actions.import";
-
-    /**
-     * @param view underlying view
-     */
-    public WorkflowImportAction(final ExplorerView view) {
-        super(view, WorkflowImportHelper.MENU_TEXT);
-        setImageDescriptor(WorkflowImportHelper.ICON);
-        setToolTipText(WorkflowImportHelper.TOOLTIP);
+final class WorkflowImportHelper {
+    private WorkflowImportHelper() {
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getId() {
-        return ID;
-    }
+    static final ImageDescriptor ICON = AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+        "icons/knime_import.png");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isEnabled() {
-        return !isRO();
-    }
+    static final String MENU_TEXT = "Import KNIME Workflow...";
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void run() {
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selectedFiles = getSelectedFiles();
-        AbstractExplorerFileStore sel = null;
-        if (selectedFiles != null && selectedFiles.size() > 0) {
-            sel = selectedFiles.values().iterator().next().iterator().next();
-        }
+    static final String TOOLTIP = "Imports KNIME workflows from a directory or an archive into the workspace";
 
-        AbstractExplorerFileStore destination = WorkflowImportHelper.openImportWizard(getParentShell(), sel);
-        if (destination != null) {
-            Object object = ContentDelegator.getTreeObjectFor(destination);
-            getViewer().refresh(object);
-            getViewer().reveal(object);
+    static AbstractExplorerFileStore openImportWizard(final Shell parentShell,
+        final AbstractExplorerFileStore initialFile) {
+        WorkflowImportWizard impWiz = new WorkflowImportWizard();
+        impWiz.setInitialDestination(initialFile);
+
+        WizardDialog dialog = new WizardDialog(parentShell, impWiz);
+        if (Window.CANCEL != dialog.open()) {
+            return impWiz.getDestinationContainer();
+        } else {
+            return null;
         }
     }
 }

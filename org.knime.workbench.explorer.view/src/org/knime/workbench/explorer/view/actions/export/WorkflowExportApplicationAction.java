@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
  *
@@ -42,36 +43,34 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * Created: May 19, 2011
- * Author: ohl
+ * History
+ *   02.07.2014 (ohl): created
  */
-package org.knime.workbench.explorer.view.actions.imports;
+package org.knime.workbench.explorer.view.actions.export;
 
-import java.util.List;
-import java.util.Map;
-
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.ContentDelegator;
-import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.explorer.view.actions.ExplorerAction;
+import org.eclipse.jface.action.Action;
+import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PlatformUI;
 
 /**
- * Action to export workflow(s).
+ * This action is registered with the application File menu.
  *
- * @author ohl, University of Konstanz
+ * @author Peter Ohl, KNIME.com AG, Zurich, Switzerland
+ * @since 6.4
  */
-public class WorkflowImportAction extends ExplorerAction {
+public class WorkflowExportApplicationAction extends Action {
     /** id of the action. */
-    public static final String ID = "org.knime.explorer.view.actions.import";
+    public static final String ID = "org.knime.workbench.explorer.view.actions.export.WorkflowExportApplicationAction";
 
     /**
-     * @param view underlying view
+     * The constructor.
      */
-    public WorkflowImportAction(final ExplorerView view) {
-        super(view, WorkflowImportHelper.MENU_TEXT);
-        setImageDescriptor(WorkflowImportHelper.ICON);
-        setToolTipText(WorkflowImportHelper.TOOLTIP);
+    public WorkflowExportApplicationAction() {
+        super(WorkflowExportHelper.MENU_TEXT, WorkflowExportHelper.ICON);
+        setToolTipText(WorkflowExportHelper.TOOLTIP);
     }
 
     /**
@@ -84,28 +83,24 @@ public class WorkflowImportAction extends ExplorerAction {
 
     /**
      * {@inheritDoc}
-     */
-    @Override
-    public boolean isEnabled() {
-        return !isRO();
-    }
-
-    /**
-     * {@inheritDoc}
+     * run is called multiple times on a static instance in the WorkflowExportAction. This method/class must not
+     * use any member variable or store a state in any other way. See {@link WorkflowExportAction}.
      */
     @Override
     public void run() {
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selectedFiles = getSelectedFiles();
-        AbstractExplorerFileStore sel = null;
-        if (selectedFiles != null && selectedFiles.size() > 0) {
-            sel = selectedFiles.values().iterator().next().iterator().next();
+        IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        if (workbenchWindow == null) {
+            return;
         }
 
-        AbstractExplorerFileStore destination = WorkflowImportHelper.openImportWizard(getParentShell(), sel);
-        if (destination != null) {
-            Object object = ContentDelegator.getTreeObjectFor(destination);
-            getViewer().refresh(object);
-            getViewer().reveal(object);
+        ISelection workbenchSelection = workbenchWindow.getSelectionService().getSelection();
+        IStructuredSelection structSelection;
+        if (workbenchSelection instanceof IStructuredSelection) {
+            structSelection = (IStructuredSelection)workbenchSelection;
+        } else {
+            structSelection = StructuredSelection.EMPTY;
         }
+        WorkflowExportHelper.openExportWizard(workbenchWindow.getShell(), structSelection);
     }
+
 }

@@ -49,14 +49,10 @@ package org.knime.workbench.explorer.view.actions.export;
 
 import java.util.List;
 
-import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.wizard.WizardDialog;
-import org.eclipse.ui.PlatformUI;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
-import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  * Action to export workflow(s).
@@ -65,26 +61,16 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  */
 public class WorkflowExportAction extends ExplorerAction {
 
-//    private static final NodeLogger LOGGER = NodeLogger
-//            .getLogger(WorkflowExportAction.class);
-
-    private static final int SIZING_WIZARD_WIDTH = 470;
-
-    private static final int SIZING_WIZARD_HEIGHT = 550;
-
-    private static final ImageDescriptor ICON = KNIMEUIPlugin
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/knime_export.png");
-
-    /** id of the action */
+    /** id of the action. */
     public static final String ID = "org.knime.explorer.view.actions.export";
 
     /**
      * @param view underlying view
      */
     public WorkflowExportAction(final ExplorerView view) {
-        super(view, "Export KNIME Workflow...");
-        setImageDescriptor(ICON);
+        super(view, WorkflowExportHelper.MENU_TEXT);
+        setImageDescriptor(WorkflowExportHelper.ICON);
+        setToolTipText(WorkflowExportHelper.TOOLTIP);
     }
 
     /**
@@ -116,14 +102,6 @@ public class WorkflowExportAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        WorkflowExportWizard expWiz = new WorkflowExportWizard();
-        expWiz.init(PlatformUI.getWorkbench(), getSelection());
-
-        WizardDialog dialog = new WizardDialog(getParentShell(), expWiz);
-        dialog.create();
-        dialog.getShell().setSize(
-                Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x),
-                SIZING_WIZARD_HEIGHT);
-        dialog.open();
+        WorkflowExportHelper.openExportWizard(getParentShell(), getSelection());
     }
 }

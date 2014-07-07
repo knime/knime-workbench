@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
  *
@@ -42,70 +43,45 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * Created: May 19, 2011
- * Author: ohl
+ * History
+ *   07.07.2014 (thor): created
  */
-package org.knime.workbench.explorer.view.actions.imports;
+package org.knime.workbench.explorer.view.actions.export;
 
-import java.util.List;
-import java.util.Map;
-
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.ContentDelegator;
-import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.explorer.view.actions.ExplorerAction;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.wizard.WizardDialog;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
- * Action to export workflow(s).
+ * Utility class for workflow export actions.
  *
- * @author ohl, University of Konstanz
+ * @author Thorsten Meinl, KNIME.com, Zurich, Switzerland
  */
-public class WorkflowImportAction extends ExplorerAction {
-    /** id of the action. */
-    public static final String ID = "org.knime.explorer.view.actions.import";
+final class WorkflowExportHelper {
+    private WorkflowExportHelper() {}
 
-    /**
-     * @param view underlying view
-     */
-    public WorkflowImportAction(final ExplorerView view) {
-        super(view, WorkflowImportHelper.MENU_TEXT);
-        setImageDescriptor(WorkflowImportHelper.ICON);
-        setToolTipText(WorkflowImportHelper.TOOLTIP);
-    }
+    static final int SIZING_WIZARD_WIDTH = 470;
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getId() {
-        return ID;
-    }
+    static final int SIZING_WIZARD_HEIGHT = 350;
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isEnabled() {
-        return !isRO();
-    }
+    static final ImageDescriptor ICON = AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+        "icons/knime_export.png");
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void run() {
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selectedFiles = getSelectedFiles();
-        AbstractExplorerFileStore sel = null;
-        if (selectedFiles != null && selectedFiles.size() > 0) {
-            sel = selectedFiles.values().iterator().next().iterator().next();
-        }
+    static final String MENU_TEXT = "Export KNIME Workflow...";
 
-        AbstractExplorerFileStore destination = WorkflowImportHelper.openImportWizard(getParentShell(), sel);
-        if (destination != null) {
-            Object object = ContentDelegator.getTreeObjectFor(destination);
-            getViewer().refresh(object);
-            getViewer().reveal(object);
-        }
+    static final String TOOLTIP = "Exports KNIME workflows from the workspace to an external directory or an archive";
+
+    static void openExportWizard(final Shell parentShell, final IStructuredSelection selection) {
+        WorkflowExportWizard expWiz = new WorkflowExportWizard();
+        expWiz.init(PlatformUI.getWorkbench(), selection);
+
+        WizardDialog dialog = new WizardDialog(parentShell, expWiz);
+        dialog.create();
+        dialog.getShell().setSize(Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x), SIZING_WIZARD_HEIGHT);
+        dialog.open();
     }
 }

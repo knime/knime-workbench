@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
  *
@@ -42,35 +43,36 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * Created: May 19, 2011
- * Author: ohl
+ * History
+ *   02.07.2014 (ohl): created
  */
 package org.knime.workbench.explorer.view.actions.imports;
 
-import java.util.List;
-import java.util.Map;
-
+import org.eclipse.jface.action.Action;
+import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PlatformUI;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
-import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.explorer.view.actions.ExplorerAction;
 
 /**
- * Action to export workflow(s).
+ * Registered with the application File menue.
  *
- * @author ohl, University of Konstanz
+ * @author Peter Ohl, KNIME.com AG, Zurich, Switzerland
+ * @since 6.4
  */
-public class WorkflowImportAction extends ExplorerAction {
+public class WorkflowImportApplicationAction extends Action {
     /** id of the action. */
-    public static final String ID = "org.knime.explorer.view.actions.import";
+    public static final String ID = "org.knime.workbench.explorer.view.actions.imports.WorkflowImportApplicationAction";
+
+    private AbstractExplorerFileStore m_destination; // set after wizard finish
 
     /**
-     * @param view underlying view
+     * The constructor.
      */
-    public WorkflowImportAction(final ExplorerView view) {
-        super(view, WorkflowImportHelper.MENU_TEXT);
-        setImageDescriptor(WorkflowImportHelper.ICON);
+    public WorkflowImportApplicationAction() {
+        super(WorkflowImportHelper.MENU_TEXT, WorkflowImportHelper.ICON);
         setToolTipText(WorkflowImportHelper.TOOLTIP);
     }
 
@@ -84,28 +86,29 @@ public class WorkflowImportAction extends ExplorerAction {
 
     /**
      * {@inheritDoc}
-     */
-    @Override
-    public boolean isEnabled() {
-        return !isRO();
-    }
-
-    /**
-     * {@inheritDoc}
+     * run is called multiple times on a static instance in the WorkflowImportAction. This method/class must not
+     * use any member variable or store a state in any other way. See {@link WorkflowImportAction}.
      */
     @Override
     public void run() {
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selectedFiles = getSelectedFiles();
-        AbstractExplorerFileStore sel = null;
-        if (selectedFiles != null && selectedFiles.size() > 0) {
-            sel = selectedFiles.values().iterator().next().iterator().next();
+        IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        if (workbenchWindow == null) {
+            return;
+        }
+        ISelection workbenchSelection = workbenchWindow.getSelectionService().getSelection();
+        AbstractExplorerFileStore initFile = null;
+        if (workbenchSelection instanceof IStructuredSelection) {
+            initFile = ContentDelegator.getFileStore(((IStructuredSelection)workbenchSelection).getFirstElement());
         }
 
-        AbstractExplorerFileStore destination = WorkflowImportHelper.openImportWizard(getParentShell(), sel);
-        if (destination != null) {
-            Object object = ContentDelegator.getTreeObjectFor(destination);
-            getViewer().refresh(object);
-            getViewer().reveal(object);
-        }
+        m_destination = WorkflowImportHelper.openImportWizard(workbenchWindow.getShell(), initFile);
+    }
+
+    /**
+     * Returns the import destination - only valid after the wizard finishes (after run()).
+     * @return the import destination - only valid after the wizard finishes (after run())
+     */
+    public AbstractExplorerFileStore getDestination() {
+        return m_destination;
     }
 }
