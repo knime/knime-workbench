@@ -189,7 +189,11 @@ public class LocalDownloadWorkflowAction extends Action {
      * {@inheritDoc}
      */
     protected void refreshTarget() {
-        getTargetDir().refresh();
+        final LocalExplorerFileStore targetDir = getTargetDir();
+        LocalExplorerFileStore parent = targetDir.getParent();
+        if (parent != null) {
+            parent.refresh();
+        }
     }
 
 
