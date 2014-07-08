@@ -63,7 +63,7 @@ import org.eclipse.swt.widgets.Text;
  * @author Thorsten Meinl, KNIME.com, Zurich, Switzerland
  * @since 2.8
  */
-class SnapshotPanel extends Composite {
+public class SnapshotPanel extends Composite {
     private final Button m_createSnapshotButton;
 
     private final Text m_commentField;
@@ -78,7 +78,7 @@ class SnapshotPanel extends Composite {
      * @param parent the parent component
      * @param style layout styles, the same as for {@link Composite}
      */
-    SnapshotPanel(final Composite parent, final int style) {
+    public SnapshotPanel(final Composite parent, final int style) {
         super(parent, style);
         setLayout(new GridLayout());
         setLayoutData(new GridData(GridData.FILL_BOTH));
