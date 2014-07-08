@@ -85,6 +85,9 @@ public final class SaveAsValidator extends Validator {
     @Override
     public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {
         // called when clicked
+        if (selection == null) {
+            return "Please select a destination workflow or workflow group.";
+        }
         AbstractExplorerFileInfo info = selection.fetchInfo();
         if (!info.isWorkflow() && !info.isWorkflowGroup()) {
             return "Please select a destination workflow or workflow group.";
