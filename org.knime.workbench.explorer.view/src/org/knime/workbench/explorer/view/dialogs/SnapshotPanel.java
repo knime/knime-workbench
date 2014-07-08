@@ -61,7 +61,7 @@ import org.eclipse.swt.widgets.Text;
  * Panel that shows a checkbox asking the user whether a snapshot should be created and a textfield for the comment.
  *
  * @author Thorsten Meinl, KNIME.com, Zurich, Switzerland
- * @since 2.8
+ * @since 6.4
  */
 public class SnapshotPanel extends Composite {
     private final Button m_createSnapshotButton;
