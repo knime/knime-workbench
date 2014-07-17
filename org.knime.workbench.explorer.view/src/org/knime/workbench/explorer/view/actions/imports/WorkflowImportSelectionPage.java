@@ -623,7 +623,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
                             .toOSString();
         }
         File initialPath = new File(fileName);
-        if (initialPath.exists()) {
+        if (initialPath.isFile()) {
             String filterPath = new Path(initialPath.getParent()).toOSString();
             dialog.setFilterPath(filterPath);
             initialZipLocation = filterPath;
