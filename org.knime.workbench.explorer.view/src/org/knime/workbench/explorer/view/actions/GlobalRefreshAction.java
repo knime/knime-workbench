@@ -44,12 +44,17 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 
@@ -89,10 +94,35 @@ public class GlobalRefreshAction extends ExplorerAction {
         if (stores == null) {
             getViewer().refresh();
         } else {
-            for (AbstractExplorerFileStore file : stores) {
-//                getViewer().refresh(ContentDelegator.getTreeObjectFor(file));
-                file.refresh();
+            new RefreshJob(stores).schedule();
+        }
+    }
+
+
+    private static class RefreshJob extends ExplorerJob {
+        private final List<AbstractExplorerFileStore> m_stores;
+
+        public RefreshJob(final List<AbstractExplorerFileStore> stores) {
+            super("Refreshing " + stores.size() + " resources");
+            m_stores = new ArrayList<>(stores);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected IStatus run(final IProgressMonitor monitor) {
+            monitor.beginTask("Refreshing " + m_stores.size() + " resources", m_stores.size());
+
+            for (AbstractExplorerFileStore file : m_stores) {
+                if (monitor.isCanceled()) {
+                    return Status.CANCEL_STATUS;
+                }
+                monitor.beginTask("Refreshing " + file, 1);
+                file.refresh(monitor);
             }
+
+            return Status.OK_STATUS;
         }
     }
 }

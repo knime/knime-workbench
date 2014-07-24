@@ -234,6 +234,18 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      */
     public abstract void refresh();
 
+    /**
+     * Called when changes are made to the underlying file system. Implementations can update their caches or internal
+     * members. Override this method if you can make use of the progress monitor. The default implementation will call
+     * {@link #refresh()}.
+     *
+     * @param monitor a progress monitor, may be <code>null</code>
+     * @since 6.5
+     */
+    public void refresh(final IProgressMonitor monitor) {
+        refresh();
+    }
+
 
     /**
      * Convenience method that calls #toLocalFile(int, IProgressMonitor) with

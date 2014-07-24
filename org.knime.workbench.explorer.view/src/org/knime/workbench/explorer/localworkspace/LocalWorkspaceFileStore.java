@@ -269,12 +269,22 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      */
     @Override
     public void refresh() {
+        refresh(null);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void refresh(final IProgressMonitor monitor) {
         try {
-            refreshResource(this, IResource.DEPTH_INFINITE, null);
+            refreshResource(this, IResource.DEPTH_INFINITE, monitor);
         } catch (CoreException e) {
-            // too bad
+            // do not refresh
+            LOGGER.error("Could not refresh resource " + this, e);
         }
     }
+
 
     private static void refreshResource(final IResource resource,
             final int depth,
@@ -299,9 +309,31 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         }
         File file = fileStore.toLocalFile(EFS.NONE, null);
         if (file != null) {
-            refreshResource(KnimeResourceUtil.getResourceForURI(file.toURI()), depth, monitor);
+            IResource resource = KnimeResourceUtil.getResourceForURI(file.toURI());
+            refreshResource(resource, depth, monitor);
+            if (resource == ResourcesPlugin.getWorkspace().getRoot()) {
+                fixOrphanedProjects((IWorkspaceRoot)resource, monitor);
+            }
         }
         fileStore.getContentProvider().refresh(fileStore);
+    }
+
+
+    private static void fixOrphanedProjects(final IWorkspaceRoot root, final IProgressMonitor monitor) {
+        for (IProject project : root.getProjects()) {
+            if (monitor.isCanceled()) {
+                break;
+            }
+            monitor.subTask("Checking if '" + project.getName() + "' still exists");
+            IPath projectLocation = project.getLocation();
+            if ((projectLocation == null) || !projectLocation.toFile().exists()) {
+                try {
+                    project.delete(true, monitor);
+                } catch (CoreException ex) {
+                    LOGGER.warn("Could not delete orphaned project '" + project + "': " + ex.getMessage(), ex);
+                }
+            }
+        }
     }
 
     /**
