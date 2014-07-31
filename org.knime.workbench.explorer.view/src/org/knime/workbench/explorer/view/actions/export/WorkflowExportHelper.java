@@ -81,7 +81,6 @@ final class WorkflowExportHelper {
 
         WizardDialog dialog = new WizardDialog(parentShell, expWiz);
         dialog.create();
-        dialog.getShell().setSize(Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x), SIZING_WIZARD_HEIGHT);
         dialog.open();
     }
 }
