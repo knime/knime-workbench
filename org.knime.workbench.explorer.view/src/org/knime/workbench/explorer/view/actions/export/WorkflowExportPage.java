@@ -275,6 +275,8 @@ public class WorkflowExportPage extends WizardPage {
                 f = new File(System.getProperty("user.home"), fileName);
             }
             m_fileText.setText(f.getAbsolutePath());
+        } else {
+            m_fileText.setText("");
         }
     }
 
@@ -322,21 +324,22 @@ public class WorkflowExportPage extends WizardPage {
      * Updates the tree visibility, and container text field, etc.
      */
     private void containerSelectionChanged() {
-        // // reset checked elements
-        // m_treeViewer.expandAll();
-        // m_treeViewer.setAllChecked(false);
-
-        if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
+        if ((m_selection == null) || AbstractExplorerFileStore.isWorkflow(m_selection)) {
             m_treeViewer.getTree().setVisible(false);
         } else {
             // clear the selection before setting a new input!!!
             m_treeViewer.setSelection(null);
             m_treeViewer.setInput(m_selection);
             m_treeViewer.getTree().setVisible(true);
+            getContainer().getShell().pack(true);
+            getContainer().getShell().update();
             selectAllWorkflows();
         }
-
-        m_containerText.setText(m_selection.getMountIDWithFullPath());
+        if (m_selection != null) {
+            m_containerText.setText(m_selection.getMountIDWithFullPath());
+        } else {
+            m_containerText.setText("");
+        }
         // also update the target file name
         updateFileName(m_selection);
     }
@@ -456,7 +459,9 @@ public class WorkflowExportPage extends WizardPage {
 
         List<AbstractExplorerFileStore> workflows =
                 new ArrayList<AbstractExplorerFileStore>();
-
+        if (m_selection == null) {
+            return workflows;
+        }
         if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
             workflows.add(m_selection);
             return workflows;
