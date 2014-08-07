@@ -321,10 +321,12 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
 
     private static void fixOrphanedProjects(final IWorkspaceRoot root, final IProgressMonitor monitor) {
         for (IProject project : root.getProjects()) {
-            if (monitor.isCanceled()) {
-                break;
+            if (monitor != null) {
+                if (monitor.isCanceled()) {
+                    break;
+                }
+                monitor.subTask("Checking if '" + project.getName() + "' still exists");
             }
-            monitor.subTask("Checking if '" + project.getName() + "' still exists");
             IPath projectLocation = project.getLocation();
             if ((projectLocation == null) || !projectLocation.toFile().exists()) {
                 try {
