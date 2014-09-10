@@ -65,13 +65,9 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.jface.action.Action;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
 import org.eclipse.ui.internal.wizards.datatransfer.ZipLeveledStructureProvider;
 import org.knime.core.node.NodeLogger;
-import org.knime.workbench.core.util.ImageRepository;
-import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -80,6 +76,7 @@ import org.knime.workbench.explorer.filesystem.RemoteDownloadStream;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.AbstractContentProvider.AfterRunCallback;
 import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.explorer.view.actions.imports.IWorkflowImportElement;
 import org.knime.workbench.explorer.view.actions.imports.WorkflowImportElementFromArchive;
@@ -89,21 +86,19 @@ import org.knime.workbench.ui.navigator.ZipLeveledStructProvider;
 /**
  *
  * @author ohl, KNIME.com, Zurich, Switzerland
+ * @since 7.0
  */
-public class LocalDownloadWorkflowAction extends Action {
+public class WorkflowDownload {
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalDownloadWorkflowAction.class);
-
-    private static final ImageDescriptor IMG_DOWNLOAD = ImageRepository.getImageDescriptor(SharedImages.ServerDownload);
-
-    /** The action's id. */
-    public static final String ID = "com.knime.explorer.downloadaction";
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowDownload.class);
 
     private final IProgressMonitor m_monitor;
 
     private final LocalExplorerFileStore m_targetDir;
     private final RemoteExplorerFileStore m_source;
     private final boolean m_deleteSource;
+    private final AfterRunCallback m_afterRunCallback;
+
 
     /**
      * Creates a action with the source and parent directory.
@@ -111,11 +106,12 @@ public class LocalDownloadWorkflowAction extends Action {
      * @param source the source file store containing the workflow
      * @param target the target directory to download the workflow to
      * @param deleteSource if true the source is deleted after a successful download
-     * @since 6.4
+     * @param afterRunCallback see {@link AbstractContentProvider#performDownloadAsync(RemoteExplorerFileStore,
+     * LocalExplorerFileStore, boolean, AfterRunCallback)} - may be null.
      */
-    public LocalDownloadWorkflowAction(final RemoteExplorerFileStore source,
-            final LocalExplorerFileStore target, final boolean deleteSource) {
-        this(source, target, deleteSource, null);
+    public WorkflowDownload(final RemoteExplorerFileStore source,
+            final LocalExplorerFileStore target, final boolean deleteSource, final AfterRunCallback afterRunCallback) {
+        this(source, target, deleteSource, afterRunCallback, null);
     }
 
     /**
@@ -124,45 +120,21 @@ public class LocalDownloadWorkflowAction extends Action {
      * @param source the source file store containing the workflow
      * @param target the target directory to download the workflow to
      * @param deleteSource if true the source is deleted after a successful download
+     * @param afterRunCallback see {@link AbstractContentProvider#performDownloadAsync(RemoteExplorerFileStore,
+     * LocalExplorerFileStore, boolean, AfterRunCallback)} - may be null.
      * @param monitor the progress monitor to use
-     * @since 6.4
      */
-    public LocalDownloadWorkflowAction(final RemoteExplorerFileStore source, final LocalExplorerFileStore target,
-            final boolean deleteSource, final IProgressMonitor monitor) {
-        super("Download");
+    public WorkflowDownload(final RemoteExplorerFileStore source, final LocalExplorerFileStore target,
+            final boolean deleteSource, final AfterRunCallback afterRunCallback, final IProgressMonitor monitor) {
         m_source = source;
         m_targetDir = target;
         m_deleteSource = deleteSource;
+        m_afterRunCallback = afterRunCallback;
         m_monitor = monitor;
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getId() {
-        return ID;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ImageDescriptor getImageDescriptor() {
-        return IMG_DOWNLOAD;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isEnabled() {
-        return getTargetDir() != null && getSourceFile() != null;
-    }
-
-    /**
      * @return the directory to save the download to
-     * @since 6.4
      */
     protected LocalExplorerFileStore getTargetDir() {
         return m_targetDir;
@@ -170,7 +142,6 @@ public class LocalDownloadWorkflowAction extends Action {
 
     /**
      * @return a string identifying the download target
-     * @since 6.4
      */
     protected String getTargetIdentifier() {
         return m_targetDir.getMountIDWithFullPath();
@@ -179,14 +150,13 @@ public class LocalDownloadWorkflowAction extends Action {
     /**
      * Perform preparations on the target. Nothing is done
      * in the base implementation.
-     * @since 6.4
      */
     protected void prepareTarget() {
         // do nothing
     }
 
     /**
-     * {@inheritDoc}
+     *
      */
     protected void refreshTarget() {
         final LocalExplorerFileStore targetDir = getTargetDir();
@@ -199,7 +169,6 @@ public class LocalDownloadWorkflowAction extends Action {
 
     /**
      * @return the file store to download
-     * @since 6.4
      */
     protected RemoteExplorerFileStore getSourceFile() {
         return m_source;
@@ -344,11 +313,29 @@ public class LocalDownloadWorkflowAction extends Action {
     /**
      * @param monitor the monitor to report progress
      * @throws CoreException if the download does not complete without warnings
-     *
-     * @since 6.4
      */
-    public final void runSync(final IProgressMonitor monitor)
-            throws CoreException {
+    public final void runSync(final IProgressMonitor monitor) throws CoreException {
+        try {
+            runSyncInternal(monitor);
+            AfterRunCallback.callCallbackInDisplayThread(m_afterRunCallback, null);
+        } catch (final Exception e) {
+            AfterRunCallback.callCallbackInDisplayThread(m_afterRunCallback, e);
+            if (e instanceof CoreException) {
+                throw (CoreException)e;
+            } else if (e instanceof RuntimeException) {
+                throw (RuntimeException)e;
+            } else {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+
+    /**
+     * @param monitor the monitor to report progress
+     * @throws CoreException if the download does not complete without warnings
+     */
+    private final void runSyncInternal(final IProgressMonitor monitor) throws CoreException {
         String srcIdentifier = getSourceFile().getMountIDWithFullPath();
         if (!isSourceSupported()) {
             throw new IllegalArgumentException("Type of download source '"
@@ -407,7 +394,6 @@ public class LocalDownloadWorkflowAction extends Action {
     }
 
     /**
-     * @since 6.4
      */
     public void schedule() {
         ExplorerJob j = new ExplorerJob("Download of " + getSourceFile().getName() + " to "
@@ -435,12 +421,8 @@ public class LocalDownloadWorkflowAction extends Action {
      * Downloads a remote file store to a local temp dir.
      *
      * @author Peter Ohl, KNIME.com, Zurich, Switzerland
-     * @since 6.4
-     *
      */
     protected static class DownloadRunnable implements Runnable {
-        private static final NodeLogger LOGGER = NodeLogger.getLogger(
-                DownloadRunnable.class);
 
         private final RemoteExplorerFileStore m_source;
 
@@ -462,8 +444,6 @@ public class LocalDownloadWorkflowAction extends Action {
          *
          * @return the status of the download or null if no status messages
          *      are available
-         *
-         * @since 3.0
          */
         public Status getStatus() {
             return m_status;
@@ -669,7 +649,7 @@ public class LocalDownloadWorkflowAction extends Action {
         /**
          * Should contain something if {@link #getTempFile()} returns null.
          *
-         * @return
+         * @return ...
          */
         public String getErrorMessage() {
             return m_errorMsg;

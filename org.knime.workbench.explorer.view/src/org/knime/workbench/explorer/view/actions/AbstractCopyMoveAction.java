@@ -47,7 +47,7 @@ package org.knime.workbench.explorer.view.actions;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -83,9 +83,11 @@ import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.AbstractContentProvider.AfterRunCallback;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.DestinationChecker;
+import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
 
@@ -327,10 +329,11 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             }
         }
         // confirm move (deletion of flows in source location)
+        final Map<AbstractExplorerFileStore, AbstractExplorerFileStore> destCheckerMappings = destChecker.getMappings();
         if (m_performMove) {
             HashMap<AbstractContentProvider, List<AbstractExplorerFileStore>> movedFlows =
                     new HashMap<AbstractContentProvider, List<AbstractExplorerFileStore>>();
-            Map<AbstractExplorerFileStore, AbstractExplorerFileStore> srcToDest = destChecker.getMappings();
+            Map<AbstractExplorerFileStore, AbstractExplorerFileStore> srcToDest = destCheckerMappings;
             for (AbstractExplorerFileStore aefs : srcFileStores) {
                 if (!AbstractExplorerFileStore.isWorkflow(aefs)) {
                     continue;
@@ -356,9 +359,6 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             }
         }
 
-        final Collection<AbstractExplorerFileStore> processedTargets
-                = new HashSet<AbstractExplorerFileStore>(
-                        destChecker.getMappings().values());
         final List<IStatus> result = new LinkedList<IStatus>();
         final AtomicBoolean success = new AtomicBoolean(true);
         try {
@@ -374,10 +374,14 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                     monitor.beginTask(m_cmd + " " + numFiles
                             + " files to " + m_target.getFullName(),
                             numFiles);
-
+                    // calculating the number of file transactions (copy/move/down/uploads)
+                    final ArrayList<AbstractExplorerFileStore> processedTargets =
+                        new ArrayList<>(destCheckerMappings.values());
+                    processedTargets.removeAll(Collections.singleton(null));
+                    int iterationCount = processedTargets.size();
                     for (final Map.Entry<AbstractExplorerFileStore,
                             AbstractExplorerFileStore> entry
-                            : destChecker.getMappings().entrySet()) {
+                            : destCheckerMappings.entrySet()) {
                         AbstractExplorerFileStore srcFS = entry.getKey();
                         AbstractExplorerFileStore destFS = entry.getValue();
                         if (destFS == null) {
@@ -450,19 +454,24 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                                 ((RemoteExplorerFileStore)destFS).createSnapshot(info.getComment());
                             }
 
+                            AfterRunCallback callback = null; // for async operations
+                            if (--iterationCount == 0) {
+                                callback = new AfterRunCallback() {
+                                    @Override
+                                    public void afterCompletion(final Throwable throwable) {
+                                        getView().setNextSelection(processedTargets);
+                                        m_target.refresh();
+                                    }
+                                };
+                            }
                             if (!isSrcRemote && isDstRemote) { // upload
-                                destFS.getContentProvider().performUpload((LocalExplorerFileStore)srcFS,
-                                    (RemoteExplorerFileStore)destFS, m_performMove, monitor);
-                            } else if (isSrcRemote && !isDstRemote) {
-                                // download
-                                destFS.getContentProvider().performDownload((RemoteExplorerFileStore)srcFS,
-                                    (LocalExplorerFileStore)destFS, m_performMove, monitor);
+                                destFS.getContentProvider().performUploadAsync((LocalExplorerFileStore)srcFS,
+                                    (RemoteExplorerFileStore)destFS, m_performMove, callback);
+                            } else if (isSrcRemote && !isDstRemote) { // download
+                                destFS.getContentProvider().performDownloadAsync((RemoteExplorerFileStore)srcFS,
+                                    (LocalExplorerFileStore)destFS, m_performMove, callback);
                             } else { // regular copy
-                                if (m_performMove) {
-                                    srcFS.move(destFS, options, monitor);
-                                } else {
-                                    srcFS.copy(destFS, options, monitor);
-                                }
+                                scheduleLocalCopyOrMove(srcFS, destFS, callback, isOverwritten, options);
                             }
                         } catch (CoreException e) {
                             LOGGER.debug(m_cmd + " failed: "
@@ -492,8 +501,6 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                     }
                 }
             });
-            getView().setNextSelection(processedTargets);
-            m_target.refresh();
         } catch (InvocationTargetException e) {
             LOGGER.debug("Invocation exception, " + e.getMessage(), e);
             result.add(new Status(IStatus.ERROR,
@@ -530,6 +537,32 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                     result.get(0));
         }
         return success.get();
+    }
+
+    private void scheduleLocalCopyOrMove(final AbstractExplorerFileStore source,
+        final AbstractExplorerFileStore destination, final AfterRunCallback callback, final boolean move,
+        final int options) {
+        ExplorerJob job =
+            new ExplorerJob((move ? "Move" : "Copy") + " of " + source.getMountIDWithFullPath() + " to "
+                + destination.getMountIDWithFullPath()) {
+
+                @Override
+                protected IStatus run(final IProgressMonitor monitor) {
+                    try {
+                        if (move) {
+                            source.move(destination, options, monitor);
+                        } else {
+                            source.copy(destination, options, monitor);
+                        }
+                        AfterRunCallback.callCallbackInDisplayThread(callback, null);
+                        return Status.OK_STATUS;
+                    } catch (CoreException ce) {
+                        AfterRunCallback.callCallbackInDisplayThread(callback, ce);
+                        return ce.getStatus();
+                    }
+                }
+        };
+        job.schedule();
     }
 
     /**

@@ -114,26 +114,6 @@
             </message_arguments>
         </filter>
     </resource>
-    <resource path="src/org/knime/workbench/explorer/view/actions/LocalDownloadWorkflowAction.java" type="org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction">
-        <filter id="338722907">
-            <message_arguments>
-                <message_argument value="org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction"/>
-                <message_argument value="LocalDownloadWorkflowAction(RemoteExplorerFileStore, File)"/>
-            </message_arguments>
-        </filter>
-        <filter id="338722907">
-            <message_arguments>
-                <message_argument value="org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction"/>
-                <message_argument value="LocalDownloadWorkflowAction(RemoteExplorerFileStore, File, IProgressMonitor)"/>
-            </message_arguments>
-        </filter>
-        <filter id="338792546">
-            <message_arguments>
-                <message_argument value="org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction"/>
-                <message_argument value="getTargetFileStore()"/>
-            </message_arguments>
-        </filter>
-    </resource>
     <resource path="src/org/knime/workbench/explorer/view/preferences/MountSettings.java" type="org.knime.workbench.explorer.view.preferences.MountSettings">
         <filter id="338792546">
             <message_arguments>

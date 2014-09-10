@@ -112,8 +112,8 @@ public class DownloadAndOpenWorkflowAction extends Action {
             } catch (CoreException e1) {
                 return new Status(e1.getStatus().getSeverity(), PLUGIN_ID, e1.getMessage(), e1);
             }
-            final LocalDownloadWorkflowAction downloadAction =
-                    new LocalDownloadWorkflowAction(m_source, tmpDestDir, /*deleteSource=*/false, progress);
+            final WorkflowDownload downloadAction =
+                    new WorkflowDownload(m_source, tmpDestDir, /*deleteSource=*/false, null, progress);
             try {
                 downloadAction.runSync(monitor);
             } catch (CoreException e) {

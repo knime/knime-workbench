@@ -65,7 +65,6 @@ import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
@@ -90,7 +89,7 @@ import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.actions.AbstractCopyMoveAction;
 import org.knime.workbench.explorer.view.actions.GlobalCopyAction;
 import org.knime.workbench.explorer.view.actions.GlobalMoveAction;
-import org.knime.workbench.explorer.view.actions.LocalDownloadWorkflowAction;
+import org.knime.workbench.explorer.view.actions.WorkflowDownload;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.wiring.BundleWiring;
@@ -611,9 +610,10 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public void performDownload(final RemoteExplorerFileStore source, final LocalExplorerFileStore target,
-        final boolean deleteSource, final IProgressMonitor monitor) throws CoreException {
-        LocalDownloadWorkflowAction downloadAction = new LocalDownloadWorkflowAction(source, target, deleteSource);
+    public void performDownloadAsync(final RemoteExplorerFileStore source, final LocalExplorerFileStore target,
+        final boolean deleteSource, final AfterRunCallback afterRunCallback) {
+        WorkflowDownload downloadAction =
+                new WorkflowDownload(source, target, deleteSource, afterRunCallback);
         downloadAction.schedule();
     }
 
@@ -621,8 +621,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public void performUpload(final LocalExplorerFileStore source, final RemoteExplorerFileStore target,
-        final boolean deleteSource, final IProgressMonitor monitor) throws CoreException {
+    public void performUploadAsync(final LocalExplorerFileStore source, final RemoteExplorerFileStore target,
+        final boolean deleteSource, final AfterRunCallback callback) throws CoreException {
         throw new UnsupportedOperationException("Cannot upload files to a local content provider.");
     }
 

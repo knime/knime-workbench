@@ -240,7 +240,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * {@link #refresh()}.
      *
      * @param monitor a progress monitor, may be <code>null</code>
-     * @since 6.5
+     * @since 7.0
      */
     public void refresh(final IProgressMonitor monitor) {
         refresh();

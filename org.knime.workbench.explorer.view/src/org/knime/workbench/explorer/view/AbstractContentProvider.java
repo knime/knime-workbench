@@ -60,7 +60,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.InputDialog;
@@ -1234,13 +1233,11 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param source the file store to be downloaded
      * @param target the file store to download to
      * @param deleteSource if true the source is deleted after a successful download
-     * @param monitor the monitor to report progress
-     * @throws CoreException if this method fails. Reasons include: A
-     *         corresponding file could not be created in the local file system.
-     * @since 6.4
+     * @param afterRunCallback Callback that is called after the operation is completed (or null).
+     * @since 7.0
      */
-    public abstract void performDownload(RemoteExplorerFileStore source, LocalExplorerFileStore target,
-        boolean deleteSource, IProgressMonitor monitor) throws CoreException;
+    public abstract void performDownloadAsync(RemoteExplorerFileStore source, LocalExplorerFileStore target,
+        boolean deleteSource, AfterRunCallback afterRunCallback);
 
     /**
      * Uploads a file store from a local provider to a remote provider.
@@ -1248,13 +1245,13 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param source the file store to be uploaded
      * @param target the file store to upload to
      * @param deleteSource if true the source is deleted after a successful upload
-     * @param monitor the monitor to report progress
+     * @param callback TODO
      * @throws CoreException if this method fails. Reasons include: A
      *         corresponding file could not be created in the local file system.
-     * @since 6.4
+     * @since 7.0
      */
-    public abstract void performUpload(final LocalExplorerFileStore source, final RemoteExplorerFileStore target,
-        boolean deleteSource, final IProgressMonitor monitor) throws CoreException;
+    public abstract void performUploadAsync(final LocalExplorerFileStore source, final RemoteExplorerFileStore target,
+        boolean deleteSource, AfterRunCallback callback) throws CoreException;
 
     /**
      * Allows the content provider to open a 'special' confirmation dialog. Server is currently the only one confirming
@@ -1322,6 +1319,39 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             mb.open();
         }
         return msg;
+    }
+
+    /**
+     * Callback for clients to be notified when async operation is completed. Used for future selections in the
+     * explorer. Error messages are collected and displayed by the Eclipse framework - no need to collect and display
+     * them in here. tree.
+     * @since 7.0
+     */
+    public abstract static class AfterRunCallback {
+
+        /** Called after completion of the async execution of up/download. This method is call in the UI thread.
+         * @param throwable A throwable or null. (non-null if and only if errorMessage is non-null)
+         */
+        public abstract void afterCompletion(final Throwable throwable);
+
+        /**
+         * @param callback callback class or null
+         * @param e ...
+         */
+        public static void callCallbackInDisplayThread(final AfterRunCallback callback, final Exception e) {
+            if (callback != null) {
+                Display current = Display.getDefault();
+                if (current != null && !current.isDisposed()) {
+                    current.syncExec(new Runnable() {
+                        @Override
+                        public void run() {
+                            callback.afterCompletion(e);
+                        }
+                    });
+                }
+            }
+        }
+
     }
 
 }
