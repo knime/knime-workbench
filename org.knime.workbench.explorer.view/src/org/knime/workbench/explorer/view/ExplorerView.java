@@ -149,7 +149,7 @@ import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.knime.workbench.explorer.view.dnd.ExplorerDragListener;
 import org.knime.workbench.explorer.view.dnd.ExplorerDropListener;
-import org.knime.workbench.repository.view.LabeledFilterViewContributionItem;
+import org.knime.workbench.repository.view.FilterViewContributionItem;
 import org.knime.workbench.repository.view.TextualViewFilter;
 import org.knime.workbench.ui.SyncExecQueueDispatcher;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
@@ -297,9 +297,10 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 m_contentDelegator);
         toolBarMgr.add(synchronize);
         toolBarMgr.add(new Separator());
-        toolBarMgr.add(new LabeledFilterViewContributionItem(m_viewer, new ExplorerFilter(), false));
+        toolBarMgr.add(new FilterViewContributionItem(m_viewer, new ExplorerFilter(), false));
+        toolBarMgr.add(new Separator());
         Action configure = new ConfigureExplorerViewAction(this,
-                m_contentDelegator);
+            m_contentDelegator);
         toolBarMgr.add(configure);
     }
 
