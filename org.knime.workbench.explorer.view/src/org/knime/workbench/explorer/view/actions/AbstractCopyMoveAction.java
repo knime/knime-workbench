@@ -471,7 +471,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                                 destFS.getContentProvider().performDownloadAsync((RemoteExplorerFileStore)srcFS,
                                     (LocalExplorerFileStore)destFS, m_performMove, callback);
                             } else { // regular copy
-                                scheduleLocalCopyOrMove(srcFS, destFS, callback, isOverwritten, options);
+                                scheduleLocalCopyOrMove(srcFS, destFS, callback, m_performMove, options);
                             }
                         } catch (CoreException e) {
                             LOGGER.debug(m_cmd + " failed: "
