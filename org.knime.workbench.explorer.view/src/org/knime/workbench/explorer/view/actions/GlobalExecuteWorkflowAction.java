@@ -126,7 +126,7 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         WorkflowManager wfm = getWorkflow();
-        return wfm != null && wfm.getNodeContainerState().isConfigured();
+        return wfm != null && WorkflowManager.ROOT.canExecuteNode(wfm.getID());
     }
 
     private void showCantExecuteLockMessage() {
