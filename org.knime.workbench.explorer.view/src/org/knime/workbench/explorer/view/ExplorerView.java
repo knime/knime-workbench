@@ -82,11 +82,14 @@ import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MessageBox;
@@ -162,6 +165,42 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         NodeStateChangeListener, NodeMessageListener,
         NodePropertyChangedListener, IPropertyChangeListener,
         ISelectionChangedListener {
+
+    /**
+     * Helper class which sets and resets the global actions, if the search is selected or unselected.
+     * @author Marcel Hanser
+     */
+    private final class FilterViewContributionItemExtension extends FilterViewContributionItem {
+        /**
+         * @param viewer the treeviewer
+         * @param filter used view filter
+         * @param liveUpdate live update settings
+         */
+        private FilterViewContributionItemExtension(final TreeViewer viewer,
+            final TextualViewFilter filter, final boolean liveUpdate) {
+            super(viewer, filter, liveUpdate);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected Control createControl(final Composite parent) {
+            Control createControl = super.createControl(parent);
+            getCombo().addFocusListener(new FocusListener() {
+                @Override
+                public void focusLost(final FocusEvent e) {
+                    hookGlobalActions();
+                }
+
+                @Override
+                public void focusGained(final FocusEvent e) {
+                    resetGlobalActions();
+                }
+            });
+            return createControl;
+        }
+    }
 
     /** The ID of the view as specified by the extension. */
     public static final String ID = "org.knime.workbench.explorer.view";
@@ -272,6 +311,20 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         bars.setGlobalActionHandler(ActionFactory.PASTE.getId(), m_pasteAction);
     }
 
+    /**
+     * Reset the default actions. Used by the inner class which activates them if
+     * the search field gained focus.
+     */
+    private void resetGlobalActions() {
+        IActionBars bars = getViewSite().getActionBars();
+        bars.setGlobalActionHandler(ActionFactory.COPY.getId(),
+            ActionFactory.COPY.create(this.getSite().getWorkbenchWindow()));
+        bars.setGlobalActionHandler(ActionFactory.CUT.getId(),
+            ActionFactory.CUT.create(this.getSite().getWorkbenchWindow()));
+        bars.setGlobalActionHandler(ActionFactory.PASTE.getId(),
+            ActionFactory.PASTE.create(this.getSite().getWorkbenchWindow()));
+    }
+
     private void updateGlobalActions(final IStructuredSelection selection) {
         m_copyAction.updateSelection(selection);
         m_cutAction.updateSelection(selection);
@@ -297,7 +350,10 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 m_contentDelegator);
         toolBarMgr.add(synchronize);
         toolBarMgr.add(new Separator());
-        toolBarMgr.add(new FilterViewContributionItem(m_viewer, new ExplorerFilter(), false));
+        FilterViewContributionItemExtension filterViewContributionItem =
+                new FilterViewContributionItemExtension(m_viewer, new ExplorerFilter(), false);
+
+        toolBarMgr.add(filterViewContributionItem);
         toolBarMgr.add(new Separator());
         Action configure = new ConfigureExplorerViewAction(this,
             m_contentDelegator);
