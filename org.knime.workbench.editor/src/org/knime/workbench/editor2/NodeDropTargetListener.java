@@ -42,90 +42,85 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * -------------------------------------------------------------------
  *
+ * History
+ *   04.02.2008 (Fabian Dill): created
  */
-package org.knime.workbench.editor2.actions;
+package org.knime.workbench.editor2;
 
-import org.eclipse.jface.resource.ImageDescriptor;
-import org.knime.workbench.editor2.ImageRepository;
-import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.gef.EditPartViewer;
+import org.eclipse.jface.util.LocalSelectionTransfer;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.Transfer;
+import org.knime.workbench.repository.model.AbstractNodeTemplate;
+import org.knime.workbench.repository.model.NodeTemplate;
 
 /**
- * Action to open the dialog of a node.
- *
- * @author Florian Georg, University of Konstanz
+ * A drop target listener for normal node drops from the node repository to the workbench.
+ * 
+ * @author Tim-Oliver Buchholz, KNIME.com AG, Zurich, Switzerland
  */
-public class OpenDialogAction extends AbstractNodeAction {
-
-    /** unique ID for this action. * */
-    public static final String ID = "knime.action.openDialog";
+public class NodeDropTargetListener extends WorkflowEditorDropTargetListener<NodeCreationFactory> {
 
     /**
-     *
-     * @param editor The workflow editor
+     * @param viewer the viewer
      */
-    public OpenDialogAction(final WorkflowEditor editor) {
-        super(editor);
+    protected NodeDropTargetListener(final EditPartViewer viewer) {
+        super(viewer, new NodeCreationFactory());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public String getId() {
-        return ID;
+    public boolean isEnabled(final DropTargetEvent event) {
+        AbstractNodeTemplate snt = getSelectionNodeTemplate();
+        if (snt != null) {
+            event.feedback = DND.FEEDBACK_SELECT;
+            event.operations = DND.DROP_COPY;
+            event.detail = DND.DROP_COPY;
+            return true;
+        }
+        return false;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public String getText() {
-        return "Configure...\t" + getHotkey("knime.commands.openDialog");
+    protected void handleDrop() {
+        NodeTemplate template = getSelectionNodeTemplate();
+        getFactory().setNodeTemplate(template);
+        super.handleDrop();
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ImageDescriptor getImageDescriptor() {
-        return ImageRepository.getImageDescriptor("icons/openDialog.gif");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getToolTipText() {
-        return "Open configuration dialog for this node";
-    }
-
-    /**
-     * @return <code>true</code> if at we have a single node which has a
-     *         dialog
-     * @see org.eclipse.gef.ui.actions.WorkbenchPartAction#calculateEnabled()
-     */
-    @Override
-    protected boolean internalCalculateEnabled() {
-        NodeContainerEditPart[] selected =
-            getSelectedParts(NodeContainerEditPart.class);
-        if (selected.length != 1) {
-            return false;
+    private NodeTemplate getSelectionNodeTemplate() {
+        if (LocalSelectionTransfer.getTransfer().getSelection() == null) {
+            return null;
+        }
+        if (((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).size() > 1) {
+            // allow dropping a single node only
+            return null;
         }
 
-        NodeContainerEditPart part = selected[0];
-
-        return part.getNodeContainer().hasDialog();
+        Object template = ((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).getFirstElement();
+        if (template instanceof NodeTemplate) {
+            return (NodeTemplate)template;
+        }
+        // Last change: Ask adaptables for an adapter object
+        if (template instanceof IAdaptable) {
+            return (NodeTemplate)((IAdaptable)template).getAdapter(NodeTemplate.class);
+        }
+        return null;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
-        if (nodeParts.length > 0) {
-            final NodeContainerEditPart nodeContainerEditPart = nodeParts[0];
-            nodeContainerEditPart.openNodeDialog();
-        }
+    public Transfer getTransfer() {
+        return LocalSelectionTransfer.getTransfer();
     }
 }

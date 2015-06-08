@@ -40,84 +40,77 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ---------------------------------------------------------------------
+ * -------------------------------------------------------------------
  *
- * Created: Mar 30, 2011
- * Author: ohl
+ * History
+ *   29.05.2005 (Florian Georg): created
  */
 package org.knime.workbench.editor2.commands;
 
+import java.util.Collections;
+
 import org.eclipse.draw2d.geometry.Point;
-import org.eclipse.gef.EditPartViewer;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeFactory;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
-import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.NodeTimer;
+import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 
 /**
- * Creates a new node - and may auto connect it to another one.
+ * GEF command for adding a <code>Node</code> to a connection. The new node will be connected to the source and target
+ * node of the passed connection.
  *
- * @author ohl, University of Konstanz
+ * @author Tim-Oliver Buchholz, KNIME.com AG, Zurich, Switzerland
  */
-public class CreateNewConnectedNodeCommand extends AbstractCreateNewConnectedNodeCommand {
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(CreateNewConnectedNodeCommand.class);
-    private final NodeFactory<? extends NodeModel> m_factory;
+public class InsertNodeCommand extends CreateNodeCommand {
+
+    private ConnectionContainer m_edge;
+
+    private DeleteCommand m_delete;
+
+    private InsertHelper m_ih;
 
     /**
-     * Creates a new node and connects it to the passed node - if it fits.
-     *
-     * @param viewer the workflow viewer
-     * @param manager The workflow manager that should host the new node
-     * @param factory The factory of the Node that should be added
-     * @param location Initial visual location of the new node ABSOLTE COORDS!
-     * @param connectTo node to which the new node should be connected to
+     * @param manager the workflow manager
+     * @param factory the node factory
+     * @param location the insert location of the new meta node
+     * @param snapToGrid should meta node snap to grid
+     * @param edge on which the meta node should be inserted
      */
-    public CreateNewConnectedNodeCommand(final EditPartViewer viewer,
-            final WorkflowManager manager,
-            final NodeFactory<? extends NodeModel> factory,
-            final Point location, final NodeID connectTo) {
-        super(viewer, manager, location, connectTo);
-        m_factory = factory;
+    public InsertNodeCommand(final WorkflowManager manager, final NodeFactory<? extends NodeModel> factory,
+        final Point location, final boolean snapToGrid, final ConnectionContainerEditPart edge) {
+        super(manager, factory, location, snapToGrid);
+        m_edge = edge.getModel();
+        m_ih = new InsertHelper(getHostWFM(), m_edge);
+
+        // delete command handles undo and restores all connections and node correctly
+        m_delete = new DeleteCommand(Collections.singleton(edge), manager);
     }
 
     /**
-     * We can execute, if all components were 'non-null' in the constructor.
      * {@inheritDoc}
      */
     @Override
     public boolean canExecute() {
-        return m_factory != null && super.canExecute();
+        return super.canExecute() && m_delete.canExecute() && m_ih.insertNode();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected NodeID createNewNode() {
-        // Add node to workflow and get the container
-        NodeID newID = null;
-        WorkflowManager hostWFM = getHostWFM();
-        try {
-            newID = hostWFM.createAndAddNode(m_factory);
-            NodeTimer.GLOBAL_TIMER.addNodeCreation(hostWFM.getNodeContainer(newID));
-        } catch (Throwable t) {
-            // if fails notify the user
-            LOGGER.debug("Node cannot be created.", t);
-            MessageBox mb =
-                    new MessageBox(Display.getDefault().getActiveShell(),
-                            SWT.ICON_WARNING | SWT.OK);
-            mb.setText("Node cannot be created.");
-            mb.setMessage("The node could not be created "
-                    + "due to the following reason:\n" + t.getMessage());
-            mb.open();
-            return null;
-        }
-        return newID;
+    public void execute() {
+        m_delete.execute();
+        super.execute();
+        m_ih.reconnect(m_container, m_snapToGrid, m_location.x, m_location.y);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void undo() {
+        super.undo();
+        m_delete.undo();
     }
 }

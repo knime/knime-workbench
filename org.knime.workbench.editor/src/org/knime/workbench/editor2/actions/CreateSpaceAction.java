@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
  *
@@ -40,32 +41,87 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
+ * History
+ *   19.03.2015 (tibuch): created
  */
 package org.knime.workbench.editor2.actions;
 
-import org.eclipse.jface.resource.ImageDescriptor;
-import org.knime.workbench.editor2.ImageRepository;
+import org.eclipse.draw2d.geometry.Point;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
- * Action to open the dialog of a node.
+ * This action moves all selected nodes in a workbench a certain distance in a certain direction.
  *
- * @author Florian Georg, University of Konstanz
+ * @author Tim-Oliver Buchholz, KNIME.com AG, Zurich, Switzerland
  */
-public class OpenDialogAction extends AbstractNodeAction {
-
-    /** unique ID for this action. * */
-    public static final String ID = "knime.action.openDialog";
+public class CreateSpaceAction extends MoveNodeAbstractAction {
 
     /**
-     *
-     * @param editor The workflow editor
+     * The move directions for the @link{CreateSapceAction}
+     * @author Tim-Oliver Buchholz, KNIME.com AG, Zurich, Switzerland
      */
-    public OpenDialogAction(final WorkflowEditor editor) {
+    public enum CreateSpaceDirection {
+        /**
+         * Move up.
+         */
+        UP,
+        /**
+         * Move right.
+         */
+        RIGHT,
+        /**
+         * Move down.
+         */
+        DOWN,
+        /**
+         * Move left
+         */
+        LEFT
+    }
+
+    private Point m_point;
+
+    /**
+     * The ID of this action.
+     */
+    public static final String ID = "knime.action.node.createspace";
+
+    /**
+     * @param editor the active workflow editor
+     * @param m_direction the direction
+     * @param distance the distance in pixels
+     */
+    public CreateSpaceAction(final WorkflowEditor editor, final CreateSpaceDirection m_direction, final int distance) {
         super(editor);
+
+        int factorX = 0;
+        int factorY = 0;
+
+        if (m_direction.equals(CreateSpaceDirection.UP)) {
+            factorX = 0;
+            factorY = -1;
+        } else if (m_direction.equals(CreateSpaceDirection.RIGHT)) {
+            factorX = 1;
+            factorY = 0;
+        } else if (m_direction.equals(CreateSpaceDirection.DOWN)) {
+            factorX = 0;
+            factorY = 1;
+        } else if (m_direction.equals(CreateSpaceDirection.LEFT)) {
+            factorX = -1;
+            factorY = 0;
+        }
+
+        m_point = new Point(factorX * distance, factorY * distance);
+    }
+
+    /**
+     * @return all selected editor parts
+     */
+    public NodeContainerEditPart[] selectedParts() {
+        return getSelectedParts(NodeContainerEditPart.class);
     }
 
     /**
@@ -81,15 +137,7 @@ public class OpenDialogAction extends AbstractNodeAction {
      */
     @Override
     public String getText() {
-        return "Configure...\t" + getHotkey("knime.commands.openDialog");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ImageDescriptor getImageDescriptor() {
-        return ImageRepository.getImageDescriptor("icons/openDialog.gif");
+        return "Move selected node(s)";
     }
 
     /**
@@ -97,35 +145,15 @@ public class OpenDialogAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Open configuration dialog for this node";
-    }
-
-    /**
-     * @return <code>true</code> if at we have a single node which has a
-     *         dialog
-     * @see org.eclipse.gef.ui.actions.WorkbenchPartAction#calculateEnabled()
-     */
-    @Override
-    protected boolean internalCalculateEnabled() {
-        NodeContainerEditPart[] selected =
-            getSelectedParts(NodeContainerEditPart.class);
-        if (selected.length != 1) {
-            return false;
-        }
-
-        NodeContainerEditPart part = selected[0];
-
-        return part.getNodeContainer().hasDialog();
+        return "Move selected node(s)";
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
-        if (nodeParts.length > 0) {
-            final NodeContainerEditPart nodeContainerEditPart = nodeParts[0];
-            nodeContainerEditPart.openNodeDialog();
-        }
+    public Point getMoveDirection() {
+        return m_point;
     }
+
 }

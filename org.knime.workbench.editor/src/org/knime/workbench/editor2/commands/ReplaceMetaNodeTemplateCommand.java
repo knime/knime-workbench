@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
  *
@@ -42,82 +43,73 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * Created: Mar 30, 2011
- * Author: ohl
+ * History
+ *   25.03.2015 (tibuch): created
  */
 package org.knime.workbench.editor2.commands;
 
+import java.util.Collections;
+
 import org.eclipse.draw2d.geometry.Point;
-import org.eclipse.gef.EditPartViewer;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.MessageBox;
-import org.knime.core.node.NodeFactory;
-import org.knime.core.node.NodeLogger;
-import org.knime.core.node.NodeModel;
-import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.NodeTimer;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 
 /**
- * Creates a new node - and may auto connect it to another one.
+ * GEF command for replacing a <code>Meta Node Template</code> in the <code>WorkflowManager</code>.
  *
- * @author ohl, University of Konstanz
+ * @author Tim-Oliver Buchholz, KNIME.com, Zurich, Switzerland
  */
-public class CreateNewConnectedNodeCommand extends AbstractCreateNewConnectedNodeCommand {
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(CreateNewConnectedNodeCommand.class);
-    private final NodeFactory<? extends NodeModel> m_factory;
+public class ReplaceMetaNodeTemplateCommand extends CreateMetaNodeTemplateCommand {
+
+    private NodeContainerEditPart m_node;
+
+    private DeleteCommand m_delete;
+
+    private ReplaceHelper m_rh;
 
     /**
-     * Creates a new node and connects it to the passed node - if it fits.
-     *
-     * @param viewer the workflow viewer
-     * @param manager The workflow manager that should host the new node
-     * @param factory The factory of the Node that should be added
-     * @param location Initial visual location of the new node ABSOLTE COORDS!
-     * @param connectTo node to which the new node should be connected to
+     * @param manager the workflow manager
+     * @param templateFolder the folder of the meta node template
+     * @param location the insert location of the new meta node template
+     * @param snapToGrid should meta node snap to grid
+     * @param node which will be replaced by this meta node template
      */
-    public CreateNewConnectedNodeCommand(final EditPartViewer viewer,
-            final WorkflowManager manager,
-            final NodeFactory<? extends NodeModel> factory,
-            final Point location, final NodeID connectTo) {
-        super(viewer, manager, location, connectTo);
-        m_factory = factory;
+    public ReplaceMetaNodeTemplateCommand(final WorkflowManager manager,
+        final AbstractExplorerFileStore templateFolder, final Point location, final boolean snapToGrid,
+        final NodeContainerEditPart node) {
+        super(manager, templateFolder, location, snapToGrid);
+        m_node = node;
+        m_rh = new ReplaceHelper(manager, m_node.getNodeContainer());
+
+        m_delete = new DeleteCommand(Collections.singleton(m_node), getHostWFM());
     }
 
     /**
-     * We can execute, if all components were 'non-null' in the constructor.
      * {@inheritDoc}
      */
     @Override
     public boolean canExecute() {
-        return m_factory != null && super.canExecute();
+        return super.canExecute() && m_delete.canExecute() && m_rh.replaceNode();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected NodeID createNewNode() {
-        // Add node to workflow and get the container
-        NodeID newID = null;
-        WorkflowManager hostWFM = getHostWFM();
-        try {
-            newID = hostWFM.createAndAddNode(m_factory);
-            NodeTimer.GLOBAL_TIMER.addNodeCreation(hostWFM.getNodeContainer(newID));
-        } catch (Throwable t) {
-            // if fails notify the user
-            LOGGER.debug("Node cannot be created.", t);
-            MessageBox mb =
-                    new MessageBox(Display.getDefault().getActiveShell(),
-                            SWT.ICON_WARNING | SWT.OK);
-            mb.setText("Node cannot be created.");
-            mb.setMessage("The node could not be created "
-                    + "due to the following reason:\n" + t.getMessage());
-            mb.open();
-            return null;
-        }
-        return newID;
+    public void execute() {
+        m_delete.execute();
+        super.execute();
+        m_rh.reconnect(m_container);
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void undo() {
+        super.undo();
+        m_delete.undo();
+    }
+
 }

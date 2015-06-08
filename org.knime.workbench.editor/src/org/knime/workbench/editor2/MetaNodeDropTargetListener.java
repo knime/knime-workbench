@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
  *
@@ -42,82 +43,87 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * Created: Mar 30, 2011
- * Author: ohl
+ * History
+ *   24.03.2015 (tibuch): created
  */
-package org.knime.workbench.editor2.commands;
+package org.knime.workbench.editor2;
 
-import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.gef.EditPartViewer;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.MessageBox;
-import org.knime.core.node.NodeFactory;
-import org.knime.core.node.NodeLogger;
-import org.knime.core.node.NodeModel;
-import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.NodeTimer;
-import org.knime.core.node.workflow.WorkflowManager;
+import org.eclipse.jface.util.LocalSelectionTransfer;
+import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.Transfer;
+import org.knime.workbench.repository.model.AbstractNodeTemplate;
+import org.knime.workbench.repository.model.MetaNodeTemplate;
 
 /**
- * Creates a new node - and may auto connect it to another one.
+ * A DropTargetListener for meta node drops from the node repository.
  *
- * @author ohl, University of Konstanz
+ * @author Tim-Oliver Buchholz, KNIME.com AG, Zurich, Switzerland
  */
-public class CreateNewConnectedNodeCommand extends AbstractCreateNewConnectedNodeCommand {
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(CreateNewConnectedNodeCommand.class);
-    private final NodeFactory<? extends NodeModel> m_factory;
+public class MetaNodeDropTargetListener extends
+    WorkflowEditorDropTargetListener<MetaNodeCreationFactory> {
 
     /**
-     * Creates a new node and connects it to the passed node - if it fits.
-     *
-     * @param viewer the workflow viewer
-     * @param manager The workflow manager that should host the new node
-     * @param factory The factory of the Node that should be added
-     * @param location Initial visual location of the new node ABSOLTE COORDS!
-     * @param connectTo node to which the new node should be connected to
+     * @param viewer the viewer
      */
-    public CreateNewConnectedNodeCommand(final EditPartViewer viewer,
-            final WorkflowManager manager,
-            final NodeFactory<? extends NodeModel> factory,
-            final Point location, final NodeID connectTo) {
-        super(viewer, manager, location, connectTo);
-        m_factory = factory;
-    }
-
-    /**
-     * We can execute, if all components were 'non-null' in the constructor.
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean canExecute() {
-        return m_factory != null && super.canExecute();
+    protected MetaNodeDropTargetListener(final EditPartViewer viewer) {
+        super(viewer, new MetaNodeCreationFactory());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected NodeID createNewNode() {
-        // Add node to workflow and get the container
-        NodeID newID = null;
-        WorkflowManager hostWFM = getHostWFM();
-        try {
-            newID = hostWFM.createAndAddNode(m_factory);
-            NodeTimer.GLOBAL_TIMER.addNodeCreation(hostWFM.getNodeContainer(newID));
-        } catch (Throwable t) {
-            // if fails notify the user
-            LOGGER.debug("Node cannot be created.", t);
-            MessageBox mb =
-                    new MessageBox(Display.getDefault().getActiveShell(),
-                            SWT.ICON_WARNING | SWT.OK);
-            mb.setText("Node cannot be created.");
-            mb.setMessage("The node could not be created "
-                    + "due to the following reason:\n" + t.getMessage());
-            mb.open();
+    public boolean isEnabled(final DropTargetEvent event) {
+        AbstractNodeTemplate snt = getSelectionNodeTemplate();
+        if (snt != null) {
+            event.feedback = DND.FEEDBACK_SELECT;
+            event.operations = DND.DROP_COPY;
+            event.detail = DND.DROP_COPY;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void handleDrop() {
+        MetaNodeTemplate template = getSelectionNodeTemplate();
+        getFactory().setMetaNodeTemplate(template);
+        super.handleDrop();
+    }
+
+    private MetaNodeTemplate getSelectionNodeTemplate() {
+        if (LocalSelectionTransfer.getTransfer().getSelection() == null) {
             return null;
         }
-        return newID;
+        if (((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).size() > 1) {
+            // allow dropping a single node only
+            return null;
+        }
+
+        Object template = ((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).getFirstElement();
+        if (template instanceof MetaNodeTemplate) {
+            return (MetaNodeTemplate)template;
+        }
+        // Last change: Ask adaptables for an adapter object
+        if (template instanceof IAdaptable) {
+            return (MetaNodeTemplate)((IAdaptable)template).getAdapter(MetaNodeTemplate.class);
+        }
+        return null;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Transfer getTransfer() {
+        return LocalSelectionTransfer.getTransfer();
+    }
+
 }

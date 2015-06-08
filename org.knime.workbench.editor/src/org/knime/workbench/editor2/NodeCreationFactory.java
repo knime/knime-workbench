@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME GmbH, Konstanz, Germany
  *  Website: http://www.knime.org; Email: contact@knime.org
  *
@@ -40,92 +41,59 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
+ * History
+ *   24.03.2015 (tibuch): created
  */
-package org.knime.workbench.editor2.actions;
+package org.knime.workbench.editor2;
 
-import org.eclipse.jface.resource.ImageDescriptor;
-import org.knime.workbench.editor2.ImageRepository;
-import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.eclipse.gef.requests.CreationFactory;
+import org.knime.core.node.NodeFactory;
+import org.knime.workbench.repository.model.NodeTemplate;
 
 /**
- * Action to open the dialog of a node.
- *
- * @author Florian Georg, University of Konstanz
+ * Factory for normal nodes from the node repository.
+ * @author Tim-Oliver Buchholz, KNIME.com AG, Zurich, Switzerland
  */
-public class OpenDialogAction extends AbstractNodeAction {
+public class NodeCreationFactory implements CreationFactory {
 
-    /** unique ID for this action. * */
-    public static final String ID = "knime.action.openDialog";
+    private NodeTemplate m_template = null;
 
     /**
+     * Creates a new <code>NodeFactory</code> instance.
      *
-     * @param editor The workflow editor
-     */
-    public OpenDialogAction(final WorkflowEditor editor) {
-        super(editor);
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
-    public String getId() {
-        return ID;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getText() {
-        return "Configure...\t" + getHotkey("knime.commands.openDialog");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public ImageDescriptor getImageDescriptor() {
-        return ImageRepository.getImageDescriptor("icons/openDialog.gif");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getToolTipText() {
-        return "Open configuration dialog for this node";
-    }
-
-    /**
-     * @return <code>true</code> if at we have a single node which has a
-     *         dialog
-     * @see org.eclipse.gef.ui.actions.WorkbenchPartAction#calculateEnabled()
-     */
-    @Override
-    protected boolean internalCalculateEnabled() {
-        NodeContainerEditPart[] selected =
-            getSelectedParts(NodeContainerEditPart.class);
-        if (selected.length != 1) {
-            return false;
+    public NodeFactory<?> getNewObject() {
+        try {
+            return m_template.createFactoryInstance();
+        } catch (Exception e) {
+            throw new RuntimeException("Can't instantiate NodeFactory "
+                    + "from NodeTemplate", e);
         }
-
-        NodeContainerEditPart part = selected[0];
-
-        return part.getNodeContainer().hasDialog();
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
-        if (nodeParts.length > 0) {
-            final NodeContainerEditPart nodeContainerEditPart = nodeParts[0];
-            nodeContainerEditPart.openNodeDialog();
-        }
+    public Object getObjectType() {
+        return NodeFactory.class;
+    }
+
+    /**
+     * @return the node template
+     */
+    public NodeTemplate getNodeTemplate() {
+        return m_template;
+    }
+
+    /**
+     * @param template the node template to set
+     */
+    public void setNodeTemplate(final NodeTemplate template) {
+        m_template = template;
     }
 }
