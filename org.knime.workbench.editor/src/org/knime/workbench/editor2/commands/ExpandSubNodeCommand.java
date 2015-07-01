@@ -51,11 +51,8 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.SubNodeContainer;
-import org.knime.core.node.workflow.WorkflowAnnotation;
-import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.node.workflow.action.ExpandSubnodeResult;
 
 /**
  * Command that expands the selected sub node.
@@ -68,11 +65,7 @@ public class ExpandSubNodeCommand extends AbstractKNIMECommand {
 
     private final NodeID m_id;
 
-    private NodeID[] m_pastedNodes;
-
-    private WorkflowAnnotation[] m_pastedAnnotations;
-
-    private WorkflowPersistor m_undoCopyPersistor;
+    private ExpandSubnodeResult m_expandResult;
 
     /**
      * @param wfm the workflow manager holding the new metanode
@@ -101,16 +94,8 @@ public class ExpandSubNodeCommand extends AbstractKNIMECommand {
     public void execute() {
         try {
             WorkflowManager hostWFM = getHostWFM();
-            WorkflowManager subWFM = ((SubNodeContainer)hostWFM.getNodeContainer(m_id)).getWorkflowManager();
-            WorkflowCopyContent cnt = new WorkflowCopyContent();
-            cnt.setNodeIDs(m_id);
-            cnt.setIncludeInOutConnections(true);
-            m_undoCopyPersistor = hostWFM.copy(true, cnt);
-            WorkflowCopyContent wcc = hostWFM.expandSubWorkflow(m_id, subWFM);
-            m_pastedNodes = wcc.getNodeIDs();
-            m_pastedAnnotations = wcc.getAnnotations();
+            m_expandResult = hostWFM.expandSubWorkflow(m_id);
         } catch (Exception e) {
-            m_undoCopyPersistor = null;
             String error = "Expanding Sub Node failed: " + e.getMessage();
             LOGGER.error(error, e);
             MessageDialog.openError(Display.getCurrent().getActiveShell(), "Expand failed", error);
@@ -122,16 +107,7 @@ public class ExpandSubNodeCommand extends AbstractKNIMECommand {
      */
     @Override
     public boolean canUndo() {
-        if (m_undoCopyPersistor != null) {
-            WorkflowManager hostWFM = getHostWFM();
-            for (NodeID id : m_pastedNodes) {
-                if (hostWFM.containsNodeContainer(id) && !hostWFM.canRemoveNode(id)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return false;
+        return m_expandResult != null && m_expandResult.canUndo();
     }
 
     /**
@@ -139,17 +115,8 @@ public class ExpandSubNodeCommand extends AbstractKNIMECommand {
      */
     @Override
     public void undo() {
-        WorkflowManager hostWFM = getHostWFM();
-        for (NodeID id : m_pastedNodes) {
-            hostWFM.removeNode(id);
-        }
-        for (WorkflowAnnotation anno : m_pastedAnnotations) {
-            hostWFM.removeAnnotation(anno);
-        }
-        hostWFM.paste(m_undoCopyPersistor);
-        m_pastedNodes = null;
-        m_pastedAnnotations = null;
-        m_undoCopyPersistor = null;
+        m_expandResult.undo();
+        m_expandResult = null;
     }
 
 }
