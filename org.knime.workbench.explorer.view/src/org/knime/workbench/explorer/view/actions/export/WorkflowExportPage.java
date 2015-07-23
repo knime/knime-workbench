@@ -77,8 +77,8 @@ import org.eclipse.swt.widgets.Text;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
-import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
 
@@ -290,25 +290,19 @@ public class WorkflowExportPage extends WizardPage {
      */
     private void handleFlowSelect() {
         ContentObject initSel = ContentObject.forFile(m_selection);
-        SpaceResourceSelectionDialog dlg =
-                new SpaceResourceSelectionDialog(getShell(), ExplorerMountTable
-                        .getAllVisibleMountIDs().toArray(new String[0]), initSel);
-        dlg.setTitle("Source Selection");
-        dlg.setHeader("Workflow selection.");
-        dlg.setDescription("Please select the workflow or directory to export.");
-        dlg.setValidator(
-
-            new Validator() {
-            @Override
-            public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {
-                if (!(AbstractExplorerFileStore.isWorkflowGroup(selection) || AbstractExplorerFileStore
-                        .isWorkflow(selection))) {
-                    return "Please select a workflow or workflow group";
-                }
-                return null;
+        List<String> allIDs = ExplorerMountTable.getAllVisibleMountIDs();
+        ArrayList<String> selIDs = new ArrayList<String>();
+        for (String id : allIDs) {
+            MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
+            if (!mountPoint.getProvider().isRemote()) {
+                selIDs.add(id);
             }
-        });
-        // dlg.expand(2);
+        }
+        SpaceResourceSelectionDialog dlg =
+                new SpaceResourceSelectionDialog(getShell(), selIDs.toArray(new String[selIDs.size()]), initSel);
+        dlg.setTitle("Source Selection");
+        dlg.setHeader("Export items selection.");
+        dlg.setDescription("Please select the item or directory to export.");
         if (dlg.open() != Window.OK) {
             return;
         }
@@ -324,7 +318,7 @@ public class WorkflowExportPage extends WizardPage {
      * Updates the tree visibility, and container text field, etc.
      */
     private void containerSelectionChanged() {
-        if ((m_selection == null) || AbstractExplorerFileStore.isWorkflow(m_selection)) {
+        if ((m_selection == null) || isExportElement(m_selection)) {
             m_treeViewer.getTree().setVisible(false);
         } else {
             // clear the selection before setting a new input!!!
@@ -359,7 +353,7 @@ public class WorkflowExportPage extends WizardPage {
         FileDialog fileDialog = new FileDialog(getShell(), SWT.SAVE);
         fileDialog.setFilterExtensions(FILTER_EXTENSION);
         fileDialog.setText("Specify archive file to store "
-                + "exported workflows in.");
+                + "the exported elements in.");
         if (m_fileText.getText() != null
                 && !m_fileText.getText().trim().isEmpty()) {
             String exportString = m_fileText.getText().trim();
@@ -407,6 +401,17 @@ public class WorkflowExportPage extends WizardPage {
     }
 
     /**
+     * Returns true if store is one of the accepted elements for export (file, flow, template). Workflow groups (dirs)
+     * are not accepted (will return false).
+     * @param store
+     * @return
+     */
+    static boolean isExportElement(final AbstractExplorerFileStore store) {
+        return AbstractExplorerFileStore.isWorkflow(store) || AbstractExplorerFileStore.isDataFile(store)
+                || AbstractExplorerFileStore.isWorkflowTemplate(store);
+    }
+
+    /**
      * Ensures that both text fields are set.
      */
     private void dialogChanged() {
@@ -424,17 +429,14 @@ public class WorkflowExportPage extends WizardPage {
         }
         if (m_treeViewer.getTree().isVisible()
                 && m_treeViewer.getCheckedElements().length == 0) {
-            return "Please select the workflows to export.";
+            return "Please select the element(s) to export.";
         }
-        Collection<AbstractExplorerFileStore> sel = getWorkflowsOrGroups();
-        String msg = "Selection contains no workflows.";
-        for (AbstractExplorerFileStore store : sel) {
-            if (AbstractExplorerFileStore.isWorkflow(store)) {
-                msg = null;
-                break;
-            }
+        Collection<AbstractExplorerFileStore> sel = getElementsToExport();
+        if (sel.isEmpty()) {
+            return "Selection contains no elements.";
+        } else {
+            return null;
         }
-        return msg;
     }
 
     private void updateStatus(final String message) {
@@ -453,38 +455,36 @@ public class WorkflowExportPage extends WizardPage {
 
     /**
      *
-     * @return checked workflows and workflow groups
+     * @return checked workflows and workflow groups, files or templates
      */
-    public Collection<AbstractExplorerFileStore> getWorkflowsOrGroups() {
+    public Collection<AbstractExplorerFileStore> getElementsToExport() {
 
-        List<AbstractExplorerFileStore> workflows =
+        List<AbstractExplorerFileStore> elements =
                 new ArrayList<AbstractExplorerFileStore>();
         if (m_selection == null) {
-            return workflows;
+            return elements;
         }
-        if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
-            workflows.add(m_selection);
-            return workflows;
+        if (isExportElement(m_selection)) { // workgroups are not exportElements
+            elements.add(m_selection);
+            return elements;
         }
 
         if (AbstractExplorerFileStore.isWorkflowGroup(m_selection)) {
             // also add the selected root - unless it is the "/"
             if (!"/".equals(m_selection.getFullName())) {
-                workflows.add(m_selection);
+                elements.add(m_selection);
             }
             Object[] checkedObjs = m_treeViewer.getCheckedElements();
             for (Object o : checkedObjs) {
-                AbstractExplorerFileStore file = (AbstractExplorerFileStore)o;
-                if (AbstractExplorerFileStore.isWorkflowGroup(file)) {
-                    workflows.add(file);
-                } else if (AbstractExplorerFileStore.isWorkflow(file)) {
-                    workflows.add(file);
+                if (isExportElement((AbstractExplorerFileStore)o)) {
+                    elements.add((AbstractExplorerFileStore)o);
                 }
+
             }
-            return workflows;
+            return elements;
         }
 
-        return workflows;
+        return elements;
     }
 
     /**

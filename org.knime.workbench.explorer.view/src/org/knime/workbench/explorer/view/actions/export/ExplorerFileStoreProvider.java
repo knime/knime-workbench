@@ -94,8 +94,7 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
             ArrayList<AbstractExplorerFileStore> result =
                     new ArrayList<AbstractExplorerFileStore>();
             for (AbstractExplorerFileStore c : childs) {
-                if (AbstractExplorerFileStore.isWorkflowGroup(c)
-                        || AbstractExplorerFileStore.isWorkflow(c)) {
+                if (AbstractExplorerFileStore.isWorkflowGroup(c) || WorkflowExportPage.isExportElement(c)) {
                     result.add(c);
                 }
             }
