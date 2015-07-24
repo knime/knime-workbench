@@ -456,6 +456,7 @@ public class WorkflowExportPage extends WizardPage {
     /**
      *
      * @return checked workflows and workflow groups, files or templates
+     * @since 7.1
      */
     public Collection<AbstractExplorerFileStore> getElementsToExport() {
 

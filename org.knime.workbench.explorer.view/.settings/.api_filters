@@ -114,6 +114,14 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/export/WorkflowExportPage.java" type="org.knime.workbench.explorer.view.actions.export.WorkflowExportPage">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.export.WorkflowExportPage"/>
+                <message_argument value="getWorkflowsOrGroups()"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="src/org/knime/workbench/explorer/view/preferences/MountSettings.java" type="org.knime.workbench.explorer.view.preferences.MountSettings">
         <filter id="338792546">
             <message_arguments>
