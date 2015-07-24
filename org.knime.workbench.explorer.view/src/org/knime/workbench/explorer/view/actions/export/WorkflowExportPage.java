@@ -415,28 +415,6 @@ public class WorkflowExportPage extends WizardPage {
         setLastSelectedExportLocation();
     }
 
-    private void selectAllWorkflows() {
-        ArrayList<Object> obj = new ArrayList<Object>();
-        obj.add(m_selection);
-        while (obj.size() > 0) {
-            Object f = obj.remove(obj.size() - 1);
-            if (f instanceof AbstractExplorerFileStore) {
-                AbstractExplorerFileStore store = (AbstractExplorerFileStore)f;
-                if (AbstractExplorerFileStore.isWorkflow(store)) {
-                    m_treeViewer.setChecked(store, true);
-                    setParentTreeChecked(store, true);
-                    // workflows don't have no children
-                    continue;
-                }
-            }
-            Object[] childs = m_provider.getChildren(f);
-            if (childs != null) {
-                obj.addAll(Arrays.asList(childs));
-            }
-        }
-
-    }
-
     private void selectAll() {
         setCheckedAll(true);
     }
@@ -538,7 +516,9 @@ public class WorkflowExportPage extends WizardPage {
             }
             Object[] checkedObjs = m_treeViewer.getCheckedElements();
             for (Object o : checkedObjs) {
-                if (isExportElement((AbstractExplorerFileStore)o)) {
+                AbstractExplorerFileStore f = (AbstractExplorerFileStore)o;
+                if (isExportElement(f) || AbstractExplorerFileStore.isWorkflowGroup(f)) {
+                    // add groups to also collect meta info files contained in there.
                     elements.add((AbstractExplorerFileStore)o);
                 }
 

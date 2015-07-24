@@ -340,7 +340,10 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         } else if (AbstractExplorerFileStore.isDataFile(element)) {
             addFile(resourceList, element);
         } else if (AbstractExplorerFileStore.isWorkflowGroup(element)) {
-            // not adding dirs - will be created with elements contained
+            AbstractExplorerFileStore metaInfoFile = element.getChild(WorkflowPersistor.METAINFO_FILE);
+            if (metaInfoFile.fetchInfo().exists()) {
+                addFile(resourceList, metaInfoFile);
+            }
         } else {
             throw new IllegalArgumentException("Only resources of flows, templates or data files can be added.");
         }
