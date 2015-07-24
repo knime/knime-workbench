@@ -339,6 +339,8 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
             addResourcesRec(resourceList, element, excludeData);
         } else if (AbstractExplorerFileStore.isDataFile(element)) {
             addFile(resourceList, element);
+        } else if (AbstractExplorerFileStore.isWorkflowGroup(element)) {
+            // not adding dirs - will be created with elements contained
         } else {
             throw new IllegalArgumentException("Only resources of flows, templates or data files can be added.");
         }
