@@ -104,6 +104,10 @@ public class WorkflowExportPage extends WizardPage {
 
     private CheckboxTreeViewer m_treeViewer;
 
+    private Button m_selAll;
+
+    private Button m_deselAll;
+
     private static String lastSelectedTargetLocation;
 
     /**
@@ -134,7 +138,7 @@ public class WorkflowExportPage extends WizardPage {
      */
     @Override
     public void createControl(final Composite parent) {
-        Composite container = new Composite(parent, SWT.NULL);
+        Composite container = new Composite(parent, SWT.NONE);
         // place components vertically
         container.setLayout(new GridLayout(1, false));
 
@@ -210,7 +214,12 @@ public class WorkflowExportPage extends WizardPage {
     }
 
     private void createTreeViewer(final Composite parent) {
-        m_treeViewer = new CheckboxTreeViewer(parent);
+        final Group group = new Group(parent, SWT.V_SCROLL);
+        final GridLayout gridLayout1 = new GridLayout(1, false);
+        group.setLayout(gridLayout1);
+        group.setLayoutData(new GridData(GridData.FILL_BOTH));
+
+        m_treeViewer = new CheckboxTreeViewer(group);
         m_treeViewer.getTree().setLayoutData(new GridData(GridData.FILL_BOTH));
         // provider handling file stores
         m_provider = new ExplorerFileStoreProvider();
@@ -232,7 +241,31 @@ public class WorkflowExportPage extends WizardPage {
             }
 
         });
+        Composite buttons = new Composite(group, SWT.NONE);
+        buttons.setLayout(new GridLayout(2, false));
+        buttons.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        m_selAll = new Button(buttons, SWT.PUSH);
+        m_selAll.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_CENTER));
+        m_selAll.setText("Select All");
+        m_selAll.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                selectAll();
+            }
+        });
+        m_deselAll = new Button(buttons, SWT.PUSH);
+        m_deselAll.setText("Deselect all");
+        m_deselAll.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_CENTER));
+        m_deselAll.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                deselectAll();
+            }
+        });
+
         m_treeViewer.getTree().setVisible(false);
+        m_selAll.setVisible(false);
+        m_deselAll.setVisible(false);
     }
 
     /**
@@ -320,14 +353,18 @@ public class WorkflowExportPage extends WizardPage {
     private void containerSelectionChanged() {
         if ((m_selection == null) || isExportElement(m_selection)) {
             m_treeViewer.getTree().setVisible(false);
+            m_selAll.setVisible(false);
+            m_deselAll.setVisible(false);
         } else {
             // clear the selection before setting a new input!!!
             m_treeViewer.setSelection(null);
             m_treeViewer.setInput(m_selection);
             m_treeViewer.getTree().setVisible(true);
+            m_selAll.setVisible(true);
+            m_deselAll.setVisible(true);
             getContainer().getShell().pack(true);
             getContainer().getShell().update();
-            selectAllWorkflows();
+            selectAll();
         }
         if (m_selection != null) {
             m_containerText.setText(m_selection.getMountIDWithFullPath());
@@ -398,6 +435,30 @@ public class WorkflowExportPage extends WizardPage {
             }
         }
 
+    }
+
+    private void selectAll() {
+        setCheckedAll(true);
+    }
+
+    private void deselectAll() {
+        setCheckedAll(false);
+    }
+
+    private void setCheckedAll(final boolean state) {
+        ArrayList<Object> obj = new ArrayList<Object>();
+        obj.add(m_selection);
+        while (obj.size() > 0) {
+            Object f = obj.remove(obj.size() - 1);
+            if (f instanceof AbstractExplorerFileStore) {
+                AbstractExplorerFileStore store = (AbstractExplorerFileStore)f;
+                m_treeViewer.setChecked(store, state);
+            }
+            Object[] childs = m_provider.getChildren(f);
+            if (childs != null) {
+                obj.addAll(Arrays.asList(childs));
+            }
+        }
     }
 
     /**
