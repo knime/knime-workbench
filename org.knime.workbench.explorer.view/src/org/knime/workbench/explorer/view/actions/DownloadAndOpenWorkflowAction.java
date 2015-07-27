@@ -85,7 +85,7 @@ public class DownloadAndOpenWorkflowAction extends Action {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(DownloadAndOpenWorkflowAction.class);
 
     /*--------- inner job class -------------------------------------------------------------------------*/
-    private class DownloadAndOpenJob extends ExplorerJob {
+    private static class DownloadAndOpenJob extends ExplorerJob {
 
         private final IWorkbenchPage m_page;
 
@@ -182,9 +182,11 @@ public class DownloadAndOpenWorkflowAction extends Action {
     private final List<RemoteExplorerFileStore> m_sources;
 
     private final IWorkbenchPage m_page;
+
     /**
      * Downloads a remote item to a temp location and opens it in an editor.
      *
+     * @param page the current workbench page
      * @param sources things to open
      */
     public DownloadAndOpenWorkflowAction(final IWorkbenchPage page, final List<RemoteExplorerFileStore> sources) {
@@ -202,7 +204,8 @@ public class DownloadAndOpenWorkflowAction extends Action {
     public void run() {
         for (RemoteExplorerFileStore s : m_sources) {
             LOGGER.info("Opening remote " + s.getFullName() + ", downloading it first into the temp mount point");
-            new DownloadAndOpenJob(m_page, s).schedule();
+            DownloadAndOpenJob job = new DownloadAndOpenJob(m_page, s);
+            job.schedule();
         }
     }
 }

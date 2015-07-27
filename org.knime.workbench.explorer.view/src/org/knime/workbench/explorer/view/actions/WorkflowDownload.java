@@ -357,11 +357,14 @@ public class WorkflowDownload {
         // error handling if download failed
         File tmpLoc = dwnLoader.getTempFile();
         if (tmpLoc == null || !success) {
+            int status;
             String msg = "Unable to download workflow: ";
             if (success) {
                 msg += dwnLoader.getErrorMessage();
+                status = IStatus.ERROR;
                 LOGGER.error(msg);
             } else {
+                status = IStatus.WARNING;
                 msg += " Download interrupted.";
                 LOGGER.warn(msg);
             }
@@ -369,8 +372,7 @@ public class WorkflowDownload {
                 LOGGER.info("Existing destination not modified ("
                         + getTargetIdentifier() + ") ");
             }
-            throw new CoreException(new Status(IStatus.WARNING,
-                                ExplorerActivator.PLUGIN_ID, msg));
+            throw new CoreException(new Status(status, ExplorerActivator.PLUGIN_ID, msg));
         }
 
         prepareTarget();
@@ -519,11 +521,9 @@ public class WorkflowDownload {
                 LOGGER.debug("Received server download stream for '" + m_source
                         + "', storing it '"
                         + m_tmpFile.getAbsolutePath() + "'");
-                BufferedInputStream inStream = null;
-                FileOutputStream outStream = null;
-                try {
-                    inStream = new BufferedInputStream(in, 1024 * 1024);
-                    outStream = new FileOutputStream(m_tmpFile);
+
+                try (BufferedInputStream inStream = new BufferedInputStream(in, 1024 * 1024);
+                        FileOutputStream outStream = new FileOutputStream(m_tmpFile)) {
                     int b;
                     byte[] buffer = new byte[1024 * 1024];
                     while ((b = inStream.read(buffer)) >= 0) {
@@ -540,21 +540,6 @@ public class WorkflowDownload {
                             m_errorMsg = "Canceled.";
                             return;
                         }
-                    }
-                } finally {
-                    try {
-                        if (inStream != null) {
-                            inStream.close();
-                        }
-                    } catch (Exception ee) {
-                        // not closing then...
-                    }
-                    try {
-                        if (outStream != null) {
-                            outStream.close();
-                        }
-                    } catch (Exception ee) {
-                        // not closing then...
                     }
                 }
                 m_errorMsg = null;
