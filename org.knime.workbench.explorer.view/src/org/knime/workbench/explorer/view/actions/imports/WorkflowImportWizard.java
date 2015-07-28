@@ -49,6 +49,7 @@ package org.knime.workbench.explorer.view.actions.imports;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
+import java.util.Map;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
@@ -59,7 +60,9 @@ import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
@@ -97,17 +100,38 @@ public class WorkflowImportWizard extends Wizard {
             final AbstractExplorerFileStore destination) {
         if (destination == null) {
             m_initialDestination = null;
+            // if no initial selection is made, chose LOCAL, or the first local mountpoint
+            Map<String, AbstractContentProvider> mountedContent = ExplorerMountTable.getMountedContent();
+            AbstractContentProvider firstlocal = null;
+            for (AbstractContentProvider prov : mountedContent.values()) {
+                if (!prov.isRemote() && prov.isWritable()) {
+                    if (firstlocal == null) {
+                        firstlocal = prov;
+                    }
+                    if (prov.getMountID().equals("LOCAL")) {
+                        m_initialDestination = prov.getFileStore("/");
+                        return;
+                    }
+                }
+            }
+            // didn't find the LOCAL (they renamed the workspace mount point), use the first non-remote we got.
+            if (firstlocal != null) {
+                m_initialDestination = firstlocal.getFileStore("/");
+            }
             return;
-        }
-        m_initialDestination = destination;
-        while (!AbstractExplorerFileStore.isWorkflowGroup(
-                m_initialDestination)) {
-            AbstractExplorerFileStore f = m_initialDestination;
-            m_initialDestination = m_initialDestination.getParent();
-            if (m_initialDestination == null || m_initialDestination == f) {
-                // that is strange - at least the root should be valid...
-                m_initialDestination = null;
-                return;
+        } else {
+            AbstractContentProvider prov = destination.getContentProvider();
+            if (!prov.isRemote() && prov.isWritable()) {
+                m_initialDestination = destination;
+                while (!AbstractExplorerFileStore.isWorkflowGroup(m_initialDestination)) {
+                    AbstractExplorerFileStore f = m_initialDestination;
+                    m_initialDestination = m_initialDestination.getParent();
+                    if (m_initialDestination == null || m_initialDestination == f) {
+                        // that is strange - at least the root should be valid...
+                        m_initialDestination = null;
+                        return;
+                    }
+                }
             }
         }
     }
