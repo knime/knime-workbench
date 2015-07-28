@@ -251,7 +251,8 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             if ((ch instanceof WorkflowImportElementFromArchive) && ch.isFile()
                     && ch.getName().equals(WorkflowPersistor.METAINFO_FILE)) {
                 WorkflowImportElementFromArchive child = (WorkflowImportElementFromArchive)ch;
-                importZipEntry(child.getProvider(), (ZipEntry)child.getEntry(), destinationDir, monitor);
+                importZipEntry(child.getProvider(), (ZipEntry)child.getEntry(),
+                    destinationDir.getChild(WorkflowPersistor.METAINFO_FILE), monitor);
                 return true;
             }
         }
