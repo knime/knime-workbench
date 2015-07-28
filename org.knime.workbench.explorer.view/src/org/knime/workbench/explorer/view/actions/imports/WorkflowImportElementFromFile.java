@@ -55,7 +55,6 @@ import java.io.InputStream;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.KnimeFileUtil;
 
 /**
@@ -68,29 +67,6 @@ public class WorkflowImportElementFromFile
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
             WorkflowImportElementFromFile.class);
-
-    /**
-     *
-     * @param dir the directory to test
-     * @return true if the directory is a workflow
-     */
-    public static boolean isWorkflow(final File dir) {
-        if (!dir.isDirectory()) {
-            return false;
-        }
-        File workflowFile = new File(dir, WorkflowPersistor.WORKFLOW_FILE);
-        // if itself contains a .knime file -> return this
-        if (workflowFile.exists()) {
-            File parentWorkflowFile = new File(dir.getParent(),
-                    WorkflowPersistor.WORKFLOW_FILE);
-            if (!parentWorkflowFile.exists()) {
-                // check whether the parent does not contain a workflow file
-                // in order to prevent importing of meta nodes
-                return true;
-            }
-        }
-        return false;
-    }
 
     private final File m_file;
 
@@ -189,5 +165,13 @@ public class WorkflowImportElementFromFile
     @Override
     public boolean isTemplate() {
         return KnimeFileUtil.isMetaNodeTemplate(getFile());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isFile() {
+        return getFile().isFile();
     }
 }

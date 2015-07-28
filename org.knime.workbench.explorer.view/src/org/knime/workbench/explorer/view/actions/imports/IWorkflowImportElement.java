@@ -155,5 +155,9 @@ public interface IWorkflowImportElement {
     public boolean isTemplate();
 
 
-
+    /**
+     *
+     * @return true if the element is a file.
+     */
+    public boolean isFile();
 }

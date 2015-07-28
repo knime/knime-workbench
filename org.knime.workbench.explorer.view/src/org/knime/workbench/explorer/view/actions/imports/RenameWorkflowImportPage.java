@@ -77,7 +77,7 @@ public class RenameWorkflowImportPage extends WizardPage {
     private final WorkflowImportSelectionPage m_previousPage;
 
     /** Identifier for this page. */
-    public static final String NAME = "Rename duplicate workflows";
+    public static final String NAME = "Rename duplicate elements";
 
     private boolean m_isNameValid = true;
 
@@ -96,7 +96,7 @@ public class RenameWorkflowImportPage extends WizardPage {
         m_previousPage = previousPage;
         m_invalids = invalids;
         setTitle("Rename Page");
-        setDescription("Rename the workflows to import");
+        setDescription("Rename the elements to import");
     }
 
 
@@ -109,11 +109,11 @@ public class RenameWorkflowImportPage extends WizardPage {
         overall.setLayout(new GridLayout(1, false));
         GridData gridData = new GridData(SWT.FILL, SWT.FILL, true, true);
         overall.setLayoutData(gridData);
-        overall.setText("Duplicate workflows:");
+        overall.setText("Duplicate items:");
 
         if (m_invalids == null || m_invalids.isEmpty()) {
             Label ok = new Label(overall, SWT.NONE);
-            ok.setText("No duplicate workflows found!");
+            ok.setText("No duplicate elements found!");
             setControl(overall);
             return;
         } // else
@@ -172,7 +172,7 @@ public class RenameWorkflowImportPage extends WizardPage {
         AbstractExplorerFileStore newChild = destination.getChild(name);
         m_nameExists = newChild.fetchInfo().exists();
         if (m_nameExists) {
-            setErrorMessage(name + " already exists in target destination!");
+            setErrorMessage(name + " already exists in the destination!");
             setPageComplete(false);
         }
         return m_nameExists;

@@ -68,6 +68,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.eclipse.ui.internal.wizards.datatransfer.ArchiveFileManipulations;
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
+import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.FileUtil;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
@@ -89,7 +90,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
     // hence are not displayed - meta info file has to be created after the
     // import -> occurs when importing zip files containing directories
     private final List<AbstractExplorerFileStore> m_missingMetaInfoLocations =
-            new ArrayList<AbstractExplorerFileStore>();
+        new ArrayList<AbstractExplorerFileStore>();
 
     /**
      *
@@ -97,9 +98,8 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      * @param targetPath the destination path within the workspace
      * @param shell the shell
      */
-    public WorkflowImportOperation(
-            final Collection<IWorkflowImportElement> workflows,
-            final AbstractExplorerFileStore targetPath, final Shell shell) {
+    public WorkflowImportOperation(final Collection<IWorkflowImportElement> workflows,
+        final AbstractExplorerFileStore targetPath, final Shell shell) {
         m_workflows = workflows;
         m_targetPath = targetPath;
         m_shell = shell;
@@ -111,8 +111,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      */
     @SuppressWarnings("restriction")
     @Override
-    protected void execute(final IProgressMonitor monitor)
-            throws InvocationTargetException, InterruptedException {
+    protected void execute(final IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
         ILeveledImportStructureProvider provider = null;
         try {
             monitor.beginTask("", m_workflows.size());
@@ -132,17 +131,15 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             throw new InvocationTargetException(e);
         } finally {
             if (provider != null) {
-                ArchiveFileManipulations.closeStructureProvider(provider,
-                        m_shell);
+                ArchiveFileManipulations.closeStructureProvider(provider, m_shell);
             }
             monitor.done();
         }
     }
 
     @SuppressWarnings("restriction")
-    private ILeveledImportStructureProvider handleCopyProject(
-            final IWorkflowImportElement importElement,
-            final IProgressMonitor monitor) throws Exception {
+    private ILeveledImportStructureProvider handleCopyProject(final IWorkflowImportElement importElement,
+        final IProgressMonitor monitor) throws Exception {
 
         // determine the destination from the renamed element
         IPath renamedElementPath = importElement.getRenamedPath();
@@ -154,21 +151,17 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
         ILeveledImportStructureProvider provider = null;
 
         if (importElement instanceof WorkflowImportElementFromFile) {
-            WorkflowImportElementFromFile importFile =
-                    (WorkflowImportElementFromFile)importElement;
+            WorkflowImportElementFromFile importFile = (WorkflowImportElementFromFile)importElement;
 
             // copy workflow from file location
-            importWorkflowFromFile(importFile, destination,
-                    new SubProgressMonitor(monitor, 1));
+            importWorkflowFromFile(importFile, destination, new SubProgressMonitor(monitor, 1));
 
         } else if (importElement instanceof WorkflowImportElementFromArchive) {
-            WorkflowImportElementFromArchive zip =
-                    (WorkflowImportElementFromArchive)importElement;
+            WorkflowImportElementFromArchive zip = (WorkflowImportElementFromArchive)importElement;
             provider = zip.getProvider();
 
             // create workflow from ZIP archive
-            importWorkflowFromArchive(zip, destination, new SubProgressMonitor(
-                    monitor, 1));
+            importWorkflowFromArchive(zip, destination, new SubProgressMonitor(monitor, 1));
 
         } else {
             monitor.worked(1);
@@ -184,70 +177,100 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      * @param monitor monitor
      * @throws IOException if things go bad.
      */
-    protected void importWorkflowFromFile(
-            final WorkflowImportElementFromFile fileElement,
-            final AbstractExplorerFileStore destination,
-            final IProgressMonitor monitor) throws IOException {
-
-        File destinationDir = null;
+    protected void importWorkflowFromFile(final WorkflowImportElementFromFile fileElement,
+        final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException {
 
         // in the wizard page we make sure the destination doesn't exist
         assert !destination.fetchInfo().exists();
 
-        // first create the destination
+        File dest = null;
         try {
-            destination.mkdir(EFS.SHALLOW, monitor);
-            destinationDir = destination.toLocalFile();
+            dest = destination.toLocalFile();
         } catch (CoreException e) {
             throw new IOException(e.getMessage(), e);
         }
 
-        if (fileElement.isWorkflow()) {
+        if (fileElement.isWorkflow() || fileElement.isTemplate()) {
             File dir = fileElement.getFile();
-            FileUtil.copyDir(dir, destinationDir);
+            FileUtil.copyDir(dir, dest);
+        } else if (fileElement.isFile()) {
+            FileUtil.copy(fileElement.getFile(), dest);
         } else {
-            m_missingMetaInfoLocations.add(destination);
+            // copy the meta info file from a group - if it exists
+            try {
+                destination.mkdir(EFS.SHALLOW, monitor);
+            } catch (CoreException e) {
+                throw new IOException(e.getMessage(), e);
+            }
+            File metaFile = new File(fileElement.getFile(), WorkflowPersistor.METAINFO_FILE);
+            if (metaFile.exists()) {
+                FileUtil.copy(metaFile, new File(dest, WorkflowPersistor.METAINFO_FILE));
+            } else {
+                m_missingMetaInfoLocations.add(destination);
+            }
         }
-
         // we operated on the file system directly. Refresh file stores.
         destination.refresh();
-
     }
 
     /**
-     * Extracts the import elements (recursively) from the corresponding
-     * provider and stores them in the destination.
+     * Extracts the import elements (recursively) from the corresponding provider and stores them in the destination.
      *
      * @param zipElement the element to extract (and its children)
      * @param destination target
      * @param monitor monitor
      * @throws IOException if things go bad or user cancels
      */
-    protected void importWorkflowFromArchive(
-            final WorkflowImportElementFromArchive zipElement,
-            final AbstractExplorerFileStore destination, final IProgressMonitor monitor)
-            throws IOException {
+    protected void importWorkflowFromArchive(final WorkflowImportElementFromArchive zipElement,
+        final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException {
 
-        if (zipElement.isWorkflow() || zipElement.isTemplate()
-                || zipElement.isWorkflowGroup()) {
-            importZipEntry(zipElement.getProvider(),
-                    (ZipEntry)zipElement.getEntry(), destination, monitor);
+        if (zipElement.isWorkflow() || zipElement.isTemplate() || zipElement.isFile()) {
+            importZipEntry(zipElement.getProvider(), (ZipEntry)zipElement.getEntry(), destination, monitor);
+        } else if (zipElement.isWorkflowGroup()) {
+            try {
+                destination.mkdir(EFS.SHALLOW, monitor);
+            } catch (CoreException e) {
+                throw new IOException(e.getMessage(), e);
+            }
+            // copy the metainfo file in a group - if it exists
+            if (!importMetaInfoFile(zipElement, destination, monitor)) {
+                m_missingMetaInfoLocations.add(destination);
+            }
         }
+    }
+
+    /*
+     * Copies the meta info file from the passed group into the destination directory. Returns true if the meta info
+     * file exists, false if it doesn't.
+     */
+    private boolean importMetaInfoFile(final WorkflowImportElementFromArchive group,
+        final AbstractExplorerFileStore destinationDir, final IProgressMonitor monitor) throws IOException {
+        assert group.isWorkflowGroup();
+        assert destinationDir.fetchInfo().isDirectory();
+        for (IWorkflowImportElement ch : group.getChildren()) {
+            if ((ch instanceof WorkflowImportElementFromArchive) && ch.isFile()
+                    && ch.getName().equals(WorkflowPersistor.METAINFO_FILE)) {
+                WorkflowImportElementFromArchive child = (WorkflowImportElementFromArchive)ch;
+                importZipEntry(child.getProvider(), (ZipEntry)child.getEntry(), destinationDir, monitor);
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * Import the entire subtree.
      *
+     * @see #importZipEntry(ILeveledImportStructureProvider, ZipEntry, AbstractExplorerFileStore, IProgressMonitor)
      * @param zipProvider
      * @param entry
      * @param destination
      * @param monitor
-     * @throws IOException if it blows.
+     * @throws IOException
      */
-    protected void importZipEntry(
-            final ILeveledImportStructureProvider zipProvider,
-            final ZipEntry entry, final AbstractExplorerFileStore destination,
-            final IProgressMonitor monitor) throws IOException {
+    protected void importZipEntry(final ILeveledImportStructureProvider zipProvider, final ZipEntry entry,
+        final AbstractExplorerFileStore destination, final IProgressMonitor monitor)
+        throws IOException {
 
         //assert !destination.fetchInfo().exists();
 
@@ -262,26 +285,20 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             // import all sub elements
             for (Object c : zipProvider.getChildren(entry)) {
                 ZipEntry child = (ZipEntry)c;
-                AbstractExplorerFileStore childDest =
-                        destination.getChild(
-                                new Path(child.getName()).lastSegment());
+                AbstractExplorerFileStore childDest = destination.getChild(new Path(child.getName()).lastSegment());
                 importZipEntry(zipProvider, child, childDest, monitor);
             }
         } else {
             // suck the file content in
             BufferedOutputStream outStream = null;
             try {
-                outStream =
-                        new BufferedOutputStream(
-                                destination.openOutputStream(EFS.NONE,
-                                        monitor));
+                outStream = new BufferedOutputStream(destination.openOutputStream(EFS.NONE, monitor));
             } catch (CoreException e) {
                 throw new IOException(e.getMessage(), e);
             }
             BufferedInputStream inStream = null;
             try {
-                inStream =
-                        new BufferedInputStream(zipProvider.getContents(entry));
+                inStream = new BufferedInputStream(zipProvider.getContents(entry));
                 byte[] buffer = new byte[BUFFSIZE];
                 int read;
                 while ((read = inStream.read(buffer)) >= 0) {
@@ -305,7 +322,10 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             assert f.fetchInfo().exists();
             File parent = f.toLocalFile();
             if (parent != null) {
-                MetaInfoFile.createMetaInfoFile(parent, false);
+                if (!new File(parent, WorkflowPersistor.METAINFO_FILE).exists()) {
+                    // don't overwrite (use io.File for the test, AEFS hides the meta info file!)
+                    MetaInfoFile.createMetaInfoFile(parent, false);
+                }
             }
         }
     }

@@ -49,6 +49,8 @@ package org.knime.workbench.explorer.view.actions.imports;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.zip.ZipFile;
 
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
@@ -57,13 +59,11 @@ import org.knime.core.node.workflow.FileSingleNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowPersistor;
 
 /**
- * Implementation of a workflow import element from an archive file
- * (zip or tar).
+ * Implementation of a workflow import element from an archive file (zip or tar).
  *
  * @author Fabian Dill, KNIME.com, Zurich, Switzerland
  */
-public class WorkflowImportElementFromArchive
-    extends AbstractWorkflowImportElement {
+public class WorkflowImportElementFromArchive extends AbstractWorkflowImportElement {
 
     /**
      *
@@ -78,16 +78,15 @@ public class WorkflowImportElementFromArchive
             if (children == null) {
                 return false;
             }
+            Set<String> childNames = new TreeSet<String>();
             for (Object o : children) {
-                String elementLabel = provider.getLabel(o);
-                if (elementLabel.equals(WorkflowPersistor.WORKFLOW_FILE)) {
-                    return true;
-                }
+                childNames.add(provider.getLabel(o));
             }
+            return childNames.contains(WorkflowPersistor.WORKFLOW_FILE)
+                    && !childNames.contains(WorkflowPersistor.TEMPLATE_FILE);
         }
         return false;
     }
-
 
     /**
      *
@@ -102,23 +101,16 @@ public class WorkflowImportElementFromArchive
         }
         List children = provider.getChildren(zipEntry);
         if (children == null) {
-            return false;
+            return true; // empty folder/group
         }
 
         for (Object o : children) {
             String elementLabel = provider.getLabel(o);
-            if (elementLabel.equals(
-                    WorkflowPersistor.METAINFO_FILE)) {
+            if (elementLabel.equals(WorkflowPersistor.METAINFO_FILE)) {
                 return true;
-            } else if (
-                    // workflow or meta node
-                    elementLabel.equals(WorkflowPersistor.WORKFLOW_FILE)
-                    // workflow template
-                    || elementLabel.equals(
-                            WorkflowPersistor.TEMPLATE_FILE)
-                    // node
-                    || elementLabel.equals(
-                        FileSingleNodeContainerPersistor.SETTINGS_FILE_NAME)) {
+            } else if (elementLabel.equals(WorkflowPersistor.WORKFLOW_FILE)
+                    || elementLabel.equals(WorkflowPersistor.TEMPLATE_FILE)
+                    || elementLabel.equals(FileSingleNodeContainerPersistor.SETTINGS_FILE_NAME)) {
                 return false;
             }
         }
@@ -127,35 +119,42 @@ public class WorkflowImportElementFromArchive
     }
 
     /**
-    *
-    * {@inheritDoc}
-    */
-   @Override
-   public boolean isTemplate() {
-       ILeveledImportStructureProvider provider = getProvider();
-       Object zipEntry = getEntry();
-       if (provider.isFolder(zipEntry)) {
-           List children = provider.getChildren(zipEntry);
-           if (children == null) {
-               return false;
-           }
-           for (Object o : children) {
-               String elementLabel = provider.getLabel(o);
-               if (elementLabel.equals(WorkflowPersistor.TEMPLATE_FILE)) {
-                   return true;
-               }
-           }
-       }
-       return false;
-   }
+     *
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isTemplate() {
+        ILeveledImportStructureProvider provider = getProvider();
+        Object zipEntry = getEntry();
+        if (provider.isFolder(zipEntry)) {
+            List children = provider.getChildren(zipEntry);
+            if (children == null) {
+                return false;
+            }
+            for (Object o : children) {
+                String elementLabel = provider.getLabel(o);
+                if (elementLabel.equals(WorkflowPersistor.TEMPLATE_FILE)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isFile() {
+        Object entry = getEntry();
+        return !getProvider().isFolder(entry);
+    }
 
     private final ILeveledImportStructureProvider m_provider;
 
     // this is either org.eclipse.ui.internal.wizards.datatransfer.ZipFile or
     // org.eclipse.ui.internal.wizards.datatransfer.TarFile
     private final Object m_entry;
-
-
 
     private final int m_level;
 
@@ -165,9 +164,8 @@ public class WorkflowImportElementFromArchive
      * @param entry the archive file entry ({@link TarFile} or {@link ZipFile})
      * @param level indicates the level within the archive file hierarchy
      */
-    public WorkflowImportElementFromArchive(
-            final ILeveledImportStructureProvider provider,
-            final Object entry, final int level) {
+    public WorkflowImportElementFromArchive(final ILeveledImportStructureProvider provider, final Object entry,
+        final int level) {
         super(provider.getLabel(entry));
         m_entry = entry;
         m_provider = provider;
