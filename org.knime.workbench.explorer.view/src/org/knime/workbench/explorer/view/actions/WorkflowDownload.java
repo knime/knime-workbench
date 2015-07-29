@@ -233,8 +233,6 @@ public class WorkflowDownload {
         }
         WorkflowImportElementFromArchive root =
                 collectWorkflowsFromZipFile(zippedWorkflow);
-        List<IWorkflowImportElement> flows =
-                new LinkedList<IWorkflowImportElement>();
         IWorkflowImportElement element = null;
         if (root.getChildren().size() == 1) {
             element = root.getChildren().iterator().next();
@@ -243,12 +241,10 @@ public class WorkflowDownload {
         }
         // rename the import element
         element.setName(getTargetDir().getName());
-        flows.add(element);
         LOGGER.debug("Unpacking workflow \"" + element.getName()
                 + "\" into destination: "
             + destWorkflowDir.getMountIDWithFullPath());
-        final WorkflowImportOperation importOp =
-                new WorkflowImportOperation(flows, destWorkflowDir, null);
+        final WorkflowImportOperation importOp = new WorkflowImportOperation(element, destWorkflowDir);
 
         try {
             importOp.run(m_monitor);

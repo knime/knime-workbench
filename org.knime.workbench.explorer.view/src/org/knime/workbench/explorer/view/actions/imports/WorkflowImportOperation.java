@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.zip.ZipEntry;
 
@@ -84,6 +85,8 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
     private final AbstractExplorerFileStore m_targetPath;
 
+    private final boolean m_recursive;
+
     private final Shell m_shell;
 
     // stores those directories which not yet contain a metainfo file and
@@ -93,7 +96,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
         new ArrayList<AbstractExplorerFileStore>();
 
     /**
-     *
+     * Imports the elements specified in the passed collection.
      * @param workflows the import elements (file or zip entries) to import
      * @param targetPath the destination path within the workspace
      * @param shell the shell
@@ -103,6 +106,22 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
         m_workflows = workflows;
         m_targetPath = targetPath;
         m_shell = shell;
+        m_recursive = false;
+    }
+
+    /**
+     * Imports the root element and its entire subtree.
+     * @param rootElement
+     * @param targetPath
+     * @since 7.1
+     *
+     */
+    public WorkflowImportOperation(final IWorkflowImportElement rootElement,
+        final AbstractExplorerFileStore targetPath) {
+        m_workflows = Collections.singleton(rootElement);
+        m_targetPath = targetPath;
+        m_shell = null;
+        m_recursive = true;
     }
 
     /**
@@ -202,12 +221,16 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             } catch (CoreException e) {
                 throw new IOException(e.getMessage(), e);
             }
-            File metaFile = new File(fileElement.getFile(), WorkflowPersistor.METAINFO_FILE);
-            if (metaFile.exists()) {
-                FileUtil.copy(metaFile, new File(dest, WorkflowPersistor.METAINFO_FILE));
+            if (m_recursive) {
+                File dir = fileElement.getFile();
+                FileUtil.copyDir(dir, dest);
             } else {
-                m_missingMetaInfoLocations.add(destination);
+                File metaFile = new File(fileElement.getFile(), WorkflowPersistor.METAINFO_FILE);
+                if (metaFile.exists()) {
+                    FileUtil.copy(metaFile, new File(dest, WorkflowPersistor.METAINFO_FILE));
+                }
             }
+            m_missingMetaInfoLocations.add(destination);
         }
         // we operated on the file system directly. Refresh file stores.
         destination.refresh();
@@ -227,14 +250,18 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
         if (zipElement.isWorkflow() || zipElement.isTemplate() || zipElement.isFile()) {
             importZipEntry(zipElement.getProvider(), (ZipEntry)zipElement.getEntry(), destination, monitor);
         } else if (zipElement.isWorkflowGroup()) {
-            try {
-                destination.mkdir(EFS.SHALLOW, monitor);
-            } catch (CoreException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-            // copy the metainfo file in a group - if it exists
-            if (!importMetaInfoFile(zipElement, destination, monitor)) {
-                m_missingMetaInfoLocations.add(destination);
+            if (m_recursive) {
+                importZipEntry(zipElement.getProvider(), (ZipEntry)zipElement.getEntry(), destination, monitor);
+            } else {
+                try {
+                    destination.mkdir(EFS.SHALLOW, monitor);
+                } catch (CoreException e) {
+                    throw new IOException(e.getMessage(), e);
+                }
+                // copy the metainfo file in a group - if it exists
+                if (!importMetaInfoFile(zipElement, destination, monitor)) {
+                    m_missingMetaInfoLocations.add(destination);
+                }
             }
         }
     }
