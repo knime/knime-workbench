@@ -143,6 +143,7 @@ public class WorkflowImportElementFromArchive extends AbstractWorkflowImportElem
 
     /**
      * {@inheritDoc}
+     * @since 2.12
      */
     @Override
     public boolean isFile() {
