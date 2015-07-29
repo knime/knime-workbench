@@ -158,7 +158,7 @@ public interface IWorkflowImportElement {
     /**
      *
      * @return true if the element is a file.
-     * @since 2.12
+     * @since 7.1
      */
     public boolean isFile();
 }

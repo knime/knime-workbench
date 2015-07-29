@@ -169,7 +169,7 @@ public class WorkflowImportElementFromFile
 
     /**
      * {@inheritDoc}
-     * @since 2.12
+     * @since 7.1
      */
     @Override
     public boolean isFile() {

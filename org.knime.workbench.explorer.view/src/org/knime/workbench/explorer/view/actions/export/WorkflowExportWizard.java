@@ -287,7 +287,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
      *
      * @param store the resource to check
      * @return true if the given resource should be excluded, false if it should be included
-     * @since 2.12
+     * @since 7.1
      */
     protected static boolean excludeResource(final File store) {
         String name = store.getName();

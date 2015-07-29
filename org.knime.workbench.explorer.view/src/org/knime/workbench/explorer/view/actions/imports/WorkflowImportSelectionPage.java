@@ -703,7 +703,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
     /**
      *
      * @param selectedDir the directory to collect the contained workflows from
-     * @since 2.12
+     * @since 7.1
      */
     public void collectElementsFromDir(final String selectedDir) {
         clear();

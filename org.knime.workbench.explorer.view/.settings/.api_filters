@@ -122,6 +122,39 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/imports/IWorkflowImportElement.java" type="org.knime.workbench.explorer.view.actions.imports.IWorkflowImportElement">
+        <filter id="403804204">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.imports.IWorkflowImportElement"/>
+                <message_argument value="isFile()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/imports/RenameWorkflowImportPage.java" type="org.knime.workbench.explorer.view.actions.imports.RenameWorkflowImportPage">
+        <filter id="388194388">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.imports.RenameWorkflowImportPage"/>
+                <message_argument value="NAME"/>
+                <message_argument value="Rename duplicate workflows"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/imports/WorkflowImportElementFromFile.java" type="org.knime.workbench.explorer.view.actions.imports.WorkflowImportElementFromFile">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.imports.WorkflowImportElementFromFile"/>
+                <message_argument value="isWorkflow(File)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/imports/WorkflowImportSelectionPage.java" type="org.knime.workbench.explorer.view.actions.imports.WorkflowImportSelectionPage">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.imports.WorkflowImportSelectionPage"/>
+                <message_argument value="collectWorkflowsFromDir(String)"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="src/org/knime/workbench/explorer/view/preferences/MountSettings.java" type="org.knime.workbench.explorer.view.preferences.MountSettings">
         <filter id="338792546">
             <message_arguments>
