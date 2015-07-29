@@ -48,21 +48,28 @@
 package org.knime.workbench.explorer.view.actions.imports;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
+import org.eclipse.ui.IViewPart;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
@@ -221,8 +228,46 @@ public class WorkflowImportWizard extends Wizard {
             ErrorDialog.openError(getShell(), message, null, status);
             LOGGER.error(message, e);
         }
+        // select imported items in explorer view
+        selectImportedElementsInExplorerView(m_importPage.getSelectedTopLevelElements());
+
         return true;
     }
+
+
+    private void selectImportedElementsInExplorerView(final ArrayList<IWorkflowImportElement> topLevelElements) {
+        IWorkbenchWindow wbWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        if (wbWindow == null) {
+            return;
+        }
+        IWorkbenchPage activePage = wbWindow.getActivePage();
+        if (activePage == null) {
+            return;
+        }
+        IViewPart viewPart = activePage.findView("org.knime.workbench.explorer.view");
+        if (viewPart == null) {
+            return;
+        }
+        if (!(viewPart instanceof ExplorerView)) {
+            return;
+        }
+        ExplorerView explorer = (ExplorerView)viewPart;
+        ArrayList<AbstractExplorerFileStore> importedElements = new ArrayList<AbstractExplorerFileStore>();
+        AbstractExplorerFileStore importRoot = m_importPage.getDestination();
+        for (IWorkflowImportElement e : topLevelElements) {
+            IPath topPath = e.getRenamedPath();
+            if (topPath.segmentCount() > 0) {
+                importedElements.add(importRoot.getChild(topPath.toString()));
+            } else {
+                importedElements.add(importRoot);
+            }
+        }
+        explorer.setNextSelection(importedElements);
+        explorer.getViewer().reveal(importRoot);
+        explorer.getViewer().expandToLevel(importRoot, 1);
+        importRoot.refresh();
+    }
+
 
     /**
      * @return the destination where flows were imported to

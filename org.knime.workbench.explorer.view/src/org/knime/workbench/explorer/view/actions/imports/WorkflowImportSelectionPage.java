@@ -939,6 +939,23 @@ public class WorkflowImportSelectionPage extends WizardPage {
     }
 
     /**
+     * @return a list of top level elements (items below the root) selected in the import tree
+     * @since 7.1
+     */
+    protected ArrayList<IWorkflowImportElement> getSelectedTopLevelElements() {
+        ArrayList<IWorkflowImportElement> result = new ArrayList<IWorkflowImportElement>();
+        if (m_importRoot == null) {
+            return result;
+        }
+        for (IWorkflowImportElement topchild : m_importRoot.getChildren()) {
+            if (m_workflowListUI.getChecked(topchild)) {
+                result.add(topchild);
+            }
+        }
+        return result;
+    }
+
+    /**
      * Collects those elements which have to be renamed (not their children) and those which have been renamed in order
      * to let the user change the name again.
      *
