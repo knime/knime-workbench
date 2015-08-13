@@ -140,8 +140,7 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
             T destStore = (T)destination.getChild(childName);
             result = destStore;
             AbstractExplorerFileInfo resultInfo = destStore.fetchInfo();
-            if (resultInfo.exists()
-                    || m_mappings.values().contains(result)) {
+            if (resultInfo.exists() || m_mappings.containsValue(result)) {
                 /* The filestore already exist or another filestore with the
                  * same name is already selected for the operation.*/
                 confirmOverwrite = true;
