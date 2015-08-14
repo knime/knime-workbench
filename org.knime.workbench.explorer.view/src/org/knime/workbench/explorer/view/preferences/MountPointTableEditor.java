@@ -48,7 +48,7 @@ package org.knime.workbench.explorer.view.preferences;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -503,7 +503,7 @@ public class MountPointTableEditor extends FieldEditor {
     }
 
     private List<String> getContentProviderIDs() {
-        Set<String> idSet = new HashSet<String>();
+        Set<String> idSet = new LinkedHashSet<>();
         for (MountSettings settings : m_mountSettings) {
             idSet.add(settings.getFactoryID());
         }
