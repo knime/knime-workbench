@@ -443,13 +443,11 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         }
     }
 
-    private void expandSelected() {
-        IStructuredSelection selection =
-                (IStructuredSelection)m_viewer.getSelection();
-        @SuppressWarnings("unchecked")
-        Iterator<Object> iter = selection.iterator();
-        while (iter.hasNext()) {
-            m_viewer.expandToLevel(iter.next(), 1);
+    private void onDoubleClickInTreeViewerInSWT() {
+        IStructuredSelection selection = (IStructuredSelection)m_viewer.getSelection();
+        if (selection.toList().size() == 1) {
+            Object firstElement = selection.getFirstElement();
+            m_viewer.setExpandedState(firstElement, !m_viewer.getExpandedState(firstElement));
         }
     }
 
@@ -470,7 +468,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                     @Override
                     public void run() {
                         if (!openSelected()) {
-                            expandSelected();
+                            onDoubleClickInTreeViewerInSWT();
                         }
                     }
                 });
