@@ -586,7 +586,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 for (int i = indexWhereDifferent; i < templatePathParts.length; i++) {
                     relPath.append('/').append(templatePathParts[i]);
                 }
-                return new URI(ExplorerFileSystem.SCHEME, "knime.workflow", relPath.toString(), "");
+                return new URI(ExplorerFileSystem.SCHEME, "knime.workflow", relPath.toString(), null);
             } else {
                 throw new IllegalArgumentException("Unknown metanode link type: " + linkType);
             }
