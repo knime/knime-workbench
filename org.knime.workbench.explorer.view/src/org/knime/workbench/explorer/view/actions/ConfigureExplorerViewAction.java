@@ -73,8 +73,7 @@ public class ConfigureExplorerViewAction extends ExplorerAction {
         super(viewer, "Configure Content...");
         m_delegator = delegator;
         setToolTipText(TOOLTIP);
-        setImageDescriptor(ImageRepository
-                .getImageDescriptor(SharedImages.ConfigureNode));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.ConfigureNode));
     }
 
     /**

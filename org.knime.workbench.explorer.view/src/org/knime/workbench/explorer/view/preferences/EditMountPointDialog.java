@@ -443,7 +443,7 @@ public class EditMountPointDialog extends ListDialog {
         Image mountIDHeaderImage = null;
         if (m_defaultMountID != null && !m_defaultMountID.isEmpty() && !m_defaultMountID.equals(id)) {
             mountIDHeaderText += "\nThe default ID is " + m_defaultMountID;
-            mountIDHeaderImage = ImageRepository.getImage(SharedImages.InfoBalloon);
+            mountIDHeaderImage = ImageRepository.getIconImage(SharedImages.InfoBalloon);
         }
         m_mountIDHeader.setText(mountIDHeaderText);
         m_mountIDHeader.setImage(mountIDHeaderImage);
@@ -518,7 +518,7 @@ public class EditMountPointDialog extends ListDialog {
         // third row
         m_errIcon = new Label(header, SWT.NONE);
         m_errIcon.setVisible(true);
-        m_errIcon.setImage(ImageRepository.getImage(SharedImages.Error));
+        m_errIcon.setImage(ImageRepository.getIconImage(SharedImages.Error));
         m_errIcon.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
         m_errIcon.setBackground(white);
         m_errText = new Label(header, SWT.WRAP);

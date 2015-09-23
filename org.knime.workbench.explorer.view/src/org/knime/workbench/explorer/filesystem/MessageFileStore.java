@@ -76,7 +76,7 @@ public final class MessageFileStore extends AbstractExplorerFileStore {
      * @see AbstractExplorerFileStore#AbstractExplorerFileStore(String, String)
      */
     public MessageFileStore(final String mountID, final String message) {
-        this(mountID, message, ImageRepository.getImage(SharedImages.InfoButton));
+        this(mountID, message, ImageRepository.getIconImage(SharedImages.InfoButton));
     }
 
     /**

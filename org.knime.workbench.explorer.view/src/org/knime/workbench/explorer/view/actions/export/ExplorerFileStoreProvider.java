@@ -158,9 +158,9 @@ public class ExplorerFileStoreProvider extends LabelProvider implements
             }
             IFileInfo info = e.fetchInfo();
             if (info.isDirectory()) {
-                return ImageRepository.getImage(SharedImages.Folder);
+                return ImageRepository.getIconImage(SharedImages.Folder);
             } else {
-                return ImageRepository.getImage(SharedImages.File2);
+                return ImageRepository.getIconImage(SharedImages.File2);
             }
         }
         return null;

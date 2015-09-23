@@ -139,7 +139,7 @@ public class QuickformExecuteStartWizardPage extends WizardPage {
                 CLabel l = new CLabel(overall, SWT.CENTER);
                 l.setText("No workflow variables or credentials are defined "
                         + "for the current workflow.");
-                l.setImage(ImageRepository.getImage(SharedImages.Info));
+                l.setImage(ImageRepository.getIconImage(SharedImages.Info));
             }
         }
         setControl(overall);

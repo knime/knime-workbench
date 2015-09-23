@@ -60,8 +60,7 @@ public class CollapseAllAction extends ExplorerAction {
      */
     public CollapseAllAction(final ExplorerView viewer) {
         super(viewer, "Collapse All");
-        setImageDescriptor(ImageRepository
-                .getImageDescriptor(SharedImages.CollapseAll));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.CollapseAll));
         setToolTipText(TOOLTIP);
     }
 

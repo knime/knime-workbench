@@ -262,7 +262,7 @@ public class MergeRenameDialog extends Dialog {
         m_errMsg.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         m_errMsg.setText("");
         m_errMsg.setForeground(Display.getDefault().getSystemColor(SWT.COLOR_RED));
-        m_errMsg.setImage(ImageRepository.getImage(SharedImages.Error));
+        m_errMsg.setImage(ImageRepository.getIconImage(SharedImages.Error));
         m_errMsg.setVisible(false);
     }
 

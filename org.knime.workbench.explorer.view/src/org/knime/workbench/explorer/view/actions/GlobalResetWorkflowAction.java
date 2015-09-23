@@ -71,8 +71,7 @@ public class GlobalResetWorkflowAction extends ExplorerAction {
     public GlobalResetWorkflowAction(final ExplorerView viewer) {
         super(viewer, "Reset");
         setToolTipText("Resets the workflow");
-        setImageDescriptor(ImageRepository
-                .getImageDescriptor(SharedImages.Reset));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.Reset));
     }
 
     /**

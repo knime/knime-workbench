@@ -81,8 +81,7 @@ public class GlobalConfigureWorkflowAction extends ExplorerAction {
      */
     public GlobalConfigureWorkflowAction(final ExplorerView viewer) {
         super(viewer, "Configure...");
-        setImageDescriptor(ImageRepository
-                .getImageDescriptor(SharedImages.ConfigureNode));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.ConfigureNode));
     }
 
     /**

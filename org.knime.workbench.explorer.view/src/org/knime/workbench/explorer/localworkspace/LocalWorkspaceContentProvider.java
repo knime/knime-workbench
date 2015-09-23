@@ -322,14 +322,14 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     @Override
     public Image getImage(final Object element) {
         if (!(element instanceof LocalWorkspaceFileStore)) {
-            return ImageRepository.getImage(SharedImages.WorkflowUnknownRed);
+            return ImageRepository.getIconImage(SharedImages.WorkflowUnknownRed);
         }
         LocalExplorerFileStore e = (LocalExplorerFileStore)element;
         Image img = getWorkspaceImage(e);
         if (img != null) {
             return img;
         } else {
-            return ImageRepository.getImage(SharedImages.WorkflowUnknownRed);
+            return ImageRepository.getIconImage(SharedImages.WorkflowUnknownRed);
         }
     }
 
@@ -370,7 +370,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public Image getImage() {
-        return ImageRepository.getImage(SharedImages.LocalSpaceIcon);
+        return ImageRepository.getIconImage(SharedImages.LocalSpaceIcon);
     }
 
     /**

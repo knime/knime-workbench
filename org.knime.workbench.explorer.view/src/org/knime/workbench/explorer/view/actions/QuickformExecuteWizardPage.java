@@ -213,7 +213,7 @@ public class QuickformExecuteWizardPage extends WizardPage {
             comp.setLayout(new GridLayout(1, false));
             CLabel l = new CLabel(comp, SWT.CENTER);
             l.setText("No more QuickForm configurations.");
-            l.setImage(ImageRepository.getImage(SharedImages.Info));
+            l.setImage(ImageRepository.getIconImage(SharedImages.Info));
             setControl(comp);
         } else {
             JPanel buffer = new JPanel();

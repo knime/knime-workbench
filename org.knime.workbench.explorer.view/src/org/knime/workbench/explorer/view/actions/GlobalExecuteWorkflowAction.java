@@ -77,8 +77,7 @@ public class GlobalExecuteWorkflowAction extends ExplorerAction {
      */
     public GlobalExecuteWorkflowAction(final ExplorerView viewer) {
         super(viewer, "Execute...");
-        setImageDescriptor(ImageRepository
-                .getImageDescriptor(SharedImages.Execute));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.Execute));
     }
 
     /**

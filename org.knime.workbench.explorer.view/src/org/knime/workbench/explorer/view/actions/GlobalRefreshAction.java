@@ -71,7 +71,7 @@ public class GlobalRefreshAction extends ExplorerAction {
      */
     public GlobalRefreshAction(final ExplorerView viewer) {
         super(viewer, "Refresh");
-        setImageDescriptor(ImageRepository.getImageDescriptor(SharedImages.Refresh));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.Refresh));
         setToolTipText(TOOLTIP);
     }
 

@@ -1121,23 +1121,23 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public static Image getWorkspaceImage(final AbstractExplorerFileStore efs) {
 
         if (AbstractExplorerFileStore.isNode(efs)) {
-            return ImageRepository.getImage(SharedImages.Node);
+            return ImageRepository.getIconImage(SharedImages.Node);
         }
         if (AbstractExplorerFileStore.isMetaNode(efs)) {
-            return ImageRepository.getImage(SharedImages.Node);
+            return ImageRepository.getIconImage(SharedImages.Node);
         }
         if (AbstractExplorerFileStore.isWorkflowGroup(efs)) {
-            return ImageRepository.getImage(SharedImages.WorkflowGroup);
+            return ImageRepository.getIconImage(SharedImages.WorkflowGroup);
         }
         if (AbstractExplorerFileStore.isWorkflowTemplate(efs)) {
-            return ImageRepository.getImage(SharedImages.MetaNodeTemplate);
+            return ImageRepository.getIconImage(SharedImages.MetaNodeTemplate);
         }
         if (AbstractExplorerFileStore.isDataFile(efs)) {
             Image img = ContextAwareNodeFactoryMapper.getImage(efs.getName());
             if (img != null) {
                 return img;
             }
-            return ImageRepository.getImage(SharedImages.File);
+            return ImageRepository.getIconImage(SharedImages.File);
         }
         if (!AbstractExplorerFileStore.isWorkflow(efs)) {
             return null;
@@ -1148,39 +1148,39 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         try {
             f = efs.toLocalFile(EFS.NONE, null);
         } catch (CoreException ce) {
-            return ImageRepository.getImage(SharedImages.WorkflowClosed);
+            return ImageRepository.getIconImage(SharedImages.WorkflowClosed);
         }
 
         if (f == null) {
-            return ImageRepository.getImage(SharedImages.WorkflowClosed);
+            return ImageRepository.getIconImage(SharedImages.WorkflowClosed);
         }
         URI wfURI = f.toURI();
         NodeContainer nc = ProjectWorkflowMap.getWorkflow(wfURI);
         if (nc == null) {
-            return ImageRepository.getImage(SharedImages.WorkflowClosed);
+            return ImageRepository.getIconImage(SharedImages.WorkflowClosed);
         }
         if (nc instanceof WorkflowManager) {
             if (nc.getID().hasSamePrefix(WorkflowManager.ROOT.getID())) {
                 // only show workflow directly off the root
                 if (nc.getNodeMessage().getMessageType()
                         .equals(NodeMessage.Type.ERROR)) {
-                    return ImageRepository.getImage(SharedImages.WorkflowError);
+                    return ImageRepository.getIconImage(SharedImages.WorkflowError);
                 }
                 NodeContainerState ncState = nc.getNodeContainerState();
                 if (ncState.isExecuted()) {
-                    return ImageRepository.getImage(SharedImages.WorkflowExecuted);
+                    return ImageRepository.getIconImage(SharedImages.WorkflowExecuted);
                 } else if (ncState.isExecutionInProgress()) {
-                    return ImageRepository.getImage(SharedImages.WorkflowExecuting);
+                    return ImageRepository.getIconImage(SharedImages.WorkflowExecuting);
                 } else if (ncState.isConfigured()) {
-                    return ImageRepository.getImage(SharedImages.WorkflowConfigured);
+                    return ImageRepository.getIconImage(SharedImages.WorkflowConfigured);
                 } else {
-                    return ImageRepository.getImage(SharedImages.WorkflowConfigured);
+                    return ImageRepository.getIconImage(SharedImages.WorkflowConfigured);
                 }
             } else {
-                return ImageRepository.getImage(SharedImages.Node);
+                return ImageRepository.getIconImage(SharedImages.Node);
             }
         } else {
-            return ImageRepository.getImage(SharedImages.WorkflowUnknown);
+            return ImageRepository.getIconImage(SharedImages.WorkflowUnknown);
         }
     }
 

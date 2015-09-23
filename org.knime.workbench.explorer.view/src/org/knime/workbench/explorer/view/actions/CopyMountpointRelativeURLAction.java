@@ -82,8 +82,7 @@ public class CopyMountpointRelativeURLAction extends ExplorerAction {
         super(viewer, "Mountpoint-relative URL");
         m_cb = cb;
         setToolTipText("Copy mountpoint-relative URL to clipboard");
-        setImageDescriptor(ImageRepository.getImageDescriptor(FrameworkUtil.getBundle(getClass()).getSymbolicName(),
-            "/icons/url.png"));
+        setImageDescriptor(ImageRepository.getIconDescriptor(FrameworkUtil.getBundle(getClass()).getSymbolicName(), "/icons/url.png"));
     }
 
     /**

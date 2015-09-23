@@ -192,7 +192,7 @@ public class DownloadAndOpenWorkflowAction extends Action {
     public DownloadAndOpenWorkflowAction(final IWorkbenchPage page, final List<RemoteExplorerFileStore> sources) {
         setDescription("Download and open");
         setToolTipText(getDescription());
-        setImageDescriptor(ImageRepository.getImageDescriptor(SharedImages.ServerDownload));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.ServerDownload));
         m_page = page;
         m_sources = new LinkedList<RemoteExplorerFileStore>(sources);
     }

@@ -7,6 +7,12 @@
                 <message_argument value="6.3.2"/>
             </message_arguments>
         </filter>
+        <filter id="923795461">
+            <message_arguments>
+                <message_argument value="7.1.0"/>
+                <message_argument value="7.1.0"/>
+            </message_arguments>
+        </filter>
         <filter id="924844039">
             <message_arguments>
                 <message_argument value="6.3.0"/>
@@ -23,6 +29,14 @@
             <message_arguments>
                 <message_argument value="6.3.2"/>
                 <message_argument value="6.3.0"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="META-INF/MANIFEST.MF" type="org.knime.workbench.explorer.view.IconFactory">
+        <filter id="305324134">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.IconFactory"/>
+                <message_argument value="org.knime.workbench.explorer.view_7.1.0"/>
             </message_arguments>
         </filter>
     </resource>

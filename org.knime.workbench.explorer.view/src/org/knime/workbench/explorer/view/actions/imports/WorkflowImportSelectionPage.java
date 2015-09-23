@@ -459,13 +459,13 @@ public class WorkflowImportSelectionPage extends WizardPage {
                     if (wf.isInvalid()) {
                         return IMG_WARN;
                     } else if (wf.isWorkflow()) {
-                        return ImageRepository.getImage(SharedImages.Workflow);
+                        return ImageRepository.getIconImage(SharedImages.Workflow);
                     } else if (wf.isWorkflowGroup()) {
-                        return ImageRepository.getImage(SharedImages.WorkflowGroup);
+                        return ImageRepository.getIconImage(SharedImages.WorkflowGroup);
                     } else if (wf.isTemplate()) {
-                        return ImageRepository.getImage(SharedImages.MetaNodeTemplate);
+                        return ImageRepository.getIconImage(SharedImages.MetaNodeTemplate);
                     } else if (wf.isFile()) {
-                        return ImageRepository.getImage(SharedImages.File);
+                        return ImageRepository.getIconImage(SharedImages.File);
                     }
                 }
                 return super.getImage(element);

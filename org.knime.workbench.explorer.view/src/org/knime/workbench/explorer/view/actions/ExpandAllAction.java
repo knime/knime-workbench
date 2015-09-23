@@ -60,8 +60,7 @@ public class ExpandAllAction extends ExplorerAction {
      */
     public ExpandAllAction(final ExplorerView viewer) {
         super(viewer, "Expand All");
-        setImageDescriptor(ImageRepository
-                .getImageDescriptor(SharedImages.ExpandAll));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.ExpandAll));
         setToolTipText(TOOLTIP);
     }
 

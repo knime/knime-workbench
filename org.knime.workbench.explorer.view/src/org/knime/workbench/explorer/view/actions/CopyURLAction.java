@@ -78,8 +78,7 @@ public class CopyURLAction extends ExplorerAction {
         super(viewer, "Absolute URL");
         m_cb = cb;
         setToolTipText("Copy absolute URL to clipboard");
-        setImageDescriptor(ImageRepository.getImageDescriptor(FrameworkUtil.getBundle(getClass()).getSymbolicName(),
-                "/icons/url.png"));
+        setImageDescriptor(ImageRepository.getIconDescriptor(FrameworkUtil.getBundle(getClass()).getSymbolicName(), "/icons/url.png"));
     }
 
     /**

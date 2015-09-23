@@ -90,7 +90,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         super(viewer, "Synchronize...");
         m_delegator = delegator;
         setToolTipText(TOOLTIP);
-        setImageDescriptor(ImageRepository.getImageDescriptor(SharedImages.Synch));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.Synch));
     }
 
     /**
@@ -129,7 +129,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
 
 
     private AbstractExplorerFileStore resolveViaPath(final IEditorPart rootEditor) {
-        WorkflowEditorAdapter adapter = (WorkflowEditorAdapter)rootEditor.getAdapter(WorkflowEditorAdapter.class);
+        WorkflowEditorAdapter adapter = rootEditor.getAdapter(WorkflowEditorAdapter.class);
         if (adapter == null) {
             return null;
         }
@@ -174,7 +174,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
     }
 
     private IEditorPart findRootEditor(final IEditorPart editor) {
-        WorkflowEditorAdapter wfAdapter = (WorkflowEditorAdapter)editor.getAdapter(WorkflowEditorAdapter.class);
+        WorkflowEditorAdapter wfAdapter = editor.getAdapter(WorkflowEditorAdapter.class);
         if (wfAdapter != null) {
             if (wfAdapter.getParentEditor() == null) {
                 return editor;

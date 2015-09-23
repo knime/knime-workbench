@@ -70,8 +70,7 @@ public class GlobalCancelWorkflowExecutionAction extends ExplorerAction {
     public GlobalCancelWorkflowExecutionAction(final ExplorerView viewer) {
         super(viewer, "Cancel execution");
         setToolTipText("Cancel the execution of the running workflow");
-        setImageDescriptor(ImageRepository
-                .getImageDescriptor(SharedImages.CancelExecution));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.CancelExecution));
     }
 
     /**

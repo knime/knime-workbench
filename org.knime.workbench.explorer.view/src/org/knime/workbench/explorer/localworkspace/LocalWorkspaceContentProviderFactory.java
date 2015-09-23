@@ -112,7 +112,7 @@ public class LocalWorkspaceContentProviderFactory extends
      */
     @Override
     public Image getImage() {
-        return ImageRepository.getImage(SharedImages.LocalSpaceIcon);
+        return ImageRepository.getIconImage(SharedImages.LocalSpaceIcon);
     }
 
     /**
