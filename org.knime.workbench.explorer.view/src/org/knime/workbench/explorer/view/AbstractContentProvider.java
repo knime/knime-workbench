@@ -828,7 +828,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         Shell shell = Display.getDefault().getActiveShell();
         String uniqueName = originalName;
         if (new FileStoreNameValidator().isValid(uniqueName) != null) {
-            InputDialog dialog = new InputDialog(shell, "Sub node rename",
+            InputDialog dialog = new InputDialog(shell, "Wrapped Node rename",
                     "The name \"" + uniqueName + "\" is not a valid "
                     + "template name.\n\nChoose a new name under which the "
                     + "template will be saved.", uniqueName,
