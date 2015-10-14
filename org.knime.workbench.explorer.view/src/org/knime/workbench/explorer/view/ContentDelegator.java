@@ -76,10 +76,10 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
- * calls to different content providers providing a view to different sources. <br />
+ * calls to different content providers providing a view to different sources. <br>
  * The objects returned by the different providers are wrapped into a
  * {@link ContentObject} (associating the creating provider with it) and the
- * wrapper is placed in the tree view. <br />
+ * wrapper is placed in the tree view. <br>
  * An instance of this should be set as input of the tree view.
  *
  * @author ohl, KNIME.com, Zurich, Switzerland

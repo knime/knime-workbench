@@ -51,7 +51,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 /**
  * Used as object in the treeview of the KNIME Explorer. Wraps the objects
  * provided by the different content providers. Stores the original object and a
- * reference to the creator/provider. <br />
+ * reference to the creator/provider. <br>
  * (The original approach with a hash map doesn't work because the original
  * objects may not implement equals. Actually the eclipse resources don't.)
  *
