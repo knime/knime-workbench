@@ -57,7 +57,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
  *
  * @author ohl, University of Konstanz
  */
-public final class ContentObject {
+public final class ContentObject implements IFileStoreProvider{
 
     private final AbstractExplorerFileStore m_obj;
 
@@ -150,5 +150,14 @@ public final class ContentObject {
             return null;
         }
         return new ContentObject(mp.getProvider(), file);
+    }
+
+    /**
+     * {@inheritDoc}
+     * @since 7.1
+     */
+    @Override
+    public AbstractExplorerFileStore getFileStore() {
+        return m_obj;
     }
 }
