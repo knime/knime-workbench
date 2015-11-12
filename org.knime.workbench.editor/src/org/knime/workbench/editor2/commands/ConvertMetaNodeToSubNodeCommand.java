@@ -50,21 +50,18 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.action.MetaNodeToSubNodeAction;
 
 /**
- *
+ * Command to wrap a meta node into a subnode/wrappednode.
  * @author M. Berthold
  */
 public class ConvertMetaNodeToSubNodeCommand extends AbstractKNIMECommand {
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(
-        ExpandMetaNodeCommand.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(ExpandMetaNodeCommand.class);
 
     private final NodeID m_id;
-//    private NodeID[] m_pastedNodes;
-//    private WorkflowAnnotation[] m_pastedAnnotations;
-//    private WorkflowPersistor m_undoCopyPersistor;
+    private MetaNodeToSubNodeAction m_metaNodeToSubNodeAction;
 
     /**
      * @param wfm the workflow manager holding the metanode
@@ -81,7 +78,7 @@ public class ConvertMetaNodeToSubNodeCommand extends AbstractKNIMECommand {
         if (!super.canExecute()) {
             return false;
         }
-        return true; // getHostWFM().canExpandMetaNode(m_id) == null;
+        return getHostWFM().canRemoveNode(m_id);
     }
 
     /**
@@ -90,14 +87,7 @@ public class ConvertMetaNodeToSubNodeCommand extends AbstractKNIMECommand {
     @Override
     public void execute() {
         try {
-            WorkflowManager hostWFM = getHostWFM();
-            WorkflowCopyContent cnt = new WorkflowCopyContent();
-            cnt.setNodeIDs(m_id);
-            cnt.setIncludeInOutConnections(true);
-//            m_undoCopyPersistor = hostWFM.copy(true, cnt);
-            hostWFM.convertMetaNodeToSubNode(m_id);
-//            m_pastedNodes = wcc.getNodeIDs();
-//            m_pastedAnnotations = wcc.getAnnotations();
+            m_metaNodeToSubNodeAction = getHostWFM().convertMetaNodeToSubNode(m_id);
         } catch (Exception e) {
             String error = "Converting Metanode failed: " + e.getMessage();
             LOGGER.error(error, e);
@@ -105,39 +95,17 @@ public class ConvertMetaNodeToSubNodeCommand extends AbstractKNIMECommand {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
     public boolean canUndo() {
-//        if (m_undoCopyPersistor != null) {
-//            WorkflowManager hostWFM = getHostWFM();
-//            for (NodeID id : m_pastedNodes) {
-//                if (!hostWFM.canRemoveNode(id)) {
-//                    return false;
-//                }
-//            }
-//            return true;
-//        }
-        return false;
+        return m_metaNodeToSubNodeAction != null && m_metaNodeToSubNodeAction.canUndo();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override
     public void undo() {
-        WorkflowManager hostWFM = getHostWFM();
-//        for (NodeID id : m_pastedNodes) {
-//            hostWFM.removeNode(id);
-//        }
-//        for (WorkflowAnnotation anno : m_pastedAnnotations) {
-//            hostWFM.removeAnnotation(anno);
-//        }
-//        hostWFM.paste(m_undoCopyPersistor);
-//        m_pastedNodes = null;
-//        m_pastedAnnotations = null;
-//        m_undoCopyPersistor = null;
+        m_metaNodeToSubNodeAction.undo();
+        m_metaNodeToSubNodeAction = null;
     }
 
 }
