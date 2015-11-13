@@ -154,7 +154,7 @@ public final class ContentObject implements IFileStoreProvider{
 
     /**
      * {@inheritDoc}
-     * @since 7.1
+     * @since 7.2
      */
     @Override
     public AbstractExplorerFileStore getFileStore() {

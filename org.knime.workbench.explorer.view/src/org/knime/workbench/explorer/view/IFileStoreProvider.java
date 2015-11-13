@@ -55,11 +55,9 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
  * other plugins that contribute to their menu can access the underlying filestore and handle it.
  *
  * @author Ferry Abt
- * @since 7.1
+ * @since 7.2
  */
 public interface IFileStoreProvider {
-
-
     /**
      * @return the fileStore
      */
