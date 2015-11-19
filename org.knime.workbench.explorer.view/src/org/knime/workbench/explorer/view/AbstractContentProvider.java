@@ -65,6 +65,7 @@ import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.util.LocalSelectionTransfer;
+import org.eclipse.jface.viewers.IColorProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.LabelProviderChangedEvent;
@@ -74,6 +75,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -116,7 +118,7 @@ import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
  * @author ohl, University of Konstanz
  */
 public abstract class AbstractContentProvider extends LabelProvider implements
-        ITreeContentProvider, Comparable<AbstractContentProvider> {
+        ITreeContentProvider, Comparable<AbstractContentProvider>, IColorProvider {
 
     /**
      * Enumeration for the different link types for metanode templates.
@@ -1319,6 +1321,24 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             mb.open();
         }
         return msg;
+    }
+
+    /**
+     * {@inheritDoc}
+     * @since 7.2
+     */
+    @Override
+    public Color getForeground(final Object element) {
+        return Display.getDefault().getSystemColor(SWT.COLOR_LIST_FOREGROUND);
+    }
+
+    /**
+     * {@inheritDoc}
+     * @since 7.2
+     */
+    @Override
+    public Color getBackground(final Object element) {
+        return Display.getDefault().getSystemColor(SWT.COLOR_LIST_BACKGROUND);
     }
 
     /**

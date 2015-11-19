@@ -55,13 +55,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
+import org.eclipse.jface.viewers.IColorProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
-import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.LabelProviderChangedEvent;
 import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
@@ -84,9 +87,8 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  *
  * @author ohl, KNIME.com, Zurich, Switzerland
  */
-public class ContentDelegator extends LabelProvider implements
-        IStructuredContentProvider, ITreeContentProvider,
-        IPropertyChangeListener, ILabelProviderListener {
+public class ContentDelegator extends LabelProvider
+    implements ITreeContentProvider, IColorProvider, IPropertyChangeListener, ILabelProviderListener {
     /**
      * The property for changes in the content IPropertyChangeListener can
      * register for.
@@ -666,6 +668,38 @@ public class ContentDelegator extends LabelProvider implements
     private void notifyListeners(final PropertyChangeEvent event) {
         for (IPropertyChangeListener listener : m_changeListener) {
             listener.propertyChange(event);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * @since 7.2
+     */
+    @Override
+    public Color getForeground(final Object element) {
+        if (element instanceof AbstractContentProvider) {
+            return ((AbstractContentProvider)element).getForeground(element);
+        } else if (element instanceof ContentObject) {
+            ContentObject co = (ContentObject) element;
+            return co.getProvider().getForeground(co.getObject());
+        } else {
+            return Display.getDefault().getSystemColor(SWT.COLOR_LIST_FOREGROUND);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     * @since 7.2
+     */
+    @Override
+    public Color getBackground(final Object element) {
+        if (element instanceof AbstractContentProvider) {
+            return ((AbstractContentProvider)element).getBackground(element);
+        } else if (element instanceof ContentObject) {
+            ContentObject co = (ContentObject) element;
+            return co.getProvider().getBackground(co.getObject());
+        } else {
+            return Display.getDefault().getSystemColor(SWT.COLOR_LIST_BACKGROUND);
         }
     }
 }
