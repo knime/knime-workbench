@@ -259,7 +259,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
 
     /**
      * Returns the local file corresponding to the file store. In contrast
-     * to {@link #toLocalFile()} implementors can not only return the local file
+     * to {@link #toLocalFile()} implementors cannot only return the local file
      * when implementing {@link LocalExplorerFileStore}, but also return
      * a temporary copy of remote files.<br/>
      * <b>Please note: The returned file should be treated read only! It can be
@@ -275,7 +275,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
 
     /**
      * Returns the local file corresponding to the file store. In contrast
-     * to {@link #toLocalFile()} implementors can not only return the local file
+     * to {@link #toLocalFile()} implementors cannot only return the local file
      * when implementing {@link LocalExplorerFileStore}, but also return
      * a temporary copy of remote files.<br/>
      * <b>Please note: The returned file should be treated read only! It can be

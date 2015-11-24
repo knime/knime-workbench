@@ -139,7 +139,7 @@ public class GlobalConfigureWorkflowAction extends ExplorerAction {
                                             Display.getDefault()
                                                     .getActiveShell(),
                                             "Workflow Not Configurable",
-                                            "This workflow can not be "
+                                            "This workflow cannot be "
                                                     + "configured: "
                                                     + nce.getMessage());
                         }
