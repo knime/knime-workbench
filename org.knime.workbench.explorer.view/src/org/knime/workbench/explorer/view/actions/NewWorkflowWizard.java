@@ -138,7 +138,11 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                 DragAndDropUtils.getProviderMap(selection);
             if (providerMap != null) {
                 AbstractExplorerFileStore firstSelectedItem = providerMap.values().iterator().next().get(0);
-                if (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote()) {
+                // use a different default selection if:
+                //   - the selected mount point isn't writable (e.g. missing teamspace license)
+                //   - a remote workflow is requested to be created (not supported)
+                if (!validMountPointList.contains(firstSelectedItem.getMountID())
+                        || (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote())) {
                     // can't create workflow on the selected item (it is remote)
                     if (ExplorerMountTable.getMountPoint(defaultLocalID) != null) {
                         m_initialSelection =
