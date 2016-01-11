@@ -441,7 +441,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                                             .canHostMetaNodeTemplates()) {
                                 throw new UnsupportedOperationException(
                                         "Cannot " + m_cmd
-                                        + " Meta Node template '"
+                                        + " metanode template '"
                                         + srcFS.getFullName() + "' to "
                                         + destFS.getMountID() + "."
                                         + ". Unsupported operation.");

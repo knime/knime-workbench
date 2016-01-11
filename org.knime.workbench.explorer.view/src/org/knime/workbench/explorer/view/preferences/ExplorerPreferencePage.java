@@ -90,7 +90,7 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
 
         m_linkTemplateEditor = new ComboFieldEditor(
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
-                "Link meta node when defining new template",
+                "Link metanode when defining new template",
                 new String[][] {
                         {"Always", MessageDialogWithToggle.ALWAYS},
                         {"Never", MessageDialogWithToggle.NEVER},

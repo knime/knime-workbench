@@ -467,7 +467,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         return isMetanodeRepositoryEnabled();
     }
 
-    /** Init lazy. Checks whether teamspace license is available (enable meta node sharing only if avail). */
+    /** Init lazy. Checks whether teamspace license is available (enable metanode sharing only if avail). */
     private static Boolean isMetanodeRepositoryEnabled;
 
     /** Lazy init and return of {@link #isMetanodeRepositoryEnabled}. */

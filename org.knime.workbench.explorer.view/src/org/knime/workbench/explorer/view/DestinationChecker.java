@@ -258,7 +258,7 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                     /* Workflow groups can only overwrite other workflow groups. */
                     && destInfo.isWorkflowGroup()) {
                 collectChildMappings(child, destChild, info);
-            } else { // workflows, meta node templates and files
+            } else { // workflows, metanode templates and files
                 if (child instanceof LocalWorkspaceFileStore && ".project".equals(child.getName())) {
                         // skip .project files
                         m_mappings.put(child, null);

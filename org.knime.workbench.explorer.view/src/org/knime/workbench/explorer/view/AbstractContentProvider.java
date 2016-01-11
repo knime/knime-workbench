@@ -370,7 +370,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * in its parent workflow manager. The user is queried if s/he wants to link back to the tamples and what kind
      * of link it should be.
      *
-     * @param metaNode the meta node
+     * @param metaNode the metanode
      * @param target the target for the template
      * @return <code>true</code> if the operation was successful, <code>false</code> otherwise
      */
@@ -515,7 +515,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /**
      * Creates a URI from the metaNode to the template location. Honors the link type. If the template location is
      * in a different mount point, only absolute paths are allowed (LinkType.Absolute).
-     * @param metaNode the meta node for whome the link is created
+     * @param metaNode the metanode for whome the link is created
      * @param templateLocation the template to link the metanode to
      * @param linkType the type of link
      * @return the URI pointing to the template - honoring the passed type
@@ -689,7 +689,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         final Collection<LinkType> allowedLinkTypes) {
 
         Shell activeShell = Display.getDefault().getActiveShell();
-        String msg = "Update meta node to link to the template?";
+        String msg = "Update metanode to link to the template?";
         if (!oldName.equals(newName)) {
             msg = msg + "\n(The node will be renamed to \"" + newName + "\".)";
         }
@@ -723,7 +723,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
          * @param allowedLinkTypes a collection of allowed linked types
          */
         LinkPrompt(final Shell parentShell, final String message, final Collection<LinkType> allowedLinkTypes) {
-            super(parentShell, "Link Meta Node Template", null, message, MessageDialog.QUESTION_WITH_CANCEL,
+            super(parentShell, "Link Metanode Template", null, message, MessageDialog.QUESTION_WITH_CANCEL,
                 new String[]{IDialogConstants.OK_LABEL, IDialogConstants.CANCEL_LABEL}, 0);
             setShellStyle(getShellStyle() | SWT.SHEET);
             m_allowedLinkTypes = allowedLinkTypes;
@@ -769,7 +769,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             m_mountpointRelativeLink = new Button(group, SWT.RADIO);
             m_mountpointRelativeLink.setLayoutData(data);
             m_mountpointRelativeLink.setText("Create mountpoint-relative link");
-            m_mountpointRelativeLink.setToolTipText("If you move the workflow to a new workspace - the meta node "
+            m_mountpointRelativeLink.setToolTipText("If you move the workflow to a new workspace - the metanode "
                 + "template must be available on this new workspace as well");
             m_mountpointRelativeLink.addSelectionListener(new SelectionAdapter() {
                 @Override
@@ -782,7 +782,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             m_workflowRelativeLink = new Button(group, SWT.RADIO);
             m_workflowRelativeLink.setLayoutData(data);
             m_workflowRelativeLink.setText("Create workflow-relative link");
-            m_workflowRelativeLink.setToolTipText("Workflow and meta node should always be moved together");
+            m_workflowRelativeLink.setToolTipText("Workflow and metanode should always be moved together");
             m_workflowRelativeLink.addSelectionListener(new SelectionAdapter() {
                 @Override
                 public void widgetSelected(final SelectionEvent e) {
@@ -793,8 +793,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
             m_noLink = new Button(group, SWT.RADIO);
             m_noLink.setLayoutData(data);
-            m_noLink.setText("Don't link MetaNode with saved template");
-            m_noLink.setToolTipText("You will not be able to update the meta node from the template.");
+            m_noLink.setText("Don't link metanode with saved template");
+            m_noLink.setToolTipText("You will not be able to update the metanode from the template.");
             m_noLink.addSelectionListener(new SelectionAdapter() {
                 @Override
                 public void widgetSelected(final SelectionEvent e) {
@@ -830,7 +830,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         Shell shell = Display.getDefault().getActiveShell();
         String uniqueName = originalName;
         if (new FileStoreNameValidator().isValid(uniqueName) != null) {
-            InputDialog dialog = new InputDialog(shell, "Wrapped Node rename",
+            InputDialog dialog = new InputDialog(shell, "Wrapped metanode rename",
                     "The name \"" + uniqueName + "\" is not a valid "
                     + "template name.\n\nChoose a new name under which the "
                     + "template will be saved.", uniqueName,
@@ -952,7 +952,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     /**
-     * @return whether this content provider is able to host meta node templates,
+     * @return whether this content provider is able to host metanode templates,
      *         this is true for KNIME Server or KNIME TeamSpace but false for the LOCAL
      *         space (or the the read-only EXAMPLES KNIME Server)
      */
@@ -1039,7 +1039,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public static AbstractExplorerFileStore[] getWorkflowTemplateChildren(
             final AbstractExplorerFileStore template) {
-        // meta nodes have not children (as long as we don't show their nodes)
+        // metanodes have not children (as long as we don't show their nodes)
         return NO_CHILD;
     }
 
@@ -1114,7 +1114,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /* ------------ helper methods for label provider (icons) ------------- */
     /**
      * Returns an icon/image for the passed file, if it is something like a
-     * workflow, group, node or meta node. If it is not a store representing one
+     * workflow, group, node or metanode. If it is not a store representing one
      * of these, null is returned.
      *
      * @param efs the explorer file store

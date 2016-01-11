@@ -94,9 +94,9 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
     public abstract boolean isNode();
 
     /**
-     * Checks whether a file represents a KNIME meta node.
+     * Checks whether a file represents a KNIME metanode.
      *
-     * @return true if the file is a KNIME meta node, false otherwise
+     * @return true if the file is a KNIME metanode, false otherwise
      */
     public abstract boolean isMetaNode();
 

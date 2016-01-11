@@ -90,7 +90,7 @@ public class ExplorerPreferenceInitializer extends
             prefStore.setDefault(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML,
                     MountSettings.getSettingsString(settingsList));
         }
-        // Set the default behavior of "Do you want to link this meta node".
+        // Set the default behavior of "Do you want to link this metanode".
         prefStore.setDefault(
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
                 MessageDialogWithToggle.PROMPT);

@@ -202,7 +202,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     protected void cleanupDestination(final IFileStore destination,
             final int options, final IProgressMonitor monitor)
             throws CoreException {
-        /* Delete workflows and meta node templates if they exist at the
+        /* Delete workflows and metanode templates if they exist at the
          * destination. Otherwise we may end up with somehow merged workflows
          * containing obsolete node folders, reports etc. */
         if (destination instanceof AbstractExplorerFileStore) {
@@ -389,10 +389,10 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     }
 
     /**
-     * Checks whether a file represents a meta node.
+     * Checks whether a file represents a metanode.
      *
-     * @param file the file to check if it represents a meta node
-     * @return true if the file is a meta node, false otherwise
+     * @param file the file to check if it represents a metanode
+     * @return true if the file is a metanode, false otherwise
      */
     public static boolean isMetaNode(final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().exists()) {
