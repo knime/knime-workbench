@@ -226,7 +226,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                 FileUtil.copyDir(dir, dest);
             } else {
                 File metaFile = new File(fileElement.getFile(), WorkflowPersistor.METAINFO_FILE);
-                if (metaFile.exists()) {
+                if (metaFile.exists() && (metaFile.length() > 0)) {
                     FileUtil.copy(metaFile, new File(dest, WorkflowPersistor.METAINFO_FILE));
                 }
             }
@@ -350,7 +350,8 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             assert f.fetchInfo().exists();
             File parent = f.toLocalFile();
             if (parent != null) {
-                if (!new File(parent, WorkflowPersistor.METAINFO_FILE).exists()) {
+                File metaInfoFile = new File(parent, WorkflowPersistor.METAINFO_FILE);
+                if (!metaInfoFile.exists() || (metaInfoFile.length() == 0)) {
                     // don't overwrite (use io.File for the test, AEFS hides the meta info file!)
                     MetaInfoFile.createMetaInfoFile(parent, false);
                 }
