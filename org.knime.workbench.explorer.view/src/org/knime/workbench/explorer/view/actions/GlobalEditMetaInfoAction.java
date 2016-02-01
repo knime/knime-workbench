@@ -55,6 +55,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -101,7 +102,8 @@ public class GlobalEditMetaInfoAction extends ExplorerAction {
         AbstractExplorerFileStore metaInfo =
                 srcFileStore.getChild(WorkflowPersistor.METAINFO_FILE);
         try {
-            if (!metaInfo.fetchInfo().exists()) {
+            AbstractExplorerFileInfo fetchInfo = metaInfo.fetchInfo();
+            if (!fetchInfo.exists() || (fetchInfo.getLength() == 0)) {
                 // create a new meta info file if it does not exist
                 MetaInfoFile.createMetaInfoFile(
                         srcFileStore.toLocalFile(EFS.NONE, null),
