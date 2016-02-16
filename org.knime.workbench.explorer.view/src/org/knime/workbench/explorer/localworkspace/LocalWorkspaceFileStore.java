@@ -53,10 +53,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Objects;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.filesystem.provider.FileStore;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
@@ -106,6 +108,18 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     @Override
     public boolean equals(final Object obj) {
         if (!(obj instanceof LocalWorkspaceFileStore)) {
+            // Fix for Bug AP-5451 (switch from report -> workflow)
+            // If it is the same file but a different class it is still equal.
+            // this "equals" isn't symmetric but that's OK as equals is called
+            // on the right object
+            if (obj instanceof FileStore) {
+                try {
+                    File thisfile = this.toLocalFile();
+                    File thatfile = ((FileStore)obj).toLocalFile(0, null);
+                    return Objects.equals(thisfile, thatfile);
+                } catch (CoreException e) {
+                }
+            }
             return false;
         }
         LocalExplorerFileStore other = (LocalExplorerFileStore)obj;
