@@ -168,6 +168,7 @@ public class ContentDelegator extends LabelProvider
      */
     @Override
     public void dispose() {
+        ExplorerMountTable.updateProviderSettings();
         removeAllMountPoints();
         ExplorerMountTable.removePropertyChangeListener(this);
         super.dispose();

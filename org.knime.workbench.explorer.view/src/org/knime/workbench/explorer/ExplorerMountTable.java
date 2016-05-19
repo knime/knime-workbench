@@ -761,4 +761,27 @@ public final class ExplorerMountTable {
         }
     }
 
+    /**
+     * Updates the settings of all providers in the preferences. Some providers may get additional attributes once they
+     * are used (e.g. the REST address for server mount points) which should be persisted.
+     * @since 7.3
+     */
+    public static void updateProviderSettings() {
+        List<MountSettings> newSettings = new ArrayList<>();
+
+        Map<String, AbstractContentProvider> mountedContent = getMountedContent();
+        for (MountSettings ms : getMountSettings()) {
+            if (mountedContent.containsKey(ms.getMountID())) {
+                newSettings.add(new MountSettings(mountedContent.get(ms.getMountID())));
+            } else {
+                newSettings.add(ms);
+            }
+        }
+
+        IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
+        if (!newSettings.isEmpty()) {
+            prefStore.setValue(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML,
+                MountSettings.getSettingsString(newSettings));
+        }
+    }
 }
