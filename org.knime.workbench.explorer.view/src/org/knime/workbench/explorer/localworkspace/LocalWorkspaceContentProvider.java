@@ -673,22 +673,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * {@inheritDoc}
      */
     @Override
-    public void connect() {
-        // nothing to do
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void disconnect() {
-        // nothing to do
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public boolean isWritable() {
         return true;
     }

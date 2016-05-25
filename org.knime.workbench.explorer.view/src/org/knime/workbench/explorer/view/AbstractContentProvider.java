@@ -1207,14 +1207,18 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      *
      * @since 7.3
      */
-    public abstract void connect();
+    public void connect() {
+        // do nothing by default
+    }
 
     /**
      * Disconnects the content provider. This can for example trigger a logout.
      *
      * @since 7.3
      */
-    public abstract void disconnect();
+    public void disconnect() {
+        // do nothing by default
+    }
 
 
     /**
