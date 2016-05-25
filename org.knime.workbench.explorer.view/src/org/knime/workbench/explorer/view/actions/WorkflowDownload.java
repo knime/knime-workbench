@@ -48,15 +48,10 @@ package org.knime.workbench.explorer.view.actions;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
-import java.util.zip.ZipFile;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
@@ -65,8 +60,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.Status;
-import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
-import org.eclipse.ui.internal.wizards.datatransfer.ZipLeveledStructureProvider;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
@@ -78,27 +71,17 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProvider.AfterRunCallback;
 import org.knime.workbench.explorer.view.ExplorerJob;
-import org.knime.workbench.explorer.view.actions.imports.IWorkflowImportElement;
-import org.knime.workbench.explorer.view.actions.imports.WorkflowImportElementFromArchive;
-import org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation;
-import org.knime.workbench.ui.navigator.ZipLeveledStructProvider;
 
 /**
  *
  * @author ohl, KNIME.com, Zurich, Switzerland
  * @since 7.0
  */
-public class WorkflowDownload {
+public class WorkflowDownload extends TempExtractArchive {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowDownload.class);
 
-    private final IProgressMonitor m_monitor;
-
-    private final LocalExplorerFileStore m_targetDir;
     private final RemoteExplorerFileStore m_source;
-    private final boolean m_deleteSource;
-    private final AfterRunCallback m_afterRunCallback;
-
 
     /**
      * Creates a action with the source and parent directory.
@@ -106,8 +89,9 @@ public class WorkflowDownload {
      * @param source the source file store containing the workflow
      * @param target the target directory to download the workflow to
      * @param deleteSource if true the source is deleted after a successful download
-     * @param afterRunCallback see {@link AbstractContentProvider#performDownloadAsync(RemoteExplorerFileStore,
-     * LocalExplorerFileStore, boolean, AfterRunCallback)} - may be null.
+     * @param afterRunCallback see
+     *            {@link AbstractContentProvider#performDownloadAsync(RemoteExplorerFileStore, LocalExplorerFileStore, boolean, AfterRunCallback)}
+     *            - may be null.
      */
     public WorkflowDownload(final RemoteExplorerFileStore source,
             final LocalExplorerFileStore target, final boolean deleteSource, final AfterRunCallback afterRunCallback) {
@@ -125,47 +109,10 @@ public class WorkflowDownload {
      * @param monitor the progress monitor to use
      */
     public WorkflowDownload(final RemoteExplorerFileStore source, final LocalExplorerFileStore target,
-            final boolean deleteSource, final AfterRunCallback afterRunCallback, final IProgressMonitor monitor) {
+        final boolean deleteSource, final AfterRunCallback afterRunCallback, final IProgressMonitor monitor) {
+        super(null, target, deleteSource, afterRunCallback, monitor);
         m_source = source;
-        m_targetDir = target;
-        m_deleteSource = deleteSource;
-        m_afterRunCallback = afterRunCallback;
-        m_monitor = monitor;
     }
-
-    /**
-     * @return the directory to save the download to
-     */
-    protected LocalExplorerFileStore getTargetDir() {
-        return m_targetDir;
-    }
-
-    /**
-     * @return a string identifying the download target
-     */
-    protected String getTargetIdentifier() {
-        return m_targetDir.getMountIDWithFullPath();
-    }
-
-    /**
-     * Perform preparations on the target. Nothing is done
-     * in the base implementation.
-     */
-    protected void prepareTarget() {
-        // do nothing
-    }
-
-    /**
-     *
-     */
-    protected void refreshTarget() {
-        final LocalExplorerFileStore targetDir = getTargetDir();
-        LocalExplorerFileStore parent = targetDir.getParent();
-        if (parent != null) {
-            parent.refresh();
-        }
-    }
-
 
     /**
      * @return the file store to download
@@ -208,130 +155,19 @@ public class WorkflowDownload {
         if (info.isFile()) {
             FileUtils.copyFile(downloadedFile, getTargetDir().toLocalFile());
         } else if (info.isWorkflow() || info.isWorkflowTemplate() || info.isWorkflowGroup()) {
-            unpackWorkflowIntoLocalDir(getTargetDir().getParent(), downloadedFile);
+            setSourceArchiveFile(downloadedFile);
+            unpackWorkflowIntoLocalDir();
         } else {
             throw new IllegalArgumentException("Downloaded item '" + getSourceFile().getMountIDWithFullPath() + "'"
                     + " is neither a file nor a workflow or template.");
         }
     }
 
-    private void unpackWorkflowIntoLocalDir(
-            final LocalExplorerFileStore destWorkflowDir,
-            final File zippedWorkflow) throws Exception {
-
-        ZipFile zFile = new ZipFile(zippedWorkflow);
-        ZipLeveledStructProvider importStructureProvider =
-                new ZipLeveledStructProvider(zFile);
-        importStructureProvider.setStrip(1);
-
-        ZipEntry rootEntry = (ZipEntry)importStructureProvider.getRoot();
-        List<ZipEntry> rootChild =
-                importStructureProvider.getChildren(rootEntry);
-        if (rootChild.size() == 1) {
-            // the zipped workflow normally contains only one dir
-            rootEntry = rootChild.get(0);
-        }
-        WorkflowImportElementFromArchive root =
-                collectWorkflowsFromZipFile(zippedWorkflow);
-        IWorkflowImportElement element = null;
-        if (root.getChildren().size() == 1) {
-            element = root.getChildren().iterator().next();
-        } else {
-            element = root;
-        }
-        // rename the import element
-        element.setName(getTargetDir().getName());
-        LOGGER.debug("Unpacking workflow \"" + element.getName()
-                + "\" into destination: "
-            + destWorkflowDir.getMountIDWithFullPath());
-        final WorkflowImportOperation importOp = new WorkflowImportOperation(element, destWorkflowDir);
-
-        try {
-            importOp.run(m_monitor);
-        } finally {
-            importStructureProvider.closeArchive();
-        }
-    }
-
-    private WorkflowImportElementFromArchive collectWorkflowsFromZipFile(
-            final File zipFile) throws ZipException, IOException {
-        ILeveledImportStructureProvider provider = null;
-        ZipFile sourceFile = new ZipFile(zipFile);
-        provider = new ZipLeveledStructureProvider(sourceFile);
-        // TODO: store only the workflows (dirs are created automatically)
-        Object child = provider.getRoot();
-        WorkflowImportElementFromArchive root =
-                new WorkflowImportElementFromArchive(provider, child,
-                        0);
-        collectWorkflowsFromProvider(root);
-        return root;
-    }
-
     /**
-     *
-     * @param parent the archive element to collect the workflows from
-     * @param monitor progress monitor
+     * @since 7.3
      */
-    private void collectWorkflowsFromProvider(
-            final WorkflowImportElementFromArchive parent) {
-        ILeveledImportStructureProvider provider = parent.getProvider();
-        Object entry = parent.getEntry();
-        if (parent.isWorkflow() || parent.isTemplate()) {
-            // abort recursion
-            return;
-        }
-        List children = provider.getChildren(entry);
-        if (children == null) {
-            return;
-        }
-        Iterator childrenEnum = children.iterator();
-        while (childrenEnum.hasNext()) {
-            Object child = childrenEnum.next();
-            if (provider.isFolder(child)) {
-                WorkflowImportElementFromArchive childElement =
-                        new WorkflowImportElementFromArchive(provider, child,
-                                parent.getLevel() + 1);
-                collectWorkflowsFromProvider(childElement);
-                // either it's a workflow
-                if (childElement.isWorkflow()
-                // or it is a workflow group
-                        || childElement.isWorkflowGroup()
-                        // or it is a workflow template
-                        || childElement.isTemplate()) {
-                    /* because only workflows, templates and workflow groups are
-                     * added */
-                    parent.addChild(childElement);
-                }
-            }
-        }
-    }
-
-    /**
-     * @param monitor the monitor to report progress
-     * @throws CoreException if the download does not complete without warnings
-     */
-    public final void runSync(final IProgressMonitor monitor) throws CoreException {
-        try {
-            runSyncInternal(monitor);
-            AfterRunCallback.callCallbackInDisplayThread(m_afterRunCallback, null);
-        } catch (final Exception e) {
-            AfterRunCallback.callCallbackInDisplayThread(m_afterRunCallback, e);
-            if (e instanceof CoreException) {
-                throw (CoreException)e;
-            } else if (e instanceof RuntimeException) {
-                throw (RuntimeException)e;
-            } else {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-
-    /**
-     * @param monitor the monitor to report progress
-     * @throws CoreException if the download does not complete without warnings
-     */
-    private final void runSyncInternal(final IProgressMonitor monitor) throws CoreException {
+    @Override
+    protected void runSyncInternal(final IProgressMonitor monitor) throws CoreException {
         String srcIdentifier = getSourceFile().getMountIDWithFullPath();
         if (!isSourceSupported()) {
             throw new IllegalArgumentException("Type of download source '"
@@ -386,7 +222,7 @@ public class WorkflowDownload {
         if (status != null) {
             throw new CoreException(status);
         }
-        if (success && m_deleteSource) {
+        if (success && getDeleteSource()) {
             m_source.delete(EFS.NONE, monitor);
         }
     }

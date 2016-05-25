@@ -96,13 +96,13 @@ import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvi
 import org.eclipse.ui.internal.wizards.datatransfer.TarFile;
 import org.eclipse.ui.internal.wizards.datatransfer.TarLeveledStructureProvider;
 import org.eclipse.ui.internal.wizards.datatransfer.ZipLeveledStructureProvider;
+import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.KnimeFileUtil;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -122,11 +122,13 @@ public class WorkflowImportSelectionPage extends WizardPage {
     /** Identifier for this page within a wizard. */
     public static final String NAME = "Workflow import selection";
 
-    private static final Image IMG_WARN = KNIMEUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-        "icons/warning.gif").createImage();
+    private static final Image IMG_WARN =
+        KNIMEUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID, "icons/warning.gif").createImage();
 
     // constant from WizardArchiveFileResourceImportPage1
-    private static final String[] ZIP_FILE_MASK = {"*.jar;*.zip;*.tar;*.tar.gz;*.tgz", "*.*"}; //$NON-NLS-1$
+    private static final String[] ZIP_FILE_MASK =
+        {"*." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION + ";" + "*." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION
+            + ";" + "*.zip;" + "*.jar;" + "*.tar;" + "*.tar.gz;" + "*.tgz", "*.*"}; //$NON-NLS-7$
 
     // keys and fields for dialog settings
     private static final String KEY_ZIP_LOC = "initialZipLocation";
@@ -139,10 +141,12 @@ public class WorkflowImportSelectionPage extends WizardPage {
 
     private static String initialDirLocation = "";
 
-    private static boolean initialFromDir = true;
+    private static boolean initialFromDir = false;
 
     // the initial destination should not be static
     private AbstractExplorerFileStore m_initialDestination;
+
+    private String m_initialSelectedFile;
 
     private static final GridData FILL_BOTH = new GridData(GridData.FILL_BOTH);
 
@@ -274,6 +278,50 @@ public class WorkflowImportSelectionPage extends WizardPage {
         overall.setLayoutData(fillHorizontal);
 
         overall.setLayout(new GridLayout(3, false));
+        m_fromZipUI = new Button(overall, SWT.RADIO);
+        if (initialZipLocation != null && !initialZipLocation.isEmpty()) {
+            m_fromZipUI.setText("File:");
+        } else {
+            m_fromZipUI.setText("Select file:");
+        }
+        m_fromZipUI.addSelectionListener(new SelectionListener() {
+            @Override
+            public void widgetDefaultSelected(final SelectionEvent e) {
+                widgetSelected(e);
+            }
+
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                boolean fromZip = m_fromZipUI.getSelection();
+                initialFromDir = !fromZip;
+                enableDirComponents(!fromZip);
+                enableZipComponents(fromZip);
+                clear();
+                // restore imports from previously selected file
+                if (m_fromZipTextUI.getText() != null && !m_fromZipTextUI.getText().trim().isEmpty()) {
+                    collectWorkflowsFromZipFile(m_fromZipTextUI.getText().trim());
+                    validateWorkflows();
+                }
+            }
+        });
+
+        m_fromZipTextUI = new Text(overall, SWT.BORDER | SWT.READ_ONLY);
+        m_fromZipTextUI.setLayoutData(fillHorizontal);
+        m_zipBrowseBtn = new Button(overall, SWT.PUSH);
+        m_zipBrowseBtn.setText("Browse...");
+        m_zipBrowseBtn.setLayoutData(m_btnData);
+        m_zipBrowseBtn.addSelectionListener(new SelectionListener() {
+            @Override
+            public void widgetDefaultSelected(final SelectionEvent e) {
+                widgetSelected(e);
+            }
+
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                handleZipBrowseButtonPressed();
+            }
+        });
+
         m_fromDirUI = new Button(overall, SWT.RADIO);
         m_fromDirUI.setText("Select root directory:");
         m_fromDirUI.addSelectionListener(new SelectionListener() {
@@ -311,46 +359,6 @@ public class WorkflowImportSelectionPage extends WizardPage {
             @Override
             public void widgetSelected(final SelectionEvent e) {
                 handleDirBrowseButtonPressed();
-            }
-        });
-
-        m_fromZipUI = new Button(overall, SWT.RADIO);
-        m_fromZipUI.setText("Select archive file:");
-        m_fromZipUI.addSelectionListener(new SelectionListener() {
-            @Override
-            public void widgetDefaultSelected(final SelectionEvent e) {
-                widgetSelected(e);
-            }
-
-            @Override
-            public void widgetSelected(final SelectionEvent e) {
-                boolean fromZip = m_fromZipUI.getSelection();
-                initialFromDir = !fromZip;
-                enableDirComponents(!fromZip);
-                enableZipComponents(fromZip);
-                clear();
-                // restore imports from previously selected file
-                if (m_fromZipTextUI.getText() != null && !m_fromZipTextUI.getText().trim().isEmpty()) {
-                    collectWorkflowsFromZipFile(m_fromZipTextUI.getText().trim());
-                    validateWorkflows();
-                }
-            }
-
-        });
-        m_fromZipTextUI = new Text(overall, SWT.BORDER | SWT.READ_ONLY);
-        m_fromZipTextUI.setLayoutData(fillHorizontal);
-        m_zipBrowseBtn = new Button(overall, SWT.PUSH);
-        m_zipBrowseBtn.setText("Browse...");
-        m_zipBrowseBtn.setLayoutData(m_btnData);
-        m_zipBrowseBtn.addSelectionListener(new SelectionListener() {
-            @Override
-            public void widgetDefaultSelected(final SelectionEvent e) {
-                widgetSelected(e);
-            }
-
-            @Override
-            public void widgetSelected(final SelectionEvent e) {
-                handleZipBrowseButtonPressed();
             }
         });
 
@@ -530,6 +538,10 @@ public class WorkflowImportSelectionPage extends WizardPage {
                 }
             }
         });
+
+        if (initialZipLocation != null && !initialZipLocation.isEmpty()) {
+            handleSelectedZipFileChange(initialZipLocation);
+        }
         return parent;
     }
 
@@ -622,6 +634,23 @@ public class WorkflowImportSelectionPage extends WizardPage {
             initialZipLocation = filterPath;
         }
         String selectedFile = dialog.open();
+        handleSelectedZipFileChange(selectedFile);
+    }
+
+    /**
+     * Sets a predefined file and updates the workflow selection view
+     *
+     * @param selectedFile the file to be selected
+     * @since 7.3
+     */
+    public void setSelectedZipFile(final String selectedFile) {
+        //m_zipBrowseBtn.setEnabled(false);
+        //handleSelectedZipFileChange(selectedFile);
+        initialZipLocation = selectedFile;
+        initialFromDir = false;
+    }
+
+    private void handleSelectedZipFileChange(final String selectedFile) {
         // null if dialog was canceled/error occurred
         if (selectedFile != null) {
             clear();
@@ -664,18 +693,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
     private void handleWorkflowGroupBrowseButtonPressed() {
         // get mounted local destinations to select from
         List<String> mountIDs = ExplorerMountTable.getAllVisibleMountIDs();
-        Iterator<String> it = mountIDs.iterator();
-        while (it.hasNext()) {
-            String m = it.next();
-            MountPoint mp = ExplorerMountTable.getMountPoint(m);
-            if (mp.getProvider().isRemote()) {
-                // can't import to remote locations
-                it.remove();
-            }
-        }
-        SpaceResourceSelectionDialog dlg =
-            new SpaceResourceSelectionDialog(getShell(), mountIDs.toArray(new String[0]),
-                ContentObject.forFile(m_target));
+        SpaceResourceSelectionDialog dlg = new SpaceResourceSelectionDialog(getShell(), mountIDs.toArray(new String[0]),
+            ContentObject.forFile(m_target));
         dlg.setTitle("Import Destination");
         dlg.setHeader("Select the import destination");
         dlg.setDescription("Please select the directory to store the new workflows in");
@@ -813,8 +832,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
             try {
                 getContainer().run(true, true, new IRunnableWithProgress() {
                     @Override
-                    public void run(final IProgressMonitor monitor) throws InvocationTargetException,
-                        InterruptedException {
+                    public void run(final IProgressMonitor monitor)
+                        throws InvocationTargetException, InterruptedException {
                         Object child = finalProvider.getRoot();
                         m_importRoot = new WorkflowImportElementFromArchive(finalProvider, child, 0);
                         monitor.beginTask("Scanning for workflows in ", IProgressMonitor.UNKNOWN);

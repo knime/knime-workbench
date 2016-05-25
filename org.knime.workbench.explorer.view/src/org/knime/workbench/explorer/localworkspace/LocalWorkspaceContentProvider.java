@@ -77,6 +77,7 @@ import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
+import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
@@ -90,6 +91,7 @@ import org.knime.workbench.explorer.view.actions.AbstractCopyMoveAction;
 import org.knime.workbench.explorer.view.actions.GlobalCopyAction;
 import org.knime.workbench.explorer.view.actions.GlobalMoveAction;
 import org.knime.workbench.explorer.view.actions.WorkflowDownload;
+import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.wiring.BundleWiring;
@@ -557,11 +559,15 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     File src = new File(path);
                     if (src.exists()
                             && !targetDir.equals(src.getParentFile())) {
-                        File dir = new File(targetDir, src.getName());
-                        FileUtils.copyFile(src, dir);
-                        LOGGER.debug("Copied directory "
-                                + src.getAbsolutePath() + " to directory "
+                        if (path.endsWith("." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION)
+                            || path.endsWith("." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION)) {
+                            new WorkflowImportAction(view, target, path).run();
+                        } else {
+                            File dir = new File(targetDir, src.getName());
+                            FileUtils.copyFile(src, dir);
+                            LOGGER.debug("Copied directory " + src.getAbsolutePath() + " to directory "
                                 + dir.getAbsolutePath() + ".");
+                        }
                     }
                 }
                 return true;
@@ -661,6 +667,22 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     @Override
     public boolean isRemote() {
         return false;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void connect() {
+        // nothing to do
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void disconnect() {
+        // nothing to do
     }
 
     /**

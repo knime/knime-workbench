@@ -74,8 +74,16 @@ final class WorkflowImportHelper {
 
     static AbstractExplorerFileStore openImportWizard(final Shell parentShell,
         final AbstractExplorerFileStore initialFile) {
+        return openImportWizard(parentShell, initialFile, null);
+    }
+
+    static AbstractExplorerFileStore openImportWizard(final Shell parentShell,
+        final AbstractExplorerFileStore initialFile, final String selectedFile) {
         WorkflowImportWizard impWiz = new WorkflowImportWizard();
         impWiz.setInitialDestination(initialFile);
+        if (selectedFile != null && !selectedFile.isEmpty()) {
+            impWiz.setSelectedZipFile(selectedFile);
+        }
 
         WizardDialog dialog = new WizardDialog(parentShell, impWiz);
         if (Window.CANCEL != dialog.open()) {

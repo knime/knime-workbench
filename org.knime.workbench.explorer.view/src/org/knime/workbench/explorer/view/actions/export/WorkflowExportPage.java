@@ -74,6 +74,7 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
+import org.knime.core.node.KNIMEConstants;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -90,7 +91,8 @@ import org.knime.workbench.explorer.view.ContentObject;
  */
 public class WorkflowExportPage extends WizardPage {
 
-    private static final String[] FILTER_EXTENSION = {"*.zip"};
+    private static final String[] FILTER_EXTENSION =
+        {"*." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION + ";*." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION};
 
     private Text m_containerText;
 
@@ -172,7 +174,11 @@ public class WorkflowExportPage extends WizardPage {
         });
 
         label = new Label(exportGroup, SWT.NULL);
-        label.setText("Destination archive file name (zip):");
+        if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
+            label.setText("Destination workflow file name (." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION + "):");
+        } else {
+            label.setText("Destination archive file name (." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION + "):");
+        }
 
         m_fileText = new Text(exportGroup, SWT.BORDER | SWT.SINGLE);
         gd = new GridData(GridData.FILL_HORIZONTAL);
@@ -290,9 +296,14 @@ public class WorkflowExportPage extends WizardPage {
 
     private void updateFileName(final AbstractExplorerFileStore sel) {
         if (sel != null) {
-            String fileName = sel.getName() + ".zip";
+            String fileName = sel.getName() + ".";
+            if (AbstractExplorerFileStore.isWorkflow(sel)) {
+                fileName += KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION;
+            } else {
+                fileName += KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION;
+            }
             if (sel.getFullName().equals("/")) {
-                fileName = "knime-export.zip";
+                fileName = "knime-export." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION;
             }
             File f = null;
             if (lastSelectedTargetLocation != null) {
@@ -408,8 +419,14 @@ public class WorkflowExportPage extends WizardPage {
         if (filePath.isEmpty()) {
             return;
         }
-        if (!filePath.toLowerCase().endsWith(".zip")) {
-            filePath += ".zip";
+        if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
+            if (!filePath.toLowerCase().endsWith("." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION)) {
+                filePath += "." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION;
+            }
+        } else {
+            if (!filePath.toLowerCase().endsWith("." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION)) {
+                filePath += "." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION;
+            }
         }
         m_fileText.setText(filePath);
         setLastSelectedExportLocation();

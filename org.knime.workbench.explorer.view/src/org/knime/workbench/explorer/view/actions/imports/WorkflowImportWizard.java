@@ -87,6 +87,8 @@ public class WorkflowImportWizard extends Wizard {
 
     private AbstractExplorerFileStore m_target;
 
+    private String m_selectedFile;
+
     /**
      *
      */
@@ -128,7 +130,7 @@ public class WorkflowImportWizard extends Wizard {
             return;
         } else {
             AbstractContentProvider prov = destination.getContentProvider();
-            if (!prov.isRemote() && prov.isWritable()) {
+            if (prov.isWritable()) {
                 m_initialDestination = destination;
                 while (!AbstractExplorerFileStore.isWorkflowGroup(m_initialDestination)) {
                     AbstractExplorerFileStore f = m_initialDestination;
@@ -149,13 +151,16 @@ public class WorkflowImportWizard extends Wizard {
      */
     @Override
     public void addPages() {
-            super.addPages();
-            m_importPage = new WorkflowImportSelectionPage();
-            m_importPage.restoreDialogSettings();
-            m_importPage.setInitialTarget(m_initialDestination);
-            addPage(m_importPage);
-            // the next page is returned by the import page
-            setForcePreviousAndNextButtons(true);
+        super.addPages();
+        m_importPage = new WorkflowImportSelectionPage();
+        m_importPage.restoreDialogSettings();
+        m_importPage.setInitialTarget(m_initialDestination);
+        if (m_selectedFile != null && !m_selectedFile.isEmpty()) {
+            m_importPage.setSelectedZipFile(m_selectedFile);
+        }
+        addPage(m_importPage);
+        // the next page is returned by the import page
+        setForcePreviousAndNextButtons(true);
     }
 
     /**
@@ -274,6 +279,14 @@ public class WorkflowImportWizard extends Wizard {
      */
     AbstractExplorerFileStore getDestinationContainer() {
         return m_target;
+    }
+
+    /**
+     * @param selectedFile the file selected in the import wizard
+     * @since 7.3
+     */
+    public void setSelectedZipFile(final String selectedFile) {
+        m_selectedFile = selectedFile;
     }
 
 }

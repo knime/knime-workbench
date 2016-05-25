@@ -65,13 +65,39 @@ public class WorkflowImportAction extends ExplorerAction {
     /** id of the action. */
     public static final String ID = "org.knime.explorer.view.actions.import";
 
+    private AbstractExplorerFileStore m_destination;
+
+    private String m_selectedFile;
+
     /**
      * @param view underlying view
      */
     public WorkflowImportAction(final ExplorerView view) {
+        this(view, null, null);
+    }
+
+    /**
+     * @param view underlying view
+     * @param destination destination in workflow tree
+     * @since 7.3
+     */
+    public WorkflowImportAction(final ExplorerView view, final AbstractExplorerFileStore destination) {
+        this(view, destination, null);
+    }
+
+    /**
+     * @param view underlying view
+     * @param destination destination in workflow tree
+     * @param selectedFile selected file to import from
+     * @since 7.3
+     */
+    public WorkflowImportAction(final ExplorerView view, final AbstractExplorerFileStore destination,
+        final String selectedFile) {
         super(view, WorkflowImportHelper.MENU_TEXT);
         setImageDescriptor(WorkflowImportHelper.ICON);
         setToolTipText(WorkflowImportHelper.TOOLTIP);
+        m_destination = destination;
+        m_selectedFile = selectedFile;
     }
 
     /**
@@ -95,13 +121,15 @@ public class WorkflowImportAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selectedFiles = getSelectedFiles();
-        AbstractExplorerFileStore sel = null;
-        if (selectedFiles != null && selectedFiles.size() > 0) {
-            sel = selectedFiles.values().iterator().next().iterator().next();
+        if (m_destination == null) {
+            Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selectedFiles = getSelectedFiles();
+            if (selectedFiles != null && selectedFiles.size() > 0) {
+                m_destination = selectedFiles.values().iterator().next().iterator().next();
+            }
         }
 
-        AbstractExplorerFileStore destination = WorkflowImportHelper.openImportWizard(getParentShell(), sel);
+        AbstractExplorerFileStore destination =
+            WorkflowImportHelper.openImportWizard(getParentShell(), m_destination, m_selectedFile);
         if (destination != null) {
             Object object = ContentDelegator.getTreeObjectFor(destination);
             getViewer().refresh(object);

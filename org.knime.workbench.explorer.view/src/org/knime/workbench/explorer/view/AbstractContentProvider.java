@@ -1202,6 +1202,20 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public abstract boolean isRemote();
 
+    /**
+     * Connects to the content provider. This can for example trigger a login.
+     *
+     * @since 7.3
+     */
+    public abstract void connect();
+
+    /**
+     * Disconnects the content provider. This can for example trigger a logout.
+     *
+     * @since 7.3
+     */
+    public abstract void disconnect();
+
 
     /**
      * Checks whether it is possible to add items to the content provider or

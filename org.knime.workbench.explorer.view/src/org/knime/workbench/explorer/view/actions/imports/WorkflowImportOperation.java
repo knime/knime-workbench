@@ -64,6 +64,7 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.actions.WorkspaceModifyOperation;
@@ -71,7 +72,10 @@ import org.eclipse.ui.internal.wizards.datatransfer.ArchiveFileManipulations;
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.FileUtil;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
@@ -243,15 +247,42 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      * @param destination target
      * @param monitor monitor
      * @throws IOException if things go bad or user cancels
+     * @throws CoreException if there is no tmpSpace but user tries to import to server
      */
     protected void importWorkflowFromArchive(final WorkflowImportElementFromArchive zipElement,
-        final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException {
+        final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException, CoreException {
 
         if (zipElement.isWorkflow() || zipElement.isTemplate() || zipElement.isFile()) {
-            importZipEntry(zipElement.getProvider(), (ZipEntry)zipElement.getEntry(), destination, monitor);
+            AbstractExplorerFileStore tmpDestDir;
+            if (destination instanceof RemoteExplorerFileStore) {
+                tmpDestDir = ExplorerMountTable.createExplorerTempDir(zipElement.getRenamedPath().toString());
+                tmpDestDir = tmpDestDir.getChild(zipElement.getRenamedPath().toString());
+                SubMonitor progress = SubMonitor.convert(monitor, 1);
+                tmpDestDir.mkdir(EFS.NONE, progress);
+            } else {
+                tmpDestDir = destination;
+            }
+            importZipEntry(zipElement.getProvider(), (ZipEntry)zipElement.getEntry(), tmpDestDir, monitor);
+            if (destination instanceof RemoteExplorerFileStore) {
+                destination.getContentProvider().performUploadAsync((LocalExplorerFileStore)tmpDestDir,
+                    (RemoteExplorerFileStore)destination, true, null);
+            }
         } else if (zipElement.isWorkflowGroup()) {
             if (m_recursive) {
-                importZipEntry(zipElement.getProvider(), (ZipEntry)zipElement.getEntry(), destination, monitor);
+                AbstractExplorerFileStore tmpDestDir;
+                if (destination instanceof RemoteExplorerFileStore) {
+                    tmpDestDir = ExplorerMountTable.createExplorerTempDir(zipElement.getRenamedPath().toString());
+                    tmpDestDir = tmpDestDir.getChild(zipElement.getRenamedPath().toString());
+                    SubMonitor progress = SubMonitor.convert(monitor, 1);
+                    tmpDestDir.mkdir(EFS.NONE, progress);
+                } else {
+                    tmpDestDir = destination;
+                }
+                importZipEntry(zipElement.getProvider(), (ZipEntry)zipElement.getEntry(), tmpDestDir, monitor);
+                if (destination instanceof RemoteExplorerFileStore) {
+                    destination.getContentProvider().performUploadAsync((LocalExplorerFileStore)tmpDestDir,
+                        (RemoteExplorerFileStore)destination, true, null);
+                }
             } else {
                 try {
                     destination.mkdir(EFS.SHALLOW, monitor);
