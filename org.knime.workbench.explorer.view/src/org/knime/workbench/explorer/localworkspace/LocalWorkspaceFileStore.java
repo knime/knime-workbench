@@ -52,10 +52,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Objects;
 
-import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileStore;
@@ -70,6 +70,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.util.PathUtils;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -358,20 +359,18 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     @Override
     public void delete(final int options, final IProgressMonitor monitor)
             throws CoreException {
-        File srcFile = toLocalFile(options, monitor);
+        java.nio.file.Path srcFile = toLocalFile(options, monitor).toPath();
         try {
-            if (srcFile.isDirectory()) {
-                FileUtils.deleteDirectory(srcFile);
-            } else if (srcFile.isFile()) {
-                srcFile.delete();
+            if (Files.isDirectory(srcFile)) {
+                PathUtils.deleteDirectoryIfExists(srcFile);
+            } else if (Files.isRegularFile(srcFile)) {
+                Files.delete(srcFile);
             }
         } catch (IOException e) {
-            String message =
-                    "Could not delete \"" + srcFile.getAbsolutePath() + "\".";
-            throw new CoreException(new Status(IStatus.ERROR,
-                    ExplorerActivator.PLUGIN_ID, message, e));
+            String message = "Could not delete \"" + srcFile.toAbsolutePath() + "\".";
+            throw new CoreException(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID, message, e));
         }
-        IResource res = KnimeResourceUtil.getResourceForURI(srcFile.toURI());
+        IResource res = KnimeResourceUtil.getResourceForURI(srcFile.toUri());
         if (res != null) {
             res.delete(IResource.FORCE
                     | IResource.ALWAYS_DELETE_PROJECT_CONTENT
