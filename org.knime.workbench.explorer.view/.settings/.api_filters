@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<component id="org.knime.workbench.explorer.view" version="2">
+    <resource path="src/org/knime/workbench/explorer/view/actions/imports/WorkflowImportOperation.java" type="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation"/>
+                <message_argument value="importZipEntry(ILeveledImportStructureProvider, ZipEntry, AbstractExplorerFileStore, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+</component>

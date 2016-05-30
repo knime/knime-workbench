@@ -47,16 +47,15 @@
  */
 package org.knime.workbench.explorer.view.actions.imports;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.zip.ZipEntry;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -79,10 +78,9 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
- * Imports workflows from a zip file or directory into the workspace.
+ * Imports workflows from an archive (Zip, tar.gz) file or directory into the workspace.
  */
 public class WorkflowImportOperation extends WorkspaceModifyOperation {
-
     private static final int BUFFSIZE = 1024 * 2048;
 
     private final Collection<IWorkflowImportElement> m_workflows;
@@ -95,13 +93,13 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
     // stores those directories which not yet contain a metainfo file and
     // hence are not displayed - meta info file has to be created after the
-    // import -> occurs when importing zip files containing directories
+    // import -> occurs when importing archive files containing directories
     private final List<AbstractExplorerFileStore> m_missingMetaInfoLocations =
         new ArrayList<AbstractExplorerFileStore>();
 
     /**
      * Imports the elements specified in the passed collection.
-     * @param workflows the import elements (file or zip entries) to import
+     * @param workflows the import elements (file or archive entries) to import
      * @param targetPath the destination path within the workspace
      * @param shell the shell
      */
@@ -180,11 +178,11 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             importWorkflowFromFile(importFile, destination, new SubProgressMonitor(monitor, 1));
 
         } else if (importElement instanceof WorkflowImportElementFromArchive) {
-            WorkflowImportElementFromArchive zip = (WorkflowImportElementFromArchive)importElement;
-            provider = zip.getProvider();
+            WorkflowImportElementFromArchive archive = (WorkflowImportElementFromArchive)importElement;
+            provider = archive.getProvider();
 
-            // create workflow from ZIP archive
-            importWorkflowFromArchive(zip, destination, new SubProgressMonitor(monitor, 1));
+            // create workflow from archive
+            importWorkflowFromArchive(archive, destination, new SubProgressMonitor(monitor, 1));
 
         } else {
             monitor.worked(1);
@@ -243,42 +241,42 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
     /**
      * Extracts the import elements (recursively) from the corresponding provider and stores them in the destination.
      *
-     * @param zipElement the element to extract (and its children)
+     * @param archiveElement the element to extract (and its children)
      * @param destination target
      * @param monitor monitor
      * @throws IOException if things go bad or user cancels
      * @throws CoreException if there is no tmpSpace but user tries to import to server
      */
-    protected void importWorkflowFromArchive(final WorkflowImportElementFromArchive zipElement,
+    protected void importWorkflowFromArchive(final WorkflowImportElementFromArchive archiveElement,
         final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException, CoreException {
 
-        if (zipElement.isWorkflow() || zipElement.isTemplate() || zipElement.isFile()) {
+        if (archiveElement.isWorkflow() || archiveElement.isTemplate() || archiveElement.isFile()) {
             AbstractExplorerFileStore tmpDestDir;
             if (destination instanceof RemoteExplorerFileStore) {
-                tmpDestDir = ExplorerMountTable.createExplorerTempDir(zipElement.getRenamedPath().toString());
-                tmpDestDir = tmpDestDir.getChild(zipElement.getRenamedPath().toString());
+                tmpDestDir = ExplorerMountTable.createExplorerTempDir(archiveElement.getRenamedPath().toString());
+                tmpDestDir = tmpDestDir.getChild(archiveElement.getRenamedPath().toString());
                 SubMonitor progress = SubMonitor.convert(monitor, 1);
                 tmpDestDir.mkdir(EFS.NONE, progress);
             } else {
                 tmpDestDir = destination;
             }
-            importZipEntry(zipElement.getProvider(), (ZipEntry)zipElement.getEntry(), tmpDestDir, monitor);
+            importArchiveEntry(archiveElement.getProvider(), archiveElement.getEntry(), tmpDestDir, monitor);
             if (destination instanceof RemoteExplorerFileStore) {
                 destination.getContentProvider().performUploadAsync((LocalExplorerFileStore)tmpDestDir,
                     (RemoteExplorerFileStore)destination, true, null);
             }
-        } else if (zipElement.isWorkflowGroup()) {
+        } else if (archiveElement.isWorkflowGroup()) {
             if (m_recursive) {
                 AbstractExplorerFileStore tmpDestDir;
                 if (destination instanceof RemoteExplorerFileStore) {
-                    tmpDestDir = ExplorerMountTable.createExplorerTempDir(zipElement.getRenamedPath().toString());
-                    tmpDestDir = tmpDestDir.getChild(zipElement.getRenamedPath().toString());
+                    tmpDestDir = ExplorerMountTable.createExplorerTempDir(archiveElement.getRenamedPath().toString());
+                    tmpDestDir = tmpDestDir.getChild(archiveElement.getRenamedPath().toString());
                     SubMonitor progress = SubMonitor.convert(monitor, 1);
                     tmpDestDir.mkdir(EFS.NONE, progress);
                 } else {
                     tmpDestDir = destination;
                 }
-                importZipEntry(zipElement.getProvider(), (ZipEntry)zipElement.getEntry(), tmpDestDir, monitor);
+                importArchiveEntry(archiveElement.getProvider(), archiveElement.getEntry(), tmpDestDir, monitor);
                 if (destination instanceof RemoteExplorerFileStore) {
                     destination.getContentProvider().performUploadAsync((LocalExplorerFileStore)tmpDestDir,
                         (RemoteExplorerFileStore)destination, true, null);
@@ -290,7 +288,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                     throw new IOException(e.getMessage(), e);
                 }
                 // copy the metainfo file in a group - if it exists
-                if (!importMetaInfoFile(zipElement, destination, monitor)) {
+                if (!importMetaInfoFile(archiveElement, destination, monitor)) {
                     m_missingMetaInfoLocations.add(destination);
                 }
             }
@@ -309,7 +307,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             if ((ch instanceof WorkflowImportElementFromArchive) && ch.isFile()
                     && ch.getName().equals(WorkflowPersistor.METAINFO_FILE)) {
                 WorkflowImportElementFromArchive child = (WorkflowImportElementFromArchive)ch;
-                importZipEntry(child.getProvider(), (ZipEntry)child.getEntry(),
+                importArchiveEntry(child.getProvider(), child.getEntry(),
                     destinationDir.getChild(WorkflowPersistor.METAINFO_FILE), monitor);
                 return true;
             }
@@ -319,21 +317,14 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
     /**
      * Import the entire subtree.
-     *
-     * @see #importZipEntry(ILeveledImportStructureProvider, ZipEntry, AbstractExplorerFileStore, IProgressMonitor)
-     * @param zipProvider
-     * @param entry
-     * @param destination
-     * @param monitor
-     * @throws IOException
      */
-    protected void importZipEntry(final ILeveledImportStructureProvider zipProvider, final ZipEntry entry,
+    private void importArchiveEntry(final ILeveledImportStructureProvider importProvider, final Object entry,
         final AbstractExplorerFileStore destination, final IProgressMonitor monitor)
         throws IOException {
 
         //assert !destination.fetchInfo().exists();
 
-        if (zipProvider.isFolder(entry)) {
+        if (importProvider.isFolder(entry)) {
             // first create the destination
             try {
                 destination.mkdir(EFS.SHALLOW, monitor);
@@ -342,22 +333,14 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             }
 
             // import all sub elements
-            for (Object c : zipProvider.getChildren(entry)) {
-                ZipEntry child = (ZipEntry)c;
-                AbstractExplorerFileStore childDest = destination.getChild(new Path(child.getName()).lastSegment());
-                importZipEntry(zipProvider, child, childDest, monitor);
+            for (Object child : importProvider.getChildren(entry)) {
+                String path = importProvider.getFullPath(child);
+                AbstractExplorerFileStore childDest = destination.getChild(new Path(path).lastSegment());
+                importArchiveEntry(importProvider, child, childDest, monitor);
             }
         } else {
-            // suck the file content in
-            BufferedOutputStream outStream = null;
-            try {
-                outStream = new BufferedOutputStream(destination.openOutputStream(EFS.NONE, monitor));
-            } catch (CoreException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-            BufferedInputStream inStream = null;
-            try {
-                inStream = new BufferedInputStream(zipProvider.getContents(entry));
+            try (InputStream inStream = importProvider.getContents(entry);
+                    OutputStream outStream = destination.openOutputStream(EFS.NONE, monitor)) {
                 byte[] buffer = new byte[BUFFSIZE];
                 int read;
                 while ((read = inStream.read(buffer)) >= 0) {
@@ -366,11 +349,8 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                     }
                     outStream.write(buffer, 0, read);
                 }
-            } finally {
-                if (inStream != null) {
-                    inStream.close();
-                }
-                outStream.close();
+            } catch (CoreException ex) {
+                throw new IOException(ex);
             }
         }
 
