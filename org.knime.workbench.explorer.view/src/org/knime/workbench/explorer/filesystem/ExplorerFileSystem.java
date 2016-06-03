@@ -50,12 +50,19 @@ package org.knime.workbench.explorer.filesystem;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.eclipse.core.filesystem.provider.FileSystem;
 import org.eclipse.core.runtime.Path;
+import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeContext;
+import org.knime.core.node.workflow.WorkflowContext;
+import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.ExplorerURLStreamHandler;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 
@@ -110,6 +117,19 @@ public class ExplorerFileSystem extends FileSystem {
         if (mountPoint == null) {
             return null;
         }
+        if (ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equals(uri.getHost())) {
+            Optional<String> relPath = getRelativePathFromContext();
+            if (relPath.isPresent()) {
+                String combinedPath = relPath.get() + uri.getPath();
+                try {
+                    URI newUri = new URI(uri.getScheme(), mountID, combinedPath, null).normalize();
+                    return mountPoint.getProvider().getFileStore(newUri);
+                } catch (URISyntaxException ex) {
+                    NodeLogger.getLogger(getClass())
+                        .error("Could not create absolute URI from relative URI '" + uri + "': " + ex.getMessage(), ex);
+                }
+            }
+        }
         return mountPoint.getProvider().getFileStore(uri);
     }
 
@@ -117,17 +137,56 @@ public class ExplorerFileSystem extends FileSystem {
      * The ID of the mount point (referred by in the URIs). As specified
      * (upper/lower cases) by the user.
      *
-     *@param uri of scheme &quot;knime&quot; to extract mount ID from
+     * @param uri of scheme &quot;knime&quot; to extract mount ID from
      * @return the mount ID specified in the URI (must be with protocol/scheme &quot;knime&quot;)
      * @since 6.0
      */
     public static String getIDfromURI(final URI uri) {
-        if (SCHEME.equalsIgnoreCase(uri.getScheme())) {
-            return uri.getHost();
+        if (!SCHEME.equalsIgnoreCase(uri.getScheme())) {
+            throw new IllegalArgumentException("Invalid scheme in URI ('"
+                    + uri.getScheme() + "'). Only '" + SCHEME
+                    + "' is allowed here.");
         }
-        throw new IllegalArgumentException("Invalid scheme in URI ('"
-                + uri.getScheme() + "'). Only '" + SCHEME
-                + "' is allowed here.");
+        if (ExplorerURLStreamHandler.MOUNTPOINT_RELATIVE.equals(uri.getHost())
+            || ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equals(uri.getHost())
+            || ExplorerURLStreamHandler.NODE_RELATIVE.equals(uri.getHost())) {
+            return getMountpointIdFromContext().orElse(uri.getHost());
+        }
+        return uri.getHost();
+    }
+
+
+    private static Optional<String> getRelativePathFromContext() {
+        NodeContext ctx = NodeContext.getContext();
+        if (ctx == null) {
+            return Optional.empty();
+        }
+        WorkflowManager wfm = ctx.getWorkflowManager();
+        if (wfm == null) {
+            return Optional.empty();
+        }
+        WorkflowContext wfc = wfm.getContext();
+        if (wfc == null) {
+            return Optional.empty();
+        }
+        return wfc.getMountpointURI().map(u -> u.getPath());
+    }
+
+
+    private static Optional<String> getMountpointIdFromContext() {
+        NodeContext ctx = NodeContext.getContext();
+        if (ctx == null) {
+            return Optional.empty();
+        }
+        WorkflowManager wfm = ctx.getWorkflowManager();
+        if (wfm == null) {
+            return Optional.empty();
+        }
+        WorkflowContext wfc = wfm.getContext();
+        if (wfc == null) {
+            return Optional.empty();
+        }
+        return wfc.getMountpointURI().map(u -> u.getHost());
     }
 
     /**
