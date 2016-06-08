@@ -113,6 +113,7 @@ import org.knime.core.node.workflow.NodePropertyChangedEvent;
 import org.knime.core.node.workflow.NodePropertyChangedListener;
 import org.knime.core.node.workflow.NodeStateChangeListener;
 import org.knime.core.node.workflow.NodeStateEvent;
+import org.knime.core.node.workflow.NodeTimer;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -436,6 +437,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             editorDescriptor = IDE.getEditorDescriptor(filestore.getName());
             PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()
                 .openEditor(new FileStoreEditorInput(filestore), editorDescriptor.getId());
+            NodeTimer.GLOBAL_TIMER.incWorkflowOpening();
             return true;
         } catch (PartInitException ex) {
             LOGGER.warn("Cannot open editor for " + filestore + ": " + ex.getMessage(), ex);

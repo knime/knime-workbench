@@ -61,6 +61,7 @@ import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeTimer;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
@@ -164,6 +165,7 @@ public class DownloadAndOpenWorkflowAction extends Action {
                         IEditorDescriptor editorDescriptor = IDE.getEditorDescriptor(editorInput.getName());
                         m_page.openEditor(new RemoteWorkflowInput(editorInput, m_source.toURI()),
                             editorDescriptor.getId());
+                        NodeTimer.GLOBAL_TIMER.incRemoteWorkflowOpening();
                     } catch (PartInitException ex) {
                         LOGGER.info("Cannot open editor for the downloaded content. "
                             + "It is not deleted and is still available: " + downloadAction.getTargetDir());
