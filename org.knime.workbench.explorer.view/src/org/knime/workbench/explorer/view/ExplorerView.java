@@ -47,16 +47,20 @@ package org.knime.workbench.explorer.view;
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.action.Action;
@@ -759,7 +763,13 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      */
     @Override
     public void saveState(final IMemento memento) {
-        m_contentDelegator.saveState(memento.createChild("content"));
+        final IMemento mementoContent = memento.createChild("content");
+        m_contentDelegator.saveState(mementoContent);
+        // save the mount ids that were expanded so that 1st level can be expanded when view opened again
+        String expandedMountPoints = Arrays.stream(m_viewer.getExpandedTreePaths()).map(p -> p.getFirstSegment())
+                .filter(o -> o instanceof AbstractContentProvider).map(o -> (AbstractContentProvider)o)
+                .map(fs -> fs.getMountID()).collect(Collectors.joining("|"));
+        mementoContent.putString("expandedElements", expandedMountPoints);
     }
 
     /**
@@ -770,11 +780,27 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             throws PartInitException {
         super.init(site, memento);
         IMemento content = null;
+        // the list of mount points that were expanded - we only expand first level and only local mount points (no server)
+        String[] expandedElements = null;
         if (memento != null) {
             // restore visible mount points
             content = memento.getChild("content");
+            if (content != null) {
+                expandedElements = StringUtils.split(content.getString("expandedElements"), '|');
+            }
         }
         m_contentDelegator.restoreState(content);
+        if (expandedElements != null && expandedElements.length > 0) {
+            final String[] finalVar = expandedElements;
+            Display.getCurrent().asyncExec(new Runnable() {
+                @Override
+                public void run() {
+                    Arrays.stream(finalVar).map(i -> ExplorerMountTable.getMountPoint(i))
+                    .filter(Objects::nonNull).map(mp -> mp.getProvider())
+                    .filter(mp -> !mp.isRemote()).forEach(s -> m_viewer.expandToLevel(s, 1));
+                }
+            });
+        }
     }
 
     /**
