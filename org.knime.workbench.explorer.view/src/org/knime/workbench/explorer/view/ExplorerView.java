@@ -790,7 +790,11 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             }
         }
         m_contentDelegator.restoreState(content);
-        if (expandedElements != null && expandedElements.length > 0) {
+        if (expandedElements == null) {
+            // expand LOCAL mount point if this is a new (or very old) workspace
+            expandedElements = new String[]{"LOCAL"};
+        }
+        if (expandedElements.length > 0) {
             final String[] finalVar = expandedElements;
             Display.getCurrent().asyncExec(new Runnable() {
                 @Override
