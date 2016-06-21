@@ -112,6 +112,8 @@ public class WorkflowExportPage extends WizardPage {
 
     private static String lastSelectedTargetLocation;
 
+    private Label m_fileLabel;
+
     /**
      * Constructor for NewWorkflowPage.
      *
@@ -173,11 +175,11 @@ public class WorkflowExportPage extends WizardPage {
             }
         });
 
-        label = new Label(exportGroup, SWT.NULL);
+        m_fileLabel = new Label(exportGroup, SWT.NULL);
         if (AbstractExplorerFileStore.isWorkflow(m_selection)) {
-            label.setText("Destination workflow file name (." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION + "):");
+            m_fileLabel.setText("Destination workflow file name (." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION + "):");
         } else {
-            label.setText("Destination archive file name (." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION + "):");
+            m_fileLabel.setText("Destination archive file name (." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION + "):");
         }
 
         m_fileText = new Text(exportGroup, SWT.BORDER | SWT.SINGLE);
@@ -299,8 +301,12 @@ public class WorkflowExportPage extends WizardPage {
             String fileName = sel.getName() + ".";
             if (AbstractExplorerFileStore.isWorkflow(sel)) {
                 fileName += KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION;
+                m_fileLabel
+                    .setText("Destination workflow file name (." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION + "):");
             } else {
                 fileName += KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION;
+                m_fileLabel
+                    .setText("Destination workflow file name (." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION + "):");
             }
             if (sel.getFullName().equals("/")) {
                 fileName = "knime-export." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION;
