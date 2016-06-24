@@ -255,8 +255,8 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
          * selection. */
         if (isChildOf(m_target,
                 new LinkedHashSet<AbstractExplorerFileStore>(srcFileStores))) {
-            String msg = "Cannot " + m_cmd + " the selected files into "
-            + m_target + " because it is a child of the selection.";
+            String msg = "Cannot " + m_cmd.toLowerCase() + " the selected files into "
+            + m_target.toString().replace("&", "&&") + " because it is a child of the selection.";
             MessageDialog.openError(Display.getDefault()
                     .getActiveShell(), m_cmd + " Workflow", msg);
             LOGGER.info(msg);
