@@ -139,24 +139,35 @@ public class OpenKnimeUrlAction extends Action {
                             view.setNextSelection(fileStore);
                             if (mountPoint.getProvider().isRemote()) {
                                 mountPoint.getProvider().connect();
-                                if (fileStore instanceof RemoteExplorerFileStore
-                                    && AbstractExplorerFileStore.isWorkflow(fileStore)) {
-                                    List<RemoteExplorerFileStore> downloadList =
-                                        new ArrayList<RemoteExplorerFileStore>(1);
-                                    downloadList.add((RemoteExplorerFileStore)fileStore);
-                                    DownloadAndOpenWorkflowAction action =
-                                        new DownloadAndOpenWorkflowAction(m_page, downloadList);
-                                    action.run();
-                                }
-                            } else {
-                                Object object = ContentDelegator.getTreeObjectFor(fileStore);
+                            }
+                            if (!fileStore.fetchInfo().exists()) {
+                                returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID,
+                                    "The item denoted by " + m_url + " does not exist."));
+                                return;
+                            }
+                            Object object = ContentDelegator.getTreeObjectFor(fileStore);
+                            if (object != null) {
                                 view.getViewer().reveal(object);
                                 view.getViewer().refresh(object);
                                 view.getViewer().setSelection(new StructuredSelection(object));
-                                if (AbstractExplorerFileStore.isWorkflow(fileStore)) {
+                            }
+                            if (AbstractExplorerFileStore.isWorkflow(fileStore)) {
+                                if (mountPoint.getProvider().isRemote()) {
+                                    if (fileStore instanceof RemoteExplorerFileStore) {
+                                        List<RemoteExplorerFileStore> downloadList =
+                                            new ArrayList<RemoteExplorerFileStore>(1);
+                                        downloadList.add((RemoteExplorerFileStore)fileStore);
+                                        DownloadAndOpenWorkflowAction action =
+                                            new DownloadAndOpenWorkflowAction(m_page, downloadList);
+                                        action.run();
+                                    } else {
+                                        //should not happen
+                                        returnStatus.set(new Status(IStatus.WARNING, PLUGIN_ID,
+                                            "FileStoreProvider is remote but FileStore is not a RemoteExplorerFileStore"));
+                                    }
+                                } else {
                                     URI urlToOpen = new URI(m_url + "/workflow.knime");
-                                    IDE.openEditor(m_page, urlToOpen, "org.knime.workbench.editor.WorkflowEditor",
-                                        true);
+                                    IDE.openEditor(m_page, urlToOpen, "org.knime.workbench.editor.WorkflowEditor", true);
                                 }
                             }
                         }
