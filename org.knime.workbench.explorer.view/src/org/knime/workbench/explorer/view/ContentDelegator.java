@@ -44,6 +44,11 @@
  */
 package org.knime.workbench.explorer.view;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -52,6 +57,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
@@ -68,6 +74,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.util.GUIDeadlockDetector;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
@@ -593,6 +600,9 @@ public class ContentDelegator extends LabelProvider
         }
     }
 
+    private static boolean hasLoggedBugSRV715;
+    private static final String LOG_MOUNT_REMOVE_SRV_715 = System.getProperty("knime.log.srv-715.path");
+
     /**
      * {@inheritDoc}
      */
@@ -607,6 +617,15 @@ public class ContentDelegator extends LabelProvider
                 if (removed) {
                     notifyListeners(new PropertyChangeEvent(mp,
                             CONTENT_CHANGED, mp.getMountID(), null));
+                    if (StringUtils.isNotBlank(LOG_MOUNT_REMOVE_SRV_715) && !hasLoggedBugSRV715) {
+                        hasLoggedBugSRV715 = true;
+                        LOGGER.infoWithFormat("Logging mount point preference change to '%s'", LOG_MOUNT_REMOVE_SRV_715);
+                        try (BufferedWriter s = Files.newBufferedWriter(Paths.get(LOG_MOUNT_REMOVE_SRV_715), StandardOpenOption.CREATE)) {
+                            s.write(GUIDeadlockDetector.createStacktrace());
+                        } catch (IOException e) {
+                            LOGGER.error("Couldn't log details for SRV-715", e);
+                        }
+                    }
                     LOGGER.debug("Removed mount point with id \""
                             + mp.getMountID()
                             + "\" from view because it was deleted in the "
