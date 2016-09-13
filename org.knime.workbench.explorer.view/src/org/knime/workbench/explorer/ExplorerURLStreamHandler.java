@@ -59,6 +59,7 @@ import java.net.URLDecoder;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.URIUtil;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowContext;
@@ -167,9 +168,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
 
             if (workflowContext.getRemoteRepositoryAddress().isPresent()) {
-                String path = workflowContext.getRemoteRepositoryAddress().get()
-                        + "/" + decodedPath + ":data";
-                return URI.create(path).normalize().toURL();
+                URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(), decodedPath + ":data");
+                return uri.normalize().toURL();
             } else {
                 // we shouldn't end up here
                 return origUrl;
@@ -181,10 +181,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
 
         if (workflowContext.getRemoteRepositoryAddress().isPresent()) {
-            String path = workflowContext.getRemoteRepositoryAddress().get()
-                    + "/" + workflowContext.getRelativeRemotePath().get()
-                    + "/" + decodedPath + ":data";
-            return URI.create(path).normalize().toURL();
+            URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(),
+                workflowContext.getRelativeRemotePath().get() + "/" + decodedPath + ":data");
+            return uri.normalize().toURL();
         } else {
             // in local application or an executor controlled by a pre-4.4 server
             File currentLocation = workflowContext.getCurrentLocation();
@@ -217,9 +216,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
 
         if (workflowContext.getRemoteRepositoryAddress().isPresent()) {
-            String path = workflowContext.getRemoteRepositoryAddress().get()
-                    + "/" + decodedPath + ":data";
-            return URI.create(path).normalize().toURL();
+            URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(), decodedPath + ":data");
+            return uri.normalize().toURL();
         } else {
             // in local application or an executor controlled by a pre-4.4 server
 
