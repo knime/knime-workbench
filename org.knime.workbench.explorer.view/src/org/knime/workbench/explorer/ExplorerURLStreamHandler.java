@@ -51,15 +51,19 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLDecoder;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
+import org.knime.core.internal.ReferencedFile;
+import org.knime.core.node.workflow.NodeContext;
+import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
-import org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl;
 import org.osgi.service.url.AbstractURLStreamHandlerService;
 
 /**
@@ -105,24 +109,151 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                 + " is supported by this handler.");
         }
 
-        try {
-            if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost())) {
-                File resolvedPath = URIToFileResolveImpl.resolveWorkflowRelativeUri(url.toURI());
-                // FIXME add permission check if run on the server
-                return resolvedPath.toURI().toURL().openConnection();
-            } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())) {
-                File resolvedPath = URIToFileResolveImpl.resolveMountpointRelativeUri(url.toURI());
-                // FIXME add permission check if run on the server
-                return resolvedPath.toURI().toURL().openConnection();
-            } else if (NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
-                File resolvedPath = URIToFileResolveImpl.resolveNodeRelativeUri(url.toURI());
-                return resolvedPath.toURI().toURL().openConnection();
-            } else {
-                return openExternalMountConnection(url);
-            }
-        } catch (URISyntaxException ex) {
-            throw new IOException(ex);
+        URL resolvedUrl = resolveKNIMEURL(url);
+        if (ExplorerFileSystem.SCHEME.equals(resolvedUrl.getProtocol())) {
+            return openExternalMountConnection(url);
+        } else if ("http".equals(resolvedUrl.getProtocol()) || "https".equals(resolvedUrl.getProtocol())) {
+            // neither the node context nor the workflow context can be null here, otherwise resolveKNIMEURL would have
+            // already failed
+            WorkflowContext workflowContext = NodeContext.getContext().getWorkflowManager().getContext();
+            URLConnection conn = resolvedUrl.openConnection();
+            conn.setRequestProperty("Authorization", "Bearer " + workflowContext.getServerAuthToken().get());
+            return conn;
+        } else {
+            return resolvedUrl.openConnection();
         }
+    }
+
+    /**
+     * Resolves a knime-URL to the final address. The final address can be a local file-URL in case the workflow runs
+     * locally, a KNIME server address, in case the workflow runs inside an executor, or the unaltered address in case
+     * it points to a server mount point.
+     *
+     * @param url a KNIME URL
+     * @return the resolved URL
+     * @throws IOException if an error occurs while resolving the URL
+     */
+    public static URL resolveKNIMEURL(final URL url) throws IOException {
+        if (!ExplorerFileSystem.SCHEME.equalsIgnoreCase(url.getProtocol())) {
+            throw new IOException("Unexpected protocol: " + url.getProtocol() + ". Only " + ExplorerFileSystem.SCHEME
+                + " is supported by this handler.");
+        }
+
+        NodeContext nodeContext = NodeContext.getContext();
+        if (nodeContext == null) {
+            throw new IOException("No context for relative URL available");
+        }
+
+        WorkflowContext workflowContext = nodeContext.getWorkflowManager().getContext();
+        if (workflowContext == null) {
+            throw new IOException("Workflow " + nodeContext.getWorkflowManager() + " does not have a context");
+        }
+
+        if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost())) {
+            return resolveWorkflowRelativeUrl(url, workflowContext);
+        } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())) {
+            return resolveMountpointRelativeUrl(url, workflowContext);
+        } else if (NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
+            return resolveNodeRelativeUrl(url, nodeContext, workflowContext);
+        } else if (url.getHost().equalsIgnoreCase(workflowContext.getRemoteMountId().orElse(null))) {
+            return resolveRemoteServerUrl(url, workflowContext);
+        } else {
+            return url;
+        }
+    }
+
+    private static URL resolveRemoteServerUrl(final URL origUrl, final WorkflowContext workflowContext)
+            throws IOException {
+            String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
+
+            if (workflowContext.getRemoteRepositoryAddress().isPresent()) {
+                String path = workflowContext.getRemoteRepositoryAddress().get()
+                        + "/" + decodedPath + ":data";
+                return URI.create(path).normalize().toURL();
+            } else {
+                // we shouldn't end up here
+                return origUrl;
+            }
+        }
+
+    private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
+        throws IOException {
+        String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
+
+        if (workflowContext.getRemoteRepositoryAddress().isPresent()) {
+            String path = workflowContext.getRemoteRepositoryAddress().get()
+                    + "/" + workflowContext.getRelativeRemotePath().get()
+                    + "/" + decodedPath + ":data";
+            return URI.create(path).normalize().toURL();
+        } else {
+            // in local application or an executor controlled by a pre-4.4 server
+            File currentLocation = workflowContext.getCurrentLocation();
+            File resolvedPath = new File(currentLocation, decodedPath);
+            if ((workflowContext.getOriginalLocation() != null)
+                && !currentLocation.equals(workflowContext.getOriginalLocation())
+                && !resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())) {
+                // we are outside the current workflow directory => use the original location in the server repository
+                resolvedPath = new File(workflowContext.getOriginalLocation(), decodedPath);
+            }
+
+            // if resolved path is outside the workflow, check whether it is still inside the mountpoint
+            if (!resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())
+                && (workflowContext.getMountpointRoot() != null)) {
+                URI normalizedPath = resolvedPath.toURI().normalize();
+                URI normalizedRoot = workflowContext.getMountpointRoot().toURI().normalize();
+
+                if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
+                    throw new IOException("Leaving the mount point is not allowed for workflow relative URLs: "
+                        + resolvedPath.getAbsolutePath() + " is not in "
+                        + workflowContext.getMountpointRoot().getAbsolutePath());
+                }
+            }
+            return resolvedPath.toURI().toURL();
+        }
+    }
+
+    private static URL resolveMountpointRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
+        throws IOException {
+        String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
+
+        if (workflowContext.getRemoteRepositoryAddress().isPresent()) {
+            String path = workflowContext.getRemoteRepositoryAddress().get()
+                    + "/" + decodedPath + ":data";
+            return URI.create(path).normalize().toURL();
+        } else {
+            // in local application or an executor controlled by a pre-4.4 server
+
+            File mountpointRoot = workflowContext.getMountpointRoot();
+            File resolvedPath = new File(mountpointRoot, decodedPath);
+
+            URI normalizedPath = resolvedPath.toURI().normalize();
+            URI normalizedRoot = mountpointRoot.toURI().normalize();
+
+            if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
+                throw new IOException("Leaving the mount point is not allowed for mount point relative URLs: "
+                    + resolvedPath.getAbsolutePath() + " is not in " + mountpointRoot.getAbsolutePath());
+            }
+            return resolvedPath.toURI().toURL();
+        }
+    }
+
+    private static URL resolveNodeRelativeUrl(final URL origUrl, final NodeContext nodeContext,
+        final WorkflowContext workflowContext) throws IOException {
+        ReferencedFile nodeDirectoryRef = nodeContext.getNodeContainer().getNodeContainerDirectory();
+        if (nodeDirectoryRef == null) {
+            throw new IOException("Workflow must be saved before node-relative URLs can be used");
+        }
+        String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
+        File resolvedPath = new File(nodeDirectoryRef.getFile().getAbsolutePath(), decodedPath);
+
+        File currentLocation = workflowContext.getCurrentLocation();
+
+        // check if resolved path leaves the workflow
+        if (!resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())) {
+            throw new IOException("Leaving the workflow is not allowed for node-relative URLs: "
+                + resolvedPath.getCanonicalPath() + " is not in " + currentLocation.getCanonicalPath());
+        }
+        return resolvedPath.toURI().toURL();
     }
 
     private URLConnection openExternalMountConnection(final URL url) throws IOException {
@@ -139,17 +270,12 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      * Allows the communication with a "knime" URL.
      *
      * @author ohl, University of Konstanz
-     *
      */
     static class ExplorerURLConnection extends URLConnection {
         private final AbstractExplorerFileStore m_file;
 
-        /**
-         * @param url the specified url
-         * @param file the specified file
-         */
-        public ExplorerURLConnection(final URL url, final AbstractExplorerFileStore file) {
-            super(url);
+        ExplorerURLConnection(final URL u, final AbstractExplorerFileStore file) {
+            super(u);
             m_file = file;
         }
 
@@ -158,7 +284,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
          */
         @Override
         public void connect() throws IOException {
-            // ...
+            // nothing to do
         }
 
         /**
@@ -205,6 +331,5 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             }
             return EFS.NONE == length ? -1 : (int)length;
         }
-
     }
 }
