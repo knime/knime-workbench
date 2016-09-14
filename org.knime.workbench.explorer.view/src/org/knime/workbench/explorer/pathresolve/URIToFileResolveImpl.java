@@ -107,10 +107,10 @@ public class URIToFileResolveImpl implements URIToFileResolve {
             } else if (ExplorerFileSystem.SCHEME.equals(url.getProtocol())) {
                 return resolveStandardUri(uri, monitor);
             } else {
-                throw new IOException("URI \"" + uri + "\" does not point to a local file");
+                return null;
             }
         } else {
-            throw new IOException("Unable to resolve URI \"" + uri + "\" to local file, unknown scheme");
+            return null;
         }
     }
 
@@ -157,7 +157,8 @@ public class URIToFileResolveImpl implements URIToFileResolve {
                     throw new IOException("Unsupported file store type: " + fs.getClass());
                 }
             } else {
-                return fetchRemoteFile(url);
+                // use the original URL because otherwise the handler may not be invoked correctly
+                return fetchRemoteFile(uri.toURL());
             }
         } else {
             throw new IOException("Unable to resolve URI \"" + uri + "\" to local file, unknown scheme");

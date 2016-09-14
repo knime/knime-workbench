@@ -105,11 +105,6 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      */
     @Override
     public URLConnection openConnection(final URL url) throws IOException {
-        if (!ExplorerFileSystem.SCHEME.equalsIgnoreCase(url.getProtocol())) {
-            throw new IOException("Unexpected protocol: " + url.getProtocol() + ". Only " + ExplorerFileSystem.SCHEME
-                + " is supported by this handler.");
-        }
-
         URL resolvedUrl = resolveKNIMEURL(url);
         if (ExplorerFileSystem.SCHEME.equals(resolvedUrl.getProtocol())) {
             return openExternalMountConnection(url);
