@@ -113,7 +113,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             // already failed
             WorkflowContext workflowContext = NodeContext.getContext().getWorkflowManager().getContext();
             URLConnection conn = resolvedUrl.openConnection();
-            conn.setRequestProperty("Authorization", "Bearer " + workflowContext.getServerAuthToken().get());
+            if (workflowContext.getServerAuthToken().isPresent()) {
+                conn.setRequestProperty("Authorization", "Bearer " + workflowContext.getServerAuthToken().get());
+            }
             return conn;
         } else {
             return resolvedUrl.openConnection();
@@ -147,40 +149,27 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
         if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost())) {
             return resolveWorkflowRelativeUrl(url, workflowContext);
-        } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())) {
+        } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())
+            || url.getHost().equalsIgnoreCase(workflowContext.getRemoteMountId().orElse(null))) {
             return resolveMountpointRelativeUrl(url, workflowContext);
         } else if (NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
             return resolveNodeRelativeUrl(url, nodeContext, workflowContext);
-        } else if (url.getHost().equalsIgnoreCase(workflowContext.getRemoteMountId().orElse(null))) {
-            return resolveRemoteServerUrl(url, workflowContext);
         } else {
             return url;
         }
     }
 
-    private static URL resolveRemoteServerUrl(final URL origUrl, final WorkflowContext workflowContext)
-            throws IOException {
-            String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
-
-            if (workflowContext.getRemoteRepositoryAddress().isPresent()) {
-                URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(), decodedPath + ":data");
-                return uri.normalize().toURL();
-            } else {
-                // we shouldn't end up here
-                return origUrl;
-            }
-        }
-
     private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
         throws IOException {
         String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
 
-        if (workflowContext.getRemoteRepositoryAddress().isPresent()) {
+        if (workflowContext.getRemoteRepositoryAddress().isPresent()
+            && workflowContext.getServerAuthToken().isPresent()) {
             URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(),
                 workflowContext.getRelativeRemotePath().get() + "/" + decodedPath + ":data");
             return uri.normalize().toURL();
         } else {
-            // in local application or an executor controlled by a pre-4.4 server
+            // in local application, an executor controlled by a pre-4.4 server, or an old job without a token
             File currentLocation = workflowContext.getCurrentLocation();
             File resolvedPath = new File(currentLocation, decodedPath);
             if ((workflowContext.getOriginalLocation() != null)
@@ -210,12 +199,12 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         throws IOException {
         String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
 
-        if (workflowContext.getRemoteRepositoryAddress().isPresent()) {
+        if (workflowContext.getRemoteRepositoryAddress().isPresent()
+            && workflowContext.getServerAuthToken().isPresent()) {
             URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(), decodedPath + ":data");
             return uri.normalize().toURL();
         } else {
-            // in local application or an executor controlled by a pre-4.4 server
-
+            // in local application, an executor controlled by a pre-4.4 server, or an old job without a token
             File mountpointRoot = workflowContext.getMountpointRoot();
             File resolvedPath = new File(mountpointRoot, decodedPath);
 

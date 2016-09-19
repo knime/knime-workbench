@@ -416,6 +416,35 @@ public class ExplorerURLStreamHandlerTest {
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedUri));
     }
 
+
+    /**
+     * Check if URLs with a remote mount point are resolved correctly for old jobs that don't have a remote token
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveRemoteMountpointURLWithoutToken() throws Exception {
+        URL url = new URL("knime://Server/some where/outside.txt");
+        URI baseUri = new URI("https://localhost:8080/knime");
+
+        Path mpRoot = KNIMEConstants.getKNIMETempPath().resolve("root");
+        Path currentLocation = mpRoot.resolve("workflow");
+        WorkflowCreationHelper ch = new WorkflowCreationHelper();
+        WorkflowContext.Factory fac = new WorkflowContext.Factory(currentLocation.toFile());
+        fac.setMountpointRoot(mpRoot.toFile());
+        fac.setOriginalLocation(currentLocation.toFile());
+        fac.setRemoteAddress(baseUri, "workflow");
+        fac.setRemoteMountId("Server");
+        ch.setWorkflowContext(fac.createContext());
+        WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), ch);
+        NodeContext.pushContext(wfm);
+
+        URLConnection conn = m_handler.openConnection(url);
+        URI expectedUri = new URI(mpRoot.toUri() + "/some%20where/outside.txt").normalize();
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedUri));
+    }
+
+
     /**
      * Checks if node-relative knime-URLs are resolved correctly.
      *
