@@ -168,13 +168,14 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         throws IOException {
         String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
 
-        if (workflowContext.getRemoteRepositoryAddress().isPresent()
+        if (decodedPath.startsWith("/../") && workflowContext.getRemoteRepositoryAddress().isPresent()
             && workflowContext.getServerAuthToken().isPresent()) {
             URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(),
                 workflowContext.getRelativeRemotePath().get() + "/" + decodedPath + ":data");
             return uri.normalize().toURL();
         } else {
-            // in local application, an executor controlled by a pre-4.4 server, or an old job without a token
+            // in local application, an executor controlled by a pre-4.4 server, an old job without a token, or
+            // a file inside the workflow
             File currentLocation = workflowContext.getCurrentLocation();
             File resolvedPath = new File(currentLocation, decodedPath);
             if ((workflowContext.getOriginalLocation() != null)

@@ -265,8 +265,9 @@ public class ExplorerURLStreamHandlerTest {
         WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), ch);
         NodeContext.pushContext(wfm);
 
+        // links inside the workflow must stay local links to the workflow copy
         URLConnection conn = m_handler.openConnection(url);
-        URI expectedUri = new URI(baseUri.toString() + "/workflow/workflow.knime:data");
+        URI expectedUri = new URI(currentLocation.toUri().toString() + "/workflow.knime").normalize();
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedUri));
         // we cannot check whether the Authorization header is set correctly, because HttpURLConnection
         // doesn't return it for security reasons
