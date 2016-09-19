@@ -57,6 +57,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
 
+import javax.net.ssl.HttpsURLConnection;
+
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.URIUtil;
@@ -115,6 +117,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             URLConnection conn = resolvedUrl.openConnection();
             if (workflowContext.getServerAuthToken().isPresent()) {
                 conn.setRequestProperty("Authorization", "Bearer " + workflowContext.getServerAuthToken().get());
+            }
+            if (conn instanceof HttpsURLConnection) {
+                ((HttpsURLConnection)conn).setHostnameVerifier(KNIMEHostnameVerifier.INSTANCE);
             }
             return conn;
         } else {
