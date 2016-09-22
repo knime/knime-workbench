@@ -49,8 +49,8 @@
 package org.knime.workbench.editor2;
 
 import org.eclipse.gef.requests.CreationFactory;
+import org.knime.core.api.node.workflow.WorkflowCopyContent;
 import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.repository.model.MetaNodeTemplate;
@@ -70,9 +70,9 @@ public class MetaNodeCreationFactory implements CreationFactory {
     public Object getNewObject() {
         NodeID id = m_template.getManager().getID();
         WorkflowManager sourceManager = WorkflowManager.META_NODE_ROOT;
-        WorkflowCopyContent content = new WorkflowCopyContent();
+        WorkflowCopyContent.Builder content = WorkflowCopyContent.builder();
         content.setNodeIDs(id);
-        return sourceManager.copy(content);
+        return sourceManager.copy(content.build());
     }
 
     /**
