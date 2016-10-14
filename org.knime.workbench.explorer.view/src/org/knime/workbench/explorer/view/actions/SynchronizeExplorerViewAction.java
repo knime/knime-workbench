@@ -53,6 +53,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.knime.core.internal.ReferencedFile;
@@ -106,8 +107,12 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
      */
     @Override
     public void run() {
+        IWorkbenchWindow activeWorkbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        if (activeWorkbenchWindow == null){
+            return; // no window open at all
+        }
         IEditorPart activeEditor =
-            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+            activeWorkbenchWindow.getActivePage().getActiveEditor();
         if (activeEditor == null) {
             return; // no editor open at all
         }
