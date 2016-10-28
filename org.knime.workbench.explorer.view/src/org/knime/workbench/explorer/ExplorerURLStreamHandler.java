@@ -142,26 +142,27 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                 + " is supported by this handler.");
         }
 
-        NodeContext nodeContext = NodeContext.getContext();
-        if (nodeContext == null) {
-            throw new IOException("No context for relative URL available");
-        }
+        if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost()) || MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())
+                || NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
+            NodeContext nodeContext = NodeContext.getContext();
+            if (nodeContext == null) {
+                throw new IOException("No context for relative URL available");
+            }
+            WorkflowContext workflowContext = nodeContext.getWorkflowManager().getContext();
+            if (workflowContext == null) {
+                throw new IOException("Workflow " + nodeContext.getWorkflowManager() + " does not have a context");
+            }
 
-        WorkflowContext workflowContext = nodeContext.getWorkflowManager().getContext();
-        if (workflowContext == null) {
-            throw new IOException("Workflow " + nodeContext.getWorkflowManager() + " does not have a context");
+            if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost())) {
+                return resolveWorkflowRelativeUrl(url, workflowContext);
+            } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())
+                || url.getHost().equalsIgnoreCase(workflowContext.getRemoteMountId().orElse(null))) {
+                return resolveMountpointRelativeUrl(url, workflowContext);
+            } else if (NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
+                return resolveNodeRelativeUrl(url, nodeContext, workflowContext);
+            }
         }
-
-        if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost())) {
-            return resolveWorkflowRelativeUrl(url, workflowContext);
-        } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())
-            || url.getHost().equalsIgnoreCase(workflowContext.getRemoteMountId().orElse(null))) {
-            return resolveMountpointRelativeUrl(url, workflowContext);
-        } else if (NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
-            return resolveNodeRelativeUrl(url, nodeContext, workflowContext);
-        } else {
-            return url;
-        }
+        return url;
     }
 
     private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
