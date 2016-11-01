@@ -96,10 +96,12 @@ public class ExplorerURLStreamHandlerTest {
      */
     @After
     public void cleanup() throws Exception {
-        try {
-            NodeContext.removeLastContext();
-        } catch (IllegalStateException ex) {
-            // ignore
+        while (true) {
+            try {
+                NodeContext.removeLastContext();
+            } catch (IllegalStateException ex) {
+                break;
+            }
         }
 
         Collection<NodeID> workflows =
