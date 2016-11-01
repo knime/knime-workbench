@@ -387,6 +387,7 @@ public class ExplorerURLStreamHandlerTest {
      */
     @Test
     public void testResolveLocalMountpointURL() throws Exception {
+        assertThat("NodeContext not expected to be set at this point", NodeContext.getContext(), is((NodeContext)null));
         URL url = new URL("knime://LOCAL/test.txt");
 
         URLConnection conn = m_handler.openConnection(url);
