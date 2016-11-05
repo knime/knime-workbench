@@ -1362,15 +1362,18 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /**
      * Callback for clients to be notified when async operation is completed. Used for future selections in the
      * explorer. Error messages are collected and displayed by the Eclipse framework - no need to collect and display
-     * them in here. tree.
+     * them in here.
+     *
      * @since 7.0
      */
-    public abstract static class AfterRunCallback {
+    public interface AfterRunCallback {
 
-        /** Called after completion of the async execution of up/download. This method is call in the UI thread.
-         * @param throwable A throwable or null. (non-null if and only if errorMessage is non-null)
+        /**
+         * Called after completion of the async execution of up/download. This method is call in the UI thread.
+         *
+         * @param throwable A throwable or <code>null</code> (non-null if and only if errorMessage is non-null)
          */
-        public abstract void afterCompletion(final Throwable throwable);
+        void afterCompletion(final Throwable throwable);
 
         /**
          * @param callback callback class or null

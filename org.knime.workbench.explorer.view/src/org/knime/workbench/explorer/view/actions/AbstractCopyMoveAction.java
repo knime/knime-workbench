@@ -456,12 +456,9 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
 
                             AfterRunCallback callback = null; // for async operations
                             if (--iterationCount == 0) {
-                                callback = new AfterRunCallback() {
-                                    @Override
-                                    public void afterCompletion(final Throwable throwable) {
-                                        getView().setNextSelection(processedTargets);
-                                        m_target.refresh();
-                                    }
+                                callback = t -> {
+                                    getView().setNextSelection(processedTargets);
+                                    m_target.refresh();
                                 };
                             }
                             if (!isSrcRemote && isDstRemote) { // upload
