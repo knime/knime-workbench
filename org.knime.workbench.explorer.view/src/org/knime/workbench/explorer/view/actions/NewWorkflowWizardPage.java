@@ -262,8 +262,7 @@ public class NewWorkflowWizardPage extends WizardPage {
         // check whether this container already exists
         IFileStore newFile = m_parent.getChild(projectName);
         if (newFile.fetchInfo().exists()) {
-            updateStatus("A " + m_elementName.toLowerCase()
-                    + " with the provided name already exists.");
+            updateStatus("An item with the provided name already exists.");
             return;
         }
         m_projectName = projectName;
