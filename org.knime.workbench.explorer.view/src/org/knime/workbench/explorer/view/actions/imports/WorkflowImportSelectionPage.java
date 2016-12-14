@@ -56,6 +56,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.zip.ZipFile;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IPath;
@@ -96,6 +97,7 @@ import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvi
 import org.eclipse.ui.internal.wizards.datatransfer.TarFile;
 import org.eclipse.ui.internal.wizards.datatransfer.TarLeveledStructureProvider;
 import org.eclipse.ui.internal.wizards.datatransfer.ZipLeveledStructureProvider;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
@@ -123,7 +125,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
     public static final String NAME = "Workflow import selection";
 
     private static final Image IMG_WARN =
-        KNIMEUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID, "icons/warning.gif").createImage();
+        AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID, "icons/warning.gif").createImage();
 
     // constant from WizardArchiveFileResourceImportPage1
     private static final String[] ZIP_FILE_MASK =
@@ -145,8 +147,6 @@ public class WorkflowImportSelectionPage extends WizardPage {
 
     // the initial destination should not be static
     private AbstractExplorerFileStore m_initialDestination;
-
-    private String m_initialSelectedFile;
 
     private static final GridData FILL_BOTH = new GridData(GridData.FILL_BOTH);
 
@@ -189,6 +189,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
      * returned.
      */
     private RenameWorkflowImportPage m_renamePage;
+
+    private boolean m_presetZipLocation;
 
     /**
      *
@@ -279,7 +281,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
 
         overall.setLayout(new GridLayout(3, false));
         m_fromZipUI = new Button(overall, SWT.RADIO);
-        if (initialZipLocation != null && !initialZipLocation.isEmpty()) {
+        if (m_presetZipLocation && StringUtils.isNotEmpty(initialZipLocation)) {
             m_fromZipUI.setText("File:");
         } else {
             m_fromZipUI.setText("Select file:");
@@ -539,7 +541,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
             }
         });
 
-        if (initialZipLocation != null && !initialZipLocation.isEmpty()) {
+        if (m_presetZipLocation && StringUtils.isNotEmpty(initialZipLocation)) {
             handleSelectedZipFileChange(initialZipLocation);
         }
         return parent;
@@ -646,6 +648,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
     public void setSelectedZipFile(final String selectedFile) {
         //m_zipBrowseBtn.setEnabled(false);
         //handleSelectedZipFileChange(selectedFile);
+        m_presetZipLocation = true;
         initialZipLocation = selectedFile;
         initialFromDir = false;
     }

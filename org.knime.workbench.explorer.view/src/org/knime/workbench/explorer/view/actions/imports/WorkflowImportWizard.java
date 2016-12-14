@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IStatus;
@@ -155,7 +156,7 @@ public class WorkflowImportWizard extends Wizard {
         m_importPage = new WorkflowImportSelectionPage();
         m_importPage.restoreDialogSettings();
         m_importPage.setInitialTarget(m_initialDestination);
-        if (m_selectedFile != null && !m_selectedFile.isEmpty()) {
+        if (StringUtils.isNotEmpty(m_selectedFile)) {
             m_importPage.setSelectedZipFile(m_selectedFile);
         }
         addPage(m_importPage);
