@@ -191,10 +191,10 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                 resolvedPath = new File(workflowContext.getOriginalLocation(), decodedPath);
             }
 
+            URI normalizedPath = resolvedPath.toURI().normalize();
             // if resolved path is outside the workflow, check whether it is still inside the mountpoint
             if (!resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())
                 && (workflowContext.getMountpointRoot() != null)) {
-                URI normalizedPath = resolvedPath.toURI().normalize();
                 URI normalizedRoot = workflowContext.getMountpointRoot().toURI().normalize();
 
                 if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
@@ -203,7 +203,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                         + workflowContext.getMountpointRoot().getAbsolutePath());
                 }
             }
-            return resolvedPath.toURI().toURL();
+            return normalizedPath.toURL();
         }
     }
 
@@ -227,7 +227,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                 throw new IOException("Leaving the mount point is not allowed for mount point relative URLs: "
                     + resolvedPath.getAbsolutePath() + " is not in " + mountpointRoot.getAbsolutePath());
             }
-            return resolvedPath.toURI().toURL();
+            return normalizedPath.toURL();
         }
     }
 
@@ -247,7 +247,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             throw new IOException("Leaving the workflow is not allowed for node-relative URLs: "
                 + resolvedPath.getCanonicalPath() + " is not in " + currentLocation.getCanonicalPath());
         }
-        return resolvedPath.toURI().toURL();
+        return resolvedPath.toURI().normalize().toURL();
     }
 
     private URLConnection openExternalMountConnection(final URL url) throws IOException {
