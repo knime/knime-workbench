@@ -179,7 +179,7 @@ public class ExplorerURLStreamHandlerTest {
         // path outside the workflow
         url = new URL("knime://knime.workflow/../test.txt");
         conn = m_handler.openConnection(url);
-        expectedPath = currentLocation.resolve("..").resolve("test.txt");
+        expectedPath = currentLocation.resolve("..").resolve("test.txt").normalize();
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
     }
 
@@ -219,7 +219,7 @@ public class ExplorerURLStreamHandlerTest {
         // path outside the workflow
         url = new URL("knime://knime.workflow/../test.txt");
         conn = m_handler.openConnection(url);
-        expectedPath = originalLocation.resolve("..").resolve("test.txt");
+        expectedPath = originalLocation.resolve("..").resolve("test.txt").normalize();
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
     }
 
