@@ -50,6 +50,7 @@ import org.eclipse.core.internal.filesystem.local.LocalFile;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
@@ -58,23 +59,25 @@ import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
-public class GlobalEditMetaInfoAction extends ExplorerAction {
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            GlobalEditMetaInfoAction.class);
+/**
+ * Deploys a selected workflow or workflow group (single selection) to a KNIME Server.
+ *
+ * @author Bernd Wiswedel, KNIME.com, Zurich, Switzerland
+ */
+public class GlobalDeploytoServerAction extends ExplorerAction {
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(GlobalDeploytoServerAction.class);
 
     /** ID of the global rename action in the explorer menu. */
-    public static final String METAINFO_ACTION_ID =
-        "org.knime.workbench.explorer.action.openMetaInfo";
+    public static final String DEPLOY_TO_SERVER_ACTION_ID = "org.knime.workbench.explorer.action.deployToServer";
 
-    private static final ImageDescriptor ICON = KNIMEUIPlugin
-    .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-            "icons/meta_info_edit.png");;
+    private static final ImageDescriptor ICON =
+        AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID, "icons/deploy_to_server.png");
 
     /**
      * @param viewer the associated tree viewer
      */
-    public GlobalEditMetaInfoAction(final ExplorerView viewer) {
-        super(viewer, "Edit Meta Information...");
+    public GlobalDeploytoServerAction(final ExplorerView viewer) {
+        super(viewer, "Deploy to Server...");
         setImageDescriptor(ICON);
     }
 
@@ -83,7 +86,7 @@ public class GlobalEditMetaInfoAction extends ExplorerAction {
      */
     @Override
     public String getId() {
-       return METAINFO_ACTION_ID;
+        return DEPLOY_TO_SERVER_ACTION_ID;
     }
 
     /**
@@ -94,24 +97,23 @@ public class GlobalEditMetaInfoAction extends ExplorerAction {
         try {
             AbstractExplorerFileStore srcFileStore = getSingleSelectedWorkflowOrGroup()
                     .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
-            AbstractExplorerFileStore metaInfo =
-                    srcFileStore.getChild(WorkflowPersistor.METAINFO_FILE);
+            AbstractExplorerFileStore metaInfo = srcFileStore.getChild(WorkflowPersistor.METAINFO_FILE);
             AbstractExplorerFileInfo fetchInfo = metaInfo.fetchInfo();
             if (!fetchInfo.exists() || (fetchInfo.getLength() == 0)) {
                 // create a new meta info file if it does not exist
-                MetaInfoFile.createMetaInfoFile(
-                        srcFileStore.toLocalFile(EFS.NONE, null),
-                        AbstractExplorerFileStore.isWorkflow(srcFileStore));
+                MetaInfoFile.createMetaInfoFile(srcFileStore.toLocalFile(EFS.NONE, null),
+                    AbstractExplorerFileStore.isWorkflow(srcFileStore));
             }
-            IFileStore localFS = new LocalFile(
-                    metaInfo.toLocalFile(EFS.NONE, null));
-            IDE.openEditorOnFileStore(PlatformUI.getWorkbench()
-                    .getActiveWorkbenchWindow().getActivePage(), localFS);
+            IFileStore localFS = new LocalFile(metaInfo.toLocalFile(EFS.NONE, null));
+            IDE.openEditorOnFileStore(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(), localFS);
         } catch (Exception e) {
             LOGGER.error("Could not open meta info editor.", e);
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean isEnabled() {
         return getSingleSelectedWorkflowOrGroup().isPresent();

@@ -50,6 +50,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.core.filesystem.EFS;
@@ -167,6 +168,22 @@ public abstract class ExplorerAction extends Action {
             return null;
         }
         return DragAndDropUtils.getExplorerFileStores(selection);
+    }
+
+    /** If the selected element represents a workflow or workflow group, return it. Otherwise return an empty.
+     * @return The single selected workflow or group.
+     */
+    protected Optional<AbstractExplorerFileStore> getSingleSelectedWorkflowOrGroup() {
+        List<AbstractExplorerFileStore> fileStores = getAllSelectedFiles();
+        if (fileStores == null || fileStores.size() != 1) {
+            return Optional.empty();
+        }
+        AbstractExplorerFileStore fileStore = fileStores.get(0);
+        if (!(AbstractExplorerFileStore.isWorkflow(fileStore)
+            || AbstractExplorerFileStore.isWorkflowGroup(fileStore))) {
+            return Optional.of(fileStore);
+        }
+        return Optional.empty();
     }
 
     /**
