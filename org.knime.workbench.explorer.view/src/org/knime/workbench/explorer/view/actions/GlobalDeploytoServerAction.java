@@ -44,20 +44,26 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.internal.filesystem.local.LocalFile;
+import java.util.Collections;
+import java.util.Optional;
+import java.util.stream.Stream;
+
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.window.Window;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
+import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
  * Deploys a selected workflow or workflow group (single selection) to a KNIME Server.
@@ -71,7 +77,10 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
     public static final String DEPLOY_TO_SERVER_ACTION_ID = "org.knime.workbench.explorer.action.deployToServer";
 
     private static final ImageDescriptor ICON =
-        AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID, "icons/deploy_to_server.png");
+        AbstractUIPlugin.imageDescriptorFromPlugin(ExplorerActivator.PLUGIN_ID, "icons/deploy_to_server.png");
+
+
+    private static AbstractExplorerFileStore lastUsedLocation;
 
     /**
      * @param viewer the associated tree viewer
@@ -97,18 +106,58 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         try {
             AbstractExplorerFileStore srcFileStore = getSingleSelectedWorkflowOrGroup()
                     .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
-            AbstractExplorerFileStore metaInfo = srcFileStore.getChild(WorkflowPersistor.METAINFO_FILE);
-            AbstractExplorerFileInfo fetchInfo = metaInfo.fetchInfo();
-            if (!fetchInfo.exists() || (fetchInfo.getLength() == 0)) {
-                // create a new meta info file if it does not exist
-                MetaInfoFile.createMetaInfoFile(srcFileStore.toLocalFile(EFS.NONE, null),
-                    AbstractExplorerFileStore.isWorkflow(srcFileStore));
+            Optional<AbstractExplorerFileStore> destGroupOptional = promptForTargetLocation(srcFileStore);
+            if (!destGroupOptional.isPresent()) {
+                LOGGER.debug(getText() + "canceled");
+                return;
             }
-            IFileStore localFS = new LocalFile(metaInfo.toLocalFile(EFS.NONE, null));
-            IDE.openEditorOnFileStore(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(), localFS);
+            AbstractExplorerFileStore destGroup = destGroupOptional.get();
+            GlobalCopyAction globalCopyAction = new GlobalCopyAction(
+                getView(), Collections.singletonList(srcFileStore), destGroup);
+            globalCopyAction.run();
+            lastUsedLocation = destGroup;
         } catch (Exception e) {
-            LOGGER.error("Could not open meta info editor.", e);
+            LOGGER.error("Couldn't deploy to server.", e);
         }
+    }
+
+    /** Opens the selection prompt and lets the user choose a remote workflow group.
+     * @return An empty if the prompt was cancelled, otherwise the selected target. */
+    Optional<AbstractExplorerFileStore> promptForTargetLocation(final AbstractExplorerFileStore srcFileStore) {
+        final boolean isWorkflow = AbstractExplorerFileStore.isWorkflow(srcFileStore);
+
+        String[] validMountIDs = getValidTargets().map(c -> c.getMountID()).toArray(String[]::new);
+        Shell shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
+
+        SpaceResourceSelectionDialog destinationDialog = new SpaceResourceSelectionDialog(shell, validMountIDs,
+            ContentObject.forFile(lastUsedLocation));
+        destinationDialog.setValidator(new Validator() {
+            @Override
+            public String validateSelectionValue(final AbstractExplorerFileStore sel, final String currentName) {
+                if (!AbstractExplorerFileStore.isWorkflowGroup(sel)) {
+                    return "Select the destination group to which the selected " + (isWorkflow ? "workflow" : "group")
+                            + " will be uploaded";
+                }
+                return null;
+            }
+        });
+        destinationDialog.setTitle("Destination");
+        destinationDialog.setDescription("Select the destination workflow group.");
+        while (destinationDialog.open() == Window.OK) {
+            AbstractExplorerFileStore destGroup = destinationDialog.getSelection();
+            AbstractExplorerFileInfo destGroupInfo = destGroup.fetchInfo();
+            if (!destGroupInfo.isModifiable()) {
+                boolean chooseNew = MessageDialog.openConfirm(shell, "Not writable",
+                    "The selected group is not writable.\n\nChoose a new location.");
+                if (chooseNew) {
+                    continue;
+                } else {
+                    return Optional.empty();
+                }
+            }
+            return Optional.of(destGroup);
+        }
+        return Optional.empty();
     }
 
     /**
@@ -116,7 +165,15 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        return getSingleSelectedWorkflowOrGroup().isPresent();
+        if (!getSingleSelectedWorkflowOrGroup().isPresent()) {
+            return false;
+        }
+        return getValidTargets().findAny().isPresent();
+    }
+
+    /** @return a stream of content providers that are remote and writable, i.e. server mount points. */
+    private static Stream<AbstractContentProvider> getValidTargets() {
+        return ExplorerMountTable.getMountedContent().values().stream().filter(c -> c.isRemote() && c.isWritable());
     }
 
 }

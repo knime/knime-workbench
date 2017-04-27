@@ -179,8 +179,7 @@ public abstract class ExplorerAction extends Action {
             return Optional.empty();
         }
         AbstractExplorerFileStore fileStore = fileStores.get(0);
-        if (!(AbstractExplorerFileStore.isWorkflow(fileStore)
-            || AbstractExplorerFileStore.isWorkflowGroup(fileStore))) {
+        if (AbstractExplorerFileStore.isWorkflow(fileStore) || AbstractExplorerFileStore.isWorkflowGroup(fileStore)) {
             return Optional.of(fileStore);
         }
         return Optional.empty();
