@@ -226,6 +226,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
         createResultPanel(overall);
         createErrorPanel(overall);
         createNameField(overall);
+        createCustomFooterField(overall);
         return overall;
 
     }
@@ -543,6 +544,14 @@ public class SpaceResourceSelectionDialog extends Dialog {
             m_nameField.setText(val);
             handleNameFieldValueChanged();
         }
+    }
+
+    /** Possibly overwritten by subclasses to add a customer footer panel. This implementation is empty.
+     * @param parent To add too, not null.
+     * @since 7.4
+     */
+    protected void createCustomFooterField(final Composite parent) {
+        // possibly overwritten
     }
 
     /**

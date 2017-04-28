@@ -51,10 +51,16 @@ import java.util.stream.Stream;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
@@ -69,6 +75,7 @@ import org.knime.workbench.explorer.view.ExplorerView;
  * Deploys a selected workflow or workflow group (single selection) to a KNIME Server.
  *
  * @author Bernd Wiswedel, KNIME.com, Zurich, Switzerland
+ * @since 7.4
  */
 public class GlobalDeploytoServerAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(GlobalDeploytoServerAction.class);
@@ -103,19 +110,25 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
      */
     @Override
     public void run() {
+        // first save dirty editors
+        if (!PlatformUI.getWorkbench().saveAllEditors(true)) {
+            return;
+        }
         try {
             AbstractExplorerFileStore srcFileStore = getSingleSelectedWorkflowOrGroup()
                     .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
-            Optional<AbstractExplorerFileStore> destGroupOptional = promptForTargetLocation(srcFileStore);
+            Optional<SelectedDestination> destGroupOptional = promptForTargetLocation(srcFileStore);
             if (!destGroupOptional.isPresent()) {
                 LOGGER.debug(getText() + "canceled");
                 return;
             }
-            AbstractExplorerFileStore destGroup = destGroupOptional.get();
+            SelectedDestination destGroup = destGroupOptional.get();
             GlobalCopyAction globalCopyAction = new GlobalCopyAction(
-                getView(), Collections.singletonList(srcFileStore), destGroup);
+                getView(), Collections.singletonList(srcFileStore), destGroup.getDestination());
+            LOGGER.fatal("Checkbox was set: " + destGroup.isExcludeData());
+
             globalCopyAction.run();
-            lastUsedLocation = destGroup;
+            lastUsedLocation = destGroup.getDestination();
         } catch (Exception e) {
             LOGGER.error("Couldn't deploy to server.", e);
         }
@@ -123,29 +136,15 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
 
     /** Opens the selection prompt and lets the user choose a remote workflow group.
      * @return An empty if the prompt was cancelled, otherwise the selected target. */
-    Optional<AbstractExplorerFileStore> promptForTargetLocation(final AbstractExplorerFileStore srcFileStore) {
-        final boolean isWorkflow = AbstractExplorerFileStore.isWorkflow(srcFileStore);
-
+    Optional<SelectedDestination> promptForTargetLocation(final AbstractExplorerFileStore srcFileStore) {
         String[] validMountIDs = getValidTargets().map(c -> c.getMountID()).toArray(String[]::new);
         Shell shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
 
-        SpaceResourceSelectionDialog destinationDialog = new SpaceResourceSelectionDialog(shell, validMountIDs,
-            ContentObject.forFile(lastUsedLocation));
-        destinationDialog.setValidator(new Validator() {
-            @Override
-            public String validateSelectionValue(final AbstractExplorerFileStore sel, final String currentName) {
-                if (!AbstractExplorerFileStore.isWorkflowGroup(sel)) {
-                    return "Select the destination group to which the selected " + (isWorkflow ? "workflow" : "group")
-                            + " will be uploaded";
-                }
-                return null;
-            }
-        });
-        destinationDialog.setTitle("Destination");
-        destinationDialog.setDescription("Select the destination workflow group.");
+        DestinationSelectionDialog destinationDialog =
+                new DestinationSelectionDialog(shell, validMountIDs, ContentObject.forFile(lastUsedLocation));
         while (destinationDialog.open() == Window.OK) {
-            AbstractExplorerFileStore destGroup = destinationDialog.getSelection();
-            AbstractExplorerFileInfo destGroupInfo = destGroup.fetchInfo();
+            SelectedDestination destGroup = destinationDialog.getSelectedDestination();
+            AbstractExplorerFileInfo destGroupInfo = destGroup.getDestination().fetchInfo();
             if (!destGroupInfo.isModifiable()) {
                 boolean chooseNew = MessageDialog.openConfirm(shell, "Not writable",
                     "The selected group is not writable.\n\nChoose a new location.");
@@ -174,6 +173,77 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
     /** @return a stream of content providers that are remote and writable, i.e. server mount points. */
     private static Stream<AbstractContentProvider> getValidTargets() {
         return ExplorerMountTable.getMountedContent().values().stream().filter(c -> c.isRemote() && c.isWritable());
+    }
+
+
+    /** Dialog to select the server + destination folder. Also contains a checkbox whether to exclude the data. */
+    static final class DestinationSelectionDialog extends SpaceResourceSelectionDialog {
+
+        private Button m_excludeDataButton;
+        private boolean m_isExcludeData;
+
+        /**
+         * @param parentShell
+         * @param mountIDs
+         * @param initialSelection
+         */
+        public DestinationSelectionDialog(final Shell parentShell, final String[] mountIDs,
+            final ContentObject initialSelection) {
+            super(parentShell, mountIDs, initialSelection);
+            setValidator(new Validator() {
+                @Override
+                public String validateSelectionValue(final AbstractExplorerFileStore sel, final String currentName) {
+                    if (!AbstractExplorerFileStore.isWorkflowGroup(sel)) {
+                        return "Select the destination group to which the selected element will be uploaded";
+                    }
+                    return null;
+                }
+            });
+            setTitle("Destination");
+            setHeader("Deploy to...");
+            setDescription("Select the destination workflow group.");
+        }
+
+        @Override
+        protected void createCustomFooterField(final Composite parent) {
+            m_excludeDataButton = new Button(parent, SWT.CHECK);
+            m_isExcludeData = true;
+            m_excludeDataButton.setSelection(m_isExcludeData);
+            m_excludeDataButton.setText("Exclude data from export.");
+            m_excludeDataButton.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(final SelectionEvent e) {
+                    Button b = (Button)e.widget;
+                    m_isExcludeData = b.getSelection();
+                }
+            });
+        }
+
+        SelectedDestination getSelectedDestination() {
+            return new SelectedDestination(getSelection(), m_isExcludeData);
+        }
+    }
+
+    static final class SelectedDestination {
+        private final AbstractExplorerFileStore m_destination;
+        private final boolean m_isExcludeData;
+
+        SelectedDestination(final AbstractExplorerFileStore destination, final boolean isExcludeData) {
+            m_destination = CheckUtils.checkArgumentNotNull(destination, "Destination must not be null");
+            m_isExcludeData = isExcludeData;
+        }
+
+        /** @return the destination, not null. */
+        AbstractExplorerFileStore getDestination() {
+            return m_destination;
+        }
+
+        /** @return the isExcludeData checkbox property. */
+        boolean isExcludeData() {
+            return m_isExcludeData;
+        }
+
+
     }
 
 }
