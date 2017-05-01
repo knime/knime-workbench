@@ -67,30 +67,26 @@ import org.eclipse.core.runtime.Path;
  *
  * @author ohl, University of Konstanz
  */
-public class Zipper {
+final class Zipper {
 
     private static final int BUFFSIZE = 1024 * 2048;
 
     private static final int COMPR_LEVEL = 9;
 
     /**
-     * Compresses multiple files into one archive. Pass only files in the list!
-     * Allows for removing leading path segments of each file's path.
+     * Compresses multiple files into one archive. Pass only files in the list! Allows for removing leading path
+     * segments of each file's path.
      *
      * @param files files (no dirs) to add to the archive
      * @param outputFile the compressed output archive
-     * @param stripOff number of segments in the path of each file that are
-     *            stripped off before storing (if zero or negative nothing is
-     *            stripped off). The device is always removed.
+     * @param stripOff number of segments in the path of each file that are stripped off before storing (if zero or
+     *            negative nothing is stripped off). The device is always removed.
      * @param mon to report progress and check for cancellation (can be null)
-     * @throws IOException if an an I/O error occurred, the user canceled, one
-     *             of the specified didn't exist or anything else went wrong. It
-     *             tries to delete the partially created output file before
-     *             then.
+     * @throws IOException if an an I/O error occurred, the user canceled, one of the specified didn't exist or anything
+     *             else went wrong. It tries to delete the partially created output file before then.
      */
-    public static void zipFiles(final Collection<File> files,
-            final File outputFile, final int stripOff,
-            final IProgressMonitor mon) throws IOException {
+    public static void zipFiles(final Collection<File> files, final File outputFile, final int stripOff,
+        final IProgressMonitor mon) throws IOException {
 
         IProgressMonitor monitor = mon;
         if (monitor == null) {
@@ -99,13 +95,11 @@ public class Zipper {
 
         byte[] buf = new byte[BUFFSIZE];
         ZipOutputStream zout =
-                new ZipOutputStream(new BufferedOutputStream(
-                        new FileOutputStream(outputFile), BUFFSIZE));
+            new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outputFile), BUFFSIZE));
         IOException ioException = null;
 
         try {
             if (files.size() == 0) {
-                ioException = null;
                 // cleanup done in the finally block
                 return;
             }
@@ -118,22 +112,17 @@ public class Zipper {
                     int megaBytes = (int)(f.length() >>> 20);
                     wrk += megaBytes + 1;
                 }
-                monitor.beginTask("Compressing " + files.size() + " files...",
-                        wrk);
+                monitor.beginTask("Compressing " + files.size() + " files...", wrk);
             }
             for (File f : files) {
                 if (f == null) {
-                    ioException =
-                            new IOException("Illegal file in archive list: "
-                                    + "<null>!");
+                    ioException = new IOException("Illegal file in archive list: <null>!");
                     // cleanup done in the finally block
                     return;
                 }
                 if (f.isDirectory()) {
                     ioException =
-                            new IOException("Illegal file in archive list: "
-                                    + "directory (" + f.getAbsolutePath()
-                                    + ").");
+                        new IOException("Illegal file in archive list: directory (" + f.getAbsolutePath() + ").");
                     // cleanup done in the finally block
                     return;
                 }
@@ -149,34 +138,31 @@ public class Zipper {
                 }
                 String entryName = path.makeRelative().toString();
                 if (f.length() == 0) {
-                	// this is mainly for the .knimeLock file of open workflows; the file is locked and windows forbids
-                	// mmap-ing locked files but FileInputStream seems to mmap files which leads to exceptions while
-                	// reading the (non-existing) contents of the file
+                    // this is mainly for the .knimeLock file of open workflows; the file is locked and windows forbids
+                    // mmap-ing locked files but FileInputStream seems to mmap files which leads to exceptions while
+                    // reading the (non-existing) contents of the file
                     zout.putNextEntry(new ZipEntry(entryName));
                     zout.closeEntry();
                 } else {
-	                InputStream in = null;
-	                try {
-	                    in =
-	                            new BufferedInputStream(new FileInputStream(f),
-	                                    BUFFSIZE);
-	                    zout.putNextEntry(new ZipEntry(entryName));
-	                    int read;
-	                    while ((read = in.read(buf)) >= 0) {
-	                        if (monitor.isCanceled()) {
-	                            ioException =
-	                                    new IOException("Canceled.");
-	                            // cleanup done in the finally block
-	                            return;
-	                        }
-	                        zout.write(buf, 0, read);
-	                    }
-	                } finally {
-	                    zout.closeEntry();
-	                    if (in != null) {
-	                        in.close();
-	                    }
-	                }
+                    InputStream in = null;
+                    try {
+                        in = new BufferedInputStream(new FileInputStream(f), BUFFSIZE);
+                        zout.putNextEntry(new ZipEntry(entryName));
+                        int read;
+                        while ((read = in.read(buf)) >= 0) {
+                            if (monitor.isCanceled()) {
+                                ioException = new IOException("Canceled.");
+                                // cleanup done in the finally block
+                                return;
+                            }
+                            zout.write(buf, 0, read);
+                        }
+                    } finally {
+                        zout.closeEntry();
+                        if (in != null) {
+                            in.close();
+                        }
+                    }
                 }
                 int megaBytes = (int)(f.length() >>> 20);
                 monitor.worked(megaBytes + 1);
