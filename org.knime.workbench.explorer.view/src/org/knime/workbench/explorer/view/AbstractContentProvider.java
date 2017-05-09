@@ -1265,13 +1265,15 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param source the file store to be uploaded
      * @param target the file store to upload to
      * @param deleteSource if true the source is deleted after a successful upload
+     * @param excludeDataInWorkflows If true, any workflow in the selected folder will be 'exported' without data
+     *        (similar to the export menu option).
      * @param callback TODO
      * @throws CoreException if this method fails. Reasons include: A
      *         corresponding file could not be created in the local file system.
      * @since 7.0
      */
     public abstract void performUploadAsync(final LocalExplorerFileStore source, final RemoteExplorerFileStore target,
-        boolean deleteSource, AfterRunCallback callback) throws CoreException;
+        boolean deleteSource, boolean excludeDataInWorkflows, AfterRunCallback callback) throws CoreException;
 
     /**
      * Allows the content provider to open a 'special' confirmation dialog. Server is currently the only one confirming

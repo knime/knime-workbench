@@ -628,7 +628,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public void performUploadAsync(final LocalExplorerFileStore source, final RemoteExplorerFileStore target,
-        final boolean deleteSource, final AfterRunCallback callback) throws CoreException {
+        final boolean deleteSource, boolean excludeDataInWorkflows, final AfterRunCallback callback) throws CoreException {
         throw new UnsupportedOperationException("Cannot upload files to a local content provider.");
     }
 

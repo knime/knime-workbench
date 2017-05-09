@@ -263,7 +263,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             importArchiveEntry(archiveElement.getProvider(), archiveElement.getEntry(), tmpDestDir, monitor);
             if (destination instanceof RemoteExplorerFileStore) {
                 destination.getContentProvider().performUploadAsync((LocalExplorerFileStore)tmpDestDir,
-                    (RemoteExplorerFileStore)destination, true, null);
+                    (RemoteExplorerFileStore)destination, true, false, null);
             }
         } else if (archiveElement.isWorkflowGroup()) {
             if (m_recursive) {
@@ -279,7 +279,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                 importArchiveEntry(archiveElement.getProvider(), archiveElement.getEntry(), tmpDestDir, monitor);
                 if (destination instanceof RemoteExplorerFileStore) {
                     destination.getContentProvider().performUploadAsync((LocalExplorerFileStore)tmpDestDir,
-                        (RemoteExplorerFileStore)destination, true, null);
+                        (RemoteExplorerFileStore)destination, true, false, null);
                 }
             } else {
                 try {
