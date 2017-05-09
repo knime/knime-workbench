@@ -47,7 +47,6 @@ package org.knime.workbench.explorer.view.actions;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -57,8 +56,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.MultiStatus;
@@ -83,13 +80,11 @@ import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.AbstractContentProvider.AfterRunCallback;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.DestinationChecker;
-import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
+import org.knime.workbench.explorer.view.actions.CopyMove.CopyMoveResult;
 
 public abstract class AbstractCopyMoveAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
@@ -264,23 +259,19 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         }
 
         // collect the necessary information
-        final DestinationChecker <AbstractExplorerFileStore,
-                AbstractExplorerFileStore> destChecker = new DestinationChecker
-                <AbstractExplorerFileStore, AbstractExplorerFileStore>(
-                getParentShell(), m_cmd, srcFileStores.size() > 1,
-                !m_performMove);
+        final DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore> destChecker =
+            new DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore>(getParentShell(), m_cmd,
+                srcFileStores.size() > 1, !m_performMove);
         destChecker.setIsOverwriteDefault(true);
         for (final AbstractExplorerFileStore srcFS : srcFileStores) {
-            final AbstractExplorerFileStore destFS =
-                    destChecker.getAndCheckDestinationFlow(srcFS, m_target);
+            final AbstractExplorerFileStore destFS = destChecker.getAndCheckDestinationFlow(srcFS, m_target);
             if (destChecker.isAbort()) {
                 LOGGER.info(m_cmd + " operation was aborted.");
                 return false;
             }
             if (destFS == null) {
                 // the user skipped the operation or it is not allowed
-                LOGGER.info(m_cmd + " operation of "
-                        + srcFS.getMountIDWithFullPath() + " was skipped.");
+                LOGGER.info(m_cmd + " operation of " + srcFS.getMountIDWithFullPath() + " was skipped.");
             }
         }
 
@@ -300,8 +291,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                 LocalExplorerFileStore lfs = (LocalExplorerFileStore)aefs;
                 if (ExplorerFileSystemUtils.lockWorkflow(lfs)) {
                     lockedDest.add(lfs);
-                    /* Flows opened in an editor cannot be overwritten as
-                        well. */
+                    // Flows opened in an editor cannot be overwritten
                     if (ExplorerFileSystemUtils.hasOpenWorkflows(Arrays.asList(lfs))) {
                         notOverwritableDest.add(lfs);
                     }
@@ -359,157 +349,29 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             }
         }
 
-        final List<IStatus> result = new LinkedList<IStatus>();
-        final AtomicBoolean success = new AtomicBoolean(true);
+        AtomicBoolean success = new AtomicBoolean(true);
+        List<IStatus> result = new LinkedList<IStatus>();
+
         try {
             // perform the copy/move operations en-bloc in the background
-            PlatformUI.getWorkbench().getProgressService()
-                    .busyCursorWhile(new IRunnableWithProgress() {
+            PlatformUI.getWorkbench().getProgressService().busyCursorWhile(new IRunnableWithProgress() {
                 @Override
-                public void run(final IProgressMonitor monitor)
-                        throws InvocationTargetException,
-                        InterruptedException {
-
-                    int numFiles = srcFileStores.size();
-                    monitor.beginTask(m_cmd + " " + numFiles
-                            + " files to " + m_target.getFullName(),
-                            numFiles);
-                    // calculating the number of file transactions (copy/move/down/uploads)
-                    final ArrayList<AbstractExplorerFileStore> processedTargets =
-                        new ArrayList<>(destCheckerMappings.values());
-                    processedTargets.removeAll(Collections.singleton(null));
-                    int iterationCount = processedTargets.size();
-                    for (final Map.Entry<AbstractExplorerFileStore,
-                            AbstractExplorerFileStore> entry
-                            : destCheckerMappings.entrySet()) {
-                        AbstractExplorerFileStore srcFS = entry.getKey();
-                        AbstractExplorerFileStore destFS = entry.getValue();
-                        if (destFS == null) {
-                            // skip operations that have been marked to
-                            // be skipped
-                            continue;
-                        }
-                        String operation = m_cmd + " "
-                                + srcFS.getMountIDWithFullPath()
-                                + " to " + destFS.getFullName();
-                        monitor.subTask(operation);
-                        LOGGER.debug(operation);
-                        try {
-                            if (notOverwritableDest.contains(destFS)) {
-                                throw new UnsupportedOperationException(
-                                        "Cannot override \""
-                                        + destFS.getFullName()
-                                        + "\". Probably it is opened in the"
-                                        + " editor or it is in use by another "
-                                        + "user.");
-                            }
-                            boolean isOverwritten = destChecker.getOverwriteFS()
-                                    .contains(destFS);
-                            int options = isOverwritten ?
-                                            EFS.OVERWRITE : EFS.NONE;
-
-                            /* Make sure that a workflow group is not
-                             * overwritten by a workflow or template and vice
-                             * versa. */
-                            if (isOverwritten && (
-                                    srcFS.fetchInfo().isWorkflowGroup()
-                                    != destFS.fetchInfo().isWorkflowGroup())) {
-                                String msg = null;
-                                if (srcFS.fetchInfo().isWorkflowGroup()) {
-                                    msg = "Cannot override \""
-                                        + destFS.getFullName()
-                                        + "\". Workflows and MetaNode Templates"
-                                        + " cannot be overwritten by a Workflow"
-                                        + " Group.";
-                                } else {
-                                    msg = "Cannot override \""
-                                        + destFS.getFullName()
-                                        + "\". Workflow Groups can only be "
-                                        + "overwritten by other Workflow"
-                                        + " Groups.";
-                                }
-                                throw new UnsupportedOperationException(msg);
-                            }
-
-
-                            boolean isSrcRemote
-                                = srcFS instanceof RemoteExplorerFileStore;
-                            boolean isDstRemote
-                                = destFS instanceof RemoteExplorerFileStore;
-                            if (srcFS.fetchInfo().isWorkflowTemplate()
-                                    && !destFS.getContentProvider()
-                                            .canHostMetaNodeTemplates()) {
-                                throw new UnsupportedOperationException(
-                                        "Cannot " + m_cmd
-                                        + " metanode template '"
-                                        + srcFS.getFullName() + "' to "
-                                        + destFS.getMountID() + "."
-                                        + ". Unsupported operation.");
-                            }
-
-                            OverwriteAndMergeInfo info = destChecker.getOverwriteAndMergeInfos().get(destFS);
-                            if ((info != null)
-                                    && (destFS instanceof RemoteExplorerFileStore)
-                                    && info.createSnapshot()) {
-                                ((RemoteExplorerFileStore)destFS).createSnapshot(info.getComment());
-                            }
-
-                            AfterRunCallback callback = null; // for async operations
-                            if (--iterationCount == 0) {
-                                callback = t -> {
-                                    getView().setNextSelection(processedTargets);
-                                    m_target.refresh();
-                                };
-                            }
-                            if (!isSrcRemote && isDstRemote) { // upload
-                                destFS.getContentProvider().performUploadAsync((LocalExplorerFileStore)srcFS,
-                                    (RemoteExplorerFileStore)destFS, m_performMove, callback);
-                            } else if (isSrcRemote && !isDstRemote) { // download
-                                destFS.getContentProvider().performDownloadAsync((RemoteExplorerFileStore)srcFS,
-                                    (LocalExplorerFileStore)destFS, m_performMove, callback);
-                            } else { // regular copy
-                                scheduleLocalCopyOrMove(srcFS, destFS, callback, m_performMove, options);
-                            }
-                        } catch (CoreException e) {
-                            LOGGER.debug(m_cmd + " failed: "
-                                    + e.getStatus().getMessage(), e);
-                            result.add(e.getStatus());
-                            success.set(false);
-                            processedTargets.remove(destFS);
-                        } catch (UnsupportedOperationException e) {
-                            // illegal operation
-                            LOGGER.debug(m_cmd + " failed: "
-                                    + e.getMessage());
-                            result.add(new Status(IStatus.WARNING,
-                                    ExplorerActivator.PLUGIN_ID,
-                                    e.getMessage()));
-                            success.set(true);
-                            processedTargets.remove(destFS);
-                        } catch (Exception e) {
-                            LOGGER.debug(m_cmd + " failed: "
-                                    + e.getMessage(), e);
-                            result.add(new Status(IStatus.ERROR,
-                                    ExplorerActivator.PLUGIN_ID,
-                                    e.getMessage(), e));
-                            success.set(false);
-                            processedTargets.remove(destFS);
-                        }
-                        monitor.worked(1);
-                    }
+                public void run(final IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
+                    CopyMove copyMove = new CopyMove(getView(), m_target, destChecker, m_performMove);
+                    copyMove.setNotOverwritableDest(notOverwritableDest);
+                    CopyMoveResult copyMoveResult = copyMove.run(monitor);
+                    success.set(copyMoveResult.isSuccess());
+                    result.addAll(copyMoveResult.getStatusList());
                 }
             });
         } catch (InvocationTargetException e) {
             LOGGER.debug("Invocation exception, " + e.getMessage(), e);
-            result.add(new Status(IStatus.ERROR,
-                    ExplorerActivator.PLUGIN_ID,
-                    "invocation error: " + e.getMessage(), e));
+            result.add(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
+                "invocation error: " + e.getMessage(), e));
             success.set(false);
         } catch (InterruptedException e) {
-            LOGGER.debug(m_cmd + " failed: interrupted, " + e.getMessage(),
-                    e);
-            result.add(new Status(IStatus.ERROR,
-                    ExplorerActivator.PLUGIN_ID,
-                    "interrupted: " + e.getMessage(), e));
+            LOGGER.debug(m_cmd + " failed: interrupted, " + e.getMessage(), e);
+            result.add(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID, "interrupted: " + e.getMessage(), e));
             success.set(false);
         } finally {
             // unlock all locked destinations
@@ -517,49 +379,17 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         }
 
         if (result.size() > 1) {
-            IStatus multiStatus = new MultiStatus(ExplorerActivator.PLUGIN_ID,
-                    IStatus.ERROR, result.toArray(new IStatus[0]),
-                    "Could not " + m_cmd + " all files.", null);
-            ErrorDialog.openError(Display.getDefault().getActiveShell(),
-                    m_cmd + " item",
-                    "Some problems occurred during the operation.",
-                    multiStatus);
-            /* Don't show it as failure if only some of the items could not be
-             * copied. */
+            IStatus multiStatus = new MultiStatus(ExplorerActivator.PLUGIN_ID, IStatus.ERROR,
+                result.toArray(new IStatus[0]), "Could not " + m_cmd + " all files.", null);
+            ErrorDialog.openError(Display.getDefault().getActiveShell(), m_cmd + " item",
+                "Some problems occurred during the operation.", multiStatus);
+            // Don't show it as failure if only some of the items could not be copied.
             success.set(true);
         } else if (result.size() == 1) {
-            ErrorDialog.openError(Display.getDefault().getActiveShell(),
-                    m_cmd + " item",
-                    "Some problems occurred during the operation.",
-                    result.get(0));
+            ErrorDialog.openError(Display.getDefault().getActiveShell(), m_cmd + " item",
+                "Some problems occurred during the operation.", result.get(0));
         }
         return success.get();
-    }
-
-    private void scheduleLocalCopyOrMove(final AbstractExplorerFileStore source,
-        final AbstractExplorerFileStore destination, final AfterRunCallback callback, final boolean move,
-        final int options) {
-        ExplorerJob job =
-            new ExplorerJob((move ? "Move" : "Copy") + " of " + source.getMountIDWithFullPath() + " to "
-                + destination.getMountIDWithFullPath()) {
-
-                @Override
-                protected IStatus run(final IProgressMonitor monitor) {
-                    try {
-                        if (move) {
-                            source.move(destination, options, monitor);
-                        } else {
-                            source.copy(destination, options, monitor);
-                        }
-                        AfterRunCallback.callCallbackInDisplayThread(callback, null);
-                        return Status.OK_STATUS;
-                    } catch (CoreException ce) {
-                        AfterRunCallback.callCallbackInDisplayThread(callback, ce);
-                        return ce.getStatus();
-                    }
-                }
-        };
-        job.schedule();
     }
 
     /**
@@ -638,4 +468,6 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
     protected void setSuccess(final boolean success) {
         m_success = success;
     }
+
+
  }

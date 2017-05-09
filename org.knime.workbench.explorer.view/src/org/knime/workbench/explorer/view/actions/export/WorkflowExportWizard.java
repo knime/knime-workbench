@@ -47,21 +47,13 @@
  */
 package org.knime.workbench.explorer.view.actions.export;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Path;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.viewers.ISelection;
@@ -70,14 +62,7 @@ import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.ui.INewWizard;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
-import org.knime.core.node.FileNodePersistor;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.NodePersistor;
-import org.knime.core.node.workflow.SingleNodeContainer;
-import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.core.util.KnimeFileUtil;
-import org.knime.core.util.VMFileLocker;
-import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentDelegator;
 
@@ -92,14 +77,6 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
     private WorkflowExportPage m_page;
 
     private ISelection m_selection;
-
-    private final Collection<AbstractExplorerFileStore> m_elementsToExport = new ArrayList<AbstractExplorerFileStore>();
-
-    private boolean m_excludeData;
-
-    private AbstractExplorerFileStore m_commonParent;
-
-    private String m_fileName;
 
     /**
      * Constructor.
@@ -149,21 +126,20 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
 
         m_page.saveDialogSettings();
 
-        m_commonParent = m_page.getSelectedStore();
-        m_fileName = m_page.getFileName().trim();
-        m_excludeData = m_page.excludeData();
-        m_elementsToExport.clear();
         // get all workflows and workflow groups and stuff selected
-        m_elementsToExport.addAll(m_page.getElementsToExport());
-        if (m_elementsToExport.isEmpty()) {
+        Collection<AbstractExplorerFileStore> elementsToExport = new ArrayList<>();
+        elementsToExport.addAll(m_page.getElementsToExport());
+        if (elementsToExport.isEmpty()) {
             m_page.setErrorMessage("No elements contained in the selection. Nothing to export.");
             return false;
         }
+        final String filePath = m_page.getFileName().trim();
+        final File exportFile = new File(filePath);
+        final WorkflowExporter workflowExporter = new WorkflowExporter(exportFile,
+            m_page.getSelectedStore(), elementsToExport, m_page.excludeData());
 
         // if the specified export file already exist ask the user
         // for confirmation
-
-        final File exportFile = new File(m_fileName);
 
         if (exportFile.exists()) {
             // if it exists we have to check if we can write to:
@@ -209,7 +185,7 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
             @Override
             public void run(final IProgressMonitor monitor) throws InvocationTargetException {
                 try {
-                    doFinish(exportFile, monitor);
+                    workflowExporter.doFinish(monitor);
                 } catch (CoreException e) {
                     throw new InvocationTargetException(e);
                 } finally {
@@ -236,240 +212,6 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
     }
 
     /**
-     * Implements the exclude policy. Called only if "exclude data" is checked.
-     *
-     * @param store the resource to check
-     * @return true if the given resource should be excluded, false if it should be included
-     */
-    protected static boolean excludeResource(final AbstractExplorerFileStore store) {
-        String name = store.getName();
-        if (name.equals("internal")) {
-            return true;
-        }
-        if (store.fetchInfo().isDirectory()) {
-            // directories to exclude:
-            if (name.startsWith(FileNodePersistor.PORT_FOLDER_PREFIX)) {
-                return true;
-            }
-            if (name.startsWith(FileNodePersistor.INTERNAL_TABLE_FOLDER_PREFIX)) {
-                return true;
-            }
-            if (name.startsWith(FileNodePersistor.FILESTORE_FOLDER_PREFIX)) {
-                return true;
-            }
-            if (name.startsWith(NodePersistor.INTERN_FILE_DIR)) {
-                return true;
-            }
-            if (name.startsWith(SingleNodeContainer.DROP_DIR_NAME)) {
-                return true;
-            }
-        } else {
-            // files to exclude:
-            if (name.startsWith("model_")) {
-                return true;
-            }
-            if (name.equals("data.xml")) {
-                return true;
-            }
-            if (name.startsWith(WorkflowPersistor.SAVED_WITH_DATA_FILE)) {
-                return true;
-            }
-            if (name.startsWith(VMFileLocker.LOCK_FILE)) {
-                return true;
-            }
-        }
-        // always exclude zip files
-        return name.toLowerCase().endsWith(".zip");
-    }
-
-    /**
-     * Implements the exclude policy. Called only if "exclude data" is checked.
-     *
-     * @param store the resource to check
-     * @return true if the given resource should be excluded, false if it should be included
-     * @since 7.1
-     */
-    protected static boolean excludeResource(final File store) {
-        String name = store.getName();
-        if (name.equals("internal")) {
-            return true;
-        }
-        if (store.isDirectory()) {
-            // directories to exclude:
-            if (name.startsWith(FileNodePersistor.PORT_FOLDER_PREFIX)) {
-                return true;
-            }
-            if (name.startsWith(FileNodePersistor.INTERNAL_TABLE_FOLDER_PREFIX)) {
-                return true;
-            }
-            if (name.startsWith(FileNodePersistor.FILESTORE_FOLDER_PREFIX)) {
-                return true;
-            }
-            if (name.startsWith(NodePersistor.INTERN_FILE_DIR)) {
-                return true;
-            }
-            if (name.startsWith(SingleNodeContainer.DROP_DIR_NAME)) {
-                return true;
-            }
-        } else {
-            // files to exclude:
-            if (name.startsWith("model_")) {
-                return true;
-            }
-            if (name.equals("data.xml")) {
-                return true;
-            }
-            if (name.startsWith(WorkflowPersistor.SAVED_WITH_DATA_FILE)) {
-                return true;
-            }
-            if (name.startsWith(VMFileLocker.LOCK_FILE)) {
-                return true;
-            }
-        }
-        // always exclude zip files
-        return name.toLowerCase().endsWith(".zip");
-    }
-
-    /**
-     * The worker method. It will find the container, create the export file if missing or just replace its contents.
-     */
-    private void doFinish(final File fileName, final IProgressMonitor monitor) throws CoreException {
-        // start zipping
-        monitor.beginTask("Archiving selected workflows... ", 10);
-        // if the data should be excluded from the export
-        // iterate over the resources and add only the wanted stuff
-        // i.e. the "intern" folder and "*.zip" files are excluded
-        final List<File> resourceList = new ArrayList<File>();
-        for (AbstractExplorerFileStore wf : m_elementsToExport) {
-            // add all files within the workflow or group
-            addResourcesFor(resourceList, wf, m_excludeData);
-        }
-        monitor.worked(1); // 10% for collecting the files...
-        try {
-            SubProgressMonitor sub = new SubProgressMonitor(monitor, 9);
-
-            File parentLoc = m_commonParent.toLocalFile();
-            if (parentLoc == null) {
-                throw new CoreException(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
-                    "Only local files can be exported (" + m_commonParent.getFullName() + " has no local file)", null));
-            }
-
-            int stripOff = new Path(parentLoc.getAbsolutePath()).segmentCount();
-            if (!m_commonParent.getFullName().equals("/")) {
-                // keep the common workflow group (if exists) in the archive
-                stripOff = stripOff - 1;
-            }
-            Zipper.zipFiles(resourceList, fileName, stripOff, sub);
-
-        } catch (final IOException t) {
-            LOGGER.debug("Export of KNIME workflow(s) failed: " + t.getMessage(), t);
-            throw new CoreException(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID, t.getMessage(), t));
-        }
-        monitor.done();
-
-    }
-
-    /**
-     * Collects the files (files only) that are contained in the passed workflow or workflow group and are that are not
-     * excluded. For workflows it does include all files contained in sub dirs (unless excluded).
-     *
-     * @param resourceList result list of local resources to export
-     * @param element the resource representing the thing to export
-     * @param excludeData true if KNIME data files should be excluded
-     * @throws CoreException
-     */
-    public static void addResourcesFor(final List<File> resourceList, final AbstractExplorerFileStore element,
-        final boolean excludeData) throws CoreException {
-        if (resourceList == null) {
-            throw new NullPointerException("Result list can't be null");
-        }
-        if (AbstractExplorerFileStore.isWorkflow(element) || AbstractExplorerFileStore.isWorkflowTemplate(element)) {
-            addWorkflowContent(resourceList, element, excludeData);
-        } else if (AbstractExplorerFileStore.isDataFile(element)) {
-            addFile(resourceList, element);
-        } else if (AbstractExplorerFileStore.isWorkflowGroup(element)) {
-            addWorkflowGroupContent(resourceList, element);
-        } else {
-            throw new IllegalArgumentException("Only resources of flows, templates or data files can be added.");
-        }
-    }
-
-    /*
-     * Adds files contained in workflow groups. Doesn't recurse. Adds the meta info file.
-     */
-    private static void addWorkflowGroupContent(final List<File> resourceList, final AbstractExplorerFileStore group) throws CoreException {
-        assert group.fetchInfo().isDirectory();
-        File loc = group.toLocalFile();
-        if (loc == null) {
-            throw new CoreException(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
-                "Only local files can be exported (" + group.getFullName() + " has no local file).", null));
-        }
-        resourceList.add(new File(loc, WorkflowPersistor.METAINFO_FILE));
-    }
-
-    /**
-     * Adds a file of the passed resourcelist.
-     *
-     * @param resourceList
-     * @param dataFile a file!
-     * @throws CoreException
-     */
-    private static void addFile(final List<File> resourceList, final AbstractExplorerFileStore dataFile)
-        throws CoreException {
-        assert dataFile.fetchInfo().isFile();
-        File loc = dataFile.toLocalFile();
-        if (loc == null) {
-            throw new CoreException(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
-                "Only local files can be exported (" + dataFile.getFullName() + " has no local file).", null));
-        }
-        resourceList.add(loc);
-    }
-
-    /*
-     * Call this on workflows or templates only. Includes everything except data tables, if excluded
-     */
-
-    private static void addWorkflowContent(final List<File> resources, final AbstractExplorerFileStore flow,
-        final boolean excludeData) throws CoreException {
-        assert flow.fetchInfo().isDirectory();
-        File loc = flow.toLocalFile();
-        if (loc == null) {
-            throw new CoreException(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
-                "Only local files can be exported (" + flow.getFullName() + " has no local file).", null));
-        }
-        addEntireDirContent(resources, loc, excludeData);
-    }
-
-    private static void addEntireDirContent(final List<File> resources, final File dir, final boolean excludeData)
-        throws CoreException {
-        File[] content = dir.listFiles();
-        if (content == null) {
-            throw new CoreException(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
-                "Unable to read folder content from " + dir.getAbsolutePath() + ". Can't export it.", null));
-        }
-        for (File child : content) {
-            if (!KnimeFileUtil.isMetaNode(child) && excludeData && excludeResource(child)) {
-                continue;
-            }
-            if (!child.isDirectory()) {
-                resources.add(child);
-            } else {
-                addEntireDirContent(resources, child, excludeData);
-            }
-        }
-    }
-
-    /**
-     * We will initialize file contents with a sample text.
-     *
-     * @return an empty content stream
-     */
-    InputStream openContentStream() {
-        String contents = "";
-        return new ByteArrayInputStream(contents.getBytes());
-    }
-
-    /**
      * We will accept the selection in the workbench to see if we can initialize from it.
      *
      * {@inheritDoc}
@@ -479,7 +221,4 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
         this.m_selection = selection;
     }
 
-    private static Status getErrorStatus(final String msg, final Throwable e) {
-        return new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID, msg, e);
-    }
 }

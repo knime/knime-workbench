@@ -44,11 +44,19 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
-import java.util.Collections;
+import java.lang.reflect.InvocationTargetException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.MultiStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
@@ -56,6 +64,7 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
@@ -69,7 +78,9 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
+import org.knime.workbench.explorer.view.DestinationChecker;
 import org.knime.workbench.explorer.view.ExplorerView;
+import org.knime.workbench.explorer.view.actions.CopyMove.CopyMoveResult;
 
 /**
  * Deploys a selected workflow or workflow group (single selection) to a KNIME Server.
@@ -114,24 +125,59 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         if (!PlatformUI.getWorkbench().saveAllEditors(true)) {
             return;
         }
-        try {
-            AbstractExplorerFileStore srcFileStore = getSingleSelectedWorkflowOrGroup()
-                    .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
-            Optional<SelectedDestination> destGroupOptional = promptForTargetLocation(srcFileStore);
-            if (!destGroupOptional.isPresent()) {
-                LOGGER.debug(getText() + "canceled");
-                return;
-            }
-            SelectedDestination destGroup = destGroupOptional.get();
-            GlobalCopyAction globalCopyAction = new GlobalCopyAction(
-                getView(), Collections.singletonList(srcFileStore), destGroup.getDestination());
-            LOGGER.fatal("Checkbox was set: " + destGroup.isExcludeData());
+        AbstractExplorerFileStore srcFileStore = getSingleSelectedWorkflowOrGroup()
+                .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
+        String dialogTitle = "Deploy " + srcFileStore.getName();
 
-            globalCopyAction.run();
-            lastUsedLocation = destGroup.getDestination();
-        } catch (Exception e) {
-            LOGGER.error("Couldn't deploy to server.", e);
+        Optional<SelectedDestination> destInfoOptional = promptForTargetLocation(srcFileStore);
+        if (!destInfoOptional.isPresent()) {
+            LOGGER.debug(getText() + "canceled");
+            return;
         }
+        SelectedDestination destInfo = destInfoOptional.get();
+        AbstractExplorerFileStore destination = destInfo.getDestination();
+
+        final DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore> destChecker =
+                new DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore>(
+                        getParentShell(), "Copy", false, true);
+        destChecker.setIsOverwriteEnabled(true);
+        destChecker.setIsOverwriteDefault(true);
+        final AbstractExplorerFileStore destFS = destChecker.getAndCheckDestinationFlow(srcFileStore, destination);
+        if (destChecker.isAbort() || destFS == null) {
+            return;
+        }
+
+        CopyMove copyMove = new CopyMove(getView(), destination, destChecker, false);
+        copyMove.setExcludeDataInWorkflows(destInfo.isExcludeData());
+        final List<IStatus> statusList = new LinkedList<>();
+        try {
+            // perform the copy/move operations en-bloc in the background
+            PlatformUI.getWorkbench().getProgressService().busyCursorWhile(new IRunnableWithProgress() {
+                @Override
+                public void run(final IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
+                    CopyMoveResult copyMoveResult = copyMove.run(monitor);
+                    statusList.addAll(copyMoveResult.getStatusList());
+                }
+            });
+        } catch (InvocationTargetException e) {
+            LOGGER.debug("Invocation exception, " + e.getMessage(), e);
+            statusList.add(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
+                "invocation error: " + e.getMessage(), e));
+        } catch (InterruptedException e) {
+            LOGGER.debug("Deploy failed: interrupted, " + e.getMessage(), e);
+            statusList.add(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
+                "interrupted: " + e.getMessage(), e));
+        }
+        if (statusList.size() > 1) {
+            IStatus multiStatus = new MultiStatus(ExplorerActivator.PLUGIN_ID, IStatus.ERROR,
+                statusList.toArray(new IStatus[0]), "Could not deploy all elements.", null);
+            ErrorDialog.openError(Display.getDefault().getActiveShell(), dialogTitle,
+                "Some problems occurred during the operation.", multiStatus);
+        } else if (statusList.size() == 1) {
+            ErrorDialog.openError(Display.getDefault().getActiveShell(), dialogTitle,
+                "Some problems occurred during the operation.", statusList.get(0));
+        }
+        lastUsedLocation = destination;
     }
 
     /** Opens the selection prompt and lets the user choose a remote workflow group.
@@ -224,6 +270,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         }
     }
 
+    /** Represents a selected destination folder and the property whether the data is to be excluded before upload. */
     static final class SelectedDestination {
         private final AbstractExplorerFileStore m_destination;
         private final boolean m_isExcludeData;
