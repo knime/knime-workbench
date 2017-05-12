@@ -53,6 +53,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -449,13 +450,8 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     @Override
     public AbstractExplorerFileStore[] childStores(final int options,
             final IProgressMonitor monitor) throws CoreException {
-        IFileStore[] childStores = super.childStores(options, monitor);
-        AbstractExplorerFileStore[] efs
-                = new AbstractExplorerFileStore[childStores.length];
-        for (int i = 0; i < efs.length; i++) {
-            efs[i] = (AbstractExplorerFileStore)childStores[i];
-        }
-        return efs;
+        return Arrays.stream(super.childStores(options, monitor))
+                .map(i -> (AbstractExplorerFileStore)i).toArray(AbstractExplorerFileStore[]::new);
     }
 
     /**

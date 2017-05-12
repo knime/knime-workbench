@@ -86,7 +86,7 @@ public final class WorkflowExporter {
 
     private final AbstractExplorerFileStore m_commonParent;
 
-    private File m_exportFile;
+    private final File m_exportFile;
 
     /**
      * @param exportFile
@@ -99,7 +99,7 @@ public final class WorkflowExporter {
         m_commonParent = CheckUtils.checkArgumentNotNull(commonParent);
         m_exportFile = CheckUtils.checkArgumentNotNull(exportFile);
         m_excludeData = CheckUtils.checkArgumentNotNull(excludeData);
-        m_elementsToExport = elementsToExport;
+        m_elementsToExport = CheckUtils.checkArgumentNotNull(elementsToExport);
     }
 
     /**
@@ -113,10 +113,11 @@ public final class WorkflowExporter {
         // iterate over the resources and add only the wanted stuff
         // i.e. the "intern" folder and "*.zip" files are excluded
         final List<File> resourceList = new ArrayList<File>();
-        for (AbstractExplorerFileStore wf : m_elementsToExport) {
+        for (AbstractExplorerFileStore fs : m_elementsToExport) {
             // add all files within the workflow or group
-            addResourcesFor(resourceList, wf, m_excludeData);
+            addResourcesFor(resourceList, fs, m_excludeData);
         }
+
         monitor.worked(1); // 10% for collecting the files...
         try {
             SubProgressMonitor sub = new SubProgressMonitor(monitor, 9);
@@ -258,7 +259,8 @@ public final class WorkflowExporter {
         } else if (AbstractExplorerFileStore.isWorkflowGroup(element)) {
             addWorkflowGroupContent(resourceList, element);
         } else {
-            throw new IllegalArgumentException("Only resources of flows, templates or data files can be added.");
+            throw new IllegalArgumentException("Only resources of flows, templates or data files can be added (item \""
+                    + element.getMountIDWithFullPath() + "\")");
         }
     }
 

@@ -142,8 +142,8 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
                         getParentShell(), "Copy", false, true);
         destChecker.setIsOverwriteEnabled(true);
         destChecker.setIsOverwriteDefault(true);
-        final AbstractExplorerFileStore destFS = destChecker.getAndCheckDestinationFlow(srcFileStore, destination);
-        if (destChecker.isAbort() || destFS == null) {
+        destChecker.getAndCheckDestinationFlow(srcFileStore, destination);
+        if (destChecker.isAbort()) {
             return;
         }
 
