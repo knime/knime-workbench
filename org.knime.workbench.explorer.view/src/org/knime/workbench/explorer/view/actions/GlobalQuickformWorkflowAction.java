@@ -84,7 +84,7 @@ public class GlobalQuickformWorkflowAction extends ExplorerAction {
      * @param viewer the associated tree viewer
      */
     public GlobalQuickformWorkflowAction(final ExplorerView viewer) {
-        super(viewer, "QuickForm Execution...");
+        super(viewer, "QuickForm Execution (legacy)...");
         setImageDescriptor(IMG);
     }
 
