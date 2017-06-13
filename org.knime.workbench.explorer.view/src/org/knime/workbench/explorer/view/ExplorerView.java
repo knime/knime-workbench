@@ -706,6 +706,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new Separator());
         manager.add(new WorkflowImportAction(this));
         manager.add(new WorkflowExportAction(this));
+        manager.add(new GlobalDeploytoServerAction(this));
         manager.add(new Separator());
         manager.add(new GlobalDeleteAction(this));
         manager.add(new GlobalRenameAction(this));
@@ -722,7 +723,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new Separator());
         manager.add(new GlobalEditMetaInfoAction(this));
         manager.add(new Separator());
-        manager.add(new GlobalDeploytoServerAction(this));
         manager.add(new Separator());
         manager.add(new GlobalRefreshAction(this));
         manager.add(new Separator());

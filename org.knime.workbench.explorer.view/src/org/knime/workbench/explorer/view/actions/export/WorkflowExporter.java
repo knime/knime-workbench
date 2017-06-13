@@ -215,9 +215,6 @@ public final class WorkflowExporter {
             if (name.startsWith(NodePersistor.INTERN_FILE_DIR)) {
                 return true;
             }
-            if (name.startsWith(SingleNodeContainer.DROP_DIR_NAME)) {
-                return true;
-            }
         } else {
             // files to exclude:
             if (name.startsWith("model_")) {

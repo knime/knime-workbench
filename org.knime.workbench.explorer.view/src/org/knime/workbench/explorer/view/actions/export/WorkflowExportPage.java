@@ -211,7 +211,7 @@ public class WorkflowExportPage extends WizardPage {
 
         m_excludeData = new Button(group, SWT.CHECK);
         m_excludeData.setSelection(true);
-        m_excludeData.setText("Exclude data from export.");
+        m_excludeData.setText("Reset Workflow(s) before export");
 
         createTreeViewer(container);
 

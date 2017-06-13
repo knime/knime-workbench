@@ -255,7 +255,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
             m_excludeDataButton = new Button(parent, SWT.CHECK);
             m_isExcludeData = false;
             m_excludeDataButton.setSelection(m_isExcludeData);
-            m_excludeDataButton.setText("Exclude data from export.");
+            m_excludeDataButton.setText("Reset Workflow(s) before upload");
             m_excludeDataButton.addSelectionListener(new SelectionAdapter() {
                 @Override
                 public void widgetSelected(final SelectionEvent e) {
