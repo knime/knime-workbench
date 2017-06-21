@@ -46,8 +46,6 @@ package org.knime.workbench.explorer.localworkspace;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -65,7 +63,6 @@ import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -93,8 +90,6 @@ import org.knime.workbench.explorer.view.actions.GlobalMoveAction;
 import org.knime.workbench.explorer.view.actions.WorkflowDownload;
 import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.wiring.BundleWiring;
 
 /**
  * Provides content for the user space view that shows the content (workflows
@@ -466,44 +461,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     /** {@inheritDoc} */
     @Override
     public final boolean canHostMetaNodeTemplates() {
-        return isMetanodeRepositoryEnabled();
-    }
-
-    /** Init lazy. Checks whether teamspace license is available (enable metanode sharing only if avail). */
-    private static Boolean isMetanodeRepositoryEnabled;
-
-    /** Lazy init and return of {@link #isMetanodeRepositoryEnabled}. */
-    private boolean isMetanodeRepositoryEnabled() {
-        if (isMetanodeRepositoryEnabled == null) {
-            try {
-                Bundle licensesBundle = Platform.getBundle("com.knime.licenses");
-                if (licensesBundle == null) {
-                    isMetanodeRepositoryEnabled = false;
-                    return false;
-                }
-
-                BundleWiring bundleWiring = licensesBundle.adapt(BundleWiring.class);
-                if (bundleWiring == null) {
-                    isMetanodeRepositoryEnabled = false;
-                    return false;
-                }
-
-                ClassLoader classLoader = bundleWiring.getClassLoader();
-                if (classLoader == null) {
-                    isMetanodeRepositoryEnabled = false;
-                    return false;
-                }
-
-                Class<?> licenseStoreClass = classLoader.loadClass("com.knime.licenses.LicenseStore");
-                Method validLicense = licenseStoreClass.getMethod("validLicense", String.class);
-                isMetanodeRepositoryEnabled = (Boolean)validLicense.invoke(null, "MetanodeRepository");
-            } catch (NoClassDefFoundError | ClassNotFoundException | SecurityException | NoSuchMethodException
-                    | IllegalArgumentException | IllegalAccessException | InvocationTargetException cnfe) {
-                // optional dependency to com.knime.license not met - no license
-                isMetanodeRepositoryEnabled = false;
-            }
-        }
-        return isMetanodeRepositoryEnabled.booleanValue();
+        return true;
     }
 
     /**
@@ -628,7 +586,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public void performUploadAsync(final LocalExplorerFileStore source, final RemoteExplorerFileStore target,
-        final boolean deleteSource, boolean excludeDataInWorkflows, final AfterRunCallback callback) throws CoreException {
+        final boolean deleteSource, final boolean excludeDataInWorkflows, final AfterRunCallback callback) throws CoreException {
         throw new UnsupportedOperationException("Cannot upload files to a local content provider.");
     }
 
