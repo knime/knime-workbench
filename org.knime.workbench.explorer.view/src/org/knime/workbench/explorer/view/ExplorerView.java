@@ -63,6 +63,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
@@ -715,8 +716,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new GlobalExecuteWorkflowAction(this));
         manager.add(new GlobalCancelWorkflowExecutionAction(this));
         manager.add(new GlobalResetWorkflowAction(this));
-        manager.add(new Separator());
-        manager.add(new GlobalQuickformWorkflowAction(this));
+        boolean showLegacyQuickformAction = Platform.getPreferencesService().getBoolean("org.knime.js.core",
+            "js.core.enableLegacyQuickformExecution", false, null);
+        if (showLegacyQuickformAction) {
+            manager.add(new Separator());
+            manager.add(new GlobalQuickformWorkflowAction(this));
+        }
         manager.add(new Separator());
         manager.add(new GlobalCredentialVariablesDialogAction(this));
         manager.add(new GlobalOpenWorkflowVariablesDialogAction(this));
