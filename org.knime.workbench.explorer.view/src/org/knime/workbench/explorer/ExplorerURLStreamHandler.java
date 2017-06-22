@@ -191,11 +191,11 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                 resolvedPath = new File(workflowContext.getOriginalLocation(), decodedPath);
             }
 
-            URI normalizedPath = resolvedPath.toURI().normalize();
             // if resolved path is outside the workflow, check whether it is still inside the mountpoint
             if (!resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())
                 && (workflowContext.getMountpointRoot() != null)) {
-                URI normalizedRoot = workflowContext.getMountpointRoot().toURI().normalize();
+                URI normalizedRoot = workflowContext.getMountpointRoot().toPath().normalize().toUri();
+                URI normalizedPath = resolvedPath.toPath().normalize().toUri();
 
                 if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
                     throw new IOException("Leaving the mount point is not allowed for workflow relative URLs: "
@@ -203,7 +203,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                         + workflowContext.getMountpointRoot().getAbsolutePath());
                 }
             }
-            return normalizedPath.toURL();
+            return resolvedPath.toURI().toURL();
         }
     }
 
@@ -220,14 +220,14 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             File mountpointRoot = workflowContext.getMountpointRoot();
             File resolvedPath = new File(mountpointRoot, decodedPath);
 
-            URI normalizedPath = resolvedPath.toURI().normalize();
-            URI normalizedRoot = mountpointRoot.toURI().normalize();
+            URI normalizedPath = resolvedPath.toPath().normalize().toUri();
+            URI normalizedRoot = mountpointRoot.toPath().normalize().toUri();
 
             if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
                 throw new IOException("Leaving the mount point is not allowed for mount point relative URLs: "
                     + resolvedPath.getAbsolutePath() + " is not in " + mountpointRoot.getAbsolutePath());
             }
-            return normalizedPath.toURL();
+            return resolvedPath.toURI().toURL();
         }
     }
 
@@ -247,7 +247,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             throw new IOException("Leaving the workflow is not allowed for node-relative URLs: "
                 + resolvedPath.getCanonicalPath() + " is not in " + currentLocation.getCanonicalPath());
         }
-        return resolvedPath.toURI().normalize().toURL();
+        return resolvedPath.toURI().toURL();
     }
 
     private URLConnection openExternalMountConnection(final URL url) throws IOException {

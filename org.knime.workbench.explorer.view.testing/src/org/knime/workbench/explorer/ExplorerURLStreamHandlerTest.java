@@ -53,6 +53,7 @@ import static org.hamcrest.core.IsInstanceOf.instanceOf;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.assertThat;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
@@ -62,7 +63,9 @@ import java.util.Collection;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.eclipse.core.runtime.Platform;
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -179,7 +182,7 @@ public class ExplorerURLStreamHandlerTest {
         // path outside the workflow
         url = new URL("knime://knime.workflow/../test.txt");
         conn = m_handler.openConnection(url);
-        expectedPath = currentLocation.resolve("..").resolve("test.txt").normalize();
+        expectedPath = currentLocation.resolve("..").resolve("test.txt");
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
     }
 
@@ -220,7 +223,7 @@ public class ExplorerURLStreamHandlerTest {
         url = new URL("knime://knime.workflow/../test.txt");
         conn = m_handler.openConnection(url);
         expectedPath = originalLocation.resolve("..").resolve("test.txt").normalize();
-        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+        assertThat("Unexpected resolved URL", conn.getURL().toURI().normalize(), is(expectedPath.toUri().normalize()));
     }
 
     /**
@@ -304,6 +307,32 @@ public class ExplorerURLStreamHandlerTest {
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
     }
 
+
+    /**
+     * Checks if mountpoint-relative knime-URLs that reside on an UNC drive are resolved correctly (see AP-7427).
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveMountpointRelativeLocalUNC() throws Exception {
+        Assume.assumeThat(Platform.getOS(), is(Platform.OS_WIN32));
+
+        URL url = new URL("knime://knime.mountpoint/test.txt");
+
+        File currentLocation = new File("\\\\server\\repo\\workflow");
+        WorkflowCreationHelper ch = new WorkflowCreationHelper();
+        WorkflowContext.Factory fac = new WorkflowContext.Factory(currentLocation);
+        fac.setMountpointRoot(currentLocation.getParentFile());
+        ch.setWorkflowContext(fac.createContext());
+        WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), ch);
+        NodeContext.pushContext(wfm);
+
+        URLConnection conn = m_handler.openConnection(url);
+        File expectedPath = new File(currentLocation.getParentFile(), "test.txt");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toURI()));
+        assertThat("Unexpected resulting file", new File(conn.getURL().toURI()), is(expectedPath));
+    }
+
     /**
      * Checks if mountpoint-relative knime-URLs are resolved correctly for old executors.
      *
@@ -379,6 +408,41 @@ public class ExplorerURLStreamHandlerTest {
         // we cannot check whether the Authorization header is set correctly, because HttpURLConnection
         // doesn't return it for security reasons
     }
+
+
+
+
+    /**
+     * Checks if workflow-relative knime-URLs that reside on an UNC drive are resolved correctly (see AP-7427).
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveWorkflowRelativeLocalUNC() throws Exception {
+        Assume.assumeThat(Platform.getOS(), is(Platform.OS_WIN32));
+
+        URL url = new URL("knime://knime.workflow/workflow.knime");
+
+        File currentLocation = new File("\\\\server\\repo\\workflow");
+        WorkflowCreationHelper ch = new WorkflowCreationHelper();
+        WorkflowContext.Factory fac = new WorkflowContext.Factory(currentLocation);
+        fac.setMountpointRoot(currentLocation.getParentFile());
+        ch.setWorkflowContext(fac.createContext());
+        WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), ch);
+        NodeContext.pushContext(wfm);
+
+        URLConnection conn = m_handler.openConnection(url);
+        File expectedPath = new File(currentLocation, "workflow.knime");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toURI()));
+
+        // path outside the workflow
+        url = new URL("knime://knime.workflow/../test.txt");
+        conn = m_handler.openConnection(url);
+        expectedPath = new File(currentLocation, "../test.txt");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toURI()));
+        assertThat("Unexpected resulting file", new File(conn.getURL().toURI()), is(expectedPath));
+    }
+
 
     /**
      * Check if URLs with a local mount point are resolved correctly.
