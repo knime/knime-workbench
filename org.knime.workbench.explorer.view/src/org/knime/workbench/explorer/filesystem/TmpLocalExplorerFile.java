@@ -71,6 +71,7 @@ import org.knime.workbench.explorer.ExplorerActivator;
 public class TmpLocalExplorerFile extends LocalExplorerFileStore {
 
     private final File m_wrappedFile;
+    private final boolean m_mimicFlowOrTemplate;
     private AbstractExplorerFileInfo m_info;
 
     /**
@@ -78,8 +79,19 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
      *
      */
     public TmpLocalExplorerFile(final File wrappedFile) {
+        this(wrappedFile, false);
+    }
+
+    /**
+     * @param wrappedFile the wrapped file
+     * @param mimicFlowOrTemplate If set to <code>true</code>, the file info will return <code>true</code> when
+     * its {@link AbstractExplorerFileInfo#isMetaNode()} or {@link AbstractExplorerFileInfo#isWorkflow()} get called.
+     * @since 8.1
+     */
+    public TmpLocalExplorerFile(final File wrappedFile, final boolean mimicFlowOrTemplate) {
         super("", wrappedFile.getAbsolutePath());
         m_wrappedFile = wrappedFile;
+        m_mimicFlowOrTemplate = mimicFlowOrTemplate;
     }
 
     /**
@@ -130,9 +142,14 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
     public AbstractExplorerFileInfo fetchInfo() {
         if (m_info == null) {
             m_info = new AbstractExplorerFileInfo() {
+
+                {
+                    setDirectory(m_mimicFlowOrTemplate);
+                }
+
                 @Override
                 public boolean isWorkflowTemplate() {
-                    return false;
+                    return m_mimicFlowOrTemplate;
                 }
 
                 @Override
@@ -142,7 +159,7 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
 
                 @Override
                 public boolean isWorkflow() {
-                    return false;
+                    return m_mimicFlowOrTemplate;
                 }
 
                 @Override
