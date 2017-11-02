@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -58,7 +58,7 @@ import org.knime.workbench.editor2.svgexport.WorkflowSVGExport;
  * Service implementation of the {@link WorkflowSVGExport}. This service is registered in the editor bundle activator
  * ({@link org.knime.workbench.KNIMEEditorPlugin}).
  *
- * @author Bernd Wiswedel, Patrick Winter, KNIME.com, Zurich, Switzerland
+ * @author Bernd Wiswedel, Patrick Winter, KNIME AG, Zurich, Switzerland
  */
 public final class WorkflowSVGExportImpl implements WorkflowSVGExport {
 
