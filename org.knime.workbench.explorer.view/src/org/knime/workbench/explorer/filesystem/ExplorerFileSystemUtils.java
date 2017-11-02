@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -77,7 +77,7 @@ import org.knime.workbench.ui.navigator.WorkflowEditorAdapter;
  * A set of static methods to deal with the creation/deletion of possibly locked
  * workflows in the explorer file system.
  *
- * @author Bernd Wiswedel, KNIME.com, Zurich, Switzerland
+ * @author Bernd Wiswedel, KNIME AG, Zurich, Switzerland
  */
 public final class ExplorerFileSystemUtils {
 

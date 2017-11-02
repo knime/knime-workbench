@@ -1,7 +1,7 @@
 /*
  * ------------------------------------------------------------------------
  *
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -81,7 +81,7 @@ import org.knime.workbench.explorer.ExplorerURLStreamHandler.ExplorerURLConnecti
 /**
  * Testcases for {@link ExplorerURLStreamHandler}.
  *
- * @author Thorsten Meinl, KNIME.com, Zurich, Switzerland
+ * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
  */
 public class ExplorerURLStreamHandlerTest {
     /**

@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -60,7 +60,7 @@ import org.eclipse.swt.widgets.Text;
 /**
  * Panel that shows a checkbox asking the user whether a snapshot should be created and a textfield for the comment.
  *
- * @author Thorsten Meinl, KNIME.com, Zurich, Switzerland
+ * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
  * @since 6.4
  */
 public class SnapshotPanel extends Composite {

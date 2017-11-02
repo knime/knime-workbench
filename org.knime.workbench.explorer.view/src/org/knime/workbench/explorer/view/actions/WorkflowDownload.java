@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -74,7 +74,7 @@ import org.knime.workbench.explorer.view.ExplorerJob;
 
 /**
  *
- * @author ohl, KNIME.com, Zurich, Switzerland
+ * @author ohl, KNIME AG, Zurich, Switzerland
  * @since 7.0
  */
 public class WorkflowDownload extends TempExtractArchive {
@@ -254,7 +254,7 @@ public class WorkflowDownload extends TempExtractArchive {
     /**
      * Downloads a remote file store to a local temp dir.
      *
-     * @author Peter Ohl, KNIME.com, Zurich, Switzerland
+     * @author Peter Ohl, KNIME AG, Zurich, Switzerland
      */
     protected static class DownloadRunnable implements Runnable {
 

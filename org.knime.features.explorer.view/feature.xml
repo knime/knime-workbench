@@ -3,14 +3,14 @@
       id="org.knime.features.explorer.view"
       label="KNIME Explorer view (do not install!)"
       version="3.5.0.qualifier"
-      provider-name="KNIME GmbH, Konstanz, Germany">
+      provider-name="KNIME AG, Zurich, Switzerland">
 
    <description>
       Feature containing the Explorer view plug-in. This is only used for internal purposes and must not be installed into KNIME.
    </description>
 
    <copyright>
-      Copyright by KNIME GmbH, Konstanz, Germany
+      Copyright by KNIME AG, Zurich, Switzerland
    </copyright>
 
    <plugin

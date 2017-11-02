@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -63,7 +63,7 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 
 /**
  *
- * @author Peter Ohl, KNIME.com AG, Zurich, Switzerland
+ * @author Peter Ohl, KNIME AG, Zurich, Switzerland
  * @since 6.4
  */
 public final class SaveAsValidator extends Validator {

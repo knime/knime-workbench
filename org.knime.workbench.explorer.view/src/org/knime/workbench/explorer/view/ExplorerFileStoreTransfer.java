@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -66,7 +66,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
  * Transfer for arrays of AbstractExplorerFileStore URIs. Only URIs with
  * {@link ExplorerFileSystem}#SCHEME are supported.
  *
- * @author Dominik Morent, KNIME.com, Zurich, Switzerland
+ * @author Dominik Morent, KNIME AG, Zurich, Switzerland
  *
  */
 public class ExplorerFileStoreTransfer extends ByteArrayTransfer {

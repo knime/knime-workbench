@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -92,7 +92,7 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  * wrapper is placed in the tree view. <br>
  * An instance of this should be set as input of the tree view.
  *
- * @author ohl, KNIME.com, Zurich, Switzerland
+ * @author ohl, KNIME AG, Zurich, Switzerland
  */
 public class ContentDelegator extends LabelProvider
     implements ITreeContentProvider, IColorProvider, IPropertyChangeListener, ILabelProviderListener {

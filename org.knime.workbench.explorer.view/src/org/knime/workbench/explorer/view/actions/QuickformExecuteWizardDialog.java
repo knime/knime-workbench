@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -55,7 +55,7 @@ import org.eclipse.swt.widgets.Shell;
  * Extension of the WizardDialog to allow resetting of quickform nodes before
  * showing the previous page.
  *
- * @author Dominik Morent, KNIME.com, Zurich, Switzerland
+ * @author Dominik Morent, KNIME AG, Zurich, Switzerland
  * @since 2.6
  */
 public class QuickformExecuteWizardDialog extends WizardDialog {

@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -50,7 +50,7 @@ import java.util.List;
 /**
  * Used to download server items from a remote store location.
  *
- * @author Peter Ohl, KNIME.com AG, Zurich, Switzerland
+ * @author Peter Ohl, KNIME AG, Zurich, Switzerland
  * @since 4.0
  */
 public abstract class RemoteDownloadStream extends InputStream {

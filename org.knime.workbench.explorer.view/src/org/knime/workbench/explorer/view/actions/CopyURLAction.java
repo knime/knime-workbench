@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -59,7 +59,7 @@ import org.osgi.framework.FrameworkUtil;
 /**
  * Action for copying the mount-point relative URL of an item in the explorer tree to the clipboard.
  *
- * @author Peter Ohl, KNIME.com AG, Zurich, Switzerland
+ * @author Peter Ohl, KNIME AG, Zurich, Switzerland
  */
 public class CopyURLAction extends ExplorerAction {
     /** ID of the global rename action in the explorer menu. */

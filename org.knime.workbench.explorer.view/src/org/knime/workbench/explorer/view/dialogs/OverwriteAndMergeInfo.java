@@ -1,6 +1,6 @@
 /*
  * ------------------------------------------------------------------------
- *  Copyright by KNIME GmbH, Konstanz, Germany
+ *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -50,7 +50,7 @@ package org.knime.workbench.explorer.view.dialogs;
  * Simple class that contains information about overwrite and merge operations, such as whether existing items should be
  * overwritten or whether snapshots should be created or not.
  *
- * @author Thorsten Meinl, KNIME.com, Zurich, Switzerland
+ * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
  * @since 6.0
  */
 public class OverwriteAndMergeInfo {
