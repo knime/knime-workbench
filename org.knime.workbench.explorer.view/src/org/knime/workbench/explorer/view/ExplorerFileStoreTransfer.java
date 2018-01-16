@@ -152,6 +152,10 @@ public class ExplorerFileStoreTransfer extends ByteArrayTransfer {
                 DataInputStream readIn = new DataInputStream(in);
                 while (readIn.available() > 1) {
                     int size = readIn.readInt();
+                    if (size > readIn.available()) {
+                        // skip transfer, as an invalid buffer was passed; workaround for AP-8685
+                        break;
+                    }
                     byte[] name = new byte[size];
                     readIn.read(name);
                     String uriStr = new String(name);
