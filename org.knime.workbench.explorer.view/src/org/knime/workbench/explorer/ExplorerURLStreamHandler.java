@@ -56,6 +56,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -101,6 +102,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      * @since 6.4
      */
     public static final String NODE_RELATIVE = "knime.node";
+
+    private static final URIPathEncoder UTF8_ENCODER = new URIPathEncoder(StandardCharsets.UTF_8);
 
     /**
      * {@inheritDoc}
@@ -159,14 +162,14 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
 
         if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost())) {
-            return resolveWorkflowRelativeUrl(url, workflowContext);
+            return UTF8_ENCODER.encodePathSegments(resolveWorkflowRelativeUrl(url, workflowContext));
         } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost()) || ((workflowContext != null)
             && url.getHost().equalsIgnoreCase(workflowContext.getRemoteMountId().orElse(null)))) {
-            return resolveMountpointRelativeUrl(url, workflowContext);
+            return UTF8_ENCODER.encodePathSegments(resolveMountpointRelativeUrl(url, workflowContext));
         } else if (NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
-            return resolveNodeRelativeUrl(url, nodeContext, workflowContext);
+            return UTF8_ENCODER.encodePathSegments(resolveNodeRelativeUrl(url, nodeContext, workflowContext));
         } else {
-            return url;
+            return UTF8_ENCODER.encodePathSegments(url);
         }
     }
 

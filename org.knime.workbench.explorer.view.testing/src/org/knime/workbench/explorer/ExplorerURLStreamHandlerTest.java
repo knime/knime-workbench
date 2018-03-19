@@ -580,4 +580,130 @@ public class ExplorerURLStreamHandlerTest {
         m_expectedException.expectMessage(containsString("Leaving the workflow is not allowed"));
         m_handler.openConnection(url);
     }
+
+    /**
+     * Checks if German special characters in a local work flow relative URL are UTF-8 encoded.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testWorkflowRelativeURLIsEncoded() throws Exception {
+        String umlautFileName = "workflöw.knime";
+        URL urlWithUmlaut = new URL("knime://knime.workflow/" + umlautFileName);
+
+        Path currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
+        WorkflowCreationHelper workflowCreation = new WorkflowCreationHelper();
+        WorkflowContext.Factory contextFactory = new WorkflowContext.Factory(currentLocation.toFile());
+        contextFactory.setMountpointRoot(currentLocation.getParent().toFile());
+        workflowCreation.setWorkflowContext(contextFactory.createContext());
+        NodeContext.pushContext(WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), workflowCreation));
+
+        URLConnection connection = m_handler.openConnection(urlWithUmlaut);
+        String utf8FileName = "workfl%C3%B6w.knime";
+        Path expectedPath = currentLocation.resolve(utf8FileName);
+        URI expectedURI = new URI(expectedPath.toUri().toString().replace("25", "")); // hack to remove unwanted encoding of %!
+
+        assertThat("Unexpected resolved URL", connection.getURL().toURI(), is(expectedURI));
+    }
+
+    /**
+     * Checks if German special characters in a local mount point relative URL are UTF-8 encoded.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testLocalMountPointRelativeURLIsEncoded() throws Exception {
+        URL url = new URL("knime://knime.mountpoint/testÖ.txt");
+
+        Path currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
+        WorkflowCreationHelper workflowCreation = new WorkflowCreationHelper();
+        WorkflowContext.Factory workflowContextFactory = new WorkflowContext.Factory(currentLocation.toFile());
+        workflowContextFactory.setMountpointRoot(currentLocation.getParent().toFile());
+        workflowCreation.setWorkflowContext(workflowContextFactory.createContext());
+        WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), workflowCreation);
+        NodeContext.pushContext(wfm);
+
+        URLConnection conn = m_handler.openConnection(url);
+        Path expectedPath = currentLocation.getParent().resolve("test%C3%96.txt");
+        URI expectedURI = new URI(expectedPath.toUri().toString().replace("25", "")); // hack to remove unwanted encoding of %!
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedURI));
+    }
+
+    /**
+     * Checks if German special characters in a local node relative URL are UTF-8 encoded.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testLocalNodeRelativeURLIsEncoded() throws Exception {
+        URL url = new URL("knime://knime.node/testÖ.txt");
+
+        Path currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
+        WorkflowCreationHelper workflowCreation = new WorkflowCreationHelper();
+        WorkflowContext.Factory workflowContextFactory = new WorkflowContext.Factory(currentLocation.toFile());
+        workflowContextFactory.setMountpointRoot(currentLocation.getParent().toFile());
+        workflowCreation.setWorkflowContext(workflowContextFactory.createContext());
+        WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), workflowCreation);
+        wfm.save(currentLocation.toFile(), new ExecutionMonitor(), false);
+        NodeContext.pushContext(wfm);
+
+        URLConnection conn = m_handler.openConnection(url);
+        Path expectedPath = currentLocation.resolve("test%C3%96.txt");
+        URI expectedURI = new URI(expectedPath.toUri().toString().replace("25", "")); // hack to remove unwanted encoding of %!
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedURI));
+    }
+
+    /**
+     * Checks if German special characters in a remote mount point resolved URL are encoded.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testRemoteMountpointURLIsEncoded() throws Exception {
+        String umlautFileName = "röw0.json";
+        URL urlWithUmlaut = new URL("knime://knime.workflow/../" + umlautFileName);
+        URI baseUri = new URI("https://localhost:8080/knime");
+
+        Path mountPointRoot = KNIMEConstants.getKNIMETempPath().resolve("root");
+        Path currentLocation = mountPointRoot.resolve("workflow");
+        WorkflowCreationHelper workflowCreation = new WorkflowCreationHelper();
+        WorkflowContext.Factory workflowContextFactory = new WorkflowContext.Factory(currentLocation.toFile());
+        workflowContextFactory.setMountpointRoot(currentLocation.getParent().toFile());
+        workflowContextFactory.setRemoteAddress(baseUri, "workflow");
+        workflowContextFactory.setRemoteAuthToken("token");
+        workflowCreation.setWorkflowContext(workflowContextFactory.createContext());
+        NodeContext.pushContext(WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), workflowCreation));
+
+        URLConnection connection = m_handler.openConnection(urlWithUmlaut);
+        URI expectedUri = new URI(baseUri.toString() + "/r%C3%B6w0.json:data").normalize();
+
+        assertThat("Unexpected resolved URL", connection.getURL().toURI(), is(expectedUri));
+    }
+
+    /**
+     * Checks if German special characters in a remote work flow relative to server URL are encoded.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testRemoteWorkflowRelativeURLIsEncoded() throws Exception {
+        URI baseUri = new URI("http://localhost:8080/knime");
+
+        // original location == current location
+        Path currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
+        WorkflowCreationHelper workflowCreation = new WorkflowCreationHelper();
+        WorkflowContext.Factory workflowContextFactory = new WorkflowContext.Factory(currentLocation.toFile());
+        workflowContextFactory.setOriginalLocation(currentLocation.toFile());
+        workflowContextFactory.setRemoteAddress(baseUri, "workflow");
+        workflowContextFactory.setRemoteAuthToken("token");
+        workflowCreation.setWorkflowContext(workflowContextFactory.createContext());
+        WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), workflowCreation);
+        NodeContext.pushContext(wfm);
+
+        URL umlautURL = new URL("knime://knime.workflow/../testÜ.txt");
+        URLConnection connection = m_handler.openConnection(umlautURL);
+        URI expectedUri = new URI(baseUri.toString() + "/test%C3%9C.txt:data");
+        assertThat("Unexpected resolved URL", connection.getURL().toURI(), is(expectedUri));
+    }
+
 }
