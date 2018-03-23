@@ -68,6 +68,10 @@ import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.ServiceReference;
 import org.osgi.service.url.AbstractURLStreamHandlerService;
 
 /**
@@ -105,6 +109,30 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
     private static final URIPathEncoder UTF8_ENCODER = new URIPathEncoder(StandardCharsets.UTF_8);
 
+    private final ServerRequestModifier m_requestModifier;
+
+    /**
+     * Creates a new URL stream handler.
+     */
+    public ExplorerURLStreamHandler() {
+        Bundle myself = FrameworkUtil.getBundle(getClass());
+        if (myself != null) {
+            BundleContext ctx = myself.getBundleContext();
+            ServiceReference<ServerRequestModifier> ser = ctx.getServiceReference(ServerRequestModifier.class);
+            if (ser != null) {
+                try {
+                    m_requestModifier = ctx.getService(ser);
+                } finally {
+                    ctx.ungetService(ser);
+                }
+            } else {
+                m_requestModifier = (p, c) -> {};
+            }
+        } else {
+            m_requestModifier = (p, c) -> {};
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -121,6 +149,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             if (workflowContext.getServerAuthToken().isPresent()) {
                 conn.setRequestProperty("Authorization", "Bearer " + workflowContext.getServerAuthToken().get());
             }
+
+            workflowContext.getRemoteRepositoryAddress().ifPresent(u -> m_requestModifier.modifyRequest(u, conn));
+
             if (conn instanceof HttpsURLConnection) {
                 ((HttpsURLConnection)conn).setHostnameVerifier(KNIMEHostnameVerifier.INSTANCE);
             }
