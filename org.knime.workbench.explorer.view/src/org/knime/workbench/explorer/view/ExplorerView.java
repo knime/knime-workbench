@@ -126,6 +126,7 @@ import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
@@ -455,7 +456,16 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         IStructuredSelection selection = (IStructuredSelection)m_viewer.getSelection();
         if (selection.toList().size() == 1) {
             Object firstElement = selection.getFirstElement();
+
+            // Even if the selected element is the message file store with the login message, expanding it doesn't hurt.
+            // It just won't do anything.
             m_viewer.setExpandedState(firstElement, !m_viewer.getExpandedState(firstElement));
+            if (firstElement instanceof ContentObject) {
+                AbstractExplorerFileStore fs = ((ContentObject) firstElement).getFileStore();
+                if ((fs instanceof MessageFileStore) && fs.getContentProvider().isRemote()) {
+                    fs.getContentProvider().connect();
+                }
+            }
         }
     }
 
