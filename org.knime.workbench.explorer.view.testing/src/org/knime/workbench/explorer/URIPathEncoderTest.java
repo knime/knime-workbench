@@ -56,6 +56,8 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
+import org.eclipse.core.runtime.Platform;
+import org.junit.Assume;
 import org.junit.Test;
 
 /**
@@ -109,6 +111,8 @@ public class URIPathEncoderTest {
      */
     @Test
     public void testUNCPathHasFourLeadingSlashes() throws Exception {
+        Assume.assumeThat("Only makes sense under Windows", Platform.getOS(), is(Platform.OS_WIN32));
+
         URIPathEncoder utf8Encoder = new URIPathEncoder(StandardCharsets.UTF_8);
         URI uncURI = new File("\\\\HOST\\path\\file.txt").toURI();
         URI expectedUNC = new URI("file:////HOST/path/file.txt");
@@ -122,6 +126,8 @@ public class URIPathEncoderTest {
      */
     @Test
     public void testWindowsLocalPath() throws Exception {
+        Assume.assumeThat("Only makes sense under Windows", Platform.getOS(), is(Platform.OS_WIN32));
+
         URIPathEncoder utf8Encoder = new URIPathEncoder(StandardCharsets.UTF_8);
         URI windowsURI = new File("C:\\path\\fileÄ.txt").toURI();
         URI expectedWindowsURI = new URI("file:/C:/path/file%C3%84.txt");
