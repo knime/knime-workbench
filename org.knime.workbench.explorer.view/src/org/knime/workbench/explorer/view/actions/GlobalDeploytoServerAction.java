@@ -45,6 +45,7 @@
 package org.knime.workbench.explorer.view.actions;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -65,6 +66,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
@@ -76,6 +78,7 @@ import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.DestinationChecker;
@@ -121,13 +124,19 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        // first save dirty editors
-        if (!PlatformUI.getWorkbench().saveAllEditors(true)) {
-            return;
-        }
         AbstractExplorerFileStore srcFileStore = getSingleSelectedWorkflowOrGroup()
                 .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
         String dialogTitle = "Deploy " + srcFileStore.getName();
+
+        String lockableMessage = ExplorerFileSystemUtils.isLockable(Collections.singletonList(srcFileStore), true);
+        if (lockableMessage != null) {
+            MessageBox mb =
+                new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
+            mb.setText("Can't Deploy All Selected Items To Server");
+            mb.setMessage(lockableMessage);
+            mb.open();
+            return;
+        }
 
         Optional<SelectedDestination> destInfoOptional = promptForTargetLocation(srcFileStore);
         if (!destInfoOptional.isPresent()) {
