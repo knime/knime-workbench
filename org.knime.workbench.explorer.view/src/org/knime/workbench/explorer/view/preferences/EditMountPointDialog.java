@@ -106,12 +106,12 @@ public class EditMountPointDialog extends ListDialog {
     private static final ImageDescriptor IMG_NEWITEM = AbstractUIPlugin.imageDescriptorFromPlugin(
         KNIMEUIPlugin.PLUGIN_ID, "icons/new_knime55.png");
 
-    private static final String INVALID_MSG = "A valid mount id contains only characters a-z, A-Z, 0-9, '.' or '-'.\n"
+    private static final String INVALID_MSG = "A valid Mount ID contains only characters a-z, A-Z, 0-9, '.' or '-'.\n"
         + "It must start with a character and not end with a dot nor hyphen.\n"
-        + "Additionally, mount point names starting with 'knime.' are reserved\n"
+        + "Additionally, Mount IDs starting with 'knime.' are reserved\n"
         + "for internal use.";
 
-    private static final String MOUNT_ID_HEADER_TEXT = "Enter the name that is used to reference the new content.";
+    private static final String MOUNT_ID_HEADER_TEXT = "Enter the name of the Mount ID.";
 
     private ValidationRequiredListener m_validationListener;
 
@@ -214,8 +214,8 @@ public class EditMountPointDialog extends ListDialog {
                 if (defaultMountID != null && !defaultMountID.isEmpty()
                         && !m_mountID.getText().equals(defaultMountID)) {
                     String confirmTitle = "Overwrite Mount ID";
-                    String confirmMsg = "The default mount ID is " + defaultMountID
-                            + ". Do you want to overwrite your current mount ID?";
+                    String confirmMsg = "The default Mount ID is " + defaultMountID
+                            + ". Do you want to overwrite your current Mount ID?";
                     if (MessageDialog.openQuestion(m_mountID.getShell(), confirmTitle, confirmMsg)) {
                         m_mountID.setText(id);
                     }
@@ -442,8 +442,12 @@ public class EditMountPointDialog extends ListDialog {
         String mountIDHeaderText = m_mountIDHeaderText;
         Image mountIDHeaderImage = null;
         if (m_defaultMountID != null && !m_defaultMountID.isEmpty() && !m_defaultMountID.equals(id)) {
-            mountIDHeaderText += "\nThe default ID is " + m_defaultMountID;
-            mountIDHeaderImage = ImageRepository.getIconImage(SharedImages.InfoBalloon);
+            mountIDHeaderText += "\n\nChanging the default Mount ID is not recommended since it can cause\n"
+                + "issues when trying to reference server resources\n"
+                + "by the Mount ID (e.g. knime://knime-server/resource.txt).\n"
+                + "Only change the default Mount ID if you are certain of what you are doing.\n\n"
+                + "The default Mount ID is: " + m_defaultMountID;
+            mountIDHeaderImage = ImageRepository.getIconImage(SharedImages.Warning);
         }
         m_mountIDHeader.setText(mountIDHeaderText);
         m_mountIDHeader.setImage(mountIDHeaderImage);
