@@ -79,7 +79,9 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.dialogs.ListDialog;
@@ -144,6 +146,8 @@ public class EditMountPointDialog extends ListDialog {
     private String m_mountIDHeaderText;
 
     private String m_defaultMountID;
+
+    private Button m_resetMountID;
 
     /**
      * Creates a new mount point dialog for creating a new mount point.
@@ -315,7 +319,16 @@ public class EditMountPointDialog extends ListDialog {
         Composite mountHdr = new Composite(parent, SWT.FILL);
         Composite mountInput = new Composite(mountHdr, SWT.FILL | SWT.BORDER);
         m_mountID = new Text(mountInput, SWT.BORDER);
+        m_resetMountID = new Button(mountInput, SWT.BORDER);
+        m_resetMountID.setText("Reset Mount ID");
+        m_resetMountID.setEnabled(false);
+        m_resetMountID.addListener(SWT.Selection, new Listener() {
 
+            @Override
+            public void handleEvent(final Event event) {
+                m_mountID.setText(getDefaultMountID());
+            }
+        });
         // insert the selection list
 
         Control c = super.createDialogArea(parent);
@@ -396,6 +409,11 @@ public class EditMountPointDialog extends ListDialog {
         GridData gridData = new GridData(GridData.FILL_BOTH);
         m_mountID.setLayoutData(gridData);
 
+        GridData resetGridData = new GridData(GridData.BEGINNING);
+        resetGridData.horizontalSpan = 2;
+        m_resetMountID.moveBelow(m_mountID);
+        m_resetMountID.setLayoutData(resetGridData);
+
         m_mountID.addModifyListener(new ModifyListener() {
 
             @Override
@@ -448,6 +466,9 @@ public class EditMountPointDialog extends ListDialog {
                 + "Only change the default Mount ID if you are certain of what you are doing.\n\n"
                 + "The default Mount ID is: " + m_defaultMountID;
             mountIDHeaderImage = ImageRepository.getIconImage(SharedImages.Warning);
+            m_resetMountID.setEnabled(true);
+        } else {
+            m_resetMountID.setEnabled(false);
         }
         m_mountIDHeader.setText(mountIDHeaderText);
         m_mountIDHeader.setImage(mountIDHeaderImage);
