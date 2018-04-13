@@ -730,6 +730,7 @@ public final class ExplorerMountTable {
                 mpSettings = pStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
             }
              mountSettings = MountSettings.parseSettings(mpSettings, true);
+             mountSettings.addAll(MountSettings.loadSortedMountSettingsFromDefaultPreferenceNode());
         }
 
         return mountSettings;

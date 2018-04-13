@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.IPreferenceStore;
@@ -455,22 +456,65 @@ public class MountSettings {
      */
     public static List<MountSettings> loadSortedMountSettingsFromPreferenceNode() {
         // AP-8989 Switching to IEclipsePreferences
-        Map<Integer, MountSettings> mountSettingsMap = new TreeMap<Integer, MountSettings>();
-
+        Map<Integer, MountSettings> defaultMountSettingsMap = new TreeMap<Integer, MountSettings>();
+        Map<Integer, MountSettings> instancetMountSettingsMap = new TreeMap<Integer, MountSettings>();
         List<MountSettings> mountSettings = new ArrayList<MountSettings>();
-        IEclipsePreferences mountPointsNode = getMountPointParentNode();
-        String[] childNodes;
+        IEclipsePreferences instanceMountPointsNode = getInstanceMountPointParentNode();
+        IEclipsePreferences defaultMountPointsNode  = getDefaultMountPointParentNode();
         try {
-            childNodes = mountPointsNode.childrenNames();
-            for (final String mountPointNodeName : childNodes) {
-                final Preferences childMountPointNode = mountPointsNode.node(mountPointNodeName);
+            String[] defaultChildNodes = defaultMountPointsNode.childrenNames();
+            for (final String mountPointNodeName : defaultChildNodes) {
+                final Preferences childMountPointNode = defaultMountPointsNode.node(mountPointNodeName);
                 String s = childMountPointNode.get(MountSettings.MOUNTPOINT_PREFERENCE_KEY, "");
                 MountSettings ms = MountSettings.parseSingleSetting(s, true);
                 if (ms != null) {
-                    mountSettingsMap.put(ms.getMountPointNumber(), ms);
+                    defaultMountSettingsMap.put(ms.getMountPointNumber(), ms);
                 }
             }
-            mountSettings = new ArrayList<>(mountSettingsMap.values());
+            String[] instanceChildNodes = instanceMountPointsNode.childrenNames();
+            for (final String mountPointNodeName : instanceChildNodes) {
+                final Preferences childMountPointNode = instanceMountPointsNode.node(mountPointNodeName);
+                String s = childMountPointNode.get(MountSettings.MOUNTPOINT_PREFERENCE_KEY, "");
+                MountSettings ms = MountSettings.parseSingleSetting(s, true);
+                if (ms != null) {
+                    instancetMountSettingsMap.put(ms.getMountPointNumber(), ms);
+                }
+            }
+
+
+
+            mountSettings = new ArrayList<>(defaultMountSettingsMap.values());
+            mountSettings.addAll(instancetMountSettingsMap.values());
+        } catch (BackingStoreException e) {
+            // ignore, return an empty list
+        }
+
+        return mountSettings;
+    }
+
+    /**
+     * Loads the MountSettings from the DefaultInstance {@link ExplorerActivator#PLUGIN_ID} preference node.
+     *
+     * @return The MountSettings read from the {@link ExplorerActivator#PLUGIN_ID} preference node
+     * @since 8.2
+     */
+    public static List<MountSettings> loadSortedMountSettingsFromDefaultPreferenceNode() {
+        // AP-8989 Switching to IEclipsePreferences
+        Map<Integer, MountSettings> defaultMountSettingsMap = new TreeMap<Integer, MountSettings>();
+        List<MountSettings> mountSettings = new ArrayList<MountSettings>();
+        IEclipsePreferences defaultMountPointsNode  = getDefaultMountPointParentNode();
+        try {
+            String[] defaultChildNodes = defaultMountPointsNode.childrenNames();
+            for (final String mountPointNodeName : defaultChildNodes) {
+                final Preferences childMountPointNode = defaultMountPointsNode.node(mountPointNodeName);
+                String s = childMountPointNode.get(MountSettings.MOUNTPOINT_PREFERENCE_KEY, "");
+                MountSettings ms = MountSettings.parseSingleSetting(s, true);
+                if (ms != null) {
+                    defaultMountSettingsMap.put(ms.getMountPointNumber(), ms);
+                }
+            }
+
+            mountSettings = new ArrayList<>(defaultMountSettingsMap.values());
         } catch (BackingStoreException e) {
             // ignore, return an empty list
         }
@@ -489,7 +533,7 @@ public class MountSettings {
     public static List<MountSettings> loadSortedMountSettingsFromPreferences() throws BackingStoreException {
         // AP-8989 Switching to IEclipsePreferences
         List<MountSettings> mountSettings = new ArrayList<MountSettings>();
-        IEclipsePreferences mountPointsNode = getMountPointParentNode();
+        IEclipsePreferences mountPointsNode = getInstanceMountPointParentNode();
         String[] childNodes = null;
         childNodes = mountPointsNode.childrenNames();
         if (childNodes == null || childNodes.length == 0) {
@@ -515,7 +559,10 @@ public class MountSettings {
      */
     public static void saveMountSettings(final List<MountSettings> mountSettings) {
         // AP-8989 Switching to IEclipsePreferences
-        IEclipsePreferences mountPointsNode = getMountPointParentNode();
+        List<MountSettings> defaultMountSettings = MountSettings.loadSortedMountSettingsFromDefaultPreferenceNode();
+        mountSettings.removeAll(defaultMountSettings);
+
+        IEclipsePreferences mountPointsNode = getInstanceMountPointParentNode();
         for (int i = 0; i < mountSettings.size(); i++) {
                 MountSettings ms = mountSettings.get(i);
                 IEclipsePreferences mountPointChildNode = (IEclipsePreferences)mountPointsNode.node(ms.getMountID());
@@ -539,8 +586,13 @@ public class MountSettings {
         }
     }
 
-    private static IEclipsePreferences getMountPointParentNode() {
+    private static IEclipsePreferences getInstanceMountPointParentNode() {
         IEclipsePreferences mountPointsNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+        return mountPointsNode;
+    }
+
+    private static IEclipsePreferences getDefaultMountPointParentNode() {
+        IEclipsePreferences mountPointsNode = DefaultScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
         return mountPointsNode;
     }
 
