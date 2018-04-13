@@ -49,7 +49,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
-import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
@@ -58,6 +57,7 @@ import org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl;
 import org.knime.workbench.explorer.view.preferences.ExplorerPrefsSyncer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.prefs.BackingStoreException;
 
 /**
  *
@@ -118,13 +118,31 @@ public class ExplorerActivator extends AbstractUIPlugin {
     @Override
     public IPreferenceStore getPreferenceStore() {
         IPreferenceStore prefStore = super.getPreferenceStore();
+        addPrefSyncer();
+        return prefStore;
+    }
+
+    private void addPrefSyncer() {
         if (!m_prefSyncerAdded.getAndSet(true)) {
-            IPreferenceChangeListener prefsSyncer = new ExplorerPrefsSyncer();
+            // AP-8989 switching to IEclipsePreferences
+            ExplorerPrefsSyncer prefsSyncer = new ExplorerPrefsSyncer();
             IEclipsePreferences defaultPrefs = DefaultScope.INSTANCE.getNode(PLUGIN_ID);
             defaultPrefs.addPreferenceChangeListener(prefsSyncer);
             IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(PLUGIN_ID);
+            preferences.addNodeChangeListener(prefsSyncer);
             preferences.addPreferenceChangeListener(prefsSyncer);
+            try {
+
+                for (String childName : preferences.childrenNames()) {
+                    IEclipsePreferences childPreference = (IEclipsePreferences)preferences.node(childName);
+                    childPreference.addNodeChangeListener(prefsSyncer);
+                    childPreference.addPreferenceChangeListener(prefsSyncer);
+                }
+            } catch (BackingStoreException e) {
+
+            }
         }
-        return prefStore;
     }
+
+
 }

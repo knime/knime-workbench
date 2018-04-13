@@ -58,6 +58,7 @@ import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.osgi.framework.FrameworkUtil;
+import org.osgi.service.prefs.BackingStoreException;
 
 public class ExplorerPreferenceInitializer extends
         AbstractPreferenceInitializer {
@@ -105,6 +106,23 @@ public class ExplorerPreferenceInitializer extends
             ExplorerActivator.class).getSymbolicName());
         String mpSettings = preferences.get(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, null);
         return (mpSettings != null && !mpSettings.isEmpty());
+    }
+
+    /**
+     * Returns whether there are MountSettings stored in the {@link ExplorerActivator#PLUGIN_ID} preference node.
+     *
+     * @return Whether there are MountSettingsStored in the {@link ExplorerActivator#PLUGIN_ID} preference node
+     * @since 8.2
+     */
+    public static boolean existMountPointPreferenceNodes() {
+        IEclipsePreferences mountPointNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+        boolean exist = false;
+        try {
+            exist = mountPointNode.childrenNames().length > 0 ? true : false;
+        } catch (BackingStoreException e) {
+            // No settings to be found.
+        }
+        return  exist;
     }
 
 }

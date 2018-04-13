@@ -49,16 +49,29 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.osgi.service.prefs.BackingStoreException;
+import org.osgi.service.prefs.Preferences;
 
 public class MountSettings {
+
+    /** The preference key used to store the MountSettings as XML in the IEclipsePreference nodes */
+    private static final String MOUNTPOINT_PREFERENCE_KEY = "mountpoint";
+
     /** Used for separating multiple mount settings in the preferences. */
     private static final String SETTINGS_SEPARATOR = "\n";
 
@@ -80,6 +93,8 @@ public class MountSettings {
     private String m_state;
 
     private boolean m_active;
+
+    private int m_mountPointNumber;
 
     /**
      * Creates a new mount settings object based on the passed settings string.
@@ -105,6 +120,10 @@ public class MountSettings {
         m_content = settings.getString("content");
         m_defaultMountID = settings.getString("defaultMountID");
         m_active = settings.getBoolean("active");
+        if (settings.containsKey("mountPointNumber")) {
+            m_mountPointNumber = settings.getInt("mountPointNumber");
+        }
+
     }
 
     /**
@@ -119,6 +138,21 @@ public class MountSettings {
         m_content = cp.saveState();
         m_defaultMountID = cp.getFactory().getDefaultMountID();
         m_active = true;
+        // New Mount Points Are always at the top of the table.
+        m_mountPointNumber = 0;
+    }
+
+    /**
+     * Creates a new mount settings object based on the passed NodeSettings object and the provided mount point number.
+     *
+     * @param settings A NodeSettings object
+     * @param mountPointNumber The corresponding mount point number for the given NodeSettings
+     * @throws InvalidSettingsException if the settings can't be retrieved
+     * @since 8.2
+     */
+    public MountSettings(final NodeSettingsRO settings, final int mountPointNumber) throws InvalidSettingsException {
+        this(settings);
+        m_mountPointNumber = mountPointNumber;
     }
 
     /**
@@ -231,6 +265,16 @@ public class MountSettings {
     }
 
     /**
+     * Returns the mount point's number according to the mount points' ordering.
+     *
+     * @return The mount point number
+     * @since 8.2
+     */
+    public int getMountPointNumber() {
+        return m_mountPointNumber;
+    }
+
+    /**
      * @param nodeSettings the NodeSettings to save to
      */
     private void saveToNodeSettings(final NodeSettingsWO nodeSettings) {
@@ -332,6 +376,59 @@ public class MountSettings {
     }
 
     /**
+     * Parses MountSettings to an XML which can be saved to a Preference node.
+     *
+     * @param mountSetting The MountSettings to be parsed as an XML
+     * @param mountPointNumber The mount number of these MountSettings
+     * @return The MountSettings as a String in XML format
+     * @since 8.2
+     */
+    public static String getSingleSettingsString(final MountSettings mountSetting, final int mountPointNumber) {
+        // Settings are parsed individually for IEclipsePreferences node.
+        NodeSettings nodeSettings = new NodeSettings("mountSettings");
+        NodeSettingsWO singleSettings = nodeSettings.addNodeSettings("mountSettings_" + mountPointNumber);
+        mountSetting.saveToNodeSettings(singleSettings);
+        nodeSettings.addInt("mountPointNumber", mountPointNumber);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            nodeSettings.saveToXML(out);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Error while saving mount settings to XML.", e);
+        }
+        return out.toString();
+    }
+
+    /**
+     * Parses a single mount settings from the give mount settings in XML format.
+     *
+     * @param settings The mount settings in XMLformat
+     * @param excludeUnknownContentProviders true if resulting list should only contain displayable settings
+     * @return The MountSettings parsed from the given XML
+     * @since 8.2
+     */
+    public static MountSettings parseSingleSetting(final String settings,
+            final boolean excludeUnknownContentProviders)  {
+     // Settings are parsed individually for IEclipsePreferences node.
+        MountSettings mountSettings = null;
+        if (settings == null || settings.isEmpty()) {
+            return mountSettings;
+        }
+        try {
+            NodeSettingsRO nodeSettings = NodeSettings.loadFromXML(new ByteArrayInputStream(settings.getBytes()));
+            int mountPointNumber = nodeSettings.getInt("mountPointNumber");
+            NodeSettingsRO singleSettings = nodeSettings.getNodeSettings("mountSettings_" + mountPointNumber);
+            MountSettings singleMountSettings = new MountSettings(singleSettings, mountPointNumber);
+            if (!excludeUnknownContentProviders || isMountSettingsAddable(singleMountSettings)) {
+                mountSettings = singleMountSettings;
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error parsing mount settings. ", e);
+        }
+        return mountSettings;
+    }
+
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -349,4 +446,102 @@ public class MountSettings {
     public int hashCode() {
         return getSettingsString().hashCode();
     }
+
+    /**
+     * Loads the MountSettings from the {@link ExplorerActivator#PLUGIN_ID} preference node.
+     *
+     * @return The MountSettings read from the {@link ExplorerActivator#PLUGIN_ID} preference node
+     * @since 8.2
+     */
+    public static List<MountSettings> loadSortedMountSettingsFromPreferenceNode() {
+        // AP-8989 Switching to IEclipsePreferences
+        Map<Integer, MountSettings> mountSettingsMap = new TreeMap<Integer, MountSettings>();
+
+        List<MountSettings> mountSettings = new ArrayList<MountSettings>();
+        IEclipsePreferences mountPointsNode = getMountPointParentNode();
+        String[] childNodes;
+        try {
+            childNodes = mountPointsNode.childrenNames();
+            for (final String mountPointNodeName : childNodes) {
+                final Preferences childMountPointNode = mountPointsNode.node(mountPointNodeName);
+                String s = childMountPointNode.get(MountSettings.MOUNTPOINT_PREFERENCE_KEY, "");
+                MountSettings ms = MountSettings.parseSingleSetting(s, true);
+                if (ms != null) {
+                    mountSettingsMap.put(ms.getMountPointNumber(), ms);
+                }
+            }
+            mountSettings = new ArrayList<>(mountSettingsMap.values());
+        } catch (BackingStoreException e) {
+            // ignore, return an empty list
+        }
+
+        return mountSettings;
+    }
+
+    /**
+     * Loads the MountSettings from either the {@link ExplorerActivator#PLUGIN_ID} preference node, or from the
+     * PreferenceStore, this ensures backwards compatibility.
+     *
+     * @return The MountSettings read from the {@link ExplorerActivator#PLUGIN_ID} preference node
+     * @throws BackingStoreException if there is a failure in the backing store
+     * @since 8.2
+     */
+    public static List<MountSettings> loadSortedMountSettingsFromPreferences() throws BackingStoreException {
+        // AP-8989 Switching to IEclipsePreferences
+        List<MountSettings> mountSettings = new ArrayList<MountSettings>();
+        IEclipsePreferences mountPointsNode = getMountPointParentNode();
+        String[] childNodes = null;
+        childNodes = mountPointsNode.childrenNames();
+        if (childNodes == null || childNodes.length == 0) {
+            // Backwards compatibility.
+            IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
+            String prefString = prefStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);;
+            if (prefString == null || prefString.isEmpty()) {
+                prefString = prefStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
+            }
+            mountSettings = MountSettings.parseSettings(prefString, false);
+        } else {
+            mountSettings = loadSortedMountSettingsFromPreferenceNode();
+        }
+        return mountSettings;
+    }
+
+    /**
+     * Saves the given mountSettings to the {@link ExplorerActivator#PLUGIN_ID) preference node.
+     * The preferences are saved in the mount point ordering of the given List.
+     *
+     * @param mountSettings  The MountSettings to be saved to the preference node
+     * @since 8.2
+     */
+    public static void saveMountSettings(final List<MountSettings> mountSettings) {
+        // AP-8989 Switching to IEclipsePreferences
+        IEclipsePreferences mountPointsNode = getMountPointParentNode();
+        for (int i = 0; i < mountSettings.size(); i++) {
+                MountSettings ms = mountSettings.get(i);
+                IEclipsePreferences mountPointChildNode = (IEclipsePreferences)mountPointsNode.node(ms.getMountID());
+                //InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID + "/" + ms.getMountID());
+                mountPointChildNode.put(MOUNTPOINT_PREFERENCE_KEY, MountSettings.getSingleSettingsString(ms, i));
+        }
+    }
+
+    /**
+     * Removes the given MountSettings from the {@link ExplorerActivator#PLUGIN_ID} preference node.
+     *
+     * @param mountSettings  The mounSettings to be removed from the preference node
+     * @throws BackingStoreException if there is a failure in the backing store
+     * @since 8.2
+     */
+    public static void removeMountSettings(final List<String> mountSettings) throws BackingStoreException {
+        // AP-8989 Switching to IEclipsePreferences
+        for (String ms : mountSettings) {
+            IEclipsePreferences mountPointNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+            mountPointNode.node(ms).removeNode();
+        }
+    }
+
+    private static IEclipsePreferences getMountPointParentNode() {
+        IEclipsePreferences mountPointsNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+        return mountPointsNode;
+    }
+
 }

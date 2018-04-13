@@ -70,6 +70,8 @@ import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
@@ -85,6 +87,7 @@ import org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializ
 import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.osgi.framework.FrameworkUtil;
+import org.osgi.service.prefs.BackingStoreException;
 
 /**
  *
@@ -702,17 +705,34 @@ public final class ExplorerMountTable {
     }
 
     private static List<MountSettings> getMountSettings() {
-        IPreferenceStore pStore = ExplorerActivator.getDefault().getPreferenceStore();
-        String mpSettings;
-        if (ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
-            mpSettings = pStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
+        // AP-8989 switching to IEclipsePreferences
+        List<MountSettings> mountSettings = new ArrayList<>();
+
+        IEclipsePreferences mountPointNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+        String[] childrenNames = null;
+        try {
+            childrenNames = mountPointNode.childrenNames();
+        } catch (BackingStoreException e) {
+            LOGGER.error(e.getMessage(),e);
+        }
+
+        if (childrenNames != null && childrenNames.length > 0) {
+            mountSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
         } else {
-            mpSettings = pStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
+            IPreferenceStore pStore = ExplorerActivator.getDefault().getPreferenceStore();
+            String mpSettings;
+            if (ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
+                mpSettings = pStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
+            } else {
+                mpSettings = pStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
+            }
+            if (mpSettings == null || mpSettings.isEmpty()) {
+                mpSettings = pStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
+            }
+             mountSettings = MountSettings.parseSettings(mpSettings, true);
         }
-        if (mpSettings == null || mpSettings.isEmpty()) {
-            mpSettings = pStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
-        }
-        return MountSettings.parseSettings(mpSettings, true);
+
+        return mountSettings;
     }
 
     /* Mounts all hidden spaces that provide a default mount id. */
@@ -767,21 +787,24 @@ public final class ExplorerMountTable {
      * @since 7.3
      */
     public static void updateProviderSettings() {
-        List<MountSettings> newSettings = new ArrayList<>();
-
+        // AP-8989 switching to IEclipsePreferences
         Map<String, AbstractContentProvider> mountedContent = getMountedContent();
+        List<MountSettings> mountSettingsToSave = new ArrayList<>();
+        List<String> mountSettingsToRemove = new ArrayList<>();
+
         for (MountSettings ms : getMountSettings()) {
             if (mountedContent.containsKey(ms.getMountID())) {
-                newSettings.add(new MountSettings(mountedContent.get(ms.getMountID())));
+                mountSettingsToSave.add(ms);
             } else {
-                newSettings.add(ms);
+                mountSettingsToRemove.add(ms.getMountID());
             }
         }
+        MountSettings.saveMountSettings(mountSettingsToSave);
 
-        IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        if (!newSettings.isEmpty()) {
-            prefStore.setValue(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML,
-                MountSettings.getSettingsString(newSettings));
+        try {
+            MountSettings.removeMountSettings(mountSettingsToRemove);
+        } catch (BackingStoreException e) {
+            LOGGER.error(e.getMessage(),e);
         }
     }
 }

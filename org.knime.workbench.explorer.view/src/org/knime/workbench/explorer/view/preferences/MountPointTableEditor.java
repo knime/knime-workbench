@@ -53,9 +53,12 @@ import java.util.List;
 import java.util.Set;
 
 import org.eclipse.core.runtime.Assert;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.layout.PixelConverter;
 import org.eclipse.jface.preference.FieldEditor;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.CheckStateChangedEvent;
@@ -85,11 +88,13 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Widget;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.osgi.service.prefs.BackingStoreException;
 
 /**
  *
@@ -104,6 +109,8 @@ public class MountPointTableEditor extends FieldEditor {
     private static final int MOUNT_ID_PROP = 0;
     private static final int CONTENT_PROP = 1;
     private static final int TYPE_PROP = 2;
+
+    private final List<String> m_removedMountPointNames = new ArrayList<>();
 
     private class MountPointTableLabelProvider implements ITableLabelProvider {
 
@@ -419,6 +426,7 @@ public class MountPointTableEditor extends FieldEditor {
         m_removeButton.setEnabled(index >= 0 && size > 1);
         m_upButton.setEnabled(size > 1 && index > 0);
         m_downButton.setEnabled(size > 1 && index >= 0 && index < size - 1);
+        m_tableViewer.refresh();
     }
 
     private void addPressed() {
@@ -444,6 +452,9 @@ public class MountPointTableEditor extends FieldEditor {
                 addItemToTable(edited, index);
                 m_table.setSelection(index);
                 selectionChanged();
+                if (!settings.getMountID().equals(edited.getMountID())) {
+                    m_removedMountPointNames.add(settings.getMountID());
+                }
             }
         }
     }
@@ -453,6 +464,7 @@ public class MountPointTableEditor extends FieldEditor {
         int index = m_table.getSelectionIndex();
         if (index >= 0) {
             MountSettings settings = (MountSettings)m_table.getItem(index).getData();
+            m_removedMountPointNames.add(settings.getMountID());
             removeItemFromTable(settings);
             selectionChanged();
         }
@@ -556,10 +568,28 @@ public class MountPointTableEditor extends FieldEditor {
      */
     @Override
     protected void doLoad() {
-        String s = getPreferenceStore().getString(getPreferenceName());
-        m_mountSettings = MountSettings.parseSettings(s, true);
-        m_tableViewer.setInput(m_mountSettings);
-        m_tableViewer.refresh();
+        try {
+            // AP-8989 Switching to IEclipsePreferences
+            IEclipsePreferences mountPointsNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+            String[] childNodes = mountPointsNode.childrenNames();
+            if (childNodes == null || childNodes.length == 0) {
+                // Backwards compatibility.
+                IPreferenceStore prefStore = getPreferenceStore();
+                String ss = prefStore.getString(getPreferenceName());
+
+                // doStore() ensures that all mountpoints are represented as a IEclipsePreference node.
+                // Ensures that deleting mountpoints is properly synced through the ExplorerPrefSyncer.
+                m_mountSettings = MountSettings.parseSettings(ss, true);
+                m_tableViewer.setInput(m_mountSettings);
+                doStore();
+            } else {
+                m_mountSettings = new ArrayList<>(MountSettings.loadSortedMountSettingsFromPreferenceNode());
+                m_tableViewer.setInput(m_mountSettings);
+            }
+            m_tableViewer.refresh();
+        } catch (final BackingStoreException exception) {
+            LOGGER.error(exception.getMessage(), exception);
+        }
     }
 
     /**
@@ -578,12 +608,18 @@ public class MountPointTableEditor extends FieldEditor {
      */
     @Override
     protected void doStore() {
-        List<MountSettings> settingsList = new ArrayList<MountSettings>();
-        for (TableItem item : m_table.getItems()) {
-            settingsList.add((MountSettings)item.getData());
+        // AP-8989 Switching to IEclipsePreferences
+        if (!m_removedMountPointNames.isEmpty()) {
+            try {
+                MountSettings.removeMountSettings(m_removedMountPointNames);
+            } catch (BackingStoreException e) {
+                LOGGER.error(e.getMessage(), e);
+            }
         }
-        String settingsString = MountSettings.getSettingsString(settingsList);
-        getPreferenceStore().setValue(getPreferenceName(), settingsString);
+        List<TableItem> asList = Arrays.asList(m_table.getItems());
+        List<MountSettings> mountSettings = new ArrayList<>();
+        asList.forEach(tableItem -> mountSettings.add((MountSettings)tableItem.getData()));
+        MountSettings.saveMountSettings(mountSettings);
     }
 
     /**
@@ -605,5 +641,4 @@ public class MountPointTableEditor extends FieldEditor {
         m_tableViewer.remove(settings);
         m_tableViewer.refresh();
     }
-
 }

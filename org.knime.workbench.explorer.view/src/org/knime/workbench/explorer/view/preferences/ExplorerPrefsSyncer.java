@@ -51,9 +51,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences.INodeChangeListener;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences.NodeChangeEvent;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.util.IPropertyChangeListener;
@@ -64,14 +65,15 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
-public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreferenceChangeListener {
-    private String m_previousValue;
+public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreferenceChangeListener, INodeChangeListener {
+
+    private List<MountSettings> m_previousValues;
 
     /**
      * Creates a new preference syncer.
      */
     public ExplorerPrefsSyncer() {
-        m_previousValue = getUserOrDefaultValue();
+        m_previousValues = getUserOrDefaultValue();
     }
 
     /**
@@ -81,9 +83,9 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
     public void propertyChange(final PropertyChangeEvent event) {
         if (PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML.equals(
             event.getProperty())) {
-            String newValue = getUserOrDefaultValue();
-            updateSettings(m_previousValue, newValue);
-            m_previousValue = newValue;
+            List<MountSettings> newValue = getUserOrDefaultValue();
+            updateSettings(m_previousValues, newValue);
+            m_previousValues = newValue;
         }
     }
 
@@ -93,39 +95,35 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
      */
     @Override
     public void preferenceChange(final PreferenceChangeEvent event) {
-        if (PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML.equals(event.getKey())) {
-            String newValue = getUserOrDefaultValue();
-            updateSettings(m_previousValue, newValue);
-            m_previousValue = newValue;
+        if ("mountpoint".equals(event.getKey())) {
+            List<MountSettings> newValue = getUserOrDefaultValue();
+            updateSettings(m_previousValues, newValue);
+            m_previousValues = newValue;
         }
     }
 
-    private void updateSettings(final String oldValue, final String newValue) {
-        if (ConvenienceMethods.areEqual(oldValue, newValue)) {
+    private synchronized void updateSettings(final List<MountSettings> oldValues, final List<MountSettings> newValues) {
+        if (ConvenienceMethods.areEqual(oldValues, newValues)) {
             return;
         }
 
         Set<MountSettings> oldSettings;
-        if (oldValue != null) {
-            List<MountSettings> oldMS = MountSettings.parseSettings(
-                    oldValue, false);
-            oldSettings = new LinkedHashSet<MountSettings>(oldMS);
+        if (oldValues != null) {
+            oldSettings = new LinkedHashSet<MountSettings>(oldValues);
         } else {
             oldSettings = Collections.emptySet();
         }
 
         Set<MountSettings> newSettings;
-        List<MountSettings> newMS;
-        if (newValue != null) {
-            newMS = MountSettings.parseSettings(newValue, false);
-            newSettings = new LinkedHashSet<MountSettings>(newMS);
+        if (newValues != null) {
+            newSettings = new LinkedHashSet<MountSettings>(newValues);
             // leave unchanged values untouched
             newSettings.removeAll(oldSettings);
         } else {
             newSettings = Collections.emptySet();
-            newMS = Collections.emptyList();
         }
-        oldSettings.removeAll(new LinkedHashSet<MountSettings>(newMS));
+
+        oldSettings.removeAll(new LinkedHashSet<MountSettings>(newValues));
 
         // remove deleted mount points
         for (MountSettings ms : oldSettings) {
@@ -154,19 +152,44 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
 
         // sync the ordering of the mount points
         List<String> newMountIds = new ArrayList<String>();
-        for (MountSettings ms : newMS) {
+        for (MountSettings ms : newValues) {
             newMountIds.add(ms.getMountID());
         }
         ExplorerMountTable.setMountOrder(newMountIds);
     }
 
-    private static String getUserOrDefaultValue() {
-        IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
-        String value = preferences.get(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, null);
-        if (value == null) {
-            IEclipsePreferences defaultPreferences = DefaultScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
-            value = defaultPreferences.get(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, null);
+    private static List<MountSettings> getUserOrDefaultValue() {
+        List<MountSettings> mountSettings = null;
+
+        mountSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
+
+        return mountSettings;
+    }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void added(final NodeChangeEvent event) {
+        // AP-8989 switching to IEclipsePreferences
+        if (ExplorerActivator.PLUGIN_ID.equals(event.getParent().name())) {
+            IEclipsePreferences childNode =
+                    InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID + "/" + event.getChild().name());
+            childNode.addNodeChangeListener(this);
+            childNode.addPreferenceChangeListener(this);
         }
-        return value;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void removed(final NodeChangeEvent event) {
+        // AP-8989 switching to IEclipsePreferences
+        if (ExplorerActivator.PLUGIN_ID.equals(event.getParent().name())) {
+            List<MountSettings> newValue = getUserOrDefaultValue();
+            updateSettings(m_previousValues, newValue);
+        }
     }
 }

@@ -83,6 +83,7 @@ import org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializ
 import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.osgi.service.prefs.BackingStoreException;
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
@@ -515,7 +516,8 @@ public class ContentDelegator extends LabelProvider
             m_pre29Storage = storage.getString(KEY);
             ignoreMemento = Boolean.TRUE.equals(storage.getBoolean(IGNORE_MEMENTO));
         }
-        if (ignoreMemento || ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
+        if (ignoreMemento || ExplorerPreferenceInitializer.existMountPointPreferenceNodes()
+                || ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
             restoreStateFromPreferences();
         } else {
             createMountPointXMLPreferences();
@@ -555,13 +557,13 @@ public class ContentDelegator extends LabelProvider
     }
 
     private void saveStateToPreferences() {
-        List<MountSettings> settingsList = getMountSettingsFromPreferences();
+        List<MountSettings> mountSettings = getMountSettingsFromPreferences();
         Set<String> activeIDs = getMountedIds();
-        for (int i = 0; i < settingsList.size(); i++) {
-            MountSettings settings = settingsList.get(i);
+        for (int i = 0; i < mountSettings.size(); i++) {
+            MountSettings settings = mountSettings.get(i);
             settings.setActive(activeIDs.contains(settings.getMountID()));
         }
-        writeToPreferences(MountSettings.getSettingsString(settingsList));
+        writeToPreferences(mountSettings);
     }
 
     private void restoreStateFromPreferences() {
@@ -574,19 +576,20 @@ public class ContentDelegator extends LabelProvider
     }
 
     private List<MountSettings> getMountSettingsFromPreferences() {
-        IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        String prefString = prefStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
-        if (prefString == null || prefString.isEmpty()) {
-            prefString = prefStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
+        List<MountSettings> mountSettings = null;
+
+        try {
+            mountSettings = MountSettings.loadSortedMountSettingsFromPreferences();
+        } catch (BackingStoreException e) {
+            LOGGER.error(e.getMessage(), e);
         }
-        List<MountSettings> settingsList = MountSettings.parseSettings(prefString, false);
-        return settingsList;
+
+        return mountSettings;
     }
 
-    private void writeToPreferences(final String settings) {
-        if (settings != null && !settings.isEmpty()) {
-            IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-            prefStore.setValue(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, settings);
+    private void writeToPreferences(final List<MountSettings> mountSettings) {
+        if (mountSettings != null && !mountSettings.isEmpty()) {
+            MountSettings.saveMountSettings(mountSettings);
         }
     }
 
