@@ -48,6 +48,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -457,7 +458,7 @@ public class MountSettings {
     public static List<MountSettings> loadSortedMountSettingsFromPreferenceNode() {
         // AP-8989 Switching to IEclipsePreferences
         Map<Integer, MountSettings> defaultMountSettingsMap = new TreeMap<Integer, MountSettings>();
-        Map<Integer, MountSettings> instancetMountSettingsMap = new TreeMap<Integer, MountSettings>();
+        Map<Integer, MountSettings> instanceMountSettingsMap = new TreeMap<Integer, MountSettings>();
         List<MountSettings> mountSettings = new ArrayList<MountSettings>();
         IEclipsePreferences instanceMountPointsNode = getInstanceMountPointParentNode();
         IEclipsePreferences defaultMountPointsNode  = getDefaultMountPointParentNode();
@@ -477,14 +478,35 @@ public class MountSettings {
                 String s = childMountPointNode.get(MountSettings.MOUNTPOINT_PREFERENCE_KEY, "");
                 MountSettings ms = MountSettings.parseSingleSetting(s, true);
                 if (ms != null) {
-                    instancetMountSettingsMap.put(ms.getMountPointNumber(), ms);
+                    instanceMountSettingsMap.put(ms.getMountPointNumber(), ms);
                 }
             }
 
 
+            List<MountSettings> defaultMountSettingsList = new ArrayList<>(defaultMountSettingsMap.values());
+            List<MountSettings> instanceMountSettingsList = new ArrayList<>(instanceMountSettingsMap.values());
 
-            mountSettings = new ArrayList<>(defaultMountSettingsMap.values());
-            mountSettings.addAll(instancetMountSettingsMap.values());
+            List<String> instanceMountIDs= new ArrayList<>();
+            for (Iterator<MountSettings> iterator = instanceMountSettingsList.iterator(); iterator.hasNext();) {
+                instanceMountIDs.add(iterator.next().getMountID());
+            }
+            instanceMountSettingsList.forEach(item -> instanceMountIDs.add(item.getMountID()));
+
+            for (Iterator<MountSettings> iterator = defaultMountSettingsList.iterator(); iterator.hasNext();) {
+                MountSettings defaultSetting = iterator.next();
+                String nextMountID = defaultSetting.getMountID();
+                boolean doAdd = true;
+                for (String instanceMountId : instanceMountIDs) {
+                    if (nextMountID.equals(instanceMountId)) {
+                        doAdd = false;
+                    }
+                }
+                if (doAdd) {
+                    mountSettings.add(defaultSetting);
+                }
+            }
+
+            mountSettings.addAll(instanceMountSettingsList);
         } catch (BackingStoreException e) {
             // ignore, return an empty list
         }
@@ -544,6 +566,9 @@ public class MountSettings {
                 prefString = prefStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
             }
             mountSettings = MountSettings.parseSettings(prefString, false);
+            mountSettings.addAll(loadSortedMountSettingsFromDefaultPreferenceNode());
+            // ensures that preference nodes are present.
+            saveMountSettings(mountSettings);
         } else {
             mountSettings = loadSortedMountSettingsFromPreferenceNode();
         }
