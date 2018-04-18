@@ -116,13 +116,12 @@ public class ExplorerPreferenceInitializer extends
      */
     public static boolean existMountPointPreferenceNodes() {
         IEclipsePreferences mountPointNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
-        boolean exist = false;
         try {
-            exist = mountPointNode.childrenNames().length > 0 ? true : false;
+            return mountPointNode.childrenNames().length > 0;
         } catch (BackingStoreException e) {
             // No settings to be found.
+            return false;
         }
-        return  exist;
     }
 
 }

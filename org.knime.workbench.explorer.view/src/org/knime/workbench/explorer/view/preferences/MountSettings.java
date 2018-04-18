@@ -47,6 +47,7 @@ package org.knime.workbench.explorer.view.preferences;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -398,9 +399,9 @@ public class MountSettings {
         try {
             nodeSettings.saveToXML(out);
         } catch (IOException e) {
-            throw new IllegalArgumentException("Error while saving mount settings to XML.", e);
+            throw new IllegalArgumentException("Error while saving mount settings to XML: " + e.getMessage(), e);
         }
-        return out.toString();
+        return new String(out.toByteArray(), StandardCharsets.UTF_8);
     }
 
     /**
@@ -427,7 +428,7 @@ public class MountSettings {
                 mountSettings = singleMountSettings;
             }
         } catch (Exception e) {
-            throw new IllegalArgumentException("Error parsing mount settings. ", e);
+            throw new IllegalArgumentException("Error parsing mount settings: " + e.getMessage(), e);
         }
         return mountSettings;
     }
@@ -455,7 +456,8 @@ public class MountSettings {
     /**
      * Loads the MountSettings from the {@link ExplorerActivator#PLUGIN_ID} preference node.
      *
-     * @return The MountSettings read from the {@link ExplorerActivator#PLUGIN_ID} preference node
+     * @return The MountSettings read from the {@link ExplorerActivator#PLUGIN_ID} preference node, never
+     *         <code>null</code>
      * @since 8.2
      */
     public static List<MountSettings> loadSortedMountSettingsFromPreferenceNode() {

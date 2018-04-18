@@ -46,9 +46,9 @@ package org.knime.workbench.explorer.view.preferences;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
@@ -60,7 +60,6 @@ import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.util.ConvenienceMethods;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -102,27 +101,16 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
     }
 
     private synchronized void updateSettings(final List<MountSettings> oldValues, final List<MountSettings> newValues) {
-        if (ConvenienceMethods.areEqual(oldValues, newValues)) {
+        if (Objects.equals(oldValues, newValues)) {
             return;
         }
 
-        Set<MountSettings> oldSettings;
-        if (oldValues != null) {
-            oldSettings = new LinkedHashSet<MountSettings>(oldValues);
-        } else {
-            oldSettings = Collections.emptySet();
-        }
-
-        Set<MountSettings> newSettings;
-        if (newValues != null) {
-            newSettings = new LinkedHashSet<MountSettings>(newValues);
-            // leave unchanged values untouched
-            newSettings.removeAll(oldSettings);
-        } else {
-            newSettings = Collections.emptySet();
-        }
-
+        Set<MountSettings> oldSettings = new LinkedHashSet<MountSettings>(oldValues);
         oldSettings.removeAll(new LinkedHashSet<MountSettings>(newValues));
+
+        Set<MountSettings> newSettings = new LinkedHashSet<MountSettings>(newValues);
+        // leave unchanged values untouched
+        newSettings.removeAll(oldSettings);
 
         // remove deleted mount points
         for (MountSettings ms : oldSettings) {
@@ -158,23 +146,20 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
     }
 
     private static List<MountSettings> getUserOrDefaultValue() {
-        List<MountSettings> mountSettings = null;
-
-        mountSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
-
-        return mountSettings;
+        return MountSettings.loadSortedMountSettingsFromPreferenceNode();
     }
 
 
     /**
      * {@inheritDoc}
+     * @since 8.2
      */
     @Override
     public void added(final NodeChangeEvent event) {
         // AP-8989 switching to IEclipsePreferences
         if (InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation()).equals(event.getParent())) {
-            IEclipsePreferences childNode =
-                    InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation() + "/" + event.getChild().name());
+            IEclipsePreferences childNode = InstanceScope.INSTANCE
+                .getNode(MountSettings.getMountpointPreferenceLocation() + "/" + event.getChild().name());
             childNode.addNodeChangeListener(this);
             childNode.addPreferenceChangeListener(this);
         }
@@ -182,6 +167,7 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
 
     /**
      * {@inheritDoc}
+     * @since 8.2
      */
     @Override
     public void removed(final NodeChangeEvent event) {

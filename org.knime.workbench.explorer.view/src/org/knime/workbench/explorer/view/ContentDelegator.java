@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.IPropertyChangeListener;
@@ -559,8 +560,7 @@ public class ContentDelegator extends LabelProvider
     private void saveStateToPreferences() {
         List<MountSettings> mountSettings = getMountSettingsFromPreferences();
         Set<String> activeIDs = getMountedIds();
-        for (int i = 0; i < mountSettings.size(); i++) {
-            MountSettings settings = mountSettings.get(i);
+        for (MountSettings settings : mountSettings) {
             settings.setActive(activeIDs.contains(settings.getMountID()));
         }
         writeToPreferences(mountSettings);
@@ -581,14 +581,14 @@ public class ContentDelegator extends LabelProvider
         try {
             mountSettings = MountSettings.loadSortedMountSettingsFromPreferences();
         } catch (BackingStoreException e) {
-            LOGGER.error(e.getMessage(), e);
+            LOGGER.error("Could not load mount point settings:" + e.getMessage(), e);
         }
 
         return mountSettings;
     }
 
     private void writeToPreferences(final List<MountSettings> mountSettings) {
-        if (mountSettings != null && !mountSettings.isEmpty()) {
+        if (!CollectionUtils.isEmpty(mountSettings)) {
             MountSettings.saveMountSettings(mountSettings);
         }
     }

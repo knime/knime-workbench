@@ -63,6 +63,8 @@ import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtensionPoint;
@@ -713,10 +715,10 @@ public final class ExplorerMountTable {
         try {
             childrenNames = mountPointNode.childrenNames();
         } catch (BackingStoreException e) {
-            LOGGER.error(e.getMessage(),e);
+            LOGGER.error("Unabled to read mount point preferences: " + e.getMessage(), e);
         }
 
-        if (childrenNames != null && childrenNames.length > 0) {
+        if (!ArrayUtils.isEmpty(childrenNames)) {
             mountSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
         } else {
             IPreferenceStore pStore = ExplorerActivator.getDefault().getPreferenceStore();
@@ -726,7 +728,7 @@ public final class ExplorerMountTable {
             } else {
                 mpSettings = pStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
             }
-            if (mpSettings == null || mpSettings.isEmpty()) {
+            if (StringUtils.isEmpty(mpSettings)) {
                 mpSettings = pStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
             }
              mountSettings = MountSettings.parseSettings(mpSettings, true);
@@ -805,7 +807,7 @@ public final class ExplorerMountTable {
         try {
             MountSettings.removeMountSettings(mountSettingsToRemove);
         } catch (BackingStoreException e) {
-            LOGGER.error(e.getMessage(),e);
+            LOGGER.error("Unabled to save mount point settings: " + e.getMessage(), e);
         }
     }
 }

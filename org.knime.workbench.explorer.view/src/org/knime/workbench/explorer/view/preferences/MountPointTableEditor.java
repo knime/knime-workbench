@@ -568,8 +568,8 @@ public class MountPointTableEditor extends FieldEditor {
             m_mountSettings = mountSettings;
             m_tableViewer.setInput(m_mountSettings);
             m_tableViewer.refresh();
-        } catch (final BackingStoreException exception) {
-            LOGGER.error(exception.getMessage(), exception);
+        } catch (final BackingStoreException e) {
+            LOGGER.error("Unable to read mount point settings: " + e.getMessage(), e);
         }
     }
 
@@ -594,7 +594,7 @@ public class MountPointTableEditor extends FieldEditor {
             try {
                 MountSettings.removeMountSettings(m_removedMountPointNames);
             } catch (BackingStoreException e) {
-                LOGGER.error(e.getMessage(), e);
+                LOGGER.error("Unable to save mount point settings: " + e.getMessage(), e);
             }
         }
         TableItem[] items = m_table.getItems();
