@@ -140,7 +140,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     public URLConnection openConnection(final URL url) throws IOException {
         URL resolvedUrl = resolveKNIMEURL(url);
         if (ExplorerFileSystem.SCHEME.equals(resolvedUrl.getProtocol())) {
-            return openExternalMountConnection(url);
+            return openExternalMountConnection(resolvedUrl);
         } else if ("http".equals(resolvedUrl.getProtocol()) || "https".equals(resolvedUrl.getProtocol())) {
             // neither the node context nor the workflow context can be null here, otherwise resolveKNIMEURL would have
             // already failed
@@ -208,10 +208,15 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         throws IOException {
         String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
 
-        if (decodedPath.startsWith("/../") && workflowContext.getRemoteRepositoryAddress().isPresent()
+        boolean leavesWorkflow = decodedPath.startsWith("/../");
+
+        if (leavesWorkflow && workflowContext.getRemoteRepositoryAddress().isPresent()
             && workflowContext.getServerAuthToken().isPresent()) {
             URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(),
                 workflowContext.getRelativeRemotePath().get() + "/" + decodedPath + ":data");
+            return uri.normalize().toURL();
+        } else if (leavesWorkflow && workflowContext.isTemporaryCopy() && workflowContext.getMountpointURI().isPresent()) {
+            URI uri = URIUtil.append(workflowContext.getMountpointURI().get(), decodedPath);
             return uri.normalize().toURL();
         } else {
             // in local application, an executor controlled by a pre-4.4 server, an old job without a token, or
@@ -249,6 +254,14 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             && workflowContext.getServerAuthToken().isPresent()) {
             URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(), decodedPath + ":data");
             return uri.normalize().toURL();
+        } else if (workflowContext.isTemporaryCopy() && workflowContext.getMountpointURI().isPresent()) {
+            try {
+                URI mpUri = workflowContext.getMountpointURI().get();
+                URI uri = new URI(mpUri.getScheme(), mpUri.getHost(), decodedPath, null);
+                return uri.normalize().toURL();
+            } catch (URISyntaxException ex) {
+                throw new IOException(ex);
+            }
         } else {
             // in local application, an executor controlled by a pre-4.4 server, or an old job without a token
             File mountpointRoot = workflowContext.getMountpointRoot();

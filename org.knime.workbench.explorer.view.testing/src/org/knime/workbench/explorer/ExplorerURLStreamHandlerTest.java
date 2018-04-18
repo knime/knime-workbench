@@ -706,4 +706,47 @@ public class ExplorerURLStreamHandlerTest {
         assertThat("Unexpected resolved URL", connection.getURL().toURI(), is(expectedUri));
     }
 
+    /**
+     * Checks if knime-URLs are correctly resolved for temporary copies of workflows.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveInTemporaryCopy() throws Exception {
+        Path currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
+        WorkflowCreationHelper workflowCreation = new WorkflowCreationHelper();
+        WorkflowContext.Factory workflowContextFactory = new WorkflowContext.Factory(currentLocation.toFile());
+        workflowContextFactory.setOriginalLocation(currentLocation.toFile());
+        workflowContextFactory.setTemporaryCopy(true);
+        workflowContextFactory.setMountpointURI(new URI("knime://LOCAL/workflow"));
+        workflowCreation.setWorkflowContext(workflowContextFactory.createContext());
+        WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), workflowCreation);
+        NodeContext.pushContext(wfm);
+
+        URL url = new URL("knime://knime.workflow/../test.txt");
+        URLConnection connection = m_handler.openConnection(url);
+        URL expectedUrl = new URL("knime://LOCAL/test.txt");
+        assertThat("Unexpected resolved workflow-relative URL outside workflow", connection.getURL(), is(expectedUrl));
+
+        url = new URL("knime://knime.workflow/test.txt");
+        connection = m_handler.openConnection(url);
+        expectedUrl = currentLocation.resolve("test.txt").toUri().toURL();
+        assertThat("Unexpected resolved workflow-relative URL inside workflow", connection.getURL(), is(expectedUrl));
+
+        url = new URL("knime://knime.mountpoint/xxx/test.txt");
+        connection = m_handler.openConnection(url);
+        expectedUrl = new URL("knime://LOCAL/xxx/test.txt");
+        assertThat("Unexpected resolved mountpoint-relative URL", connection.getURL(), is(expectedUrl));
+
+        url = new URL("knime://LOCAL/yyy/test.txt");
+        connection = m_handler.openConnection(url);
+        expectedUrl = url;
+        assertThat("Unexpected resolved absolute URL in same mount point", connection.getURL(), is(expectedUrl));
+
+
+        url = new URL("knime://Some-Other-Server/test.txt");
+        connection = m_handler.openConnection(url);
+        expectedUrl = url;
+        assertThat("Unexpected resolved absolute URL in other mount point", connection.getURL(), is(expectedUrl));
+    }
 }
