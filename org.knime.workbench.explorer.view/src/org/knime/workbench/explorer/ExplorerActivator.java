@@ -55,6 +55,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.util.pathresolve.URIToFileResolve;
 import org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl;
 import org.knime.workbench.explorer.view.preferences.ExplorerPrefsSyncer;
+import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.prefs.BackingStoreException;
@@ -126,9 +127,9 @@ public class ExplorerActivator extends AbstractUIPlugin {
         if (!m_prefSyncerAdded.getAndSet(true)) {
             // AP-8989 switching to IEclipsePreferences
             ExplorerPrefsSyncer prefsSyncer = new ExplorerPrefsSyncer();
-            IEclipsePreferences defaultPrefs = DefaultScope.INSTANCE.getNode(PLUGIN_ID);
+            IEclipsePreferences defaultPrefs = DefaultScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation());
             defaultPrefs.addPreferenceChangeListener(prefsSyncer);
-            IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(PLUGIN_ID);
+            IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation());
             preferences.addNodeChangeListener(prefsSyncer);
             preferences.addPreferenceChangeListener(prefsSyncer);
             try {

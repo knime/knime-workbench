@@ -708,7 +708,7 @@ public final class ExplorerMountTable {
         // AP-8989 switching to IEclipsePreferences
         List<MountSettings> mountSettings = new ArrayList<>();
 
-        IEclipsePreferences mountPointNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+        IEclipsePreferences mountPointNode = InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation());
         String[] childrenNames = null;
         try {
             childrenNames = mountPointNode.childrenNames();

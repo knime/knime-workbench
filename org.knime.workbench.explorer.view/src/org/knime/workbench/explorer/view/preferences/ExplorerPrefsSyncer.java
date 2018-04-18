@@ -61,7 +61,6 @@ import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.ConvenienceMethods;
-import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -173,9 +172,9 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
     @Override
     public void added(final NodeChangeEvent event) {
         // AP-8989 switching to IEclipsePreferences
-        if (ExplorerActivator.PLUGIN_ID.equals(event.getParent().name())) {
+        if (InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation()).equals(event.getParent())) {
             IEclipsePreferences childNode =
-                    InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID + "/" + event.getChild().name());
+                    InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation() + "/" + event.getChild().name());
             childNode.addNodeChangeListener(this);
             childNode.addPreferenceChangeListener(this);
         }
@@ -187,7 +186,7 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
     @Override
     public void removed(final NodeChangeEvent event) {
         // AP-8989 switching to IEclipsePreferences
-        if (ExplorerActivator.PLUGIN_ID.equals(event.getParent().name())) {
+        if (InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation()).equals(event.getParent())) {
             List<MountSettings> newValue = getUserOrDefaultValue();
             updateSettings(m_previousValues, newValue);
         }

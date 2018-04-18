@@ -74,6 +74,9 @@ public class MountSettings {
     /** The preference key used to store the MountSettings as XML in the IEclipsePreference nodes */
     private static final String MOUNTPOINT_PREFERENCE_KEY = "mountpoint";
 
+    /** Location for the MountSettings preference node. */
+    private static final String MOUNTPOINT_PREFERENCE_LOCATION = ExplorerActivator.PLUGIN_ID + "/mountpointNode";
+
     /** Used for separating multiple mount settings in the preferences. */
     private static final String SETTINGS_SEPARATOR = "\n";
 
@@ -606,19 +609,29 @@ public class MountSettings {
     public static void removeMountSettings(final List<String> mountSettings) throws BackingStoreException {
         // AP-8989 Switching to IEclipsePreferences
         for (String ms : mountSettings) {
-            IEclipsePreferences mountPointNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+            IEclipsePreferences mountPointNode = InstanceScope.INSTANCE.getNode(getMountpointPreferenceLocation());
             mountPointNode.node(ms).removeNode();
         }
     }
 
     private static IEclipsePreferences getInstanceMountPointParentNode() {
-        IEclipsePreferences mountPointsNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+        IEclipsePreferences mountPointsNode = InstanceScope.INSTANCE.getNode(getMountpointPreferenceLocation());
         return mountPointsNode;
     }
 
     private static IEclipsePreferences getDefaultMountPointParentNode() {
-        IEclipsePreferences mountPointsNode = DefaultScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
+        IEclipsePreferences mountPointsNode = DefaultScope.INSTANCE.getNode(getMountpointPreferenceLocation());
         return mountPointsNode;
+    }
+
+    /**
+     * Returns the location for the mountpoint preferences
+     *
+     * @return the mountpointPreferenceLocation
+     * @since 8.2
+     */
+    public static String getMountpointPreferenceLocation() {
+        return MOUNTPOINT_PREFERENCE_LOCATION;
     }
 
 }
