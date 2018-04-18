@@ -132,7 +132,7 @@ public class GlobalRefreshAction extends ExplorerAction {
                     NodeContainerUI workflow = ProjectWorkflowMap.getWorkflowUI(file.toURI());
                     if (workflow != null && workflow instanceof WorkflowManagerUI
                         && ((WorkflowManagerUI)workflow).isRefreshable()) {
-                        ((WorkflowManagerUI)workflow).refresh();
+                        ((WorkflowManagerUI)workflow).refresh(true);
                     }
                 }
             }
