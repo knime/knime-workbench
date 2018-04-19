@@ -50,8 +50,8 @@ package org.knime.workbench.explorer;
 
 import static org.junit.Assert.assertThat;
 
-import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.hamcrest.Matchers;
@@ -81,10 +81,15 @@ public class MountPointPreferencesTest {
         assertThat(initialMountIDs, Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2"));
 
 
-        String newMountPointString = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<config xmlns=\"http://www.knime.org/2008/09/XMLConfig\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.knime.org/2008/09/XMLConfig http://www.knime.org/XMLConfig_2008_09.xsd\" key=\"mountSettings\">\n<config key=\"mountSettings_0\">\n<entry key=\"mountID\" type=\"xstring\" value=\"newMountSettings\"/>\n<entry key=\"displayName\" type=\"xstring\" value=\"newMountSettings (knimeuser@https://testing.knime.org/tomee/ejb)\"/>\n<entry key=\"factoryID\" type=\"xstring\" value=\"com.knime.explorer.server\"/>\n<entry key=\"content\" type=\"xstring\" value=\"https://testing.knime.org/tomee/ejb;ole.ostergaard;false;\"/>\n<entry key=\"defaultMountID\" type=\"xstring\" isnull=\"true\" value=\"\"/>\n<entry key=\"active\" type=\"xboolean\" value=\"true\"/>\n</config>\n<entry key=\"mountPointNumber\" type=\"xint\" value=\"0\"/>\n</config>\n";
 
+        String mountID = "new-mountpoint";
+        String content = "https://testing.knime.org/tomee/ejb;oole;false;";
+        String displayName = "new-mountpoint (oole@https://testing.knime.org/tomee/ejb)";
+        String factoryID = "com.knime.explorer.server";
+        int mountPointNumber = 0;
+        boolean active = true;
 
-        MountSettings newMountSettings = MountSettings.parseSingleSetting(newMountPointString, true);
+        MountSettings newMountSettings = new MountSettings(mountID, displayName, factoryID, content, "", active, mountPointNumber);
 
 
         initialSettings.add(newMountSettings);
@@ -113,20 +118,20 @@ public class MountPointPreferencesTest {
         List<MountSettings> initialSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
         int numberOfSettings = initialSettings.size();
 
-        String defaultMountPoint1SettingsString = null;
-        for (Iterator<MountSettings> iterator = initialSettings.iterator(); iterator.hasNext();) {
-            MountSettings defaultSettings = iterator.next();
-            if (defaultSettings.getMountID().equals("test-mountpoint1")) {
-                defaultMountPoint1SettingsString = defaultSettings.getSettingsString();
-            }
-        }
 
-        assertThat(defaultMountPoint1SettingsString, Matchers.notNullValue());
+        Optional<MountSettings> optMS = initialSettings.stream().filter(ms -> ms.getMountID().equals("test-mountpoint1")).findFirst();
 
-        String overWriteMountPoint1SettingsString = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<config xmlns=\"http://www.knime.org/2008/09/XMLConfig\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.knime.org/2008/09/XMLConfig http://www.knime.org/XMLConfig_2008_09.xsd\" key=\"mountSettings\">\n<config key=\"mountSettings_0\">\n<entry key=\"mountID\" type=\"xstring\" value=\"test-mountpoint1\"/>\n<entry key=\"displayName\" type=\"xstring\" value=\"test-mountpoint1 (newKNIMEUser@https://testing.knime.org/tomee/ejb)\"/>\n<entry key=\"factoryID\" type=\"xstring\" value=\"com.knime.explorer.server\"/>\n<entry key=\"content\" type=\"xstring\" value=\"https://testing.knime.org/tomee/ejb;ole.ostergaard;false;\"/>\n<entry key=\"defaultMountID\" type=\"xstring\" isnull=\"true\" value=\"\"/>\n<entry key=\"active\" type=\"xboolean\" value=\"true\"/>\n</config>\n<entry key=\"mountPointNumber\" type=\"xint\" value=\"0\"/>\n</config>\n";
+        MountSettings oldMountSettings = optMS.orElse(null);
+        assertThat(oldMountSettings, Matchers.notNullValue());
 
+        String mountID = "test-mountpoint1";
+        String content = "https://testing.knime.org/tomee/ejb;oole;false;";
+        String displayName = "test-mountpoint1 (oole@https://testing.knime.org/tomee/ejb)";
+        String factoryID = "com.knime.explorer.server";
+        int mountPointNumber = 0;
+        boolean active = true;
 
-        MountSettings newMountSettings = MountSettings.parseSingleSetting(overWriteMountPoint1SettingsString, true);
+        MountSettings newMountSettings = new MountSettings(mountID, displayName, factoryID, content, "", active, mountPointNumber);
 
         initialSettings.add(newMountSettings);
 
@@ -136,15 +141,12 @@ public class MountPointPreferencesTest {
 
         assertThat(modifiedSettings.size(), Matchers.equalTo(numberOfSettings));
 
-        String overwrittenMountPoint1Settings = null;
-        for (Iterator<MountSettings> iterator = modifiedSettings.iterator(); iterator.hasNext();) {
-            MountSettings mount = iterator.next();
-            if (mount.getMountID().equals("test-mountpoint1")) {
-                overwrittenMountPoint1Settings = mount.getSettingsString();
-            }
-        }
+        Optional<MountSettings> optoverwritteMS = modifiedSettings.stream().filter(ms -> ms.getMountID().equals("test-mountpoint1")).findFirst();
 
-        assertThat(overwrittenMountPoint1Settings, Matchers.notNullValue());
-        assertThat(defaultMountPoint1SettingsString, Matchers.not(Matchers.equalTo(overwrittenMountPoint1Settings)));
+        MountSettings overwrittenMountSettings = optoverwritteMS.orElse(null);
+
+        assertThat(overwrittenMountSettings, Matchers.notNullValue());
+        assertThat(oldMountSettings, Matchers.not(Matchers.equalTo(overwrittenMountSettings)));
+        assertThat(overwrittenMountSettings, Matchers.equalTo(newMountSettings));
     }
 }

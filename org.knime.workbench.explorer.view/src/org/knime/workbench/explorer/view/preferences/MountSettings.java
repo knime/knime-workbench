@@ -47,7 +47,6 @@ package org.knime.workbench.explorer.view.preferences;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -132,6 +131,7 @@ public class MountSettings {
 
     }
 
+
     /**
      * Creates a new mount settings object for the content provider.
      *
@@ -149,15 +149,25 @@ public class MountSettings {
     }
 
     /**
-     * Creates a new mount settings object based on the passed NodeSettings object and the provided mount point number.
+     * Creates a new mount settings object from the given parameters.
      *
-     * @param settings A NodeSettings object
-     * @param mountPointNumber The corresponding mount point number for the given NodeSettings
-     * @throws InvalidSettingsException if the settings can't be retrieved
+     * @param mountID The mountpoint's mount ID
+     * @param displayName The mountpoint's display name
+     * @param factoryID The mountpoint's factory ID
+     * @param content The mountpoint's content
+     * @param defaultMountID The mountpoint's default mount ID
+     * @param active Whether the mountpoint is active
+     * @param mountPointNumber The mountpoint number
      * @since 8.2
      */
-    public MountSettings(final NodeSettingsRO settings, final int mountPointNumber) throws InvalidSettingsException {
-        this(settings);
+    public MountSettings(final String mountID, final String displayName, final String factoryID, final String content,
+        final String defaultMountID, final Boolean active, final int mountPointNumber) {
+        m_mountID = mountID;
+        m_displayName = displayName;
+        m_factoryID = factoryID;
+        m_content = content;
+        m_defaultMountID = defaultMountID;
+        m_active = active;
         m_mountPointNumber = mountPointNumber;
     }
 
@@ -382,59 +392,6 @@ public class MountSettings {
     }
 
     /**
-     * Parses MountSettings to an XML which can be saved to a Preference node.
-     *
-     * @param mountSetting The MountSettings to be parsed as an XML
-     * @param mountPointNumber The mount number of these MountSettings
-     * @return The MountSettings as a String in XML format
-     * @since 8.2
-     */
-    public static String getSingleSettingsString(final MountSettings mountSetting, final int mountPointNumber) {
-        // Settings are parsed individually for IEclipsePreferences node.
-        NodeSettings nodeSettings = new NodeSettings("mountSettings");
-        NodeSettingsWO singleSettings = nodeSettings.addNodeSettings("mountSettings_" + mountPointNumber);
-        mountSetting.saveToNodeSettings(singleSettings);
-        nodeSettings.addInt("mountPointNumber", mountPointNumber);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try {
-            nodeSettings.saveToXML(out);
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Error while saving mount settings to XML: " + e.getMessage(), e);
-        }
-        return new String(out.toByteArray(), StandardCharsets.UTF_8);
-    }
-
-    /**
-     * Parses a single mount settings from the give mount settings in XML format.
-     *
-     * @param settings The mount settings in XMLformat
-     * @param excludeUnknownContentProviders true if resulting list should only contain displayable settings
-     * @return The MountSettings parsed from the given XML
-     * @since 8.2
-     */
-    public static MountSettings parseSingleSetting(final String settings,
-            final boolean excludeUnknownContentProviders)  {
-     // Settings are parsed individually for IEclipsePreferences node.
-        MountSettings mountSettings = null;
-        if (settings == null || settings.isEmpty()) {
-            return mountSettings;
-        }
-        try {
-            NodeSettingsRO nodeSettings = NodeSettings.loadFromXML(new ByteArrayInputStream(settings.getBytes()));
-            int mountPointNumber = nodeSettings.getInt("mountPointNumber");
-            NodeSettingsRO singleSettings = nodeSettings.getNodeSettings("mountSettings_" + mountPointNumber);
-            MountSettings singleMountSettings = new MountSettings(singleSettings, mountPointNumber);
-            if (!excludeUnknownContentProviders || isMountSettingsAddable(singleMountSettings)) {
-                mountSettings = singleMountSettings;
-            }
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Error parsing mount settings: " + e.getMessage(), e);
-        }
-        return mountSettings;
-    }
-
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -471,8 +428,7 @@ public class MountSettings {
             String[] defaultChildNodes = defaultMountPointsNode.childrenNames();
             for (final String mountPointNodeName : defaultChildNodes) {
                 final Preferences childMountPointNode = defaultMountPointsNode.node(mountPointNodeName);
-                String s = childMountPointNode.get(MountSettings.MOUNTPOINT_PREFERENCE_KEY, "");
-                MountSettings ms = MountSettings.parseSingleSetting(s, true);
+                MountSettings ms = loadMountSettingsFromNode(childMountPointNode);
                 if (ms != null) {
                     defaultMountSettingsMap.put(ms.getMountPointNumber(), ms);
                 }
@@ -480,8 +436,7 @@ public class MountSettings {
             String[] instanceChildNodes = instanceMountPointsNode.childrenNames();
             for (final String mountPointNodeName : instanceChildNodes) {
                 final Preferences childMountPointNode = instanceMountPointsNode.node(mountPointNodeName);
-                String s = childMountPointNode.get(MountSettings.MOUNTPOINT_PREFERENCE_KEY, "");
-                MountSettings ms = MountSettings.parseSingleSetting(s, true);
+                MountSettings ms = loadMountSettingsFromNode(childMountPointNode);
                 if (ms != null) {
                     instanceMountSettingsMap.put(ms.getMountPointNumber(), ms);
                 }
@@ -534,8 +489,7 @@ public class MountSettings {
             String[] defaultChildNodes = defaultMountPointsNode.childrenNames();
             for (final String mountPointNodeName : defaultChildNodes) {
                 final Preferences childMountPointNode = defaultMountPointsNode.node(mountPointNodeName);
-                String s = childMountPointNode.get(MountSettings.MOUNTPOINT_PREFERENCE_KEY, "");
-                MountSettings ms = MountSettings.parseSingleSetting(s, true);
+                MountSettings ms = MountSettings.loadMountSettingsFromNode(childMountPointNode);
                 if (ms != null) {
                     defaultMountSettingsMap.put(ms.getMountPointNumber(), ms);
                 }
@@ -596,9 +550,34 @@ public class MountSettings {
         for (int i = 0; i < mountSettings.size(); i++) {
                 MountSettings ms = mountSettings.get(i);
                 IEclipsePreferences mountPointChildNode = (IEclipsePreferences)mountPointsNode.node(ms.getMountID());
-                //InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID + "/" + ms.getMountID());
-                mountPointChildNode.put(MOUNTPOINT_PREFERENCE_KEY, MountSettings.getSingleSettingsString(ms, i));
+                saveMountSettingsToNode(ms, mountPointChildNode, i);
         }
+    }
+
+    private static void saveMountSettingsToNode(final MountSettings settings,
+        final IEclipsePreferences node, final int mountPointNumber) {
+        node.put("mountID", settings.getMountID());
+        node.put("displayName", settings.getDisplayName());
+        node.put("factoryID", settings.getFactoryID());
+        node.put("content", settings.getContent());
+        String defaultMountID = settings.getDefaultMountID();
+        if (defaultMountID !=null) {
+            node.put("defaultMountID", settings.getDefaultMountID());
+        }
+        node.putBoolean("active", settings.isActive());
+        node.putInt("mounPointNumber", mountPointNumber);
+    }
+
+    private static MountSettings loadMountSettingsFromNode(final Preferences node) {
+        String mountID = node.get("mountID","");
+        String displayName = node.get("displayName", "");
+        String factoryID = node.get("factoryID", "");
+        String content = node.get("content", "");
+        String defaultMountID = node.get("defaultMountID", "");
+        boolean active = node.getBoolean("active", true);
+        int mountPointNumber = node.getInt("mounPointNumber", 0);
+
+        return new MountSettings(mountID, displayName, factoryID, content, defaultMountID, active, mountPointNumber);
     }
 
     /**

@@ -93,7 +93,7 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
      */
     @Override
     public void preferenceChange(final PreferenceChangeEvent event) {
-        if ("mountpoint".equals(event.getKey())) {
+        if (InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation()).equals(event.getNode().parent())) {
             List<MountSettings> newValue = getUserOrDefaultValue();
             updateSettings(m_previousValues, newValue);
             m_previousValues = newValue;
