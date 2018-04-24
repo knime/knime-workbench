@@ -60,6 +60,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.InputDialog;
@@ -109,6 +110,7 @@ import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidat
 import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
 import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
+import org.osgi.service.prefs.Preferences;
 
 /**
  * Content and label provider for one source in the user space view. One
@@ -1395,6 +1397,29 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             }
         }
 
+    }
+
+    /**
+     * Saves the given state of the ContentProvider to the {@link IEclipsePreferences} node.
+     *
+     * @since 8.2
+     */
+    public void saveStateToPreferenceNode(final IEclipsePreferences node, final String state) {
+        // AP-8989 Switching to IEclipsePreferences
+        // By default don't save anything to the preference node.
+    }
+
+    /**
+     * Load the state from the given {@link Preferences} node.
+     *
+     * @param node The {@link Preferences} node to load from
+     * @return The state loaded from the {@link Preferences} node
+     * @since 8.2
+     */
+    public String loadStateFromPreferenceNode(final Preferences node) {
+        // AP-8989 Switching to IEclipsePreferences
+        // By default return an empty state.
+        return "";
     }
 
 }

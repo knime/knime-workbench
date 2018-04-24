@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
@@ -100,6 +101,7 @@ public class MountSettings {
     private boolean m_active;
 
     private int m_mountPointNumber;
+
 
     /**
      * Creates a new mount settings object based on the passed settings string.
@@ -557,12 +559,16 @@ public class MountSettings {
     private static void saveMountSettingsToNode(final MountSettings settings,
         final IEclipsePreferences node, final int mountPointNumber) {
         node.put("mountID", settings.getMountID());
-        node.put("displayName", settings.getDisplayName());
         node.put("factoryID", settings.getFactoryID());
-        node.put("content", settings.getContent());
+
+        AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(settings.getFactoryID());
+        AbstractContentProvider contenProvider = factory.createContentProvider(settings.getMountID(), settings.getContent());
+
+        contenProvider.saveStateToPreferenceNode(node, settings.getContent());
+
         String defaultMountID = settings.getDefaultMountID();
-        if (defaultMountID !=null) {
-            node.put("defaultMountID", settings.getDefaultMountID());
+        if (!StringUtils.isEmpty(defaultMountID)) {
+            node.put("defaultMountID", defaultMountID);
         }
         node.putBoolean("active", settings.isActive());
         node.putInt("mounPointNumber", mountPointNumber);
@@ -570,9 +576,20 @@ public class MountSettings {
 
     private static MountSettings loadMountSettingsFromNode(final Preferences node) {
         String mountID = node.get("mountID","");
-        String displayName = node.get("displayName", "");
         String factoryID = node.get("factoryID", "");
-        String content = node.get("content", "");
+
+        AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(factoryID);
+        String content ="" ;
+        String displayName = "";
+        if (factory != null) {
+            AbstractContentProvider contenProvider = factory.createContentProvider(mountID, "");
+            content = contenProvider.loadStateFromPreferenceNode(node);
+            displayName = mountID + " (" +contenProvider.toString() + ")";
+        }
+
+
+
+
         String defaultMountID = node.get("defaultMountID", "");
         boolean active = node.getBoolean("active", true);
         int mountPointNumber = node.getInt("mounPointNumber", 0);

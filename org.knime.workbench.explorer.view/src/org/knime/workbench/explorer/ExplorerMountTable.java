@@ -810,4 +810,14 @@ public final class ExplorerMountTable {
             LOGGER.error("Unabled to save mount point settings: " + e.getMessage(), e);
         }
     }
+
+    /**
+     * Returns the collected ContentProviderFactories.
+     *
+     * @return the collected ContentProviderFactories
+     * @since 8.2
+     */
+    public static TreeMap<String, AbstractContentProviderFactory> getContentProviderFactories() {
+        return CONTENT_FACTORIES;
+    }
 }
