@@ -48,6 +48,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -556,11 +557,18 @@ public class MountSettings {
         }
     }
 
+
+
+    private static String MOUNT_ID = "mountID";
+    private static String FACTORY_ID = "factoryID";
+    private static String DEFAULT_MOUNT_ID = "defaultMountID";
+    private static String ACTIVE = "active";
+    private static String MOUNTPOINT_NUMBER = "mountpointNumber";
+
+    private static List<String> m_necessaryKeys = Arrays.asList(MOUNT_ID, FACTORY_ID);
+
     private static void saveMountSettingsToNode(final MountSettings settings,
         final IEclipsePreferences node, final int mountPointNumber) {
-        node.put("mountID", settings.getMountID());
-        node.put("factoryID", settings.getFactoryID());
-
         AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(settings.getFactoryID());
         AbstractContentProvider contenProvider = factory.createContentProvider(settings.getMountID(), settings.getContent());
 
@@ -568,34 +576,44 @@ public class MountSettings {
 
         String defaultMountID = settings.getDefaultMountID();
         if (!StringUtils.isEmpty(defaultMountID)) {
-            node.put("defaultMountID", defaultMountID);
+            node.put(DEFAULT_MOUNT_ID, defaultMountID);
         }
-        node.putBoolean("active", settings.isActive());
-        node.putInt("mounPointNumber", mountPointNumber);
+        node.putBoolean(ACTIVE, settings.isActive());
+
+        node.putInt(MOUNTPOINT_NUMBER, mountPointNumber);
+
+        // The factoryID and mountID are saved last, this makes sure that the settings do not get loaded prematurely
+        // from a triggered preferenceChange event.
+        node.put(FACTORY_ID, settings.getFactoryID());
+        node.put(MOUNT_ID, settings.getMountID());
     }
 
-    private static MountSettings loadMountSettingsFromNode(final Preferences node) {
-        String mountID = node.get("mountID","");
-        String factoryID = node.get("factoryID", "");
+    private static MountSettings loadMountSettingsFromNode(final Preferences node) throws BackingStoreException {
+        // Preference nodes must contain the factoryID and the mountID, otherwise they cannot be loaded.
+        List<String> nodeKeys = Arrays.asList(node.keys());
+        if (nodeKeys.containsAll(m_necessaryKeys)) {
+            String mountID = node.get(MOUNT_ID,"");
+            String factoryID = node.get(FACTORY_ID, "");
 
-        AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(factoryID);
-        String content ="" ;
-        String displayName = "";
-        if (factory != null) {
-            AbstractContentProvider contenProvider = factory.createContentProvider(mountID, "");
-            content = contenProvider.loadStateFromPreferenceNode(node);
-            displayName = mountID + " (" +contenProvider.toString() + ")";
+            AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(factoryID);
+            String content ="" ;
+            String displayName = "";
+            if (factory != null ) {
+                AbstractContentProvider contenProvider = factory.createContentProvider(mountID, "");
+                content = contenProvider.loadStateFromPreferenceNode(node);
+                displayName = mountID + " (" +contenProvider.toString() + ")";
+            }
+
+            String defaultMountID = node.get(DEFAULT_MOUNT_ID, "");
+            boolean active = node.getBoolean(ACTIVE, true);
+            int mountPointNumber = node.getInt(MOUNTPOINT_NUMBER, 0);
+
+            return new MountSettings(mountID, displayName, factoryID, content, defaultMountID, active, mountPointNumber);
+        } else {
+            return null;
         }
-
-
-
-
-        String defaultMountID = node.get("defaultMountID", "");
-        boolean active = node.getBoolean("active", true);
-        int mountPointNumber = node.getInt("mounPointNumber", 0);
-
-        return new MountSettings(mountID, displayName, factoryID, content, defaultMountID, active, mountPointNumber);
     }
+
 
     /**
      * Removes the given MountSettings from the {@link ExplorerActivator#PLUGIN_ID} preference node.
