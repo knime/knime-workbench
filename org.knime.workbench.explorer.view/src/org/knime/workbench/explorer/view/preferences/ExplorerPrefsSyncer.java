@@ -94,9 +94,13 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
     @Override
     public void preferenceChange(final PreferenceChangeEvent event) {
         if (InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation()).equals(event.getNode().parent())) {
-            List<MountSettings> newValue = getUserOrDefaultValue();
-            updateSettings(m_previousValues, newValue);
-            m_previousValues = newValue;
+            Object eventValue = event.getNewValue();
+            if (!(eventValue == null)) {
+                // if the eventValue is null, then the preference was removed
+                List<MountSettings> newValue = getUserOrDefaultValue();
+                updateSettings(m_previousValues, newValue);
+                m_previousValues = newValue;
+            }
         }
     }
 
@@ -160,7 +164,6 @@ public class ExplorerPrefsSyncer implements IPropertyChangeListener, IPreference
         if (InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation()).equals(event.getParent())) {
             IEclipsePreferences childNode = InstanceScope.INSTANCE
                 .getNode(MountSettings.getMountpointPreferenceLocation() + "/" + event.getChild().name());
-            childNode.addNodeChangeListener(this);
             childNode.addPreferenceChangeListener(this);
         }
     }
