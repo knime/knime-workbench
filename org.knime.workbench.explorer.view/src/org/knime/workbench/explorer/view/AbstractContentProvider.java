@@ -1401,10 +1401,10 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
     /**
      * Saves the given state of the ContentProvider to the {@link IEclipsePreferences} node.
-     *
+     * @param node The {@link IEclipsePreferences} node to save to
      * @since 8.2
      */
-    public void saveStateToPreferenceNode(final IEclipsePreferences node, final String state) {
+    public void saveStateToPreferenceNode(final IEclipsePreferences node) {
         // AP-8989 Switching to IEclipsePreferences
         // By default don't save anything to the preference node.
     }

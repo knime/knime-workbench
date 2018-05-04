@@ -572,7 +572,7 @@ public class MountSettings {
         AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(settings.getFactoryID());
         AbstractContentProvider contenProvider = factory.createContentProvider(settings.getMountID(), settings.getContent());
 
-        contenProvider.saveStateToPreferenceNode(node, settings.getContent());
+        contenProvider.saveStateToPreferenceNode(node);
 
         String defaultMountID = settings.getDefaultMountID();
         if (!StringUtils.isEmpty(defaultMountID)) {
@@ -596,7 +596,7 @@ public class MountSettings {
             String factoryID = node.get(FACTORY_ID, "");
 
             AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(factoryID);
-            String content ="" ;
+            String content = "" ;
             String displayName = "";
             if (factory != null ) {
                 AbstractContentProvider contenProvider = factory.createContentProvider(mountID, "");
