@@ -54,6 +54,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.ui.wrapper.WorkflowManagerWrapper;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -127,7 +128,7 @@ public class GlobalConfigureWorkflowAction extends ExplorerAction {
                 try {
                     WrappedNodeDialog dialog =
                             new WrappedNodeDialog(Display.getDefault()
-                                    .getActiveShell(), wfm);
+                                    .getActiveShell(), WorkflowManagerWrapper.wrap(wfm));
                     dialog.setBlockOnOpen(true);
                     dialog.open();
                 } catch (final NotConfigurableException nce) {
