@@ -185,8 +185,8 @@ public final class WorkflowExporter {
                 return true;
             }
         }
-        // always exclude zip files
-        return name.toLowerCase().endsWith(".zip");
+
+        return false;
     }
 
     /**
@@ -230,8 +230,8 @@ public final class WorkflowExporter {
                 return true;
             }
         }
-        // always exclude zip files
-        return name.toLowerCase().endsWith(".zip");
+
+        return false;
     }
 
 
