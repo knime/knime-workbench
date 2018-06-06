@@ -60,6 +60,7 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
@@ -592,26 +593,31 @@ public class MountSettings {
         // Preference nodes must contain the factoryID and the mountID, otherwise they cannot be loaded.
         List<String> nodeKeys = Arrays.asList(node.keys());
         if (nodeKeys.containsAll(m_necessaryKeys)) {
-            String mountID = node.get(MOUNT_ID,"");
-            String factoryID = node.get(FACTORY_ID, "");
+            try {
+                String mountID = node.get(MOUNT_ID,"");
+                String factoryID = node.get(FACTORY_ID, "");
 
-            AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(factoryID);
-            String content = "" ;
-            String displayName = "";
-            if (factory != null ) {
-                AbstractContentProvider contenProvider = factory.createContentProvider(mountID, "");
-                content = contenProvider.loadStateFromPreferenceNode(node);
-                displayName = mountID + " (" +contenProvider.toString() + ")";
+                AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(factoryID);
+                String content = "" ;
+                String displayName = "";
+                if (factory != null ) {
+                    AbstractContentProvider contenProvider = factory.createContentProvider(mountID, "");
+                    content = contenProvider.loadStateFromPreferenceNode(node);
+                    displayName = mountID + " (" +contenProvider.toString() + ")";
+                }
+
+                String defaultMountID = node.get(DEFAULT_MOUNT_ID, "");
+                boolean active = node.getBoolean(ACTIVE, true);
+                int mountPointNumber = node.getInt(MOUNTPOINT_NUMBER, 0);
+
+                return new MountSettings(mountID, displayName, factoryID, content, defaultMountID, active,
+                    mountPointNumber);
+            } catch (Exception ex) {
+                NodeLogger.getLogger(MountSettings.class).error("Could not load mount point settings from node "
+                    + node.absolutePath() + ": " + ex.getMessage(), ex);
             }
-
-            String defaultMountID = node.get(DEFAULT_MOUNT_ID, "");
-            boolean active = node.getBoolean(ACTIVE, true);
-            int mountPointNumber = node.getInt(MOUNTPOINT_NUMBER, 0);
-
-            return new MountSettings(mountID, displayName, factoryID, content, defaultMountID, active, mountPointNumber);
-        } else {
-            return null;
         }
+        return null;
     }
 
 
