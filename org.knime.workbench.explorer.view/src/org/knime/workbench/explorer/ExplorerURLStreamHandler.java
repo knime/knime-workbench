@@ -66,6 +66,7 @@ import org.eclipse.core.runtime.URIUtil;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowContext;
+import org.knime.core.util.KNIMEServerHostnameVerifier;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.osgi.framework.Bundle;
@@ -153,7 +154,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             workflowContext.getRemoteRepositoryAddress().ifPresent(u -> m_requestModifier.modifyRequest(u, conn));
 
             if (conn instanceof HttpsURLConnection) {
-                ((HttpsURLConnection)conn).setHostnameVerifier(KNIMEHostnameVerifier.INSTANCE);
+                ((HttpsURLConnection)conn).setHostnameVerifier(KNIMEServerHostnameVerifier.getInstance());
             }
             return conn;
         } else {
