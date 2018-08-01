@@ -46,13 +46,14 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
-import org.knime.core.ui.node.workflow.WorkflowManagerUI;
+import org.knime.core.ui.node.workflow.async.AsyncWorkflowManagerUI;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -130,9 +131,13 @@ public class GlobalRefreshAction extends ExplorerAction {
                     && ((RemoteExplorerFileStore)file).fetchInfo().isWorkflowJob()) {
                     //if it's a remote workflow job, try refreshing its workflow in case it's opened in the editor
                     NodeContainerUI workflow = ProjectWorkflowMap.getWorkflowUI(file.toURI());
-                    if (workflow != null && workflow instanceof WorkflowManagerUI
-                        && ((WorkflowManagerUI)workflow).isRefreshable()) {
-                        ((WorkflowManagerUI)workflow).refresh(true);
+                    if (workflow != null && workflow instanceof AsyncWorkflowManagerUI) {
+                        try {
+                            ((AsyncWorkflowManagerUI)workflow).refresh(true).get();
+                        } catch (InterruptedException | ExecutionException e) {
+                            return new Status(IStatus.ERROR, "unknown", "A problem occurred while refreshing workflow.",
+                                e);
+                        }
                     }
                 }
             }
