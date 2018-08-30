@@ -146,4 +146,20 @@ public class URIPathEncoderTest {
         URL expectedEncodedURL = new URI("file://knime.mountpoint/path/file%C3%84.txt").toURL();
         assertThat(utf8Encoder.encodePathSegments(url), is(expectedEncodedURL));
     }
+
+    /**
+     * Tests that a whitespace in a UNC path is correctly encoded to %20.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testWhitespaceInUncPathIsEncodedToPercentTwenty() throws Exception {
+        Assume.assumeThat("Only makes sense under Windows", Platform.getOS(), is(Platform.OS_WIN32));
+
+        URIPathEncoder utf8Encoder = new URIPathEncoder(StandardCharsets.UTF_8);
+        URI uncURI = new File("\\\\HOST\\path\\file with whitespace.txt").toURI();
+        URI expectedUNC = new URI("file:////HOST/path/file%20with%20whitespace.txt");
+        assertThat(utf8Encoder.encodePathSegments(uncURI), is(expectedUNC));
+    }
+
 }
