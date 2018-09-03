@@ -123,6 +123,8 @@ public class GlobalDeleteAction extends ExplorerAction {
                 getAllContainedWorkflows(allFiles);
         List<LocalExplorerFileStore> toDelLocalFlows =
                 getContainedLocalWorkflows(allFiles);
+        List<AbstractExplorerFileStore> toDelJobs =
+                getAllContainedJobs(allFiles);
         // try locking all local workflows for deletion
         LinkedList<LocalExplorerFileStore> lockedWFs =
                 new LinkedList<LocalExplorerFileStore>();
@@ -167,6 +169,8 @@ public class GlobalDeleteAction extends ExplorerAction {
                 return;
             }
         }
+
+        ExplorerFileSystemUtils.closeOpenWorkflows(toDelJobs);
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelWorkflows);
 
         // delete Workflows first (unlocks them too)

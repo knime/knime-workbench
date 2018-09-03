@@ -48,6 +48,7 @@
 package org.knime.workbench.explorer.filesystem;
 
 import java.io.File;
+import java.net.URI;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,7 @@ import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -176,17 +178,23 @@ public final class ExplorerFileSystemUtils {
                 PlatformUI.getWorkbench().getActiveWorkbenchWindow()
                         .getActivePage();
         for (AbstractExplorerFileStore wf : workflows) {
-            File loc;
+            URI loc = null;
             try {
-                loc = wf.toLocalFile(EFS.NONE, null);
+                File file = wf.toLocalFile(EFS.NONE, null);
+                if (file != null) {
+                    loc = file.toURI();
+                }
             } catch (CoreException e) {
-                loc = null;
+                //
             }
             if (loc == null) {
-                // not a local workflow. Not open.
+                loc = wf.toURI();
+            }
+            if (loc == null) {
+                // not a local workflow nor a remote workflow job. Not open.
                 continue;
             }
-            NodeContainer wfm = ProjectWorkflowMap.getWorkflow(loc.toURI());
+            NodeContainerUI wfm = ProjectWorkflowMap.getWorkflowUI(loc);
             if (wfm != null) {
                 for (IEditorReference editRef : page.getEditorReferences()) {
                     IEditorPart editor = editRef.getEditor(false);
@@ -195,11 +203,11 @@ public final class ExplorerFileSystemUtils {
                         continue;
                     }
                     WorkflowEditorAdapter wea =
-                            (WorkflowEditorAdapter)editor
-                                    .getAdapter(WorkflowEditorAdapter.class);
-                    NodeContainer editWFM = null;
+                            editor
+                            .getAdapter(WorkflowEditorAdapter.class);
+                    NodeContainerUI editWFM = null;
                     if (wea != null) {
-                        editWFM = wea.getWorkflowManager();
+                        editWFM = wea.getWorkflowManagerUI();
                     }
                     if (wfm == editWFM) {
                         page.closeEditor(editor, false);
@@ -254,8 +262,8 @@ public final class ExplorerFileSystemUtils {
                         continue;
                     }
                     WorkflowEditorAdapter wea =
-                            (WorkflowEditorAdapter)editor
-                                    .getAdapter(WorkflowEditorAdapter.class);
+                            editor
+                            .getAdapter(WorkflowEditorAdapter.class);
                     NodeContainer editWFM = null;
                     if (wea != null) {
                         editWFM = wea.getWorkflowManager();

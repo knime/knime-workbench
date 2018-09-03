@@ -64,6 +64,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -318,6 +319,25 @@ public abstract class ExplorerAction extends Action {
                 } catch (CoreException e) {
                     // ignore - no workflows contained.
                 }
+            } // else ignore
+        }
+        return result;
+    }
+
+    /**
+     * Returns a new list of workflow jobs that are contained in the parameter list.
+     *
+     * @param selected the list to return contained workflow jobs from
+     * @return a new list with workflow jobs contained (only the directly selected ones) in the argument
+     * @since 8.2
+     */
+    public static List<AbstractExplorerFileStore>
+        getAllContainedJobs(final List<? extends AbstractExplorerFileStore> selected) {
+        List<AbstractExplorerFileStore> result =
+                new LinkedList<AbstractExplorerFileStore>();
+        for (AbstractExplorerFileStore f : selected) {
+            if (f instanceof RemoteExplorerFileStore && ((RemoteExplorerFileStore)f).fetchInfo().isWorkflowJob()) {
+                result.add(f);
             } // else ignore
         }
         return result;
