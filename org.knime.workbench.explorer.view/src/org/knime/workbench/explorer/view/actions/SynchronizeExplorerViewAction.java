@@ -53,6 +53,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IURIEditorInput;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.FileStoreEditorInput;
@@ -127,6 +128,9 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         if (fs == null) {
             fs = resolveViaPath(activeEditor);
         }
+        if (fs == null) {
+            fs = resolveViaURI(activeEditor);
+        }
         if (fs != null) {
             getViewer().setSelection(new StructuredSelection(ContentDelegator.getTreeObjectFor(fs)), true);
         }
@@ -139,6 +143,9 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
             return null;
         }
         WorkflowManager wm = adapter.getWorkflowManager();
+        if (wm == null) {
+            return null;
+        }
         ReferencedFile wfFileRef = wm.getWorkingDir();
         if (wfFileRef == null) {
             return null;
@@ -173,6 +180,15 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
                 newUri = newUri.substring(0, newUri.length() - WorkflowPersistor.WORKFLOW_FILE.length() - 1);
                 uri = URI.create(newUri);
             }
+            return ExplorerFileSystem.INSTANCE.getStore(uri);
+        }
+        return null;
+    }
+
+    private AbstractExplorerFileStore resolveViaURI(final IEditorPart rootEditor) {
+        IEditorInput editorInput = rootEditor.getEditorInput();
+        if (editorInput instanceof IURIEditorInput) {
+            URI uri = ((IURIEditorInput)editorInput).getURI();
             return ExplorerFileSystem.INSTANCE.getStore(uri);
         }
         return null;
