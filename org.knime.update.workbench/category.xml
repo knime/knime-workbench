@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/org.knime.features.workbench_3.8.0.qualifier.jar" id="org.knime.features.workbench" version="3.8.0.qualifier"/>
+</site>
