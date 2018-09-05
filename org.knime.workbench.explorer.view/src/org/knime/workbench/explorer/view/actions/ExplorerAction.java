@@ -329,7 +329,7 @@ public abstract class ExplorerAction extends Action {
      *
      * @param selected the list to return contained workflow jobs from
      * @return a new list with workflow jobs contained (only the directly selected ones) in the argument
-     * @since 8.2
+     * @since 8.3
      */
     public static List<AbstractExplorerFileStore>
         getAllContainedJobs(final List<? extends AbstractExplorerFileStore> selected) {
