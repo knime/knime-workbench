@@ -104,6 +104,8 @@ public class MountSettings {
 
     private int m_mountPointNumber;
 
+    private boolean m_useRest;
+
 
     /**
      * Creates a new mount settings object based on the passed settings string.
@@ -129,6 +131,7 @@ public class MountSettings {
         m_content = settings.getString("content");
         m_defaultMountID = settings.getString("defaultMountID");
         m_active = settings.getBoolean("active");
+        m_useRest = settings.getBoolean("useRest", false);
         if (settings.containsKey("mountPointNumber")) {
             m_mountPointNumber = settings.getInt("mountPointNumber");
         }
@@ -148,6 +151,9 @@ public class MountSettings {
         m_content = cp.saveState();
         m_defaultMountID = cp.getFactory().getDefaultMountID();
         m_active = true;
+
+        String[] splitContent = m_content.split(";");
+        m_useRest = splitContent.length >= 5 ? splitContent[4].equals("true") : false;
         // New Mount Points Are always at the top of the table.
         m_mountPointNumber = 0;
     }
@@ -285,6 +291,29 @@ public class MountSettings {
     }
 
     /**
+     * Whether if REST od EJB shall be used.
+     *
+     * @return {@code true} if REST shall be used, {@code false} otherwise.
+     * @since 8.3
+     */
+    public boolean isUseRest() {
+        return m_useRest;
+    }
+
+    /**
+     * Sets if REST or EJB shall be used.
+     *
+     * @param useRest {@code true} if REST shall be used, {@code false} otherwise.
+     * @since 8.3
+     */
+    public void setIsUseRest(final boolean useRest) {
+        if(m_useRest != useRest) {
+            m_state = null;
+        }
+        m_useRest = useRest;
+    }
+
+    /**
      * Returns the mount point's number according to the mount points' ordering.
      *
      * @return The mount point number
@@ -304,6 +333,7 @@ public class MountSettings {
         nodeSettings.addString("content", m_content);
         nodeSettings.addString("defaultMountID", m_defaultMountID);
         nodeSettings.addBoolean("active", m_active);
+        nodeSettings.addBoolean("useRest", m_useRest);
     }
 
     /**
@@ -316,7 +346,7 @@ public class MountSettings {
                     + m_factoryID + ELEMENTS_SEPARATOR
                     + Boolean.toString(m_active) + ELEMENTS_SEPARATOR
                     + (m_defaultMountID == null ? "" : m_defaultMountID) + ELEMENTS_SEPARATOR
-                    + m_content;
+                    + m_content + ELEMENTS_SEPARATOR + m_useRest;
         }
         return m_state;
     }
@@ -565,6 +595,7 @@ public class MountSettings {
     private static String DEFAULT_MOUNT_ID = "defaultMountID";
     private static String ACTIVE = "active";
     private static String MOUNTPOINT_NUMBER = "mountpointNumber";
+    private static String USE_REST = "useRest";
 
     private static List<String> m_necessaryKeys = Arrays.asList(MOUNT_ID, FACTORY_ID);
 
@@ -580,6 +611,8 @@ public class MountSettings {
             node.put(DEFAULT_MOUNT_ID, defaultMountID);
         }
         node.putBoolean(ACTIVE, settings.isActive());
+
+        node.putBoolean(USE_REST, settings.isUseRest());
 
         node.putInt(MOUNTPOINT_NUMBER, mountPointNumber);
 
@@ -610,8 +643,11 @@ public class MountSettings {
                 boolean active = node.getBoolean(ACTIVE, true);
                 int mountPointNumber = node.getInt(MOUNTPOINT_NUMBER, 0);
 
-                return new MountSettings(mountID, displayName, factoryID, content, defaultMountID, active,
-                    mountPointNumber);
+                MountSettings settings = new MountSettings(mountID, displayName, factoryID, content, defaultMountID,
+                    active, mountPointNumber);
+                settings.setIsUseRest(node.getBoolean(USE_REST, false));
+
+                return settings;
             } catch (Exception ex) {
                 NodeLogger.getLogger(MountSettings.class).error("Could not load mount point settings from node "
                     + node.absolutePath() + ": " + ex.getMessage(), ex);
