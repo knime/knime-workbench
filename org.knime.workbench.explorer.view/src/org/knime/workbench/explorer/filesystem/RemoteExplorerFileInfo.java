@@ -125,4 +125,21 @@ public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
     public abstract boolean isReportWorkflow();
 
 
+    /**
+     * Checks whether a file represents a scheduled ẃorkflow job.
+     *
+     * @return true, if the file is a scheduled job, false otherwise.
+     *
+     * @since 8.3
+     */
+    public abstract boolean isScheduledFlow();
+
+    /**
+     * Checks whether a file has node messages.
+     *
+     * @return true, if the file has node messages, false otherwise.
+     *
+     * @since 8.3
+     */
+    public abstract boolean hasNodeMessages();
 }

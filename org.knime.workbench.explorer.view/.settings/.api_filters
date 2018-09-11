@@ -30,6 +30,20 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="src/org/knime/workbench/explorer/filesystem/RemoteExplorerFileInfo.java" type="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo">
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
+                <message_argument value="hasNodeMessages()"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
+                <message_argument value="isScheduledFlow()"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="src/org/knime/workbench/explorer/pathresolve/URIToFileResolveImpl.java" type="org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl">
         <filter id="574619656">
             <message_arguments>
