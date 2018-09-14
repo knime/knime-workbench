@@ -121,6 +121,20 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
             throws CoreException;
 
     /**
+     * A zipped workflow or workflow group sent through the stream is stored on the server as workflow represented by
+     * this. The default implementation calls {@link #openDownloadStream()}.
+     *
+     * @param isWorkflowGroup {@code true} if the uploaded zipped file is a workflow group, {@code false} if it is a
+     *            workflow.
+     * @return an open stream, that stores the content as a workflow or workflow group on the server.
+     * @throws CoreException
+     * @since 8.3
+     */
+    public RemoteUploadStream openWorkflowUploadStream(final boolean isWorkflowGroup) throws CoreException {
+        return openWorkflowUploadStream();
+    }
+
+    /**
      * Stores the content send through the stream as file on the server (doesn't unzip it).
      * @return an open stream that stores the content (unzipped) in a file on the server.
      * @throws CoreException
