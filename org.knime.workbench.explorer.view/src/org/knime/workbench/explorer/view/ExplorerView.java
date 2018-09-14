@@ -99,15 +99,11 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.IActionBars;
-import org.eclipse.ui.IEditorDescriptor;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.IViewSite;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.ActionFactory;
-import org.eclipse.ui.ide.FileStoreEditorInput;
-import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.ViewPart;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.NodeLogger;
@@ -118,16 +114,15 @@ import org.knime.core.node.workflow.NodePropertyChangedEvent;
 import org.knime.core.node.workflow.NodePropertyChangedListener;
 import org.knime.core.node.workflow.NodeStateChangeListener;
 import org.knime.core.node.workflow.NodeStateEvent;
-import org.knime.core.node.workflow.NodeTimer;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
 import org.knime.workbench.explorer.view.actions.ConfigureExplorerViewAction;
@@ -153,6 +148,7 @@ import org.knime.workbench.explorer.view.actions.GlobalResetWorkflowAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowAction;
 import org.knime.workbench.explorer.view.actions.NewWorkflowGroupAction;
 import org.knime.workbench.explorer.view.actions.NoMenuAction;
+import org.knime.workbench.explorer.view.actions.OpenWorkflowAction;
 import org.knime.workbench.explorer.view.actions.PasteFromClipboardAction;
 import org.knime.workbench.explorer.view.actions.SynchronizeExplorerViewAction;
 import org.knime.workbench.explorer.view.actions.export.WorkflowExportAction;
@@ -413,7 +409,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         }
         boolean opened = false;
         for (ContentObject co : localWorkflowsToOpen) {
-            opened |= openEditor(co);
+            opened |= OpenWorkflowAction.openEditor(co.getFileStore());
         }
         List<RemoteExplorerFileStore> remotes = new LinkedList<RemoteExplorerFileStore>();
         for (ContentObject co : remoteWorkflowsToOpen) {
@@ -424,32 +420,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         a.run();
         m_viewer.update(localWorkflowsToOpen.toArray(), null);
         return opened;
-    }
-
-    private boolean openEditor(final ContentObject co) {
-        AbstractExplorerFileStore filestore = co.getObject();
-
-        if (filestore.fetchInfo().isDirectory()) {
-            AbstractExplorerFileStore workflowFile = filestore.getChild(WorkflowPersistor.WORKFLOW_FILE);
-            if (workflowFile.fetchInfo().exists()) {
-                filestore = workflowFile;
-            } else {
-                // directories that are not workflows cannot be opened
-                return false;
-            }
-        }
-
-        IEditorDescriptor editorDescriptor;
-        try {
-            editorDescriptor = IDE.getEditorDescriptor(filestore.getName());
-            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()
-                .openEditor(new FileStoreEditorInput(filestore), editorDescriptor.getId());
-            NodeTimer.GLOBAL_TIMER.incWorkflowOpening();
-            return true;
-        } catch (PartInitException ex) {
-            LOGGER.warn("Cannot open editor for " + filestore + ": " + ex.getMessage(), ex);
-            return false;
-        }
     }
 
     /**
@@ -715,6 +685,18 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             return;
         }
         final TreeSelection selection = (TreeSelection) m_viewer.getSelection();
+
+        //add 'open workflow' action when selected item is a local workflow
+        if (selection != null) {
+            List<AbstractExplorerFileStore> files = DragAndDropUtils.getExplorerFileStores(selection);
+            if (files.size() == 1 && files.get(0) instanceof LocalWorkspaceFileStore) {
+                if (((LocalWorkspaceFileStore)files.get(0)).fetchInfo().isWorkflow()) {
+                    manager.add(new OpenWorkflowAction(this));
+                    manager.add(new Separator());
+                }
+            }
+        }
+
         addGlobalActions(manager);
 
         Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selFiles =

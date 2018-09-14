@@ -63,8 +63,6 @@ import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeTimer;
 import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.workbench.core.util.ImageRepository;
-import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.RemoteWorkflowInput;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -192,9 +190,9 @@ public class DownloadAndOpenWorkflowAction extends Action {
      * @param sources things to open
      */
     public DownloadAndOpenWorkflowAction(final IWorkbenchPage page, final List<RemoteExplorerFileStore> sources) {
-        setDescription("Download and open");
+        setText("Open");
+        setDescription("Downloads and opens the the workflow");
         setToolTipText(getDescription());
-        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.ServerDownload));
         m_page = page;
         m_sources = new LinkedList<RemoteExplorerFileStore>(sources);
     }
