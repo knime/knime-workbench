@@ -106,6 +106,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
 import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
@@ -1422,4 +1423,16 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         return "";
     }
 
+    /**
+     * Can optionally be overridden by subclasses in order to react on double-click events on an
+     * {@link AbstractExplorerFileStore}-object in the {@link ExplorerView}.
+     *
+     * @param fileStore the {@link AbstractExplorerFileStore} that is selected
+     * @param view the {@link ExplorerView}-instance (e.g. in order to create an {@link ExplorerAction})
+     *
+     * @since 8.3
+     */
+    protected void onDoubleClick(final AbstractExplorerFileStore fileStore, final ExplorerView view) {
+        //do nothing by default
+    }
 }

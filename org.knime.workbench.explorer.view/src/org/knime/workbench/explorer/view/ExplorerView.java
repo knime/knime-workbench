@@ -452,8 +452,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         }
     }
 
-    private void onDoubleClickInTreeViewerInSWT() {
+    /**
+     * @return <code>true</code> if an action has been taken, otherwise <code>false</code>
+     */
+    private boolean onDoubleClickInTreeViewerInSWT() {
         IStructuredSelection selection = (IStructuredSelection)m_viewer.getSelection();
+        boolean action = false;
         if (selection.toList().size() == 1) {
             Object firstElement = selection.getFirstElement();
 
@@ -464,9 +468,11 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 AbstractExplorerFileStore fs = ((ContentObject) firstElement).getFileStore();
                 if ((fs instanceof MessageFileStore) && fs.getContentProvider().isRemote()) {
                     fs.getContentProvider().connect();
+                    action = true;
                 }
             }
         }
+        return action;
     }
 
     private void createTreeViewer(final Composite parent,
@@ -477,6 +483,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         m_viewer.setContentProvider(provider);
         m_viewer.setLabelProvider(provider);
         m_viewer.setInput(provider); // the provider is also the root!
+        final ExplorerView thisExplorerView = this;
         m_viewer.addDoubleClickListener(new IDoubleClickListener() {
             @Override
             public void doubleClick(final DoubleClickEvent event) {
@@ -484,7 +491,22 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                     @Override
                     public void run() {
                         if (!openSelected()) {
-                            onDoubleClickInTreeViewerInSWT();
+                            //nothing has been done on 'openSelected'
+                            if (!onDoubleClickInTreeViewerInSWT()) {
+                                //nothing has been done 'onDoubleClickInTree...'
+                                //-> forward double-click to selected provider
+                                final TreeSelection selection = (TreeSelection)m_viewer.getSelection();
+                                if (selection.size() == 1) {
+                                    Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selFiles =
+                                        DragAndDropUtils.getProviderMap(selection);
+                                    assert selFiles.size() == 1;
+                                    AbstractContentProvider selectedProvider = selFiles.keySet().iterator().next();
+                                    List<AbstractExplorerFileStore> list = selFiles.get(selectedProvider);
+                                    assert list.size() == 1;
+                                    AbstractExplorerFileStore fileStore = list.get(0);
+                                    selectedProvider.onDoubleClick(fileStore, thisExplorerView);
+                                }
+                            }
                         }
                     }
                 });
