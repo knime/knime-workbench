@@ -83,7 +83,7 @@ public class MountPointPreferencesTest {
 
 
         String mountID = "new-mountpoint";
-        String content = "https://testing.knime.org/tomee/ejb;oole;false;";
+        String content = "https://testing.knime.org/tomee/ejb;oole;false;;false";
         String displayName = "new-mountpoint (oole@https://testing.knime.org/tomee/ejb)";
         String factoryID = "com.knime.explorer.server";
         int mountPointNumber = 0;
@@ -125,7 +125,7 @@ public class MountPointPreferencesTest {
         assertThat(oldMountSettings, Matchers.notNullValue());
 
         String mountID = "test-mountpoint1";
-        String content = "https://testing.knime.org/tomee/ejb;oole;false;";
+        String content = "https://testing.knime.org/tomee/ejb;oole;false;;false";
         String displayName = "test-mountpoint1 (oole@https://testing.knime.org/tomee/ejb)";
         String factoryID = "com.knime.explorer.server";
         int mountPointNumber = 0;
