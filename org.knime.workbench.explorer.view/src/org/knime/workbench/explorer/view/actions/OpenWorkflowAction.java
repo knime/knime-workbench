@@ -74,7 +74,7 @@ public class OpenWorkflowAction extends ExplorerAction {
 
 
     private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(ExplorerView.class);
+            .getLogger(OpenWorkflowAction.class);
 
     /** The id of this action. */
     public static final String ID
