@@ -142,4 +142,13 @@ public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
      * @since 8.3
      */
     public abstract boolean hasNodeMessages();
+
+    /**
+     * Returns the owner of the item.
+     *
+     * @return The owner of the item.
+     *
+     * @since 8.3
+     */
+    public abstract String getOwner();
 }

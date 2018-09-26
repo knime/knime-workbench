@@ -34,6 +34,12 @@
         <filter id="336695337">
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
+                <message_argument value="getOwner()"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
                 <message_argument value="hasNodeMessages()"/>
             </message_arguments>
         </filter>
