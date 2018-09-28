@@ -55,6 +55,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.filesystem.EFS;
@@ -1211,6 +1212,19 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @since 7.3
      */
     public void connect() {
+        // do nothing by default
+    }
+
+    /**
+     * Connects to the content provider. This can trigger a login and fetching of the repository. This method blocks the
+     * calling thread and waits until the repository is being fetched, however not longer than the specified timeout.
+     * Note that after a timeout occurs the server might be still connected.
+     *
+     * @param timeout The timeout in ms.
+     * @throws TimeoutException If a timeout has occured.
+     * @since 8.3
+     */
+    public void connectAndWaitForRepository(final long timeout) throws TimeoutException {
         // do nothing by default
     }
 

@@ -49,6 +49,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -138,7 +139,14 @@ public class OpenKnimeUrlAction extends Action {
                             ExplorerView view = (ExplorerView)part;
                             view.setNextSelection(fileStore);
                             if (mountPoint.getProvider().isRemote()) {
-                                mountPoint.getProvider().connect();
+                                try {
+                                    mountPoint.getProvider().connectAndWaitForRepository(30 * 1000);
+                                } catch (TimeoutException e) {
+                                    LOGGER.error("Failed to open item denoted by '" + m_url + "': " + e.getMessage());
+                                    returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID,
+                                        "Failed to open item denoted by '" + m_url + "': " + e.getMessage()));
+                                    return;
+                                }
                             }
                             if (!fileStore.fetchInfo().exists()) {
                                 returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID,
