@@ -414,6 +414,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         List<RemoteExplorerFileStore> remotes = new LinkedList<RemoteExplorerFileStore>();
         for (ContentObject co : remoteWorkflowsToOpen) {
             remotes.add((RemoteExplorerFileStore)co.getObject());
+            opened |= true;
         }
         DownloadAndOpenWorkflowAction a;
         a = new DownloadAndOpenWorkflowAction(getSite().getPage(), remotes);
