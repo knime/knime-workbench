@@ -44,6 +44,8 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
+import java.util.Optional;
+
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.internal.filesystem.local.LocalFile;
@@ -92,7 +94,7 @@ public class GlobalEditMetaInfoAction extends ExplorerAction {
     @Override
     public void run() {
         try {
-            AbstractExplorerFileStore srcFileStore = getSingleSelectedWorkflowOrGroup()
+            AbstractExplorerFileStore srcFileStore = getSingleSelectedElement()
                     .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
             AbstractExplorerFileStore metaInfo =
                     srcFileStore.getChild(WorkflowPersistor.METAINFO_FILE);
@@ -114,7 +116,12 @@ public class GlobalEditMetaInfoAction extends ExplorerAction {
 
     @Override
     public boolean isEnabled() {
-        return getSingleSelectedWorkflowOrGroup().isPresent();
+        return getSingleSelectedElement().isPresent();
+    }
+
+    private Optional<AbstractExplorerFileStore> getSingleSelectedElement() {
+        return super.getSingleSelectedElement(fs -> AbstractExplorerFileStore.isWorkflow(fs)
+            || AbstractExplorerFileStore.isWorkflowGroup(fs));
     }
 
 }

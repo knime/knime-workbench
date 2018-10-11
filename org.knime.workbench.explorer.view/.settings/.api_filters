@@ -58,6 +58,19 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/ExplorerAction.java" type="org.knime.workbench.explorer.view.actions.ExplorerAction">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.ExplorerAction"/>
+                <message_argument value="getSingleSelectedWorkflowOrGroup()"/>
+            </message_arguments>
+        </filter>
+        <filter id="1143996420">
+            <message_arguments>
+                <message_argument value="getSingleSelectedElement(Predicate&lt;AbstractExplorerFileStore&gt;)"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="src/org/knime/workbench/explorer/view/actions/imports/WorkflowImportOperation.java" type="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation">
         <filter id="338792546">
             <message_arguments>

@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -171,16 +172,19 @@ public abstract class ExplorerAction extends Action {
         return DragAndDropUtils.getExplorerFileStores(selection);
     }
 
-    /** If the selected element represents a workflow or workflow group, return it. Otherwise return an empty.
-     * @return The single selected workflow or group.
+    /** If the selected element represents a workflow or workflow group, or whatever is defined through the argument,
+     * return it. Otherwise return an empty Optional.
+     * @param fs a non-null predicate to check the element's property
+     * @return The single selected element or an empty Optional.
      */
-    protected Optional<AbstractExplorerFileStore> getSingleSelectedWorkflowOrGroup() {
+    protected Optional<AbstractExplorerFileStore>
+        getSingleSelectedElement(final Predicate<AbstractExplorerFileStore> fs) {
         List<AbstractExplorerFileStore> fileStores = getAllSelectedFiles();
         if (fileStores == null || fileStores.size() != 1) {
             return Optional.empty();
         }
         AbstractExplorerFileStore fileStore = fileStores.get(0);
-        if (AbstractExplorerFileStore.isWorkflow(fileStore) || AbstractExplorerFileStore.isWorkflowGroup(fileStore)) {
+        if (fs.test(fileStore)) {
             return Optional.of(fileStore);
         }
         return Optional.empty();

@@ -124,7 +124,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        AbstractExplorerFileStore srcFileStore = getSingleSelectedWorkflowOrGroup()
+        AbstractExplorerFileStore srcFileStore = getSingleSelectedElement()
                 .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
         String dialogTitle = "Deploy " + srcFileStore.getName();
 
@@ -219,10 +219,15 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        if (!getSingleSelectedWorkflowOrGroup().isPresent()) {
+        if (!getSingleSelectedElement().isPresent()) {
             return false;
         }
         return getValidTargets().findAny().isPresent();
+    }
+
+    private Optional<AbstractExplorerFileStore> getSingleSelectedElement() {
+        return super.getSingleSelectedElement(fs -> AbstractExplorerFileStore.isWorkflow(fs)
+            || AbstractExplorerFileStore.isWorkflowGroup(fs) || AbstractExplorerFileStore.isWorkflowTemplate(fs));
     }
 
     /** @return a stream of content providers that are remote and writable, i.e. server mount points. */
