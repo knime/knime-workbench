@@ -178,4 +178,21 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * @since 6.0
      */
     public abstract void replaceWithSnapshot(String snapshotName) throws CoreException;
+
+    /**
+     * Saves the represented job as a workflow.
+     *
+     * @param destination the destination where the job shall be saved to.
+     * @throws CoreException if an error occurs.
+     * @since 8.3
+     */
+    public abstract void saveJobAsWorkflow(RemoteExplorerFileStore destination) throws CoreException;
+
+    /**
+     * Cancels the execution of the represented job.
+     *
+     * @throws CoreException if an error occurs.
+     * @since 8.3
+     */
+    public abstract void cancelExecution() throws CoreException;
 }

@@ -34,6 +34,12 @@
         <filter id="336695337">
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
+                <message_argument value="getNodeMessages()"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
                 <message_argument value="getOwner()"/>
             </message_arguments>
         </filter>
@@ -47,6 +53,20 @@
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
                 <message_argument value="isScheduledFlow()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/filesystem/RemoteExplorerFileStore.java" type="org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore">
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore"/>
+                <message_argument value="cancelExecution()"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore"/>
+                <message_argument value="saveJobAsWorkflow(RemoteExplorerFileStore)"/>
             </message_arguments>
         </filter>
     </resource>
