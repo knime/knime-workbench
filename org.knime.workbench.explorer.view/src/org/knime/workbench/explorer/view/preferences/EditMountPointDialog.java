@@ -271,6 +271,10 @@ public class EditMountPointDialog extends ListDialog {
         m_factory = (AbstractContentProviderFactory)selection;
         m_mountIDval = m_mountID.getText().trim();
         if (m_additionalPanel != null) {
+            if (m_contentProvider != null) {
+                // we should disconnect the server when we edit it, especially as we get a new content provider.
+                m_contentProvider.disconnect();
+            }
             m_contentProvider = m_additionalPanel.createContentProvider();
         } else {
             m_contentProvider = m_factory.createContentProvider(m_mountIDval);
