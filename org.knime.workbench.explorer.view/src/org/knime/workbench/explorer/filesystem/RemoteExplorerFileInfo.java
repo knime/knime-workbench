@@ -44,10 +44,6 @@
  */
 package org.knime.workbench.explorer.filesystem;
 
-import java.util.Collection;
-
-import com.knime.enterprise.utility.NodeMsg;
-
 public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
     /**
      * Creates a new file information object with default values.
@@ -155,12 +151,4 @@ public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
      * @since 8.3
      */
     public abstract String getOwner();
-
-    /**
-     * Returns the node messages of the file if it is a job.
-     *
-     * @return The node messages of this file if applicable or an empty collection
-     * @since 8.3
-     */
-    public abstract Collection<NodeMsg> getNodeMessages();
 }
