@@ -61,6 +61,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.DeletionConfirmationResult;
@@ -179,6 +180,12 @@ public class GlobalDeleteAction extends ExplorerAction {
 
         if (!success) {
             showUnsuccessfulMessage();
+        }
+
+        /* Refresh action for RemoteExplorerFileStores, this triggers an upate on the content cache of the
+         * remote file system. This is faster than waiting for the general update which may take up to 2 seconds. */
+        if (!allFiles.isEmpty() && allFiles.get(0) instanceof RemoteExplorerFileStore) {
+            allFiles.get(0).refresh();
         }
 
         for (AbstractExplorerFileStore fileStore : allFiles) {
