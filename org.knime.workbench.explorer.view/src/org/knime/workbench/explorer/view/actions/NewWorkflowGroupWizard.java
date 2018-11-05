@@ -113,7 +113,9 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
             }
             MetaInfoFile.createMetaInfoFile(locFile, false);
         }
-        newItem.refresh();
+
+        // Refresh parent of the newly created workflow group.
+        newItem.getParent().refresh();
         // TODO handle meta file creation for remote files
     }
 

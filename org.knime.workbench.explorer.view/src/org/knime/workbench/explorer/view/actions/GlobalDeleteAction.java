@@ -61,7 +61,6 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.DeletionConfirmationResult;
@@ -182,15 +181,21 @@ public class GlobalDeleteAction extends ExplorerAction {
             showUnsuccessfulMessage();
         }
 
-        /* Refresh action for RemoteExplorerFileStores, this triggers an upate on the content cache of the
-         * remote file system. This is faster than waiting for the general update which may take up to 2 seconds. */
-        if (!allFiles.isEmpty() && allFiles.get(0) instanceof RemoteExplorerFileStore) {
-            allFiles.get(0).refresh();
-        }
+        /* Refresh parents of deleted items. */
+        allFiles.stream().map(e -> e.getParent()).distinct().forEach(e -> e.refresh());
 
         for (AbstractExplorerFileStore fileStore : allFiles) {
+            AbstractExplorerFileStore parentStore = fileStore.getParent();
+
+            /* Select the correct parent for REST explorer. In case of a reserved system item it could be that the
+             * parent is visible for a split second without icon if its last job gets deleted. Thus it does not exist so
+             * we have to refresh the correct existing ancestor. */
+            while(parentStore.getParent() != null && !parentStore.fetchInfo().exists()) {
+                parentStore = parentStore.getParent();
+            }
+
             Object parent =
-                    ContentDelegator.getTreeObjectFor(fileStore.getParent());
+                    ContentDelegator.getTreeObjectFor(parentStore);
             getViewer().refresh(parent);
         }
     }
