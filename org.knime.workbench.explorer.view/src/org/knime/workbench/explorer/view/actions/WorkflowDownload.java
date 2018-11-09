@@ -334,20 +334,21 @@ public class WorkflowDownload extends TempExtractArchive {
                     }
                    Thread.sleep(1000);
                 }
+
+                String size = " / <unkown>";
+                final String taskMessage = "Downloading workflow " + m_source.getFullName()+ ": ";
+                long downloaded = 0;
+
                 if (monitor != null) {
                     int kbyte = IProgressMonitor.UNKNOWN;
                     long l = in.length();
-                    if (l >= 0) {
-                        kbyte = (int)(l >> 10);
-                    }
-                    StringBuilder progMsg = null;
-                    progMsg = new StringBuilder("Downloading workflow ");
-                    progMsg.append(m_source.getFullName());
-                    progMsg.append(" (" + (kbyte >> 10) + "MB).");
-                    monitor.setTaskName(progMsg.toString());
                     // we progress over kilobytes in case people download
                     // flows larger than 4GB. Have fun.
-                    monitor.beginTask(progMsg.toString(), kbyte);
+                    if (l >= 0) {
+                        kbyte = (int)(l >> 10);
+                        size = " / (" + (kbyte >> 10) + " MB).";
+                    }
+                    monitor.beginTask(taskMessage + "0 MB" + size, kbyte);
                 }
                 m_tmpFile = File.createTempFile("KNIMEServerDownload", ".tmp");
                 LOGGER.debug("Received server download stream for '" + m_source
@@ -362,6 +363,8 @@ public class WorkflowDownload extends TempExtractArchive {
                         outStream.write(buffer, 0, b);
                         if (monitor != null) {
                             monitor.worked(b >> 10);
+                            downloaded += b;
+                            monitor.setTaskName(taskMessage + (downloaded >> 20) + " MB" + size);
                             if (monitor.isCanceled()) {
                                 m_cancel.set(true);
                             }
