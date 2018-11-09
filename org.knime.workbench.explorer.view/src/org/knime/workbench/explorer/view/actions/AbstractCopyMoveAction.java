@@ -78,7 +78,6 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
-import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -432,17 +431,20 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         if (fileStore instanceof MessageFileStore) {
             return false;
         }
-        if (fileStore instanceof RemoteExplorerFileStore) {
-            // currently we can only download one workflow or metanode template
-            if (selections.size() > 1) {
-                return false;
+
+        for (AbstractExplorerFileStore store : selections) {
+            if (performMove) {
+                if (!store.canMove()) {
+                    return false;
+                }
+            } else {
+                if (!store.canCopy()) {
+                    return false;
+                }
             }
         }
-        if (performMove) {
-            return fileStore.canMove();
-        } else {
-            return fileStore.canCopy();
-        }
+
+        return true;
     }
 
     protected boolean isPerformMove() {

@@ -134,26 +134,34 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
             }
         }
 
-        AbstractExplorerFileStore file = files.get(0);
-        AbstractExplorerFileInfo fileInfo = file.fetchInfo();
-        AbstractContentProvider cp = file.getContentProvider();
-        if ((cp.isRemote() && sourceURI.length > 1) || !cp.isWritable()) {
+        AbstractContentProvider cp = files.get(0).getContentProvider();
+        if (!cp.isWritable()) {
             return false;
         }
-        // for workflow groups check if it is writable
-        if (fileInfo.isWorkflowGroup()) {
-            return fileInfo.isModifiable();
-        } else {
-            // for other types check if the parent is a writable workflow group
-            final AbstractExplorerFileStore parent = file.getParent();
-            if (parent == null) {
-                // no parent = root
-                return false;
+
+        for (AbstractExplorerFileStore file : files) {
+            final AbstractExplorerFileInfo fileInfo = file.fetchInfo();
+            // for workflow groups check if it is writable
+            if (fileInfo.isWorkflowGroup()) {
+                if (!fileInfo.isModifiable()) {
+                    return false;
+                }
+            } else {
+                // for other types check if the parent is a writable workflow group
+                final AbstractExplorerFileStore parent = file.getParent();
+                if (parent == null) {
+                    // no parent = root
+                    return false;
+                }
+                final AbstractExplorerFileInfo parentInfo = parent.fetchInfo();
+
+                if (parentInfo.isWorkflowGroup() && !parentInfo.isModifiable()) {
+                    return false;
+                }
             }
-            AbstractExplorerFileInfo parentInfo = parent.fetchInfo();
-            return parentInfo.isWorkflowGroup() && parentInfo.isModifiable();
         }
 
+        return true;
     }
 
 
