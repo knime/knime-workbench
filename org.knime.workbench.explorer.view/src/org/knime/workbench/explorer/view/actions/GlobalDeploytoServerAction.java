@@ -79,6 +79,7 @@ import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.DestinationChecker;
@@ -219,7 +220,8 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
      */
     @Override
     public boolean isEnabled() {
-        if (!getSingleSelectedElement().isPresent()) {
+        if (!getSingleSelectedElement().isPresent()
+            || getSingleSelectedElement().get() instanceof RemoteExplorerFileStore) {
             return false;
         }
         return getValidTargets().findAny().isPresent();
