@@ -52,8 +52,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
@@ -64,6 +68,7 @@ import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.DeletionConfirmationResult;
+import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
@@ -173,31 +178,41 @@ public class GlobalDeleteAction extends ExplorerAction {
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelJobs);
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelWorkflows);
 
-        // delete Workflows first (unlocks them too)
-        boolean success = ExplorerFileSystemUtils.deleteLockedWorkflows(lockedWFs, confResults);
-        success &= ExplorerFileSystemUtils.deleteTheRest(allFiles, confResults);
+        new ExplorerJob("Deleting items.") {
 
-        if (!success) {
-            showUnsuccessfulMessage();
-        }
+            @Override
+            protected IStatus run(final IProgressMonitor monitor) {
+                // delete Workflows first (unlocks them too)
+                boolean success = ExplorerFileSystemUtils.deleteLockedWorkflows(lockedWFs, confResults);
+                success &= ExplorerFileSystemUtils.deleteTheRest(allFiles, confResults);
 
-        /* Refresh parents of deleted items. */
-        allFiles.stream().map(e -> e.getParent()).distinct().forEach(e -> e.refresh());
+                if (!success) {
+                    Display.getDefault().syncExec(() -> showUnsuccessfulMessage());
+                }
 
-        for (AbstractExplorerFileStore fileStore : allFiles) {
-            AbstractExplorerFileStore parentStore = fileStore.getParent();
+                /* Refresh parents of deleted items. */
+                allFiles.stream().map(e -> e.getParent()).distinct().forEach(e -> e.refresh());
 
-            /* Select the correct parent for REST explorer. In case of a reserved system item it could be that the
-             * parent is visible for a split second without icon if its last job gets deleted. Thus it does not exist so
-             * we have to refresh the correct existing ancestor. */
-            while(parentStore.getParent() != null && !parentStore.fetchInfo().exists()) {
-                parentStore = parentStore.getParent();
+                Display.getDefault().syncExec(() -> {
+                    for (AbstractExplorerFileStore fileStore : allFiles) {
+                        AbstractExplorerFileStore parentStore = fileStore.getParent();
+
+                        /* Select the correct parent for REST explorer. In case of a reserved system item it could be
+                         * that the parent is visible for a split second without icon if its last job gets deleted. Thus
+                         * it does not exist so we have to refresh the correct existing ancestor. */
+                        while (parentStore.getParent() != null && !parentStore.fetchInfo().exists()) {
+                            parentStore = parentStore.getParent();
+                        }
+
+                        Object parent = ContentDelegator.getTreeObjectFor(parentStore);
+                        getViewer().refresh(parent);
+                    }
+                    ;
+                });
+
+                return Status.OK_STATUS;
             }
-
-            Object parent =
-                    ContentDelegator.getTreeObjectFor(parentStore);
-            getViewer().refresh(parent);
-        }
+        }.schedule();
     }
 
     /**
