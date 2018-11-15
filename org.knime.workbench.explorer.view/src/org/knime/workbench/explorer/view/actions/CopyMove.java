@@ -194,6 +194,12 @@ public final class CopyMove {
                 if (--iterationCount == 0) {
                     callback = t -> {
                         m_view.setNextSelection(processedTargets);
+
+                        // update source folder as we removed an item from it.
+                        if (!srcFS.equals(m_target)) {
+                            srcFS.getParent().refresh();
+                        }
+
                         m_target.refresh();
                     };
                 }
