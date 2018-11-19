@@ -52,6 +52,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -174,6 +175,17 @@ public class EditMountPointDialog extends ListDialog {
         final Collection<String> invalidIDs, final MountSettings settings) {
         super(parentShell);
         init(input, invalidIDs, settings);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void cancelPressed() {
+        super.cancelPressed();
+        if (m_additionalPanel != null) {
+            m_additionalPanel.cancelBackgroundWork();
+        }
     }
 
     private void init(final List<AbstractContentProviderFactory> input,
@@ -446,6 +458,7 @@ public class EditMountPointDialog extends ListDialog {
      */
     protected boolean validate() {
         boolean valid = true;
+        boolean loading = false;
         String errMsg = "";
         if (getTableViewer().getSelection().isEmpty()) {
             valid = false;
@@ -453,8 +466,14 @@ public class EditMountPointDialog extends ListDialog {
         }
 
         if (m_additionalPanel != null) {
-            String additionalError = m_additionalPanel.validate();
-            if (additionalError != null && !additionalError.isEmpty()) {
+            final String loadingMessage = m_additionalPanel.getLoadMessage();
+            final String additionalError = m_additionalPanel.validate();
+
+            if (!StringUtils.isEmpty(loadingMessage)) {
+                loading = true;
+                valid = false;
+                errMsg = loadingMessage;
+            } else if (!StringUtils.isEmpty(additionalError)) {
                 valid = false;
                 errMsg = additionalError;
             }
@@ -493,6 +512,12 @@ public class EditMountPointDialog extends ListDialog {
         }
 
         m_errText.setText(errMsg);
+
+        if (loading) {
+            m_errIcon.setImage(ImageRepository.getIconImage(SharedImages.Busy));
+        } else {
+            m_errIcon.setImage(ImageRepository.getIconImage(SharedImages.Error));
+        }
         m_errIcon.setVisible(!valid);
 
         if (m_ok != null) {

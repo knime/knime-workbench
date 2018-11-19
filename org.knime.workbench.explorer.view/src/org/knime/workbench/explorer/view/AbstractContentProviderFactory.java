@@ -265,6 +265,29 @@ public abstract class AbstractContentProviderFactory {
                 listener.setMountIDLabel(label);
             }
         }
+
+
+        /**
+         * Indicates that a background process is running that needs to be finished before the ok-button is enabled. The
+         * provided message is displayed as an information. If no background thread is running, {@code null} has to be
+         * returned.
+         *
+         * @return The loading message that is shown at the top, if a background process is running that needs to be
+         *         finished, or {@code null} if no such process exists.
+         * @since 8.3
+         */
+        public String getLoadMessage() {
+            return null;
+        }
+
+        /**
+         * Cancels background processes that may be still running when window is being disposed through cancel.
+         *
+         * @since 8.3
+         */
+        public void cancelBackgroundWork() {
+            // do nothing
+        }
     }
 
     /**
