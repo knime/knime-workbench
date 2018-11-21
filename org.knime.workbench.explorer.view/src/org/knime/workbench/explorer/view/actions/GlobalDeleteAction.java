@@ -319,8 +319,11 @@ public class GlobalDeleteAction extends ExplorerAction {
         if (isRO() || selFiles == null || selFiles.size() == 0) {
             return false;
         }
+
+        final String mountID = selFiles.get(0).getMountID();
+
         for (AbstractExplorerFileStore fs : selFiles) {
-            if (!fs.canDelete()) {
+            if (!fs.canDelete() || !mountID.equals(fs.getMountID())) {
                 return false;
             }
         }
