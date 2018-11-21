@@ -196,7 +196,7 @@ public final class CopyMove {
                         m_view.setNextSelection(processedTargets);
 
                         // update source folder as we removed an item from it.
-                        if (!srcFS.equals(m_target)) {
+                        if (!srcFS.equals(m_target) && m_performMove) {
                             srcFS.getParent().refresh();
                         }
 
