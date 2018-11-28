@@ -47,7 +47,7 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.util.List;
 
-import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
@@ -131,14 +131,9 @@ public class GlobalCredentialVariablesDialogAction extends ExplorerAction {
                 CredentialVariablesDialog dialog =
                         new CredentialVariablesDialog(d.getActiveShell(),
                                 store, wfm.getName());
-                if (dialog.open() == Dialog.OK) {
-                    for (String name : store.listNames()) {
-                        store.remove(name);
-                    }
+                if (dialog.open() == Window.OK) {
                     List<Credentials> credentials = dialog.getCredentials();
-                    for (Credentials cred : credentials) {
-                        store.add(cred);
-                    }
+                    wfm.updateCredentials(credentials.toArray(new Credentials[0]));
                 }
             }
         });
