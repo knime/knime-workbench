@@ -133,7 +133,7 @@ public class GlobalRefreshAction extends ExplorerAction {
                     NodeContainerUI workflow = ProjectWorkflowMap.getWorkflowUI(file.toURI());
                     if (workflow != null && workflow instanceof AsyncWorkflowManagerUI) {
                         try {
-                            ((AsyncWorkflowManagerUI)workflow).refresh(true).get();
+                            ((AsyncWorkflowManagerUI)workflow).refreshAsync(true).get();
                         } catch (InterruptedException | ExecutionException e) {
                             return new Status(IStatus.ERROR, "unknown", "A problem occurred while refreshing workflow.",
                                 e);
