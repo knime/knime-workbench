@@ -793,22 +793,17 @@ public final class ExplorerMountTable {
         // AP-8989 switching to IEclipsePreferences
         Map<String, AbstractContentProvider> mountedContent = getMountedContent();
         List<MountSettings> mountSettingsToSave = new ArrayList<>();
-        List<String> mountSettingsToRemove = new ArrayList<>();
 
         for (MountSettings ms : getMountSettings()) {
             if (mountedContent.containsKey(ms.getMountID())) {
-                mountSettingsToSave.add(ms);
+                mountSettingsToSave.add(new MountSettings(mountedContent.get(ms.getMountID())));
             } else {
-                mountSettingsToRemove.add(ms.getMountID());
+                mountSettingsToSave.add(ms);
             }
         }
+
         MountSettings.saveMountSettings(mountSettingsToSave);
 
-        try {
-            MountSettings.removeMountSettings(mountSettingsToRemove);
-        } catch (BackingStoreException e) {
-            LOGGER.error("Unabled to save mount point settings: " + e.getMessage(), e);
-        }
     }
 
     /**
