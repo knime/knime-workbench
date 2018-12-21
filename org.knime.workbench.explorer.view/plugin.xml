@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension-point id="org.knime.workbench.explorer.contentprovider" name="KNIME Explorer Contentprovider" schema="schema/org.knime.workbench.explorer.contentprovider.exsd"/>
+      <extension
+         point="org.eclipse.core.filesystem.filesystems">
+      <filesystem
+            scheme="knime">
+         <run
+               class="org.knime.workbench.explorer.filesystem.ExplorerFileSystem">
+         </run>
+      </filesystem>
+   </extension>
+      <extension
+            point="org.knime.workbench.explorer.contentprovider">
+         <KNIMEExplorerContentProvider
+               ContentProviderFactory="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory">
+         </KNIMEExplorerContentProvider>
+      </extension>
+      <extension
+            point="org.eclipse.ui.preferencePages">
+         <page
+               category="org.knime.workbench.ui.preferences"
+               class="org.knime.workbench.explorer.view.preferences.ExplorerPreferencePage"
+               id="org.knime.workbench.explorer.view.explorer"
+               name="KNIME Explorer">
+         </page>
+      </extension>
+      <extension
+            point="org.eclipse.core.runtime.preferences">
+         <initializer
+               class="org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializer">
+         </initializer>
+      </extension>
+     <extension point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension targetID="org.knime.workbench.ui.ModellerPerspective">
+         <newWizardShortcut
+               id="org.knime.workbench.explorer.view.actions.NewWorkflowWizard">
+         </newWizardShortcut>
+         <newWizardShortcut
+               id="org.knime.workbench.explorer.view.actions.NewWorkflowGroupWizard">
+         </newWizardShortcut>
+      </perspectiveExtension>
+   </extension>
+   <extension point="org.eclipse.ui.views">
+      <view
+            allowMultiple="true"
+            category="org.knime.workbench.ui.category"
+            class="org.knime.workbench.explorer.view.ExplorerView"
+            icon="icons/knime_explorer.png"
+            id="org.knime.workbench.explorer.view"
+            name="KNIME Explorer"
+            restorable="true">
+      </view>
+   </extension>      
+   
+    <extension point="org.eclipse.ui.menus">
+        <menuContribution locationURI="popup:org.knime.workbench.explorer.view?after=additions">
+            <command commandId="org.eclipse.ui.edit.cut"/>
+            <command commandId="org.eclipse.ui.edit.copy"/>
+            <command commandId="org.eclipse.ui.edit.paste"/>
+        </menuContribution>
+    </extension>
+    <!-- Removing extensions contributed by other plugins -->
+    <extension
+          point="org.eclipse.ui.activities">
+       <activity
+             id="org.knime.workbench.explorer.view.activity"
+             name="Explorer Activity">
+       </activity>
+       <category
+             id="org.knime.workbench.explorer.view.category"
+             name="Explorer Category">
+       </category>
+       <categoryActivityBinding
+             activityId="org.knime.workbench.explorer.view.activity"
+             categoryId="org.knime.workbench.explorer.view.category">
+       </categoryActivityBinding>
+       <!-- Removing the wizards contributed by the workbench plugin -->
+       <activityPatternBinding
+             activityId="org.knime.workbench.explorer.view.activity"
+             pattern="org.knime.workbench.ui/org.knime.workbench.ui.wizards.*">
+       </activityPatternBinding>
+       <activityPatternBinding
+             activityId="org.knime.workbench.explorer.view.activity"
+             isEqualityPattern="true"
+             pattern="org.knime.workbench.ui/org.knime.workbench.ui.newworkflowgroup">
+       </activityPatternBinding>
+       
+    </extension>
+    <extension point="org.eclipse.ui.newWizards">
+      <wizard
+            name="New KNIME Workflow"
+            id="org.knime.workbench.explorer.view.actions.NewWorkflowWizard"
+            category="org.knime.workbench.ui.wizards.category"
+            class="org.knime.workbench.explorer.view.actions.NewWorkflowWizard"
+            descriptionImage="icons/new_knime55.png"
+            icon="icons/new_knime16.png"
+            finalPerspective="org.knime.workbench.ui.ModellerPerspective"
+            project="true"
+            preferredPerspectives="org.knime.workbench.ui.ModellerPerspective">
+         <description>
+            This wizard creates a new KNIME workflow project.
+         </description>
+      </wizard>
+      <wizard
+            id="org.knime.workbench.explorer.view.actions.NewWorkflowGroupWizard"
+            category="org.knime.workbench.ui.wizards.category"
+            class="org.knime.workbench.explorer.view.actions.NewWorkflowGroupWizard"
+            descriptionImage="icons/new_knime55.png"
+            finalPerspective="org.knime.workbench.ui.ModellerPerspective"
+            icon="icons/new_knime16.png"
+            name="New KNIME Workflow Group"
+            preferredPerspectives="org.knime.workbench.ui.ModellerPerspective">
+         <description>
+             This wizard creates a new workflow group helping to organize your workflows.
+         </description>
+      </wizard>
+      <primaryWizard
+            id="org.knime.workbench.explorer.view.actions.NewWorkflowWizard">
+      </primaryWizard>
+      <primaryWizard
+            id="org.knime.workbench.explorer.view.actions.NewWorkflowGroupWizard">
+      </primaryWizard>
+   </extension>
+  <extension
+        point="org.eclipse.ecf.filetransfer.urlStreamHandlerService">
+     <urlStreamHandlerService
+           protocol="knime"
+           serviceClass="org.knime.workbench.explorer.ExplorerURLStreamHandler">
+     </urlStreamHandlerService>
+  </extension>   
+</plugin>

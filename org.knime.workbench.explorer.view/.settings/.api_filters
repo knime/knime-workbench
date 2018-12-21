@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<component id="org.knime.workbench.explorer.view" version="2">
+    <resource path="src/org/knime/workbench/explorer/ExplorerURLStreamHandler.java" type="org.knime.workbench.explorer.ExplorerURLStreamHandler">
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="NodeContainer"/>
+                <message_argument value="ExplorerURLStreamHandler"/>
+                <message_argument value="getNodeContainerDirectory()"/>
+            </message_arguments>
+        </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="NodeContext"/>
+                <message_argument value="ExplorerURLStreamHandler"/>
+                <message_argument value="getContext()"/>
+            </message_arguments>
+        </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="NodeContext"/>
+                <message_argument value="ExplorerURLStreamHandler"/>
+                <message_argument value="getNodeContainer()"/>
+            </message_arguments>
+        </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="NodeContext"/>
+                <message_argument value="ExplorerURLStreamHandler"/>
+                <message_argument value="getWorkflowManager()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/filesystem/RemoteExplorerFileInfo.java" type="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo">
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
+                <message_argument value="getNodeMessages()"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
+                <message_argument value="getOwner()"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
+                <message_argument value="hasNodeMessages()"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo"/>
+                <message_argument value="isScheduledFlow()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/filesystem/RemoteExplorerFileStore.java" type="org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore">
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore"/>
+                <message_argument value="cancelExecution()"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore"/>
+                <message_argument value="saveJobAsWorkflow(RemoteExplorerFileStore)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/pathresolve/URIToFileResolveImpl.java" type="org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl">
+        <filter id="574619656">
+            <message_arguments>
+                <message_argument value="URIToFileResolve"/>
+                <message_argument value="URIToFileResolveImpl"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/ExplorerAction.java" type="org.knime.workbench.explorer.view.actions.ExplorerAction">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.ExplorerAction"/>
+                <message_argument value="getSingleSelectedWorkflowOrGroup()"/>
+            </message_arguments>
+        </filter>
+        <filter id="1143996420">
+            <message_arguments>
+                <message_argument value="getSingleSelectedElement(Predicate&lt;AbstractExplorerFileStore&gt;)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/imports/WorkflowImportOperation.java" type="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation"/>
+                <message_argument value="importZipEntry(ILeveledImportStructureProvider, ZipEntry, AbstractExplorerFileStore, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+</component>
