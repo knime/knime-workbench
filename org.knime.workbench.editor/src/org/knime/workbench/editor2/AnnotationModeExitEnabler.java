@@ -156,9 +156,9 @@ public class AnnotationModeExitEnabler implements MouseListener {
     public void mouseDown(final MouseEvent me) {
         if (WorkflowEditorMode.ANNOTATION_EDIT.equals(m_workflowEditor.getEditorMode())) {
             final SelectionManager sm = m_workflowEditor.getGraphicalViewer().getSelectionManager();
+            final StructuredSelection ss = (StructuredSelection)sm.getSelection();
 
-            m_dragPositionProcessor.processDragEventAtPoint(me.display.getCursorLocation(), false,
-                (StructuredSelection)sm.getSelection());
+            m_dragPositionProcessor.processDragEventAtPoint(me.display.getCursorLocation(), false, ss);
 
             if (m_dragPositionProcessor.getAnnotation() == null) {
                 final ToggleEditorModeAction action = new ToggleEditorModeAction(m_workflowEditor, false);

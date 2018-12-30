@@ -69,6 +69,7 @@ import org.knime.core.node.workflow.NodeContainer;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.editor2.figures.ProgressPolylineConnection;
 
 /**
@@ -169,11 +170,12 @@ class DragPositionProcessor {
      *
      * @param p This is expected to be in untranslated (untranslated from the source SWT event) coordinates.
      * @param shouldAffectMark If this is true, the UI is updated concerning hit detected objects, as well as keeping
-     *            markedNode or markedEdge populated appropriately.
+     *            <code>m_markedNode</code> or <code>m_markedEdge</code> populated appropriately.
      * @param encouragedReselects if non-null, for any of the selection which are instances of subclasses of
-     *            AbstractGraphicalEditPart, if the processing point is within the bounds of the edit part's figure,
-     *            then this edit part will be the chosen one for hit detection. The bounds are actually expanded by
-     *            USER_DRAG_SLOP_FOR_BOUNDS pixels to account for user slop at the resize handle boundaries.
+     *            <code>AbstractGraphicalEditPart</code>, if the processing point is within the bounds of the edit
+     *            part's figure, then this edit part will be the chosen one for hit detection. The bounds are actually
+     *            expanded by USER_DRAG_SLOP_FOR_BOUNDS pixels to account for user slop at the resize handle boundaries.
+     *            Selections that are instances of <code>WorkflowRootEditPart</code> will be ignored.
      */
     void processDragEventAtPoint(final Point p, final boolean shouldAffectMark,
         final StructuredSelection encouragedReselects) {
@@ -184,11 +186,10 @@ class DragPositionProcessor {
         if (encouragedReselects != null) {
             final ZoomManager zoomManager = (ZoomManager)m_parentViewer.getProperty(ZoomManager.class.toString());
             final Iterator<?> it = encouragedReselects.iterator();
-
             while (it.hasNext()) {
                 Object o = it.next();
 
-                if (o instanceof AbstractGraphicalEditPart) {
+                if ((o instanceof AbstractGraphicalEditPart) && (!(o instanceof WorkflowRootEditPart))) {
                     final AbstractGraphicalEditPart encouragedReselect = (AbstractGraphicalEditPart)o;
                     final IFigure f = encouragedReselect.getFigure();
                     final Rectangle bounds = f.getBounds().getCopy();

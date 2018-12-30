@@ -65,20 +65,46 @@ import org.knime.workbench.editor2.editparts.FontStore;
 import org.knime.workbench.editor2.editparts.NodeAnnotationEditPart;
 
 /**
- *
  * @author ohl, KNIME AG, Zurich, Switzerland
  */
 public class AnnotationEditManager extends DirectEditManager {
+    /*
+     * Since we can only ever have one annotation in edit across the application (edit ends on focus loss and on active
+     * tab change in the workflow editor part,) the singleton nature of this is fine.
+     */
+    private static GraphicalEditPart PART_CURRENTLY_IN_EDIT = null;
+
+    /**
+     * @param aep the AnnotationEditPart for which we wish to know whether is should veto its selection (due to another
+     *            AnnotationEditPart being in edit.) This request arose due to AP-11008.
+     * @return false if the param value representing the AnnotationEditPart instance which is currently being edited, or
+     *         nothing is being edited
+     */
+    public static boolean partShouldVetoSelection(final AnnotationEditPart aep) {
+        return (PART_CURRENTLY_IN_EDIT != null) && (!aep.equals(PART_CURRENTLY_IN_EDIT));
+    }
+
 
     private IActionBars m_actionBars;
 
     private CellEditorActionHandler m_actionHandler;
 
-    private IAction m_copy, m_cut, m_paste, m_undo, m_redo, m_find,
-            m_selectAll, m_delete;
+    private IAction m_copy;
+    private IAction m_cut;
+    private IAction m_paste;
+    private IAction m_undo;
+    private IAction m_redo;
+    private IAction m_find;
+    private IAction m_selectAll;
+    private IAction m_delete;
 
-    public AnnotationEditManager(final GraphicalEditPart editPart,
-            final CellEditorLocator locator) {
+    /**
+     * Constructs an instace of the edit manager.
+     *
+     * @param editPart
+     * @param locator
+     */
+    public AnnotationEditManager(final AnnotationEditPart editPart, final CellEditorLocator locator) {
         super(editPart, StyledTextEditor.class, locator);
         if (locator instanceof StyledTextEditorLocator) {
             ((StyledTextEditorLocator)locator).setEditPart(editPart);
@@ -96,9 +122,10 @@ public class AnnotationEditManager extends DirectEditManager {
         final GraphicalEditPart editPart = getEditPart();
         editPart.getRoot().getViewer().deselectAll();
         editPart.getFigure().setVisible(false);
-        StyledTextEditor stw = (StyledTextEditor)getCellEditor();
-        Annotation anno = ((AnnotationEditPart)editPart).getModel();
-        Font defaultFont;
+
+        final StyledTextEditor stw = (StyledTextEditor)getCellEditor();
+        final Annotation anno = ((AnnotationEditPart)editPart).getModel();
+        final Font defaultFont;
         if (editPart instanceof NodeAnnotationEditPart) {
             defaultFont = AnnotationEditPart.getNodeAnnotationDefaultFont();
         } else if (anno.getVersion() < AnnotationData.VERSION_20151012) {
@@ -125,6 +152,16 @@ public class AnnotationEditManager extends DirectEditManager {
      * {@inheritDoc}
      */
     @Override
+    public void show() {
+        PART_CURRENTLY_IN_EDIT = getEditPart();
+
+        super.show();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     protected void bringDown() {
         super.bringDown();
 
@@ -140,30 +177,30 @@ public class AnnotationEditManager extends DirectEditManager {
         }
 
         final GraphicalEditPart editPart = getEditPart();
-        final EditPartViewer v = editPart.getRoot().getViewer();
         // select later as the "commit" mouse-click maybe in the region of the
         // figure (which would trigger another edit). This problem would only
         // occur if zoom > 1 (as the edit area is smaller than the figure)
-        Display.getCurrent().asyncExec(new Runnable() {
-            @Override
-            public void run() {
-                if (Display.getCurrent().isDisposed()) {
-                    return;
-                }
-                editPart.getFigure().setVisible(true);
-                v.deselectAll();
-                v.appendSelection(editPart);
-            };
+        Display.getCurrent().asyncExec(() -> {
+            if (Display.getCurrent().isDisposed()) {
+                PART_CURRENTLY_IN_EDIT = null;
+
+                return;
+            }
+
+            final EditPartViewer v = editPart.getRoot().getViewer();
+            editPart.getFigure().setVisible(true);
+            v.deselectAll();
+            v.appendSelection(editPart);
+
+            PART_CURRENTLY_IN_EDIT = null;
         });
     }
 
     private void restoreSavedActions(final IActionBars actionBars) {
         actionBars.setGlobalActionHandler(ActionFactory.COPY.getId(), m_copy);
         actionBars.setGlobalActionHandler(ActionFactory.PASTE.getId(), m_paste);
-        actionBars.setGlobalActionHandler(ActionFactory.DELETE.getId(),
-                m_delete);
-        actionBars.setGlobalActionHandler(ActionFactory.SELECT_ALL.getId(),
-                m_selectAll);
+        actionBars.setGlobalActionHandler(ActionFactory.DELETE.getId(), m_delete);
+        actionBars.setGlobalActionHandler(ActionFactory.SELECT_ALL.getId(), m_selectAll);
         actionBars.setGlobalActionHandler(ActionFactory.CUT.getId(), m_cut);
         actionBars.setGlobalActionHandler(ActionFactory.FIND.getId(), m_find);
         actionBars.setGlobalActionHandler(ActionFactory.UNDO.getId(), m_undo);
@@ -172,12 +209,9 @@ public class AnnotationEditManager extends DirectEditManager {
 
     private void saveCurrentActions(final IActionBars actionBars) {
         m_copy = actionBars.getGlobalActionHandler(ActionFactory.COPY.getId());
-        m_paste = actionBars
-                .getGlobalActionHandler(ActionFactory.PASTE.getId());
-        m_delete = actionBars.getGlobalActionHandler(ActionFactory.DELETE
-                .getId());
-        m_selectAll = actionBars
-                .getGlobalActionHandler(ActionFactory.SELECT_ALL.getId());
+        m_paste = actionBars.getGlobalActionHandler(ActionFactory.PASTE.getId());
+        m_delete = actionBars.getGlobalActionHandler(ActionFactory.DELETE.getId());
+        m_selectAll = actionBars.getGlobalActionHandler(ActionFactory.SELECT_ALL.getId());
         m_cut = actionBars.getGlobalActionHandler(ActionFactory.CUT.getId());
         m_find = actionBars.getGlobalActionHandler(ActionFactory.FIND.getId());
         m_undo = actionBars.getGlobalActionHandler(ActionFactory.UNDO.getId());

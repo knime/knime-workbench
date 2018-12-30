@@ -613,6 +613,10 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart
             }
         }
 
+        if (AnnotationEditManager.partShouldVetoSelection(this)) {
+            return null;
+        }
+
         return new WorkflowSelectionDragEditPartsTracker(this);
     }
 
