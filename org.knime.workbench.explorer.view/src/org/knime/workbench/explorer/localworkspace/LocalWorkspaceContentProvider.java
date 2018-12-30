@@ -92,15 +92,13 @@ import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 
 /**
- * Provides content for the user space view that shows the content (workflows
- * and workflow groups) of the local workspace of the workbench.
+ * Provides content for the user space view that shows the content (workflows and workflow groups) of the local
+ * workspace of the workbench.
  *
  * @author ohl, University of Konstanz
  */
 public class LocalWorkspaceContentProvider extends AbstractContentProvider {
-
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(LocalWorkspaceContentProvider.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalWorkspaceContentProvider.class);
 
     private IResourceChangeListener m_workspaceResourceListener;
 
@@ -108,26 +106,19 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      * @param factory the factory that created us.
      * @param id mount id
      */
-    LocalWorkspaceContentProvider(
-            final LocalWorkspaceContentProviderFactory factory,
-            final String id) {
+    LocalWorkspaceContentProvider(final LocalWorkspaceContentProviderFactory factory, final String id) {
         super(factory, id);
         registerListeners();
     }
 
-    /**
-     *  */
     private void registerListeners() {
         final IWorkspace workspace = ResourcesPlugin.getWorkspace();
-        m_workspaceResourceListener = new IResourceChangeListener() {
 
-            @Override
-            public void resourceChanged(final IResourceChangeEvent event) {
-                onResourceChanged(event);
-            }
+        m_workspaceResourceListener = (event) -> {
+            onResourceChanged(event);
         };
-        workspace.addResourceChangeListener(m_workspaceResourceListener,
-                IResourceChangeEvent.POST_CHANGE);
+
+        workspace.addResourceChangeListener(m_workspaceResourceListener, IResourceChangeEvent.POST_CHANGE);
     }
 
     private void onResourceChanged(final IResourceChangeEvent event) {
@@ -140,10 +131,10 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         try {
             delta.accept(new IResourceDeltaVisitor() {
                 @Override
-                public boolean visit(final IResourceDelta delta) {
-                    IResource res = delta.getResource();
+                public boolean visit(final IResourceDelta visitDelta) {
+                    IResource res = visitDelta.getResource();
                     IResource refreshCandidate = res.getParent();
-                    switch (delta.getKind()) {
+                    switch (visitDelta.getKind()) {
                     case IResourceDelta.ADDED:
                     case IResourceDelta.REMOVED:
                         boolean isChild = false;
@@ -508,8 +499,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 for (String path : files) {
                     File src = new File(path);
                     if (!src.isFile()) {
-                        LOGGER.error("Only files can be dropped. " + path
-                                + " doesn't denote a file.");
+                        LOGGER.error("Only files can be dropped. " + path + " doesn't denote a file.");
                         return false;
                     }
                 }
@@ -530,12 +520,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 }
                 return true;
             } catch (IOException e) {
-                LOGGER.error("An error occurred while copying files to the User"
-                        + " Space.", e);
+                LOGGER.error("An error occurred while copying files to the User Space.", e);
             } catch (CoreException e) {
-                LOGGER.error(
-                        "Could not get local file for item "
-                                + target.getFullName() + ".", e);
+                LOGGER.error("Could not get local file for item " + target.getFullName() + ".", e);
             }
         }
         return false;
@@ -600,8 +587,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
         }
         for (AbstractExplorerFileStore fs : fileStores) {
             if (DragAndDropUtils.isLinkedProject(fs)) {
-                LOGGER.warn("Linked workflow project cannot be copied from the"
-                        + " User Space.");
+                LOGGER.warn("Linked workflow project cannot be copied from the User Space.");
                 return false;
             }
         }

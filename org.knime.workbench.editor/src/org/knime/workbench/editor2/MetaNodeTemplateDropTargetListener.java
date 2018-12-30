@@ -59,13 +59,10 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
 
 /**
- *
  * @author Bernd Wiswedel, KNIME.com, Zurich Switzerland
  * @author Peter Ohl, KNIME.com, Zurich Switzerland
  */
-public class MetaNodeTemplateDropTargetListener extends
-        WorkflowEditorDropTargetListener<IFileStoreFactory> {
-
+public class MetaNodeTemplateDropTargetListener extends WorkflowEditorDropTargetListener<IFileStoreFactory> {
     /**
      * @param v the edit part viewer this drop target listener is attached
      *            to
@@ -74,15 +71,16 @@ public class MetaNodeTemplateDropTargetListener extends
         super(v, new IFileStoreFactory());
     }
 
-
     /** {@inheritDoc} */
     @Override
     protected void handleDrop() {
-        ContentObject obj = getDragResources(getCurrentEvent());
-        AbstractExplorerFileStore store =  obj.getObject();
+        final ContentObject obj = getDragResources(getCurrentEvent());
+        final AbstractExplorerFileStore store =  obj.getObject();
         if (AbstractExplorerFileStore.isWorkflowTemplate(store)) {
             getFactory().setSourceFileStore(store);
             super.handleDrop();
+        } else {
+            clearTransferSelection();
         }
     }
 
@@ -94,10 +92,8 @@ public class MetaNodeTemplateDropTargetListener extends
         if (!super.isEnabled(event)) {
             return false;
         }
-        AbstractExplorerFileStore fileStore
-                = getDragResources(event).getObject();
-        boolean isMetaNodeTemplate =
-            AbstractExplorerFileStore.isWorkflowTemplate(fileStore);
+        final AbstractExplorerFileStore fileStore = getDragResources(event).getObject();
+        final boolean isMetaNodeTemplate = AbstractExplorerFileStore.isWorkflowTemplate(fileStore);
         //not yet supported by WorkflowManagerUI-implementations
         if (isMetaNodeTemplate && wraps(getWorkflowManager(), WorkflowManager.class)) {
             event.feedback = DND.FEEDBACK_SELECT;

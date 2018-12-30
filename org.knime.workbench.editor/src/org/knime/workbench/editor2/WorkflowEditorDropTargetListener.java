@@ -64,6 +64,7 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchPage;
@@ -85,7 +86,6 @@ import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
 
 /**
- *
  * @author Dominik Morent, KNIME AG, Zurich, Switzerland
  * @author Tim-Oliver Buchholz, KNIME AG, Zurich, Switzerland
  * @param <T> a creation factory for the item which will be dropped
@@ -434,6 +434,11 @@ public abstract class WorkflowEditorDropTargetListener<T extends CreationFactory
 
     /**
      * {@inheritDoc}
+     *
+     * Developers writing subclasses that override this method should read the javadocs for
+     * <code>clearTransferSelection()</code>.
+     *
+     * @see #clearTransferSelection()
      */
     @SuppressWarnings("unchecked") // generics casting...
     @Override
@@ -450,6 +455,8 @@ public abstract class WorkflowEditorDropTargetListener<T extends CreationFactory
                     final boolean connection = (ep instanceof ConnectionContainerEditPart);
 
                     if (!NodeSupplantDragListener.replacingNodeOrConnectionBisectionIsAllowed(connection)) {
+                        clearTransferSelection();
+
                         return;
                     }
                 }
@@ -489,11 +496,11 @@ public abstract class WorkflowEditorDropTargetListener<T extends CreationFactory
             // after adding a node the editor should get the focus
             // this is issued asynchronously, in order to avoid bug #3029
             Display.getDefault().asyncExec(() -> {
-                IWorkbenchWindow w = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+                final IWorkbenchWindow w = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
                 if (w != null) {
-                    IWorkbenchPage p = w.getActivePage();
+                    final IWorkbenchPage p = w.getActivePage();
                     if (p != null) {
-                        IEditorPart e = p.getActiveEditor();
+                        final IEditorPart e = p.getActiveEditor();
                         if (e != null) {
                             e.setFocus();
                         }
@@ -502,6 +509,23 @@ public abstract class WorkflowEditorDropTargetListener<T extends CreationFactory
             });
         } else {
             getCurrentEvent().detail = DND.DROP_NONE;
+        }
+
+        clearTransferSelection();
+    }
+
+    /**
+     * Subclasses that do not call this class' implementation of <code>handleDrop()</code> from their overridden
+     * version, or do not always call it, should invoke this method from their overridden method.
+     *
+     * If the subclass returns something other than an instance of <code>LocalSelectionTransfer</code> in its
+     * <code>getTransfer()</code> method, then this method will have no effect.
+     */
+    protected void clearTransferSelection() {
+        Transfer t = getTransfer();
+
+        if (t instanceof LocalSelectionTransfer) {
+            ((LocalSelectionTransfer)t).setSelection(null);
         }
     }
 
