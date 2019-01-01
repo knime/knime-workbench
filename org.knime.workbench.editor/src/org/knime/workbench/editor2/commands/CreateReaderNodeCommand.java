@@ -63,35 +63,42 @@ import org.knime.core.util.SWTUtilities;
 import org.knime.workbench.ui.wrapper.WrappedNodeDialog;
 
 /**
+ * This command is invoked due to the user dragging a file of some known registered type onto the workflow canvas; it
+ * was previously named DropNodeCommand.
  *
  * @author ohl, University of Konstanz
  */
-public class DropNodeCommand extends AbstractKNIMECommand {
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(DropNodeCommand.class);
+public class CreateReaderNodeCommand extends AbstractKNIMECommand {
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(CreateReaderNodeCommand.class);
+
+
+    /** the location on the canvas at which the newly created node should be placed **/
+    protected final Point m_location;
+
+    /** whether the node should be snapped to the grid closest to that location **/
+    protected final boolean m_snapToGrid;
+
+    /**
+     * the node container of the created node, this will not be populated until <code>execute()</code> successfully
+     * returns
+     */
+    protected NodeContainer m_container;
 
     private final ContextAwareNodeFactory<NodeModel> m_factory;
-
-    private final Point m_location;
-
-    private final boolean m_snapToGrid;
-
-    private NodeContainer m_container;
 
     private final NodeCreationContext m_dropContext;
 
     /**
      * Creates a new command.
      *
-     * @param manager The workflow manager that should host the new node
-     * @param factory The factory of the Node that should be added
-     * @param context the file to be set as source for the new node.
-     * @param location Initial visual location in the
+     * @param manager the workflow manager that should host the new node
+     * @param factory the factory of the Node that should be added
+     * @param context the file to be set as source for the new node
+     * @param location initial visual location on the canvas
      * @param snapToGrid if location should be rounded to closest grid location
      */
-    public DropNodeCommand(final WorkflowManager manager,
-            final ContextAwareNodeFactory<NodeModel> factory,
-            final NodeCreationContext context, final Point location, final boolean snapToGrid) {
+    public CreateReaderNodeCommand(final WorkflowManager manager, final ContextAwareNodeFactory<NodeModel> factory,
+        final NodeCreationContext context, final Point location, final boolean snapToGrid) {
         super(manager);
         m_factory = factory;
         m_location = location;
@@ -104,18 +111,16 @@ public class DropNodeCommand extends AbstractKNIMECommand {
      */
     @Override
     public boolean canExecute() {
-        return m_factory != null && (m_location != null)
-            && (m_dropContext != null) && super.canExecute();
+        return (m_factory != null) && (m_location != null) && (m_dropContext != null) && super.canExecute();
     }
 
     /** {@inheritDoc} */
     @Override
     public void execute() {
         // Add node to workflow and get the container
-        WorkflowManager hostWFM = getHostWFM();
+        final WorkflowManager hostWFM = getHostWFM();
         try {
-            NodeID id =
-                    hostWFM.addNodeAndApplyContext(m_factory, m_dropContext);
+            final NodeID id = hostWFM.addNodeAndApplyContext(m_factory, m_dropContext);
             m_container = hostWFM.getNodeContainer(id);
             // create extra info and set it
             NodeUIInformation info = NodeUIInformation.builder()
@@ -125,11 +130,11 @@ public class DropNodeCommand extends AbstractKNIMECommand {
                     .setIsDropLocation(true).build();
             m_container.setUIInformation(info);
 
-            // Open the dialog. Some times.
-            if (m_container instanceof SingleNodeContainer
+            // Open the dialog -- sometimes...
+            if ((m_container instanceof SingleNodeContainer)
                     && m_container.getNodeContainerState().isIdle() && m_container.hasDialog()
                     // and has only a variable in port
-                    && m_container.getNrInPorts() == 1) {
+                    && (m_container.getNrInPorts() == 1)) {
                 // if not executable and has a dialog and is fully connected
 
                 // This is embedded in a special JFace wrapper dialog
@@ -138,7 +143,7 @@ public class DropNodeCommand extends AbstractKNIMECommand {
                     @Override
                     public void run() {
                         try {
-                            WrappedNodeDialog dlg = new WrappedNodeDialog(SWTUtilities.getActiveShell(),
+                            final WrappedNodeDialog dlg = new WrappedNodeDialog(SWTUtilities.getActiveShell(),
                                 NodeContainerWrapper.wrap(m_container));
                             dlg.open();
                         } catch (Exception e) {
@@ -147,25 +152,22 @@ public class DropNodeCommand extends AbstractKNIMECommand {
                     }
                 });
             }
-
         } catch (Throwable t) {
             // if fails notify the user
             LOGGER.debug("Node cannot be created.", t);
             MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_WARNING | SWT.OK);
             mb.setText("Node cannot be created.");
-            mb.setMessage("The selected node could not be created "
-                    + "due to the following reason:\n" + t.getMessage());
+            mb.setMessage("The selected node could not be created due to the following reason:\n" + t.getMessage());
             mb.open();
-            return;
         }
-
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean canUndo() {
-        return m_container != null
-                && getHostWFM().canRemoveNode(m_container.getID());
+        return (m_container != null) && getHostWFM().canRemoveNode(m_container.getID());
     }
 
     /**
@@ -184,5 +186,4 @@ public class DropNodeCommand extends AbstractKNIMECommand {
                 "The node " + m_container.getNameWithID() + " can currently not be removed");
         }
     }
-
 }
