@@ -71,7 +71,7 @@ public class HeadlessPreferencesInitializer extends
                 System.getProperty("java.io.tmpdir"));
 
         store.setDefault(HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE,
-                LEVEL.DEBUG.name());
+                LEVEL.WARN.name());
 
         store.setDefault(HeadlessPreferencesConstants.P_LOG_FILE_LOCATION, false);
 
