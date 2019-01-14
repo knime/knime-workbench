@@ -351,7 +351,19 @@
                menubarPath="org.knime.workbench.editor.menu/group1"
                style="push"
                toolbarPath="org.knime.workbench.editor.menu/group1"
-               tooltip="Cancel all selected, running nodes"/>                   
+               tooltip="Cancel all selected, running nodes"/>
+          <action
+                class="org.knime.workbench.editor2.actions.delegates.ShowProgressEditorAction"
+                definitionId="knime.commands.showprogress"
+                disabledIcon="icons/showProgress.png"
+                icon="icons/showProgress.png"
+                id="org.knime.workbench.editor.actions.showprogress"
+                label="Show Progress"
+                menubarPath="org.knime.workbench.editor.menu/group1"
+                style="push"
+                toolbarPath="org.knime.workbench.editor.menu/group1"
+                tooltip="Shows the progress of the currently executing workflow">
+          </action>                   
          <action
                class="org.knime.workbench.editor2.actions.delegates.ExecuteAndOpenViewEditorAction"
                definitionId="knime.commands.executeAndOpenView"

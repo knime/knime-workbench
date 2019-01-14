@@ -245,6 +245,7 @@ import org.knime.workbench.editor2.actions.SendAnnotationBackwardAction;
 import org.knime.workbench.editor2.actions.SendAnnotationToBackAction;
 import org.knime.workbench.editor2.actions.SetNodeDescriptionAction;
 import org.knime.workbench.editor2.actions.ShowNodeIdsAction;
+import org.knime.workbench.editor2.actions.ShowProgressAction;
 import org.knime.workbench.editor2.actions.StepLoopAction;
 import org.knime.workbench.editor2.actions.SubNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.ToggleEditorModeAction;
@@ -697,6 +698,7 @@ public class WorkflowEditor extends GraphicalEditor implements
 
         final AbstractNodeAction execute = new ExecuteAction(this);
         final AbstractNodeAction executeAll = new ExecuteAllAction(this);
+        final AbstractNodeAction showProgress = new ShowProgressAction(this);
         final AbstractNodeAction cancelAll = new CancelAllAction(this);
         final AbstractNodeAction cancel = new CancelAction(this);
         final AbstractNodeAction pause = new PauseLoopExecutionAction(this);
@@ -759,6 +761,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         m_actionRegistry.registerAction(openDialog);
         m_actionRegistry.registerAction(execute);
         m_actionRegistry.registerAction(executeAll);
+        m_actionRegistry.registerAction(showProgress);
         m_actionRegistry.registerAction(cancelAll);
         m_actionRegistry.registerAction(cancel);
         m_actionRegistry.registerAction(pause);
@@ -820,6 +823,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         m_editorActions.add(openDialog.getId());
         m_editorActions.add(execute.getId());
         m_editorActions.add(executeAll.getId());
+        m_editorActions.add(showProgress.getId());
         m_editorActions.add(cancelAll.getId());
         m_editorActions.add(executeAndView.getId());
         m_editorActions.add(reset.getId());
