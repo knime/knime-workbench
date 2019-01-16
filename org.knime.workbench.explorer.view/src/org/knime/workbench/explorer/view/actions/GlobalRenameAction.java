@@ -179,7 +179,6 @@ public class GlobalRenameAction extends ExplorerAction {
             // unlockDstWorkflows(acp, srcFileStore, dstFileStore, lockedWFs);
             LOGGER.debug("Renamed \"" + srcFileStore + "\" to \""
                     + dstFileStore + "\".");
-            dstFileStore.getParent().refresh();
             getView().setNextSelection(dstFileStore);
         } catch (CoreException e) {
             String message =

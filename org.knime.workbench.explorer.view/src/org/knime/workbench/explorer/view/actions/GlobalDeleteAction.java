@@ -190,10 +190,6 @@ public class GlobalDeleteAction extends ExplorerAction {
                     Display.getDefault().syncExec(() -> showUnsuccessfulMessage());
                 }
 
-                /* Refresh parents of deleted items. */
-                allFiles.stream().filter(e -> e.getParent() != null).map(e -> e.getParent()).distinct()
-                    .forEach(e -> e.refresh());
-
                 Display.getDefault().syncExec(() -> {
                     for (AbstractExplorerFileStore fileStore : allFiles) {
                         AbstractExplorerFileStore parentStore = fileStore.getParent();
