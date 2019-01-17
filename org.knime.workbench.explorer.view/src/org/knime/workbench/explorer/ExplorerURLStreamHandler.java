@@ -47,16 +47,21 @@
  */
 package org.knime.workbench.explorer;
 
+import static org.knime.core.ui.wrapper.Wrapper.unwrap;
+import static org.knime.core.ui.wrapper.Wrapper.wraps;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -66,6 +71,10 @@ import org.eclipse.core.runtime.URIUtil;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowContext;
+import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
+import org.knime.core.ui.node.workflow.WorkflowContextUI;
+import org.knime.core.ui.node.workflow.WorkflowManagerUI;
+import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.KNIMEServerHostnameVerifier;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
@@ -145,13 +154,12 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         } else if ("http".equals(resolvedUrl.getProtocol()) || "https".equals(resolvedUrl.getProtocol())) {
             // neither the node context nor the workflow context can be null here, otherwise resolveKNIMEURL would have
             // already failed
-            WorkflowContext workflowContext = NodeContext.getContext().getWorkflowManager().getContext();
+            WorkflowContextUI workflowContext =
+                NodeContext.getContext().getContextObjectForClass(WorkflowManagerUI.class).get().getContext();
             URLConnection conn = resolvedUrl.openConnection();
-            if (workflowContext.getServerAuthToken().isPresent()) {
-                conn.setRequestProperty("Authorization", "Bearer " + workflowContext.getServerAuthToken().get());
-            }
+            getServerAuthToken(workflowContext).ifPresent(t -> conn.setRequestProperty("Authorization", "Bearer " + t));
 
-            workflowContext.getRemoteRepositoryAddress().ifPresent(u -> m_requestModifier.modifyRequest(u, conn));
+            getRemoteRepositoryAddress(workflowContext).ifPresent(u -> m_requestModifier.modifyRequest(u, conn));
 
             if (conn instanceof HttpsURLConnection) {
                 ((HttpsURLConnection)conn).setHostnameVerifier(KNIMEServerHostnameVerifier.getInstance());
@@ -177,9 +185,10 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                 + " is supported by this handler.");
         }
         NodeContext nodeContext = NodeContext.getContext();
-        WorkflowContext workflowContext;
+        WorkflowContextUI workflowContext;
         if (nodeContext != null) {
-            workflowContext = nodeContext.getWorkflowManager().getContext();
+            workflowContext =
+                nodeContext.getContextObjectForClass(WorkflowManagerUI.class).map(wfm -> wfm.getContext()).orElse(null);
         } else {
             workflowContext = null;
         }
@@ -189,27 +198,81 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             if (nodeContext == null) {
                 throw new IOException("No context for relative URL available");
             } else if (workflowContext == null) {
-                throw new IOException("Workflow " + nodeContext.getWorkflowManager() + " does not have a context");
+                throw new IOException("Workflow " + nodeContext.getContextObjectForClass(WorkflowManagerUI.class)
+                    + " does not have a context");
             }
         }
 
         if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost())) {
             return UTF8_ENCODER.encodePathSegments(resolveWorkflowRelativeUrl(url, workflowContext));
         } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost()) || ((workflowContext != null)
-            && url.getHost().equalsIgnoreCase(workflowContext.getRemoteMountId().orElse(null)))) {
+            && url.getHost().equalsIgnoreCase(getRemoteMountId(workflowContext).orElse(null)))) {
             return UTF8_ENCODER.encodePathSegments(resolveMountpointRelativeUrl(url, workflowContext));
         } else if (NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
-            return UTF8_ENCODER.encodePathSegments(resolveNodeRelativeUrl(url, nodeContext, workflowContext));
+            return UTF8_ENCODER
+                .encodePathSegments(resolveNodeRelativeUrl(url, NodeContext.getContext(), workflowContext));
         } else {
             return UTF8_ENCODER.encodePathSegments(url);
         }
     }
 
+    private static Optional<String> getRemoteMountId(final WorkflowContextUI workflowContext) {
+        if (workflowContext instanceof RemoteWorkflowContext) {
+            return Optional.of(((RemoteWorkflowContext)workflowContext).getMountId());
+        } else {
+            return Wrapper.unwrapOptional(workflowContext, WorkflowContext.class)
+                .map(c -> c.getRemoteMountId().orElse(null));
+        }
+    }
+
+    private static Optional<URI> getRemoteRepositoryAddress(final WorkflowContextUI workflowContext) {
+        if (workflowContext instanceof RemoteWorkflowContext) {
+            return Optional.of(((RemoteWorkflowContext)workflowContext).getRepositoryAddress());
+        } else {
+            return Wrapper.unwrapOptional(workflowContext, WorkflowContext.class)
+                .map(c -> c.getRemoteRepositoryAddress().orElse(null));
+        }
+    }
+
+    private static Optional<String> getServerAuthToken(final WorkflowContextUI workflowContext) {
+        if (workflowContext instanceof RemoteWorkflowContext) {
+            return Optional.of(((RemoteWorkflowContext)workflowContext).getServerAuthToken());
+        } else {
+            return Wrapper.unwrapOptional(workflowContext, WorkflowContext.class)
+                .map(c -> c.getServerAuthToken().orElse(null));
+        }
+    }
+
+    private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
+        throws IOException {
+        if (wraps(workflowContext, WorkflowContext.class)) {
+            return resolveWorkflowRelativeUrl(origUrl, unwrap(workflowContext, WorkflowContext.class));
+        } else {
+            assert workflowContext instanceof RemoteWorkflowContext;
+            RemoteWorkflowContext rwc = (RemoteWorkflowContext)workflowContext;
+            String decodedPath = decodePath(origUrl);
+            if (!leavesWorkflow(decodedPath)) {
+                throw new IllegalArgumentException(
+                    "Workflow relative URL points to a resource within a workflow. Not accessible.");
+            }
+            URI mpURI = rwc.getMountpointURI();
+            URI mpURIWithoutQueryAndFragment;
+            try {
+                mpURIWithoutQueryAndFragment =
+                    new URI(mpURI.getScheme(), null, mpURI.getHost(), mpURI.getPort(), mpURI.getPath(), null, null);
+            } catch (URISyntaxException e) {
+                throw new IOException(e);
+            }
+            URI uri = URIUtil.append(mpURIWithoutQueryAndFragment, decodedPath);
+            return uri.normalize().toURL();
+        }
+   }
+
     private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
         throws IOException {
-        String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
+        String decodedPath = decodePath(origUrl);
 
-        boolean leavesWorkflow = decodedPath.startsWith("/../");
+        boolean leavesWorkflow = leavesWorkflow(decodedPath);
 
         if (leavesWorkflow && workflowContext.getRemoteRepositoryAddress().isPresent()
             && workflowContext.getServerAuthToken().isPresent()) {
@@ -247,6 +310,25 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
     }
 
+    private static URL resolveMountpointRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
+        throws IOException {
+        if (wraps(workflowContext, WorkflowContext.class)) {
+            return resolveMountpointRelativeUrl(origUrl, unwrap(workflowContext, WorkflowContext.class));
+        } else {
+            assert workflowContext instanceof RemoteWorkflowContext;
+            RemoteWorkflowContext rwc = (RemoteWorkflowContext)workflowContext;
+            String decodedPath = decodePath(origUrl);
+            URI mpUri = rwc.getMountpointURI();
+            URI uri;
+            try {
+                uri = new URI(mpUri.getScheme(), mpUri.getHost(), decodedPath, null);
+            } catch (URISyntaxException e) {
+                throw new IOException(e);
+            }
+            return uri.normalize().toURL();
+        }
+    }
+
     private static URL resolveMountpointRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
         throws IOException {
         String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
@@ -280,6 +362,16 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     }
 
     private static URL resolveNodeRelativeUrl(final URL origUrl, final NodeContext nodeContext,
+        final WorkflowContextUI workflowContext) throws IOException {
+        if (wraps(workflowContext, WorkflowContext.class)) {
+            return resolveNodeRelativeUrl(origUrl, nodeContext, unwrap(workflowContext, WorkflowContext.class));
+        } else {
+            throw new IllegalArgumentException(
+                "Node relative URLs cannot be resolved from within purely remote workflows.");
+        }
+    }
+
+    private static URL resolveNodeRelativeUrl(final URL origUrl, final NodeContext nodeContext,
         final WorkflowContext workflowContext) throws IOException {
         ReferencedFile nodeDirectoryRef = nodeContext.getNodeContainer().getNodeContainerDirectory();
         if (nodeDirectoryRef == null) {
@@ -306,6 +398,14 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         } catch (URISyntaxException e) {
             throw new IOException(e.getMessage(), e);
         }
+    }
+
+    private static String decodePath(final URL url) throws UnsupportedEncodingException {
+        return URLDecoder.decode(url.getPath(), "UTF-8");
+    }
+
+    private static boolean leavesWorkflow(final String decodedPath) {
+        return decodedPath.startsWith("/../");
     }
 
     /**
