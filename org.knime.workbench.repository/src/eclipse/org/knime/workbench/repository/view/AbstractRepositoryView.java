@@ -47,7 +47,6 @@
  */
 package org.knime.workbench.repository.view;
 
-import java.lang.reflect.Method;
 import java.util.ConcurrentModificationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -106,8 +105,6 @@ import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
-import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.node.streamable.PartitionInfo;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.KNIMEJob;
@@ -121,6 +118,7 @@ import org.knime.workbench.repository.model.IRepositoryObject;
 import org.knime.workbench.repository.model.MetaNodeTemplate;
 import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.repository.model.Root;
+import org.knime.workbench.repository.util.NodeUtil;
 import org.osgi.framework.FrameworkUtil;
 
 /**
@@ -453,12 +451,7 @@ public abstract class AbstractRepositoryView extends ViewPart implements Reposit
             } else if (parent instanceof NodeTemplate) {
                 NodeTemplate nodeTemplate = (NodeTemplate)parent;
                 try {
-                    NodeFactory<? extends NodeModel> nf = nodeTemplate.createFactoryInstance();
-                    NodeModel nm = nf.createNodeModel();
-                    //check whether the current node model overrides the #createStreamableOperator-method
-                    Method m = nm.getClass().getMethod("createStreamableOperator", PartitionInfo.class,
-                        PortObjectSpec[].class);
-                    if (m.getDeclaringClass() != NodeModel.class) {
+                    if (NodeUtil.isStreamable(nodeTemplate)) {
                         //method has been overriden -> node is probably streamable or distributable
                         nodeTemplate.addAdditionalInfo(KEY_INFO_STREAMABLE, "streamable");
                     }
