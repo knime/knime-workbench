@@ -1823,6 +1823,10 @@ public class WorkflowEditor extends GraphicalEditor implements
      */
     @Override
     public void doSaveAs() {
+        if(!getWorkflowManager().isPresent()) {
+            LOGGER.warn("'Save As...'-action not possible for workflow " + getWorkflowManagerUI().getName());
+            return;
+        }
         if (m_parentEditor != null) { // parent does it if this is a metanode editor
             m_parentEditor.doSaveAs();
             return;
@@ -1897,7 +1901,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 MessageDialog.openError(activeShell, "\"Save As...\" failed.", msg);
             }
             // update the location and the link to the workflow as part of SRV-1326
-            if (m_manager.getContext().isTemporaryCopy()) {
+            if (getWorkflowManager().get().getContext().isTemporaryCopy()) {
                 m_manuallySetToolTip = null;
                 m_origRemoteLocation = newWorkflowDir.toURI();
                 updateWorkflowMessages();
@@ -1922,7 +1926,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 LOGGER.warn("Could not determine mount point root for " + newWorkflowDir + ": " + ex.getMessage(), ex);
             }
 
-            WorkflowContext context = new WorkflowContext.Factory(m_manager.getContext())
+            WorkflowContext context = new WorkflowContext.Factory(getWorkflowManager().get().getContext())
                         .setCurrentLocation(localNewWorkflowDir)
                         .setMountpointRoot(mountPointRoot)
                         .setMountpointURI(newWorkflowDir.toURI())
