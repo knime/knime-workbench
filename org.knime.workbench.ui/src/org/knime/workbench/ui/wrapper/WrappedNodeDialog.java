@@ -47,7 +47,6 @@
  */
 package org.knime.workbench.ui.wrapper;
 
-import static org.knime.core.ui.wrapper.Wrapper.unwrapNCOptional;
 import static org.knime.core.ui.wrapper.Wrapper.wraps;
 import static org.knime.workbench.ui.async.AsyncUtil.ncAsyncSwitchRethrow;
 
@@ -737,14 +736,11 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
     }
 
     private void pushNodeContext() {
-        // so far node context is only supported for the non-UI NodeContainer
-        unwrapNCOptional(m_nodeContainer).ifPresent(nc -> NodeContext.pushContext(nc));
+        NodeContext.pushContext(m_nodeContainer);
     }
 
     private void removeNodeContext() {
-        if (wraps(m_nodeContainer, NodeContainer.class)) {
-            NodeContext.removeLastContext();
-        }
+        NodeContext.removeLastContext();
     }
 
     private void updateWriteProtectedState() {
