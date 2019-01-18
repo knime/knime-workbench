@@ -99,6 +99,11 @@ public class LocalWorkspaceContentProviderFactory extends
         return "LOCAL";
     }
 
+    @Override
+    public boolean isMountpointEditable() {
+        return false;
+    }
+
     /**
      * {@inheritDoc}
      */

@@ -105,6 +105,16 @@ public abstract class AbstractContentProviderFactory {
     }
 
     /**
+     * Returns whether the mountpoint can be edited.
+     *
+     * @return Whether the mountpoint can be edited
+     * @since 8.4
+     */
+    public boolean isMountpointEditable() {
+        return true;
+    }
+
+    /**
      * Not intended to be called. Rather go through the
      * {@link ExplorerMountTable}.
      *

@@ -416,7 +416,13 @@ public class MountPointTableEditor extends FieldEditor {
         int index = m_table.getSelectionIndex();
         int size = m_table.getItemCount();
 
-        m_editButton.setEnabled(index >= 0);
+        if (index >= 0) {
+            MountSettings settings = (MountSettings)m_table.getItem(index).getData();
+            AbstractContentProviderFactory contentProviderFactory = ExplorerMountTable.getContentProviderFactories().get(settings.getFactoryID());
+            m_editButton.setEnabled(contentProviderFactory.isMountpointEditable());
+        } else {
+            m_editButton.setEnabled(false);
+        }
         // disable remove button for only one entry
         // deleting all mount points, causes problems with updated pre 2.9 workspaces
         m_removeButton.setEnabled(index >= 0 && size > 1);
