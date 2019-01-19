@@ -357,6 +357,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                 @Override
                 public void run(final IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
                     CopyMove copyMove = new CopyMove(getView(), m_target, destChecker, m_performMove);
+                    copyMove.setSrcFileStores(srcFileStores);
                     copyMove.setNotOverwritableDest(notOverwritableDest);
                     CopyMoveResult copyMoveResult = copyMove.run(monitor);
                     success.set(copyMoveResult.isSuccess());

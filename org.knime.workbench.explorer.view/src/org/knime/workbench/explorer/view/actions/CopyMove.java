@@ -84,13 +84,18 @@ public final class CopyMove {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(CopyMove.class);
 
     private final ExplorerView m_view;
+
     private final AbstractExplorerFileStore m_target;
+
     private final boolean m_performMove;
+
     private final DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore> m_destChecker;
 
     private boolean m_excludeDataInWorkflows = false;
+
     private Set<LocalExplorerFileStore> m_notOverwritableDest = Collections.emptySet();
 
+    private List<AbstractExplorerFileStore> m_srcFileStores = Collections.emptyList();
 
     /**
      * @param view
@@ -143,8 +148,9 @@ public final class CopyMove {
         int numFiles = processedTargets.size();
         monitor.beginTask(cmd + " " + numFiles + " files to " + m_target.getFullName(), numFiles);
         int iterationCount = processedTargets.size();
-        for (final Map.Entry<AbstractExplorerFileStore, AbstractExplorerFileStore> entry
-                : destCheckerMappings.entrySet()) {
+        List<ExplorerJob> moveJobs = new ArrayList<>();
+        for (final Map.Entry<AbstractExplorerFileStore, AbstractExplorerFileStore> entry : destCheckerMappings
+            .entrySet()) {
             AbstractExplorerFileStore srcFS = entry.getKey();
             AbstractExplorerFileStore destFS = entry.getValue();
             if (destFS == null) {
@@ -212,7 +218,11 @@ public final class CopyMove {
                         (LocalExplorerFileStore)destFS, m_performMove, callback);
                 } else { // regular copy
                     CheckUtils.checkState(!m_excludeDataInWorkflows, "Copy/Move 'without data' not implement");
-                    scheduleLocalCopyOrMove(srcFS, destFS, callback, m_performMove, options);
+                    if (m_performMove) {
+                        moveJobs.add(scheduleLocalCopyOrMove(srcFS, destFS, callback, m_performMove, options));
+                    } else {
+                        scheduleLocalCopyOrMove(srcFS, destFS, callback, m_performMove, options);
+                    }
                 }
             } catch (CoreException e) {
                 LOGGER.debug(cmd + " failed: " + e.getStatus().getMessage(), e);
@@ -233,7 +243,77 @@ public final class CopyMove {
             }
             monitor.worked(1);
         }
+        if (m_performMove && !m_srcFileStores.isEmpty()) {
+            scheduleDeletionOfRemainingWorkflowGroups(destCheckerMappings, moveJobs);
+        }
         return new CopyMoveResult(statusList, success);
+    }
+
+    private void scheduleDeletionOfRemainingWorkflowGroups(
+        final Map<AbstractExplorerFileStore, AbstractExplorerFileStore> destCheckerMappings,
+        final List<ExplorerJob> moveJobs) {
+        ExplorerJob job = new ExplorerJob("Delete remaining workflow groups") {
+
+            @Override
+            protected IStatus run(final IProgressMonitor monitor) {
+                // wait for the move jobs to move all the files
+                for (ExplorerJob moveJob : moveJobs) {
+                    try {
+                        moveJob.join(60000, monitor);
+                    } catch (InterruptedException e) {
+                        return Status.CANCEL_STATUS;
+                    }
+                }
+                for (AbstractExplorerFileStore srcFileStore : m_srcFileStores) {
+                    AfterRunCallback callback = t -> srcFileStore.getParent().refresh();
+                    try {
+                        // if sourceWorkFlowGroup is not moved because it was merged into an existing group, delete it
+                        if (destCheckerMappings.get(srcFileStore) == null) {
+                            deleteRemainingWorkflowGroups(srcFileStore, monitor);
+                        }
+                        AfterRunCallback.callCallbackInDisplayThread(callback, null);
+                    } catch (CoreException ce) {
+                        AfterRunCallback.callCallbackInDisplayThread(callback, ce);
+                        return ce.getStatus();
+                    }
+                }
+                return Status.OK_STATUS;
+            }
+        };
+        job.schedule();
+    }
+
+    private void deleteRemainingWorkflowGroups(final AbstractExplorerFileStore fileStore,
+        final IProgressMonitor monitor) throws CoreException {
+        // only workflowgroups should be deleted
+        if (!AbstractExplorerFileStore.isWorkflowGroup(fileStore)) {
+            return;
+        }
+        // do not delete workflowgroups that have workflows or other files as children...
+        if (hasOnlyWorkflowGroupChidlren(fileStore, monitor)) {
+            fileStore.delete(EFS.NONE, monitor);
+        } else {
+            // ... but delete contained workflow groups that are empty
+            for (AbstractExplorerFileStore childFileStore : fileStore.childStores(EFS.NONE, monitor)) {
+                deleteRemainingWorkflowGroups(childFileStore, monitor);
+            }
+        }
+
+    }
+
+    private boolean hasOnlyWorkflowGroupChidlren(final AbstractExplorerFileStore fileStore,
+        final IProgressMonitor monitor) throws CoreException {
+        if (AbstractExplorerFileStore.isWorkflowGroup(fileStore)) {
+            for (AbstractExplorerFileStore childStore : fileStore.childStores(EFS.NONE, monitor)) {
+                if (!AbstractExplorerFileStore.isWorkflowGroup(childStore)) {
+                    return false;
+                }
+                if (!hasOnlyWorkflowGroupChidlren(childStore, monitor)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /** Return "Move" or "Copy" for us in string literals such as log messages. */
@@ -241,11 +321,11 @@ public final class CopyMove {
         return m_performMove ? "Move" : "Copy";
     }
 
-    private void scheduleLocalCopyOrMove(final AbstractExplorerFileStore source,
+    private ExplorerJob scheduleLocalCopyOrMove(final AbstractExplorerFileStore source,
         final AbstractExplorerFileStore destination, final AfterRunCallback callback, final boolean move,
         final int options) {
-        ExplorerJob job = new ExplorerJob(cmdAsTextual() + " of " + source.getMountIDWithFullPath() + " to "
-                + destination.getMountIDWithFullPath()) {
+        ExplorerJob job = new ExplorerJob(
+            cmdAsTextual() + " of " + source.getMountIDWithFullPath() + " to " + destination.getMountIDWithFullPath()) {
 
             @Override
             protected IStatus run(final IProgressMonitor monitor) {
@@ -264,11 +344,23 @@ public final class CopyMove {
             }
         };
         job.schedule();
+        return job;
+    }
+
+    /**
+     * Sets the source file stores that are going to be moved/copied.
+     *
+     * @param srcFileStores a potentially empty list of source file stores
+     * @since 8.4
+     */
+    public void setSrcFileStores(final List<AbstractExplorerFileStore> srcFileStores) {
+        m_srcFileStores = new ArrayList<>(srcFileStores);
     }
 
     /** Return value of the run method. */
     public static final class CopyMoveResult {
         private final List<IStatus> m_result;
+
         private final boolean m_success;
 
         CopyMoveResult(final List<IStatus> result, final boolean success) {
