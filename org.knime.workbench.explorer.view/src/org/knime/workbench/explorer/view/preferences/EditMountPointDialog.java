@@ -379,6 +379,8 @@ public class EditMountPointDialog extends ListDialog {
                         String mountID = factory.getDefaultMountID() == null ? "" : factory.getDefaultMountID();
                         m_mountID.setText(mountID);
                     }
+
+                    setMountIdStatic(factory.isMountIdStatic());
                 }
                 validate();
             }
@@ -449,6 +451,17 @@ public class EditMountPointDialog extends ListDialog {
         }
 
         return c;
+    }
+
+    private void setMountIdStatic(final boolean isStatic) {
+        // If the mount ID is static, the components should be disabled or hidden. SRV-1284
+        m_mountID.setEnabled(!isStatic);
+        m_resetMountID.setVisible(!isStatic);
+        if (isStatic) {
+            m_mountIDHeaderText = "The Mount ID is static for this resource and cannot be edited.";
+        } else {
+            m_mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
+        }
     }
 
     /**

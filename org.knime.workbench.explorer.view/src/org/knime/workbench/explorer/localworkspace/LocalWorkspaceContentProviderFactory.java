@@ -104,6 +104,11 @@ public class LocalWorkspaceContentProviderFactory extends
         return false;
     }
 
+    @Override
+    public boolean isMountIdStatic() {
+        return true;
+    }
+
     /**
      * {@inheritDoc}
      */

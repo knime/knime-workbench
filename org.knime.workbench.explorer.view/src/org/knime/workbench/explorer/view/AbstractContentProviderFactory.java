@@ -114,6 +114,17 @@ public abstract class AbstractContentProviderFactory {
         return true;
     }
 
+
+    /**
+     * Returns whether the mount ID is static.
+     *
+     * @return Whether the mount ID is static
+     * @since 8.4
+     */
+    public boolean isMountIdStatic() {
+        return false;
+    }
+
     /**
      * Not intended to be called. Rather go through the
      * {@link ExplorerMountTable}.
