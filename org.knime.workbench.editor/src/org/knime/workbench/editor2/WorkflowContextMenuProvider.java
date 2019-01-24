@@ -66,6 +66,8 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.ui.IWorkbenchActionConstants;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.KNIMEConstants;
+import org.knime.core.node.port.PageableDataTable;
+import org.knime.core.node.port.PortType;
 import org.knime.core.node.workflow.LoopEndNode;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.SingleNodeContainer;
@@ -492,11 +494,11 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                         // skip the implicit flow var ports on "normal" nodes
                         continue;
                     }
-                    if (!Wrapper.wraps(container, NodeContainer.class)
-                        && !container.getOutPort(i).getPortType().equals(BufferedDataTable.TYPE)) {
-                        // only view on data tables are currently supported for WorkflowManagerUI and Co.
+
+                    if (!isPortTypeSupportedByNodeContainerUI(container.getOutPort(i).getPortType(), container)) {
                         continue;
                     }
+
                     action = new OpenPortViewAction(container, i, numOutPorts);
                     manager.appendToGroup("outPortViews", action);
                 }
@@ -643,4 +645,18 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
         m_actionRegistry.dispose();
     }
 
+    private static boolean isPortTypeSupportedByNodeContainerUI(final PortType ptype, final NodeContainerUI container) {
+        if (!Wrapper.wraps(container, NodeContainer.class)) {
+            if (ptype.equals(BufferedDataTable.TYPE)) {
+                return true;
+            } else if (PageableDataTable.class.isAssignableFrom(ptype.getPortObjectClass())) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            //all port types are supported by the original node container implementation
+            return true;
+        }
+    }
 }
