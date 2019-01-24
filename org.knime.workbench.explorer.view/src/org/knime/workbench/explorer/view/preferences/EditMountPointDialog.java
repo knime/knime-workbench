@@ -150,6 +150,8 @@ public class EditMountPointDialog extends ListDialog {
 
     private Button m_resetMountID;
 
+    private String m_oldMountID;
+
     /**
      * Creates a new mount point dialog for creating a new mount point.
      *
@@ -208,6 +210,7 @@ public class EditMountPointDialog extends ListDialog {
             m_mountIDval = settings.getMountID();
             m_additionalContent = settings.getContent();
             m_defaultMountID = settings.getDefaultMountID();
+            m_oldMountID = m_mountIDval;
             m_isNew = false;
         }
     }
@@ -235,6 +238,9 @@ public class EditMountPointDialog extends ListDialog {
                     if (MessageDialog.openQuestion(m_mountID.getShell(), confirmTitle, confirmMsg)) {
                         m_mountID.setText(id);
                     }
+                    // When the defaultMountID changes we know the real default mountID so it can be set as
+                    // as the old Mount ID.
+                    m_oldMountID = id;
                 }
                 validate();
             }
@@ -342,7 +348,12 @@ public class EditMountPointDialog extends ListDialog {
 
             @Override
             public void handleEvent(final Event event) {
-                m_mountID.setText(getDefaultMountID());
+                if (getDefaultMountID() != null) {
+                    // Mount ID has been retrieved, so default == old
+                    m_mountID.setText(getDefaultMountID());
+                } else {
+                    m_mountID.setText(m_oldMountID);
+                }
             }
         });
         // insert the selection list
@@ -495,7 +506,7 @@ public class EditMountPointDialog extends ListDialog {
         String id = m_mountID.getText().trim();
         String mountIDHeaderText = m_mountIDHeaderText;
         Image mountIDHeaderImage = null;
-        if (m_defaultMountID != null && !m_defaultMountID.isEmpty() && !m_defaultMountID.equals(id)) {
+        if (!StringUtils.isEmpty(m_defaultMountID) && !m_defaultMountID.equals(id)) {
             mountIDHeaderText += "\n\nChanging the default Mount ID is not recommended since it can cause\n"
                 + "issues when trying to reference server resources\n"
                 + "by the Mount ID (e.g. knime://knime-server/resource.txt).\n"
@@ -503,6 +514,14 @@ public class EditMountPointDialog extends ListDialog {
                 + "The default Mount ID is: " + m_defaultMountID;
             mountIDHeaderImage = ImageRepository.getIconImage(SharedImages.Warning);
             m_resetMountID.setEnabled(true);
+        } else if (!StringUtils.isEmpty(m_oldMountID) && !m_oldMountID.equals(id)) {
+            mountIDHeaderText += "\n\nChanging the default Mount ID is not recommended since it can cause\n"
+                    + "issues when trying to reference server resources\n"
+                    + "by the Mount ID (e.g. knime://knime-server/resource.txt).\n"
+                    + "Only change the Mount ID if you are certain of what you are doing.\n\n"
+                    + "The old Mount ID is: " + m_oldMountID;
+                mountIDHeaderImage = ImageRepository.getIconImage(SharedImages.Warning);
+                m_resetMountID.setEnabled(true);
         } else {
             m_resetMountID.setEnabled(false);
         }
