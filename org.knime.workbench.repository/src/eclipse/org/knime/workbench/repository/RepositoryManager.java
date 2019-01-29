@@ -152,6 +152,8 @@ public final class RepositoryManager {
     private final Map<String, NodeTemplate> m_nodesById =
             new HashMap<String, NodeTemplate>();
 
+    private final Root m_completeRoot = new Root();
+
     /**
      * Creates the repository model. This instantiates all contributed
      * category/node extensions found in the global Eclipse PluginRegistry, and
@@ -162,7 +164,7 @@ public final class RepositoryManager {
 
     private void readRepository(final IProgressMonitor monitor) {
         assert !m_root.hasChildren();
-        readCategories(monitor);
+        readCategories(monitor, m_root);
         if (monitor.isCanceled()) {
             return;
         }
@@ -174,7 +176,7 @@ public final class RepositoryManager {
         if (monitor.isCanceled()) {
             return;
         }
-        readMetanodes(monitor);
+        readMetanodes(monitor, m_root);
         if (monitor.isCanceled()) {
             return;
         }
@@ -182,7 +184,29 @@ public final class RepositoryManager {
         m_loadListeners.clear();
     }
 
-    private void readMetanodes(final IProgressMonitor monitor) {
+    private void readCompleteRepository(final IProgressMonitor monitor) {
+        assert !m_completeRoot.hasChildren();
+        readCategories(monitor, m_completeRoot);
+        if (monitor.isCanceled()) {
+            return;
+        }
+        readCompleteNodes(monitor);
+        if (monitor.isCanceled()) {
+            return;
+        }
+        readCompleteNodeSets(monitor);
+        if (monitor.isCanceled()) {
+            return;
+        }
+        readMetanodes(monitor, m_completeRoot);
+        if (monitor.isCanceled()) {
+            return;
+        }
+        removeEmptyCategories(m_completeRoot);
+        m_loadListeners.clear();
+    }
+
+    private void readMetanodes(final IProgressMonitor monitor, final Root root) {
         // iterate over the meta node config elements
         // and create meta node templates
         IExtension[] metanodeExtensions = getExtensions(ID_META_NODE);
@@ -200,11 +224,11 @@ public final class RepositoryManager {
                     LOGGER.debug("Found meta node definition '"
                         + metaNode.getID() + "': " + metaNode.getName());
                     for (Listener l : m_loadListeners) {
-                        l.newMetanode(m_root, metaNode);
+                        l.newMetanode(root, metaNode);
                     }
 
                     IContainerObject parentContainer =
-                            m_root.findContainer(metaNode.getCategoryPath());
+                            root.findContainer(metaNode.getCategoryPath());
                     // If parent category is illegal, log an error and
                     // append the node to the repository root.
                     if (parentContainer == null) {
@@ -212,7 +236,7 @@ public final class RepositoryManager {
                                 + "contribution: '"
                                 + metaNode.getCategoryPath()
                                 + "' - adding to root instead");
-                        m_root.addChild(metaNode);
+                        root.addChild(metaNode);
                     } else {
                         // everything is fine, add the node to its parent
                         // category
@@ -246,7 +270,7 @@ public final class RepositoryManager {
         }
     }
 
-    private void readCategories(final IProgressMonitor monitor) {
+    private void readCategories(final IProgressMonitor monitor, final Root root) {
         //
         // First, process the contributed categories
         //
@@ -303,11 +327,11 @@ public final class RepositoryManager {
                 return;
             }
             try {
-                Category category = RepositoryFactory.createCategory(m_root, e);
+                Category category = RepositoryFactory.createCategory(root, e);
                 LOGGER.debug("Found category extension '" + category.getID()
                         + "' on path '" + category.getPath() + "'");
                 for (Listener l : m_loadListeners) {
-                    l.newCategory(m_root, category);
+                    l.newCategory(root, category);
                 }
             } catch (Exception ex) {
                 String message =
@@ -323,24 +347,34 @@ public final class RepositoryManager {
         }
     }
 
-    /**
-     * @param isInExpertMode
-     */
     private void readNodes(final IProgressMonitor monitor) {
-        //
-        // Second, process the contributed nodes
-        //
-
-        IContainerObject uncategorized = m_root.findContainer("/uncategorized");
-        if (uncategorized == null) {
-            // this should never happen, but who knows...
-            uncategorized = m_root;
-        }
-
         Iterator<IConfigurationElement> it = Stream.of(RepositoryManager.getExtensions(ID_NODE))
                 .flatMap(ext -> Stream.of(ext.getConfigurationElements()))
                 .filter(elem -> !"true".equalsIgnoreCase(elem.getAttribute("deprecated")))
                 .iterator();
+        readNodes(monitor, m_root, it);
+    }
+
+    private void readCompleteNodes(final IProgressMonitor monitor) {
+        final Iterator<IConfigurationElement> it = Stream.of(RepositoryManager.getExtensions(ID_NODE))
+                .flatMap(ext -> Stream.of(ext.getConfigurationElements()))
+                .iterator();
+        readNodes(monitor, m_completeRoot, it);
+    }
+
+    /**
+     * @param isInExpertMode
+     */
+    private void readNodes(final IProgressMonitor monitor, final Root root, final Iterator<IConfigurationElement> it) {
+        //
+        // Second, process the contributed nodes
+        //
+
+        IContainerObject uncategorized = root.findContainer("/uncategorized");
+        if (uncategorized == null) {
+            // this should never happen, but who knows...
+            uncategorized = root;
+        }
 
         while (it.hasNext()) {
             IConfigurationElement elem = it.next();
@@ -354,7 +388,7 @@ public final class RepositoryManager {
                 LOGGER.debug("Found node extension '" + node.getID()
                         + "': " + node.getName());
                 for (Listener l : m_loadListeners) {
-                    l.newNode(m_root, node);
+                    l.newNode(root, node);
                 }
 
                 m_nodesById.put(node.getID(), node);
@@ -365,7 +399,7 @@ public final class RepositoryManager {
                 // Ask the root to lookup the category-container located at
                 // the given path
                 IContainerObject parentContainer =
-                        m_root.findContainer(node.getCategoryPath());
+                        root.findContainer(node.getCategoryPath());
 
                 // If parent category is illegal, log an error and append
                 // the node to the repository root.
@@ -424,9 +458,6 @@ public final class RepositoryManager {
         } // for configuration elements
     }
 
-    /**
-     * @param isInExpertMode
-     */
     private void readNodeSets(final IProgressMonitor monitor) {
         //
         // Process the contributed node sets
@@ -435,19 +466,36 @@ public final class RepositoryManager {
             .flatMap(ext -> Stream.of(ext.getConfigurationElements()))
             .filter(elem -> !"true".equalsIgnoreCase(elem.getAttribute("deprecated")))
             .iterator();
+        readNodeSets(monitor, m_root, it);
+    }
+
+    private void readCompleteNodeSets(final IProgressMonitor monitor) {
+        Iterator<IConfigurationElement> it = Stream.of(RepositoryManager.getExtensions(ID_NODE_SET))
+            .flatMap(ext -> Stream.of(ext.getConfigurationElements()))
+            .iterator();
+        readNodeSets(monitor, m_completeRoot, it);
+    }
+
+    /**
+     * @param isInExpertMode
+     */
+    private void readNodeSets(final IProgressMonitor monitor, final Root root, final Iterator<IConfigurationElement> it) {
+        //
+        // Process the contributed node sets
+        //
 
         while (it.hasNext()) {
             IConfigurationElement elem = it.next();
             try {
                 Collection<DynamicNodeTemplate> dynamicNodeTemplates =
-                        RepositoryFactory.createNodeSet(m_root, elem);
+                        RepositoryFactory.createNodeSet(root, elem);
 
                 for (DynamicNodeTemplate node : dynamicNodeTemplates) {
                     if (monitor.isCanceled()) {
                         return;
                     }
                     for (Listener l : m_loadListeners) {
-                        l.newNode(m_root, node);
+                        l.newNode(root, node);
                     }
 
                     m_nodesById.put(node.getID(), node);
@@ -458,7 +506,7 @@ public final class RepositoryManager {
                     // Ask the root to lookup the category-container located
                     // at
                     // the given path
-                    IContainerObject parentContainer = m_root
+                    IContainerObject parentContainer = root
                             .findContainer(node.getCategoryPath());
 
                     // If parent category is illegal, log an error and
@@ -469,7 +517,7 @@ public final class RepositoryManager {
                                 + "contribution: '"
                                 + node.getCategoryPath()
                                 + "' - adding to root instead");
-                        m_root.addChild(node);
+                        root.addChild(node);
                     } else {
                         // everything is fine, add the node to its parent
                         // category
@@ -610,6 +658,41 @@ public final class RepositoryManager {
     }
 
     /**
+     * Returns the complete repository root. If the repository has not yet read, it will be created during the call.
+     * Thus the first call to this method can take some time.
+     *
+     * <p>
+     * Unlike {@link RepositoryManager#getRoot(IProgressMonitor)}, the {@code Root} returned by this method will contain
+     * deprecated nodes.
+     * </p>
+     *
+     * @param monitor a progress monitor, mainly use for canceling; must not be <code>null</code>
+     *
+     * @return the root object
+     */
+    public synchronized Root getCompleteRoot(final IProgressMonitor monitor) {
+        if (!m_completeRoot.hasChildren()) {
+            readCompleteRepository(monitor);
+        }
+        return m_completeRoot;
+    }
+
+    /**
+     * Returns the complete repository root. If the repository has not yet read, it will be created during the call.
+     * Thus the first call to this method can take some time.
+     *
+     * <p>
+     * Unlike {@link RepositoryManager#getRoot()}, the {@code Root} returned by this method will contain deprecated
+     * nodes.
+     * </p>
+     *
+     * @return the root object
+     */
+    public synchronized Root getCompleteRoot() {
+        return getCompleteRoot(new NullProgressMonitor());
+    }
+
+    /**
      * Adds a listener which is notified while the node repository is loaded.
      * The listener is automatically removed from the list once the node
      * repository is fully loaded.
@@ -630,7 +713,7 @@ public final class RepositoryManager {
      * @since 2.4
      */
     public synchronized NodeTemplate getNodeTemplate(final String id) {
-        if (!m_root.hasChildren()) {
+        if (!m_root.hasChildren() && !m_completeRoot.hasChildren()) {
             readRepository(new NullProgressMonitor());
         }
         return m_nodesById.get(id);
@@ -639,12 +722,12 @@ public final class RepositoryManager {
     /**
      * Creates the node factory instance for the given fully-qualified factory class name.
      * Otherwise a respective exception will be thrown.
-     * @param factoryClassName 
+     * @param factoryClassName
      * @return a new node factory instance
-     * @throws InvalidSettingsException 
-     * @throws InstantiationException 
-     * @throws IllegalAccessException 
-     * @throws ClassNotFoundException 
+     * @throws InvalidSettingsException
+     * @throws InstantiationException
+     * @throws IllegalAccessException
+     * @throws ClassNotFoundException
      *
      * @since 3.5
      */
