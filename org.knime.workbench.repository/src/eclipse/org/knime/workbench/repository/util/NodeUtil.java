@@ -71,8 +71,18 @@ public final class NodeUtil {
      * @throws Exception thrown if the node cannot be instantiated
      */
     public static boolean isStreamable(final NodeTemplate nodeTemplate) throws Exception {
-        NodeFactory<? extends NodeModel> nf = nodeTemplate.createFactoryInstance();
-        NodeModel nm = nf.createNodeModel();
+        return isStreamable(nodeTemplate.createFactoryInstance());
+    }
+
+    /**
+     * Checks if the given {@link NodeFactory} is streamable.
+     *
+     * @param nodeFactory the {@code NodeFactory<? extends NodeModel>} to check if it is streamable
+     * @return {@code true} if the given node is streamable, {@code false} otherwise
+     * @throws Exception thrown if the node cannot be instantiated
+     */
+    public static boolean isStreamable(final NodeFactory<? extends NodeModel> nodeFactory) throws Exception {
+        NodeModel nm = nodeFactory.createNodeModel();
         //check whether the current node model overrides the #createStreamableOperator-method
         Method m = nm.getClass().getMethod("createStreamableOperator", PartitionInfo.class, PortObjectSpec[].class);
         return m.getDeclaringClass() != NodeModel.class;
