@@ -1012,6 +1012,17 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     /**
+     * This is public exposure of the AE mode exit enabler which allows for interested consumers to register themselves
+     * for notification of mode exit. This will return null until the graphical viewer has been created.
+     *
+     * @return the <code>AnnotationModeExitEnabler</code> instance created and held by this instance
+     * @see #createGraphicalViewer(Composite)
+     */
+    public AnnotationModeExitEnabler getAnnotationModeExitEnabler() {
+        return m_annotationModeExitEnabler;
+    }
+
+    /**
      * Returns the URI to the workflow. If this is a metanode editor, it traverses up until it finds the top. Should
      * never return null - returns null if it has no file resource AND no parent....
      * @return the URI to the workflow. If this is a metanode editor, it traverses up until it finds the top.

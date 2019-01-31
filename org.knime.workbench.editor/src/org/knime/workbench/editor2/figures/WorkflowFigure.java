@@ -75,7 +75,9 @@ public class WorkflowFigure extends FreeformLayeredPane {
 
     int m_backgroundWatermarkImageHeight;
 
-    private final TentStakeFigure m_tentStakeFigure;
+    private final TentStakeFigure m_northTentStakeFigure;
+    private final TentStakeFigure m_southTentStakeFigure;
+    private final TentStakeFigure m_eastTentStakeFigure;
 
     /**
      * New workflow root figure.
@@ -94,8 +96,12 @@ public class WorkflowFigure extends FreeformLayeredPane {
         // not opaque, so that we can directly select on the "background" layer
         setOpaque(false);
 
-        m_tentStakeFigure = new TentStakeFigure();
-        add(m_tentStakeFigure);
+        m_northTentStakeFigure = new TentStakeFigure();
+        add(m_northTentStakeFigure);
+        m_southTentStakeFigure = new TentStakeFigure();
+        add(m_southTentStakeFigure);
+        m_eastTentStakeFigure = new TentStakeFigure();
+        add(m_eastTentStakeFigure);
 
         if (backgroundWatermark != null) {
             ImageData imgData = backgroundWatermark.getImageData();
@@ -173,30 +179,111 @@ public class WorkflowFigure extends FreeformLayeredPane {
     }
 
     /**
-     * This drags out the tent stake to create a white space buffer in the canvas of the specified pixel height (so, if
-     * the vertical scroll bar were to be moved to the zero location the user would see a whitespace buffer of the
-     * specified pixel height before the start of the actual canvas at (0, 0)).
+     * This drags out the tent stake northwards to create a top-side white space buffer in the canvas of the specified
+     * pixel height (so, if the vertical scroll bar were to be moved to the zero location the user would see a
+     * whitespace buffer of the specified pixel height before the start of the actual canvas at (0, 0)).
      *
-     * @param pixelHeight the height in pixels of the white space buffer
+     * @param pixelHeight the height in pixels of the white space buffer (a positive value;) a zero value means the
+     *            stake will be move to a location where it doesn't affect the canvas' bounds.
      */
-    public void placeTentStakeToAllowForWhitespaceBuffer(final int pixelHeight) {
-        m_tentStakeFigure.setLocation(new Point(0, -pixelHeight));
+    public void placeTentStakeToAllowForTopWhitespaceBuffer(final int pixelHeight) {
+        final int y = -pixelHeight;
+
+        // only bother setting if we're "removing" the stake (returning the y-origin to 0) or if the stake is
+        //      being moved into a more negative y-value
+        if ((y == 0) || (m_northTentStakeFigure.getLocation().y > y)) {
+            m_northTentStakeFigure.setLocation(new Point(0, y));
+        }
     }
 
+    /**
+     * This drags out the tent stake eastwards to create a right-side white space buffer in the canvas of the specified
+     * pixel width (so, if the horizontal scroll bar were to be moved to the previous edge of the workflow, the user
+     * would find a whitespace buffer of the specified pixel width continuing rightward.)
+     *
+     * @param pixelWidth the width in pixels of the white space buffer (a positive value;) a zero value means the
+     *            stake will be move to a location where it doesn't affect the canvas' bounds.
+     */
+    public void placeTentStakeToAllowForRightWhitespaceBuffer(final int pixelWidth) {
+        if (pixelWidth == 0) {
+            m_eastTentStakeFigure.setLocation(new Point(0, 0));
+
+            return;
+        }
+
+        // We handle this logic differently than top since we are not tracking bounds prior to stake placement and
+        //      so therefore do not know whether this width request would be satisfied by a prior stake placement
+        //      (which we can judge in the top scenario, because we always have the negative space.) So we treat
+        //      a call to this method as a request for an additional pixelWidth increase to the right.
+        final Rectangle canvasBounds = getBounds();
+        m_eastTentStakeFigure.setLocation(new Point((canvasBounds.width + pixelWidth), canvasBounds.height));
+    }
 
     /**
-     * This figure is an invisible 1 x 1 figure which represents the stake we 'stretch the canvas with by continual
-     * re-placement (not replacement) in the northwest corner of the workflow canvas.' We do this trivial subclassing
-     * only to allow simple figure sussing when walking the children of the root figure.
+     * This drags out the tent stake southwards to create a bottom-side white space buffer in the canvas of the
+     * specified pixel height (so, if the vertical scroll bar were to be moved to the previous edge of the workflow, the
+     * user would find a whitespace buffer of the specified pixel width continuing downward.)
+     *
+     * @param pixelHeight the height in pixels of the white space buffer (a positive value;) a zero value means the
+     *            stake will be move to a location where it doesn't affect the canvas' bounds.
+     */
+    public void placeTentStakeToAllowForBottomWhitespaceBuffer(final int pixelHeight) {
+        if (pixelHeight == 0) {
+            m_southTentStakeFigure.setLocation(new Point(0, 0));
+
+            return;
+        }
+
+        // We handle this logic differently than top since we are not tracking bounds prior to stake placement and
+        //      so therefore do not know whether this height request would be satisfied by a prior stake placement
+        //      (which we can judge in the top scenario, because we always have the negative space.) So we treat
+        //      a call to this method as a request for an additional pixelHeight increase to the bottom.
+        final Rectangle canvasBounds = getBounds();
+        m_southTentStakeFigure.setLocation(new Point(canvasBounds.width, (canvasBounds.height + pixelHeight)));
+    }
+
+    /**
+     * This will return <code>true</code> if there is a tent stake which is extending the 'canvas' at the top.
+     *
+     * @return <code>true</code> if the tent stake has been placed in a top-side canvas augmenting position.
+     */
+    public boolean northTentStakeHasBeenPlaced() {
+        return (m_northTentStakeFigure.getLocation().y < 0);
+    }
+
+    /**
+     * This will return <code>true</code> if there is a tent stake which is extending the 'canvas' at the bottom.
+     *
+     * @return <code>true</code> if the tent stake has been placed in a bottom-side canvas augmenting position.
+     */
+    public boolean southTentStakeHasBeenPlaced() {
+        final Point location = m_southTentStakeFigure.getLocation();
+
+        return ((location.x != 0) || (location.y != 0));
+    }
+
+    /**
+     * This will return <code>true</code> if there is a tent stake which is extending the 'canvas' to the right.
+     *
+     * @return <code>true</code> if the tent stake has been placed in a right-side canvas augmenting position.
+     */
+    public boolean eastTentStakeHasBeenPlaced() {
+        final Point location = m_eastTentStakeFigure.getLocation();
+
+        return ((location.x != 0) || (location.y != 0));
+    }
+
+    /**
+     * This figure is an invisible 1 x 1 figure which represent the stakes with which we 'stretch the canvas with by
+     * continual re-placement (not replacement) in the workflow canvas.' We do this trivial subclassing only to allow
+     * simple figure sussing when walking the children of the root figure.
      */
     private static class TentStakeFigure extends Figure {
-
         /**
          * Simply set the size of our figure to be 1 x 1.
          */
         public TentStakeFigure() {
             setSize(new Dimension(1, 1));
         }
-
     }
 }

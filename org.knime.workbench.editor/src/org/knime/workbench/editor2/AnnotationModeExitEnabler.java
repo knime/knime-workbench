@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.editor2;
 
+import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.draw2d.FigureCanvas;
@@ -69,6 +70,23 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  * @author loki der quaeler
  */
 public class AnnotationModeExitEnabler implements MouseListener {
+    /**
+     * Classes interested in being notified when annotation mode is exiting due to canvas click-away should implement
+     * this interface and register themselves with the instance of this attached to the workflow's
+     * <code>WorkflowEditor</code>.
+     */
+    public interface ExitListener {
+        /**
+         * Implementors will have this method invoked prior to the exit mode action being triggered <b>and also</b>
+         * prior to the timestamp being set on the exit action. If the exit mode action would result in the listener
+         * being "disposed," the implementor instance should ensure that they remove themselves as a listener.
+         *
+         * @param enabler the instance of this class which is notifying the listener
+         */
+        void annotationModeWillExit(AnnotationModeExitEnabler enabler);
+    }
+
+
     /**
      * @see #annotationDragTrackerShouldVeto(Point)
      */
@@ -92,10 +110,22 @@ public class AnnotationModeExitEnabler implements MouseListener {
      */
     public static boolean annotationDragTrackerShouldVeto(final Point p) {
         if (p.equals(LAST_MODE_EXIT_POINT)) {
-            return ((System.currentTimeMillis() - LAST_MODE_EXIT.get()) < UNREASONABLY_QUICK_INTER_EVENT_TIME);
+            return modeExitOccurredWithinTimeWindow(UNREASONABLY_QUICK_INTER_EVENT_TIME);
         }
 
         return false;
+    }
+
+    /**
+     * A publicly available way to query whether the last annotation mode exit was triggered within a given time.
+     *
+     * @param timeWindowInMS the maximum amount of time since the mode exit occurred
+     * @return true if the last mode exit occurred between now and <code>timeWindowInMS</code> ms ago.
+     */
+    public static boolean modeExitOccurredWithinTimeWindow(final long timeWindowInMS) {
+        final long delta = System.currentTimeMillis() - LAST_MODE_EXIT.get();
+
+        return delta < timeWindowInMS;
     }
 
     private static void modeExitIsOccurring(final Point p) {
@@ -108,6 +138,8 @@ public class AnnotationModeExitEnabler implements MouseListener {
 
     private final WorkflowEditor m_workflowEditor;
 
+    private final HashSet<ExitListener> m_listeners;
+
     /**
      * @param editor The editor containing the graphical viewer from which we'll track mouse events.
      */
@@ -118,8 +150,28 @@ public class AnnotationModeExitEnabler implements MouseListener {
 
         m_dragPositionProcessor = new DragPositionProcessor(viewer);
 
+        m_listeners = new HashSet<>();
+
         final FigureCanvas fc = getFigureCanvas();
         fc.addMouseListener(this);
+    }
+
+    /**
+     * @param listener an implementor of the ExitListener inner-interface
+     */
+    public void addListener(final ExitListener listener) {
+        synchronized(m_listeners) {
+            m_listeners.add(listener);
+        }
+    }
+
+    /**
+     * @param listener an implementor of the ExitListener inner-interface
+     */
+    public void removeListener(final ExitListener listener) {
+        synchronized(m_listeners) {
+            m_listeners.remove(listener);
+        }
     }
 
     /**
@@ -131,6 +183,14 @@ public class AnnotationModeExitEnabler implements MouseListener {
 
             if (fc != null) {
                 fc.removeMouseListener(this);
+            }
+        }
+    }
+
+    private void messageListeners() {
+        synchronized(m_listeners) {
+            for (final ExitListener listener : m_listeners) {
+                listener.annotationModeWillExit(this);
             }
         }
     }
@@ -164,6 +224,8 @@ public class AnnotationModeExitEnabler implements MouseListener {
                 final ToggleEditorModeAction action = new ToggleEditorModeAction(m_workflowEditor, false);
                 final NodeContainerEditPart node = m_dragPositionProcessor.getNode();
                 final ConnectionContainerEditPart connection = m_dragPositionProcessor.getEdge();
+
+                messageListeners();
 
                 modeExitIsOccurring(m_dragPositionProcessor.getLastPosition());
 

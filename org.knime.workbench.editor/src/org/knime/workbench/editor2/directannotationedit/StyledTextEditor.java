@@ -54,29 +54,28 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.eclipse.core.commands.Command;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.draw2d.FigureCanvas;
+import org.eclipse.draw2d.Viewport;
 import org.eclipse.jface.viewers.CellEditor;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.ExtendedModifyEvent;
-import org.eclipse.swt.custom.ExtendedModifyListener;
 import org.eclipse.swt.custom.StackLayout;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.custom.VerifyKeyListener;
-import org.eclipse.swt.events.FocusAdapter;
+import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
-import org.eclipse.swt.events.ModifyEvent;
-import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
@@ -87,20 +86,36 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.commands.ICommandService;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
 import org.knime.core.node.workflow.NodeAnnotation;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.editor2.AnnotationModeExitEnabler;
+import org.knime.workbench.editor2.ViewportPinningGraphicalViewer;
+import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.FontStore;
+import org.knime.workbench.editor2.figures.WorkflowFigure;
 
 /**
  * @author ohl, KNIME AG, Zurich, Switzerland
  */
-public class StyledTextEditor extends CellEditor {
-    private static final boolean PLATFORM_IS_MAC = Platform.OS_MACOSX.equals(Platform.getOS());
+public class StyledTextEditor extends CellEditor implements AnnotationModeExitEnabler.ExitListener {
+    static final boolean PLATFORM_IS_MAC = Platform.OS_MACOSX.equals(Platform.getOS());
+    static final boolean PLATFORM_IS_LINUX = Platform.OS_LINUX.equals(Platform.getOS());
+    static final boolean PLATFORM_IS_WINDOWS = Platform.OS_WIN32.equals(Platform.getOS());
+
+    private static final AtomicBoolean DISABLED_MOD1_I_HANDLER = new AtomicBoolean(false);
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(StyledTextEditor.class);
+
+    private static final int FONT_COLOR_SELECTION = 0;
+    private static final int BORDER_COLOR_SELECTION = 1;
+    private static final int BACKGROUND_COLOR_SELECTION = 2;
 
     /**
      * This value was originally 90ms, and 90ms still works fine when running this launched out of Eclipse, but there
@@ -110,11 +125,23 @@ public class StyledTextEditor extends CellEditor {
      *
      * @see #workflowContextMenuShouldBeVetoed()
      */
+    // Context menu subsystem
     private static final long INHUMANLY_QUICK_INTER_EVENT_TIME = 300;
 
     // Perfectly fine that this is shared across all instances as the amount of time it would take to switch workflow
     // editors falls very far outside our "inhumanly quick" boundary.
+    // Context menu subsystem
     private static final AtomicLong LAST_STYLE_CONTEXT_MENU_CLOSE = new AtomicLong(-1);
+
+    // Context menu subsystem
+    private static final RGB[] DEFAULT_COLORS = new RGB[]{
+        fromHex("CDE280"), fromHex("D8D37B"),
+        fromHex("93DDD2"), fromHex("D0D2B5"),
+        fromHex("ADDF9E"), fromHex("E8AFA7"),
+        fromHex("C4CBE0"), fromHex("E3B67D")};
+
+    // Context menu subsystem
+    private static RGB[] LAST_COLORS = null;
 
     private static final int TAB_SIZE;
 
@@ -122,23 +149,14 @@ public class StyledTextEditor extends CellEditor {
         // set tab size for win and linux and mac differently (it even depends on the zoom level, yuk!)
         if (PLATFORM_IS_MAC) {
             TAB_SIZE = 8;
-        } else if (Platform.OS_LINUX.equals(Platform.getOS())) {
+        } else if (PLATFORM_IS_LINUX) {
             TAB_SIZE = 8;
         } else {
             TAB_SIZE = 16;
         }
     }
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(StyledTextEditor.class);
-
-    private static final RGB[] DEFAULT_COLORS = new RGB[]{//
-        fromHex("CDE280"), fromHex("D8D37B"), //
-        fromHex("93DDD2"), fromHex("D0D2B5"), //
-        fromHex("ADDF9E"), fromHex("E8AFA7"), //
-        fromHex("C4CBE0"), fromHex("E3B67D")};
-
-    private static RGB[] lastColors = null;
-
+    // Context menu subsystem
     static void markStyleDecorationCloseTime() {
         LAST_STYLE_CONTEXT_MENU_CLOSE.set(System.currentTimeMillis());
     }
@@ -150,6 +168,7 @@ public class StyledTextEditor extends CellEditor {
      *
      * @return true if the workflow context menu should not be shown, false if it should be shown
      */
+    // Context menu subsystem
     public static boolean workflowContextMenuShouldBeVetoed() {
         if ((PLATFORM_IS_MAC)
               && ((System.currentTimeMillis() - LAST_STYLE_CONTEXT_MENU_CLOSE.get()) < INHUMANLY_QUICK_INTER_EVENT_TIME)) {
@@ -159,6 +178,25 @@ public class StyledTextEditor extends CellEditor {
         return false;
     }
 
+    private static void disableHandlerWithItalicKeybindingConflict () {
+        if (! DISABLED_MOD1_I_HANDLER.getAndSet(true)) {
+            ICommandService cService = PlatformUI.getWorkbench().getService(ICommandService.class);
+            Command command = cService.getCommand("org.eclipse.ui.file.properties");
+
+            command.undefine();
+
+            LOGGER.debug("We have disabled the command for org.eclipse.ui.file.properties");
+        }
+    }
+
+    // Context menu subsystem
+    private static RGB fromHex(final String hex) {
+        int color = Integer.parseInt(hex, 16);
+        int r = (color >> 16) & 255;
+        int g = (color >> 8) & 255;
+        int b = color & 255;
+        return new RGB(r, g, b);
+    }
 
 
     private StyledText m_styledText;
@@ -184,13 +222,23 @@ public class StyledTextEditor extends CellEditor {
 
     private Color m_backgroundColor = null;
 
-    private final AtomicBoolean m_allowFocusLost = new AtomicBoolean(true);
+    private final AtomicBoolean m_allowFocusLoss = new AtomicBoolean(true);
 
+    // These four are for the context menu
     private MenuItem m_rightAlignMenuItem;
-
     private MenuItem m_centerAlignMenuItem;
-
     private MenuItem m_leftAlignMenuItem;
+    private MenuItem[] m_alignmentMenuItems;
+
+    private AnnotationEditFloatingToolbar m_toolbar;
+    private final AtomicBoolean m_toolbarDismissalShouldRemoveNorthTentStake = new AtomicBoolean(false);
+    private final AtomicBoolean m_toolbarDismissalShouldRemoveSouthTentStake = new AtomicBoolean(false);
+    private final AtomicBoolean m_toolbarDismissalShouldRemoveEastTentStake = new AtomicBoolean(false);
+
+    private ColorDropDown m_colorDropDown;
+
+    private int m_currentColorSelectionTarget;
+
 
     /**
      * Creates a workflow annotation editor (with the font set to workflow annotations default font - see
@@ -198,6 +246,8 @@ public class StyledTextEditor extends CellEditor {
      */
     public StyledTextEditor() {
         super();
+
+        disableHandlerWithItalicKeybindingConflict();
     }
 
     /**
@@ -205,6 +255,8 @@ public class StyledTextEditor extends CellEditor {
      */
     public StyledTextEditor(final Composite parent) {
         super(parent);
+
+        disableHandlerWithItalicKeybindingConflict();
     }
 
     /**
@@ -213,6 +265,8 @@ public class StyledTextEditor extends CellEditor {
      */
     public StyledTextEditor(final Composite parent, final int style) {
         super(parent, style);
+
+        disableHandlerWithItalicKeybindingConflict();
     }
 
     /**
@@ -221,19 +275,155 @@ public class StyledTextEditor extends CellEditor {
     @Override
     protected Control createControl(final Composite parent) {
         m_panel = new Composite(parent, SWT.NONE);
-        StackLayout layout = new StackLayout();
+
+        final StackLayout layout = new StackLayout();
         m_panel.setLayout(layout);
+
         layout.topControl = createStyledText(m_panel);
         createShadowText(m_panel);
         applyBackgroundColor();
+
+        m_toolbar = new AnnotationEditFloatingToolbar(parent, this);
+        m_colorDropDown = new ColorDropDown(this, false);
+        m_toolbar.getEditAssetGroup().addAssetProvider(m_colorDropDown);
+        m_panel.addListener(SWT.Show, (e) -> {
+            placeToolbarAndEnsureVisible(true);
+        });
+        m_panel.addListener(SWT.Hide, (e) -> {
+            if (!m_colorDropDown.customColorChooserWasDisplayedInTheLastTimeWindow(400)) {
+                m_colorDropDown.setVisible(false);
+                hideToolbar();
+            }
+        });
+
+        final WorkflowEditor we =
+                (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+        we.getAnnotationModeExitEnabler().addListener(this);
+
         return m_panel;
     }
 
-    private Control createShadowText(final Composite parent) {
+    void placeToolbarAndEnsureVisible(final boolean includeScroll) {
+        final ViewportPinningGraphicalViewer viewer = ViewportPinningGraphicalViewer.getActiveViewer();
+        final WorkflowFigure workflowFigure = viewer.getWorkflowFigure();
+        final org.eclipse.draw2d.geometry.Rectangle workflowFigureBounds = workflowFigure.getBounds();
+        final FigureCanvas figureCanvas = (FigureCanvas)viewer.getControl();
+        final Viewport viewport = figureCanvas.getViewport();
+        final org.eclipse.draw2d.geometry.Point viewportLocation = viewport.getViewLocation();
+        final org.eclipse.draw2d.geometry.Rectangle viewportBounds = viewport.getBounds();
+        final Point annotationLocation = m_panel.getLocation();
+        final Point toolbarSize = m_toolbar.getSize();
+        final int localSpaceX = annotationLocation.x;
+        // +15 to account for a potential scroll bar obscuring the canvas
+        final int localSpaceX2 = annotationLocation.x + toolbarSize.x + m_colorDropDown.getBounds().width + 15;
+        final int localSpaceY = (m_panel.getLocation().y - toolbarSize.y - 14);
+        // this is the very bottom of the tallest displayed dropdown of the toolbar
+        final int localSpaceY2Prime =
+            (localSpaceY + toolbarSize.y + m_toolbar.getRequiredMinimumHeightForDropdownAssets());
+        final int absoluteSpaceX2 = viewportLocation.x + localSpaceX2;
+        final int absoluteSpaceY = viewportLocation.y + localSpaceY;
+        final int absoluteSpaceY2Prime = viewportLocation.y + localSpaceY2Prime;
+        final int preferredViewportY = (localSpaceY - 3);
+        final boolean needUpwardScroll = (preferredViewportY < viewportLocation.y);
+        final boolean needDownwardScroll = (localSpaceY2Prime > viewportBounds.height);
+        final boolean needRightwardScroll = (localSpaceX2 > viewportBounds.width);
+
+        if (absoluteSpaceX2 > workflowFigureBounds.width) {
+            final int bufferWidth = (absoluteSpaceX2 - workflowFigureBounds.width) + 6;
+
+            m_toolbarDismissalShouldRemoveEastTentStake.set(!workflowFigure.eastTentStakeHasBeenPlaced());
+
+            workflowFigure.placeTentStakeToAllowForRightWhitespaceBuffer(bufferWidth);
+        }
+
+        if (absoluteSpaceY2Prime > workflowFigureBounds.height) {
+            final int bufferHeight = (absoluteSpaceY2Prime - workflowFigureBounds.height) + 6;
+
+            m_toolbarDismissalShouldRemoveSouthTentStake.set(!workflowFigure.southTentStakeHasBeenPlaced());
+
+            workflowFigure.placeTentStakeToAllowForBottomWhitespaceBuffer(bufferHeight);
+        }
+
+        if (absoluteSpaceY < 0) {
+            m_toolbarDismissalShouldRemoveNorthTentStake.set(!workflowFigure.northTentStakeHasBeenPlaced());
+
+            workflowFigure.placeTentStakeToAllowForTopWhitespaceBuffer(-(absoluteSpaceY - 6));
+        }
+
+        if (includeScroll && (needUpwardScroll || needDownwardScroll || needRightwardScroll)) {
+            final int xLocation;
+            final int yLocation;
+            final int scrollX;
+            final int scrollY;
+
+            if (needRightwardScroll) {
+                final int xTranslate = (localSpaceX2 - viewportBounds.width) + 3;
+
+                xLocation = localSpaceX - xTranslate;
+                scrollX = viewportLocation.x + xTranslate;
+            } else {
+                xLocation = localSpaceX;
+                scrollX = viewportLocation.x;
+            }
+
+            if (needUpwardScroll) {
+                yLocation = 3;
+                scrollY = absoluteSpaceY - yLocation;
+            } else if (needDownwardScroll) {
+                final int yTranslate = (localSpaceY2Prime - viewportBounds.height);
+
+                yLocation = localSpaceY - yTranslate;
+                scrollY = viewportLocation.y + yTranslate;
+            } else {
+                yLocation = localSpaceY;
+                scrollY = viewportLocation.y;
+            }
+
+            m_styledText.getDisplay().asyncExec(() -> {
+                figureCanvas.scrollTo(scrollX, scrollY);
+
+                m_toolbar.setLocation(xLocation, yLocation);
+                if (!m_toolbar.isVisible()) {
+                    m_toolbar.setVisible(true);
+                }
+            });
+
+            return;
+        }
+
+        m_toolbar.setLocation(localSpaceX, localSpaceY);
+        if (!m_toolbar.isVisible()) {
+            m_toolbar.setVisible(true);
+        }
+    }
+
+    private void hideToolbar() {
+        m_toolbar.setVisible(false);
+
+        if (m_toolbarDismissalShouldRemoveNorthTentStake != null) {
+            final boolean removeNorthStake = m_toolbarDismissalShouldRemoveNorthTentStake.getAndSet(false);
+            final boolean removeSouthStake = m_toolbarDismissalShouldRemoveSouthTentStake.getAndSet(false);
+            final boolean removeEastStake = m_toolbarDismissalShouldRemoveEastTentStake.getAndSet(false);
+            if (removeNorthStake || removeSouthStake || removeEastStake) {
+                final WorkflowFigure workflowFigure = ViewportPinningGraphicalViewer.getActiveViewer().getWorkflowFigure();
+
+                if (removeNorthStake) {
+                    workflowFigure.placeTentStakeToAllowForTopWhitespaceBuffer(0);
+                }
+                if (removeSouthStake) {
+                    workflowFigure.placeTentStakeToAllowForBottomWhitespaceBuffer(0);
+                }
+                if (removeEastStake) {
+                    workflowFigure.placeTentStakeToAllowForRightWhitespaceBuffer(0);
+                }
+            }
+        }
+    }
+
+    private void createShadowText(final Composite parent) {
         m_shadowStyledText = new StyledText(parent, SWT.MULTI | SWT.FULL_SELECTION);
         m_shadowStyledText.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
         syncShadowWithEditor();
-        return m_shadowStyledText;
     }
 
     private void syncShadowWithEditor() {
@@ -257,10 +447,14 @@ public class StyledTextEditor extends CellEditor {
         m_styledText.setAlignment(SWT.LEFT);
         m_styledText.setText("");
         m_styledText.setTabs(TAB_SIZE);
-        m_styledText.addVerifyKeyListener(new VerifyKeyListener() {
-            @Override
-            public void verifyKey(final VerifyEvent event) {
-                if (event.character == SWT.CR && (event.stateMask & SWT.MOD1) != 0) {
+        m_styledText.addVerifyKeyListener((event) -> {
+            if ((event.stateMask & SWT.MOD1) != 0) {
+                if (event.character == SWT.CR) {
+                    event.doit = false;
+                } else if ((PLATFORM_IS_LINUX || PLATFORM_IS_WINDOWS) && (event.keyCode == 105)) {
+                    // Luckily the moronic SWT design lets us veto the key event which would insert a tab (aliased to ctrl-i)
+                    //      but that event, emitted as a ListenerEvent, is still picked up by our <code>SWT.KeyDown</code>
+                    //      listener.
                     event.doit = false;
                 }
             }
@@ -268,36 +462,52 @@ public class StyledTextEditor extends CellEditor {
         // forward some events to the cell editor
         m_styledText.addKeyListener(new KeyAdapter() {
             @Override
-            public void keyReleased(final KeyEvent e) {
-                keyReleaseOccured(e);
+            public void keyReleased(final KeyEvent ke) {
+                keyReleaseOccured(ke);
             }
         });
-        m_styledText.addFocusListener(new FocusAdapter() {
-            /**
-             * {@inheritDoc}
-             */
+        m_styledText.addListener(SWT.KeyDown, (e) -> {
+            if ((e.stateMask & SWT.MOD1) != 0) {
+                if (e.keyCode == 'b') {
+                    setSWTStyle(SWT.BOLD);
+                    m_toolbar.updateToolbarToReflectState();
+                } else if ((e.keyCode == 'i') || ((PLATFORM_IS_LINUX || PLATFORM_IS_WINDOWS) && (e.keyCode == 105))) {
+                    setSWTStyle(SWT.ITALIC);
+                    m_toolbar.updateToolbarToReflectState();
+                }
+            }
+        });
+        m_styledText.addFocusListener(new FocusListener() {
             @Override
-            public void focusLost(final org.eclipse.swt.events.FocusEvent e) {
-                // close the editor only if called directly (not as a side
-                // effect of an opening font editor, for instance)
-                if (m_allowFocusLost.get()) {
+            public void focusGained(final FocusEvent fe) {
+                if (m_toolbar != null) {
+                    m_toolbar.updateToolbarToReflectState();
+                    m_toolbar.ensureEditAssetsAreNotVisible();
+                }
+                if (m_colorDropDown.isVisible()) {
+                    m_colorDropDown.setVisible(false);
+                }
+            }
+            @Override
+            public void focusLost(final FocusEvent e) {
+                if (m_allowFocusLoss.get()
+                    && (!m_colorDropDown.customColorChooserWasDisplayedInTheLastTimeWindow(400))) {
                     lostFocus();
                 }
             }
         });
-        m_styledText.addModifyListener(new ModifyListener() {
-            @Override
-            public void modifyText(final ModifyEvent e) {
-                // super marks it dirty (otherwise no commit at the end)
-                fireEditorValueChanged(true, true);
+        m_styledText.addCaretListener((e) -> {
+            if (m_toolbar != null) {
+                m_toolbar.updateToolbarToReflectState();
             }
         });
-        m_styledText.addExtendedModifyListener(new ExtendedModifyListener() {
-            @Override
-            public void modifyText(final ExtendedModifyEvent event) {
-                if (event.length > 0) {
-                    textInserted(event.start, event.length);
-                }
+        m_styledText.addModifyListener((event) -> {
+            // super marks it dirty (otherwise no commit at the end)
+            fireEditorValueChanged(true, true);
+        });
+        m_styledText.addExtendedModifyListener((event) -> {
+            if (event.length > 0) {
+                textInserted(event.start, event.length);
             }
         });
         m_styledText.addSelectionListener(new SelectionListener() {
@@ -312,10 +522,39 @@ public class StyledTextEditor extends CellEditor {
             }
         });
         m_styledText.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+
+        // Context menu subsystem
         addMenu(m_styledText);
-        // toolbar gets created first - enable its style buttons!
+
+        // enable the style buttons as appropriate
+        // Context menu subsystem
         selectionChanged();
+
         return m_styledText;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void annotationModeWillExit(final AnnotationModeExitEnabler enabler) {
+        setFocusLossAllowed(true);
+
+        m_toolbar.ensureEditAssetsAreNotVisible();
+
+        if (m_colorDropDown.isVisible()) {
+            m_colorDropDown.setVisible(false);
+        }
+
+        lostFocus();
+
+        // we can't remove ourselves from the listeners list in the enabler in this thread because this thread has
+        //      the synchronization lock on the collection structure (and so the the removal from the collection
+        //      could happen midst iteration involved in messaging the listeners - resulting in a
+        //      <code>ConcurrentModificationException</code> being thrown.
+        (new Thread(() -> {
+            enabler.removeListener(this);
+        })).start();
     }
 
     /**
@@ -330,12 +569,153 @@ public class StyledTextEditor extends CellEditor {
     }
 
     /**
+     * @return the current alignment (SWT.LEFT, .CENTER, .RIGHT) of the text
+     */
+    int getCurrentAlignment() {
+        return m_styledText.getAlignment();
+    }
+
+    /**
+     * @return the current color of the background
+     */
+    Color getCurrentBackgroundColor() {
+        return m_backgroundColor;
+    }
+
+    /**
+     * @return the current color of the border
+     */
+    Color getCurrentBorderColor() {
+        return m_styledText.getMarginColor();
+    }
+
+    /**
+     * @return the current width of the border
+     */
+    int getCurrentBorderWidth() {
+        return m_styledText.getRightMargin();
+    }
+
+    /**
+     * @return the current font color of the selected text (if more than one range is in the selection, and they have
+     *         differing colors, null will be returned) or of the style at the current cursor position if there is no
+     *         selection.
+     */
+    Color getCurrentFontColor() {
+        List<StyleRange> selection = getStylesInSelection();
+
+        if (selection.size() == 0) {
+            final StyleRange styleRange = getStyleRangeAtCaret();
+
+            return (styleRange != null)
+                        ? (styleRange.foreground != null) ? styleRange.foreground
+                                                          : AnnotationEditPart.getAnnotationDefaultForegroundColor()
+                        : m_styledText.getForeground();
+        } else {
+            Color color = null;
+
+            for (final StyleRange styleRange : selection) {
+                if (color == null) {
+                    color = styleRange.foreground;
+
+                    if (color == null) {
+                        color = AnnotationEditPart.getAnnotationDefaultForegroundColor();
+                    }
+                } else {
+                    final Color c = styleRange.foreground;
+
+                    if ((!color.equals(c))
+                        && ((c != null) || (!color.equals(AnnotationEditPart.getAnnotationDefaultForegroundColor())))) {
+                        return null;
+                    }
+                }
+            }
+
+            return color;
+        }
+    }
+
+    /**
+     * @return the current font size of the selected text (if more than one range is in the selection, and they have
+     *         differing font sizes, -1 will be returned) or of the style at the current cursor position if there is no
+     *         selection.
+     */
+    int getCurrentFontSize() {
+        List<StyleRange> selection = getStylesInSelection();
+
+        if (selection.size() == 0) {
+            final StyleRange styleRange = getStyleRangeAtCaret();
+            final Font f = (styleRange != null) ? styleRange.font : m_styledText.getFont();
+
+            return f.getFontData()[0].getHeight();
+        } else {
+            int size = Integer.MIN_VALUE;
+
+            for (final StyleRange styleRange : selection) {
+                if (size == Integer.MIN_VALUE) {
+                    size = styleRange.font.getFontData()[0].getHeight();
+                } else {
+                    final int fontSize = styleRange.font.getFontData()[0].getHeight();
+
+                    if (fontSize != size) {
+                        return -1;
+                    }
+                }
+            }
+
+            return size;
+        }
+    }
+
+    /**
+     * @return the current font style of the selected text (if more than one range is in the selection, and they have
+     *         differing font styles, this will be a union of all styles) or of the style at the current cursor
+     *         position if there is no selection.
+     */
+    int getCurrentFontStyle() {
+        List<StyleRange> selection = getStylesInSelection();
+
+        if (selection.size() == 0) {
+            final StyleRange styleRange = getStyleRangeAtCaret();
+            final Font f = (styleRange != null) ? styleRange.font : m_styledText.getFont();
+
+            return f.getFontData()[0].getStyle();
+        } else {
+            int style = 0;
+
+            for (final StyleRange styleRange : selection) {
+                style |= styleRange.font.getFontData()[0].getStyle();
+            }
+
+            return style;
+        }
+    }
+
+    void setFocusLossAllowed(final boolean flag) {
+        // another funny little platform-ism; on Linux, the created control gets an SWT.Hide during the control
+        //      creation - which is during this super's init, which hasn't yet construct this ivar... sigh.
+        if (m_allowFocusLoss != null) {
+            m_allowFocusLoss.set(flag);
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     protected void fireEditorValueChanged(final boolean oldValidState, final boolean newValidState) {
         syncShadowWithEditor();
         super.fireEditorValueChanged(oldValidState, newValidState);
+    }
+
+    private StyleRange getStyleRangeAtCaret() {
+        final int offset = m_styledText.getCaretOffset();
+
+        if (offset >= m_styledText.getCharCount()) {
+            return null;
+        }
+
+        return m_styledText.getStyleRangeAtOffset(offset);
     }
 
     /**
@@ -373,159 +753,23 @@ public class StyledTextEditor extends CellEditor {
     }
 
     private void selectionChanged() {
-        boolean enabled = true;
-        int[] sel = m_styledText.getSelectionRanges();
-        if (sel == null || sel.length != 2) {
-            enabled = false;
-        } else {
-            int length = sel[1];
-            enabled = (length > 0);
+        if (m_toolbar != null) {
+            m_toolbar.updateToolbarToReflectState();
         }
+
         fireEnablementChanged(COPY);
         fireEnablementChanged(CUT);
-        enableStyleButtons(enabled);
-    }
 
-    private void enableStyleButtons(final boolean enableThem) {
-        if (m_enableOnSelectedTextMenuItems != null) {
-            for (MenuItem action : m_enableOnSelectedTextMenuItems) {
-                action.setEnabled(enableThem);
-            }
-        }
-    }
-
-    private void addMenu(final Composite parent) {
-        Menu menu = new Menu(parent);
-        // On some Linux systems the right click triggers focus loss, we need to disable this while the menu is open
-        menu.addListener(SWT.Show, new Listener() {
-            @Override
-            public void handleEvent(final Event event) {
-                m_allowFocusLost.set(false);
-            }
-        });
-        menu.addListener(SWT.Hide, new Listener() {
-            @Override
-            public void handleEvent(final Event event) {
-                m_allowFocusLost.set(true);
-
-                markStyleDecorationCloseTime();
-            }
-        });
-        Image img;
-        MenuItem action;
-
-        // background color
-        img = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/bgcolor_10.png");
-        action = addMenuItem(menu, "bg", SWT.PUSH, "Background", img);
-
-        // alignment
-        img = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/alignment_10.png");
-
-        MenuItem alignmentMenuItem = addMenuItem(menu, "alignment", SWT.CASCADE, "Alignment", img);
-
-        final Menu alignMenu = new Menu(alignmentMenuItem);
-        alignmentMenuItem.setMenu(alignMenu);
-
-        m_leftAlignMenuItem = addMenuItem(alignMenu, "alignment_left", SWT.RADIO, "Left", null);
-
-        m_centerAlignMenuItem = addMenuItem(alignMenu, "alignment_center", SWT.RADIO, "Center", null);
-
-        m_rightAlignMenuItem = addMenuItem(alignMenu, "alignment_right", SWT.RADIO, "Right", null);
-
-        new MenuItem(menu, SWT.SEPARATOR);
-        // contains buttons being en/disabled with selection
-        m_enableOnSelectedTextMenuItems = new ArrayList<MenuItem>();
-
-        // font/style button
-        img = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/font_10.png");
-        action = addMenuItem(menu, "style", SWT.PUSH, "Font Style...", img);
-        m_enableOnSelectedTextMenuItems.add(action);
-
-        new MenuItem(menu, SWT.SEPARATOR);
-
-        // border style
-        img = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/border_10.png");
-        action = addMenuItem(menu, "border", SWT.PUSH, "Border...", img);
-
-        new MenuItem(menu, SWT.SEPARATOR);
-
-        // ok button
-        img = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/ok_10.png");
-        addMenuItem(menu, "ok", SWT.PUSH, "OK (commit)", img);
-
-        // cancel button
-        img = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/cancel_10.png");
-        addMenuItem(menu, "cancel", SWT.PUSH, "Cancel (discard)", img);
-
-        parent.setMenu(menu);
-    }
-
-    private MenuItem addMenuItem(final Menu menuMgr, final String id, final int style, final String text,
-        final Image img) {
-        MenuItem menuItem = new MenuItem(menuMgr, style);
-        SelectionAdapter selListener = new SelectionAdapter() {
-            @Override
-            public void widgetSelected(final SelectionEvent e) {
-                m_allowFocusLost.set(false);
-                try {
-                    buttonClick(id);
-                } finally {
-                    m_allowFocusLost.set(true);
-                }
-            }
-
-            @Override
-            public void widgetDefaultSelected(final SelectionEvent e) {
-                super.widgetSelected(e);
-            }
-        };
-        menuItem.addSelectionListener(selListener);
-        menuItem.setText(text);
-        menuItem.setImage(img);
-        return menuItem;
-    }
-
-    private void buttonClick(final String src) {
-        if (src.equals("style")) {
-            font();
-            fireEditorValueChanged(true, true);
-        } else if (src.equals("color")) {
-            fontColor();
-            fireEditorValueChanged(true, true);
-        } else if (src.equals("bold")) {
-            bold();
-            fireEditorValueChanged(true, true);
-        } else if (src.equals("italic")) {
-            italic();
-            fireEditorValueChanged(true, true);
-        } else if (src.equals("bg")) {
-            bgColor();
-            fireEditorValueChanged(true, true);
-        } else if (src.equals("alignment_left")) {
-            alignment(SWT.LEFT);
-            fireEditorValueChanged(true, true);
-        } else if (src.equals("alignment_center")) {
-            alignment(SWT.CENTER);
-            fireEditorValueChanged(true, true);
-        } else if (src.equals("alignment_right")) {
-            alignment(SWT.RIGHT);
-            fireEditorValueChanged(true, true);
-        } else if (src.equals("border")) {
-            borderStyle();
-            fireEditorValueChanged(true, true);
-        } else if (src.equals("ok")) {
-            ok();
-        } else if (src.equals("cancel")) {
-            cancel();
+        // Context menu subsystem
+        boolean enableStyleButtons = true;
+        final int[] selections = m_styledText.getSelectionRanges();
+        if ((selections == null) || (selections.length != 2)) {
+            enableStyleButtons = false;
         } else {
-            LOGGER.coding("IMPLEMENTATION ERROR: Wrong button ID");
+            final int length = selections[1];
+            enableStyleButtons = (length > 0);
         }
-
-        // set the focus back to the editor after the buttons finish
-        if (!src.equals("ok") && !src.equals("cancel")) {
-            m_styledText.setFocus();
-        }
-
+        enableStyleButtons(enableStyleButtons);
     }
 
     private void applyBackgroundColor() {
@@ -550,11 +794,8 @@ public class StyledTextEditor extends CellEditor {
         }
     }
 
-    /**
-     * @param bg
-     */
-    public void setBackgroundColor(final Color bg) {
-        m_backgroundColor = bg;
+    private void setBackgroundColor(final Color color) {
+        m_backgroundColor = color;
         applyBackgroundColor();
     }
 
@@ -628,7 +869,7 @@ public class StyledTextEditor extends CellEditor {
             default:
                 alignment = SWT.LEFT;
         }
-        checkSelectionOfAlignmentMenuItems(alignment);
+
         m_selectAllUponFocusGain = false;
         final String text;
         if (wa instanceof NodeAnnotation) {
@@ -648,6 +889,7 @@ public class StyledTextEditor extends CellEditor {
                 m_styledText.setMargins(annotationBorderSize, annotationBorderSize, annotationBorderSize,
                     annotationBorderSize);
             }
+
             // for workflow annotations set the default font to the size stored in the annotation
             final Font defFont;
             final int defFontSize = wa.getDefaultFontSize();
@@ -658,17 +900,23 @@ public class StyledTextEditor extends CellEditor {
             }
             setDefaultFont(defFont);
         }
+        checkSelectionOfAlignmentMenuItems(alignment);
         m_styledText.setAlignment(alignment);
         m_styledText.setText(text);
         m_styledText.setStyleRanges(AnnotationEditPart.toSWTStyleRanges(wa.getData(), m_styledText.getFont()));
+
         setBackgroundColor(AnnotationEditPart.RGBintToColor(wa.getBgColor()));
         syncShadowWithEditor();
+
+        if (m_toolbar != null) {
+            m_toolbar.updateToolbarToReflectState();
+        }
     }
 
     /** {@inheritDoc} */
     @Override
     public boolean isCopyEnabled() {
-        return !m_styledText.isDisposed() && m_styledText.getSelectionCount() > 0;
+        return (!m_styledText.isDisposed()) && (m_styledText.getSelectionCount() > 0);
     }
 
     /** {@inheritDoc} */
@@ -692,7 +940,7 @@ public class StyledTextEditor extends CellEditor {
     /** {@inheritDoc} */
     @Override
     public boolean isCutEnabled() {
-        return !m_styledText.isDisposed() && m_styledText.getSelectionCount() > 0;
+        return isCopyEnabled();
     }
 
     /** {@inheritDoc} */
@@ -714,52 +962,20 @@ public class StyledTextEditor extends CellEditor {
         selectionChanged();
     }
 
-    private void bold() {
-        setSWTStyle(SWT.BOLD);
-    }
-
-    /**
-     * Update selection state of alignment buttons in menu.
-     *
-     * @param swtAlignment SWT.LEFT, CENTER, or RIGHT
-     */
-    private void checkSelectionOfAlignmentMenuItems(final int swtAlignment) {
-        MenuItem[] alignmentMenuItems =
-            new MenuItem[]{m_leftAlignMenuItem, m_centerAlignMenuItem, m_rightAlignMenuItem};
-        MenuItem activeMenuItem;
-        switch (swtAlignment) {
-            case SWT.LEFT:
-                activeMenuItem = m_leftAlignMenuItem;
-                break;
-            case SWT.CENTER:
-                activeMenuItem = m_centerAlignMenuItem;
-                break;
-            case SWT.RIGHT:
-                activeMenuItem = m_rightAlignMenuItem;
-                break;
-            default:
-                LOGGER.coding("Invalid alignment (ignored): " + swtAlignment);
-                return;
-        }
-        for (MenuItem m : alignmentMenuItems) {
-            m.setSelection(m == activeMenuItem);
-        }
-    }
-
-    private void setSWTStyle(final int swtStyle) {
-        List<StyleRange> styles = getStylesInSelection();
-        boolean setAttr = true;
-        for (StyleRange s : styles) {
-            if (s.font != null && (s.font.getFontData()[0].getStyle() & swtStyle) != 0) {
-                setAttr = false;
+    void setSWTStyle(final int swtStyle) {
+        final List<StyleRange> styles = getStylesInSelection();
+        boolean shouldSetAttribute = true;
+        for (final StyleRange s : styles) {
+            if ((s.font != null) && (s.font.getFontData()[0].getStyle() & swtStyle) != 0) {
+                shouldSetAttribute = false;
                 break;
             }
         }
-        for (StyleRange s : styles) {
-            if (setAttr) {
+        for (final StyleRange s : styles) {
+            if (shouldSetAttribute) {
                 s.font = FontStore.INSTANCE.addStyleToFont(s.font, swtStyle);
             } else {
-                s.font =FontStore.INSTANCE.removeStyleFromFont(s.font, swtStyle);
+                s.font = FontStore.INSTANCE.removeStyleFromFont(s.font, swtStyle);
             }
             m_styledText.setStyleRange(s);
         }
@@ -775,30 +991,31 @@ public class StyledTextEditor extends CellEditor {
      *         never null.
      */
     private List<StyleRange> getStylesInSelection() {
-        int[] sel = m_styledText.getSelectionRanges();
-        if (sel == null || sel.length != 2) {
+        final Point selection = m_styledText.getSelectionRange();
+        if (selection.y == 0) {
             return Collections.emptyList();
         }
-        int start = sel[0];
-        int length = sel[1];
-        StyleRange[] styles = m_styledText.getStyleRanges(start, length);
+
+        final int start = selection.x;
+        final int length = selection.y;
+        final StyleRange[] styles = m_styledText.getStyleRanges(start, length);
         if (styles == null || styles.length == 0) {
             // no existing styles in selection
-            StyleRange newStyle = new StyleRange();
+            final StyleRange newStyle = new StyleRange();
             newStyle.font = m_styledText.getFont();
             newStyle.start = start;
             newStyle.length = length;
             return Collections.singletonList(newStyle);
         } else {
-            LinkedList<StyleRange> result = new LinkedList<StyleRange>();
+            final LinkedList<StyleRange> result = new LinkedList<StyleRange>();
             int lastEnd = start; // not yet covered index
-            for (StyleRange s : styles) {
+            for (final StyleRange s : styles) {
                 if (s.start < lastEnd) {
                     LOGGER.error("StyleRanges not ordered! Style might be messed up");
                 }
                 if (lastEnd < s.start) {
                     // create style for range not covered by next exiting style
-                    StyleRange newRange = new StyleRange();
+                    final StyleRange newRange = new StyleRange();
                     newRange.font = m_styledText.getFont();
                     newRange.start = lastEnd;
                     newRange.length = s.start - lastEnd;
@@ -808,9 +1025,9 @@ public class StyledTextEditor extends CellEditor {
                 result.add(s);
                 lastEnd = s.start + s.length;
             }
-            if (lastEnd < start + length) {
+            if (lastEnd < (start + length)) {
                 // create new style for the part at the end, not covered
-                StyleRange newRange = new StyleRange();
+                final StyleRange newRange = new StyleRange();
                 newRange.font = m_styledText.getFont();
                 newRange.start = lastEnd;
                 newRange.length = start + length - lastEnd;
@@ -820,50 +1037,12 @@ public class StyledTextEditor extends CellEditor {
         }
     }
 
-    private void italic() {
-        setSWTStyle(SWT.ITALIC);
+    void userWantsToAffectBackgroundColor(final Point clickSourceLocation) {
+        displayColorDropDown(m_backgroundColor, BACKGROUND_COLOR_SELECTION, clickSourceLocation);
     }
 
-    private void bgColor() {
-        ColorDialog colDlg = new ColorDialog(m_styledText.getShell());
-        RGB[] toSet = lastColors == null ? DEFAULT_COLORS : lastColors;
-        colDlg.setText("Change the Background Color");
-        colDlg.setRGBs(toSet);
-        if (m_backgroundColor != null) {
-            colDlg.setRGB(m_backgroundColor.getRGB());
-        }
-        RGB newBGCol = colDlg.open();
-        markStyleDecorationCloseTime();
-        if (newBGCol == null) {
-            // user canceled
-            return;
-        }
-        lastColors = colDlg.getRGBs();
-        m_backgroundColor = new Color(null, newBGCol);
-        applyBackgroundColor();
-    }
-
-
-    private void borderStyle() {
-        BorderStyleDialog dlg = new BorderStyleDialog(m_styledText.getShell(), m_styledText.getMarginColor(),
-            m_styledText.getRightMargin());
-        if (dlg.open() == Window.OK) {
-            m_styledText.setMarginColor(AnnotationEditPart.RGBtoColor(dlg.getColor()));
-            m_styledText.redraw();
-            int s = dlg.getSize();
-            m_styledText.setMargins(s, s, s, s);
-        }
-    }
-
-    /**
-     * @return
-     */
-    private static RGB fromHex(final String hex) {
-        int color = Integer.parseInt(hex, 16);
-        int r = (color >> 16) & 255;
-        int g = (color >> 8) & 255;
-        int b = color & 255;
-        return new RGB(r, g, b);
+    void userWantsToAffectBorderColor(final Point clickSourceLocation) {
+        displayColorDropDown(m_styledText.getMarginColor(), BORDER_COLOR_SELECTION, clickSourceLocation);
     }
 
     /**
@@ -871,44 +1050,293 @@ public class StyledTextEditor extends CellEditor {
      *
      * @param alignment SWT.LEFT|CENTER|RIGHT.
      */
-    private void alignment(final int alignment) {
-        int newAlignment;
-        switch (alignment) {
-            case SWT.CENTER:
-                newAlignment = alignment;
-                break;
-            case SWT.RIGHT:
-                newAlignment = alignment;
-                break;
-            default:
-                newAlignment = SWT.LEFT;
-        }
-        checkSelectionOfAlignmentMenuItems(newAlignment);
-        m_styledText.setAlignment(newAlignment);
+    void alignment(final int alignment) {
+        checkSelectionOfAlignmentMenuItems(alignment);
+        m_styledText.setAlignment(alignment);
     }
 
-    private void fontColor() {
-        Color col = AnnotationEditPart.getAnnotationDefaultForegroundColor();
-        List<StyleRange> sel = getStylesInSelection();
-        // set the color of the first selection style
-        for (StyleRange style : sel) {
+    void borderWidthWasSelected(final int width) {
+        m_styledText.setMargins(width, width, width, width);
+    }
+
+    void colorWasSelected(final Color color) {
+        m_colorDropDown.setVisible(false);
+
+        if (color != null) {
+            switch (m_currentColorSelectionTarget) {
+                case FONT_COLOR_SELECTION:
+                    for (final StyleRange style : getStylesInSelection()) {
+                        style.foreground = color;
+                        m_styledText.setStyleRange(style);
+                    }
+                    break;
+                case BORDER_COLOR_SELECTION:
+                    m_styledText.setMarginColor(color);
+                    break;
+                case BACKGROUND_COLOR_SELECTION:
+                    setBackgroundColor(color);
+                    break;
+            }
+
+            m_toolbar.updateToolbarToReflectState();
+        }
+
+        setFocusLossAllowed(true);
+    }
+
+    void fontSizeWasSelected(final int size) {
+        for (final StyleRange style : getStylesInSelection()) {
+            final FontData styleFD = style.font.getFontData()[0];
+            final boolean bold = (styleFD.getStyle() & SWT.BOLD) != 0;
+            final boolean italic = (styleFD.getStyle() & SWT.ITALIC) != 0;
+
+            style.font = FontStore.INSTANCE.getDefaultFont(size, bold, italic);
+            m_styledText.setStyleRange(style);
+        }
+    }
+
+    void userWantsToAffectFontColor(final Point clickSourceLocation) {
+        Color color = null;
+        final List<StyleRange> styles = getStylesInSelection();
+        boolean multipleColorsExist = false;
+
+        for (final StyleRange style : styles) {
+            final Color c;
+
             if (style.foreground != null) {
-                col = style.foreground;
+                c = style.foreground;
+            } else {
+                c = AnnotationEditPart.getAnnotationDefaultForegroundColor();
+            }
+
+            if (color == null) {
+                color = c;
+            } else if (!c.equals(color)) {
+                multipleColorsExist = true;
+
                 break;
             }
         }
-        ColorDialog colDlg = new ColorDialog(m_styledText.getShell());
-        colDlg.setText("Change Font Color in Selection");
-        colDlg.setRGB(col.getRGB());
-        RGB newRGB = colDlg.open();
-        if (newRGB == null) {
-            // user canceled
-            return;
+
+        if (color == null) {
+            color = AnnotationEditPart.getAnnotationDefaultForegroundColor();
         }
-        Color newCol = AnnotationEditPart.RGBtoColor(newRGB);
-        for (StyleRange style : sel) {
-            style.foreground = newCol;
-            m_styledText.setStyleRange(style);
+
+        displayColorDropDown((multipleColorsExist ? null : color), FONT_COLOR_SELECTION, clickSourceLocation);
+    }
+
+    /**
+     * Used by <code>StyledTextEditorLocator.relocate(CellEditor)</code>
+     *
+     * @return the bounds needed to display the current text
+     */
+    Rectangle getTextBounds() {
+        // use the shadow instance to get the size of the not auto-wrapped text
+        final int charCount = m_shadowStyledText.getCharCount();
+        if (charCount < 1) {
+            Rectangle b = m_shadowStyledText.getBounds();
+            return new Rectangle(b.x, b.y, 0, 0);
+        } else {
+            Rectangle r = m_shadowStyledText.getTextBounds(0, charCount - 1);
+            if (m_shadowStyledText.getText(charCount - 1, charCount - 1).charAt(0) == '\n') {
+                r.height += m_shadowStyledText.getLineHeight();
+            }
+            return r;
+        }
+    }
+
+    private void displayColorDropDown(final Color color, final int colorSelectionTarget, final Point parentLocation) {
+        final Rectangle bounds = m_toolbar.getBounds();
+
+        setFocusLossAllowed(false);
+
+        m_colorDropDown.setSelectedColor(color);
+        m_colorDropDown.setLocation((bounds.x + parentLocation.x), (bounds.y + bounds.height));
+        m_colorDropDown.setVisible(true);
+
+        m_colorDropDown.setFocus();
+
+        m_currentColorSelectionTarget = colorSelectionTarget;
+    }
+
+
+    ///  CONTEXT MENU SUBSYSTEM vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    ///  CONTEXT MENU SUBSYSTEM vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    ///  CONTEXT MENU SUBSYSTEM vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    ///  CONTEXT MENU SUBSYSTEM vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    ///  CONTEXT MENU SUBSYSTEM vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+    private void enableStyleButtons(final boolean enableThem) {
+        if (m_enableOnSelectedTextMenuItems != null) {
+            for (final MenuItem action : m_enableOnSelectedTextMenuItems) {
+                action.setEnabled(enableThem);
+            }
+        }
+    }
+
+    @SuppressWarnings("unused") // menu item instance creation with out assignation
+    private void addMenu(final Composite parent) {
+        final Menu menu = new Menu(parent);
+        // On some Linux systems the right click triggers focus loss, we need to disable this while the menu is open
+        menu.addListener(SWT.Show, new Listener() {
+            @Override
+            public void handleEvent(final Event event) {
+                m_allowFocusLoss.set(false);
+            }
+        });
+        menu.addListener(SWT.Hide, new Listener() {
+            @Override
+            public void handleEvent(final Event event) {
+                m_allowFocusLoss.set(true);
+
+                markStyleDecorationCloseTime();
+            }
+        });
+        Image image;
+        MenuItem action;
+
+        // background color
+        image = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/bgcolor_10.png");
+        action = addMenuItem(menu, "bg", SWT.PUSH, "Background", image);
+
+        // alignment
+        image = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/alignment_10.png");
+
+        MenuItem alignmentMenuItem = addMenuItem(menu, "alignment", SWT.CASCADE, "Alignment", image);
+
+        final Menu alignMenu = new Menu(alignmentMenuItem);
+        alignmentMenuItem.setMenu(alignMenu);
+
+        m_leftAlignMenuItem = addMenuItem(alignMenu, "alignment_left", SWT.RADIO, "Left", null);
+        m_leftAlignMenuItem.setSelection(true);
+
+        m_centerAlignMenuItem = addMenuItem(alignMenu, "alignment_center", SWT.RADIO, "Center", null);
+
+        m_rightAlignMenuItem = addMenuItem(alignMenu, "alignment_right", SWT.RADIO, "Right", null);
+
+        m_alignmentMenuItems = new MenuItem[] {m_leftAlignMenuItem, m_centerAlignMenuItem, m_rightAlignMenuItem};
+
+        new MenuItem(menu, SWT.SEPARATOR);
+        // contains buttons being en/disabled with selection
+        m_enableOnSelectedTextMenuItems = new ArrayList<MenuItem>();
+
+        // font/style button
+        image = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/font_10.png");
+        action = addMenuItem(menu, "style", SWT.PUSH, "Font Style...", image);
+        m_enableOnSelectedTextMenuItems.add(action);
+
+        new MenuItem(menu, SWT.SEPARATOR);
+
+        // border style
+        image = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/border_10.png");
+        action = addMenuItem(menu, "border", SWT.PUSH, "Border...", image);
+
+        new MenuItem(menu, SWT.SEPARATOR);
+
+        // ok button
+        image = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/ok_10.png");
+        addMenuItem(menu, "ok", SWT.PUSH, "OK (commit)", image);
+
+        // cancel button
+        image = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/cancel_10.png");
+        addMenuItem(menu, "cancel", SWT.PUSH, "Cancel (discard)", image);
+
+        parent.setMenu(menu);
+    }
+
+    private MenuItem addMenuItem(final Menu menuMgr, final String id, final int style, final String text,
+        final Image img) {
+        final MenuItem menuItem = new MenuItem(menuMgr, style);
+        final SelectionListener listener = new SelectionAdapter() {
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                m_allowFocusLoss.set(false);
+                try {
+                    buttonClick(id);
+                } finally {
+                    m_allowFocusLoss.set(true);
+                }
+            }
+
+            @Override
+            public void widgetDefaultSelected(final SelectionEvent e) {
+                super.widgetSelected(e);
+            }
+        };
+        menuItem.addSelectionListener(listener);
+        menuItem.setText(text);
+        menuItem.setImage(img);
+        return menuItem;
+    }
+
+    private void buttonClick(final String src) {
+        if (src.equals("style")) {
+            font();
+            fireEditorValueChanged(true, true);
+        } else if (src.equals("color")) {
+            fontColor();
+            fireEditorValueChanged(true, true);
+        } else if (src.equals("bold")) {
+            bold();
+            fireEditorValueChanged(true, true);
+        } else if (src.equals("italic")) {
+            italic();
+            fireEditorValueChanged(true, true);
+        } else if (src.equals("bg")) {
+            bgColor();
+            fireEditorValueChanged(true, true);
+        } else if (src.equals("alignment_left")) {
+            alignment(SWT.LEFT);
+            m_toolbar.updateToolbarToReflectState();
+            fireEditorValueChanged(true, true);
+        } else if (src.equals("alignment_center")) {
+            alignment(SWT.CENTER);
+            m_toolbar.updateToolbarToReflectState();
+            fireEditorValueChanged(true, true);
+        } else if (src.equals("alignment_right")) {
+            alignment(SWT.RIGHT);
+            m_toolbar.updateToolbarToReflectState();
+            fireEditorValueChanged(true, true);
+        } else if (src.equals("border")) {
+            borderStyle();
+            fireEditorValueChanged(true, true);
+        } else if (src.equals("ok")) {
+            ok();
+        } else if (src.equals("cancel")) {
+            cancel();
+        } else {
+            LOGGER.coding("IMPLEMENTATION ERROR: Wrong button ID");
+        }
+
+        // set the focus back to the editor after the buttons finish
+        if (!src.equals("ok") && !src.equals("cancel")) {
+            m_styledText.setFocus();
+        }
+    }
+
+    /**
+     * Update selection state of alignment buttons in menu.
+     *
+     * @param swtAlignment SWT.LEFT, CENTER, or RIGHT
+     */
+    private void checkSelectionOfAlignmentMenuItems(final int swtAlignment) {
+        MenuItem activeMenuItem;
+        switch (swtAlignment) {
+            case SWT.LEFT:
+                activeMenuItem = m_leftAlignMenuItem;
+                break;
+            case SWT.CENTER:
+                activeMenuItem = m_centerAlignMenuItem;
+                break;
+            case SWT.RIGHT:
+                activeMenuItem = m_rightAlignMenuItem;
+                break;
+            default:
+                LOGGER.coding("Invalid alignment (ignored): " + swtAlignment);
+                return;
+        }
+        for (final MenuItem m : m_alignmentMenuItems) {
+            m.setSelection(m == activeMenuItem);
         }
     }
 
@@ -927,14 +1355,14 @@ public class StyledTextEditor extends CellEditor {
         FontData fd = f.getFontData()[0];
         FontStyleDialog dlg = new FontStyleDialog(m_styledText.getShell(), c, fd.getHeight(),
             (fd.getStyle() & SWT.BOLD) != 0, (fd.getStyle() & SWT.ITALIC) != 0);
-        m_allowFocusLost.set(false);
+        m_allowFocusLoss.set(false);
         try {
             if (dlg.open() != Window.OK) {
                 // user canceled.
                 return;
             }
         } finally {
-            m_allowFocusLost.set(true);
+            m_allowFocusLoss.set(true);
         }
         RGB newRGB = dlg.getColor();
         Integer newSize = dlg.getSize();
@@ -963,6 +1391,76 @@ public class StyledTextEditor extends CellEditor {
             }
             m_styledText.setStyleRange(style);
         }
+        m_toolbar.updateToolbarToReflectState();
+    }
+
+    private void fontColor() {
+        Color col = AnnotationEditPart.getAnnotationDefaultForegroundColor();
+        List<StyleRange> sel = getStylesInSelection();
+        // set the color of the first selection style
+        for (StyleRange style : sel) {
+            if (style.foreground != null) {
+                col = style.foreground;
+                break;
+            }
+        }
+        ColorDialog colDlg = new ColorDialog(m_styledText.getShell());
+        colDlg.setText("Change Font Color in Selection");
+        colDlg.setRGB(col.getRGB());
+        RGB newRGB = colDlg.open();
+        if (newRGB == null) {
+            // user canceled
+            return;
+        }
+        Color newCol = AnnotationEditPart.RGBtoColor(newRGB);
+        for (StyleRange style : sel) {
+            style.foreground = newCol;
+            m_styledText.setStyleRange(style);
+        }
+        m_toolbar.updateToolbarToReflectState();
+    }
+
+    private void bold() {
+        setSWTStyle(SWT.BOLD);
+        m_toolbar.updateToolbarToReflectState();
+    }
+
+    private void italic() {
+        setSWTStyle(SWT.ITALIC);
+        m_toolbar.updateToolbarToReflectState();
+    }
+
+    private void bgColor() {
+        final ColorDialog colorDialog = new ColorDialog(m_styledText.getShell());
+        RGB[] toSet = LAST_COLORS == null ? DEFAULT_COLORS : LAST_COLORS;
+        colorDialog.setText("Change the Background Color");
+        colorDialog.setRGBs(toSet);
+        if (m_backgroundColor != null) {
+            colorDialog.setRGB(m_backgroundColor.getRGB());
+        }
+        RGB newBGCol = colorDialog.open();
+        markStyleDecorationCloseTime();
+        if (newBGCol == null) {
+            // user canceled
+            return;
+        }
+        LAST_COLORS = colorDialog.getRGBs();
+        m_backgroundColor = new Color(null, newBGCol);
+        applyBackgroundColor();
+        m_toolbar.updateToolbarToReflectState();
+    }
+
+
+    private void borderStyle() {
+        BorderStyleDialog dlg = new BorderStyleDialog(m_styledText.getShell(), m_styledText.getMarginColor(),
+            m_styledText.getRightMargin());
+        if (dlg.open() == Window.OK) {
+            m_styledText.setMarginColor(AnnotationEditPart.RGBtoColor(dlg.getColor()));
+            m_styledText.redraw();
+            int s = dlg.getSize();
+            m_styledText.setMargins(s, s, s, s);
+            m_toolbar.updateToolbarToReflectState();
+        }
     }
 
     private void ok() {
@@ -976,23 +1474,9 @@ public class StyledTextEditor extends CellEditor {
         deactivate();
         return;
     }
-
-    /**
-     * @return the bounds needed to display the current text
-     */
-    Rectangle getTextBounds() {
-        // use the shadow instance to get the size of the not auto-wrapped text
-        int charCount = m_shadowStyledText.getCharCount();
-        if (charCount < 1) {
-            Rectangle b = m_shadowStyledText.getBounds();
-            return new Rectangle(b.x, b.y, 0, 0);
-        } else {
-            Rectangle r = m_shadowStyledText.getTextBounds(0, charCount - 1);
-            if (m_shadowStyledText.getText(charCount - 1, charCount - 1).charAt(0) == '\n') {
-                r.height += m_shadowStyledText.getLineHeight();
-            }
-            return r;
-        }
-    }
-
+    ///  CONTEXT MENU SUBSYSTEM ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ///  CONTEXT MENU SUBSYSTEM ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ///  CONTEXT MENU SUBSYSTEM ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ///  CONTEXT MENU SUBSYSTEM ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ///  CONTEXT MENU SUBSYSTEM ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 }

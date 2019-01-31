@@ -68,6 +68,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.LayoutExemptingLayout;
 import org.knime.workbench.core.util.ImageRepository;
@@ -127,6 +128,34 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
         public SharedImages getIcon() {
             return m_icon;
         }
+    }
+
+    /**
+     * This is a static convenience method which involves fetching the active page's active editor, and then returning
+     * the instance of this class attached to it.
+     *
+     * @return the glass pane SWT <code>ViewportPinningGraphicalViewer</code>
+     */
+    public static ViewportPinningGraphicalViewer getActiveViewer() {
+        final WorkflowEditor we =
+                (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+
+        return (ViewportPinningGraphicalViewer)we.getGraphicalViewer();
+    }
+
+    /**
+     * This is a static convenience method which involves fetching the active page's active editor, and then getting the
+     * instance of this class attached to it, and the SWT <code>Composite</code> parent into which it draws.
+     *
+     * This is useful for classes that want to draw into the glass pane that is the viewport. <b>NOTE:</b> that any SWT
+     * widget created which has a parent as this composite should call
+     * <code>LayoutExemptingLayout.exemptControlFromLayout(Control)</code>.
+     *
+     * @return the glass pane SWT <code>Composite</code>
+     * @see LayoutExemptingLayout#exemptControlFromLayout(Control)
+     */
+    public static Composite getActiveViewportComposite() {
+        return getActiveViewer().m_parent;
     }
 
 
@@ -213,6 +242,13 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
     }
 
     /**
+     * @return the <code>WorkflowFigure</code> which is the root figure for this viewer
+     */
+    public WorkflowFigure getWorkflowFigure() {
+        return ((WorkflowRootEditPart)getRootEditPart().getContents()).getFigure();
+    }
+
+    /**
      * @see org.eclipse.gef.EditPartViewer#setControl(Control)
      */
     @Override
@@ -257,8 +293,7 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
 
     private void updateTopWhitespaceBuffer() {
         final int yOffset = m_currentMessageViewHeight.get();
-        final WorkflowFigure workflowFigure = ((WorkflowRootEditPart)getRootEditPart().getContents()).getFigure();
-        workflowFigure.placeTentStakeToAllowForWhitespaceBuffer(yOffset);
+        getWorkflowFigure().placeTentStakeToAllowForTopWhitespaceBuffer(yOffset);
 
         final FigureCanvas fc = getFigureCanvas();
         if (fc.getViewport().getViewLocation().y == 0) {

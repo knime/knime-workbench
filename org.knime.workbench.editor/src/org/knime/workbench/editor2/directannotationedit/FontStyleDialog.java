@@ -73,6 +73,9 @@ import org.eclipse.swt.widgets.Spinner;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 
 /**
+ * There is a lot of commonality between this and BorderStyleDialog - if we intend to keep the context subsystem
+ *  indefinitely, we should refactor.
+ *
  * @author ohl
  */
 public class FontStyleDialog extends Dialog {
@@ -262,20 +265,31 @@ public class FontStyleDialog extends Dialog {
         txt.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
     }
 
+    /**
+     * @return the selected color or null for no change
+     */
     public RGB getColor() {
         return m_color;
     }
 
+    /**
+     * @return the selected size or null for no change
+     */
     public Integer getSize() {
         return m_size;
     }
 
+    /**
+     * @return whether it is bold or not, or null for no change
+     */
     public Boolean getBold() {
         return m_bold;
     }
 
+    /**
+     * @return whether it is italic or not, or null for no change
+     */
     public Boolean getItalic() {
         return m_italic;
     }
-
 }

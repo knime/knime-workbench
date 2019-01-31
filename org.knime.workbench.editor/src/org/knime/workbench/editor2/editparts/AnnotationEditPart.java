@@ -370,7 +370,8 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart
         result.setText(s.getText());
         result.setBgColor(colorToRGBint(s.getBackground()));
         result.setBorderColor(AnnotationEditPart.colorToRGBint(s.getMarginColor()));
-        result.setBorderSize(s.getRightMargin()); // annotations have the same margin top/left/right/bottom.
+        // annotations have the same margin top/left/right/bottom, however getLeftMargin may return a different value.
+        result.setBorderSize(s.getRightMargin());
         result.setDefaultFontSize(s.getFont().getFontData()[0].getHeight());
         TextAlignment alignment;
         switch (s.getAlignment()) {
