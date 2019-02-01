@@ -252,7 +252,6 @@ public class Nodalizer implements IApplication {
         @SuppressWarnings("unchecked")
         final org.knime.core.node.Node kcn = new org.knime.core.node.Node((NodeFactory<NodeModel>)fac);
         final NodeInfo nInfo = new NodeInfo();
-        final IconInfo iconInfo = new IconInfo();
 
         // Read from node
         final NodeSettings settings = new NodeSettings("");
@@ -260,10 +259,10 @@ public class Nodalizer implements IApplication {
         final String id = factoryString + ConfigUtils.contentBasedHash(settings);
         nInfo.setId(id);
         nInfo.setTitle(name.trim());
-        iconInfo.setNodeType(kcn.getType().toString());
+        nInfo.setNodeType(kcn.getType().toString());
         nInfo.setPath(path);
-        iconInfo.setDeprecated(isDeprecated);
-        iconInfo.setStreamable(NodeUtil.isStreamable(fac));
+        nInfo.setDeprecated(isDeprecated);
+        nInfo.setStreamable(NodeUtil.isStreamable(fac));
 
         // Read icon
         URL imageURL = fac.getIcon();
@@ -276,7 +275,7 @@ public class Nodalizer implements IApplication {
             imageBytes = IOUtils.toByteArray(s);
         }
         final String iconBase64 = "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(imageBytes);
-        iconInfo.setData(iconBase64);
+        nInfo.setIcon(iconBase64);
 
         // Read extension info
         // TODO: read update site
@@ -352,9 +351,8 @@ public class Nodalizer implements IApplication {
                         kcn.getOutputType(i).getName(), getColorAsHex(kcn.getOutputType(i).getColor()));
             outports[i - 1] = port;
         }
-        iconInfo.setInPorts(inports);
-        iconInfo.setOutPorts(outports);
-        nInfo.setIcon(iconInfo);
+        nInfo.setInPorts(inports);
+        nInfo.setOutPorts(outports);
 
         // Write to file
         final ObjectMapper map = new ObjectMapper();

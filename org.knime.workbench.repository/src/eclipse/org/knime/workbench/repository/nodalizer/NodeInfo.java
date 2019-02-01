@@ -62,7 +62,6 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 public class NodeInfo {
 
     private String m_title;
-    private IconInfo m_icon;
     private List<String> m_path;
     private String m_id;
     private String m_extensionName;
@@ -73,6 +72,12 @@ public class NodeInfo {
     private List<NamedField> m_views;
     private NamedField m_interactiveView;
     private String[] m_moreInfoLinks;
+    private String m_icon;
+    private String m_nodeType;
+    private boolean m_deprecated;
+    private boolean m_streamable;
+    private PortInfo[] m_inPorts;
+    private PortInfo[] m_outPorts;
 
     /**
      * Returns the title of this node.
@@ -81,15 +86,6 @@ public class NodeInfo {
      */
     public String getTitle() {
         return m_title;
-    }
-
-    /**
-     * Returns {@link IconInfo} for this node.
-     *
-     * @return {@link IconInfo} for this node
-     */
-    public IconInfo getIcon() {
-        return m_icon;
     }
 
     /**
@@ -183,21 +179,66 @@ public class NodeInfo {
     }
 
     /**
+     * Returns the node's icon as base64 encoded string.
+     *
+     * @return the node's icon as a base64 encoded string
+     */
+    public String getIcon() {
+        return m_icon;
+    }
+
+    /**
+     * Returns the node's type.
+     *
+     * @return the node's type
+     */
+    public String getNodeType() {
+        return m_nodeType;
+    }
+
+    /**
+     * Returns {@code true} if the node is deprecated.
+     *
+     * @return {@code true} if the node is deprecated
+     */
+    public boolean getDeprecated() {
+        return m_deprecated;
+    }
+
+    /**
+     * Returns {@code true} if the node is streamable.
+     *
+     * @return {@code true} if the node is streamable
+     */
+    public boolean getStreamable() {
+        return m_streamable;
+    }
+
+    /**
+     * Returns an array of {@link PortInfo} for node each of the node's inports.
+     *
+     * @return an array of {@link PortInfo} for node each of the node's inports
+     */
+    public PortInfo[] getInPorts() {
+        return m_inPorts;
+    }
+
+    /**
+     * Returns an array of {@link PortInfo} for node each of the node's outports.
+     *
+     * @return an array of {@link PortInfo} for node each of the node's outports
+     */
+    public PortInfo[] getOutPorts() {
+        return m_outPorts;
+    }
+
+    /**
      * Sets the node's title.
      *
      * @param title the title
      */
     public void setTitle(final String title) {
         m_title = title;
-    }
-
-    /**
-     * Sets the node's {@link IconInfo}.
-     *
-     * @param icon the node's {@code IconInfo}
-     */
-    public void setIcon(final IconInfo icon) {
-        m_icon = icon;
     }
 
     /**
@@ -293,7 +334,6 @@ public class NodeInfo {
         m_interactiveView = interactiveView;
     }
 
-
     /**
      * Sets the node's more information links
      *
@@ -305,5 +345,67 @@ public class NodeInfo {
             mil = new String[0];
         }
         m_moreInfoLinks = mil;
+    }
+
+    /**
+     * Sets the node's icon.
+     *
+     * @param icon the base64 encoded representation of the icon
+     */
+    public void setIcon(final String icon) {
+        m_icon = icon;
+    }
+
+    /**
+     * Sets the node's type.
+     *
+     * @param nodeType the node type to set
+     */
+    public void setNodeType(final String nodeType) {
+        m_nodeType = nodeType;
+    }
+
+    /**
+     * Sets if the node is deprecated or not.
+     *
+     * @param deprecated if the node is deprecated or not
+     */
+    public void setDeprecated(final boolean deprecated) {
+        m_deprecated = deprecated;
+    }
+
+    /**
+     * Sets if the node is streamable or not.
+     *
+     * @param streamable if the node is streamable or not
+     */
+    public void setStreamable(final boolean streamable) {
+        m_streamable = streamable;
+    }
+
+    /**
+     * Sets the metadata for the node's inports.
+     *
+     * @param inPorts an array of {@link PortInfo} representing the node's inports
+     */
+    public void setInPorts(final PortInfo[] inPorts) {
+        PortInfo[] pi = inPorts;
+        if (pi == null) {
+            pi = new PortInfo[0];
+        }
+        m_inPorts = pi;
+    }
+
+    /**
+     * Sets the metadata for the node's outports.
+     *
+     * @param outPorts an array of {@link PortInfo} representing the node's outports
+     */
+    public void setOutPorts(final PortInfo[] outPorts) {
+        PortInfo[] pi = outPorts;
+        if (pi == null) {
+            pi = new PortInfo[0];
+        }
+        m_outPorts = pi;
     }
 }
