@@ -66,5 +66,14 @@ a data &quot;workflow&quot;
                tooltip="Dialog for searching and inserting nodes.">
          </command>
       </menuContribution>
-   </extension>   
+   </extension>
+      <extension
+         id="RunNodalizer"
+         point="org.eclipse.core.runtime.applications">
+      <application>
+         <run
+               class="org.knime.workbench.repository.nodalizer.Nodalizer">
+         </run>
+      </application>
+   </extension> 
 </plugin>
