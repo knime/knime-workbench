@@ -125,6 +125,7 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
      */
     @Override
     public void modelChanged() {
+        cancelOutstandingViewRequests();
         Display display = getDisplay();
         if (display == null) {
             // view most likely disposed
