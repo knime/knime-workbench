@@ -357,7 +357,7 @@ public class Nodalizer implements IApplication {
         // Write to file
         final ObjectMapper map = new ObjectMapper();
         map.setSerializationInclusion(Include.NON_NULL);
-        final String json = map.writerWithDefaultPrettyPrinter().writeValueAsString(nInfo);
+        final String json = map.writeValueAsString(nInfo);
         String fileName = categoryPath + "/" + name;
         fileName = fileName.replaceAll("\\W+", "_");
         File f = new File(directory, fileName + ".json");
