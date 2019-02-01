@@ -161,7 +161,11 @@ public class IconInfo {
      * @param inPorts an array of {@link PortInfo} representing the node's inports
      */
     public void setInPorts(final PortInfo[] inPorts) {
-        m_inPorts = checkEmpty(inPorts);
+        PortInfo[] pi = inPorts;
+        if (pi == null) {
+            pi = new PortInfo[0];
+        }
+        m_inPorts = pi;
     }
 
     /**
@@ -170,15 +174,10 @@ public class IconInfo {
      * @param outPorts an array of {@link PortInfo} representing the node's outports
      */
     public void setOutPorts(final PortInfo[] outPorts) {
-        m_outPorts = checkEmpty(outPorts);
-    }
-
-    // -- Helper methods --
-
-    private static <T> T[] checkEmpty(final T[] array) {
-        if (array != null) {
-            return array.length > 0 ? array : null;
+        PortInfo[] pi = outPorts;
+        if (pi == null) {
+            pi = new PortInfo[0];
         }
-        return array;
+        m_outPorts = pi;
     }
 }

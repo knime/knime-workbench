@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.repository.nodalizer;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -205,7 +206,11 @@ public class NodeInfo {
      * @param path a {@code List<String>} containing the node's path, where the element at index 0 is the path root
      */
     public void setPath(final List<String> path) {
-        m_path = checkEmpty(path);
+        List<String> p = path;
+        if (p == null) {
+            p = Collections.emptyList();
+        }
+        m_path = p;
     }
 
     /**
@@ -259,7 +264,11 @@ public class NodeInfo {
      * @param dialog a {@code List} of {@link DialogOptionGroup}s representing the dialog options per tab for the node
      */
     public void setDialog(final List<DialogOptionGroup> dialog) {
-        m_dialog = checkEmpty(dialog);
+        List<DialogOptionGroup> dog = dialog;
+        if (dog == null) {
+            dog = Collections.emptyList();
+        }
+        m_dialog = dog;
     }
 
     /**
@@ -268,7 +277,11 @@ public class NodeInfo {
      * @param views the node's views (name and description)
      */
     public void setViews(final List<NamedField> views) {
-        m_views = checkEmpty(views);
+        List<NamedField> v = views;
+        if (v == null) {
+            v = Collections.emptyList();
+        }
+        m_views = v;
     }
 
     /**
@@ -287,22 +300,10 @@ public class NodeInfo {
      * @param moreInfoLinks an array of {@code <a>} tags representing the more information links for this node
      */
     public void setMoreInfoLinks(final String[] moreInfoLinks) {
-        m_moreInfoLinks = checkEmpty(moreInfoLinks);
-    }
-
-    // -- Helper methods --
-
-    private static <T> List<T> checkEmpty(final List<T> list) {
-        if (list != null) {
-            return list.isEmpty() ? null : list;
+        String[] mil = moreInfoLinks;
+        if (mil == null) {
+            mil = new String[0];
         }
-        return list;
-    }
-
-    private static <T> T[] checkEmpty(final T[] array) {
-        if (array != null) {
-            return array.length > 0 ? array : null;
-        }
-        return array;
+        m_moreInfoLinks = mil;
     }
 }

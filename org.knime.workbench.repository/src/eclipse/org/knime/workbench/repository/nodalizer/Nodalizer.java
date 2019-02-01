@@ -84,6 +84,7 @@ import org.knime.workbench.repository.util.NodeUtil;
 import org.osgi.framework.Bundle;
 import org.w3c.dom.Element;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -357,6 +358,7 @@ public class Nodalizer implements IApplication {
 
         // Write to file
         final ObjectMapper map = new ObjectMapper();
+        map.setSerializationInclusion(Include.NON_NULL);
         final String json = map.writerWithDefaultPrettyPrinter().writeValueAsString(nInfo);
         String fileName = categoryPath + "/" + name;
         fileName = fileName.replaceAll("\\W+", "_");
