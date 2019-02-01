@@ -73,6 +73,7 @@ import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
+import org.knime.core.util.ConfigUtils;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.IRepositoryObject;
@@ -255,9 +256,7 @@ public class Nodalizer implements IApplication {
         // Read from node
         final NodeSettings settings = new NodeSettings("");
         fac.saveAdditionalFactorySettings(settings);
-        final StringBuffer buf = new StringBuffer();
-        settings.toString(buf);
-        final String id = factoryString + buf.toString();
+        final String id = factoryString + ConfigUtils.contentBasedHash(settings);
         nInfo.setId(id);
         nInfo.setTitle(name.trim());
         iconInfo.setNodeType(kcn.getType().toString());
