@@ -94,11 +94,10 @@ final class Zipper {
         }
 
         byte[] buf = new byte[BUFFSIZE];
-        ZipOutputStream zout =
-            new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(outputFile), BUFFSIZE));
         IOException ioException = null;
 
-        try {
+        try (FileOutputStream outStream = new FileOutputStream(outputFile);
+                ZipOutputStream zout = new ZipOutputStream(new BufferedOutputStream(outStream, BUFFSIZE))) {
             if (files.size() == 0) {
                 // cleanup done in the finally block
                 return;
@@ -144,9 +143,7 @@ final class Zipper {
                     zout.putNextEntry(new ZipEntry(entryName));
                     zout.closeEntry();
                 } else {
-                    InputStream in = null;
-                    try {
-                        in = new BufferedInputStream(new FileInputStream(f), BUFFSIZE);
+                    try (InputStream in = new BufferedInputStream(new FileInputStream(f), BUFFSIZE)) {
                         zout.putNextEntry(new ZipEntry(entryName));
                         int read;
                         while ((read = in.read(buf)) >= 0) {
@@ -157,19 +154,21 @@ final class Zipper {
                             }
                             zout.write(buf, 0, read);
                         }
+                    } catch (IOException ioe) {
+                        ioException = new IOException(String.format("Unable to add file \"%s\" to archive \"%s\": %s",
+                            f.getAbsolutePath(), outputFile.getAbsoluteFile(), ioe.getMessage()), ioe);
+
                     } finally {
                         zout.closeEntry();
-                        if (in != null) {
-                            in.close();
-                        }
                     }
                 }
                 int megaBytes = (int)(f.length() >>> 20);
                 monitor.worked(megaBytes + 1);
             }
+        } catch (IOException ioe) {
+            ioException = ioe; // catch it to have variable assigned for finally block
         } finally {
             monitor.done();
-            zout.close();
             if (ioException != null) {
                 outputFile.delete();
                 throw ioException;
