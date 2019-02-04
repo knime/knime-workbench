@@ -69,8 +69,6 @@ import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.workflow.LoopEndNode;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.SingleNodeContainer;
-import org.knime.core.node.workflow.SubNodeContainer;
-import org.knime.core.node.workflow.action.InteractiveWebViewsResult;
 import org.knime.core.ui.node.workflow.InteractiveWebViewsResultUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.SingleNodeContainerUI;
@@ -468,19 +466,19 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                     subnodeMenuMgr.appendToGroup(GROUP_SUBNODE, action);
                     ((AbstractNodeAction)action).update();
 
-                    if (Wrapper.wraps(container, SubNodeContainer.class)) {
-                        final InteractiveWebViewsResult interactiveWebViewsResult =
-                                Wrapper.unwrapNC(container).getInteractiveWebViews();
+                    if (container instanceof SubNodeContainerUI) {
+                        @SuppressWarnings("rawtypes")
+                        final InteractiveWebViewsResultUI interactiveWebViewsResult =
+                            container.getInteractiveWebViews();
                         if (interactiveWebViewsResult.size() > 0) {
                             subnodeViewMgr = getSingleSubNodeViewsMenuManager(subnodeViewMgr, subnodeMenuMgr);
                             for (int i = 0; i < interactiveWebViewsResult.size(); i++) {
-                                action = new OpenInteractiveWebViewAction(Wrapper.unwrapNC(container),
-                                    interactiveWebViewsResult.get(i));
+                                action = new OpenInteractiveWebViewAction(container, interactiveWebViewsResult.get(i));
                                 subnodeViewMgr.appendToGroup(GROUP_SUBNODE_VIEWS, action);
                             }
                         }
 
-                        action = new OpenSubnodeWebViewAction(Wrapper.unwrap(container, SubNodeContainer.class));
+                        action = new OpenSubnodeWebViewAction((SubNodeContainerUI) container);
                         manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
                     }
                 }

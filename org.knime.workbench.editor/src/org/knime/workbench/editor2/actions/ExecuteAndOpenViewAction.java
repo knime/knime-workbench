@@ -55,7 +55,6 @@ import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerState;
 import org.knime.core.node.workflow.NodeStateChangeListener;
 import org.knime.core.node.workflow.NodeStateEvent;
-import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.node.workflow.InteractiveWebViewsResultUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
@@ -186,7 +185,7 @@ public class ExecuteAndOpenViewAction extends AbstractNodeAction {
                                 if (cont.hasInteractiveView()) {
                                     viewAction = new OpenInteractiveViewAction(unwrap(cont, NodeContainer.class));
                                 } else if (cont instanceof SubNodeContainerUI) {
-                                    viewAction = new OpenSubnodeWebViewAction(unwrap(cont, SubNodeContainer.class));
+                                    viewAction = new OpenSubnodeWebViewAction((SubNodeContainerUI)cont);
                                 } else if (interactiveWebViews.size() > 0) {
                                     viewAction = new OpenInteractiveWebViewAction(cont, interactiveWebViews.get(0));
                                 } else {
