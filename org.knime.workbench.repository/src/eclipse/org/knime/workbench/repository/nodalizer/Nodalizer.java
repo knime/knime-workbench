@@ -256,7 +256,7 @@ public class Nodalizer implements IApplication {
         // Read from node
         final NodeSettings settings = new NodeSettings("");
         fac.saveAdditionalFactorySettings(settings);
-        final String id = factoryString + ConfigUtils.contentBasedHash(settings);
+        final String id = factoryString + ConfigUtils.contentBasedHashString(settings);
         nInfo.setId(id);
         nInfo.setTitle(name.trim());
         nInfo.setNodeType(kcn.getType().toString());
