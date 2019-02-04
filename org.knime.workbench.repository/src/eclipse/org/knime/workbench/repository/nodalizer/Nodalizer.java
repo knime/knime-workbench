@@ -86,6 +86,7 @@ import org.w3c.dom.Element;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  * An application which scans the node repository, and outputs a JSON file containing each encountered node's metadata.
@@ -357,6 +358,7 @@ public class Nodalizer implements IApplication {
         // Write to file
         final ObjectMapper map = new ObjectMapper();
         map.setSerializationInclusion(Include.NON_NULL);
+        map.enable(SerializationFeature.INDENT_OUTPUT);
         final String json = map.writeValueAsString(nInfo);
         String fileName = categoryPath + "/" + name;
         fileName = fileName.replaceAll("\\W+", "_");

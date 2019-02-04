@@ -68,7 +68,7 @@ a data &quot;workflow&quot;
       </menuContribution>
    </extension>
       <extension
-         id="RunNodalizer"
+         id="Nodalizer"
          point="org.eclipse.core.runtime.applications">
       <application>
          <run
