@@ -60,7 +60,6 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
-import org.eclipse.core.runtime.Platform;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
 import org.jsoup.Jsoup;
@@ -74,6 +73,7 @@ import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.util.ConfigUtils;
+import org.knime.core.util.workflowalizer.NodeAndBundleInformation;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.IRepositoryObject;
@@ -81,7 +81,6 @@ import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.repository.model.Root;
 import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
 import org.knime.workbench.repository.util.NodeUtil;
-import org.osgi.framework.Bundle;
 import org.w3c.dom.Element;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -171,11 +170,9 @@ public class Nodalizer implements IApplication {
             try {
                 final NodeTemplate template = (NodeTemplate)object;
                 final NodeFactory<? extends NodeModel> fac = template.createFactoryInstance();
-                final Bundle eclipseCore = Platform.getBundle(template.getContributingPlugin());
-                final String extensionVersion = eclipseCore.getHeaders().get("Bundle-Version");
-                final String extensionName = eclipseCore.getHeaders().get("Bundle-Name");
+                final NodeAndBundleInformation nodeAndBundleInfo = NodeAndBundleInformationPersistor.create(fac);
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
-                    extensionVersion, extensionName, fac.isDeprecated(), directory);
+                    nodeAndBundleInfo, fac.isDeprecated(), directory);
             } catch (final Exception e) {
                 System.out.println("Failed to read node: " + object.getName());
                 e.printStackTrace();
@@ -217,7 +214,7 @@ public class Nodalizer implements IApplication {
                 if ((fac instanceof DynamicNodeFactory) && (parts.length > 1)) {
                     final String s = parts[1];
                     final NodeSettingsRO ns =
-                            NodeSettings.loadFromXML(new ByteArrayInputStream(s.getBytes(StandardCharsets.UTF_8)));
+                        NodeSettings.loadFromXML(new ByteArrayInputStream(s.getBytes(StandardCharsets.UTF_8)));
                     fac.loadAdditionalFactorySettings(ns);
                 }
 
@@ -229,8 +226,7 @@ public class Nodalizer implements IApplication {
                 if (b.getBundleName().isPresent() && b.getBundleVersion().isPresent()) {
                     // always pass true for isDeprecated, even though the factory may not say it is deprecated
                     // pass the factory name in the file, not the name of the loaded class - due to factory class mapping these may not match
-                    parseNodeAndPrint(fac, parts[0], path, categoryPath, fac.getNodeName(),
-                        b.getBundleVersion().get().toString(), b.getBundleName().get(), true, directory);
+                    parseNodeAndPrint(fac, parts[0], path, categoryPath, fac.getNodeName(), b, true, directory);
                 } else {
                     if (!b.getBundleName().isPresent()) {
                         System.out.println("Bundle name is missing! " + factory);
@@ -248,7 +244,7 @@ public class Nodalizer implements IApplication {
     }
 
     private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final List<String> path, final String categoryPath,
-        final String name, final String extensionVersion, final String extensionName, final boolean isDeprecated,
+        final String name, final NodeAndBundleInformation nodeAndBundleInfo, final boolean isDeprecated,
         final File directory) throws Exception {
         @SuppressWarnings("unchecked")
         final org.knime.core.node.Node kcn = new org.knime.core.node.Node((NodeFactory<NodeModel>)fac);
@@ -280,8 +276,7 @@ public class Nodalizer implements IApplication {
 
         // Read extension info
         // TODO: read update site
-        nInfo.setExtensionName(extensionName);
-        nInfo.setExtensionVersion(extensionVersion);
+        nInfo.setBundleInformation(nodeAndBundleInfo);
 
         // Parse HTML, and read fields
         final Element nodeXML = fac.getXMLDescription();
@@ -357,7 +352,7 @@ public class Nodalizer implements IApplication {
 
         // Write to file
         final ObjectMapper map = new ObjectMapper();
-        map.setSerializationInclusion(Include.NON_NULL);
+        map.setSerializationInclusion(Include.NON_ABSENT);
         map.enable(SerializationFeature.INDENT_OUTPUT);
         final String json = map.writeValueAsString(nInfo);
         String fileName = categoryPath + "/" + name;

@@ -51,7 +51,10 @@ package org.knime.workbench.repository.nodalizer;
 import java.util.Collections;
 import java.util.List;
 
+import org.knime.core.util.workflowalizer.NodeAndBundleInformation;
+
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 
 /**
  * POJO for KNIME Node information.
@@ -64,8 +67,7 @@ public class NodeInfo {
     private String m_title;
     private List<String> m_path;
     private String m_id;
-    private String m_extensionName;
-    private String m_extensionVersion;
+    private BundleInformation m_bundleInformation;
     private String m_updateSiteURL;
     private String m_description;
     private List<DialogOptionGroup> m_dialog;
@@ -107,21 +109,12 @@ public class NodeInfo {
     }
 
     /**
-     * Returns the node's extension name.
+     * Returns the bundle information for this node.
      *
-     * @return the node's extension name
+     * @return the bundle information for this node
      */
-    public String getExtensionName() {
-        return m_extensionName;
-    }
-
-    /**
-     * Returns the node's extension version.
-     *
-     * @return the node's extension version
-     */
-    public String getExtensionVersion() {
-        return m_extensionVersion;
+    public BundleInformation getBundleInformation() {
+        return m_bundleInformation;
     }
 
     /**
@@ -264,21 +257,13 @@ public class NodeInfo {
     }
 
     /**
-     * Sets the node's extension name
+     * Sets this node's bundle information.
      *
-     * @param extensionName name of the node's extension
+     * @param nodeAndBundleInfo the {@link NodeAndBundleInformation} for this node, only the bundle information will be
+     *            preserved.
      */
-    public void setExtensionName(final String extensionName) {
-        m_extensionName = extensionName;
-    }
-
-    /**
-     * Sets the node's extension version
-     *
-     * @param extensionVersion version of extension to which this node belongs
-     */
-    public void setExtensionVersion(final String extensionVersion) {
-        m_extensionVersion = extensionVersion;
+    public void setBundleInformation(final NodeAndBundleInformation nodeAndBundleInfo) {
+        m_bundleInformation = new BundleInformation(nodeAndBundleInfo);
     }
 
     /**
@@ -407,5 +392,54 @@ public class NodeInfo {
             pi = new PortInfo[0];
         }
         m_outPorts = pi;
+    }
+
+    // -- Helper Classes --
+
+    @JsonAutoDetect(getterVisibility=Visibility.NON_PRIVATE)
+    static final class BundleInformation {
+        private final NodeAndBundleInformation m_nabi;
+
+        private BundleInformation(final NodeAndBundleInformation nabi) {
+            m_nabi = nabi;
+        }
+
+        String getFeatureVersion() {
+            if (m_nabi.getFeatureVersion().isPresent()) {
+                return m_nabi.getFeatureVersion().get().toString();
+            }
+            return null;
+        }
+
+        String getFeatureVendor() {
+            return m_nabi.getFeatureVendor().orElse(null);
+        }
+
+        String getFeatureName() {
+            return m_nabi.getFeatureName().orElse(null);
+        }
+
+        String getFeatureSymbolicName() {
+            return m_nabi.getFeatureSymbolicName().orElse(null);
+        }
+
+        String getBundleVersion() {
+            if (m_nabi.getBundleVersion().isPresent()) {
+                return m_nabi.getBundleVersion().get().toString();
+            }
+            return null;
+        }
+
+        String getBundleVendor() {
+            return m_nabi.getBundleVendor().orElse(null);
+        }
+
+        String getBundleName() {
+            return m_nabi.getBundleName().orElse(null);
+        }
+
+        String getBundleSymbolicName() {
+            return m_nabi.getBundleSymbolicName().orElse(null);
+        }
     }
 }
