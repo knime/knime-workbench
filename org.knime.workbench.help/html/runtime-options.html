@@ -114,18 +114,32 @@
     "Keep only small tables in memory".
     </dd>
     
+    <dt>
+      knime.cache.tables=<em>(LRU|SMALL)</em>
+    </dt>
+    <dd>
+      The strategy for keeping tables in memory and writing tables to disk. Current
+      options are <tt>LRU</tt> and <tt>SMALL</tt>. If <tt>LRU</tt> is selected, tables of any size will be cached and
+      dropped from the cache only if (a) they have not been used recently or (b) memory becomes scarce. Flushing to
+      disk then happens as specified in <tt>knime.synchronous.io</tt>. If <tt>SMALL</tt> is selected,
+      tables are cached as in earlier versions of KNIME (&lt;v3.8). Specifically, only "small" tables (i.e., tables
+      with a maximum of <tt>org.knime.container.cellsinmemory</tt> cells) are kept in memory, unless the node
+      generating the table was specifically configured to flush tables to disk or keep tables in memory. Flushing of
+      tables to disk then happens synchronously. The default is <tt>LRU</tt>.
+    </dd>
+    
     <dt>org.knime.container.minspace.temp=<em>&lt;number&gt;</em></dt>
     <dd>Java property to specify the minimum free disc space in MB that needs to be available. If less is
      available, no further table files & blobs will be created (resulting in an exception).</dd>
      
     <dt>
-      knime.compress.io=<em>(true|false)</em>
+      knime.compress.io=<em>(GZIP|LZ4|SNAPPY|UNCOMPRESSED)</em>
     </dt>
     <dd>
       Enables/disables table stream compression. Compression results in smaller
       temp-file sizes but also (sometimes significant) longer runtime. The
       default is
-      <tt>true</tt>
+      <tt>GZIP</tt>
       . <br /> <strong>Warning:</strong> Changing this property will result in
       KNIME not being able to read workflows written previously (with a
       different compression property).
