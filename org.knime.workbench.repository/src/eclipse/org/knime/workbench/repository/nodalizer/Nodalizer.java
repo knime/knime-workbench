@@ -79,6 +79,7 @@ import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.IRepositoryObject;
 import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.repository.model.Root;
+import org.knime.workbench.repository.nodalizer.NodeInfo.LinkInformation;
 import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
 import org.knime.workbench.repository.util.NodeUtil;
 import org.w3c.dom.Element;
@@ -372,7 +373,7 @@ public class Nodalizer implements IApplication {
         final List<DialogOptionGroup> dialogOptions = new ArrayList<>();
         final List<NamedField> views = new ArrayList<>();
         NamedField interactiveView = null;
-        String[] moreInfoLinks = null;
+        LinkInformation[] moreInfoLinks = null;
         if (!nodeHTML.getElementsMatchingOwnText("Dialog Options").isEmpty()) {
             final org.jsoup.nodes.Element h2 = nodeHTML.getElementsMatchingOwnText("Dialog Options").first();
             org.jsoup.nodes.Element sibling = h2.nextElementSibling();
@@ -417,15 +418,16 @@ public class Nodalizer implements IApplication {
             }
         }
         if (!nodeHTML.getElementsMatchingOwnText("More Information").isEmpty()) {
-            org.jsoup.nodes.Element sibling = nodeHTML.getElementsMatchingOwnText("More Information").first().nextElementSibling();
+            org.jsoup.nodes.Element sibling =
+                nodeHTML.getElementsMatchingOwnText("More Information").first().nextElementSibling();
             while ((sibling != null) && !sibling.tagName().equalsIgnoreCase("dd")) {
                 sibling = sibling.nextElementSibling();
             }
             if ((sibling != null) && !sibling.getElementsByTag("ul").isEmpty()) {
                 final Elements links = sibling.getElementsByTag("a");
-                moreInfoLinks = new String[links.size()];
-                for(int i = 0; i < moreInfoLinks.length; i++) {
-                    moreInfoLinks[i] = links.get(i).outerHtml();
+                moreInfoLinks = new LinkInformation[links.size()];
+                for (int i = 0; i < moreInfoLinks.length; i++) {
+                    moreInfoLinks[i] = new LinkInformation(links.get(i).attr("href"), links.get(i).text());
                 }
             }
         }

@@ -73,7 +73,7 @@ public class NodeInfo {
     private List<DialogOptionGroup> m_dialog;
     private List<NamedField> m_views;
     private NamedField m_interactiveView;
-    private String[] m_moreInfoLinks;
+    private LinkInformation[] m_moreInfoLinks;
     private String m_icon;
     private String m_nodeType;
     private boolean m_deprecated;
@@ -163,11 +163,11 @@ public class NodeInfo {
     }
 
     /**
-     * Returns a array of more information links.
+     * Returns an array of more information links.
      *
-     * @return a array of more information links as {@code <a>} html tags
+     * @return an array of more information links
      */
-    public String[] getMoreInfoLinks() {
+    public LinkInformation[] getMoreInfoLinks() {
         return m_moreInfoLinks;
     }
 
@@ -322,12 +322,12 @@ public class NodeInfo {
     /**
      * Sets the node's more information links
      *
-     * @param moreInfoLinks an array of {@code <a>} tags representing the more information links for this node
+     * @param moreInfoLinks an array of {@code LinkInformation} representing the more information links for this node
      */
-    public void setMoreInfoLinks(final String[] moreInfoLinks) {
-        String[] mil = moreInfoLinks;
+    public void setMoreInfoLinks(final LinkInformation[] moreInfoLinks) {
+        LinkInformation[] mil = moreInfoLinks;
         if (mil == null) {
-            mil = new String[0];
+            mil = new LinkInformation[0];
         }
         m_moreInfoLinks = mil;
     }
@@ -440,6 +440,25 @@ public class NodeInfo {
 
         String getBundleSymbolicName() {
             return m_nabi.getBundleSymbolicName().orElse(null);
+        }
+    }
+
+    @JsonAutoDetect(getterVisibility=Visibility.NON_PRIVATE)
+    public static final class LinkInformation {
+        private final String m_url;
+        private final String m_text;
+
+        LinkInformation(final String url, final String text) {
+            m_url = url;
+            m_text = text;
+        }
+
+        String getUrl() {
+            return m_url;
+        }
+
+        String getText() {
+            return m_text;
         }
     }
 }
