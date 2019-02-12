@@ -51,6 +51,7 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.repository.view.TextualViewFilter;
 
 
@@ -59,6 +60,10 @@ public class ExplorerFilter extends TextualViewFilter {
             ExplorerFilter.class);
 
     private final Map<String, Boolean> m_cache = new HashMap<String, Boolean>();
+
+    private boolean m_usingKnimeProtocol;
+
+    private String m_queryString;
 
     /**
      *  An element is selected if itself, a parent or a
@@ -86,18 +91,20 @@ public class ExplorerFilter extends TextualViewFilter {
             }
             String fullName = fileStore.getFullName();
 
-            Boolean selected = m_cache.get(fullName);
+            final String cachekey = m_usingKnimeProtocol ? contentProvider.getMountID() + fullName : fullName;
+
+            Boolean selected = m_cache.get(cachekey);
             if (selected != null) {
 //                LOGGER.debug("Retrieved " + fullName
 //                        + " from cache with value " + selected);
                 if (direct) {
 //                    LOGGER.debug("Removing " + fullName + " from cache.");
-                    m_cache.remove(fullName);
+                    m_cache.remove(cachekey);
                 }
                 return selected;
             }
 
-            selectThis = match(fullName);
+            selectThis = match(fileStore);
             /* Files are shown if their name matches or if the name of any
              * parent folder matches. */
             if (AbstractExplorerFileStore.isWorkflowGroup(fileStore)) {
@@ -123,13 +130,24 @@ public class ExplorerFilter extends TextualViewFilter {
                                 ? m_cache.get(pathString) : false;
 //                        LOGGER.debug("Caching " + pathString + ": " + (
 //                                selectThis || existsAndTrue));
-                        m_cache.put(pathString, selectThis || existsAndTrue);
+                        final String key =
+                            m_usingKnimeProtocol ? contentProvider.getMountID() + pathString : pathString;
+                        m_cache.put(key, selectThis || existsAndTrue);
                     }
                 }
             }
 
         }
         return selectThis;
+    }
+
+    private boolean match(final AbstractExplorerFileStore fileStore) {
+        if (m_usingKnimeProtocol) {
+            // searching using the knime protocol, check url of the store.
+            return !(fileStore instanceof MessageFileStore)
+                && fileStore.toURI().toString().toUpperCase().startsWith(m_queryString);
+        }
+        return match(fileStore.getFullName());
     }
 
     /**
@@ -139,6 +157,8 @@ public class ExplorerFilter extends TextualViewFilter {
     public void setQueryString(final String query) {
         super.setQueryString(query);
         m_cache.clear();
+        m_queryString = query.toUpperCase();
+        m_usingKnimeProtocol = m_queryString.startsWith("KNIME://");
 //        LOGGER.debug("Clearing cache...");
     }
 }
