@@ -73,7 +73,7 @@ public class NodeInfo {
     private List<DialogOptionGroup> m_dialog;
     private List<NamedField> m_views;
     private NamedField m_interactiveView;
-    private LinkInformation[] m_moreInfoLinks;
+    private LinkInformation[] m_links;
     private String m_icon;
     private String m_nodeType;
     private boolean m_deprecated;
@@ -167,8 +167,8 @@ public class NodeInfo {
      *
      * @return an array of more information links
      */
-    public LinkInformation[] getMoreInfoLinks() {
-        return m_moreInfoLinks;
+    public LinkInformation[] getLinks() {
+        return m_links;
     }
 
     /**
@@ -322,14 +322,14 @@ public class NodeInfo {
     /**
      * Sets the node's more information links
      *
-     * @param moreInfoLinks an array of {@code LinkInformation} representing the more information links for this node
+     * @param links an array of {@code LinkInformation} representing the more information links for this node
      */
-    public void setMoreInfoLinks(final LinkInformation[] moreInfoLinks) {
-        LinkInformation[] mil = moreInfoLinks;
+    public void setLinks(final LinkInformation[] links) {
+        LinkInformation[] mil = links;
         if (mil == null) {
             mil = new LinkInformation[0];
         }
-        m_moreInfoLinks = mil;
+        m_links = mil;
     }
 
     /**
@@ -443,6 +443,11 @@ public class NodeInfo {
         }
     }
 
+    /**
+     * POJO for links.
+     *
+     * @author Alison Walter, KNIME GmbH, Konstanz, Germany
+     */
     @JsonAutoDetect(getterVisibility=Visibility.NON_PRIVATE)
     public static final class LinkInformation {
         private final String m_url;

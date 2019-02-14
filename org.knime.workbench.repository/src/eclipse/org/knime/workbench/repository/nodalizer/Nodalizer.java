@@ -434,7 +434,7 @@ public class Nodalizer implements IApplication {
         nodeInfo.setDialog(dialogOptions);
         nodeInfo.setViews(views);
         nodeInfo.setInteractiveView(interactiveView);
-        nodeInfo.setMoreInfoLinks(moreInfoLinks);
+        nodeInfo.setLinks(moreInfoLinks);
     }
 
     private static void parseDLTag(final org.jsoup.nodes.Element dl, final List<NamedField> fields) {
