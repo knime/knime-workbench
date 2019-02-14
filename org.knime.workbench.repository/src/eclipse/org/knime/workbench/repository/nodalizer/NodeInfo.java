@@ -68,7 +68,7 @@ public class NodeInfo {
     private String m_path;
     private String m_id;
     private BundleInformation m_bundleInformation;
-    private String m_updateSiteURL;
+    private SiteInfo m_additionalSiteInformation;
     private String m_description;
     private List<DialogOptionGroup> m_dialog;
     private List<NamedField> m_views;
@@ -118,12 +118,12 @@ public class NodeInfo {
     }
 
     /**
-     * Returns the update site which includes this node.
+     * Returns the {@link SiteInfo} for this node.
      *
-     * @return the update site which includes this node
+     * @return the site information
      */
-    public String getUpdateSiteURL() {
-        return m_updateSiteURL;
+    public SiteInfo getAdditionalSiteInformation() {
+        return m_additionalSiteInformation;
     }
 
     /**
@@ -263,12 +263,16 @@ public class NodeInfo {
     }
 
     /**
-     * Sets the node's update site
+     * Sets the node's {@link SiteInfo}.
      *
-     * @param updateSiteURL the update site from which this node can be retrieved
+     * @param url the node's update site url
+     * @param enabledByDefault if the node is enabled in knime AP by default
+     * @param siteName the name of the update site as listed in KNIME AP, this will only be populated for sites listed
+     *            by default
      */
-    public void setUpdateSiteURL(final String updateSiteURL) {
-        m_updateSiteURL = updateSiteURL;
+    public void setAdditionalSiteInformation(final String url, final boolean enabledByDefault,
+        final String siteName) {
+        m_additionalSiteInformation = new SiteInfo(enabledByDefault, url, siteName);
     }
 
     /**
@@ -460,6 +464,42 @@ public class NodeInfo {
 
         String getText() {
             return m_text;
+        }
+    }
+
+    /**
+     * POJO for update site, this contains the url and a boolean for if it is enabled by default.
+     *
+     * @author Alison Walter, KNIME GmbH, Konstanz, Germany
+     */
+    @JsonAutoDetect(getterVisibility = Visibility.NON_PRIVATE)
+    public static final class SiteInfo {
+        private final boolean m_enabledByDefault;
+        private final String m_url;
+        private final String m_name;
+        private final String m_version;
+
+        SiteInfo(final boolean enabledByDefault, final String url, final String name) {
+            m_enabledByDefault = enabledByDefault;
+            m_url = url;
+            m_version = m_url.substring(m_url.lastIndexOf('/') + 1, m_url.length());
+            m_name = name;
+        }
+
+        boolean getEnabledByDefault() {
+            return m_enabledByDefault;
+        }
+
+        String getUrl() {
+            return m_url;
+        }
+
+        String getName() {
+            return m_name;
+        }
+
+        String getVersion() {
+            return m_version;
         }
     }
 }
