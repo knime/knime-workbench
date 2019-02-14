@@ -321,7 +321,7 @@ public class Nodalizer implements IApplication {
                 }
             }
             final PortInfo port =
-                    new PortInfo(i - 1, kcn.getInportName(i), portDescriptHTML, kcn.getInputType(i).isOptional(),
+                    new PortInfo(kcn.getInportName(i), portDescriptHTML, kcn.getInputType(i).isOptional(),
                         kcn.getInputType(i).getName(), getColorAsHex(kcn.getInputType(i).getColor()));
             inports[i - 1] = port;
         }
@@ -341,7 +341,7 @@ public class Nodalizer implements IApplication {
                 }
             }
             final PortInfo port =
-                    new PortInfo(i - 1, kcn.getOutportName(i), portDescriptHTML, kcn.getOutputType(i).isOptional(),
+                    new PortInfo(kcn.getOutportName(i), portDescriptHTML, kcn.getOutputType(i).isOptional(),
                         kcn.getOutputType(i).getName(), getColorAsHex(kcn.getOutputType(i).getColor()));
             outports[i - 1] = port;
         }

@@ -58,7 +58,6 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 @JsonAutoDetect
 public class PortInfo {
 
-    private final int m_index;
     private final String m_name;
     private final String m_description;
     private final boolean m_optional;
@@ -68,30 +67,19 @@ public class PortInfo {
     /**
      * Creates a POJO representing a single in/outport of a node.
      *
-     * @param index index of the port
      * @param name name of the port
      * @param description description of the port, may contain HTML
      * @param optional if the port is optional
      * @param dataType type of port
      * @param color port color
      */
-    public PortInfo(final int index, final String name, final String description, final boolean optional,
+    public PortInfo(final String name, final String description, final boolean optional,
         final String dataType, final String color) {
-        m_index = index;
         m_name = name;
         m_description = description;
         m_optional = optional;
         m_color = color;
         m_dataType = dataType;
-    }
-
-    /**
-     * Returns the index of this port.
-     *
-     * @return the index of the port
-     */
-    public int getIndex() {
-        return m_index;
     }
 
     /**
