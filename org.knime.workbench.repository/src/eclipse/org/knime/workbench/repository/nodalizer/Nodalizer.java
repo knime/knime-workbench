@@ -56,7 +56,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
@@ -166,7 +165,7 @@ public class Nodalizer implements IApplication {
 
     // -- Helper methods --
 
-    private void pasreNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory) {
+    private void pasreNodesInRoot(final IRepositoryObject object, final String path, final File directory) {
         if (object instanceof NodeTemplate) {
             try {
                 final NodeTemplate template = (NodeTemplate)object;
@@ -180,14 +179,12 @@ public class Nodalizer implements IApplication {
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
-                pasreNodesInRoot(child, new ArrayList<>(), directory);
+                pasreNodesInRoot(child, "", directory);
             }
         } else if (object instanceof Category) {
             for (final IRepositoryObject child : ((Category)object).getChildren()) {
                 final Category c = (Category)object;
-                final List<String> p = new ArrayList<>(path);
-                p.add(c.getName());
-                pasreNodesInRoot(child, p, directory);
+                pasreNodesInRoot(child, path + "/" + c.getName(), directory);
             }
         } else {
             return;
@@ -221,7 +218,7 @@ public class Nodalizer implements IApplication {
 
                 final NodeAndBundleInformationPersistor b = NodeAndBundleInformationPersistor.create(fac);
                 final String categoryPath = "/uncategorized";
-                final List<String> path = Collections.singletonList("Uncategorized");
+                final String path = "Uncategorized";
 
                 fac.init(); // Some factories must be initialized or name/description throws NPE
                 if (b.getBundleName().isPresent() && b.getBundleVersion().isPresent()) {
@@ -244,7 +241,7 @@ public class Nodalizer implements IApplication {
         }
     }
 
-    private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final List<String> path, final String categoryPath,
+    private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final String path, final String categoryPath,
         final String name, final NodeAndBundleInformation nodeAndBundleInfo, final boolean isDeprecated,
         final File directory) throws Exception {
         @SuppressWarnings("unchecked")
@@ -258,7 +255,7 @@ public class Nodalizer implements IApplication {
         nInfo.setId(id);
         nInfo.setTitle(name.trim());
         nInfo.setNodeType(kcn.getType().toString());
-        nInfo.setPath(path);
+        nInfo.setPath(path + "/" + nInfo.getTitle());
         nInfo.setDeprecated(isDeprecated);
         nInfo.setStreamable(NodeUtil.isStreamable(fac));
 
