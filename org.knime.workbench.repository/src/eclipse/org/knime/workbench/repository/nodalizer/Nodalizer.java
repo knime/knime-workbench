@@ -56,7 +56,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.eclipse.equinox.app.IApplication;
@@ -98,6 +100,8 @@ public class Nodalizer implements IApplication {
     private static final String PARAM_DIRECTORY = "-outDir";
     private static final String FACTORY_LIST = "-factoryListFile";
 
+    private static final String MANUAL_UPDATE_SITES = "-manualUpdateSites";
+
     /** {@inheritDoc} */
     @Override
     public Object start(final IApplicationContext context) throws Exception {
@@ -105,6 +109,7 @@ public class Nodalizer implements IApplication {
                 context.getArguments().get(IApplicationContext.APPLICATION_ARGS);
         File outputDir = null;
         Path factoryList = null;
+        Map<String, List<String>> manualUpdateSites = null;
         if (args instanceof String[]) {
             final String[] params = (String[]) args;
             for (int i = 0; i < params.length; i++) {
@@ -113,6 +118,14 @@ public class Nodalizer implements IApplication {
                 }
                 if (params[i].equalsIgnoreCase(FACTORY_LIST) && (params.length > (i + 1))) {
                     factoryList = Paths.get(params[i + 1]);
+                }
+                if (params[i].equalsIgnoreCase(MANUAL_UPDATE_SITES) && (params.length > (i + 2))) {
+                    manualUpdateSites = new HashMap<>();
+                    int index = i + 1;
+                    while (params.length > (index + 1) && (params[index].charAt(0) != '-')) {
+                        manualUpdateSites.put(params[index], Files.readAllLines(Paths.get(params[index + 1])));
+                        index += 2;
+                    }
                 }
             }
         }
@@ -149,9 +162,9 @@ public class Nodalizer implements IApplication {
         }
         final Root root = RepositoryManager.INSTANCE.getCompleteRoot();
 
-        pasreNodesInRoot(root, null, outputDir);
+        pasreNodesInRoot(root, null, outputDir, manualUpdateSites);
         if (factoryList != null) {
-            parseDeprecatedNodeList(factoryList, outputDir);
+            parseDeprecatedNodeList(factoryList, outputDir, manualUpdateSites);
         }
 
         System.out.println("Node description generation successfully finished");
@@ -165,33 +178,33 @@ public class Nodalizer implements IApplication {
 
     // -- Helper methods --
 
-    private void pasreNodesInRoot(final IRepositoryObject object, final String path, final File directory) {
+    private void pasreNodesInRoot(final IRepositoryObject object, final String path, final File directory, final Map<String, List<String>> manualUpdateSites) {
         if (object instanceof NodeTemplate) {
             try {
                 final NodeTemplate template = (NodeTemplate)object;
                 final NodeFactory<? extends NodeModel> fac = template.createFactoryInstance();
                 final NodeAndBundleInformation nodeAndBundleInfo = NodeAndBundleInformationPersistor.create(fac);
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
-                    nodeAndBundleInfo, fac.isDeprecated(), directory);
+                    nodeAndBundleInfo, fac.isDeprecated(), directory, manualUpdateSites);
             } catch (final Exception e) {
                 System.out.println("Failed to read node: " + object.getName());
                 e.printStackTrace();
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
-                pasreNodesInRoot(child, "", directory);
+                pasreNodesInRoot(child, "", directory, manualUpdateSites);
             }
         } else if (object instanceof Category) {
             for (final IRepositoryObject child : ((Category)object).getChildren()) {
                 final Category c = (Category)object;
-                pasreNodesInRoot(child, path + "/" + c.getName(), directory);
+                pasreNodesInRoot(child, path + "/" + c.getName(), directory, manualUpdateSites);
             }
         } else {
             return;
         }
     }
 
-    private static void parseDeprecatedNodeList(final Path factoryListFile, final File directory) {
+    private static void parseDeprecatedNodeList(final Path factoryListFile, final File directory, final Map<String, List<String>> manualUpdateSites) {
         if (factoryListFile == null) {
             return;
         }
@@ -224,7 +237,7 @@ public class Nodalizer implements IApplication {
                 if (b.getBundleName().isPresent() && b.getBundleVersion().isPresent()) {
                     // always pass true for isDeprecated, even though the factory may not say it is deprecated
                     // pass the factory name in the file, not the name of the loaded class - due to factory class mapping these may not match
-                    parseNodeAndPrint(fac, parts[0], path, categoryPath, fac.getNodeName(), b, true, directory);
+                    parseNodeAndPrint(fac, parts[0], path, categoryPath, fac.getNodeName(), b, true, directory, manualUpdateSites);
                 } else {
                     if (!b.getBundleName().isPresent()) {
                         System.out.println("Bundle name is missing! " + factory);
@@ -243,7 +256,7 @@ public class Nodalizer implements IApplication {
 
     private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final String path, final String categoryPath,
         final String name, final NodeAndBundleInformation nodeAndBundleInfo, final boolean isDeprecated,
-        final File directory) throws Exception {
+        final File directory, final Map<String, List<String>> manualUpdateSites) throws Exception {
         @SuppressWarnings("unchecked")
         final org.knime.core.node.Node kcn = new org.knime.core.node.Node((NodeFactory<NodeModel>)fac);
         final NodeInfo nInfo = new NodeInfo();
@@ -273,7 +286,13 @@ public class Nodalizer implements IApplication {
         nInfo.setIcon(iconBase64);
 
         // Read extension info
-        // TODO: read update site
+        // HACK: Manually load update site
+        if (manualUpdateSites != null) {
+            final String url = getUpdateSiteUrl(id, manualUpdateSites);
+            final boolean enabledByDefault = siteEnabledByDefault(url);
+            final String siteName = getUpdateSiteName(url);
+            nInfo.setAdditionalSiteInformation(url, enabledByDefault, siteName);
+        }
         nInfo.setBundleInformation(nodeAndBundleInfo);
 
         // Parse HTML, and read fields
@@ -464,4 +483,43 @@ public class Nodalizer implements IApplication {
         return buf.toString();
     }
 
+    private static String getUpdateSiteUrl(final String id, final Map<String, List<String>> sites) {
+        for (String site : sites.keySet()) {
+            for (String siteId : sites.get(site)) {
+                if (siteId.equals(id)) {
+                    return site;
+                }
+            }
+        }
+        return "";
+    }
+
+    private static boolean siteEnabledByDefault(final String url) {
+        return url.startsWith("http://update.knime.com/analytics-platform")
+            || url.startsWith("http://update.knime.com/community-contributions/trusted/");
+    }
+
+    /**
+     * If this is one of the update site's in KNIME AP, this returns the name that is listed there by default.
+     */
+    private static String getUpdateSiteName(final String url) {
+        if (url == null || url.isEmpty()) {
+            return null;
+        }
+        final int index = url.lastIndexOf('/');
+        final String version = url.substring(index + 1, url.length());
+        if (url.startsWith("http://update.knime.com/analytics-platform")) {
+            return "KNIME Analytics Platform " + version + " Update Site";
+        }
+        if (url.startsWith("http://update.knime.com/community-contributions/trusted")) {
+            return "KNIME Community Contributions (" + version + ")";
+        }
+        if (url.startsWith("http://update.knime.com/partner")) {
+            return "KNIME Partner Update Site";
+        }
+        if (url.startsWith("http://update.knime.com/community-contributions")) {
+            return "Stable Community Contributions";
+        }
+        return null;
+    }
 }
