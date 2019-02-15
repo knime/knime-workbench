@@ -197,7 +197,8 @@ public class Nodalizer implements IApplication {
         } else if (object instanceof Category) {
             for (final IRepositoryObject child : ((Category)object).getChildren()) {
                 final Category c = (Category)object;
-                pasreNodesInRoot(child, path + "/" + c.getName(), directory, manualUpdateSites);
+                final String pathItem = c.getName().replace("/", "\\/");
+                pasreNodesInRoot(child, path + "/" + pathItem, directory, manualUpdateSites);
             }
         } else {
             return;
@@ -231,7 +232,7 @@ public class Nodalizer implements IApplication {
 
                 final NodeAndBundleInformationPersistor b = NodeAndBundleInformationPersistor.create(fac);
                 final String categoryPath = "/uncategorized";
-                final String path = "Uncategorized";
+                final String path = "/Uncategorized";
 
                 fac.init(); // Some factories must be initialized or name/description throws NPE
                 if (b.getBundleName().isPresent() && b.getBundleVersion().isPresent()) {
@@ -268,7 +269,7 @@ public class Nodalizer implements IApplication {
         nInfo.setId(id);
         nInfo.setTitle(name.trim());
         nInfo.setNodeType(kcn.getType().toString());
-        nInfo.setPath(path + "/" + nInfo.getTitle());
+        nInfo.setPath(path + "/" + nInfo.getTitle().replace("/", "\\/"));
         nInfo.setDeprecated(isDeprecated);
         nInfo.setStreamable(NodeUtil.isStreamable(fac));
 
