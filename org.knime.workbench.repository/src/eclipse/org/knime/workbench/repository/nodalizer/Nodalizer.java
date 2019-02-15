@@ -299,15 +299,20 @@ public class Nodalizer implements IApplication {
         final Element nodeXML = fac.getXMLDescription();
         final String s = NodeFactoryHTMLCreator.instance.readFullDescription(nodeXML);
         final Document nodeHTML = Jsoup.parse(s);
-        String descriptHTML = nodeHTML.getElementsByTag("p").outerHtml();
+        String descriptHTML = "";
         org.jsoup.nodes.Node n = nodeHTML.getElementsByTag("p").first();
         while (n != null) {
             if (n instanceof org.jsoup.nodes.Element) {
                 final org.jsoup.nodes.Element e = (org.jsoup.nodes.Element)n;
                 if (e.tagName().equalsIgnoreCase("h2")) {
                     n = null;
-                } else {
+                } else if (e.hasText()) {
                     descriptHTML += e.outerHtml();
+                    n = n.nextSibling();
+                } else if (e.tagName().equalsIgnoreCase("br")) {
+                    descriptHTML += e.outerHtml();
+                    n = n.nextSibling();
+                } else {
                     n = n.nextSibling();
                 }
             } else if (n instanceof TextNode) {
@@ -318,7 +323,8 @@ public class Nodalizer implements IApplication {
                 n = n.nextSibling();
             }
         }
-        nInfo.setDescription(descriptHTML);
+        final String cleanDescript = descriptHTML.replaceAll("\n|\t", "");
+        nInfo.setDescription(cleanDescript);
         parseHTML(nodeHTML, nInfo, kcn.getInteractiveViewName());
 
         // Read PortInfo
@@ -333,7 +339,7 @@ public class Nodalizer implements IApplication {
                     final Elements matches = sibling.getElementsByAttributeValue("class", "dt");
                     for (final org.jsoup.nodes.Element match : matches) {
                         if (match.ownText().equals("" + (i - 1))) {
-                            portDescriptHTML = match.nextElementSibling().html();
+                            portDescriptHTML = cleanHTML(match.nextElementSibling());
                             break;
                         }
                     }
@@ -353,7 +359,7 @@ public class Nodalizer implements IApplication {
                     final Elements matches = sibling.getElementsByAttributeValue("class", "dt");
                     for (final org.jsoup.nodes.Element match : matches) {
                         if (match.ownText().equals("" + (i - 1))) {
-                            portDescriptHTML = match.nextElementSibling().html();
+                            portDescriptHTML = cleanHTML(match.nextElementSibling());
                             break;
                         }
                     }
@@ -390,9 +396,16 @@ public class Nodalizer implements IApplication {
         final List<NamedField> views = new ArrayList<>();
         NamedField interactiveView = null;
         LinkInformation[] moreInfoLinks = null;
-        if (!nodeHTML.getElementsMatchingOwnText("Dialog Options").isEmpty()) {
-            final org.jsoup.nodes.Element h2 = nodeHTML.getElementsMatchingOwnText("Dialog Options").first();
-            org.jsoup.nodes.Element sibling = h2.nextElementSibling();
+
+        org.jsoup.nodes.Element doH2 = null;
+        for (final org.jsoup.nodes.Element element : nodeHTML.getElementsMatchingOwnText("Dialog Options")) {
+            if (element.tagName().equalsIgnoreCase("h2") && element.text().equals("Dialog Options")) {
+                doH2 = element;
+                break;
+            }
+        }
+        if (doH2 != null) {
+            org.jsoup.nodes.Element sibling = doH2.nextElementSibling();
             if (sibling.tagName().equalsIgnoreCase("dl")) {
                 final List<NamedField> fields = new ArrayList<>();
                 parseDLTag(sibling, fields);
@@ -405,10 +418,10 @@ public class Nodalizer implements IApplication {
                     final List<NamedField> fields = new ArrayList<>();
                     for (final org.jsoup.nodes.Element c : sibling.children()) {
                         if (c.attr("class").equals("groupname")) {
-                            nameHTML = c.html();
+                            nameHTML = cleanHTML(c);
                         }
                         if (c.attr("class").equals("group-description")) {
-                            descriptHTML = c.html();
+                            descriptHTML = cleanHTML(c);
                         }
                         if (c.tagName().equals("dl")) {
                             parseDLTag(c, fields);
@@ -419,23 +432,44 @@ public class Nodalizer implements IApplication {
                 }
             }
         }
-        if (!nodeHTML.getElementsMatchingOwnText("Views").isEmpty()) {
-            final org.jsoup.nodes.Element h2 = nodeHTML.getElementsMatchingOwnText("Views").first();
-            final org.jsoup.nodes.Element sib = h2.nextElementSibling();
+
+        org.jsoup.nodes.Element viewH2 = null;
+        for (final org.jsoup.nodes.Element element : nodeHTML.getElementsMatchingOwnText("Views")) {
+            if (element.tagName().equalsIgnoreCase("h2") && element.text().equals("Views")) {
+                viewH2 = element;
+                break;
+            }
+        }
+        if (viewH2 != null) {
+            final org.jsoup.nodes.Element sib = viewH2.nextElementSibling();
             if (sib.tagName().equalsIgnoreCase("dl")) {
                 parseDLTag(sib, views);
             }
         }
-        if (!nodeHTML.getElementsMatchingOwnText("Interactive View:").isEmpty()) {
-            final org.jsoup.nodes.Element h2 = nodeHTML.getElementsMatchingOwnText("Interactive View:").first();
-            final org.jsoup.nodes.Element sib = h2.nextElementSibling();
-            if ((sib != null) && sib.tagName().equalsIgnoreCase("div")) {
-                interactiveView = new NamedField(interactiveViewName, sib.html());
+
+        org.jsoup.nodes.Element interactiveViewH2 = null;
+        for (final org.jsoup.nodes.Element element : nodeHTML.getElementsMatchingOwnText("Interactive View:")) {
+            if (element.tagName().equalsIgnoreCase("h2") && element.text().startsWith("Interactive View:")) {
+                interactiveViewH2 = element;
+                break;
             }
         }
-        if (!nodeHTML.getElementsMatchingOwnText("More Information").isEmpty()) {
-            org.jsoup.nodes.Element sibling =
-                nodeHTML.getElementsMatchingOwnText("More Information").first().nextElementSibling();
+        if (interactiveViewH2 != null) {
+            final org.jsoup.nodes.Element sib = interactiveViewH2.nextElementSibling();
+            if ((sib != null) && sib.tagName().equalsIgnoreCase("div")) {
+                interactiveView = new NamedField(interactiveViewName, cleanHTML(sib));
+            }
+        }
+
+        org.jsoup.nodes.Element moreInfoH2 = null;
+        for (final org.jsoup.nodes.Element element : nodeHTML.getElementsMatchingOwnText("More Information")) {
+            if (element.tagName().equalsIgnoreCase("h2") && element.text().equals("More Information")) {
+                moreInfoH2 = element;
+                break;
+            }
+        }
+        if (moreInfoH2 != null) {
+            org.jsoup.nodes.Element sibling = moreInfoH2.nextElementSibling();
             while ((sibling != null) && !sibling.tagName().equalsIgnoreCase("dd")) {
                 sibling = sibling.nextElementSibling();
             }
@@ -457,13 +491,36 @@ public class Nodalizer implements IApplication {
         String keyHTML = "";
         for (final org.jsoup.nodes.Element child : dl.children()) {
             if (child.tagName().equals("dd")) {
-                final NamedField f = new NamedField(keyHTML, child.html());
+                final NamedField f = new NamedField(keyHTML, cleanHTML(child));
                 fields.add(f);
             }
             if (child.tagName().equals("dt")) {
-                keyHTML = child.html();
+                keyHTML = cleanHTML(child);
             }
         }
+    }
+
+    private static String cleanHTML(final org.jsoup.nodes.Element e) {
+        if (e.children().isEmpty()) {
+            return e.html().replaceAll("\n|\t", "");
+        }
+        for (final org.jsoup.nodes.Element child : e.children()) {
+            if (!hasText(child) && !child.tagName().equalsIgnoreCase("br")) {
+                child.remove();
+            }
+        }
+        return e.html().replaceAll("\n|\t", "");
+    }
+
+    private static boolean hasText(final org.jsoup.nodes.Element e) {
+        if (e.children().isEmpty()) {
+            return e.hasText();
+        }
+        boolean hasText = false;
+        for (final org.jsoup.nodes.Element child : e.children()) {
+            hasText |= hasText(child);
+        }
+        return hasText;
     }
 
     private static String getColorAsHex(final int color) {
