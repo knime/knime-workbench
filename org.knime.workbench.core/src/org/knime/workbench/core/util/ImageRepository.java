@@ -245,6 +245,8 @@ public final class ImageRepository {
         ServerScheduledJob("icons/server_space/flow_scheduled.png"),
         /** ServerSpace Explorer Icon: scheduled periodic job. */
         ServerScheduledPeriodicJob("icons/server_space/flow_periodic.png"),
+        /** ServerSpace Explorer Icon: system scheduled periodic job. */
+        SystemScheduledPeriodicJob("icons/server_space/flow_periodic_system.png"),
         /** ServerSpace Explorer Icon: configured job. */
         ServerJobConfigured("icons/server_space/running_job_confgd.png"),
         /** ServerSpace Explorer Icon: executing job. */
