@@ -300,43 +300,48 @@ public class Nodalizer implements IApplication {
 
         // Parse HTML, and read fields
         final Element nodeXML = fac.getXMLDescription();
-        final String s = NodeFactoryHTMLCreator.instance.readFullDescription(nodeXML);
-        final Document nodeHTML = Jsoup.parse(s);
-        String descriptHTML = "";
-        org.jsoup.nodes.Node n = nodeHTML.getElementsByTag("p").first();
-        while (n != null) {
-            if (n instanceof org.jsoup.nodes.Element) {
-                final org.jsoup.nodes.Element e = (org.jsoup.nodes.Element)n;
-                if (e.tagName().equalsIgnoreCase("h2")) {
-                    n = null;
-                } else if (e.hasText()) {
-                    descriptHTML += e.outerHtml();
-                    n = n.nextSibling();
-                } else if (e.tagName().equalsIgnoreCase("br")) {
-                    descriptHTML += e.outerHtml();
+        Document nodeHTML = null;
+        if (nodeXML == null) {
+            System.out.println("Node factory XML not found! " + fac.getClass().toString());
+        } else {
+            final String s = NodeFactoryHTMLCreator.instance.readFullDescription(nodeXML);
+            nodeHTML = Jsoup.parse(s);
+            String descriptHTML = "";
+            org.jsoup.nodes.Node n = nodeHTML.getElementsByTag("p").first();
+            while (n != null) {
+                if (n instanceof org.jsoup.nodes.Element) {
+                    final org.jsoup.nodes.Element e = (org.jsoup.nodes.Element)n;
+                    if (e.tagName().equalsIgnoreCase("h2")) {
+                        n = null;
+                    } else if (e.hasText()) {
+                        descriptHTML += e.outerHtml();
+                        n = n.nextSibling();
+                    } else if (e.tagName().equalsIgnoreCase("br")) {
+                        descriptHTML += e.outerHtml();
+                        n = n.nextSibling();
+                    } else {
+                        n = n.nextSibling();
+                    }
+                } else if (n instanceof TextNode) {
+                    final TextNode tn = (TextNode)n;
+                    descriptHTML += tn.getWholeText();
                     n = n.nextSibling();
                 } else {
                     n = n.nextSibling();
                 }
-            } else if (n instanceof TextNode) {
-                final TextNode tn = (TextNode)n;
-                descriptHTML += tn.getWholeText();
-                n = n.nextSibling();
-            } else {
-                n = n.nextSibling();
             }
+            nInfo.setDescription(descriptHTML);
+            parseHTML(nodeHTML, nInfo, kcn.getInteractiveViewName());
         }
-        nInfo.setDescription(descriptHTML);
-        parseHTML(nodeHTML, nInfo, kcn.getInteractiveViewName());
 
         // Read PortInfo
         final PortInfo[] inports = new PortInfo[kcn.getNrInPorts() - 1];
         final PortInfo[] outports = new PortInfo[kcn.getNrOutPorts() - 1];
         for (int i = 1; i < kcn.getNrInPorts(); i++) {
             String portDescriptHTML = fac.getInportDescription(i - 1);
-            if (!nodeHTML.getElementsMatchingOwnText("Input Ports").isEmpty()) {
+            if (nodeHTML != null && !nodeHTML.getElementsMatchingOwnText("Input Ports").isEmpty()) {
                 final org.jsoup.nodes.Element sibling =
-                        nodeHTML.getElementsMatchingOwnText("Input Ports").first().nextElementSibling();
+                    nodeHTML.getElementsMatchingOwnText("Input Ports").first().nextElementSibling();
                 if (sibling != null) {
                     final Elements matches = sibling.getElementsByAttributeValue("class", "dt");
                     for (final org.jsoup.nodes.Element match : matches) {
@@ -347,16 +352,15 @@ public class Nodalizer implements IApplication {
                     }
                 }
             }
-            final PortInfo port =
-                    new PortInfo(kcn.getInportName(i), portDescriptHTML, kcn.getInputType(i).isOptional(),
-                        kcn.getInputType(i).getName(), getColorAsHex(kcn.getInputType(i).getColor()));
+            final PortInfo port = new PortInfo(kcn.getInportName(i), portDescriptHTML, kcn.getInputType(i).isOptional(),
+                kcn.getInputType(i).getName(), getColorAsHex(kcn.getInputType(i).getColor()));
             inports[i - 1] = port;
         }
         for (int i = 1; i < kcn.getNrOutPorts(); i++) {
             String portDescriptHTML = fac.getOutportDescription(i - 1);
-            if (!nodeHTML.getElementsMatchingOwnText("Output Ports").isEmpty()) {
+            if (nodeHTML != null && !nodeHTML.getElementsMatchingOwnText("Output Ports").isEmpty()) {
                 final org.jsoup.nodes.Element sibling =
-                        nodeHTML.getElementsMatchingOwnText("Output Ports").first().nextElementSibling();
+                    nodeHTML.getElementsMatchingOwnText("Output Ports").first().nextElementSibling();
                 if (sibling != null) {
                     final Elements matches = sibling.getElementsByAttributeValue("class", "dt");
                     for (final org.jsoup.nodes.Element match : matches) {
@@ -368,8 +372,8 @@ public class Nodalizer implements IApplication {
                 }
             }
             final PortInfo port =
-                    new PortInfo(kcn.getOutportName(i), portDescriptHTML, kcn.getOutputType(i).isOptional(),
-                        kcn.getOutputType(i).getName(), getColorAsHex(kcn.getOutputType(i).getColor()));
+                new PortInfo(kcn.getOutportName(i), portDescriptHTML, kcn.getOutputType(i).isOptional(),
+                    kcn.getOutputType(i).getName(), getColorAsHex(kcn.getOutputType(i).getColor()));
             outports[i - 1] = port;
         }
         nInfo.setInPorts(inports);
