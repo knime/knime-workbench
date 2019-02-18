@@ -324,8 +324,7 @@ public class Nodalizer implements IApplication {
                 n = n.nextSibling();
             }
         }
-        final String cleanDescript = descriptHTML.replaceAll("\n|\t", "");
-        nInfo.setDescription(cleanDescript);
+        nInfo.setDescription(descriptHTML);
         parseHTML(nodeHTML, nInfo, kcn.getInteractiveViewName());
 
         // Read PortInfo
@@ -503,14 +502,14 @@ public class Nodalizer implements IApplication {
 
     private static String cleanHTML(final org.jsoup.nodes.Element e) {
         if (e.children().isEmpty()) {
-            return e.html().replaceAll("\n|\t", "");
+            return e.html();
         }
         for (final org.jsoup.nodes.Element child : e.children()) {
             if (!hasText(child) && !child.tagName().equalsIgnoreCase("br")) {
                 child.remove();
             }
         }
-        return e.html().replaceAll("\n|\t", "");
+        return e.html();
     }
 
     private static boolean hasText(final org.jsoup.nodes.Element e) {
