@@ -56,6 +56,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -178,7 +179,7 @@ public class Nodalizer implements IApplication {
 
     // -- Helper methods --
 
-    private void pasreNodesInRoot(final IRepositoryObject object, final String path, final File directory, final Map<String, List<String>> manualUpdateSites) {
+    private void pasreNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory, final Map<String, List<String>> manualUpdateSites) {
         if (object instanceof NodeTemplate) {
             try {
                 final NodeTemplate template = (NodeTemplate)object;
@@ -192,13 +193,14 @@ public class Nodalizer implements IApplication {
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
-                pasreNodesInRoot(child, "", directory, manualUpdateSites);
+                pasreNodesInRoot(child, new ArrayList<>(), directory, manualUpdateSites);
             }
         } else if (object instanceof Category) {
             for (final IRepositoryObject child : ((Category)object).getChildren()) {
                 final Category c = (Category)object;
-                final String pathItem = c.getName().replace("/", "\\/");
-                pasreNodesInRoot(child, path + "/" + pathItem, directory, manualUpdateSites);
+                final List<String> p = new ArrayList<>(path);
+                p.add(c.getName());
+                pasreNodesInRoot(child, p, directory, manualUpdateSites);
             }
         } else {
             return;
@@ -232,7 +234,7 @@ public class Nodalizer implements IApplication {
 
                 final NodeAndBundleInformationPersistor b = NodeAndBundleInformationPersistor.create(fac);
                 final String categoryPath = "/uncategorized";
-                final String path = "/Uncategorized";
+                final List<String> path = Collections.singletonList("Uncategorized");
 
                 fac.init(); // Some factories must be initialized or name/description throws NPE
                 if (b.getBundleName().isPresent() && b.getBundleVersion().isPresent()) {
@@ -255,7 +257,7 @@ public class Nodalizer implements IApplication {
         }
     }
 
-    private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final String path, final String categoryPath,
+    private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final List<String> path, final String categoryPath,
         final String name, final NodeAndBundleInformation nodeAndBundleInfo, final boolean isDeprecated,
         final File directory, final Map<String, List<String>> manualUpdateSites) throws Exception {
         @SuppressWarnings("unchecked")
@@ -269,7 +271,7 @@ public class Nodalizer implements IApplication {
         nInfo.setId(id);
         nInfo.setTitle(name.trim());
         nInfo.setNodeType(kcn.getType().toString());
-        nInfo.setPath(path + "/" + nInfo.getTitle().replace("/", "\\/"));
+        nInfo.setPath(path);
         nInfo.setDeprecated(isDeprecated);
         nInfo.setStreamable(NodeUtil.isStreamable(fac));
 

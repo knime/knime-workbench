@@ -65,7 +65,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 public class NodeInfo {
 
     private String m_title;
-    private String m_path;
+    private List<String> m_path;
     private String m_id;
     private BundleInformation m_bundleInformation;
     private SiteInfo m_additionalSiteInformation;
@@ -91,11 +91,11 @@ public class NodeInfo {
     }
 
     /**
-     * Returns the path of this node.
+     * Returns a {@code List} of this node's path components.
      *
-     * @return the path
+     * @return a {@code List} of path components
      */
-    public String getPath() {
+    public List<String> getPath() {
         return m_path;
     }
 
@@ -237,10 +237,15 @@ public class NodeInfo {
     /**
      * Sets the node's path
      *
-     * @param path the node's path
+     * @param path a {@code List<String>} containing the node's path, where the element at index 0 is the path root
      */
-    public void setPath(final String path) {
-        m_path = path;
+    public void setPath(final List<String> path) {
+        List<String> p = path;
+        if (p == null) {
+            p = Collections.emptyList();
+        }
+        m_path = p;
+
     }
 
     /**
