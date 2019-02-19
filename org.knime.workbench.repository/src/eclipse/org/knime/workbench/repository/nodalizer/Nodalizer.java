@@ -94,16 +94,33 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  * An application which scans the node repository, and outputs a JSON file containing each encountered node's metadata.
  * Node's not in the repository can also be parsed by passing the node factory class in a file. This file should have
  * one node factory per line, for dynamic nodes the line should contain the 'factory-class-#-factory-settings-xml'.
+ * Update site information can also be included in the output JSON, via the "-manualUpdateSites" flag. This should be
+ * used by passing the update site URL followed by a file containing the ids for the nodes which are part of that update
+ * site.
  *
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
 public class Nodalizer implements IApplication {
     private static final String PARAM_DIRECTORY = "-outDir";
     private static final String FACTORY_LIST = "-factoryListFile";
-
     private static final String MANUAL_UPDATE_SITES = "-manualUpdateSites";
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Parameters:
+     * <ul>
+     * <li>-outDir &lt;path-to-local-write-directory&gt;, this is a required parameter which specifies where the JSON
+     * files should be written</li>
+     * <li>-factoryListFile &lt;path-to-factory-file&gt;, this is a path to a file containing a single factory class per
+     * line. This is used for deprecated nodes.</li>
+     * <li>-manualUpdateSites &lt;update-site-1-url&gt; &lt;update-site-1-node-list&gt; &lt;update-site-2-url&gt;
+     * &lt;update-site-2-node-list&gt; ... this is used to pass update site information to be included in the output
+     * node JSON. The first parameter is the update site's url, and the second is a list of node ids (factory class +
+     * factory settings hash see {@link ConfigUtils#contentBasedHashString(org.knime.core.node.config.base.ConfigBase)})
+     * contained in that update site</li>
+     * </ul>
+     */
     @Override
     public Object start(final IApplicationContext context) throws Exception {
         final Object args =
