@@ -575,8 +575,8 @@ public class Nodalizer implements IApplication {
     }
 
     private static boolean siteEnabledByDefault(final String url) {
-        return url.startsWith("http://update.knime.com/analytics-platform")
-            || url.startsWith("http://update.knime.com/community-contributions/trusted/");
+        return url.contains("://update.knime.com/analytics-platform")
+            || url.contains("://update.knime.com/community-contributions/trusted/");
     }
 
     /**
@@ -588,16 +588,16 @@ public class Nodalizer implements IApplication {
         }
         final int index = url.lastIndexOf('/');
         final String version = url.substring(index + 1, url.length());
-        if (url.startsWith("http://update.knime.com/analytics-platform")) {
+        if (url.contains("://update.knime.com/analytics-platform")) {
             return "KNIME Analytics Platform " + version + " Update Site";
         }
-        if (url.startsWith("http://update.knime.com/community-contributions/trusted")) {
+        if (url.contains("://update.knime.com/community-contributions/trusted")) {
             return "KNIME Community Contributions (" + version + ")";
         }
-        if (url.startsWith("http://update.knime.com/partner")) {
+        if (url.contains("://update.knime.com/partner")) {
             return "KNIME Partner Update Site";
         }
-        if (url.startsWith("http://update.knime.com/community-contributions")) {
+        if (url.contains("://update.knime.com/community-contributions")) {
             return "Stable Community Contributions";
         }
         return null;
