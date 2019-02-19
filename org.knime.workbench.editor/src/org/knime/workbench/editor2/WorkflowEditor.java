@@ -1922,7 +1922,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 LOGGER.warn("Could not determine mount point root for " + newWorkflowDir + ": " + ex.getMessage(), ex);
             }
 
-            WorkflowContext context = new WorkflowContext.Factory(getWorkflowManager().get().getContext())
+            WorkflowContext context = getWorkflowManager().get().getContext().createCopy()
                         .setCurrentLocation(localNewWorkflowDir)
                         .setMountpointRoot(mountPointRoot)
                         .setMountpointURI(newWorkflowDir.toURI())
