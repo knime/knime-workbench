@@ -200,10 +200,11 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                         && resultInfo.isWorkflowGroup()) {
                     result = openMergeDialog(source, result);
                 } else {
-                    boolean isModifiable = resultInfo.isModifiable()
-                            && ExplorerFileSystemUtils.isLockable(
-                                    (List<AbstractExplorerFileStore>)
-                                    Arrays.asList(result), false) == null;
+                    boolean isModifiable =
+                        resultInfo.isModifiable()
+                            && ExplorerFileSystemUtils
+                                .isLockable((List<AbstractExplorerFileStore>)Arrays.asList(result), false) == null
+                            && !ExplorerFileSystemUtils.hasOpenReports(Arrays.asList(result));
                     /* Make sure that a workflow group is not overwritten by
                      * a workflow, a template or a file or vice versa */
                     boolean overwriteOk = !srcInfo.isWorkflowGroup()

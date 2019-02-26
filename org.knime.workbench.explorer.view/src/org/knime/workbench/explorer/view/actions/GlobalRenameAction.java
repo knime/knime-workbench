@@ -148,6 +148,12 @@ public class GlobalRenameAction extends ExplorerAction {
             return;
         }
 
+        if (ExplorerFileSystemUtils.hasOpenReports(affectedFlows)) {
+            ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
+            showCantRenameOpenReportMessage();
+            return;
+        }
+
         AbstractExplorerFileStore dstFileStore = queryTargetName(srcFileStore);
         if (dstFileStore == null) {
             // dialog was cancelled
@@ -280,6 +286,15 @@ public class GlobalRenameAction extends ExplorerAction {
         mb.setText("Can't Rename");
         mb.setMessage("At least one of the workflows affected by the renaming"
                 + " are still opened in the editor and have to be closed.");
+        mb.open();
+    }
+
+    private void showCantRenameOpenReportMessage() {
+        MessageBox mb =
+                new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
+        mb.setText("Can't Rename");
+        mb.setMessage("At least one report of the workflows affected by the renaming"
+                + " is still opened in the editor and has to be closed.");
         mb.open();
     }
 

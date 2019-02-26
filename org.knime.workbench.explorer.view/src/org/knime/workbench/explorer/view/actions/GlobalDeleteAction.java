@@ -177,6 +177,7 @@ public class GlobalDeleteAction extends ExplorerAction {
 
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelJobs);
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelWorkflows);
+        ExplorerFileSystemUtils.closeOpenReports(toDelWorkflows);
 
         new ExplorerJob("Deleting items.") {
 

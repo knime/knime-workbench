@@ -57,9 +57,12 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IEditorReference;
+import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContainer;
@@ -219,6 +222,63 @@ public final class ExplorerFileSystemUtils {
     }
 
     /**
+     * Closes the editor of the specified workflow reports.
+     *
+     * @param workflows the workflows to be closed
+     * @since 8.4
+     */
+    public static void closeOpenReports(
+            final List<? extends AbstractExplorerFileStore> workflows) {
+        final IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+        for (AbstractExplorerFileStore workflow : workflows) {
+            if (!(workflow instanceof LocalExplorerFileStore)) {
+                // only consider local workflows
+                continue;
+            }
+
+            File localFile = null;
+            try {
+                localFile = workflow.toLocalFile();
+            } catch (CoreException e) {
+                continue;
+            }
+
+            for (IEditorReference editRef : page.getEditorReferences()) {
+
+                // Check if we have an actual BIRT editor.
+                // Note: instead of checking of type IReportEditor, we check the ID so that this even works if
+                // editor is null (report is open, but KNIME just has been started up and another editor is open.
+                if (editRef.getId().startsWith("org.eclipse.birt")) {
+                    try {
+                        final IEditorInput input = editRef.getEditorInput();
+
+                        String reportLocation = "";
+                        if (input instanceof IFileEditorInput) {
+                            reportLocation = ((IFileEditorInput)input).getFile().getLocation().toString();
+                        } else {
+                            reportLocation = input.getToolTipText();
+                        }
+
+                        final int idx = reportLocation.lastIndexOf('/');
+
+                        reportLocation = idx > -1 ? reportLocation.substring(0, idx) : reportLocation;
+
+                        // Compare the path of the workflow with the path of the IEditorInput, which points to a
+                        // .rptdesign file in the workflow folder.
+                        if (localFile.toString().equals(reportLocation)) {
+                            // Restore editor in case it hasn't been done yet as otherwise the editor is null.
+                            page.closeEditor(editRef.getEditor(true), false);
+                        }
+                    } catch (PartInitException e) {
+                        // do nothing.
+                    }
+                }
+
+            }
+        }
+    }
+
+    /**
      * @param workflows the workflows to check
      * @return true if at least one of the specified workflows are open, false
      *         otherwise
@@ -226,6 +286,64 @@ public final class ExplorerFileSystemUtils {
     public static boolean hasOpenWorkflows(
             final List<? extends AbstractExplorerFileStore> workflows) {
         return  hasOpenWorkflows(workflows, false);
+    }
+
+    /**
+     * Checks if reports are opened for the specified workflows.
+     *
+     * @param workflows The workflows to check.
+     * @return {@code true} if at least one of the workflows has an open report, {@code false} otherwise.
+     * @since 8.4
+     */
+    public static boolean hasOpenReports(
+            final List<? extends AbstractExplorerFileStore> workflows) {
+        final IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+        for (AbstractExplorerFileStore workflow : workflows) {
+            if (!(workflow instanceof LocalExplorerFileStore)) {
+                // only consider local workflows
+                continue;
+            }
+
+            File localFile = null;
+            try {
+                localFile = workflow.toLocalFile();
+            } catch (CoreException e) {
+                continue;
+            }
+
+            for (IEditorReference editRef : page.getEditorReferences()) {
+
+                // Check if we have an actual BIRT editor.
+                // Note: instead of checking of type IReportEditor, we check the ID so that this even works if
+                // editor is null (report is open, but KNIME just has been started up and another editor is open.
+                if (editRef.getId().startsWith("org.eclipse.birt")) {
+                    try {
+                        final IEditorInput input = editRef.getEditorInput();
+
+                        String reportLocation = "";
+                        if (input instanceof IFileEditorInput) {
+                            reportLocation = ((IFileEditorInput)input).getFile().getLocation().toString();
+                        } else {
+                            reportLocation = input.getToolTipText();
+                        }
+
+                        final int idx = reportLocation.lastIndexOf('/');
+
+                        reportLocation = idx > -1 ? reportLocation.substring(0, idx) : reportLocation;
+
+                        // Compare the path of the workflow with the path of the IEditorInput, which points to a
+                        // .rptdesign file in the workflow folder.
+                        if (localFile.toString().equals(reportLocation)) {
+                            return true;
+                        }
+                    } catch (PartInitException e) {
+                        // do nothing.
+                    }
+                }
+
+            }
+        }
+        return false;
     }
 
     /**

@@ -291,7 +291,8 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                 if (ExplorerFileSystemUtils.lockWorkflow(lfs)) {
                     lockedDest.add(lfs);
                     // Flows opened in an editor cannot be overwritten
-                    if (ExplorerFileSystemUtils.hasOpenWorkflows(Arrays.asList(lfs))) {
+                    if (ExplorerFileSystemUtils.hasOpenWorkflows(Arrays.asList(lfs))
+                        || ExplorerFileSystemUtils.hasOpenReports(Arrays.asList(lfs))) {
                         notOverwritableDest.add(lfs);
                     }
                 } else {
