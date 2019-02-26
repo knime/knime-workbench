@@ -66,7 +66,7 @@ public class NodeInfo {
 
     private String m_title;
     private List<String> m_path;
-    private String m_id;
+    private String m_factoryName;
     private BundleInformation m_bundleInformation;
     private SiteInfo m_additionalSiteInformation;
     private String m_description;
@@ -100,12 +100,12 @@ public class NodeInfo {
     }
 
     /**
-     * Returns a unique ID for this node (factory class + factory_settings).
+     * Returns the node's factory name (factory class + factory_settings).
      *
-     * @return a unique ID for this node (factory class + factory_settings)
+     * @return the factory name
      */
-    public String getId() {
-        return m_id;
+    public String getFactoryName() {
+        return m_factoryName;
     }
 
     /**
@@ -249,12 +249,12 @@ public class NodeInfo {
     }
 
     /**
-     * Sets the node's unique id
+     * Sets the node's factory name.
      *
-     * @param id a unique id (factory class + factory_settings)
+     * @param factoryName a unique id including the factory class and factory_settings
      */
-    public void setId(final String id) {
-        m_id = id;
+    public void setFactoryName(final String factoryName) {
+        m_factoryName = factoryName;
     }
 
     /**

@@ -284,8 +284,8 @@ public class Nodalizer implements IApplication {
         // Read from node
         final NodeSettings settings = new NodeSettings("");
         fac.saveAdditionalFactorySettings(settings);
-        final String id = factoryString + ConfigUtils.contentBasedHashString(settings);
-        nInfo.setId(id);
+        final String factoryName = factoryString + ConfigUtils.contentBasedHashString(settings);
+        nInfo.setFactoryName(factoryName);
         nInfo.setTitle(name.trim());
         nInfo.setNodeType(kcn.getType().toString());
         nInfo.setPath(path);
@@ -308,7 +308,7 @@ public class Nodalizer implements IApplication {
         // Read extension info
         // HACK: Manually load update site
         if (manualUpdateSites != null) {
-            final String url = getUpdateSiteUrl(id, manualUpdateSites);
+            final String url = getUpdateSiteUrl(factoryName, manualUpdateSites);
             final boolean enabledByDefault = siteEnabledByDefault(url);
             final String siteName = getUpdateSiteName(url);
             nInfo.setAdditionalSiteInformation(url, enabledByDefault, siteName);
