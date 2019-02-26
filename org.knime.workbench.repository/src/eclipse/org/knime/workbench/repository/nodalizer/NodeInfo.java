@@ -48,6 +48,11 @@
  */
 package org.knime.workbench.repository.nodalizer;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 
@@ -106,6 +111,24 @@ public class NodeInfo {
      */
     public String getFactoryName() {
         return m_factoryName;
+    }
+
+    /**
+     * Returns this node's unique ID encoded as base64url.
+     *
+     * @return a 17 character unique id
+     */
+    public String getId() {
+        // TODO the ID is currently derived from the factory class name. As soon as that changes, also the ID
+        // changes. We still need to find a way to define a truly unique id for nodes.
+
+        try {
+            byte[] digest =
+                MessageDigest.getInstance("SHA-256").digest(getFactoryName().getBytes(StandardCharsets.UTF_8));
+            return "*" + Base64.getUrlEncoder().encodeToString(Arrays.copyOf(digest, 12));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     /**
