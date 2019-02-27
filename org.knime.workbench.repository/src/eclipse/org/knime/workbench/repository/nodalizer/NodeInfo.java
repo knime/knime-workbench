@@ -101,7 +101,7 @@ public class NodeInfo {
      * @return a {@code List} of path components
      */
     public List<String> getPath() {
-        return m_path;
+        return m_path == null ? Collections.emptyList() : m_path;
     }
 
     /**
@@ -164,7 +164,7 @@ public class NodeInfo {
      * @return the node's dialog groups' (tabs) information
      */
     public List<DialogOptionGroup> getDialog() {
-        return m_dialog;
+        return m_dialog == null ? Collections.emptyList() : m_dialog;
     }
 
     /**
@@ -173,7 +173,7 @@ public class NodeInfo {
      * @return the node's views (name and description)
      */
     public List<NamedField> getViews() {
-        return m_views;
+        return m_views == null ? Collections.emptyList() : m_views;
     }
 
     /**
@@ -191,7 +191,7 @@ public class NodeInfo {
      * @return an array of more information links
      */
     public LinkInformation[] getLinks() {
-        return m_links;
+        return m_links == null ? new LinkInformation[0] : m_links;
     }
 
     /**
@@ -236,7 +236,7 @@ public class NodeInfo {
      * @return an array of {@link PortInfo} for node each of the node's inports
      */
     public PortInfo[] getInPorts() {
-        return m_inPorts;
+        return m_inPorts == null ? new PortInfo[0] : m_inPorts;
     }
 
     /**
@@ -245,7 +245,7 @@ public class NodeInfo {
      * @return an array of {@link PortInfo} for node each of the node's outports
      */
     public PortInfo[] getOutPorts() {
-        return m_outPorts;
+        return m_outPorts == null ? new PortInfo[0] : m_outPorts;
     }
 
     /**
@@ -263,11 +263,7 @@ public class NodeInfo {
      * @param path a {@code List<String>} containing the node's path, where the element at index 0 is the path root
      */
     public void setPath(final List<String> path) {
-        List<String> p = path;
-        if (p == null) {
-            p = Collections.emptyList();
-        }
-        m_path = p;
+        m_path = path;
 
     }
 
@@ -318,11 +314,7 @@ public class NodeInfo {
      * @param dialog a {@code List} of {@link DialogOptionGroup}s representing the dialog options per tab for the node
      */
     public void setDialog(final List<DialogOptionGroup> dialog) {
-        List<DialogOptionGroup> dog = dialog;
-        if (dog == null) {
-            dog = Collections.emptyList();
-        }
-        m_dialog = dog;
+        m_dialog = dialog;
     }
 
     /**
@@ -331,11 +323,7 @@ public class NodeInfo {
      * @param views the node's views (name and description)
      */
     public void setViews(final List<NamedField> views) {
-        List<NamedField> v = views;
-        if (v == null) {
-            v = Collections.emptyList();
-        }
-        m_views = v;
+        m_views = views;
     }
 
     /**
@@ -353,11 +341,7 @@ public class NodeInfo {
      * @param links an array of {@code LinkInformation} representing the more information links for this node
      */
     public void setLinks(final LinkInformation[] links) {
-        LinkInformation[] mil = links;
-        if (mil == null) {
-            mil = new LinkInformation[0];
-        }
-        m_links = mil;
+        m_links = links;
     }
 
     /**
@@ -402,11 +386,7 @@ public class NodeInfo {
      * @param inPorts an array of {@link PortInfo} representing the node's inports
      */
     public void setInPorts(final PortInfo[] inPorts) {
-        PortInfo[] pi = inPorts;
-        if (pi == null) {
-            pi = new PortInfo[0];
-        }
-        m_inPorts = pi;
+        m_inPorts = inPorts;
     }
 
     /**
@@ -415,11 +395,7 @@ public class NodeInfo {
      * @param outPorts an array of {@link PortInfo} representing the node's outports
      */
     public void setOutPorts(final PortInfo[] outPorts) {
-        PortInfo[] pi = outPorts;
-        if (pi == null) {
-            pi = new PortInfo[0];
-        }
-        m_outPorts = pi;
+        m_outPorts = outPorts;
     }
 
     // -- Helper Classes --

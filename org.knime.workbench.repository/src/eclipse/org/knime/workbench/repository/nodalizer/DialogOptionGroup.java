@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.repository.nodalizer;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -101,6 +102,6 @@ public class DialogOptionGroup {
      * @return {@code List} of {@link NamedField}s representing the options in this dialog group (tab)
      */
     public List<NamedField> getFields() {
-        return m_fields;
+        return m_fields == null ? Collections.emptyList() : m_fields;
     }
 }
