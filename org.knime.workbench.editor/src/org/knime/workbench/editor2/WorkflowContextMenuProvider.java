@@ -64,7 +64,7 @@ import org.eclipse.swt.events.MenuDetectEvent;
 import org.eclipse.swt.events.MenuDetectListener;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.ui.IWorkbenchActionConstants;
-import org.knime.core.data.chunk.DataRowChunks;
+import org.knime.core.data.DirectAccessTable;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.port.PortType;
@@ -649,7 +649,7 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
         if (!Wrapper.wraps(container, NodeContainer.class)) {
             if (ptype.equals(BufferedDataTable.TYPE)) {
                 return true;
-            } else if (DataRowChunks.class.isAssignableFrom(ptype.getPortObjectClass())) {
+            } else if (DirectAccessTable.class.isAssignableFrom(ptype.getPortObjectClass())) {
                 return true;
             } else {
                 return false;
