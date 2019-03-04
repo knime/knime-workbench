@@ -1002,38 +1002,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /* ---------- helper methods for content provider ------------------- */
     /**
      * Helper method for content providers. Returns children of a workflow.
+     * <p/>
+     * An empty array is returned as nodes aren't shown in the explorer.
      *
      * @param workflow the workflow to return the children for
      * @return children of a workflow
      */
     public static AbstractExplorerFileStore[] getWorkflowChildren(
             final AbstractExplorerFileStore workflow) {
-        assert AbstractExplorerFileStore.isWorkflow(workflow);
-
-        try {
-            IFileStore[] childs = workflow.childStores(EFS.NONE, null);
-            if (childs == null || childs.length == 0) {
-                return NO_CHILD;
-            }
-            /*
-             * currently we are not showing nodes
-             */
-            return NO_CHILD;
-            // ArrayList<ExplorerFileStore> result =
-            // new ArrayList<ExplorerFileStore>();
-            // for (IFileStore c : childs) {
-            // not adding nodes for now.
-            // if (ExplorerFileStore.isMetaNode((ExplorerFileStore)c)) {
-            // || ExplorerFileStore.isNode(childFile)) {
-            // result.add((ExplorerFileStore)c);
-            // }
-            // }
-            // return result.toArray(new ExplorerFileStore[result.size()]);
-        } catch (CoreException ce) {
-            LOGGER.debug(ce);
-            return NO_CHILD;
-        }
-
+        // Changed code (SRV-2040), previously all children were obtained but NO_CHILD was returned nevertheless,
+        // thus return NO_CHILD without even fetching the child stores.
+        return NO_CHILD;
     }
 
     /**

@@ -52,7 +52,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionMonitor;
@@ -60,7 +59,6 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.LockFailedException;
-import org.knime.workbench.ui.navigator.KnimeResourceUtil;
 
 /**
  *
@@ -102,15 +100,6 @@ abstract class AbstractSaveRunnable extends PersistWorkflowRunnable {
             final ExecutionMonitor exec = new ExecutionMonitor(progressMonitor);
 
              save(wfm, exec);
-
-            // the refresh used to take place in WorkflowEditor#saveTo but
-            // was moved to this runnable as part of bug fix 3028
-            IResource r = KnimeResourceUtil.getResourceForURI(workflowDir.toURI());
-            if (r != null) {
-                String pName = r.getName();
-                pm.setTaskName("Refreshing " + pName + "...");
-                r.refreshLocal(IResource.DEPTH_INFINITE, pm);
-            }
         } catch (FileNotFoundException fnfe) {
             m_logger.fatal("File not found", fnfe);
             m_exceptionMessage.append("File access problems: " + fnfe.getMessage());

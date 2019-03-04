@@ -56,7 +56,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -81,7 +80,6 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
-import org.knime.workbench.ui.navigator.KnimeResourceUtil;
 
 /**
  *
@@ -158,20 +156,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                     m_initialSelection = firstSelectedItem.getParent();
                 }
             } else {
-                Object selectedObj = selection.getFirstElement();
-                if (selectedObj instanceof IResource) {
-                    // selection of a resource in the old navigator
-                    IResource resource = (IResource)selectedObj;
-                    if (KnimeResourceUtil.isWorkflow(resource)) {
-                        resource = resource.getParent();
-                    }
-                    m_initialSelection =
-                        ExplorerMountTable.getMountPoint(defaultLocalID).getProvider()
-                            .getFileStore(resource.getFullPath().toString());
-                } else {
-                    m_initialSelection =
-                        ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getFileStore("/");
-                }
+                m_initialSelection = ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getFileStore("/");
             }
         }
     }

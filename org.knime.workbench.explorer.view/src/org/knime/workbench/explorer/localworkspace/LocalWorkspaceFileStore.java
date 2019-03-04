@@ -51,7 +51,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Objects;
@@ -59,9 +58,6 @@ import java.util.Objects;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileStore;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -69,15 +65,11 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.util.PathUtils;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
-import org.knime.workbench.ui.nature.KNIMEProjectNature;
-import org.knime.workbench.ui.navigator.KnimeResourceUtil;
 
 /**
  * Wraps the Eclipse LocalFile. Provides a file interface to the workspace.
@@ -87,9 +79,6 @@ import org.knime.workbench.ui.navigator.KnimeResourceUtil;
  * @author ohl, University of Konstanz
  */
 public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(LocalWorkspaceFileStore.class);
-
     private final IFileStore m_file;
 
     /**
@@ -139,10 +128,6 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     public void copy(final IFileStore destination, final int options,
             final IProgressMonitor monitor) throws CoreException {
         super.copy(destination, options, monitor);
-        File srcFile = toLocalFile(options, monitor);
-        if (srcFile.isDirectory()) {
-            createProjectFile(destination, monitor);
-        }
     }
 
     /**
@@ -173,7 +158,6 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     public String[] childNames(final int options, final IProgressMonitor monitor)
             throws CoreException {
         String[] children = m_file.childNames(options, monitor);
-        // TODO: We MUST rewrite this if we change to IResources!!!
         // remove .metadata, .project and workflowset.meta from the list of shown children
         ArrayList<String> filteredChildren = new ArrayList<String>(children.length);
         for (String c : children) {
@@ -236,50 +220,6 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     }
 
     /**
-     * Creates a .project for the destination if necessary (only in case that
-     * destination is the workflow root and no .project file exists yet).
-     *
-     * @param destination the file store of the project
-     * @param monitor a progress monitor, or null if progress reporting and
-     *            cancellation are not desired
-     *
-     * @throws CoreException
-     */
-    public static void createProjectFile(final IFileStore destination,
-            final IProgressMonitor monitor) throws CoreException {
-        File dstDir = destination.toLocalFile(EFS.NONE, monitor);
-        if (dstDir == null) {
-            return; // do nothing
-        }
-        File root = dstDir.getParentFile();
-        IResource res = null;
-        if (root != null) {
-            res = KnimeResourceUtil.getResourceForURI(root.toURI());
-        }
-        if (res != null && res instanceof IWorkspaceRoot) {
-            /*
-             * The target is the workspace root. Therefore we have to create a
-             * .project file.
-             */
-            IProject newProject =
-                    ((IWorkspaceRoot)res).getProject(dstDir.getName());
-            newProject.delete(false, true, monitor);
-            try {
-                MetaInfoFile.createKnimeProject(dstDir.getName(),
-                        KNIMEProjectNature.ID);
-            } catch (CoreException e) {
-                throw e;
-            } catch (Exception e) {
-                String message =
-                        "Could not create KNIME project in "
-                                + "workspace root.";
-                throw new CoreException(new Status(IStatus.ERROR,
-                        ExplorerActivator.PLUGIN_ID, message, e));
-            }
-        }
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -292,65 +232,11 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      */
     @Override
     public void refresh(final IProgressMonitor monitor) {
-        try {
-            refreshResource(this, IResource.DEPTH_INFINITE, monitor);
-        } catch (CoreException e) {
-            // do not refresh
-            LOGGER.error("Could not refresh resource " + this, e);
-        }
+        refreshResource(this);
     }
 
-
-    private static void refreshResource(final IResource resource,
-            final int depth,
-            final IProgressMonitor monitor) {
-        if (resource != null) {
-            try {
-                resource.refreshLocal(depth, monitor);
-                LOGGER.debug("Refreshed resource " + resource);
-            } catch (Exception e) {
-                // do not refresh
-                LOGGER.debug("Could not refresh resource " + resource, e);
-            }
-        }
-    }
-
-    private static void refreshResource(
-            final LocalExplorerFileStore fileStore,
-            final int depth,
-            final IProgressMonitor monitor) throws CoreException {
-        if (fileStore == null) {
-            return;
-        }
-        File file = fileStore.toLocalFile(EFS.NONE, null);
-        if (file != null) {
-            IResource resource = KnimeResourceUtil.getResourceForURI(file.toURI());
-            refreshResource(resource, depth, monitor);
-            if (resource == ResourcesPlugin.getWorkspace().getRoot()) {
-                fixOrphanedProjects((IWorkspaceRoot)resource, monitor);
-            }
-        }
+    private static void refreshResource(final LocalExplorerFileStore fileStore) {
         fileStore.getContentProvider().refresh(fileStore);
-    }
-
-
-    private static void fixOrphanedProjects(final IWorkspaceRoot root, final IProgressMonitor monitor) {
-        for (IProject project : root.getProjects()) {
-            if (monitor != null) {
-                if (monitor.isCanceled()) {
-                    break;
-                }
-                monitor.subTask("Checking if '" + project.getName() + "' still exists");
-            }
-            IPath projectLocation = project.getLocation();
-            if ((projectLocation == null) || !projectLocation.toFile().exists()) {
-                try {
-                    project.delete(true, monitor);
-                } catch (CoreException ex) {
-                    LOGGER.warn("Could not delete orphaned project '" + project + "': " + ex.getMessage(), ex);
-                }
-            }
-        }
     }
 
     /**
@@ -370,13 +256,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             String message = "Could not delete \"" + srcFile.toAbsolutePath() + "\".";
             throw new CoreException(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID, message, e));
         }
-        IResource res = KnimeResourceUtil.getResourceForURI(srcFile.toUri());
-        if (res != null) {
-            res.delete(IResource.FORCE
-                    | IResource.ALWAYS_DELETE_PROJECT_CONTENT
-                    | IResource.DEPTH_INFINITE, monitor);
-        }
-        refreshResource(getParent(), IResource.DEPTH_ZERO, monitor);
+        refreshResource(getParent());
     }
 
     /**
@@ -386,8 +266,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     public AbstractExplorerFileStore mkdir(final int options,
             final IProgressMonitor monitor) throws CoreException {
         m_file.mkdir(options, monitor);
-        createProjectFile(this, monitor);
-        refreshResource(getParent(), IResource.DEPTH_ZERO, monitor);
+        refreshResource(getParent());
         return this;
     }
 
@@ -418,25 +297,15 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         super.cleanupDestination(destination, options, monitor);
 
         try {
-            URI srcURI = srcFile.toURI();
             if (srcFile.renameTo(dstFile)) {
                 // if rename works: refresh
-                if (!dstFile.isFile()) {
-                    createProjectFile(destination, monitor);
-                }
                 final LocalExplorerFileStore srcParent = getParent();
-                IResource res = KnimeResourceUtil.getResourceForURI(srcURI);
-                if (res != null) {
-                    res.delete(IResource.FORCE
-                            | IResource.ALWAYS_DELETE_PROJECT_CONTENT
-                            | IResource.DEPTH_INFINITE, monitor);
-                }
-                refreshResource(srcParent, IResource.DEPTH_ZERO, monitor);
                 IFileStore destParent = destination.getParent();
                 if (!srcParent.equals(destParent)
                         && destParent instanceof AbstractExplorerFileStore) {
                     ((AbstractExplorerFileStore)destParent).refresh();
                 }
+                refreshResource(srcParent);
             } else {
                 copy(destination, options, monitor);
                 delete(options, monitor);

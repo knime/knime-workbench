@@ -57,17 +57,10 @@ import javax.xml.transform.sax.SAXTransformerFactory;
 import javax.xml.transform.sax.TransformerHandler;
 import javax.xml.transform.stream.StreamResult;
 
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IProjectDescription;
-import org.eclipse.core.resources.IWorkspaceRoot;
-import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.CoreException;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.FileUtil;
 import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.nature.KNIMEProjectNature;
-import org.knime.workbench.ui.nature.KNIMEWorkflowSetProjectNature;
 import org.xml.sax.helpers.AttributesImpl;
 
 /**
@@ -207,40 +200,5 @@ public final class MetaInfoFile {
                 LOGGER.error("Error while trying to create default "
                         + "meta info file for " + parent.getName(), e);
             }
-    }
-
-    /**
-     * Creates a new workflow group project (with the referring nature).
-     * @param name name of the project
-     * @param natureId one of {@link KNIMEProjectNature}
-     *  or {@link KNIMEWorkflowSetProjectNature}
-     * @return the created project (already open and with description)
-     * @throws CoreException if something goes wrong
-     *
-     * @see KNIMEWorkflowSetProjectNature
-     */
-    public static IProject createKnimeProject(final String name,
-            final String natureId) throws CoreException {
-        if (!KNIMEProjectNature.ID.equals(natureId)
-                && !KNIMEWorkflowSetProjectNature.ID.equals(natureId)) {
-            throw new IllegalArgumentException(
-                    "Unsupported project nature " + natureId + ". "
-                    + "Only KnimeProjectNature and "
-                    + "KnimeWorkflowSetProjectNature are supported!");
-        }
-        IProject newProject = null;
-        try {
-            IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-            newProject = root.getProject(name);
-            newProject.create(null);
-            newProject.open(null);
-            IProjectDescription desc = newProject.getDescription();
-            desc.setNatureIds(new String[] {natureId});
-            newProject.setDescription(desc, null);
-        } catch (CoreException e) {
-            LOGGER.error("Error while creating project "  + name, e);
-            throw e;
-        }
-        return newProject;
     }
 }

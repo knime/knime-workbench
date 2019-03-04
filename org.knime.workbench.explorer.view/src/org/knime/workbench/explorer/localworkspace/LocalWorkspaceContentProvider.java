@@ -47,7 +47,6 @@ package org.knime.workbench.explorer.localworkspace;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,11 +54,6 @@ import java.util.Set;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.resources.IResource;
-import org.eclipse.core.resources.IResourceChangeEvent;
-import org.eclipse.core.resources.IResourceChangeListener;
-import org.eclipse.core.resources.IResourceDelta;
-import org.eclipse.core.resources.IResourceDeltaVisitor;
-import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -100,75 +94,13 @@ import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
 public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalWorkspaceContentProvider.class);
 
-    private IResourceChangeListener m_workspaceResourceListener;
-
     /**
      * @param factory the factory that created us.
      * @param id mount id
      */
     LocalWorkspaceContentProvider(final LocalWorkspaceContentProviderFactory factory, final String id) {
         super(factory, id);
-        registerListeners();
     }
-
-    private void registerListeners() {
-        final IWorkspace workspace = ResourcesPlugin.getWorkspace();
-
-        m_workspaceResourceListener = (event) -> {
-            onResourceChanged(event);
-        };
-
-        workspace.addResourceChangeListener(m_workspaceResourceListener, IResourceChangeEvent.POST_CHANGE);
-    }
-
-    private void onResourceChanged(final IResourceChangeEvent event) {
-        if (getListeners().length == 0) { // no view registered, nothing to do
-             return;
-        }
-        final IResourceDelta delta = event.getDelta();
-        final List<IResource> refreshList = new ArrayList<IResource>();
-
-        try {
-            delta.accept(new IResourceDeltaVisitor() {
-                @Override
-                public boolean visit(final IResourceDelta visitDelta) {
-                    IResource res = visitDelta.getResource();
-                    IResource refreshCandidate = res.getParent();
-                    switch (visitDelta.getKind()) {
-                    case IResourceDelta.ADDED:
-                    case IResourceDelta.REMOVED:
-                        boolean isChild = false;
-                        Iterator<IResource> iter = refreshList.iterator();
-                        while (iter.hasNext()) {
-                            IResource current = iter.next();
-                            if (isChildOfOrSame(refreshCandidate, current)) {
-                                isChild = true;
-                                break;
-                            }
-                            if (isChildOfOrSame(current, refreshCandidate)) {
-                                iter.remove();
-                            }
-                        }
-                        if (!isChild) {
-                            refreshList.add(refreshCandidate);
-                            return false;
-                        }
-                        break;
-                    default:
-                    }
-                    return true;
-                }
-            });
-        } catch (CoreException e) {
-            LOGGER.error("Failed to process resource events", e);
-        }
-        for (IResource r : refreshList) {
-            final String path = r.getFullPath().toString();
-            LOGGER.debug("Refreshing \"" + path + "\"");
-            refresh(getFileStore(path));
-        }
-    }
-
 
     private static boolean isChildOfOrSame(
             final IResource candidate, final IResource parent) {
@@ -383,8 +315,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
      */
     @Override
     public void dispose() {
-        final IWorkspace workspace = ResourcesPlugin.getWorkspace();
-        workspace.removeResourceChangeListener(m_workspaceResourceListener);
     }
 
     /**
@@ -584,12 +514,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     public boolean dragStart(final List<AbstractExplorerFileStore> fileStores) {
         if (fileStores == null || fileStores.isEmpty()) {
             return false;
-        }
-        for (AbstractExplorerFileStore fs : fileStores) {
-            if (DragAndDropUtils.isLinkedProject(fs)) {
-                LOGGER.warn("Linked workflow project cannot be copied from the User Space.");
-                return false;
-            }
         }
         String msg = ExplorerFileSystemUtils.isLockable(fileStores, true);
         if (msg != null) {

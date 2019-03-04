@@ -70,6 +70,14 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="src/org/knime/workbench/explorer/localworkspace/LocalWorkspaceFileStore.java" type="org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore"/>
+                <message_argument value="createProjectFile(IFileStore, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="src/org/knime/workbench/explorer/pathresolve/URIToFileResolveImpl.java" type="org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl">
         <filter id="574619656">
             <message_arguments>
@@ -96,6 +104,20 @@
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation"/>
                 <message_argument value="importZipEntry(ILeveledImportStructureProvider, ZipEntry, AbstractExplorerFileStore, IProgressMonitor)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/dnd/DragAndDropUtils.java" type="org.knime.workbench.explorer.view.dnd.DragAndDropUtils">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.dnd.DragAndDropUtils"/>
+                <message_argument value="isLinkedProject(Object)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.dnd.DragAndDropUtils"/>
+                <message_argument value="refreshResource(Object)"/>
             </message_arguments>
         </filter>
     </resource>

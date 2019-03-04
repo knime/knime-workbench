@@ -104,40 +104,6 @@
       </perspectiveExtension>
    </extension>
    <extension
-         point="org.eclipse.ui.newWizards">
-      <category
-            name="KNIME"
-            id="org.knime.workbench.ui.wizards.category">
-      </category>
-      <wizard
-            id="org.knime.workbench.ui.wizards.project.NewProjectWizard"
-            name="New KNIME Workflow"
-            category="org.knime.workbench.ui.wizards.category"
-            class="org.knime.workbench.ui.wizards.project.NewProjectWizard"
-            descriptionImage="icons/new_knime48.png"
-            icon="icons/new_knime16.png"
-            finalPerspective="org.knime.workbench.ui.ModellerPerspective"
-            project="true"
-            preferredPerspectives="org.knime.workbench.ui.ModellerPerspective">
-         <description>
-            This wizard creates a new KNIME workflow project.
-         </description>
-      </wizard>
-      <wizard
-            id="org.knime.workbench.ui.newworkflowgroup"
-            name="New KNIME Workflow Group"
-            category="org.knime.workbench.ui.wizards.category"
-            class="org.knime.workbench.ui.wizards.workflowgroup.NewWorkflowGroupProjectWizard"
-            descriptionImage="icons/new_knime48.png"
-            finalPerspective="org.knime.workbench.ui.ModellerPerspective"
-            icon="icons/new_knime16.png"
-            preferredPerspectives="org.knime.workbench.ui.ModellerPerspective">
-         <description>
-            This wizard creates a new workflow group helping to organize your workflows.
-         </description>
-      </wizard>
-   </extension>
-   <extension
          point="org.eclipse.ui.preferencePages">
       <page
             category="org.knime.workbench.ui.preferences"
@@ -192,36 +158,6 @@
       <initializer
             class="org.knime.workbench.ui.preferences.PreferenceInitializer">
       </initializer>
-   </extension>
-   <extension
-         id="KNIMEProjectBuilder"
-         name="KNIMEProjectBuilder"
-         point="org.eclipse.core.resources.builders">
-      <builder>
-         <run
-               class="org.knime.workbench.ui.builder.KNIMEProjectBuilder">
-         </run>
-      </builder>
-   </extension>
-   <extension
-         id="KNIMEProjectNature"
-         name="KNIME project nature"
-         point="org.eclipse.core.resources.natures">
-      <runtime>
-         <run
-               class="org.knime.workbench.ui.nature.KNIMEProjectNature">
-         </run>
-      </runtime>
-   </extension>
-      <extension
-         id="KNIMEWorkflowsetProject"
-         name="KNIME Workflow Set Nature"
-         point="org.eclipse.core.resources.natures">
-      <runtime>
-         <run
-               class="org.knime.workbench.ui.nature.KNIMEWorkflowSetProjectNature">
-         </run>
-      </runtime>
    </extension>
    <extension
          point="org.eclipse.ui.views">

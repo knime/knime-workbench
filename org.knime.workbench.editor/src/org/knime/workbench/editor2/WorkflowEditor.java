@@ -76,10 +76,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.URIUtil;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
-import org.eclipse.core.resources.IWorkspaceRoot;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -1938,7 +1934,6 @@ public class WorkflowEditor extends GraphicalEditor implements
             if (newWorkflowDir.getParent() != null) {
                 newWorkflowDir.getParent().refresh();
             }
-            registerProject(localNewWorkflowDir);
         }
     }
 
@@ -2154,27 +2149,6 @@ public class WorkflowEditor extends GraphicalEditor implements
             }
         } /* end of while (result != null) keep the target selection dialog open */
         return result;
-    }
-
-    /**
-     * Registers the given workflow as an eclipse project (called from save-as, which only copies files on the
-     * file system).
-     *
-     * @param workflowDir The directory of the workflow.
-     */
-    private static void registerProject(final File workflowDir) {
-        IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-        // Eclipse projects are always top level, therefore if the workflow is inside a workflow group the group is
-        // already registered as project and this workflow will appear as part of it
-        if (root.getLocation().equals(new Path(workflowDir.getParent()))) {
-            IProject project = root.getProject(workflowDir.getName());
-            try {
-                project.create(null, null);
-                project.open(IResource.BACKGROUND_REFRESH, null);
-            } catch (CoreException e) {
-                LOGGER.error(e.getMessage(), e);
-            }
-        }
     }
 
     /**
