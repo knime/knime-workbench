@@ -57,25 +57,19 @@ import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.file.Path;
 import java.util.Collection;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.WorkflowContext;
-import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
 import org.knime.core.ui.node.workflow.WorkflowContextUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
-import org.knime.core.ui.wrapper.WorkflowManagerWrapper;
 
 /**
  * Testcases for {@link ExplorerURLStreamHandler} if used on the context of {@link WorkflowContextUI} and therewith
@@ -140,7 +134,8 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
         URI mountpointUri = new URI(
             "knime://knime-server-mountpoint/test?exec=8443aad7-e59e-4be1-b31b-4b287f5bf466&name=test%2B2019-01-02%2B09.57.19");
 
-        RemoteWorkflowContext ctx = new RemoteWorkflowContext(null, "path", "token", "mount id", mountpointUri);
+        RemoteWorkflowContext ctx =
+            new RemoteWorkflowContext(null, "path", "token", "mount id", mountpointUri, null, null);
         NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
 
         URLConnection conn = m_handler.openConnection(url);
@@ -159,7 +154,8 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
         URI mountpointUri = new URI(
             "knime://knime-server-mountpoint/test?exec=8443aad7-e59e-4be1-b31b-4b287f5bf466&name=test%2B2019-01-02%2B09.57.19");
 
-        RemoteWorkflowContext ctx = new RemoteWorkflowContext(null, "path", "token", "mount id", mountpointUri);
+        RemoteWorkflowContext ctx =
+            new RemoteWorkflowContext(null, "path", "token", "mount id", mountpointUri, null, null);
         NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
 
         URLConnection conn = m_handler.openConnection(url);
@@ -178,7 +174,8 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
         URI mountpointUri = new URI(
             "knime://knime-server-mountpoint/test?exec=8443aad7-e59e-4be1-b31b-4b287f5bf466&name=test%2B2019-01-02%2B09.57.19");
 
-        RemoteWorkflowContext ctx = new RemoteWorkflowContext(null, "path", "token", "mount id", mountpointUri);
+        RemoteWorkflowContext ctx =
+            new RemoteWorkflowContext(null, "path", "token", "mount id", mountpointUri, null, null);
         NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
 
         m_expectedException.expect(IllegalArgumentException.class);
