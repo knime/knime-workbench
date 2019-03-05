@@ -737,6 +737,12 @@
             icon="icons/node_monitor.png"
             id="org.knime.workbench.nodemonitorview.nodemonitorview"
             name="Node Monitor"/>
+         <view
+            category="org.knime.workbench.ui.category"
+            class="org.knime.workbench.outportview.OutPortViewPart"
+            icon="icons/openPortView.png"
+            id="org.knime.workbench.outportview"
+            name="Node Outports"/>
     </extension>
     <extension
     		point="org.eclipse.ui.menus">
