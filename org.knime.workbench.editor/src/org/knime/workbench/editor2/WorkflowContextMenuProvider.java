@@ -67,6 +67,7 @@ import org.eclipse.ui.IWorkbenchActionConstants;
 import org.knime.core.data.DirectAccessTable;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.KNIMEConstants;
+import org.knime.core.node.port.DataTableSpecProvider;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.workflow.LoopEndNode;
 import org.knime.core.node.workflow.NodeContainer;
@@ -649,7 +650,8 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
         if (!Wrapper.wraps(container, NodeContainer.class)) {
             if (ptype.equals(BufferedDataTable.TYPE)) {
                 return true;
-            } else if (DirectAccessTable.class.isAssignableFrom(ptype.getPortObjectClass())) {
+            } else if (DataTableSpecProvider.class.isAssignableFrom(ptype.getPortObjectSpecClass())
+                && DirectAccessTable.class.isAssignableFrom(ptype.getPortObjectClass())) {
                 return true;
             } else {
                 return false;
