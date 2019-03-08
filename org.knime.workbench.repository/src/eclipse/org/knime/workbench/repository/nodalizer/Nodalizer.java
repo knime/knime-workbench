@@ -309,9 +309,15 @@ public class Nodalizer implements IApplication {
         // HACK: Manually load update site
         if (manualUpdateSites != null) {
             final String url = getUpdateSiteUrl(factoryName, manualUpdateSites);
-            final boolean enabledByDefault = siteEnabledByDefault(url);
-            final String siteName = getUpdateSiteName(url);
-            nInfo.setAdditionalSiteInformation(url, enabledByDefault, siteName);
+            if (url != null) {
+                final boolean enabledByDefault = siteEnabledByDefault(url);
+                final String siteName = getUpdateSiteName(url);
+                nInfo.setAdditionalSiteInformation(url, enabledByDefault, siteName);
+            } else {
+                // HACK: Skip nodes that are not members of an update site
+                System.out.println(fac.getClass() + " does not belong to any update site, skipping ...");
+                return;
+            }
         }
         nInfo.setBundleInformation(nodeAndBundleInfo);
 
@@ -319,7 +325,7 @@ public class Nodalizer implements IApplication {
         final Element nodeXML = fac.getXMLDescription();
         Document nodeHTML = null;
         if (nodeXML == null) {
-            System.out.println("Node factory XML not found! Skipping node: " + fac.getClass().toString());
+            System.out.println("Node factory XML not found! Skipping node: " + fac.getClass());
             return;
         }
         final String s = NodeFactoryHTMLCreator.instance.readFullDescription(nodeXML);
@@ -571,7 +577,7 @@ public class Nodalizer implements IApplication {
                 }
             }
         }
-        return "";
+        return null;
     }
 
     private static boolean siteEnabledByDefault(final String url) {
