@@ -51,9 +51,6 @@ package org.knime.workbench.editor2.directannotationedit;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javax.swing.JColorChooser;
-
-import org.eclipse.core.runtime.Platform;
 import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.PaintEvent;
@@ -93,9 +90,9 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
         new Rectangle(1, 1, (GRID_WELL_SIZE.x - 3), (GRID_WELL_SIZE.y - 3));
 
     private static final String[][] COLOR_GRID_HEX_VALUES =
-        {{"#EF2929", "#FCAF3E", "#FCE94F", "#8AE234", "#729FCF", "#AD7FA8", "#E9B96E", "#888A85", "#EFF0EE"},
-            {"#CC0000", "#F57900", "#EDD400", "#73D216", "#3465A4", "#75507B", "#C17D11", "#555753", "#D3D7CF"},
-            {"#A40000", "#CE5C00", "#C4A000", "#4E9A06", "#204A87", "#5C3566", "#8F5902", "#2E3436", "#BABDB6"},
+        {{"#EF2929", "#FCAF3E", "#E9B96E", "#FCE94F", "#8AE234", "#B2CFD6", "#729FCF", "#AD7FA8", "#EFF0EE"},
+            {"#CC0000", "#F57900", "#C17D11", "#EDD400", "#73D216", "#70A7B4", "#3465A4", "#75507B", "#D3D7CF"},
+            {"#A40000", "#CE5C00", "#8F5902", "#FFD800", "#4E9A06", "#1B6A7D", "#204A87", "#5C3566", "#BABDB6"},
             {"#000000", "#2E3436", "#555753", "#888A85", "#BABDB6", "#D3D7CF", "#EEEEEC", "#F3F3F3", "#FFFFFF"}};
     private static final boolean[][] GRID_WELL_NEEDING_BORDER =
         {{false, false, false, false, false, false, false, false, true},
@@ -103,9 +100,9 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
             {false, false, false, false, false, false, false, false, false},
             {false, false, false, false, false, false, true, true, true}};
     private static final boolean[][] GRID_WELL_SELECTION_IS_DARK =
-        {{true, true, true, true, true, true, true, false, true},
-            {false, true, true, true, true, true, true, false, true},
-            {false, true, true, true, false, false, false, false, true},
+        {{true, true, true, true, true, true, true, true, true},
+            {false, true, true, true, true, true, true, true, true},
+            {false, true, false, true, true, false, false, false, true},
             {false, false, false, false, true, true, true, true, true}};
 
     private static Color BACKGROUND_COLOR = null;
@@ -208,31 +205,19 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
 
             m_lastCustomChooserInteraction.set(System.currentTimeMillis());
 
-            if (Platform.OS_LINUX.equals(Platform.getOS())) {
-                final java.awt.Color selectedColor =
-                    (currentSelection == null) ? null : new java.awt.Color(currentSelection.getRed(),
-                        currentSelection.getGreen(), currentSelection.getBlue());
-                final java.awt.Color color = JColorChooser.showDialog(null, "Choose Color", selectedColor);
+            final ColorDialog colorDialog = new ColorDialog(getShell());
 
-                m_lastCustomChooserInteraction.set(System.currentTimeMillis());
+            colorDialog.setText("Choose Color");
 
-                userSelectedColor =
-                    (color != null) ? new Color(getDisplay(), color.getRed(), color.getGreen(), color.getBlue()) : null;
-            } else {
-                final ColorDialog colorDialog = new ColorDialog(getShell());
-
-                colorDialog.setText("Choose Color");
-
-                if (currentSelection != null) {
-                    colorDialog.setRGB(currentSelection.getRGB());
-                }
-
-                final RGB selectedRGB = colorDialog.open();
-
-                m_lastCustomChooserInteraction.set(System.currentTimeMillis());
-
-                userSelectedColor = (selectedRGB != null) ? AnnotationEditPart.RGBtoColor(selectedRGB) : null;
+            if (currentSelection != null) {
+                colorDialog.setRGB(currentSelection.getRGB());
             }
+
+            final RGB selectedRGB = colorDialog.open();
+
+            m_lastCustomChooserInteraction.set(System.currentTimeMillis());
+
+            userSelectedColor = (selectedRGB != null) ? AnnotationEditPart.RGBtoColor(selectedRGB) : null;
 
             m_styledTextEditor.colorWasSelected(userSelectedColor);
         });
@@ -270,7 +255,9 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
     // We have this hack to prevent the relegation of the custom color chooser on Linux to tell the styled text widget
     //      to hide.
     boolean customColorChooserWasDisplayedInTheLastTimeWindow(final long timeWindowInMS) {
-        return ((System.currentTimeMillis() - m_lastCustomChooserInteraction.get()) < timeWindowInMS);
+        final long delta = (System.currentTimeMillis() - m_lastCustomChooserInteraction.get());
+
+        return (delta < timeWindowInMS);
     }
 
     void setSelectedColor(final Color c) {

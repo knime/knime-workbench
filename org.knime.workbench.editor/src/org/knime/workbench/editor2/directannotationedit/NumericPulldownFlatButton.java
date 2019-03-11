@@ -208,7 +208,9 @@ public class NumericPulldownFlatButton extends FlatButton
         m_dropDownList.valueWasSet(value);
 
         getDisplay().asyncExec(() -> {
-            redraw();
+            if (!isDisposed()) {
+                redraw();
+            }
         });
     }
 

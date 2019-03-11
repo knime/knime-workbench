@@ -300,6 +300,10 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
         m_borderWidthButton.setSelectedValue(m_styledTextEditor.getCurrentBorderWidth());
 
         getDisplay().asyncExec(() -> {
+            if (isDisposed()) {
+                return;
+            }
+
             redraw();
 
             if (StyledTextEditor.PLATFORM_IS_WINDOWS) {

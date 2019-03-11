@@ -489,9 +489,15 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
                 }
             }
             @Override
-            public void focusLost(final FocusEvent e) {
-                if (m_allowFocusLoss.get()
-                    && (!m_colorDropDown.customColorChooserWasDisplayedInTheLastTimeWindow(400))) {
+            public void focusLost(final FocusEvent fe) {
+                final boolean cddActive = m_colorDropDown.customColorChooserWasDisplayedInTheLastTimeWindow(400);
+
+                if (cddActive) {
+                    if (m_styledText.isDisposed()) {
+                        // the ship has already sailed - we've lost focus out of our control
+                        hideToolbar();
+                    }
+                } else if (m_allowFocusLoss.get()) {
                     lostFocus();
                 }
             }
@@ -537,7 +543,27 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
      * {@inheritDoc}
      */
     @Override
+    public void dispose() {
+        super.dispose();
+
+        m_shadowStyledText.dispose();
+        m_toolbar.dispose();
+        m_colorDropDown.dispose();
+
+        final WorkflowEditor we =
+                (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+        we.getAnnotationModeExitEnabler().removeListener(this);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void annotationModeWillExit(final AnnotationModeExitEnabler enabler) {
+        if (m_toolbar.isDisposed()) {
+            return;
+        }
+
         setFocusLossAllowed(true);
 
         m_toolbar.ensureEditAssetsAreNotVisible();
@@ -572,6 +598,10 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
      * @return the current alignment (SWT.LEFT, .CENTER, .RIGHT) of the text
      */
     int getCurrentAlignment() {
+        if (m_styledText.isDisposed()) {
+            return SWT.LEFT;
+        }
+
         return m_styledText.getAlignment();
     }
 
@@ -586,6 +616,10 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
      * @return the current color of the border
      */
     Color getCurrentBorderColor() {
+        if (m_styledText.isDisposed()) {
+            return null;
+        }
+
         return m_styledText.getMarginColor();
     }
 
@@ -593,6 +627,10 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
      * @return the current width of the border
      */
     int getCurrentBorderWidth() {
+        if (m_styledText.isDisposed()) {
+            return -1;
+        }
+
         return m_styledText.getRightMargin();
     }
 
@@ -610,7 +648,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
             return (styleRange != null)
                         ? (styleRange.foreground != null) ? styleRange.foreground
                                                           : AnnotationEditPart.getAnnotationDefaultForegroundColor()
-                        : m_styledText.getForeground();
+                        : m_styledText.isDisposed() ? AnnotationEditPart.getAnnotationDefaultForegroundColor()
+                                                    : m_styledText.getForeground();
         } else {
             Color color = null;
 
@@ -709,6 +748,10 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
     }
 
     private StyleRange getStyleRangeAtCaret() {
+        if (m_styledText.isDisposed()) {
+            return null;
+        }
+
         final int offset = m_styledText.getCaretOffset();
 
         if (offset >= m_styledText.getCharCount()) {
@@ -991,6 +1034,10 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
      *         never null.
      */
     private List<StyleRange> getStylesInSelection() {
+        if (m_styledText.isDisposed()) {
+            return Collections.emptyList();
+        }
+
         final Point selection = m_styledText.getSelectionRange();
         if (selection.y == 0) {
             return Collections.emptyList();
