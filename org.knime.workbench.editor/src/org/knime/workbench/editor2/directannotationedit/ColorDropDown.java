@@ -65,6 +65,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.ColorDialog;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Widget;
 import org.knime.workbench.core.LayoutExemptingLayout;
 import org.knime.workbench.editor2.ViewportPinningGraphicalViewer;
@@ -205,7 +206,19 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
 
             m_lastCustomChooserInteraction.set(System.currentTimeMillis());
 
-            final ColorDialog colorDialog = new ColorDialog(getShell());
+            final Shell disposableShell;
+            final ColorDialog colorDialog;
+            // the ColorDialog on Windows locates its window at the location of the parent shell
+            if (StyledTextEditor.PLATFORM_IS_WINDOWS) {
+                disposableShell = new Shell(getShell(), SWT.NO_TRIM);
+                disposableShell.setSize(0, 0);
+                disposableShell.setLocation(getParent().toDisplay(getLocation()));
+
+                colorDialog = new ColorDialog(disposableShell);
+            } else {
+                colorDialog = new ColorDialog(getShell());
+                disposableShell = null;
+            }
 
             colorDialog.setText("Choose Color");
 
@@ -214,6 +227,10 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
             }
 
             final RGB selectedRGB = colorDialog.open();
+
+            if (disposableShell != null) {
+                disposableShell.dispose();
+            }
 
             m_lastCustomChooserInteraction.set(System.currentTimeMillis());
 
