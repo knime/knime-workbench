@@ -68,6 +68,8 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.LayoutExemptingLayout;
@@ -134,13 +136,25 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
      * This is a static convenience method which involves fetching the active page's active editor, and then returning
      * the instance of this class attached to it.
      *
-     * @return the glass pane SWT <code>ViewportPinningGraphicalViewer</code>
+     * @return the glass pane SWT <code>ViewportPinningGraphicalViewer</code> or null if we were unable to get an active
+     *         page or an active editor for it.
      */
     public static ViewportPinningGraphicalViewer getActiveViewer() {
-        final WorkflowEditor we =
-                (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+        final IWorkbenchWindow iw = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 
-        return (ViewportPinningGraphicalViewer)we.getGraphicalViewer();
+        if (iw != null) {
+            final IWorkbenchPage page = iw.getActivePage();
+
+            if (page != null) {
+                final WorkflowEditor we = (WorkflowEditor)page.getActiveEditor();
+
+                if (we != null) {
+                    return (ViewportPinningGraphicalViewer)we.getGraphicalViewer();
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -151,11 +165,19 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
      * widget created which has a parent as this composite should call
      * <code>LayoutExemptingLayout.exemptControlFromLayout(Control)</code>.
      *
-     * @return the glass pane SWT <code>Composite</code>
+     * @return the glass pane SWT <code>Composite</code> or null in conditions where null would be returned from
+     *         <code>getActiveViewer()</code>
      * @see LayoutExemptingLayout#exemptControlFromLayout(Control)
+     * @see #getActiveViewer()
      */
     public static Composite getActiveViewportComposite() {
-        return getActiveViewer().m_parent;
+        ViewportPinningGraphicalViewer viewer = getActiveViewer();
+
+        if (viewer != null) {
+            return viewer.m_parent;
+        }
+
+        return null;
     }
 
 

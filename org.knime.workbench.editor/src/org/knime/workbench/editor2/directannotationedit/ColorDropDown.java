@@ -262,7 +262,9 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
 
     @Override
     public void shouldHideEditAssets() {
-        m_styledTextEditor.colorWasSelected(null);
+        if (isVisible()) {
+            m_styledTextEditor.colorWasSelected(null);
+        }
     }
 
     @Override

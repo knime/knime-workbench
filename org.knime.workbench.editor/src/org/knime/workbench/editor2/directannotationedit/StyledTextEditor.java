@@ -514,6 +514,9 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         m_styledText.addExtendedModifyListener((event) -> {
             if (event.length > 0) {
                 textInserted(event.start, event.length);
+                if (m_toolbar != null) {
+                    m_toolbar.updateToolbarToReflectState();
+                }
             }
         });
         m_styledText.addSelectionListener(new SelectionListener() {
@@ -752,9 +755,14 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
             return null;
         }
 
-        final int offset = m_styledText.getCaretOffset();
+        int offset = m_styledText.getCaretOffset();
+        final int textLength = m_styledText.getCharCount();
 
-        if (offset >= m_styledText.getCharCount()) {
+        if (offset > textLength) {
+            return null;
+        } else if (offset > 0) {
+            offset--;
+        } else if (offset == textLength) {
             return null;
         }
 

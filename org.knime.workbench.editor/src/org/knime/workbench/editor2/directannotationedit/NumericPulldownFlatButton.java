@@ -323,8 +323,6 @@ public class NumericPulldownFlatButton extends FlatButton
             m_dropDownList.moveBelow(null);
             m_textBox.setVisible(false);
             m_textBox.moveBelow(null);
-
-            m_styledTextEditor.setFocusLossAllowed(true);
         }
     }
 
@@ -339,6 +337,8 @@ public class NumericPulldownFlatButton extends FlatButton
 
     private void userSelectedValue(final int value) {
         shouldHideEditAssets();
+
+        m_styledTextEditor.setFocusLossAllowed(true);
 
         setSelectedValue(value);
 
