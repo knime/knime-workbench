@@ -75,7 +75,6 @@ import org.knime.workbench.editor2.editparts.AnnotationEditPart;
  * This is a color drop down picker created originally to be used with the annotation styling toolbar, but presumably is
  * generic enough that it should be moved to a more central location at some point.
  *
- * TODO:  preserve custom colors? (colorDialog.getRGBs();)
  *
  * @author loki der quaeler
  */
@@ -162,6 +161,8 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
     private final AtomicLong m_lastCustomChooserInteraction;
 
     /**
+     * Constructs a color drop down picker
+     *
      * @param editor the editor while is hosting the stylized annotation
      * @param dropShadow if the panel should render a drop shadow, this should be set to true
      */

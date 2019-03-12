@@ -332,7 +332,7 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
                 break;
         }
 
-        if (! buttonToSelect.isSelected()) {
+        if (!buttonToSelect.isSelected()) {
             buttonToSelect.setSelected(true);
             m_radioGroup.updateButtonsDueToProgrammaticSelection(buttonToSelect);
         }

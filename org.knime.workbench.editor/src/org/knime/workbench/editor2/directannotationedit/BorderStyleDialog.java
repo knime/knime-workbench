@@ -71,7 +71,7 @@ import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 
 /**
  * There is a lot of commonality between this and FontStyleDialog - if we intend to keep the context subsystem
- *  indefinitely, we should refactor.
+ * indefinitely, we should refactor.
  *
  * @author ohl
  */

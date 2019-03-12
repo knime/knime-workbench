@@ -144,7 +144,7 @@ public class NumericPulldownFlatButton extends FlatButton
      * @param parent the parent widget which owns this instance; if the layout of this widget is <code>GridLayout</code>
      *            then size appropriate <code>GridData</code> will be set.
      * @param values the value choices this button will provide; it is expected to be naturally ordered
-     * @param editor the owning editor, if one exists (TODO: spin out to an interface in the future.)
+     * @param editor the owning editor, if one exists
      */
     public NumericPulldownFlatButton(final Composite parent, final int[] values, final StyledTextEditor editor) {
         super(parent, SWT.PUSH, (PaintListener)null, PULLDOWN_WIDGET_SIZE);
