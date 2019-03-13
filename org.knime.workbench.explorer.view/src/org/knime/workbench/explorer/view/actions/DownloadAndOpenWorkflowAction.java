@@ -208,4 +208,15 @@ public class DownloadAndOpenWorkflowAction extends Action {
             job.schedule();
         }
     }
+
+    @Override
+    public boolean isEnabled() {
+        boolean enabled = true;
+        for (RemoteExplorerFileStore s : m_sources) {
+            if (s.fetchInfo().isReservedSystemItem()) {
+                enabled = false;
+            }
+        }
+        return enabled;
+    }
 }

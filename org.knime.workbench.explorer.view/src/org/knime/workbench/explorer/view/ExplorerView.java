@@ -418,7 +418,9 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         }
         DownloadAndOpenWorkflowAction a;
         a = new DownloadAndOpenWorkflowAction(getSite().getPage(), remotes);
-        a.run();
+        if (a.isEnabled()) {
+            a.run();
+        }
         m_viewer.update(localWorkflowsToOpen.toArray(), null);
         return opened;
     }
