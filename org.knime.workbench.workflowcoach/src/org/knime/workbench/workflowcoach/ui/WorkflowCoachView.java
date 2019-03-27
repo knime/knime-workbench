@@ -142,7 +142,8 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         "Node recommendations only available with usage data reporting."
             + (Platform.getOS().equals(Platform.OS_MACOSX) ? " " : "\n") + "Click here to configure ...";
 
-    private static final String NOT_AVAILABLE_FOR_JOB_VIEW_MESSAGE = "Workflow Coach is not available for Job View.";
+    private static final String NOT_AVAILABLE_IN_REMOTE_WORKFLOW_EDITOR_MESSAGE =
+        "Workflow Coach is not available in remote workflow editor.";
 
     private static final String LOADING_MESSAGE = "Loading recommendations...";
 
@@ -412,7 +413,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
             if (nodeSelected) {
                 NodeContainerUI uinc = ((NodeContainerEditPart)sel).getNodeContainer();
                 if (!Wrapper.wraps(uinc, NodeContainer.class)) {
-                    updateInput(NOT_AVAILABLE_FOR_JOB_VIEW_MESSAGE);
+                    updateInput(NOT_AVAILABLE_IN_REMOTE_WORKFLOW_EDITOR_MESSAGE);
                     return;
                 } else {
                     nc = Wrapper.unwrapNC(uinc);
