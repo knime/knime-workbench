@@ -153,6 +153,8 @@ public final class ImageRepository {
         History("icons/history.png"),
         /** Icon for delete. */
         Delete("icons/delete.png"),
+        /** Icon for a recycle bin. */
+        RecycleBin("icons/recycle_bin.png"),
         /** Icon for startup messages view. */
         StartupMessages("icons/startupMessages.png"),
         /** Icon showing a magnifier glass. */
