@@ -572,7 +572,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      *
      * @return a list of recommendation arrays (the array potentially with <code>null</code>-entries) accordingly sorted
      */
-    private List<NodeRecommendation[]> joinRecommendations(final List<NodeRecommendation>[] recommendations,
+    private static List<NodeRecommendation[]> joinRecommendations(final List<NodeRecommendation>[] recommendations,
         final int maxSize) {
         List<NodeRecommendation[]> recommendationsJoined = new ArrayList<>();
         for (int i = 0; i < maxSize; i++) {
@@ -603,7 +603,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      * @return array of same length as <code>ar</code>, with the found elements non-null. <code>null</code> will be
      *         returned if <code>ar</code> only consists of <code>null</code>-entries
      */
-    private <T> T[] getMaxSameElements(final T[] ar) {
+    private static <T> T[] getMaxSameElements(final T[] ar) {
         T[] res = ar.clone();
         for (int i = ar.length; i > 0; i--) {
             Iterator<int[]> it = CombinatoricsUtils.combinationsIterator(ar.length, i);
@@ -769,7 +769,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      * haven't been updated so far, or the update schedule tells to do so. If an update is necessary it is immediately
      * performed.
      */
-    private void checkForStatisticUpdates() {
+    private static void checkForStatisticUpdates() {
         int updateSchedule = PREFS.getInt(WorkflowCoachPreferenceInitializer.P_AUTO_UPDATE_SCHEDULE);
         if (updateSchedule == WorkflowCoachPreferenceInitializer.NO_AUTO_UPDATE) {
             return;
@@ -809,7 +809,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      * @param block if <code>true</code> the method will block till the update is finished, otherwise it will return
      *            immediately after triggering the update job
      */
-    private void updateTripleProviders(final UpdateListener updateListener, final boolean requiredOnly, final boolean block) {
+    private static void updateTripleProviders(final UpdateListener updateListener, final boolean requiredOnly, final boolean block) {
         List<UpdatableNodeTripleProvider> toUpdate =
             NodeRecommendationManager.getInstance().getNodeTripleProviders().stream().filter(ntp -> {
                 if (!(ntp instanceof UpdatableNodeTripleProvider)) {

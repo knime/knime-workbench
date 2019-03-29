@@ -210,7 +210,7 @@ public class NodeRecommendationManager {
         m_listeners.stream().forEach(l -> l.updated());
     }
 
-    private void fillRecommendationsMap(final Map<String, List<NodeRecommendation>> recommendationMap,
+    private static void fillRecommendationsMap(final Map<String, List<NodeRecommendation>> recommendationMap,
         final NodeTriple nf) {
         /* considering the successor only, i.e. for all entries where the predecessor and the node
          * itself is not present
