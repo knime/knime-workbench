@@ -101,10 +101,8 @@ import org.eclipse.ui.preferences.ScopedPreferenceStore;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
-import org.knime.core.node.workflow.NativeNodeContainer;
-import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
-import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.KNIMEJob;
 import org.knime.core.util.Pair;
 import org.knime.workbench.core.KNIMECorePlugin;
@@ -141,9 +139,6 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
     private static final String NO_DATA_REPORTING_MESSAGE =
         "Node recommendations only available with usage data reporting."
             + (Platform.getOS().equals(Platform.OS_MACOSX) ? " " : "\n") + "Click here to configure ...";
-
-    private static final String NOT_AVAILABLE_IN_REMOTE_WORKFLOW_EDITOR_MESSAGE =
-        "Workflow Coach is not available in remote workflow editor.";
 
     private static final String LOADING_MESSAGE = "Loading recommendations...";
 
@@ -406,19 +401,13 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         Iterator<?> selIt = structSel.iterator();
 
         boolean nodeSelected = selIt.hasNext();
-        NodeContainer nc = null;
+        NodeContainerUI nc = null;
         if (nodeSelected) {
             Object sel = selIt.next();
             nodeSelected &= (sel instanceof NodeContainerEditPart);
             if (nodeSelected) {
-                NodeContainerUI uinc = ((NodeContainerEditPart)sel).getNodeContainer();
-                if (!Wrapper.wraps(uinc, NodeContainer.class)) {
-                    updateInput(NOT_AVAILABLE_IN_REMOTE_WORKFLOW_EDITOR_MESSAGE);
-                    return;
-                } else {
-                    nc = Wrapper.unwrapNC(uinc);
-                    nodeSelected &= nc instanceof NativeNodeContainer;
-                }
+                nc = ((NodeContainerEditPart)sel).getNodeContainer();
+                nodeSelected &= nc instanceof NativeNodeContainerUI;
             }
         }
 
@@ -442,7 +431,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         List<NodeRecommendation>[] recommendations;
         if (nodeSelected) {
             //retrieve node recommendations if exactly one node is selected
-            recommendations = NodeRecommendationManager.getInstance().getNodeRecommendationFor((NativeNodeContainer)nc);
+            recommendations = NodeRecommendationManager.getInstance().getNodeRecommendationFor((NativeNodeContainerUI)nc);
         } else if (nc == null) {
             //retrieve node recommendations if no node is selected (most likely the source nodes etc.)
             recommendations = NodeRecommendationManager.getInstance().getNodeRecommendationFor();

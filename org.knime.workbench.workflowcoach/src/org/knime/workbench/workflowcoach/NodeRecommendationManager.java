@@ -71,10 +71,10 @@ import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeInfo;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeTriple;
-import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.ConnectionContainer.ConnectionType;
-import org.knime.core.node.workflow.NativeNodeContainer;
-import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.ui.node.workflow.ConnectionContainerUI;
+import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
+import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.workflowcoach.data.NodeTripleProvider;
@@ -85,7 +85,7 @@ import org.knime.workbench.workflowcoach.prefs.WorkflowCoachPreferenceInitialize
 /**
  * Class that manages the node recommendations. It represents the node recommendations in memory for quick retrieval and
  * provides them accordingly. The {@link #loadRecommendations()}-method updates the statistics, the
- * {@link #getNodeRecommendationFor(NativeNodeContainer...)} gives the actual recommendations.
+ * {@link #getNodeRecommendationFor(NativeNodeContainerUI...)} gives the actual recommendations.
  *
  * @author Martin Horn, University of Konstanz
  */
@@ -334,7 +334,7 @@ public class NodeRecommendationManager {
      *         {@link NodeTripleProvider}. It will return <code>null</code> if something went wrong with loading the
      *         node statistics!
      */
-    public List<NodeRecommendation>[] getNodeRecommendationFor(final NativeNodeContainer... nnc) {
+    public List<NodeRecommendation>[] getNodeRecommendationFor(final NativeNodeContainerUI... nnc) {
         if (m_recommendations == null) {
             return null;
         }
@@ -353,14 +353,14 @@ public class NodeRecommendationManager {
 
                 /* recommendations based on the given node and possible predecessors */
                 for (int i = 0; i < nnc[0].getNrInPorts(); i++) {
-                    ConnectionContainer cc = nnc[0].getParent().getIncomingConnectionFor(nnc[0].getID(), i);
+                    ConnectionContainerUI cc = nnc[0].getParent().getIncomingConnectionFor(nnc[0].getID(), i);
                     if (cc != null) {
                         //only take the predecessor if its not leaving the workflow (e.g. the actual predecessor is outside of a metanode)
                         if (cc.getType() != ConnectionType.WFMIN) {
-                            NodeContainer predecessor = nnc[0].getParent().getNodeContainer(cc.getSource());
-                            if (predecessor instanceof NativeNodeContainer) {
+                            NodeContainerUI predecessor = nnc[0].getParent().getNodeContainer(cc.getSource());
+                            if (predecessor instanceof NativeNodeContainerUI) {
                                 List<NodeRecommendation> l = m_recommendations.get(idx)
-                                    .get(getKey((NativeNodeContainer)predecessor) + NODE_NAME_SEP + getKey(nnc[0]));
+                                    .get(getKey((NativeNodeContainerUI)predecessor) + NODE_NAME_SEP + getKey(nnc[0]));
                                 if (l != null) {
                                     set.addAll(l);
                                 }
@@ -421,8 +421,8 @@ public class NodeRecommendationManager {
      * @param nnc the native node container to create the key for
      * @return the key to be used to look up the node recommendations
      */
-    private static String getKey(final NativeNodeContainer nnc) {
-        return nnc.getNode().getFactory().getClass().getName() + NODE_NAME_SEP + nnc.getName();
+    private static String getKey(final NativeNodeContainerUI nnc) {
+        return nnc.getNodeFactoryClassName() + NODE_NAME_SEP + nnc.getName();
     }
 
     /**
