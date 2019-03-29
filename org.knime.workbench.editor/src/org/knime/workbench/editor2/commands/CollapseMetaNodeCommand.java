@@ -63,6 +63,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.action.CollapseIntoMetaNodeResult;
 import org.knime.core.node.workflow.action.MetaNodeToSubNodeResult;
 import org.knime.core.util.SWTUtilities;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
@@ -170,7 +171,7 @@ public class CollapseMetaNodeCommand extends AbstractKNIMECommand {
         for (int i = 0; i < nodeParts.length; i++) {
             nodeIds[i] = nodeParts[i].getNodeContainer().getID();
         }
-        final WorkflowAnnotation[] annos = AnnotationEditPart.extractWorkflowAnnotations(annoParts);
+        final WorkflowAnnotation[] annos = AnnotationUtilities.extractWorkflowAnnotations(annoParts);
         try {
             // before testing anything, let's see if we should reset
             // the selected nodes:

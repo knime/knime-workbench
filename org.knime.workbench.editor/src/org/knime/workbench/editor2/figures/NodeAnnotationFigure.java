@@ -49,7 +49,6 @@ package org.knime.workbench.editor2.figures;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 import org.eclipse.draw2d.BorderLayout;
@@ -73,16 +72,19 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
 import org.knime.core.node.workflow.NodeAnnotation;
+import org.knime.core.util.ColorUtilities;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.EditorModeParticipant;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.WorkflowEditorMode;
-import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.FontStore;
 
 /**
  * @author ohl, KNIME AG, Zurich, Switzerland
  */
 public class NodeAnnotationFigure extends Figure implements EditorModeParticipant {
+    private static NodeLogger LOGGER = NodeLogger.getLogger(NodeAnnotationFigure.class);
+
 
     /**
      * The flow figure which we are wrapping.
@@ -95,6 +97,8 @@ public class NodeAnnotationFigure extends Figure implements EditorModeParticipan
     protected Annotation m_annotation;
 
     private final ArrayList<Color> m_disposableForegroundStyledTextColors;
+    private int m_lastRevisionDisplayed;
+    private boolean m_lastRenderEnableDisplay;
 
     /**
      * @param annotation the annotation to display
@@ -102,25 +106,28 @@ public class NodeAnnotationFigure extends Figure implements EditorModeParticipan
     public NodeAnnotationFigure(final Annotation annotation) {
         setLayoutManager(new BorderLayout());
 
-        final Color bg = AnnotationEditPart.getWorkflowAnnotationDefaultBackgroundColor();
+        final Color bg = AnnotationUtilities.getWorkflowAnnotationDefaultBackgroundColor();
         m_page = new FlowPage();
         m_page.setLayoutManager(new PageFlowLayout(m_page));
         m_page.setBackgroundColor(bg);
 
         m_disposableForegroundStyledTextColors = new ArrayList<>();
+        m_annotation = annotation;
+
+        m_lastRevisionDisplayed = Integer.MIN_VALUE;
+        m_lastRenderEnableDisplay = false;
 
         add(m_page);
         setConstraint(m_page, BorderLayout.CENTER);
         setBackgroundColor(bg);
-        newContent(annotation);
+        computeDisplay();
     }
 
     /**
-     * @param annotation the annotation being rendered
      * @return true if the annotation should be rendered as "enabled", false for "disabled"
      */
-    protected boolean determineRenderEnabledState(final Annotation annotation) {
-        final boolean isNodeAnnotation = (annotation instanceof NodeAnnotation);
+    protected boolean determineRenderEnabledState() {
+        final boolean isNodeAnnotation = (m_annotation instanceof NodeAnnotation);
         final IWorkbenchWindow iww = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
         IEditorPart iep = null;
 
@@ -149,48 +156,45 @@ public class NodeAnnotationFigure extends Figure implements EditorModeParticipan
     }
 
     /**
-     * TODO there's something not great about this architecture - it is ~aware of subclasses and renders styles
-     *  for them (for example WorfklowAnnotationFigure via the private methods like
-     *  getWorkflowAnnotationSystemDefaultStyled) -- consider making this better.
-     *
-     * @param annotation the new annotation content
+     * This method creates a completely populated <code>BlockFlow</code> instance consisting of correctly styled
+     * <code>TextFlow</code> instances. If the wrapped <code>Annotation</code> instance has not be revised since the
+     * last time this method was invoked, this method will not bother recomputing anything.
      */
-    public void newContent(final Annotation annotation) {
-        final boolean isNodeAnnotation = (annotation instanceof NodeAnnotation);
-        final boolean renderEnabled = determineRenderEnabledState(annotation);
+    public final void computeDisplay() {
+        final boolean renderEnabled = determineRenderEnabledState();
+        if ((m_annotation.getRevision() == m_lastRevisionDisplayed) && (m_lastRenderEnableDisplay == renderEnabled)) {
+            return;
+        }
+
+        final boolean isNodeAnnotation = (m_annotation instanceof NodeAnnotation);
 
         final String text;
+
         final AnnotationData.StyleRange[] sr;
-        if (AnnotationEditPart.isDefaultNodeAnnotation(annotation)) {
-            text = AnnotationEditPart.getAnnotationText(annotation);
+        if (AnnotationUtilities.isDefaultNodeAnnotation(m_annotation)) {
+            text = AnnotationUtilities.getAnnotationText(m_annotation);
             sr = new AnnotationData.StyleRange[0];
         } else {
-            text = annotation.getText();
-            if (annotation.getStyleRanges() != null) {
-                sr = Arrays.copyOf(annotation.getStyleRanges(), annotation.getStyleRanges().length);
+            text = m_annotation.getText();
+            if (m_annotation.getStyleRanges() != null) {
+                sr = Arrays.copyOf(m_annotation.getStyleRanges(), m_annotation.getStyleRanges().length);
             } else {
                 sr = new AnnotationData.StyleRange[0];
             }
         }
-        Arrays.sort(sr, new Comparator<AnnotationData.StyleRange>() {
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public int compare(final AnnotationData.StyleRange o1,
-                    final AnnotationData.StyleRange o2) {
-                if (o1.getStart() == o2.getStart()) {
-                    NodeLogger.getLogger(NodeAnnotationFigure.class).error("Ranges overlap");
-                    return 0;
-                } else {
-                    return o1.getStart() < o2.getStart() ? -1 : 1;
-                }
+
+        Arrays.sort(sr, (range1, range2) -> {
+            if (range1.getStart() == range2.getStart()) {
+                LOGGER.error("Ranges overlap");
+                return 0;
+            } else {
+                return Integer.compare(range1.getStart(),range2.getStart());
             }
         });
 
         final Color previousBackgroundColor = getBackgroundColor();
         if ((previousBackgroundColor != null)
-            && !AnnotationEditPart.getWorkflowAnnotationDefaultBackgroundColor().equals(previousBackgroundColor)) {
+            && !AnnotationUtilities.getWorkflowAnnotationDefaultBackgroundColor().equals(previousBackgroundColor)) {
             previousBackgroundColor.dispose();
         }
         m_disposableForegroundStyledTextColors.stream().forEach((c) -> {
@@ -198,62 +202,60 @@ public class NodeAnnotationFigure extends Figure implements EditorModeParticipan
         });
         m_disposableForegroundStyledTextColors.clear();
 
-        final Color bg = AnnotationEditPart.RGBintToColor(annotation.getBgColor());
+        final Color bg = ColorUtilities.RGBintToColor(m_annotation.getBgColor());
         setBackgroundColor(bg);
         m_page.setBackgroundColor(bg);
-        if (isNodeAnnotation && (AnnotationEditPart.DEFAULT_BG_NODE.equals(bg) || !renderEnabled)) {
-            // node annotation are white if
+        if (isNodeAnnotation
+            && (AnnotationUtilities.getNodeAnnotationDefaultBackgroundColor().equals(bg) || !renderEnabled)) {
             setOpaque(false);
         } else {
             setOpaque(true);
         }
         int i = 0;
-        List<TextFlow> segments = new ArrayList<TextFlow>(sr.length);
+        final List<TextFlow> segments = new ArrayList<TextFlow>(sr.length);
         // in old flow annotations didn't store the font if system default was used. New annotations always store font
         // info. For backward compatibility use the system font if no font is specified here.
         final Font defaultFont;
         if (isNodeAnnotation) {
-            defaultFont = AnnotationEditPart.getNodeAnnotationDefaultFont();
-        } else if (annotation.getVersion() < AnnotationData.VERSION_20151012) {
+            defaultFont = AnnotationUtilities.getNodeAnnotationDefaultFont();
+        } else if (m_annotation.getVersion() < AnnotationData.VERSION_20151012) {
             defaultFont = FontStore.INSTANCE.getSystemDefaultFont();
-        } else if (annotation.getVersion() < AnnotationData.VERSION_20151123) {
-            defaultFont = AnnotationEditPart.getWorkflowAnnotationDefaultFont();
+        } else if (m_annotation.getVersion() < AnnotationData.VERSION_20151123) {
+            defaultFont = AnnotationUtilities.getWorkflowAnnotationDefaultFont();
         } else {
-            if (annotation.getDefaultFontSize() < 0) {
-                defaultFont = AnnotationEditPart.getWorkflowAnnotationDefaultFont();
+            if (m_annotation.getDefaultFontSize() < 0) {
+                defaultFont = AnnotationUtilities.getWorkflowAnnotationDefaultFont();
             } else {
-                defaultFont = AnnotationEditPart.getWorkflowAnnotationDefaultFont(annotation.getDefaultFontSize());
+                defaultFont = AnnotationUtilities.getWorkflowAnnotationDefaultFont(m_annotation.getDefaultFontSize());
             }
         }
-        for (AnnotationData.StyleRange r : sr) {
+        for (final AnnotationData.StyleRange range : sr) {
             // create text from last range to beginning of this range
-            if (i < r.getStart()) {
-                String noStyle = text.substring(i, r.getStart());
-                if (isNodeAnnotation) {
-                    segments.add(getNodeAnnotationSystemDefaultStyled(noStyle, defaultFont, bg, renderEnabled));
-                } else {
-                    segments.add(getWorkflowAnnotationSystemDefaultStyled(noStyle, defaultFont, bg, renderEnabled));
-                }
-                i = r.getStart();
+            if (i < range.getStart()) {
+                final String unstyled = text.substring(i, range.getStart());
+
+                segments.add(getDefaultStyledAnnotation(unstyled, defaultFont, bg, renderEnabled));
+
+                i = range.getStart();
             }
-            String styled = text.substring(i, r.getStart() + r.getLength());
-            segments.add(getStyled(styled, r, bg, defaultFont, renderEnabled, m_disposableForegroundStyledTextColors));
-            i = r.getStart() + r.getLength();
+
+            final String styled = text.substring(i, range.getStart() + range.getLength());
+            segments.add(getStyledAnnotation(styled, range, bg, defaultFont, renderEnabled,
+                m_disposableForegroundStyledTextColors));
+            i = range.getStart() + range.getLength();
         }
         if (i < text.length()) {
-            String noStyle = text.substring(i, text.length());
-            if (isNodeAnnotation) {
-                segments.add(getNodeAnnotationSystemDefaultStyled(noStyle, defaultFont, bg, renderEnabled));
-            } else {
-                segments.add(getWorkflowAnnotationSystemDefaultStyled(noStyle, defaultFont, bg, renderEnabled));
-            }
+            final String unstyled = text.substring(i, text.length());
+            segments.add(getDefaultStyledAnnotation(unstyled, defaultFont, bg, renderEnabled));
         }
-        BlockFlow bf = new BlockFlow();
-        BlockFlowLayout bfl = new BlockFlowLayout(bf);
-        bfl.setContinueOnSameLine(true);
-        bf.setLayoutManager(bfl);
-        int position;
-        switch (annotation.getAlignment()) {
+
+        final BlockFlow blockFlow = new BlockFlow();
+        final BlockFlowLayout blockFlowLayout = new BlockFlowLayout(blockFlow);
+        blockFlowLayout.setContinueOnSameLine(true);
+        blockFlow.setLayoutManager(blockFlowLayout);
+
+        final int position;
+        switch (m_annotation.getAlignment()) {
             case CENTER:
                 position = PositionConstants.CENTER;
                 break;
@@ -263,20 +265,57 @@ public class NodeAnnotationFigure extends Figure implements EditorModeParticipan
             default:
                 position = PositionConstants.LEFT;
         }
-        bf.setHorizontalAligment(position);
-        bf.setOrientation(SWT.LEFT_TO_RIGHT);
-        bf.setBackgroundColor(bg);
-        for (TextFlow tf : segments) {
-            bf.add(tf);
+        blockFlow.setHorizontalAligment(position);
+        blockFlow.setOrientation(SWT.LEFT_TO_RIGHT);
+        blockFlow.setBackgroundColor(bg);
+        for (final TextFlow textFlow : segments) {
+            blockFlow.add(textFlow);
         }
 
         m_page.removeAll();
-        m_page.add(bf);
+        m_page.add(blockFlow);
         m_page.setVisible(true);
 
-        m_annotation = annotation;
+        m_lastRevisionDisplayed = m_annotation.getRevision();
+        m_lastRenderEnableDisplay = renderEnabled;
+
+        performPostDisplayComputation();
 
         revalidate();
+    }
+
+    /**
+     * Subclasses may override this to perform any additional display computation tasks prior to revalidate()
+     *  being called on this instance.
+     *
+     * @see #computeDisplay()
+     */
+    protected void performPostDisplayComputation() { }
+
+    /**
+     * Subclasses should override this to return a <code>TextFlow</code> instance appropriately styled to their figure
+     * type.
+     *
+     * @param text the text content of the flow
+     * @param f the font to use
+     * @param bg the background color to use
+     * @param enabled whether the display should appear "enabled"
+     * @return an instance of <code>TextFlow</code> embodying the attributes specified
+     */
+    protected TextFlow getDefaultStyledAnnotation(final String text, final Font f, final Color bg,
+        final boolean enabled) {
+        final WiderTextFlow unstyledText = new WiderTextFlow();
+        final Color fg;
+        if (enabled) {
+            fg = AnnotationUtilities.getAnnotationDefaultForegroundColor();
+        } else {
+            fg = ColorConstants.lightGray;
+        }
+        unstyledText.setForegroundColor(fg);
+        unstyledText.setBackgroundColor(bg);
+        unstyledText.setFont(f);
+        unstyledText.setText(text);
+        return unstyledText;
     }
 
     /**
@@ -293,48 +332,16 @@ public class NodeAnnotationFigure extends Figure implements EditorModeParticipan
      */
     @Override
     public void workflowEditorModeWasSet(final WorkflowEditorMode newMode) {
-        newContent(m_annotation);
+        computeDisplay();
     }
 
-    private static TextFlow getNodeAnnotationSystemDefaultStyled(final String text, final Font font1, final Color bg,
-        final boolean enabled) {
-        final WiderTextFlow unstyledText = new WiderTextFlow();
-        Color fg;
-        if (enabled) {
-            fg = AnnotationEditPart.getAnnotationDefaultForegroundColor();
-        } else {
-            fg = ColorConstants.lightGray;
-        }
-        unstyledText.setForegroundColor(fg);
-        unstyledText.setBackgroundColor(bg);
-        unstyledText.setFont(font1);
-        unstyledText.setText(text);
-        return unstyledText;
-    }
-
-    private static TextFlow getWorkflowAnnotationSystemDefaultStyled(final String text, final Font font1,
-        final Color bg, final boolean enabled) {
-        final WiderTextFlow unstyledText = new WiderTextFlow();
-        Color fg;
-        if (enabled) {
-            fg = AnnotationEditPart.getAnnotationDefaultForegroundColor();
-        } else {
-            fg = ColorConstants.lightGray;
-        }
-        unstyledText.setForegroundColor(fg);
-        unstyledText.setBackgroundColor(bg);
-        unstyledText.setFont(font1);
-        unstyledText.setText(text);
-        return unstyledText;
-    }
-
-    private static TextFlow getStyled(final String text, final AnnotationData.StyleRange style, final Color bg,
-        final Font defaultFont, final boolean enabled, final List<Color> disposableForegroundColors) {
+    private static TextFlow getStyledAnnotation(final String text, final AnnotationData.StyleRange style,
+        final Color bg, final Font defaultFont, final boolean enabled, final List<Color> disposableForegroundColors) {
         final Font styledFont = FontStore.INSTANCE.getAnnotationFont(style, defaultFont);
         final WiderTextFlow styledText = new WiderTextFlow(text);
         Color fg;
         if (enabled) {
-            fg = AnnotationEditPart.RGBintToColor(style.getFgColor());
+            fg = ColorUtilities.RGBintToColor(style.getFgColor());
             disposableForegroundColors.add(fg);
         } else {
             fg = ColorConstants.lightGray;

@@ -54,6 +54,7 @@ import org.eclipse.gef.requests.DirectEditRequest;
 import org.eclipse.swt.widgets.Composite;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeAnnotationEditPart;
 
@@ -100,22 +101,21 @@ public class AnnotationEditPolicy extends DirectEditPolicy {
         return null;
     }
 
-    /** Compares the content of the new and the old annotation data. If they
-     * are equal, no change command is executed.
+    /**
+     * Compares the content of the new and the old annotation data. If they are equal, no change command is executed.
+     *
      * @param oldAnno Old annotation (may be a default node annotation)
      * @param newAnnoData The new annotation data (not a default one)
-     * @return If they are equally (a default with "Node x" equals a non-default
-     * with "Node x")
+     * @return If they are equally (a default with "Node x" equals a non-default with "Node x")
      */
-    private static boolean hasAnnotationDataChanged(
-            final Annotation oldAnno, final AnnotationData newAnnoData) {
-        AnnotationData oldAnnoRealData = new AnnotationData();
+    private static boolean hasAnnotationDataChanged(final Annotation oldAnno, final AnnotationData newAnnoData) {
+        final AnnotationData oldAnnoRealData = new AnnotationData();
         // copy bounds, overwrite text later
         oldAnnoRealData.copyFrom(newAnnoData, true);
         oldAnnoRealData.copyFrom(oldAnno.getData(), false);
         // need to set text explicitely - default node annotations have
         // no text (it's determined during rendering)
-        oldAnnoRealData.setText(AnnotationEditPart.getAnnotationText(oldAnno));
+        oldAnnoRealData.setText(AnnotationUtilities.getAnnotationText(oldAnno));
         return !oldAnnoRealData.equals(newAnnoData);
     }
 

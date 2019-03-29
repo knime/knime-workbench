@@ -56,8 +56,9 @@ import org.eclipse.swt.graphics.Point;
 import org.knime.core.node.workflow.AnnotationData;
 import org.knime.core.node.workflow.WorkflowAnnotation;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.util.ColorUtilities;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 
 /**
@@ -69,11 +70,10 @@ public class AddAnnotationCommand extends AbstractKNIMECommand {
     private static final int DEFAULT_WIDTH = 250;
 
     private static final int INITIAL_FLOWANNO_COLOR =
-        AnnotationEditPart.colorToRGBint(AnnotationEditPart.getWorkflowAnnotationDefaultBackgroundColor());
+        ColorUtilities.colorToRGBint(AnnotationUtilities.getWorkflowAnnotationDefaultBackgroundColor());
 
     private static final int INITAL_FLOWBORDER_COLOR =
-            AnnotationEditPart.colorToRGBint(AnnotationEditPart.getAnnotationDefaultBorderColor());
-
+        ColorUtilities.colorToRGBint(AnnotationUtilities.getAnnotationDefaultBorderColor());
 
     private final GraphicalViewer m_viewer;
 
@@ -116,7 +116,7 @@ public class AddAnnotationCommand extends AbstractKNIMECommand {
         // it is a workflow annotation
         data.setBgColor(INITIAL_FLOWANNO_COLOR);
         data.setDimension((int)location.preciseX(), (int)location.preciseY(), DEFAULT_WIDTH, DEFAULT_HEIGHT);
-        data.setBorderSize(AnnotationEditPart.getAnnotationDefaultBorderSizePrefValue());
+        data.setBorderSize(AnnotationUtilities.getAnnotationDefaultBorderSizePreferenceValue());
         data.setBorderColor(INITAL_FLOWBORDER_COLOR);
         data.setStyleRanges(new AnnotationData.StyleRange[0]);
         m_anno.copyFrom(data, true);

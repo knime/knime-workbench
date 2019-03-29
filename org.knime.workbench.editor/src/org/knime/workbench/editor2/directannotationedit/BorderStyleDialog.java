@@ -67,7 +67,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
-import org.knime.workbench.editor2.editparts.AnnotationEditPart;
+import org.knime.workbench.editor2.AnnotationUtilities;
 
 /**
  * There is a lot of commonality between this and FontStyleDialog - if we intend to keep the context subsystem
@@ -93,7 +93,7 @@ public class BorderStyleDialog extends Dialog {
     public BorderStyleDialog(final Shell parentShell, final Color defColor, final int defSize) {
         super(parentShell);
         if (defColor == null) {
-            m_defColor = AnnotationEditPart.getAnnotationDefaultBorderColor();
+            m_defColor = AnnotationUtilities.getAnnotationDefaultBorderColor();
         } else {
             m_defColor = defColor;
         }

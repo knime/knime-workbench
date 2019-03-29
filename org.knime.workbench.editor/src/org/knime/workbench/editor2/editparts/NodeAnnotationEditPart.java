@@ -57,6 +57,7 @@ import org.knime.core.node.workflow.NodeAnnotation;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.NodeUIInformationEvent;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.WorkflowSelectionDragEditPartsTracker;
 import org.knime.workbench.editor2.figures.NodeAnnotationFigure;
 import org.knime.workbench.editor2.figures.NodeContainerFigure;
@@ -64,7 +65,6 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
- *
  * @author Peter Ohl, KNIME AG, Zurich, Switzerland
  */
 public class NodeAnnotationEditPart extends AnnotationEditPart {
@@ -79,82 +79,80 @@ public class NodeAnnotationEditPart extends AnnotationEditPart {
      */
     @Override
     public void nodeUIInformationChanged(final NodeUIInformationEvent evt) {
-        Display.getDefault().asyncExec(new Runnable() {
-            @Override
-            public void run() {
-                WorkflowRootEditPart parent = (WorkflowRootEditPart)getParent();
-                NodeAnnotation anno = (NodeAnnotation)getModel();
-                NodeAnnotationFigure annoFig = (NodeAnnotationFigure)getFigure();
-                annoFig.newContent(anno);
-                // node annotation ignores its x/y ui info and hooks itself to its node
-                NodeID nodeID = anno.getNodeID();
-                if (nodeID == null) {
-                    // may happen if the node is disposed before this runnable is executed
-                    return;
-                }
-                NodeUIInformation nodeUI = parent.getWorkflowManager().getNodeContainer(nodeID).getUIInformation();
-                int x = anno.getX();
-                int y = anno.getY();
-                int w = anno.getWidth();
-                int h = anno.getHeight();
-                boolean update = false; // update only if anno has no ui info
-                if (w <= 0 || h <= 0) {
-                    /* this code can be removed (but not for a bug fix release) as this
-                     * method is called at least twice during activation and the 2nd
-                     * invocation has valid bounds. To reproduce: create flow w/ v2.4,
-                     * load in v2.5+ and set a break point
-                     *
-                     * TODO: remove if block + don't save bounds in node annotation
-                     * (always computed automatically)
-                     */
-                    update = true;
-                    // if the annotation has no width, make it as wide as the node
-                    if (nodeUI != null && nodeUI.getBounds()[2] > 0) {
-                        // pre2.5 flows used the node width as label width
-                        w = nodeUI.getBounds()[2];
-                    }
-                    // make it at least wide enough to hold "Node 9999xxxxxxxxx"
-                    w = Math.max(w, getNodeAnnotationMinWidth());
-                    h = getNodeAnnotationMinHeight();
-                } else {
-                    // recalculate the dimension according to the default font (which
-                    // could change through the pref page or on different OS)
-                    Font currDefFont = AnnotationEditPart.getNodeAnnotationDefaultFont();
-                    if (!currDefFont.equals(m_lastDefaultFont)) {
-                        m_lastDefaultFont = currDefFont;
-                        Dimension textBounds = annoFig.getPreferredSize();
-                        h = Math.max(textBounds.height, getNodeAnnotationMinHeight());
-                        w = Math.max(textBounds.width, getNodeAnnotationMinWidth());
-                    }
-                }
-                if (nodeUI != null) {
-                    NodeContainerEditPart nodePart =
-                        (NodeContainerEditPart)getViewer().getEditPartRegistry().get(parent.getWorkflowManager().getNodeContainer(nodeID));
-                    Point offset;
-                    int nodeHeight;
-                    int symbFigWidth;
-                    if (nodePart != null) {
-                        NodeContainerFigure fig = (NodeContainerFigure)nodePart.getFigure();
-                        offset = fig.getOffsetToRefPoint(nodeUI);
-                        nodeHeight = fig.getPreferredSize().height;
-                        symbFigWidth = fig.getSymbolFigure().getPreferredSize().width;
-                    } else {
-                        offset = new Point(65, 35);
-                        nodeHeight = NodeContainerFigure.HEIGHT;
-                        symbFigWidth = 32;
-                    }
-                    int[] nodeBounds = nodeUI.getBounds();
-                    int mid = nodeBounds[0] + (symbFigWidth / 2);
-                    x = mid - (w / 2);
-                    y = nodeBounds[1] + nodeHeight + 1 - offset.y;
-                    update = true;
-                }
-                if (update) {
-                    anno.setDimensionNoNotify(x, y, w, h);
-                }
-                parent.setLayoutConstraint(NodeAnnotationEditPart.this, annoFig, new Rectangle(x, y, w, h));
-                refreshVisuals();
+        Display.getDefault().asyncExec(() -> {
+            final WorkflowRootEditPart parent = (WorkflowRootEditPart)getParent();
+            final NodeAnnotationFigure annoFig = (NodeAnnotationFigure)getFigure();
+            annoFig.computeDisplay();
+
+            final NodeAnnotation anno = (NodeAnnotation)getModel();
+            // node annotation ignores its x/y ui info and hooks itself to its node
+            final NodeID nodeID = anno.getNodeID();
+            if (nodeID == null) {
+                // may happen if the node is disposed before this runnable is executed
+                return;
             }
+            int x = anno.getX();
+            int y = anno.getY();
+            int w = anno.getWidth();
+            int h = anno.getHeight();
+            boolean update = false; // update only if anno has no ui info
+            final NodeUIInformation nodeUI = parent.getWorkflowManager().getNodeContainer(nodeID).getUIInformation();
+            if ((w <= 0) || (h <= 0)) {
+                /* this code can be removed (but not for a bug fix release) as this
+                 * method is called at least twice during activation and the 2nd
+                 * invocation has valid bounds. To reproduce: create flow w/ v2.4,
+                 * load in v2.5+ and set a break point
+                 *
+                 * TODO: remove if block + don't save bounds in node annotation
+                 * (always computed automatically)
+                 */
+                update = true;
+                // if the annotation has no width, make it as wide as the node
+                if ((nodeUI != null) && (nodeUI.getBounds()[2] > 0)) {
+                    // pre2.5 flows used the node width as label width
+                    w = nodeUI.getBounds()[2];
+                }
+                // make it at least wide enough to hold "Node 9999xxxxxxxxx"
+                w = Math.max(w, getNodeAnnotationMinWidth());
+                h = getNodeAnnotationMinHeight();
+            } else {
+                // recalculate the dimension according to the default font (which
+                // could change through the pref page or on different OS)
+                final Font currentDefaultFont = AnnotationUtilities.getNodeAnnotationDefaultFont();
+                if (!currentDefaultFont.equals(m_lastDefaultFont)) {
+                    final Dimension textBounds = annoFig.getPreferredSize();
+                    h = Math.max(textBounds.height, getNodeAnnotationMinHeight());
+                    w = Math.max(textBounds.width, getNodeAnnotationMinWidth());
+                    m_lastDefaultFont = currentDefaultFont;
+                }
+            }
+            if (nodeUI != null) {
+                final NodeContainerEditPart nodePart =
+                    (NodeContainerEditPart)getViewer().getEditPartRegistry().get(parent.getWorkflowManager().getNodeContainer(nodeID));
+                final Point offset;
+                final int nodeHeight;
+                final int symbFigWidth;
+                if (nodePart != null) {
+                    final NodeContainerFigure ncf = (NodeContainerFigure)nodePart.getFigure();
+                    offset = ncf.getOffsetToRefPoint(nodeUI);
+                    nodeHeight = ncf.getPreferredSize().height;
+                    symbFigWidth = ncf.getSymbolFigure().getPreferredSize().width;
+                } else {
+                    offset = new Point(65, 35);
+                    nodeHeight = NodeContainerFigure.HEIGHT;
+                    symbFigWidth = 32;
+                }
+                final int[] nodeBounds = nodeUI.getBounds();
+                final int mid = nodeBounds[0] + (symbFigWidth / 2);
+                x = mid - (w / 2);
+                y = nodeBounds[1] + nodeHeight + 1 - offset.y;
+                update = true;
+            }
+            if (update) {
+                anno.setDimensionNoNotify(x, y, w, h);
+            }
+            parent.setLayoutConstraint(NodeAnnotationEditPart.this, annoFig, new Rectangle(x, y, w, h));
+            refreshVisuals();
         });
     }
 
@@ -188,7 +186,7 @@ public class NodeAnnotationEditPart extends AnnotationEditPart {
         if (prefix == null || prefix.isEmpty()) {
             prefix = "Node";
         }
-        final int minTextW = AnnotationEditPart.nodeAnnotationDefaultLineWidth(prefix + " 9999xxxxxxxxx");
+        final int minTextW = AnnotationUtilities.nodeAnnotationDefaultLineWidth(prefix + " 9999xxxxxxxxx");
         // but not less than the node default width
         return Math.max(minTextW, NodeContainerFigure.WIDTH);
     }
@@ -197,6 +195,6 @@ public class NodeAnnotationEditPart extends AnnotationEditPart {
      * @return the minimum height for a node annotation
      */
     public static int getNodeAnnotationMinHeight() {
-        return AnnotationEditPart.nodeAnnotationDefaultOneLineHeight();
+        return AnnotationUtilities.nodeAnnotationDefaultOneLineHeight();
     }
 }

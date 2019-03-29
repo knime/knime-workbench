@@ -67,9 +67,9 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Widget;
+import org.knime.core.util.ColorUtilities;
 import org.knime.workbench.core.LayoutExemptingLayout;
 import org.knime.workbench.editor2.ViewportPinningGraphicalViewer;
-import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 
 /**
  * This is a color drop down picker created originally to be used with the annotation styling toolbar, but presumably is
@@ -235,7 +235,7 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
 
             m_lastCustomChooserInteraction.set(System.currentTimeMillis());
 
-            userSelectedColor = (selectedRGB != null) ? AnnotationEditPart.RGBtoColor(selectedRGB) : null;
+            userSelectedColor = (selectedRGB != null) ? ColorUtilities.RGBtoColor(selectedRGB) : null;
 
             m_styledTextEditor.colorWasSelected(userSelectedColor);
         });

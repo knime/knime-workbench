@@ -86,6 +86,9 @@ public class FontStore {
 
     private final int m_defFontStyle;
 
+    /**
+     * The singleton instance of this class.
+     */
     public static final FontStore INSTANCE = new FontStore();
 
     /**

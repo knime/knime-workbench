@@ -58,6 +58,7 @@ import org.knime.core.node.workflow.WorkflowAnnotation;
 import org.knime.core.node.workflow.WorkflowAnnotationID;
 import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.ui.node.workflow.WorkflowCopyUI;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.ClipboardObject;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
@@ -117,13 +118,10 @@ public class CopyAction extends AbstractClipboardAction {
      */
     @Override
     protected boolean internalCalculateEnabled() {
-        NodeContainerEditPart[] nodeParts =
-            getSelectedParts(NodeContainerEditPart.class);
-        AnnotationEditPart[] annoParts =
-            getSelectedParts(AnnotationEditPart.class);
-        WorkflowAnnotation[] annos =
-            AnnotationEditPart.extractWorkflowAnnotations(annoParts);
-        return nodeParts.length > 0 || annos.length > 0;
+        NodeContainerEditPart[] nodeParts = getSelectedParts(NodeContainerEditPart.class);
+        AnnotationEditPart[] annoParts = getSelectedParts(AnnotationEditPart.class);
+        WorkflowAnnotation[] annos = AnnotationUtilities.extractWorkflowAnnotations(annoParts);
+        return (nodeParts.length > 0) || (annos.length > 0);
     }
 
     /** {@inheritDoc} */
@@ -138,7 +136,7 @@ public class CopyAction extends AbstractClipboardAction {
             ids[i] = nodeEP.getNodeContainer().getID();
         }
         WorkflowAnnotationID[] annotationIDs = Arrays.stream(
-            AnnotationEditPart.extractWorkflowAnnotations(m_annotationParts)).map(a -> a.getID())
+            AnnotationUtilities.extractWorkflowAnnotations(m_annotationParts)).map(a -> a.getID())
             .toArray(size -> new WorkflowAnnotationID[size]);
 
         WorkflowCopyContent.Builder content = WorkflowCopyContent.builder();

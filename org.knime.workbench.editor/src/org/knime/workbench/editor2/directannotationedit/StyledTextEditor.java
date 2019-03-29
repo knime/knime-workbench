@@ -92,12 +92,13 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
 import org.knime.core.node.workflow.NodeAnnotation;
+import org.knime.core.util.ColorUtilities;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.AnnotationModeExitEnabler;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.ViewportPinningGraphicalViewer;
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.FontStore;
 import org.knime.workbench.editor2.figures.WorkflowFigure;
 
@@ -135,10 +136,10 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
 
     // Context menu subsystem
     private static final RGB[] DEFAULT_COLORS = new RGB[]{
-        fromHex("CDE280"), fromHex("D8D37B"),
-        fromHex("93DDD2"), fromHex("D0D2B5"),
-        fromHex("ADDF9E"), fromHex("E8AFA7"),
-        fromHex("C4CBE0"), fromHex("E3B67D")};
+        ColorUtilities.fromHex("CDE280"), ColorUtilities.fromHex("D8D37B"),
+        ColorUtilities.fromHex("93DDD2"), ColorUtilities.fromHex("D0D2B5"),
+        ColorUtilities.fromHex("ADDF9E"), ColorUtilities.fromHex("E8AFA7"),
+        ColorUtilities.fromHex("C4CBE0"), ColorUtilities.fromHex("E3B67D")};
 
     // Context menu subsystem
     private static RGB[] LAST_COLORS = null;
@@ -187,15 +188,6 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
 
             LOGGER.debug("We have disabled the command for org.eclipse.ui.file.properties");
         }
-    }
-
-    // Context menu subsystem
-    private static RGB fromHex(final String hex) {
-        int color = Integer.parseInt(hex, 16);
-        int r = (color >> 16) & 255;
-        int g = (color >> 8) & 255;
-        int b = color & 255;
-        return new RGB(r, g, b);
     }
 
 
@@ -443,7 +435,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         m_styledText = new StyledText(parent, SWT.MULTI | SWT.WRAP | SWT.FULL_SELECTION);
         // by default we are a workflow annotation editor
         // can be changed by changing the default font (setDefaultFont(Font))
-        m_styledText.setFont(AnnotationEditPart.getWorkflowAnnotationDefaultFont());
+        m_styledText.setFont(AnnotationUtilities.getWorkflowAnnotationDefaultFont());
         m_styledText.setAlignment(SWT.LEFT);
         m_styledText.setText("");
         m_styledText.setTabs(TAB_SIZE);
@@ -650,8 +642,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
 
             return (styleRange != null)
                         ? (styleRange.foreground != null) ? styleRange.foreground
-                                                          : AnnotationEditPart.getAnnotationDefaultForegroundColor()
-                        : m_styledText.isDisposed() ? AnnotationEditPart.getAnnotationDefaultForegroundColor()
+                                                          : AnnotationUtilities.getAnnotationDefaultForegroundColor()
+                        : m_styledText.isDisposed() ? AnnotationUtilities.getAnnotationDefaultForegroundColor()
                                                     : m_styledText.getForeground();
         } else {
             Color color = null;
@@ -661,13 +653,13 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
                     color = styleRange.foreground;
 
                     if (color == null) {
-                        color = AnnotationEditPart.getAnnotationDefaultForegroundColor();
+                        color = AnnotationUtilities.getAnnotationDefaultForegroundColor();
                     }
                 } else {
                     final Color c = styleRange.foreground;
 
                     if ((!color.equals(c))
-                        && ((c != null) || (!color.equals(AnnotationEditPart.getAnnotationDefaultForegroundColor())))) {
+                        && ((c != null) || (!color.equals(AnnotationUtilities.getAnnotationDefaultForegroundColor())))) {
                         return null;
                     }
                 }
@@ -885,7 +877,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
     @Override
     protected Object doGetValue() {
         assert m_styledText != null : "Control not created!";
-        return AnnotationEditPart.toAnnotationData(m_styledText);
+        return AnnotationUtilities.toAnnotationData(m_styledText);
     }
 
     /**
@@ -924,8 +916,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         m_selectAllUponFocusGain = false;
         final String text;
         if (wa instanceof NodeAnnotation) {
-            if (AnnotationEditPart.isDefaultNodeAnnotation(wa)) {
-                text = AnnotationEditPart.getAnnotationText(wa);
+            if (AnnotationUtilities.isDefaultNodeAnnotation(wa)) {
+                text = AnnotationUtilities.getAnnotationText(wa);
                 m_selectAllUponFocusGain = true;
             } else {
                 text = wa.getText();
@@ -935,7 +927,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
 
             final int annotationBorderSize = wa.getBorderSize();
             // set margins as borders
-            m_styledText.setMarginColor(AnnotationEditPart.RGBintToColor(wa.getBorderColor()));
+            m_styledText.setMarginColor(ColorUtilities.RGBintToColor(wa.getBorderColor()));
             if (annotationBorderSize > 0) {
                 m_styledText.setMargins(annotationBorderSize, annotationBorderSize, annotationBorderSize,
                     annotationBorderSize);
@@ -945,18 +937,18 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
             final Font defFont;
             final int defFontSize = wa.getDefaultFontSize();
             if (defFontSize < 0) {
-                defFont = AnnotationEditPart.getWorkflowAnnotationDefaultFont(); // uses the size from the pref page
+                defFont = AnnotationUtilities.getWorkflowAnnotationDefaultFont(); // uses the size from the pref page
             } else {
-                defFont = AnnotationEditPart.getWorkflowAnnotationDefaultFont(defFontSize);
+                defFont = AnnotationUtilities.getWorkflowAnnotationDefaultFont(defFontSize);
             }
             setDefaultFont(defFont);
         }
         checkSelectionOfAlignmentMenuItems(alignment);
         m_styledText.setAlignment(alignment);
         m_styledText.setText(text);
-        m_styledText.setStyleRanges(AnnotationEditPart.toSWTStyleRanges(wa.getData(), m_styledText.getFont()));
+        m_styledText.setStyleRanges(AnnotationUtilities.toSWTStyleRanges(wa.getData(), m_styledText.getFont()));
 
-        setBackgroundColor(AnnotationEditPart.RGBintToColor(wa.getBgColor()));
+        setBackgroundColor(ColorUtilities.RGBintToColor(wa.getBgColor()));
         syncShadowWithEditor();
 
         if (m_toolbar != null) {
@@ -1161,7 +1153,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
             if (style.foreground != null) {
                 c = style.foreground;
             } else {
-                c = AnnotationEditPart.getAnnotationDefaultForegroundColor();
+                c = AnnotationUtilities.getAnnotationDefaultForegroundColor();
             }
 
             if (color == null) {
@@ -1174,7 +1166,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         }
 
         if (color == null) {
-            color = AnnotationEditPart.getAnnotationDefaultForegroundColor();
+            color = AnnotationUtilities.getAnnotationDefaultForegroundColor();
         }
 
         displayColorDropDown((multipleColorsExist ? null : color), FONT_COLOR_SELECTION, clickSourceLocation);
@@ -1423,7 +1415,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         Integer newSize = dlg.getSize();
         Boolean newBold = dlg.getBold();
         Boolean newItalic = dlg.getItalic();
-        Color newCol = newRGB == null ? null : AnnotationEditPart.RGBtoColor(newRGB);
+        Color newCol = newRGB == null ? null : ColorUtilities.RGBtoColor(newRGB);
         for (StyleRange style : sel) {
             if (newSize != null || newBold != null || newItalic != null) {
                 FontData stylefd = style.font.getFontData()[0];
@@ -1450,7 +1442,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
     }
 
     private void fontColor() {
-        Color col = AnnotationEditPart.getAnnotationDefaultForegroundColor();
+        Color col = AnnotationUtilities.getAnnotationDefaultForegroundColor();
         List<StyleRange> sel = getStylesInSelection();
         // set the color of the first selection style
         for (StyleRange style : sel) {
@@ -1467,7 +1459,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
             // user canceled
             return;
         }
-        Color newCol = AnnotationEditPart.RGBtoColor(newRGB);
+        Color newCol = ColorUtilities.RGBtoColor(newRGB);
         for (StyleRange style : sel) {
             style.foreground = newCol;
             m_styledText.setStyleRange(style);
@@ -1510,7 +1502,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         BorderStyleDialog dlg = new BorderStyleDialog(m_styledText.getShell(), m_styledText.getMarginColor(),
             m_styledText.getRightMargin());
         if (dlg.open() == Window.OK) {
-            m_styledText.setMarginColor(AnnotationEditPart.RGBtoColor(dlg.getColor()));
+            m_styledText.setMarginColor(ColorUtilities.RGBtoColor(dlg.getColor()));
             m_styledText.redraw();
             int s = dlg.getSize();
             m_styledText.setMargins(s, s, s, s);

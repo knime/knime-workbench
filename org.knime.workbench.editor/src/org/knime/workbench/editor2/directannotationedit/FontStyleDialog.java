@@ -70,7 +70,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Spinner;
-import org.knime.workbench.editor2.editparts.AnnotationEditPart;
+import org.knime.workbench.editor2.AnnotationUtilities;
 
 /**
  * There is a lot of commonality between this and BorderStyleDialog - if we intend to keep the context subsystem
@@ -108,7 +108,7 @@ public class FontStyleDialog extends Dialog {
         final boolean defItalic) {
         super(parentShell);
         if (defColor == null) {
-            m_defColor = AnnotationEditPart.getAnnotationDefaultForegroundColor();
+            m_defColor = AnnotationUtilities.getAnnotationDefaultForegroundColor();
         } else {
             m_defColor = defColor;
         }

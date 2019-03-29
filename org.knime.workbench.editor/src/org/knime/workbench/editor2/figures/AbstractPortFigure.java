@@ -66,7 +66,6 @@ import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.WorkflowEditorMode;
 
 /**
- *
  * @author Fabian Dill, University of Konstanz
  */
 public abstract class AbstractPortFigure extends Shape implements EditorModeParticipant {
@@ -75,27 +74,6 @@ public abstract class AbstractPortFigure extends Shape implements EditorModePart
     static {
         int c = FlowVariablePortObject.TYPE.getColor();
         COLOR_FLOW_VAR_PORT = new Color(Display.getCurrent(), (c & 0xff0000) >> 16, (c & 0x00ff00) >> 8, (c & 0x0000ff));
-    }
-
-    /**
-     *
-     * @param c the color to lighten up
-     * @return a new color derived from the argument
-     */
-    protected static Color lightenColor(final Color c) {
-        try {
-            float[] hsb = new float[3];
-            java.awt.Color.RGBtoHSB(c.getRed(), c.getGreen(), c.getBlue(), hsb);
-            // bring down the saturation
-            hsb[1] = Math.max(0, hsb[1] * 0.5f);
-            // push up the lightness
-            hsb[2] = Math.min(1.0f, hsb[2] + ((1.0f - hsb[2]) * 0.5f));
-            int lCol = java.awt.Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]);
-            return new Color(Display.getCurrent(), (lCol >> 16) & 0xFF,
-                    (lCol >> 8) & 0xFF, lCol & 0xFF);
-        } catch (Throwable t) {
-            return c;
-        }
     }
 
     /**

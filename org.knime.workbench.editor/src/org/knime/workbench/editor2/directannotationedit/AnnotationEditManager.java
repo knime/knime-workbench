@@ -60,6 +60,7 @@ import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.part.CellEditorActionHandler;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.FontStore;
 import org.knime.workbench.editor2.editparts.NodeAnnotationEditPart;
@@ -127,11 +128,11 @@ public class AnnotationEditManager extends DirectEditManager {
         final Annotation anno = ((AnnotationEditPart)editPart).getModel();
         final Font defaultFont;
         if (editPart instanceof NodeAnnotationEditPart) {
-            defaultFont = AnnotationEditPart.getNodeAnnotationDefaultFont();
+            defaultFont = AnnotationUtilities.getNodeAnnotationDefaultFont();
         } else if (anno.getVersion() < AnnotationData.VERSION_20151012) {
             defaultFont = FontStore.INSTANCE.getSystemDefaultFont();
         } else {
-            defaultFont = AnnotationEditPart.getWorkflowAnnotationDefaultFont();
+            defaultFont = AnnotationUtilities.getWorkflowAnnotationDefaultFont();
         }
         stw.setDefaultFont(defaultFont);
         stw.setValue(anno);

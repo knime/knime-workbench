@@ -57,19 +57,22 @@ import org.eclipse.draw2d.LineBorder;
 import org.eclipse.draw2d.MouseEvent;
 import org.eclipse.draw2d.MouseListener;
 import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.draw2d.text.TextFlow;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
+import org.knime.core.util.ColorUtilities;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.WorkflowEditorMode;
 import org.knime.workbench.editor2.actions.ToggleEditorModeAction;
-import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 
 /**
  * @author ohl
@@ -164,16 +167,15 @@ public class WorkflowAnnotationFigure extends NodeAnnotationFigure {
      * {@inheritDoc}
      */
     @Override
-    public void newContent(final Annotation annotation) {
-        super.newContent(annotation);
-
+    protected void performPostDisplayComputation() {
         final ArrayList<Color> disposableColors = new ArrayList<>();
-        final boolean renderEnabled = determineRenderEnabledState(annotation);
-        final AnnotationData data = annotation.getData();
+        // this has already been computed once in the super call .... TODO
+        final boolean renderEnabled = determineRenderEnabledState();
+        final AnnotationData data = m_annotation.getData();
 
         Color bg;
         if (renderEnabled) {
-            bg = AnnotationEditPart.RGBintToColor(data.getBgColor());
+            bg = ColorUtilities.RGBintToColor(data.getBgColor());
             disposableColors.add(bg);
         } else {
             bg = ColorConstants.lightGray;
@@ -181,9 +183,9 @@ public class WorkflowAnnotationFigure extends NodeAnnotationFigure {
         setBackgroundColor(bg);
         m_page.setBackgroundColor(bg);
 
-        Color fg = AnnotationEditPart.getAnnotationDefaultForegroundColor();
+        Color fg = AnnotationUtilities.getAnnotationDefaultForegroundColor();
         if (!renderEnabled) {
-            fg = AnnotationEditPart.convertToGrayscale(fg, 32);
+            fg = ColorUtilities.convertToGrayscale(fg, 32);
             disposableColors.add(fg);
         }
         setForegroundColor(fg);
@@ -191,9 +193,9 @@ public class WorkflowAnnotationFigure extends NodeAnnotationFigure {
 
         // set border with specified annotation color
         if (data.getBorderSize() > 0) {
-            Color borderColor = AnnotationEditPart.RGBintToColor(data.getBorderColor());
+            Color borderColor = ColorUtilities.RGBintToColor(data.getBorderColor());
             if (!renderEnabled) {
-                final Color grayscale = AnnotationEditPart.convertToGrayscale(borderColor, 32);
+                final Color grayscale = ColorUtilities.convertToGrayscale(borderColor, 32);
                 // dispose of it ~ now
                 m_currentContentDisposableColors.add(borderColor);
                 borderColor = grayscale;
@@ -212,6 +214,26 @@ public class WorkflowAnnotationFigure extends NodeAnnotationFigure {
             m_currentContentDisposableColors.clear();
             m_currentContentDisposableColors.addAll(disposableColors);
         });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected TextFlow getDefaultStyledAnnotation(final String text, final Font f, final Color bg,
+        final boolean enabled) {
+        final WiderTextFlow unstyledText = new WiderTextFlow();
+        final Color fg;
+        if (enabled) {
+            fg = AnnotationUtilities.getAnnotationDefaultForegroundColor();
+        } else {
+            fg = ColorConstants.lightGray;
+        }
+        unstyledText.setForegroundColor(fg);
+        unstyledText.setBackgroundColor(bg);
+        unstyledText.setFont(f);
+        unstyledText.setText(text);
+        return unstyledText;
     }
 
     /**

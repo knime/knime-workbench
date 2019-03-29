@@ -47,12 +47,7 @@
  */
 package org.knime.workbench.editor2.editparts;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.draw2d.IFigure;
-import org.eclipse.draw2d.TextUtilities;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.gef.DragTracker;
@@ -65,17 +60,8 @@ import org.eclipse.gef.requests.LocationRequest;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.StyleRange;
-import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.workflow.Annotation;
-import org.knime.core.node.workflow.AnnotationData;
-import org.knime.core.node.workflow.AnnotationData.TextAlignment;
-import org.knime.core.node.workflow.NodeAnnotation;
 import org.knime.core.node.workflow.NodeUIInformationEvent;
 import org.knime.core.node.workflow.NodeUIInformationListener;
 import org.knime.core.node.workflow.WorkflowAnnotation;
@@ -96,339 +82,13 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
- * TODO The color utility methods in this class should be moved out into their own utilities class.
- *
  * TODO This architecture is an acid trip. This class creates figures of B, and is subclassed by X; X creates figures of
- * A which is a superclass of B. A's newContent(...) method knows about salient facets of B... trippy - not good trippy.
+ * A which is a superclass of B. A's computeDisplay() method knows about salient facets of B... trippy - not good trippy.
  *
  * @author ohl, KNIME AG, Zurich, Switzerland
  */
 public class AnnotationEditPart extends AbstractWorkflowEditPart
     implements EditorModeParticipant, IPropertyChangeListener, NodeUIInformationListener {
-    private static final Color DEFAULT_FG = ColorConstants.black;
-
-    /** White (since annotations have borders the default color is white) */
-    public static final Color DEFAULT_BG_WORKFLOW = new Color(null, 255, 255, 255);
-
-    /** default Color of the border for workflow annotations. Light yellow.*/
-    private static final Color DEFAULT_BORDER_WORKFLOW = new Color(null, 255, 216, 0);
-
-    /** White. */
-    public static final Color DEFAULT_BG_NODE = new Color(null, 255, 255, 255);
-
-    /**
-     * If no foreground color is set, this one should be used.
-     *
-     * @return the default font color of annotation figures
-     */
-    public static Color getAnnotationDefaultForegroundColor() {
-        // TODO: read it from a pref page...
-        return DEFAULT_FG;
-    }
-
-    /**
-     * @return the height of one line in default font (doesn't honor label size
-     *         setting in preference page)
-     */
-    public static int workflowAnnotationDefaultOneLineHeight() {
-        return TextUtilities.INSTANCE.getStringExtents("Agq|_ÊZ", getWorkflowAnnotationDefaultFont()).height;
-    }
-
-    /**
-     * @return the height of one line in default font for node annotations -
-     *         uses the preference page setting to determine the font size
-     */
-    public static int nodeAnnotationDefaultOneLineHeight() {
-        Font font = getNodeAnnotationDefaultFont();
-        return TextUtilities.INSTANCE.getStringExtents("Agq|_ÊZ", font).height;
-    }
-
-    /**
-     * @param text to test
-     * @return the width of the specified text with the workflow annotation
-     *         default font
-     */
-    public static int workflowAnnotationDefaultLineWidth(final String text) {
-        Font font = getWorkflowAnnotationDefaultFont();
-        return TextUtilities.INSTANCE.getStringExtents(text, font).width;
-    }
-
-    /**
-     * @param text to test
-     * @return the width of the specified text with the workflow annotation
-     *         default font
-     */
-    public static int nodeAnnotationDefaultLineWidth(final String text) {
-        Font font = getNodeAnnotationDefaultFont();
-        return TextUtilities.INSTANCE.getStringExtents(text, font).width;
-    }
-
-    /**
-     * If no background color is set, this one should be used for workflow
-     * annotations.
-     *
-     * @return the default background color of workflow annotation figures
-     */
-    public static Color getWorkflowAnnotationDefaultBackgroundColor() {
-        // TODO: read it from a pref page...
-        return DEFAULT_BG_WORKFLOW;
-    }
-    /**
-     * If no background color is set, this one should be used for node
-     * annotations.
-     *
-     * @return the default background color of node annotation figures
-     */
-    public static Color getNodeAnnotationDefaultBackgroundColor() {
-        // TODO: read it from a pref page...
-        return DEFAULT_BG_NODE;
-    }
-
-    /**
-     * @return the default color of the workflow annotation border.
-     */
-    public static Color getAnnotationDefaultBorderColor() {
-        return DEFAULT_BORDER_WORKFLOW;
-    }
-
-    /** @return the value set in the preference page for the default border width. */
-    public static int getAnnotationDefaultBorderSizePrefValue() {
-        // get workflow annotation border size from preferences
-        IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
-        return store.getInt(PreferenceConstants.P_ANNOTATION_BORDER_SIZE);
-    }
-
-    /**
-     * Returns an integer with 24bit color info. Bits 23 to 16 contain the red
-     * value, 15 to 8 contain the green value, and 7 to 0 contain the blue.
-     *
-     * @param c the color to translate
-     * @return an integer with 24bit color info
-     */
-    public static int colorToRGBint(final Color c) {
-        return ((c.getRed() & 0x0FF) << 16) | ((c.getGreen() & 0x0FF) << 8)
-                | ((c.getBlue() & 0x0FF));
-    }
-
-    /**
-     * Returns the red, green, blue value of the specified 24bit int as separate
-     * values in a new object.
-     *
-     * @param rgb the 24bit color integer to convert
-     * @return a new RGB object with separated rgb values
-     */
-    public static RGB RGBintToRGBObj(final int rgb) {
-        return new RGB((rgb >>> 16) & 0xFF, (rgb >>> 8) & 0xFF, rgb & 0xFF);
-    }
-
-    /**
-     * Returns a new Color for the passed rgb values.
-     *
-     * @param rgb
-     * @return a new Color for the passed RGB object
-     */
-    public static Color RGBintToColor(final int rgb) {
-        return RGBtoColor(RGBintToRGBObj(rgb));
-    }
-
-    /**
-     * Returns a new Color for the passed RGB object.
-     *
-     * @param rgb
-     * @return a new Color for the passed RGB object
-     */
-    public static Color RGBtoColor(final RGB rgb) {
-        return new Color(null, rgb);
-    }
-
-    /**
-     * Changes the color to its CIE 1931 linear luminance grayscale representation; it also does some nudging on
-     * already monochromatic colors, nudging the value towards the center (so if it's black - go to dark gray; if
-     * it's white, go to light gray)
-     *
-     * TODO compare / constract to AbstractPortFigure.lightenColor(Color)
-     *
-     * @param c a presumed non-gray color.
-     * @param alpha a 0-255 value representing the opacity (255 == opaque)
-     * @return the grayscale representation of the passed value.
-     */
-    public static Color convertToGrayscale(final Color c, final int alpha) {
-        if ((c.getRed() == c.getGreen()) && (c.getGreen() == c.getBlue())) {
-            final int delta = 12 * ((c.getRed() > 127) ? -2 : 10);
-            int kInt = c.getRed() + delta;
-
-            if (kInt < 60) {
-                kInt = 60;
-            } else if (kInt > 190) {
-                kInt = 190;
-            }
-
-            return new Color(null, kInt, kInt, kInt, alpha);
-        } else {
-            final double y = (0.2126 * c.getRed()) + (0.7152 * c.getGreen()) + (0.0722 * c.getBlue());
-            final int kInt = (int)y;
-
-            return new Color(null, kInt, kInt, kInt, alpha);
-        }
-    }
-
-    /**
-     * If no font is set, this one should be used for workflow annotations.
-     *
-     * @return the default font for workflow annotation
-     */
-    public static Font getWorkflowAnnotationDefaultFont() {
-        // its the default font.
-        return FontStore.INSTANCE.getDefaultFont(FontStore.getFontSizeFromKNIMEPrefPage());
-    }
-
-    /**
-     * If no font is set, this one should be used for workflow annotations.
-     * @param size size
-     * @return the default font for workflow annotation
-     */
-    public static Font getWorkflowAnnotationDefaultFont(final int size) {
-        // its the default font.
-        return FontStore.INSTANCE.getDefaultFont(size);
-    }
-
-    /**
-     * If no font is set, this one should be used for node annotations. page for node labels.
-     *
-     * @return the default font for node annotation
-     */
-    public static Font getNodeAnnotationDefaultFont() {
-        Font defFont = FontStore.INSTANCE.getDefaultFont(FontStore.getFontSizeFromKNIMEPrefPage());
-        return defFont;
-    }
-
-    /**
-     * Returns the text contained in the annotation or the default text if the argument annotation is a default node
-     * annotation ("Node 1", "Node 2", ...).
-     *
-     * @param t The annotation, not null.
-     * @return The above text.
-     */
-    public static String getAnnotationText(final Annotation t) {
-        if (!isDefaultNodeAnnotation(t)) {
-            return t.getText();
-        }
-        String text;
-        if (((NodeAnnotation)t).getNodeID() == null) {
-            return "";
-        }
-        int id = ((NodeAnnotation)t).getNodeID().getIndex();
-        String prefix = KNIMEUIPlugin.getDefault().getPreferenceStore().
-            getString(PreferenceConstants.P_DEFAULT_NODE_LABEL);
-        if (prefix == null || prefix.isEmpty()) {
-            text = "";
-        } else {
-            text = prefix + " " + id;
-        }
-        return text;
-    }
-
-    /**
-     * @param t an Annotation
-     * @return true if t is an instance of NodeAnnotation and <code>isDefault()</code> returns true.
-     */
-    public static boolean isDefaultNodeAnnotation(final Annotation t) {
-        return t instanceof NodeAnnotation
-        && (((NodeAnnotation)t).getData()).isDefault();
-    }
-
-    /**
-     * @param t annotation data to be converted to style ranges
-     * @param defaultFont the default font for text
-     * @return an array of StyleRange instances
-     */
-    public static StyleRange[] toSWTStyleRanges(final AnnotationData t, final Font defaultFont) {
-        AnnotationData.StyleRange[] knimeStyleRanges = t.getStyleRanges();
-        ArrayList<StyleRange> swtStyleRange = new ArrayList<StyleRange>(knimeStyleRanges.length);
-        for (AnnotationData.StyleRange knimeSR : knimeStyleRanges) {
-            StyleRange swtStyle = new StyleRange();
-            Font f = FontStore.INSTANCE.getAnnotationFont(knimeSR, defaultFont);
-            swtStyle.font = f;
-            if (knimeSR.getFgColor() >= 0) {
-                int rgb = knimeSR.getFgColor();
-                RGB rgbObj = RGBintToRGBObj(rgb);
-                swtStyle.foreground = new Color(null, rgbObj);
-            }
-            swtStyle.start = knimeSR.getStart();
-            swtStyle.length = knimeSR.getLength();
-            swtStyleRange.add(swtStyle);
-        }
-        return swtStyleRange.toArray(new StyleRange[swtStyleRange.size()]);
-    }
-
-    /**
-     * @param s the component with the styled text to convert.
-     * @return an instance of AnnotationData embodying the styled text.
-     */
-    public static AnnotationData toAnnotationData(final StyledText s) {
-        AnnotationData result = new AnnotationData();
-        result.setText(s.getText());
-        result.setBgColor(colorToRGBint(s.getBackground()));
-        result.setBorderColor(AnnotationEditPart.colorToRGBint(s.getMarginColor()));
-        // annotations have the same margin top/left/right/bottom, however getLeftMargin may return a different value.
-        result.setBorderSize(s.getRightMargin());
-        result.setDefaultFontSize(s.getFont().getFontData()[0].getHeight());
-        TextAlignment alignment;
-        switch (s.getAlignment()) {
-        case SWT.RIGHT:
-            alignment = TextAlignment.RIGHT;
-            break;
-        case SWT.CENTER:
-            alignment = TextAlignment.CENTER;
-            break;
-        default:
-            alignment = TextAlignment.LEFT;
-        }
-        result.setAlignment(alignment);
-
-        StyleRange[] swtStyleRange = s.getStyleRanges();
-        ArrayList<AnnotationData.StyleRange> wfStyleRanges =
-                new ArrayList<AnnotationData.StyleRange>(
-                        swtStyleRange.length);
-        for (StyleRange sr : swtStyleRange) {
-            if (sr.isUnstyled()) {
-                continue;
-            }
-            AnnotationData.StyleRange waSr = new AnnotationData.StyleRange();
-            Color fg = sr.foreground;
-            if (fg != null) {
-                int rgb = colorToRGBint(fg);
-                waSr.setFgColor(rgb);
-            }
-            FontStore.saveAnnotationFontToStyleRange(waSr, sr.font);
-            waSr.setStart(sr.start);
-            waSr.setLength(sr.length);
-            wfStyleRanges.add(waSr);
-        }
-        result.setStyleRanges(wfStyleRanges
-                .toArray(new AnnotationData.StyleRange[wfStyleRanges.size()]));
-        return result;
-    }
-
-    /**
-     * Extract the WorkflowAnnotation models from the argument list. It will ignore NodeAnnotations (which have the same
-     * edit part).
-     *
-     * @param annoParts The selected annotation parts
-     * @return The workflow annotation models (possibly fewer than selected edit parts!!!)
-     */
-    public static WorkflowAnnotation[] extractWorkflowAnnotations(final AnnotationEditPart[] annoParts) {
-        List<WorkflowAnnotation> annoList = new ArrayList<WorkflowAnnotation>();
-        for (int i = 0; i < annoParts.length; i++) {
-            Annotation model = annoParts[i].getModel();
-            if (model instanceof WorkflowAnnotation) {
-                annoList.add((WorkflowAnnotation)model);
-            }
-        }
-        return annoList.toArray(new WorkflowAnnotation[annoList.size()]);
-    }
-
-
     private AnnotationEditManager m_directEditManager;
 
     private WorkflowEditorMode m_currentEditorMode = WorkflowEditor.INITIAL_EDITOR_MODE;
@@ -499,12 +159,12 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart
      */
     @Override
     public void nodeUIInformationChanged(final NodeUIInformationEvent evt) {
-        Annotation anno = getModel();
-        NodeAnnotationFigure annoFig = (NodeAnnotationFigure)getFigure();
-        annoFig.newContent(anno);
-        WorkflowRootEditPart parent = (WorkflowRootEditPart)getParent();
-        parent.setLayoutConstraint(this, getFigure(),
-            new Rectangle(anno.getX(), anno.getY(), anno.getWidth(), anno.getHeight()));
+        ((NodeAnnotationFigure)getFigure()).computeDisplay();
+
+        final WorkflowRootEditPart parent = (WorkflowRootEditPart)getParent();
+        final Annotation anno = getModel();
+        final Rectangle constraint = new Rectangle(anno.getX(), anno.getY(), anno.getWidth(), anno.getHeight());
+        parent.setLayoutConstraint(this, getFigure(), constraint);
         refreshVisuals();
         parent.refresh();
     }
@@ -515,8 +175,7 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart
     public void propertyChange(final PropertyChangeEvent p) {
         if (p.getProperty().equals(PreferenceConstants.P_DEFAULT_NODE_LABEL)
                 || p.getProperty().equals(PreferenceConstants.P_ANNOTATION_BORDER_SIZE)) {
-            NodeAnnotationFigure fig = (NodeAnnotationFigure)getFigure();
-            fig.newContent(getModel());
+            ((NodeAnnotationFigure)getFigure()).computeDisplay();
         }
     }
 
