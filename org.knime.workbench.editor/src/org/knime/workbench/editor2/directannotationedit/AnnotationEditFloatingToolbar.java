@@ -140,7 +140,10 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
            paintBackground(pe);
         });
 
-        getShell().setBackgroundMode(SWT.INHERIT_FORCE);
+        // see AP-11483: (Linux only) Entering annotation edit mode changes background of other view components
+        if (!StyledTextEditor.PLATFORM_IS_LINUX) {
+            getShell().setBackgroundMode(SWT.INHERIT_FORCE);
+        }
 
         initializeSWTAssetsIfNecessary();
 
