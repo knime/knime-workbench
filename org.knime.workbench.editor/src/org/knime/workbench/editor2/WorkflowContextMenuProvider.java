@@ -69,6 +69,7 @@ import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.port.DataTableSpecProvider;
 import org.knime.core.node.port.PortType;
+import org.knime.core.node.port.flowvariable.FlowVariablePortObject;
 import org.knime.core.node.workflow.LoopEndNode;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.SingleNodeContainer;
@@ -652,6 +653,8 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                 return true;
             } else if (DataTableSpecProvider.class.isAssignableFrom(ptype.getPortObjectSpecClass())
                 && DirectAccessTable.class.isAssignableFrom(ptype.getPortObjectClass())) {
+                return true;
+            } else if (FlowVariablePortObject.TYPE.equals(ptype)) {
                 return true;
             } else {
                 return false;
