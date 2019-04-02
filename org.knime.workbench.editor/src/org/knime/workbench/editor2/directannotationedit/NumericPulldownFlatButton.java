@@ -233,7 +233,9 @@ public class NumericPulldownFlatButton extends FlatButton
             }
 
             getDisplay().asyncExec(() -> {
-                redraw();
+                if (!isDisposed()) {
+                    redraw();
+                }
             });
         }
     }

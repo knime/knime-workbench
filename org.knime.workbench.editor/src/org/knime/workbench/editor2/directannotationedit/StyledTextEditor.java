@@ -296,6 +296,10 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
     }
 
     void placeToolbarAndEnsureVisible(final boolean includeScroll) {
+        if (m_panel.isDisposed() || m_toolbar.isDisposed()) {
+            return;
+        }
+
         final ViewportPinningGraphicalViewer viewer = ViewportPinningGraphicalViewer.getActiveViewer();
         final WorkflowFigure workflowFigure = viewer.getWorkflowFigure();
         final org.eclipse.draw2d.geometry.Rectangle workflowFigureBounds = workflowFigure.getBounds();
@@ -372,11 +376,13 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
             }
 
             m_styledText.getDisplay().asyncExec(() -> {
-                figureCanvas.scrollTo(scrollX, scrollY);
+                if (!m_toolbar.isDisposed()) {
+                    figureCanvas.scrollTo(scrollX, scrollY);
 
-                m_toolbar.setLocation(xLocation, yLocation);
-                if (!m_toolbar.isVisible()) {
-                    m_toolbar.setVisible(true);
+                    m_toolbar.setLocation(xLocation, yLocation);
+                    if (!m_toolbar.isVisible()) {
+                        m_toolbar.setVisible(true);
+                    }
                 }
             });
 
@@ -390,7 +396,9 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
     }
 
     private void hideToolbar() {
-        m_toolbar.setVisible(false);
+        if (!m_toolbar.isDisposed()) {
+            m_toolbar.setVisible(false);
+        }
 
         if (m_toolbarDismissalShouldRemoveNorthTentStake != null) {
             final boolean removeNorthStake = m_toolbarDismissalShouldRemoveNorthTentStake.getAndSet(false);

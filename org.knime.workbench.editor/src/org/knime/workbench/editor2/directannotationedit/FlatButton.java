@@ -415,7 +415,9 @@ public class FlatButton extends Canvas {
                 m_state.set(selected);
 
                 getDisplay().asyncExec(() -> {
-                    redraw();
+                    if (!isDisposed()) {
+                        redraw();
+                    }
                 });
             }
         }

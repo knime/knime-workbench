@@ -183,10 +183,11 @@ public class StyledTextEditorLocator implements CellEditorLocator {
                     Thread.sleep(250);
                 } catch (Exception e) { } // NOPMD
 
-                edit.getDisplay().asyncExec(() -> {
-                    ste.placeToolbarAndEnsureVisible(false);
-                });
-
+                if (!edit.isDisposed() && (edit.getDisplay() != null) && !edit.getDisplay().isDisposed()) {
+                    edit.getDisplay().asyncExec(() -> {
+                        ste.placeToolbarAndEnsureVisible(false);
+                    });
+                }
             };
 
             // We don't really care if some of these get rejected, and this method gets invoked a ridiculous
