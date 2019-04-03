@@ -2,7 +2,7 @@
 <feature
       id="org.knime.features.workbench"
       label="KNIME Workbench"
-      version="3.8.0.qualifier"
+      version="4.1.0.qualifier"
       provider-name="KNIME AG, Zurich, Switzerland">
 
    <description>
@@ -69,6 +69,7 @@
          download-size="0"
          install-size="0"
          version="0.0.0"
+         fragment="true"
          unpack="false"/>
 
    <plugin

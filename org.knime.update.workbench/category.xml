@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/org.knime.features.workbench_3.8.0.qualifier.jar" id="org.knime.features.workbench" version="3.8.0.qualifier"/>
+   <feature id="org.knime.features.workbench" version="0.0.0"/>
+   <feature id="org.knime.features.explorer.view" version="0.0.0"/>
+   <feature id="org.knime.features.workbench.source" version="0.0.0"/>
+   <feature id="org.knime.features.explorer.view.source" version="0.0.0"/>
+
+   <category-def name="knime-workbench" label="Build artifacts from knime-workbench">
+       <description>Build artifacts from knime-workbench</description>
+       <query><expression type="match">id ~= /.+/</expression></query>
+   </category-def>
 </site>
