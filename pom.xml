@@ -29,13 +29,19 @@
 		<knime.expressions.p2>${env.KNIME_EXPRESSIONS_P2}</knime.expressions.p2>
 		<knime.shared.p2>${env.KNIME_SHARED_P2}</knime.shared.p2>
 		<knime.tp.p2>${env.KNIME_TP_P2}</knime.tp.p2>
-		<knime.javasnippet.p2>${env.KNIME_JAVASNIPPET_P2}</knime.javasnippet.p2>
+		<knime.js.core.p2>${env.KNIME_JS_CORE_P2}</knime.js.core.p2>
 	</properties>
 
 	<modules>
+		<module>org.knime.core.wizard</module>
+		<module>org.knime.features.workbench</module>
+		<module>org.knime.features.explorer.view</module>
+		<module>org.knime.update.workbench</module>
 		<module>org.knime.workbench</module>
 		<module>org.knime.workbench.core</module>
 		<module>org.knime.workbench.editor</module>
+		<module>org.knime.workbench.explorer.view</module>
+		<!-- <module>org.knime.workbench.explorer.view.testing</module> -->
 		<module>org.knime.workbench.help</module>
 		<module>org.knime.workbench.repository</module>
 		<!-- <module>org.knime.workbench.repository.testing</module> -->
@@ -43,9 +49,6 @@
 		<module>org.knime.workbench.ui.browser</module>
 		<module>org.knime.workbench.ui.layout</module>
 		<module>org.knime.workbench.workflowcoach</module>
-		<module>org.knime.features.workbench</module>
-		<module>org.knime.update.workbench</module>
-
 	</modules>
 
 	<repositories>
@@ -75,9 +78,9 @@
 			<url>${knime.tp.p2}</url>
 		</repository>
 		<repository>
-			<id>knime.javasnippet.p2</id>
+			<id>knime.js.core.p2</id>
 			<layout>p2</layout>
-			<url>${knime.javasnippet.p2}</url>
+			<url>${knime.js.core.p2}</url>
 		</repository>
 	</repositories>
 </project>

@@ -49,13 +49,6 @@
          unpack="false"/>
 
    <plugin
-         id="org.knime.workbench.repository.testing"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
          id="org.knime.workbench.ui"
          download-size="0"
          install-size="0"
@@ -64,11 +57,11 @@
 
    <plugin
          id="org.knime.workbench.ui.browser"
-	 os="linux"
-	 fragment="true"
+         os="linux"
          download-size="0"
          install-size="0"
          version="0.0.0"
+         fragment="true"
          unpack="false"/>
 
    <plugin
@@ -84,4 +77,5 @@
          install-size="0"
          version="0.0.0"
          unpack="false"/>
+
 </feature>
