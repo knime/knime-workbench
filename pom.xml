@@ -33,7 +33,6 @@
 	</properties>
 
 	<modules>
-		<module>org.knime.core.wizard</module>
 		<module>org.knime.features.workbench</module>
 		<module>org.knime.features.explorer.view</module>
 		<module>org.knime.update.workbench</module>
@@ -41,6 +40,7 @@
 		<module>org.knime.workbench.core</module>
 		<module>org.knime.workbench.editor</module>
 		<module>org.knime.workbench.explorer.view</module>
+		<module>org.knime.workbench.editor.svgexport</module>
 		<!-- <module>org.knime.workbench.explorer.view.testing</module> -->
 		<module>org.knime.workbench.help</module>
 		<module>org.knime.workbench.repository</module>
