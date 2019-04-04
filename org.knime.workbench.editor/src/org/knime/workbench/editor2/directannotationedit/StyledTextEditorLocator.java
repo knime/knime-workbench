@@ -63,7 +63,6 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Composite;
 import org.knime.workbench.editor2.ViewportPinningGraphicalViewer;
-import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeAnnotationEditPart;
 import org.knime.workbench.editor2.figures.NodeAnnotationFigure;
 
@@ -78,8 +77,6 @@ public class StyledTextEditorLocator implements CellEditorLocator {
 
     private final ZoomManager m_zoomManager;
     private double m_lastBoundsImpactingZoom;
-
-    private AnnotationEditPart m_editPart = null;
 
     private final ExecutorService m_executorService;
 
@@ -103,98 +100,104 @@ public class StyledTextEditorLocator implements CellEditorLocator {
     }
 
     /**
-     * @param editpart the <code>EditPart</code> of the annotation which this styled text represents
-     */
-    public void setEditPart(final AnnotationEditPart editpart) {
-        m_editPart = editpart;
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
     public void relocate(final CellEditor celleditor) {
+        final StyledTextEditor ste = ((StyledTextEditor)celleditor);
+        final Rectangle textBounds = ste.getTextBounds();
         final Composite edit = (Composite)celleditor.getControl();
         final org.eclipse.draw2d.geometry.Rectangle figBounds = m_figure.getBounds().getCopy();
-        final boolean isWorkflowAnnotation = !(m_editPart instanceof NodeAnnotationEditPart);
-
+        final boolean zoomHasChanged = (m_lastBoundsImpactingZoom != m_zoomManager.getZoom());
+        final boolean needsJitter = !m_viewport.getViewLocation().equals(m_lastViewportLocation);
         // add OS editor borders or insets -- never verified (result always 0)
         final Rectangle trim = edit.computeTrim(0, 0, 0, 0);
 
         figBounds.width += trim.width;
         figBounds.height += trim.height;
 
-        final StyledTextEditor ste = ((StyledTextEditor)celleditor);
-        final Rectangle textBounds = ste.getTextBounds();
-        boolean needsJitter = false;
-        if (isWorkflowAnnotation) {
-            // grow only the height with the text entered
-            figBounds.height = Math.max(figBounds.height, (textBounds.height + 5));
+        if (ste.currentAnnotationIsNodeAnnotation()) {
+            final org.eclipse.draw2d.geometry.Rectangle absoluteWithZoomBounds = figBounds.getCopy();
 
-            needsJitter = !m_viewport.getViewLocation().equals(m_lastViewportLocation);
-        } else {
-            // grow the width and the height with the text entered
+            // adapt to zoom level and viewport (shifts x,y to view port window and grows w,h with zoom level)
+            m_figure.translateToAbsolute(absoluteWithZoomBounds);
+
             figBounds.height = Math.max(textBounds.height, NodeAnnotationEditPart.getNodeAnnotationMinHeight());
             // add 5 pixel width to avoid flickering in auto-wrapping editors
             figBounds.width = Math.max((textBounds.width + 5), NodeAnnotationEditPart.getNodeAnnotationMinWidth());
-        }
 
-        final boolean zoomHasChanged = (m_lastBoundsImpactingZoom != m_zoomManager.getZoom());
-        final int x;
-        final int y;
-        // if we have changed zoom levels and are a workflow annotation then we should try to preserve the
-        //          original viewport-relative-location rather than potentially jumping out the viewport due to
-        //          the ~precession of the center of zoom.
-        if (zoomHasChanged && isWorkflowAnnotation) {
-            final Point location = edit.getLocation();
+            // center editor in case zoom != 1 (important for node annotations)
+            int x = absoluteWithZoomBounds.x + (absoluteWithZoomBounds.width - figBounds.width) / 2;
 
-            x = location.x;
-            y = location.y;
-        } else {
-            final org.eclipse.draw2d.geometry.Rectangle absoluteWithZoomBounds = figBounds.getCopy();
+            // use x,y from viewport coordinates,
+            // w,h are original figure coordinates as editor doesn't grow with zoom
+            final Rectangle newBounds = new Rectangle(x, absoluteWithZoomBounds.y, figBounds.width, figBounds.height);
+            if (!edit.getBounds().equals(newBounds)) {
+                edit.setBounds(newBounds);
+            }
 
-            // adapt to zoom level and viewport
-            // (shifts x,y to view port window and grows w,h with zoom level)
-            m_figure.translateToAbsolute(absoluteWithZoomBounds);
-            absoluteWithZoomBounds.translate(trim.x, trim.y);
+            if (zoomHasChanged) {
+                Runnable r = () -> {
+                    // the problem here is that we need wait on the associated shifting of the viewport before we
+                    //      can re-place (not replace) the toolbar in the viewport. if we do this ahead of the
+                    //      viewport shift, the toolbar will end up in a location that is calculated correctly but
+                    //      cemented in the old viewport.  SWT!
+                    try {
+                        Thread.sleep(175);
+                    } catch (Exception e) { } // NOPMD
 
-            x = absoluteWithZoomBounds.x + (absoluteWithZoomBounds.width - figBounds.width) / 2;
-            y = absoluteWithZoomBounds.y;
-        }
+                    if (!edit.isDisposed() && (edit.getDisplay() != null) && !edit.getDisplay().isDisposed()) {
+                        edit.getDisplay().asyncExec(() -> {
+                            ste.placeToolbarAndEnsureVisible(false);
+                        });
+                    }
+                };
 
-        // use x,y from viewport coordinates,
-        // w,h are original figure coordinates as editor doesn't grow with zoom
-        final Rectangle newBounds = new Rectangle(x, y, figBounds.width, figBounds.height);
-        if (!edit.getBounds().equals(newBounds)) {
-            edit.setBounds(newBounds);
-
-            if ((zoomHasChanged && isWorkflowAnnotation) || needsJitter || (!isWorkflowAnnotation)) {
-                ste.placeToolbarAndEnsureVisible(false);
+                // We don't really care if some of these get rejected, and this method gets invoked a ridiculous
+                //      number of times per UI action...
+                try {
+                    m_executorService.execute(r);
+                } catch (RejectedExecutionException e) { } // NOPMD
             }
 
             m_lastBoundsImpactingZoom = m_zoomManager.getZoom();
-        } else if (!isWorkflowAnnotation) {
-            Runnable r = () -> {
-                // the problem here is that we need wait on the associated shifting of the viewport before we can
-                //      re-place (not replace) the toolbar in the viewport. if we do this ahead of the viewport
-                //      shift, the toolbar will end up in a location that is calculated correctly but cemented
-                //      in the old viewport.  SWT!
-                try {
-                    Thread.sleep(250);
-                } catch (Exception e) { } // NOPMD
+        } else {
+            figBounds.height = Math.max(figBounds.height, (textBounds.height + 5));
 
-                if (!edit.isDisposed() && (edit.getDisplay() != null) && !edit.getDisplay().isDisposed()) {
-                    edit.getDisplay().asyncExec(() -> {
-                        ste.placeToolbarAndEnsureVisible(false);
-                    });
+            final int x;
+            final int y;
+            // if we have changed zoom levels and are a workflow annotation then we should try to preserve the
+            //          original viewport-relative-location rather than potentially jumping out the viewport due to
+            //          the ~precession of the center of zoom.
+            if (zoomHasChanged) {
+                final Point location = edit.getLocation();
+
+                x = location.x;
+                y = location.y;
+            } else {
+                final org.eclipse.draw2d.geometry.Rectangle absoluteWithZoomBounds = figBounds.getCopy();
+
+                // adapt to zoom level and viewport
+                // (shifts x,y to view port window and grows w,h with zoom level)
+                m_figure.translateToAbsolute(absoluteWithZoomBounds);
+                absoluteWithZoomBounds.translate(trim.x, trim.y);
+
+                x = absoluteWithZoomBounds.x + (absoluteWithZoomBounds.width - figBounds.width) / 2;
+                y = absoluteWithZoomBounds.y;
+            }
+
+            // use x,y from viewport coordinates,
+            // w,h are original figure coordinates as editor doesn't grow with zoom
+            final Rectangle newBounds = new Rectangle(x, y, figBounds.width, figBounds.height);
+            if (!edit.getBounds().equals(newBounds)) {
+                edit.setBounds(newBounds);
+
+                if (zoomHasChanged || needsJitter) {
+                    ste.placeToolbarAndEnsureVisible(false);
                 }
-            };
 
-            // We don't really care if some of these get rejected, and this method gets invoked a ridiculous
-            //      number of times per UI action...
-            try {
-                m_executorService.execute(r);
-            } catch (RejectedExecutionException e) { } // NOPMD
+                m_lastBoundsImpactingZoom = m_zoomManager.getZoom();
+            }
         }
 
         // The DirectEditManager will have no knowledge that we have "moved" and so will not move the cell editor's

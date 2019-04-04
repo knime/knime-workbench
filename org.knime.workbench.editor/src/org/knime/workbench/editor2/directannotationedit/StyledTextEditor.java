@@ -216,6 +216,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
 
     private final AtomicBoolean m_allowFocusLoss = new AtomicBoolean(true);
 
+    private final AtomicBoolean m_annotationIsNodeAnnotation = new AtomicBoolean(false);
+
     // These four are for the context menu
     private MenuItem m_rightAlignMenuItem;
     private MenuItem m_centerAlignMenuItem;
@@ -857,6 +859,10 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         super.focusLost();
     }
 
+    boolean currentAnnotationIsNodeAnnotation() {
+        return m_annotationIsNodeAnnotation.get();
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -922,8 +928,9 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         }
 
         m_selectAllUponFocusGain = false;
+        m_annotationIsNodeAnnotation.set(wa instanceof NodeAnnotation);
         final String text;
-        if (wa instanceof NodeAnnotation) {
+        if (m_annotationIsNodeAnnotation.get()) {
             if (AnnotationUtilities.isDefaultNodeAnnotation(wa)) {
                 text = AnnotationUtilities.getAnnotationText(wa);
                 m_selectAllUponFocusGain = true;
