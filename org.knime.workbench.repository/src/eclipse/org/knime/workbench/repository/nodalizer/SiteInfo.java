@@ -50,27 +50,34 @@ package org.knime.workbench.repository.nodalizer;
 
 import org.knime.core.util.Version;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+
 /**
  * POJO for update site information. This includes the url and various boolean flags.
  *
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
+@JsonAutoDetect
 public class SiteInfo {
 
     private final String m_url;
     private final boolean m_enabledByDefault;
+    private final boolean m_trusted;
     private final String m_name;
     private final String m_version;
 
     /**
      * @param url update site url
      * @param enabledByDefault if the site is enabled by default in KNIME AP
+     * @param trusted if the site is trusted
      * @param name name of the update site
      * @param version version of the update site
      */
-    public SiteInfo(final String url, final boolean enabledByDefault, final String name, final String version) {
+    public SiteInfo(final String url, final boolean enabledByDefault, final boolean trusted, final String name,
+        final String version) {
         m_url = url;
         m_enabledByDefault = enabledByDefault;
+        m_trusted = trusted;
         m_name = name;
         m_version = version;
     }
@@ -79,11 +86,13 @@ public class SiteInfo {
      * @param url update site url, the text following the final '/' will be used to determine the version if possible.
      *            If this text isn't a valid version, the version will be set to {@code null}
      * @param enabledByDefault if the site is enabled by default in KNIME AP
+     * @param trusted if the site is trusted
      * @param name name of the update site
      */
-    public SiteInfo(final String url, final boolean enabledByDefault, final String name) {
+    public SiteInfo(final String url, final boolean enabledByDefault, final boolean trusted, final String name) {
         m_url = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
         m_enabledByDefault = enabledByDefault;
+        m_trusted = trusted;
         m_name = name;
 
         final String versionString = m_url.substring(m_url.lastIndexOf('/') + 1, m_url.length());
@@ -112,6 +121,15 @@ public class SiteInfo {
      */
     public boolean getEnabledByDefault() {
         return m_enabledByDefault;
+    }
+
+    /**
+     * Returns if the site is trusted.
+     *
+     * @return true if the site is trusted, false otherwise
+     */
+    public boolean getTrusted() {
+        return m_trusted;
     }
 
     /**

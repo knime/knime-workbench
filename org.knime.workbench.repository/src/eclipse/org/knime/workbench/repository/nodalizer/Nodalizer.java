@@ -311,8 +311,9 @@ public class Nodalizer implements IApplication {
             final String url = getUpdateSiteUrl(factoryName, manualUpdateSites);
             if (url != null) {
                 final boolean enabledByDefault = siteEnabledByDefault(url);
+                final boolean trusted = isTrusted(url);
                 final String siteName = getUpdateSiteName(url);
-                nInfo.setAdditionalSiteInformation(url, enabledByDefault, siteName);
+                nInfo.setAdditionalSiteInformation(url, enabledByDefault, trusted, siteName);
             } else {
                 // HACK: Skip nodes that are not members of an update site
                 System.out.println(fac.getClass() + " does not belong to any update site, skipping ...");
@@ -583,6 +584,10 @@ public class Nodalizer implements IApplication {
     private static boolean siteEnabledByDefault(final String url) {
         return url.contains("://update.knime.com/analytics-platform")
             || url.contains("://update.knime.com/community-contributions/trusted/");
+    }
+
+    private static boolean isTrusted(final String url) {
+        return siteEnabledByDefault(url);
     }
 
     /**

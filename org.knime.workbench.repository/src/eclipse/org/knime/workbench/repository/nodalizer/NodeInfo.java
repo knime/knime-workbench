@@ -290,13 +290,14 @@ public class NodeInfo {
      * Sets the node's {@link SiteInfo}.
      *
      * @param url the node's update site url
-     * @param enabledByDefault if the node is enabled in knime AP by default
+     * @param enabledByDefault if the update site is enabled in KNIME AP by default
+     * @param trusted if the update site is trusted
      * @param siteName the name of the update site as listed in KNIME AP, this will only be populated for sites listed
      *            by default
      */
-    public void setAdditionalSiteInformation(final String url, final boolean enabledByDefault,
+    public void setAdditionalSiteInformation(final String url, final boolean enabledByDefault, final boolean trusted,
         final String siteName) {
-        m_additionalSiteInformation = new SiteInfo(url, enabledByDefault, siteName);
+        m_additionalSiteInformation = new SiteInfo(url, enabledByDefault, trusted, siteName);
     }
 
     /**
