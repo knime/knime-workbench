@@ -296,7 +296,7 @@ public class NodeInfo {
      */
     public void setAdditionalSiteInformation(final String url, final boolean enabledByDefault,
         final String siteName) {
-        m_additionalSiteInformation = new SiteInfo(enabledByDefault, url, siteName);
+        m_additionalSiteInformation = new SiteInfo(url, enabledByDefault, siteName);
     }
 
     /**
@@ -468,42 +468,6 @@ public class NodeInfo {
 
         String getText() {
             return m_text;
-        }
-    }
-
-    /**
-     * POJO for update site, this contains the url and a boolean for if it is enabled by default.
-     *
-     * @author Alison Walter, KNIME GmbH, Konstanz, Germany
-     */
-    @JsonAutoDetect(getterVisibility = Visibility.NON_PRIVATE)
-    public static final class SiteInfo {
-        private final boolean m_enabledByDefault;
-        private final String m_url;
-        private final String m_name;
-        private final String m_version;
-
-        SiteInfo(final boolean enabledByDefault, final String url, final String name) {
-            m_enabledByDefault = enabledByDefault;
-            m_url = url;
-            m_version = m_url.substring(m_url.lastIndexOf('/') + 1, m_url.length());
-            m_name = name;
-        }
-
-        boolean getEnabledByDefault() {
-            return m_enabledByDefault;
-        }
-
-        String getUrl() {
-            return m_url;
-        }
-
-        String getName() {
-            return m_name;
-        }
-
-        String getVersion() {
-            return m_version;
         }
     }
 }
