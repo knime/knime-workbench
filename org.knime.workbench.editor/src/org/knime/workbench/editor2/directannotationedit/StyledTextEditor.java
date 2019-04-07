@@ -1037,6 +1037,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
             }
             m_styledText.setStyleRange(s);
         }
+        fireEditorValueChanged(true, true);
     }
 
     /**
@@ -1115,10 +1116,14 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
     void alignment(final int alignment) {
         checkSelectionOfAlignmentMenuItems(alignment);
         m_styledText.setAlignment(alignment);
+
+        fireEditorValueChanged(true, true);
     }
 
     void borderWidthWasSelected(final int width) {
         m_styledText.setMargins(width, width, width, width);
+
+        fireEditorValueChanged(true, true);
     }
 
     void colorWasSelected(final Color color) {
@@ -1144,6 +1149,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         }
 
         setFocusLossAllowed(true);
+
+        fireEditorValueChanged(true, true);
     }
 
     void fontSizeWasSelected(final int size) {
@@ -1155,6 +1162,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
             style.font = FontStore.INSTANCE.getDefaultFont(size, bold, italic);
             m_styledText.setStyleRange(style);
         }
+
+        fireEditorValueChanged(true, true);
     }
 
     void userWantsToAffectFontColor(final Point clickSourceLocation) {
@@ -1340,25 +1349,20 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
             fireEditorValueChanged(true, true);
         } else if (src.equals("bold")) {
             bold();
-            fireEditorValueChanged(true, true);
         } else if (src.equals("italic")) {
             italic();
-            fireEditorValueChanged(true, true);
         } else if (src.equals("bg")) {
             bgColor();
             fireEditorValueChanged(true, true);
         } else if (src.equals("alignment_left")) {
             alignment(SWT.LEFT);
             m_toolbar.updateToolbarToReflectState();
-            fireEditorValueChanged(true, true);
         } else if (src.equals("alignment_center")) {
             alignment(SWT.CENTER);
             m_toolbar.updateToolbarToReflectState();
-            fireEditorValueChanged(true, true);
         } else if (src.equals("alignment_right")) {
             alignment(SWT.RIGHT);
             m_toolbar.updateToolbarToReflectState();
-            fireEditorValueChanged(true, true);
         } else if (src.equals("border")) {
             borderStyle();
             fireEditorValueChanged(true, true);
