@@ -46,8 +46,10 @@ package org.knime.workbench.repository.nodalizer;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
@@ -62,8 +64,16 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
+import org.eclipse.equinox.p2.core.IProvisioningAgent;
+import org.eclipse.equinox.p2.metadata.IInstallableUnit;
+import org.eclipse.equinox.p2.metadata.ILicense;
+import org.eclipse.equinox.p2.query.IQueryResult;
+import org.eclipse.equinox.p2.query.QueryUtil;
+import org.eclipse.equinox.p2.repository.metadata.IMetadataRepository;
+import org.eclipse.equinox.p2.repository.metadata.IMetadataRepositoryManager;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.TextNode;
@@ -75,18 +85,24 @@ import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.util.ConfigUtils;
+import org.knime.core.util.Version;
 import org.knime.core.util.workflowalizer.NodeAndBundleInformation;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.IRepositoryObject;
 import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.repository.model.Root;
+import org.knime.workbench.repository.nodalizer.ExtensionInfo.LicenseInfo;
 import org.knime.workbench.repository.nodalizer.NodeInfo.LinkInformation;
 import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
 import org.knime.workbench.repository.util.NodeUtil;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.ServiceReference;
 import org.w3c.dom.Element;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -97,13 +113,21 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  * Update site information can also be included in the output JSON, via the "-manualUpdateSites" flag. This should be
  * used by passing the update site URL followed by a file containing the ids for the nodes which are part of that update
  * site.
+ * <p>
+ * If the application's extension metadata is also desired, the "-updateSite" flag must passed with a valid p2 update
+ * site url. This flag will cause both node and extension metadata for that update site to be parsed. Other
+ * nodes/extensions will not be read. If both "-updateSite" and "-manualUpdateSites" flags are set, the latter will be
+ * ignored.
+ * </p>
  *
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
 public class Nodalizer implements IApplication {
+
     private static final String PARAM_DIRECTORY = "-outDir";
     private static final String FACTORY_LIST = "-factoryListFile";
     private static final String MANUAL_UPDATE_SITES = "-manualUpdateSites";
+    private static final String UPDATE_SITE = "-updateSite";
 
     /**
      * {@inheritDoc}
@@ -119,6 +143,10 @@ public class Nodalizer implements IApplication {
      * node JSON. The first parameter is the update site's url, and the second is a list of node ids (factory class +
      * factory settings hash see {@link ConfigUtils#contentBasedHashString(org.knime.core.node.config.base.ConfigBase)})
      * contained in that update site</li>
+     * <li>-updateSite &lt;update-site-url&gt;, causes the nodalizer to read both nodes and extensions of the given
+     * update site. All other nodes/extensions in the given KNIME installation will be ignored. Node JSON will be
+     * written to outDir/nodes and extensions to outDir/extensions If this parameter and -manualUpdateSites are both
+     * provided, -manualUpdateSites will be ignored.</li>
      * </ul>
      */
     @Override
@@ -128,11 +156,12 @@ public class Nodalizer implements IApplication {
         File outputDir = null;
         Path factoryList = null;
         Map<String, List<String>> manualUpdateSites = null;
+        URI updateSite = null;
         if (args instanceof String[]) {
-            final String[] params = (String[]) args;
+            final String[] params = (String[])args;
             for (int i = 0; i < params.length; i++) {
                 if (params[i].equalsIgnoreCase(PARAM_DIRECTORY) && (params.length > (i + 1))) {
-                    outputDir = new File(params[i+1]);
+                    outputDir = new File(params[i + 1]);
                 }
                 if (params[i].equalsIgnoreCase(FACTORY_LIST) && (params.length > (i + 1))) {
                     factoryList = Paths.get(params[i + 1]);
@@ -143,6 +172,15 @@ public class Nodalizer implements IApplication {
                     while (params.length > (index + 1) && (params[index].charAt(0) != '-')) {
                         manualUpdateSites.put(params[index], Files.readAllLines(Paths.get(params[index + 1])));
                         index += 2;
+                    }
+                }
+                if (params[i].equalsIgnoreCase(UPDATE_SITE) && (params.length > (i + 1))) {
+                    final String site = params[i + 1];
+                    try {
+                        updateSite = URI.create(site);
+                    } catch (final Exception ex) {
+                        System.out.println(
+                            "Invalid update site url: " + site + "\n" + UPDATE_SITE + " parameter will be ignored.");
                     }
                 }
             }
@@ -172,6 +210,20 @@ public class Nodalizer implements IApplication {
             }
         }
 
+        // Only use updateSite or manualUpdateSite
+        File nodeDir = outputDir;
+        File extDir = null;
+        if (updateSite != null && manualUpdateSites != null) {
+            manualUpdateSites = null;
+        }
+        if (updateSite != null) {
+            nodeDir = new File(outputDir, "nodes");
+            extDir = new File(outputDir, "extensions");
+            nodeDir.mkdir();
+            extDir.mkdir();
+            parseExtensions(updateSite, extDir);
+        }
+
         // unless the user specified this property, we set it to true here
         // (true means no icons etc will be loaded, if it is false, the
         // loading of the repository manager freezes
@@ -180,9 +232,9 @@ public class Nodalizer implements IApplication {
         }
         final Root root = RepositoryManager.INSTANCE.getCompleteRoot();
 
-        pasreNodesInRoot(root, null, outputDir, manualUpdateSites);
+        pasreNodesInRoot(root, null, nodeDir, manualUpdateSites);
         if (factoryList != null) {
-            parseDeprecatedNodeList(factoryList, outputDir, manualUpdateSites);
+            parseDeprecatedNodeList(factoryList, nodeDir, manualUpdateSites);
         }
 
         System.out.println("Node description generation successfully finished");
@@ -194,7 +246,7 @@ public class Nodalizer implements IApplication {
     public void stop() {
     }
 
-    // -- Helper methods --
+    // -- Parse nodes --
 
     private void pasreNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory, final Map<String, List<String>> manualUpdateSites) {
         if (object instanceof NodeTemplate) {
@@ -517,6 +569,166 @@ public class Nodalizer implements IApplication {
         nodeInfo.setLinks(moreInfoLinks);
     }
 
+    // -- Parse Extension --
+
+    private void parseExtensions(final URI updateSite, final File outputDir) {
+        final BundleContext c = FrameworkUtil.getBundle(getClass()).getBundleContext();
+        final ServiceReference<IProvisioningAgent> ref = c.getServiceReference(IProvisioningAgent.class);
+        final IProvisioningAgent agent = c.getService(ref);
+        final IMetadataRepositoryManager metadataManager =
+            (IMetadataRepositoryManager)agent.getService(IMetadataRepositoryManager.SERVICE_NAME);
+        IMetadataRepository r = null;
+        try {
+            r = metadataManager.loadRepository(updateSite, new NullProgressMonitor());
+        } catch (final Exception ex) {
+            System.out.println("Failed to read extensions for " + updateSite.toString() + ". See details below.");
+            System.out.println(ex.getClass() + ": " + ex.getMessage());
+            ex.printStackTrace();
+            return;
+        }
+
+        // TODO: Modify query once we support reading multiple extension versions
+        final IQueryResult<IInstallableUnit> ius =
+            r.query(QueryUtil.createLatestQuery(QueryUtil.createIUGroupQuery()), new NullProgressMonitor());
+        final SiteInfo siteInfo = parseUpdateSite(r);
+        for (final IInstallableUnit iu : ius) {
+            if (!iu.getId().startsWith("org.eclipse") && !iu.getId().contains(".source.feature.")
+                && !iu.getId().startsWith("org.knime.binary.jre")
+                && !iu.getId().equals("org.knime.targetPlatform.feature.group")
+                && !iu.getId().endsWith(".externals.feature.group") && !QueryUtil.isProduct(iu)) {
+                final ExtensionInfo ext = new ExtensionInfo();
+                ext.setName(iu.getProperty("org.eclipse.equinox.p2.name"));
+                ext.setDescription(iu.getProperty("org.eclipse.equinox.p2.description"));
+                ext.setDescriptionUrl(iu.getProperty("org.eclipse.equinox.p2.description.url"));
+                ext.setSymbolicName(iu.getId());
+                ext.setVendor(iu.getProperty("org.eclipse.equinox.p2.provider"));
+                ext.setVersion(new Version(iu.getVersion().toString()));
+                ext.setUpdateSite(siteInfo);
+
+                if (iu.getCopyright() != null) {
+                    ext.setCopyright(iu.getCopyright().getBody());
+                }
+
+                if (!iu.getLicenses().isEmpty()) {
+                    // Take just the first license
+                    final ILicense license = iu.getLicenses().iterator().next();
+                    final LicenseInfo licenseInfo = new LicenseInfo();
+                    final String licenseBody = license.getBody();
+                    licenseInfo.setName(licenseBody.split("\\r?\\n")[0]);
+                    licenseInfo.setText(licenseBody);
+                    licenseInfo.setUrl(license.getLocation() != null ? license.getLocation().toString() : null);
+                    ext.setLicense(licenseInfo);
+                }
+
+                final List<String> categories = new ArrayList<>();
+                getCategoryPath(r, iu, categories);
+                ext.setCategoryPath(categories);
+
+                try {
+                    final String fileName = ext.getSymbolicName().replaceAll("\\.", "_");
+                    writeFile(outputDir, fileName, ext);
+                } catch(final JsonProcessingException | FileNotFoundException ex) {
+                    System.out.println("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName());
+                    System.out.println(ex.getClass() + ": " + ex.getMessage());
+                }
+            }
+        }
+    }
+
+    private void getCategoryPath(final IMetadataRepository repo, final IInstallableUnit iu, final List<String> category) {
+        // TODO: Modify query once we support reading multiple extension versions
+        final IQueryResult<IInstallableUnit> res =
+            repo.query(QueryUtil.createLatestQuery(QueryUtil.createMatchQuery("requirements.exists(rc | $0 ~= rc)", iu)), new NullProgressMonitor());
+
+        if (res.isEmpty()) {
+            return;
+        }
+
+        IInstallableUnit parent = null;
+        IInstallableUnit ap = null;
+        for (final IInstallableUnit r : res) {
+            if (QueryUtil.isCategory(r)) {
+                parent = r;
+                break;
+            } else if (r.getProperty("org.eclipse.equinox.p2.name").equals("KNIME Analytics Platform")) {
+                // Special handling for extensions which are bundled with KNIME AP
+                ap = r;
+            }
+        }
+
+        if (parent != null) {
+            category.add(0, parent.getProperty("org.eclipse.equinox.p2.name"));
+            getCategoryPath(repo, parent, category);
+        } else if (ap != null) {
+            // Technically extensions bundled with KNIME AP are in two layers of groups called "KNIME Analytics Platform"
+            // but from the extensions page you only see one. So we exclude the second here
+            if (!category.contains(ap.getProperty("org.eclipse.equinox.p2.name"))) {
+                category.add(0, ap.getProperty("org.eclipse.equinox.p2.name"));
+            }
+            getCategoryPath(repo, ap, category);
+        } else {
+            // Extension is buried in non-AP extension, just take the first one
+            category.add(0, res.iterator().next().getProperty("org.eclipse.equinox.p2.name"));
+            getCategoryPath(repo, res.iterator().next(), category);
+        }
+    }
+
+    // -- Parse Update Site --
+
+    private static SiteInfo parseUpdateSite(final IMetadataRepository repo) {
+        final String name = repo.getName();
+        final String url = repo.getLocation().toString();
+        final boolean enabledByDefault = siteEnabledByDefault(url);
+        final boolean isTrusted = isTrusted(url);
+        return new SiteInfo(url, enabledByDefault, isTrusted, name);
+    }
+
+    private static String getUpdateSiteUrl(final String id, final Map<String, List<String>> sites) {
+        for (String site : sites.keySet()) {
+            for (String siteId : sites.get(site)) {
+                if (siteId.equals(id)) {
+                    return site;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean siteEnabledByDefault(final String url) {
+        return url.contains("://update.knime.com/analytics-platform")
+            || url.contains("://update.knime.com/community-contributions/trusted/");
+    }
+
+    private static boolean isTrusted(final String url) {
+        return siteEnabledByDefault(url);
+    }
+
+    /**
+     * If this is one of the update site's in KNIME AP, this returns the name that is listed there by default.
+     */
+    private static String getUpdateSiteName(final String url) {
+        if (url == null || url.isEmpty()) {
+            return null;
+        }
+        final int index = url.lastIndexOf('/');
+        final String version = url.substring(index + 1, url.length());
+        if (url.contains("://update.knime.com/analytics-platform")) {
+            return "KNIME Analytics Platform " + version + " Update Site";
+        }
+        if (url.contains("://update.knime.com/community-contributions/trusted")) {
+            return "KNIME Community Contributions (" + version + ")";
+        }
+        if (url.contains("://update.knime.com/partner")) {
+            return "KNIME Partner Update Site";
+        }
+        if (url.contains("://update.knime.com/community-contributions")) {
+            return "Stable Community Contributions";
+        }
+        return null;
+    }
+
+    // -- Helper methods --
+
     private static void parseDLTag(final org.jsoup.nodes.Element dl, final List<NamedField> fields) {
         String keyHTML = "";
         for (final org.jsoup.nodes.Element child : dl.children()) {
@@ -570,47 +782,21 @@ public class Nodalizer implements IApplication {
         return buf.toString();
     }
 
-    private static String getUpdateSiteUrl(final String id, final Map<String, List<String>> sites) {
-        for (String site : sites.keySet()) {
-            for (String siteId : sites.get(site)) {
-                if (siteId.equals(id)) {
-                    return site;
-                }
-            }
+    private static void writeFile(final File outputDir, final String baseFileName, final Object pojoToWrite)
+        throws JsonProcessingException, FileNotFoundException {
+        final ObjectMapper map = new ObjectMapper();
+        map.setSerializationInclusion(Include.NON_ABSENT);
+        map.enable(SerializationFeature.INDENT_OUTPUT);
+        final String json = map.writeValueAsString(pojoToWrite);
+        String fileName = baseFileName.replaceAll("\\W+", "_");
+        File f = new File(outputDir, fileName + ".json");
+        int count = 2;
+        while (f.exists()) {
+            f = new File(outputDir, fileName + count + ".json");
+            count++;
         }
-        return null;
-    }
-
-    private static boolean siteEnabledByDefault(final String url) {
-        return url.contains("://update.knime.com/analytics-platform")
-            || url.contains("://update.knime.com/community-contributions/trusted/");
-    }
-
-    private static boolean isTrusted(final String url) {
-        return siteEnabledByDefault(url);
-    }
-
-    /**
-     * If this is one of the update site's in KNIME AP, this returns the name that is listed there by default.
-     */
-    private static String getUpdateSiteName(final String url) {
-        if (url == null || url.isEmpty()) {
-            return null;
+        try (final PrintWriter pw = new PrintWriter(f)) {
+            pw.write(json);
         }
-        final int index = url.lastIndexOf('/');
-        final String version = url.substring(index + 1, url.length());
-        if (url.contains("://update.knime.com/analytics-platform")) {
-            return "KNIME Analytics Platform " + version + " Update Site";
-        }
-        if (url.contains("://update.knime.com/community-contributions/trusted")) {
-            return "KNIME Community Contributions (" + version + ")";
-        }
-        if (url.contains("://update.knime.com/partner")) {
-            return "KNIME Partner Update Site";
-        }
-        if (url.contains("://update.knime.com/community-contributions")) {
-            return "Stable Community Contributions";
-        }
-        return null;
     }
 }

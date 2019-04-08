@@ -24,6 +24,9 @@ Require-Bundle: org.apache.xmlbeans;bundle-version="[2.5.0,3.0.0)",
  org.jsoup;bundle-version="1.11.2",
  com.fasterxml.jackson.core.jackson-core;bundle-version="2.8.9",
  com.fasterxml.jackson.core.jackson-annotations;bundle-version="2.8.9",
- com.fasterxml.jackson.core.jackson-databind;bundle-version="2.8.9"
+ com.fasterxml.jackson.core.jackson-databind;bundle-version="2.8.9",
+ org.eclipse.equinox.p2.repository;bundle-version="2.3.301",
+ org.eclipse.equinox.p2.metadata;bundle-version="2.3.200",
+ org.eclipse.equinox.p2.core;bundle-version="2.4.101"
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Bundle-ActivationPolicy: lazy
