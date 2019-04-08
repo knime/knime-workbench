@@ -213,6 +213,7 @@ public class Nodalizer implements IApplication {
         // Only use updateSite or manualUpdateSite
         File nodeDir = outputDir;
         File extDir = null;
+        Map<String, ExtensionInfo> extensions = null;
         if (updateSite != null && manualUpdateSites != null) {
             manualUpdateSites = null;
         }
@@ -221,7 +222,10 @@ public class Nodalizer implements IApplication {
             extDir = new File(outputDir, "extensions");
             nodeDir.mkdir();
             extDir.mkdir();
-            parseExtensions(updateSite, extDir);
+            extensions = parseExtensions(updateSite, extDir);
+            if (extensions == null) {
+                return IApplication.EXIT_OK;
+            }
         }
 
         // unless the user specified this property, we set it to true here
@@ -232,9 +236,9 @@ public class Nodalizer implements IApplication {
         }
         final Root root = RepositoryManager.INSTANCE.getCompleteRoot();
 
-        pasreNodesInRoot(root, null, nodeDir, manualUpdateSites);
+        pasreNodesInRoot(root, null, nodeDir, manualUpdateSites, extensions);
         if (factoryList != null) {
-            parseDeprecatedNodeList(factoryList, nodeDir, manualUpdateSites);
+            parseDeprecatedNodeList(factoryList, nodeDir, manualUpdateSites, extensions);
         }
 
         System.out.println("Node description generation successfully finished");
@@ -248,35 +252,37 @@ public class Nodalizer implements IApplication {
 
     // -- Parse nodes --
 
-    private void pasreNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory, final Map<String, List<String>> manualUpdateSites) {
+    private void pasreNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory,
+        final Map<String, List<String>> manualUpdateSites, final Map<String, ExtensionInfo> extensions) {
         if (object instanceof NodeTemplate) {
             try {
                 final NodeTemplate template = (NodeTemplate)object;
                 final NodeFactory<? extends NodeModel> fac = template.createFactoryInstance();
                 final NodeAndBundleInformation nodeAndBundleInfo = NodeAndBundleInformationPersistor.create(fac);
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
-                    nodeAndBundleInfo, fac.isDeprecated(), directory, manualUpdateSites);
+                    nodeAndBundleInfo, fac.isDeprecated(), directory, manualUpdateSites, extensions);
             } catch (final Exception e) {
                 System.out.println("Failed to read node: " + object.getName());
                 e.printStackTrace();
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
-                pasreNodesInRoot(child, new ArrayList<>(), directory, manualUpdateSites);
+                pasreNodesInRoot(child, new ArrayList<>(), directory, manualUpdateSites, extensions);
             }
         } else if (object instanceof Category) {
             for (final IRepositoryObject child : ((Category)object).getChildren()) {
                 final Category c = (Category)object;
                 final List<String> p = new ArrayList<>(path);
                 p.add(c.getName());
-                pasreNodesInRoot(child, p, directory, manualUpdateSites);
+                pasreNodesInRoot(child, p, directory, manualUpdateSites, extensions);
             }
         } else {
             return;
         }
     }
 
-    private static void parseDeprecatedNodeList(final Path factoryListFile, final File directory, final Map<String, List<String>> manualUpdateSites) {
+    private static void parseDeprecatedNodeList(final Path factoryListFile, final File directory,
+        final Map<String, List<String>> manualUpdateSites, final Map<String, ExtensionInfo> extensions) {
         if (factoryListFile == null) {
             return;
         }
@@ -309,7 +315,8 @@ public class Nodalizer implements IApplication {
                 if (b.getBundleName().isPresent() && b.getBundleVersion().isPresent()) {
                     // always pass true for isDeprecated, even though the factory may not say it is deprecated
                     // pass the factory name in the file, not the name of the loaded class - due to factory class mapping these may not match
-                    parseNodeAndPrint(fac, parts[0], path, categoryPath, fac.getNodeName(), b, true, directory, manualUpdateSites);
+                    parseNodeAndPrint(fac, parts[0], path, categoryPath, fac.getNodeName(), b, true, directory,
+                        manualUpdateSites, extensions);
                 } else {
                     if (!b.getBundleName().isPresent()) {
                         System.out.println("Bundle name is missing! " + factory);
@@ -326,9 +333,10 @@ public class Nodalizer implements IApplication {
         }
     }
 
-    private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final List<String> path, final String categoryPath,
-        final String name, final NodeAndBundleInformation nodeAndBundleInfo, final boolean isDeprecated,
-        final File directory, final Map<String, List<String>> manualUpdateSites) throws Exception {
+    private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final List<String> path,
+        final String categoryPath, final String name, final NodeAndBundleInformation nodeAndBundleInfo,
+        final boolean isDeprecated, final File directory, final Map<String, List<String>> manualUpdateSites,
+        final Map<String, ExtensionInfo> extensions) throws Exception {
         @SuppressWarnings("unchecked")
         final org.knime.core.node.Node kcn = new org.knime.core.node.Node((NodeFactory<NodeModel>)fac);
         final NodeInfo nInfo = new NodeInfo();
@@ -357,22 +365,42 @@ public class Nodalizer implements IApplication {
         final String iconBase64 = "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(imageBytes);
         nInfo.setIcon(iconBase64);
 
-        // Read extension info
+        // Read update site info
         // HACK: Manually load update site
-        if (manualUpdateSites != null) {
+        String extensionId = null;
+        SiteInfo updateSite = null;
+        if (manualUpdateSites != null && extensions == null) {
             final String url = getUpdateSiteUrl(factoryName, manualUpdateSites);
             if (url != null) {
                 final boolean enabledByDefault = siteEnabledByDefault(url);
                 final boolean trusted = isTrusted(url);
                 final String siteName = getUpdateSiteName(url);
-                nInfo.setAdditionalSiteInformation(url, enabledByDefault, trusted, siteName);
+                updateSite = new SiteInfo(url, enabledByDefault, trusted, siteName);
             } else {
                 // HACK: Skip nodes that are not members of an update site
                 System.out.println(fac.getClass() + " does not belong to any update site, skipping ...");
                 return;
             }
         }
-        nInfo.setBundleInformation(nodeAndBundleInfo);
+        if (extensions != null) {
+            // TODO: Check symbolic name and version once we support reading multiple extension versions
+            if (nodeAndBundleInfo.getFeatureSymbolicName().isPresent()
+                && extensions.containsKey(nodeAndBundleInfo.getFeatureSymbolicName().get())) {
+                final ExtensionInfo e = extensions.get(nodeAndBundleInfo.getFeatureSymbolicName().get());
+                updateSite = e.getUpdateSite();
+                extensionId = e.getId();
+            } else if (!nodeAndBundleInfo.getFeatureSymbolicName().isPresent()) {
+                System.out.println(fac.getClass() + " does not contain extension information, skipping ...");
+                return;
+            } else {
+                // Node doesn't belong to this update site, so skip. With any KNIME installation there will be
+                // around 500 nodes installed. So it is not worth printing all the nodes that don't belong
+                // to the update site being read.
+                return;
+            }
+        }
+        nInfo.setAdditionalSiteInformation(updateSite);
+        nInfo.setBundleInformation(nodeAndBundleInfo, extensionId);
 
         // Parse HTML, and read fields
         final Element nodeXML = fac.getXMLDescription();
@@ -456,21 +484,7 @@ public class Nodalizer implements IApplication {
         nInfo.setOutPorts(outports);
 
         // Write to file
-        final ObjectMapper map = new ObjectMapper();
-        map.setSerializationInclusion(Include.NON_ABSENT);
-        map.enable(SerializationFeature.INDENT_OUTPUT);
-        final String json = map.writeValueAsString(nInfo);
-        String fileName = categoryPath + "/" + name;
-        fileName = fileName.replaceAll("\\W+", "_");
-        File f = new File(directory, fileName + ".json");
-        int count = 2;
-        while (f.exists()) {
-            f = new File(directory, fileName + count + ".json");
-            count++;
-        }
-        try (final PrintWriter pw = new PrintWriter(f)) {
-            pw.write(json);
-        }
+        writeFile(directory, categoryPath + "/" + name, nInfo);
     }
 
     private static void parseHTML(final Document nodeHTML, final NodeInfo nodeInfo, final String interactiveViewName) {
@@ -571,7 +585,7 @@ public class Nodalizer implements IApplication {
 
     // -- Parse Extension --
 
-    private void parseExtensions(final URI updateSite, final File outputDir) {
+    private Map<String, ExtensionInfo> parseExtensions(final URI updateSite, final File outputDir) {
         final BundleContext c = FrameworkUtil.getBundle(getClass()).getBundleContext();
         final ServiceReference<IProvisioningAgent> ref = c.getServiceReference(IProvisioningAgent.class);
         final IProvisioningAgent agent = c.getService(ref);
@@ -584,13 +598,15 @@ public class Nodalizer implements IApplication {
             System.out.println("Failed to read extensions for " + updateSite.toString() + ". See details below.");
             System.out.println(ex.getClass() + ": " + ex.getMessage());
             ex.printStackTrace();
-            return;
+            return null;
         }
 
         // TODO: Modify query once we support reading multiple extension versions
         final IQueryResult<IInstallableUnit> ius =
             r.query(QueryUtil.createLatestQuery(QueryUtil.createIUGroupQuery()), new NullProgressMonitor());
         final SiteInfo siteInfo = parseUpdateSite(r);
+        // TODO: Mapping symbolic name to extension may not be sufficient once we support reading multiple versions
+        final Map<String, ExtensionInfo> extensions = new HashMap<>();
         for (final IInstallableUnit iu : ius) {
             if (!iu.getId().startsWith("org.eclipse") && !iu.getId().contains(".source.feature.")
                 && !iu.getId().startsWith("org.knime.binary.jre")
@@ -627,12 +643,14 @@ public class Nodalizer implements IApplication {
                 try {
                     final String fileName = ext.getSymbolicName().replaceAll("\\.", "_");
                     writeFile(outputDir, fileName, ext);
+                    extensions.put(ext.getSymbolicName(), ext);
                 } catch(final JsonProcessingException | FileNotFoundException ex) {
                     System.out.println("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName());
                     System.out.println(ex.getClass() + ": " + ex.getMessage());
                 }
             }
         }
+        return extensions;
     }
 
     private void getCategoryPath(final IMetadataRepository repo, final IInstallableUnit iu, final List<String> category) {

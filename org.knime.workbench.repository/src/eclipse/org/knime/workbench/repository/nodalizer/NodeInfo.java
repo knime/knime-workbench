@@ -281,23 +281,19 @@ public class NodeInfo {
      *
      * @param nodeAndBundleInfo the {@link NodeAndBundleInformation} for this node, only the bundle information will be
      *            preserved.
+     * @param extensionId unique ID of extension (feature) to set
      */
-    public void setBundleInformation(final NodeAndBundleInformation nodeAndBundleInfo) {
-        m_bundleInformation = new BundleInformation(nodeAndBundleInfo);
+    public void setBundleInformation(final NodeAndBundleInformation nodeAndBundleInfo, final String extensionId) {
+        m_bundleInformation = new BundleInformation(nodeAndBundleInfo, extensionId);
     }
 
     /**
      * Sets the node's {@link SiteInfo}.
      *
-     * @param url the node's update site url
-     * @param enabledByDefault if the update site is enabled in KNIME AP by default
-     * @param trusted if the update site is trusted
-     * @param siteName the name of the update site as listed in KNIME AP, this will only be populated for sites listed
-     *            by default
+     * @param additionalSiteInformation update site information to set
      */
-    public void setAdditionalSiteInformation(final String url, final boolean enabledByDefault, final boolean trusted,
-        final String siteName) {
-        m_additionalSiteInformation = new SiteInfo(url, enabledByDefault, trusted, siteName);
+    public void setAdditionalSiteInformation(final SiteInfo additionalSiteInformation) {
+        m_additionalSiteInformation = additionalSiteInformation;
     }
 
     /**
@@ -404,9 +400,11 @@ public class NodeInfo {
     @JsonAutoDetect(getterVisibility=Visibility.NON_PRIVATE)
     static final class BundleInformation {
         private final NodeAndBundleInformation m_nabi;
+        private final String m_extensionId;
 
-        private BundleInformation(final NodeAndBundleInformation nabi) {
+        private BundleInformation(final NodeAndBundleInformation nabi, final String extensionId) {
             m_nabi = nabi;
+            m_extensionId = extensionId;
         }
 
         String getFeatureVersion() {
@@ -445,6 +443,10 @@ public class NodeInfo {
 
         String getBundleSymbolicName() {
             return m_nabi.getBundleSymbolicName().orElse(null);
+        }
+
+        String getExtensionId() {
+            return m_extensionId;
         }
     }
 
