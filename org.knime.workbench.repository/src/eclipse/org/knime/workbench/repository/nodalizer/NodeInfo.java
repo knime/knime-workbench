@@ -397,8 +397,9 @@ public class NodeInfo {
 
     // -- Helper Classes --
 
-    @JsonAutoDetect(getterVisibility=Visibility.NON_PRIVATE)
+    @JsonAutoDetect(getterVisibility = Visibility.NON_PRIVATE)
     static final class BundleInformation {
+
         private final NodeAndBundleInformation m_nabi;
         private final String m_extensionId;
 
@@ -455,8 +456,9 @@ public class NodeInfo {
      *
      * @author Alison Walter, KNIME GmbH, Konstanz, Germany
      */
-    @JsonAutoDetect(getterVisibility=Visibility.NON_PRIVATE)
+    @JsonAutoDetect(getterVisibility = Visibility.NON_PRIVATE)
     public static final class LinkInformation {
+
         private final String m_url;
         private final String m_text;
 

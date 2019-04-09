@@ -73,8 +73,8 @@ public class PortInfo {
      * @param dataType type of port
      * @param color port color
      */
-    public PortInfo(final String name, final String description, final boolean optional,
-        final String dataType, final String color) {
+    public PortInfo(final String name, final String description, final boolean optional, final String dataType,
+        final String color) {
         m_name = name;
         m_description = description;
         m_optional = optional;

@@ -301,6 +301,7 @@ public class ExtensionInfo {
      */
     @JsonAutoDetect
     public static class LicenseInfo {
+
         private String m_licenseName;
         private String m_licenseText;
         private String m_licenseUrl;

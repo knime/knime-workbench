@@ -140,8 +140,7 @@ public class Nodalizer implements IApplication {
      */
     @Override
     public Object start(final IApplicationContext context) throws Exception {
-        final Object args =
-                context.getArguments().get(IApplicationContext.APPLICATION_ARGS);
+        final Object args = context.getArguments().get(IApplicationContext.APPLICATION_ARGS);
         File outputDir = null;
         Path factoryList = null;
         URI updateSite = null;
@@ -168,7 +167,7 @@ public class Nodalizer implements IApplication {
 
         if (outputDir == null) {
             System.err.println("No output directory specified. Please specify a valid output directory with "
-                    + PARAM_DIRECTORY + " flag");
+                + PARAM_DIRECTORY + " flag");
             return IApplication.EXIT_OK;
         }
         if (!outputDir.exists()) {
@@ -212,7 +211,7 @@ public class Nodalizer implements IApplication {
         }
         final Root root = RepositoryManager.INSTANCE.getCompleteRoot();
 
-        pasreNodesInRoot(root, null, nodeDir, extensions);
+        parseNodesInRoot(root, null, nodeDir, extensions);
         if (factoryList != null) {
             parseDeprecatedNodeList(factoryList, nodeDir, extensions);
         }
@@ -228,7 +227,7 @@ public class Nodalizer implements IApplication {
 
     // -- Parse nodes --
 
-    private void pasreNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory,
+    private void parseNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory,
         final Map<String, ExtensionInfo> extensions) {
         if (object instanceof NodeTemplate) {
             try {
@@ -243,14 +242,14 @@ public class Nodalizer implements IApplication {
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
-                pasreNodesInRoot(child, new ArrayList<>(), directory, extensions);
+                parseNodesInRoot(child, new ArrayList<>(), directory, extensions);
             }
         } else if (object instanceof Category) {
             for (final IRepositoryObject child : ((Category)object).getChildren()) {
                 final Category c = (Category)object;
                 final List<String> p = new ArrayList<>(path);
                 p.add(c.getName());
-                pasreNodesInRoot(child, p, directory, extensions);
+                parseNodesInRoot(child, p, directory, extensions);
             }
         } else {
             return;
@@ -611,7 +610,7 @@ public class Nodalizer implements IApplication {
                     final String fileName = ext.getSymbolicName().replaceAll("\\.", "_");
                     writeFile(outputDir, fileName, ext);
                     extensions.put(ext.getSymbolicName(), ext);
-                } catch(final JsonProcessingException | FileNotFoundException ex) {
+                } catch (final JsonProcessingException | FileNotFoundException ex) {
                     System.out.println("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName());
                     System.out.println(ex.getClass() + ": " + ex.getMessage());
                 }
