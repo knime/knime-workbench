@@ -653,41 +653,23 @@ public class Nodalizer implements IApplication {
         return extensions;
     }
 
-    private void getCategoryPath(final IMetadataRepository repo, final IInstallableUnit iu, final List<String> category) {
+    private void getCategoryPath(final IMetadataRepository repo, final IInstallableUnit iu,
+        final List<String> category) {
         // TODO: Modify query once we support reading multiple extension versions
-        final IQueryResult<IInstallableUnit> res =
-            repo.query(QueryUtil.createLatestQuery(QueryUtil.createMatchQuery("requirements.exists(rc | $0 ~= rc)", iu)), new NullProgressMonitor());
+        final IQueryResult<IInstallableUnit> res = repo.query(
+            QueryUtil.createLatestQuery(QueryUtil.createMatchQuery("requirements.exists(rc | $0 ~= rc)", iu)),
+            new NullProgressMonitor());
 
         if (res.isEmpty()) {
             return;
         }
 
-        IInstallableUnit parent = null;
-        IInstallableUnit ap = null;
         for (final IInstallableUnit r : res) {
             if (QueryUtil.isCategory(r)) {
-                parent = r;
-                break;
-            } else if (r.getProperty("org.eclipse.equinox.p2.name").equals("KNIME Analytics Platform")) {
-                // Special handling for extensions which are bundled with KNIME AP
-                ap = r;
+                category.add(0, r.getProperty("org.eclipse.equinox.p2.name"));
+                getCategoryPath(repo, r, category);
+                return;
             }
-        }
-
-        if (parent != null) {
-            category.add(0, parent.getProperty("org.eclipse.equinox.p2.name"));
-            getCategoryPath(repo, parent, category);
-        } else if (ap != null) {
-            // Technically extensions bundled with KNIME AP are in two layers of groups called "KNIME Analytics Platform"
-            // but from the extensions page you only see one. So we exclude the second here
-            if (!category.contains(ap.getProperty("org.eclipse.equinox.p2.name"))) {
-                category.add(0, ap.getProperty("org.eclipse.equinox.p2.name"));
-            }
-            getCategoryPath(repo, ap, category);
-        } else {
-            // Extension is buried in non-AP extension, just take the first one
-            category.add(0, res.iterator().next().getProperty("org.eclipse.equinox.p2.name"));
-            getCategoryPath(repo, res.iterator().next(), category);
         }
     }
 
