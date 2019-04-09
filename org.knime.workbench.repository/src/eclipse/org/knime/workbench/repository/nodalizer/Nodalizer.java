@@ -110,14 +110,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  * An application which scans the node repository, and outputs a JSON file containing each encountered node's metadata.
  * Node's not in the repository can also be parsed by passing the node factory class in a file. This file should have
  * one node factory per line, for dynamic nodes the line should contain the 'factory-class-#-factory-settings-xml'.
- * Update site information can also be included in the output JSON, via the "-manualUpdateSites" flag. This should be
- * used by passing the update site URL followed by a file containing the ids for the nodes which are part of that update
- * site.
  * <p>
  * If the application's extension metadata is also desired, the "-updateSite" flag must passed with a valid p2 update
  * site url. This flag will cause both node and extension metadata for that update site to be parsed. Other
- * nodes/extensions will not be read. If both "-updateSite" and "-manualUpdateSites" flags are set, the latter will be
- * ignored.
+ * nodes/extensions will not be read.
  * </p>
  *
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
@@ -126,7 +122,6 @@ public class Nodalizer implements IApplication {
 
     private static final String PARAM_DIRECTORY = "-outDir";
     private static final String FACTORY_LIST = "-factoryListFile";
-    private static final String MANUAL_UPDATE_SITES = "-manualUpdateSites";
     private static final String UPDATE_SITE = "-updateSite";
 
     /**
@@ -138,15 +133,9 @@ public class Nodalizer implements IApplication {
      * files should be written</li>
      * <li>-factoryListFile &lt;path-to-factory-file&gt;, this is a path to a file containing a single factory class per
      * line. This is used for deprecated nodes.</li>
-     * <li>-manualUpdateSites &lt;update-site-1-url&gt; &lt;update-site-1-node-list&gt; &lt;update-site-2-url&gt;
-     * &lt;update-site-2-node-list&gt; ... this is used to pass update site information to be included in the output
-     * node JSON. The first parameter is the update site's url, and the second is a list of node ids (factory class +
-     * factory settings hash see {@link ConfigUtils#contentBasedHashString(org.knime.core.node.config.base.ConfigBase)})
-     * contained in that update site</li>
      * <li>-updateSite &lt;update-site-url&gt;, causes the nodalizer to read both nodes and extensions of the given
      * update site. All other nodes/extensions in the given KNIME installation will be ignored. Node JSON will be
-     * written to outDir/nodes and extensions to outDir/extensions If this parameter and -manualUpdateSites are both
-     * provided, -manualUpdateSites will be ignored.</li>
+     * written to outDir/nodes and extensions to outDir/extensions.</li>
      * </ul>
      */
     @Override
@@ -155,7 +144,6 @@ public class Nodalizer implements IApplication {
                 context.getArguments().get(IApplicationContext.APPLICATION_ARGS);
         File outputDir = null;
         Path factoryList = null;
-        Map<String, List<String>> manualUpdateSites = null;
         URI updateSite = null;
         if (args instanceof String[]) {
             final String[] params = (String[])args;
@@ -165,14 +153,6 @@ public class Nodalizer implements IApplication {
                 }
                 if (params[i].equalsIgnoreCase(FACTORY_LIST) && (params.length > (i + 1))) {
                     factoryList = Paths.get(params[i + 1]);
-                }
-                if (params[i].equalsIgnoreCase(MANUAL_UPDATE_SITES) && (params.length > (i + 2))) {
-                    manualUpdateSites = new HashMap<>();
-                    int index = i + 1;
-                    while (params.length > (index + 1) && (params[index].charAt(0) != '-')) {
-                        manualUpdateSites.put(params[index], Files.readAllLines(Paths.get(params[index + 1])));
-                        index += 2;
-                    }
                 }
                 if (params[i].equalsIgnoreCase(UPDATE_SITE) && (params.length > (i + 1))) {
                     final String site = params[i + 1];
@@ -210,13 +190,9 @@ public class Nodalizer implements IApplication {
             }
         }
 
-        // Only use updateSite or manualUpdateSite
         File nodeDir = outputDir;
         File extDir = null;
         Map<String, ExtensionInfo> extensions = null;
-        if (updateSite != null && manualUpdateSites != null) {
-            manualUpdateSites = null;
-        }
         if (updateSite != null) {
             nodeDir = new File(outputDir, "nodes");
             extDir = new File(outputDir, "extensions");
@@ -236,9 +212,9 @@ public class Nodalizer implements IApplication {
         }
         final Root root = RepositoryManager.INSTANCE.getCompleteRoot();
 
-        pasreNodesInRoot(root, null, nodeDir, manualUpdateSites, extensions);
+        pasreNodesInRoot(root, null, nodeDir, extensions);
         if (factoryList != null) {
-            parseDeprecatedNodeList(factoryList, nodeDir, manualUpdateSites, extensions);
+            parseDeprecatedNodeList(factoryList, nodeDir, extensions);
         }
 
         System.out.println("Node description generation successfully finished");
@@ -253,28 +229,28 @@ public class Nodalizer implements IApplication {
     // -- Parse nodes --
 
     private void pasreNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory,
-        final Map<String, List<String>> manualUpdateSites, final Map<String, ExtensionInfo> extensions) {
+        final Map<String, ExtensionInfo> extensions) {
         if (object instanceof NodeTemplate) {
             try {
                 final NodeTemplate template = (NodeTemplate)object;
                 final NodeFactory<? extends NodeModel> fac = template.createFactoryInstance();
                 final NodeAndBundleInformation nodeAndBundleInfo = NodeAndBundleInformationPersistor.create(fac);
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
-                    nodeAndBundleInfo, fac.isDeprecated(), directory, manualUpdateSites, extensions);
+                    nodeAndBundleInfo, fac.isDeprecated(), directory, extensions);
             } catch (final Exception e) {
                 System.out.println("Failed to read node: " + object.getName());
                 e.printStackTrace();
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
-                pasreNodesInRoot(child, new ArrayList<>(), directory, manualUpdateSites, extensions);
+                pasreNodesInRoot(child, new ArrayList<>(), directory, extensions);
             }
         } else if (object instanceof Category) {
             for (final IRepositoryObject child : ((Category)object).getChildren()) {
                 final Category c = (Category)object;
                 final List<String> p = new ArrayList<>(path);
                 p.add(c.getName());
-                pasreNodesInRoot(child, p, directory, manualUpdateSites, extensions);
+                pasreNodesInRoot(child, p, directory, extensions);
             }
         } else {
             return;
@@ -282,7 +258,7 @@ public class Nodalizer implements IApplication {
     }
 
     private static void parseDeprecatedNodeList(final Path factoryListFile, final File directory,
-        final Map<String, List<String>> manualUpdateSites, final Map<String, ExtensionInfo> extensions) {
+        final Map<String, ExtensionInfo> extensions) {
         if (factoryListFile == null) {
             return;
         }
@@ -314,9 +290,10 @@ public class Nodalizer implements IApplication {
                 fac.init(); // Some factories must be initialized or name/description throws NPE
                 if (b.getBundleName().isPresent() && b.getBundleVersion().isPresent()) {
                     // always pass true for isDeprecated, even though the factory may not say it is deprecated
-                    // pass the factory name in the file, not the name of the loaded class - due to factory class mapping these may not match
+                    // pass the factory name in the file, not the name of the loaded class - due to factory class
+                    // mapping these may not match
                     parseNodeAndPrint(fac, parts[0], path, categoryPath, fac.getNodeName(), b, true, directory,
-                        manualUpdateSites, extensions);
+                        extensions);
                 } else {
                     if (!b.getBundleName().isPresent()) {
                         System.out.println("Bundle name is missing! " + factory);
@@ -335,8 +312,8 @@ public class Nodalizer implements IApplication {
 
     private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final List<String> path,
         final String categoryPath, final String name, final NodeAndBundleInformation nodeAndBundleInfo,
-        final boolean isDeprecated, final File directory, final Map<String, List<String>> manualUpdateSites,
-        final Map<String, ExtensionInfo> extensions) throws Exception {
+        final boolean isDeprecated, final File directory, final Map<String, ExtensionInfo> extensions)
+        throws Exception {
         @SuppressWarnings("unchecked")
         final org.knime.core.node.Node kcn = new org.knime.core.node.Node((NodeFactory<NodeModel>)fac);
         final NodeInfo nInfo = new NodeInfo();
@@ -366,22 +343,8 @@ public class Nodalizer implements IApplication {
         nInfo.setIcon(iconBase64);
 
         // Read update site info
-        // HACK: Manually load update site
         String extensionId = null;
         SiteInfo updateSite = null;
-        if (manualUpdateSites != null && extensions == null) {
-            final String url = getUpdateSiteUrl(factoryName, manualUpdateSites);
-            if (url != null) {
-                final boolean enabledByDefault = siteEnabledByDefault(url);
-                final boolean trusted = isTrusted(url);
-                final String siteName = getUpdateSiteName(url);
-                updateSite = new SiteInfo(url, enabledByDefault, trusted, siteName);
-            } else {
-                // HACK: Skip nodes that are not members of an update site
-                System.out.println(fac.getClass() + " does not belong to any update site, skipping ...");
-                return;
-            }
-        }
         if (extensions != null) {
             // TODO: Check symbolic name and version once we support reading multiple extension versions
             if (nodeAndBundleInfo.getFeatureSymbolicName().isPresent()
@@ -683,17 +646,6 @@ public class Nodalizer implements IApplication {
         return new SiteInfo(url, enabledByDefault, isTrusted, name);
     }
 
-    private static String getUpdateSiteUrl(final String id, final Map<String, List<String>> sites) {
-        for (String site : sites.keySet()) {
-            for (String siteId : sites.get(site)) {
-                if (siteId.equals(id)) {
-                    return site;
-                }
-            }
-        }
-        return null;
-    }
-
     private static boolean siteEnabledByDefault(final String url) {
         return url.contains("://update.knime.com/analytics-platform")
             || url.contains("://update.knime.com/community-contributions/trusted/");
@@ -701,30 +653,6 @@ public class Nodalizer implements IApplication {
 
     private static boolean isTrusted(final String url) {
         return siteEnabledByDefault(url);
-    }
-
-    /**
-     * If this is one of the update site's in KNIME AP, this returns the name that is listed there by default.
-     */
-    private static String getUpdateSiteName(final String url) {
-        if (url == null || url.isEmpty()) {
-            return null;
-        }
-        final int index = url.lastIndexOf('/');
-        final String version = url.substring(index + 1, url.length());
-        if (url.contains("://update.knime.com/analytics-platform")) {
-            return "KNIME Analytics Platform " + version + " Update Site";
-        }
-        if (url.contains("://update.knime.com/community-contributions/trusted")) {
-            return "KNIME Community Contributions (" + version + ")";
-        }
-        if (url.contains("://update.knime.com/partner")) {
-            return "KNIME Partner Update Site";
-        }
-        if (url.contains("://update.knime.com/community-contributions")) {
-            return "Stable Community Contributions";
-        }
-        return null;
     }
 
     // -- Helper methods --
