@@ -575,6 +575,10 @@ public class Nodalizer implements IApplication {
                 && !iu.getId().startsWith("org.knime.binary.jre")
                 && !iu.getId().equals("org.knime.targetPlatform.feature.group")
                 && !iu.getId().endsWith(".externals.feature.group") && !QueryUtil.isProduct(iu)) {
+                if (iu.getLicenses().size() > 1) {
+                    System.out.println(iu.getId() + " has multiple licenses. Skipping ...");
+                    continue;
+                }
                 final ExtensionInfo ext = new ExtensionInfo();
                 ext.setName(iu.getProperty("org.eclipse.equinox.p2.name"));
                 ext.setDescription(iu.getProperty("org.eclipse.equinox.p2.description"));
