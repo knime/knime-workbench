@@ -317,9 +317,33 @@ public class Nodalizer implements IApplication {
         final String categoryPath, final String name, final NodeAndBundleInformation nodeAndBundleInfo,
         final boolean isDeprecated, final File directory, final Map<String, ExtensionInfo> extensions)
         throws Exception {
+        // Read update site info
+        // Do this early to prevent instantiating unnecessary nodes.
+        String extensionId = null;
+        SiteInfo updateSite = null;
+        if (extensions != null) {
+            // TODO: Check symbolic name and version once we support reading multiple extension versions
+            if (nodeAndBundleInfo.getFeatureSymbolicName().isPresent()
+                && extensions.containsKey(nodeAndBundleInfo.getFeatureSymbolicName().get())) {
+                final ExtensionInfo e = extensions.get(nodeAndBundleInfo.getFeatureSymbolicName().get());
+                updateSite = e.getUpdateSite();
+                extensionId = e.getId();
+            } else if (!nodeAndBundleInfo.getFeatureSymbolicName().isPresent()) {
+                System.out.println(fac.getClass() + " does not contain extension information, skipping ...");
+                return;
+            } else {
+                // Node doesn't belong to this update site, so skip. With any KNIME installation there will be
+                // around 500 nodes installed. So it is not worth printing all the nodes that don't belong
+                // to the update site being read.
+                return;
+            }
+        }
+
         @SuppressWarnings("unchecked")
         final org.knime.core.node.Node kcn = new org.knime.core.node.Node((NodeFactory<NodeModel>)fac);
         final NodeInfo nInfo = new NodeInfo();
+        nInfo.setAdditionalSiteInformation(updateSite);
+        nInfo.setBundleInformation(nodeAndBundleInfo, extensionId);
 
         // Read from node
         final NodeSettings settings = new NodeSettings("");
@@ -344,29 +368,6 @@ public class Nodalizer implements IApplication {
         }
         final String iconBase64 = "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(imageBytes);
         nInfo.setIcon(iconBase64);
-
-        // Read update site info
-        String extensionId = null;
-        SiteInfo updateSite = null;
-        if (extensions != null) {
-            // TODO: Check symbolic name and version once we support reading multiple extension versions
-            if (nodeAndBundleInfo.getFeatureSymbolicName().isPresent()
-                && extensions.containsKey(nodeAndBundleInfo.getFeatureSymbolicName().get())) {
-                final ExtensionInfo e = extensions.get(nodeAndBundleInfo.getFeatureSymbolicName().get());
-                updateSite = e.getUpdateSite();
-                extensionId = e.getId();
-            } else if (!nodeAndBundleInfo.getFeatureSymbolicName().isPresent()) {
-                System.out.println(fac.getClass() + " does not contain extension information, skipping ...");
-                return;
-            } else {
-                // Node doesn't belong to this update site, so skip. With any KNIME installation there will be
-                // around 500 nodes installed. So it is not worth printing all the nodes that don't belong
-                // to the update site being read.
-                return;
-            }
-        }
-        nInfo.setAdditionalSiteInformation(updateSite);
-        nInfo.setBundleInformation(nodeAndBundleInfo, extensionId);
 
         // Parse HTML, and read fields
         final Element nodeXML = fac.getXMLDescription();
