@@ -195,8 +195,12 @@ public class Nodalizer implements IApplication {
         if (updateSite != null) {
             nodeDir = new File(outputDir, "nodes");
             extDir = new File(outputDir, "extensions");
-            nodeDir.mkdir();
-            extDir.mkdir();
+            if (!nodeDir.exists()) {
+                nodeDir.mkdir();
+            }
+            if (!extDir.exists()) {
+                extDir.mkdir();
+            }
             extensions = parseExtensions(updateSite, extDir);
             if (extensions == null) {
                 return IApplication.EXIT_OK;
