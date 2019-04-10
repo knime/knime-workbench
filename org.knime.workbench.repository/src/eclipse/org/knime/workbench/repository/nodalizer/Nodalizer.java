@@ -240,7 +240,7 @@ public class Nodalizer implements IApplication {
                 final NodeAndBundleInformation nodeAndBundleInfo = NodeAndBundleInformationPersistor.create(fac);
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
                     nodeAndBundleInfo, fac.isDeprecated(), directory, extensions);
-            } catch (final Exception e) {
+            } catch (final Throwable e) {
                 System.out.println("Failed to read node: " + object.getName());
                 e.printStackTrace();
             }
@@ -306,8 +306,8 @@ public class Nodalizer implements IApplication {
                     }
                     throw new IllegalArgumentException("Bundle information is missing!");
                 }
-            } catch (final Exception e) {
-                System.out.println("Failed to read factory: " + factory);
+            } catch (final Throwable e) {
+                System.out.println("Failed to read factory from list: " + factory);
                 e.printStackTrace();
             }
         }
