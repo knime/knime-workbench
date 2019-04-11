@@ -232,7 +232,7 @@ public class Nodalizer implements IApplication {
             parseDeprecatedNodeList(factoryList, nodeDir, extensions, bundles);
         }
 
-        System.out.println("Node description generation successfully finished");
+        System.out.println("Node (and Extension) JSON generation complete!");
         return IApplication.EXIT_OK;
     }
 
@@ -253,7 +253,8 @@ public class Nodalizer implements IApplication {
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
                     nodeAndBundleInfo, fac.isDeprecated(), directory, extensions, bundles);
             } catch (final Throwable e) {
-                System.out.println("Failed to read node: " + object.getName());
+                System.out
+                    .println("Failed to read node: " + object.getName() + ". " + e.getClass() + ": " + e.getMessage());
                 e.printStackTrace();
             }
         } else if (object instanceof Root) {
@@ -323,7 +324,8 @@ public class Nodalizer implements IApplication {
                     throw new IllegalArgumentException("Bundle information is missing!");
                 }
             } catch (final Throwable e) {
-                System.out.println("Failed to read factory from list: " + factory);
+                System.out.println(
+                    "Failed to read factory from list: " + factory + ". " + e.getClass() + ": " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -389,7 +391,7 @@ public class Nodalizer implements IApplication {
         final Element nodeXML = fac.getXMLDescription();
         Document nodeHTML = null;
         if (nodeXML == null) {
-            System.out.println("Node factory XML not found! Skipping node: " + fac.getClass());
+            System.out.println("Node factory XML not found for " + fac.getClass() + ". Skipping ...");
             return;
         }
         final String s = NodeFactoryHTMLCreator.instance.readFullDescription(nodeXML);
