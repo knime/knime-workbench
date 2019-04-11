@@ -559,85 +559,92 @@ public class Nodalizer implements IApplication {
         final IProvisioningAgent agent = c.getService(ref);
         final IMetadataRepositoryManager metadataManager =
             (IMetadataRepositoryManager)agent.getService(IMetadataRepositoryManager.SERVICE_NAME);
-        IMetadataRepository r = null;
+        final boolean uninstall = !metadataManager.contains(updateSite);
         try {
-            r = metadataManager.loadRepository(updateSite, new NullProgressMonitor());
-        } catch (final Exception ex) {
-            System.out.println("Failed to read extensions for " + updateSite.toString() + ". See details below.");
-            System.out.println(ex.getClass() + ": " + ex.getMessage());
-            ex.printStackTrace();
-            return null;
-        }
+            IMetadataRepository r = null;
+            try {
+                r = metadataManager.loadRepository(updateSite, new NullProgressMonitor());
+            } catch (final Exception ex) {
+                System.out.println("Failed to read extensions for " + updateSite.toString() + ". See details below.");
+                System.out.println(ex.getClass() + ": " + ex.getMessage());
+                ex.printStackTrace();
+                return null;
+            }
+            // TODO: Modify query once we support reading multiple extension versions
+            final IQueryResult<IInstallableUnit> ius =
+                r.query(QueryUtil.createLatestQuery(QueryUtil.createIUGroupQuery()), new NullProgressMonitor());
+            final SiteInfo siteInfo = parseUpdateSite(r);
+            // TODO: Mapping symbolic name to extension may not be sufficient once we support reading multiple versions
+            final Map<String, ExtensionInfo> extensions = new HashMap<>();
+            for (final IInstallableUnit iu : ius) {
+                if (!iu.getId().startsWith("org.eclipse") && !iu.getId().contains(".source.feature.")
+                    && !iu.getId().startsWith("org.knime.binary.jre")
+                    && !iu.getId().equals("org.knime.targetPlatform.feature.group")
+                    && !iu.getId().endsWith(".externals.feature.group") && !QueryUtil.isProduct(iu)) {
+                    if (iu.getLicenses().size() > 1) {
+                        System.out.println(iu.getId() + " has multiple licenses. Skipping ...");
+                        continue;
+                    }
+                    if (StringUtils.isEmpty(iu.getId())) {
+                        System.out.println("Extension has no ID " + iu.toString() + ". Skipping ...");
+                        continue;
+                    }
+                    Version v = null;
+                    try {
+                        v = new Version(iu.getVersion().toString());
+                    } catch (final Exception ex) {
+                        // Once we want to extract multiple versions from a single update site, it will be necessary
+                        // that the IU has a valid version
+                        System.out.println(
+                            "Extension, " + iu.getId() + ", has invalid version " + iu.getVersion() + ". Skipping ...");
+                        continue;
+                    }
 
-        // TODO: Modify query once we support reading multiple extension versions
-        final IQueryResult<IInstallableUnit> ius =
-            r.query(QueryUtil.createLatestQuery(QueryUtil.createIUGroupQuery()), new NullProgressMonitor());
-        final SiteInfo siteInfo = parseUpdateSite(r);
-        // TODO: Mapping symbolic name to extension may not be sufficient once we support reading multiple versions
-        final Map<String, ExtensionInfo> extensions = new HashMap<>();
-        for (final IInstallableUnit iu : ius) {
-            if (!iu.getId().startsWith("org.eclipse") && !iu.getId().contains(".source.feature.")
-                && !iu.getId().startsWith("org.knime.binary.jre")
-                && !iu.getId().equals("org.knime.targetPlatform.feature.group")
-                && !iu.getId().endsWith(".externals.feature.group") && !QueryUtil.isProduct(iu)) {
-                if (iu.getLicenses().size() > 1) {
-                    System.out.println(iu.getId() + " has multiple licenses. Skipping ...");
-                    continue;
-                }
-                if (StringUtils.isEmpty(iu.getId())) {
-                    System.out.println("Extension has no ID " + iu.toString() + ". Skipping ...");
-                    continue;
-                }
-                Version v = null;
-                try {
-                    v = new Version(iu.getVersion().toString());
-                } catch (final Exception ex) {
-                    // Once we want to extract multiple versions from a single update site, it will be necessary that
-                    // the IU has a valid version
-                    System.out.println(
-                        "Extension, " + iu.getId() + ", has invalid version " + iu.getVersion() + ". Skipping ...");
-                    continue;
-                }
+                    final ExtensionInfo ext = new ExtensionInfo();
+                    ext.setSymbolicName(iu.getId());
+                    ext.setVersion(v);
+                    ext.setName(iu.getProperty("org.eclipse.equinox.p2.name"));
+                    ext.setDescription(iu.getProperty("org.eclipse.equinox.p2.description"));
+                    ext.setDescriptionUrl(iu.getProperty("org.eclipse.equinox.p2.description.url"));
+                    ext.setVendor(iu.getProperty("org.eclipse.equinox.p2.provider"));
+                    ext.setUpdateSite(siteInfo);
 
-                final ExtensionInfo ext = new ExtensionInfo();
-                ext.setSymbolicName(iu.getId());
-                ext.setVersion(v);
-                ext.setName(iu.getProperty("org.eclipse.equinox.p2.name"));
-                ext.setDescription(iu.getProperty("org.eclipse.equinox.p2.description"));
-                ext.setDescriptionUrl(iu.getProperty("org.eclipse.equinox.p2.description.url"));
-                ext.setVendor(iu.getProperty("org.eclipse.equinox.p2.provider"));
-                ext.setUpdateSite(siteInfo);
+                    if (iu.getCopyright() != null) {
+                        ext.setCopyright(iu.getCopyright().getBody());
+                    }
 
-                if (iu.getCopyright() != null) {
-                    ext.setCopyright(iu.getCopyright().getBody());
-                }
+                    if (!iu.getLicenses().isEmpty()) {
+                        // Take just the first license
+                        final ILicense license = iu.getLicenses().iterator().next();
+                        final LicenseInfo licenseInfo = new LicenseInfo();
+                        final String licenseBody = license.getBody();
+                        licenseInfo.setName(licenseBody.split("\\r?\\n")[0]);
+                        licenseInfo.setText(licenseBody);
+                        licenseInfo.setUrl(license.getLocation() != null ? license.getLocation().toString() : null);
+                        ext.setLicense(licenseInfo);
+                    }
 
-                if (!iu.getLicenses().isEmpty()) {
-                    // Take just the first license
-                    final ILicense license = iu.getLicenses().iterator().next();
-                    final LicenseInfo licenseInfo = new LicenseInfo();
-                    final String licenseBody = license.getBody();
-                    licenseInfo.setName(licenseBody.split("\\r?\\n")[0]);
-                    licenseInfo.setText(licenseBody);
-                    licenseInfo.setUrl(license.getLocation() != null ? license.getLocation().toString() : null);
-                    ext.setLicense(licenseInfo);
-                }
+                    final List<String> categories = new ArrayList<>();
+                    getCategoryPath(r, iu, categories);
+                    ext.setCategoryPath(categories);
 
-                final List<String> categories = new ArrayList<>();
-                getCategoryPath(r, iu, categories);
-                ext.setCategoryPath(categories);
-
-                try {
-                    final String fileName = ext.getSymbolicName().replaceAll("\\.", "_");
-                    writeFile(outputDir, fileName, ext);
-                    extensions.put(ext.getSymbolicName(), ext);
-                } catch (final JsonProcessingException | FileNotFoundException ex) {
-                    System.out.println("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName());
-                    System.out.println(ex.getClass() + ": " + ex.getMessage());
+                    try {
+                        final String fileName = ext.getSymbolicName().replaceAll("\\.", "_");
+                        writeFile(outputDir, fileName, ext);
+                        extensions.put(ext.getSymbolicName(), ext);
+                    } catch (final JsonProcessingException | FileNotFoundException ex) {
+                        System.out.println("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName());
+                        System.out.println(ex.getClass() + ": " + ex.getMessage());
+                    }
                 }
             }
+            return extensions;
+        } finally {
+            // Without this the update site will be added to the update site in preferences in the KNIME AP instance
+            if (uninstall && metadataManager.contains(updateSite)) {
+                metadataManager.removeRepository(updateSite);
+            }
         }
-        return extensions;
     }
 
     private void getCategoryPath(final IMetadataRepository repo, final IInstallableUnit iu,
