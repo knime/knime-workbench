@@ -69,10 +69,13 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
 import org.eclipse.equinox.p2.core.IProvisioningAgent;
+import org.eclipse.equinox.p2.metadata.IArtifactKey;
 import org.eclipse.equinox.p2.metadata.IInstallableUnit;
 import org.eclipse.equinox.p2.metadata.ILicense;
 import org.eclipse.equinox.p2.query.IQueryResult;
 import org.eclipse.equinox.p2.query.QueryUtil;
+import org.eclipse.equinox.p2.repository.artifact.IArtifactRepository;
+import org.eclipse.equinox.p2.repository.artifact.IArtifactRepositoryManager;
 import org.eclipse.equinox.p2.repository.metadata.IMetadataRepository;
 import org.eclipse.equinox.p2.repository.metadata.IMetadataRepositoryManager;
 import org.jsoup.Jsoup;
@@ -193,6 +196,7 @@ public class Nodalizer implements IApplication {
         File nodeDir = outputDir;
         File extDir = null;
         Map<String, ExtensionInfo> extensions = null;
+        List<String> bundles = null;
         if (updateSite != null) {
             nodeDir = new File(outputDir, "nodes");
             extDir = new File(outputDir, "extensions");
@@ -202,7 +206,14 @@ public class Nodalizer implements IApplication {
             if (!extDir.exists()) {
                 extDir.mkdir();
             }
-            extensions = parseExtensions(updateSite, extDir);
+            final BundleContext c = FrameworkUtil.getBundle(getClass()).getBundleContext();
+            final ServiceReference<IProvisioningAgent> ref = c.getServiceReference(IProvisioningAgent.class);
+            final IProvisioningAgent agent = c.getService(ref);
+            bundles = getSymbolicBundleNames(updateSite, agent);
+            if (bundles == null) {
+                return IApplication.EXIT_OK;
+            }
+            extensions = parseExtensions(updateSite, extDir, agent);
             if (extensions == null) {
                 return IApplication.EXIT_OK;
             }
@@ -216,9 +227,9 @@ public class Nodalizer implements IApplication {
         }
         final Root root = RepositoryManager.INSTANCE.getCompleteRoot();
 
-        parseNodesInRoot(root, null, nodeDir, extensions);
+        parseNodesInRoot(root, null, nodeDir, extensions, bundles);
         if (factoryList != null) {
-            parseDeprecatedNodeList(factoryList, nodeDir, extensions);
+            parseDeprecatedNodeList(factoryList, nodeDir, extensions, bundles);
         }
 
         System.out.println("Node description generation successfully finished");
@@ -233,28 +244,28 @@ public class Nodalizer implements IApplication {
     // -- Parse nodes --
 
     private void parseNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory,
-        final Map<String, ExtensionInfo> extensions) {
+        final Map<String, ExtensionInfo> extensions, final List<String> bundles) {
         if (object instanceof NodeTemplate) {
             try {
                 final NodeTemplate template = (NodeTemplate)object;
                 final NodeFactory<? extends NodeModel> fac = template.createFactoryInstance();
                 final NodeAndBundleInformation nodeAndBundleInfo = NodeAndBundleInformationPersistor.create(fac);
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
-                    nodeAndBundleInfo, fac.isDeprecated(), directory, extensions);
+                    nodeAndBundleInfo, fac.isDeprecated(), directory, extensions, bundles);
             } catch (final Throwable e) {
                 System.out.println("Failed to read node: " + object.getName());
                 e.printStackTrace();
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
-                parseNodesInRoot(child, new ArrayList<>(), directory, extensions);
+                parseNodesInRoot(child, new ArrayList<>(), directory, extensions, bundles);
             }
         } else if (object instanceof Category) {
             for (final IRepositoryObject child : ((Category)object).getChildren()) {
                 final Category c = (Category)object;
                 final List<String> p = new ArrayList<>(path);
                 p.add(c.getName());
-                parseNodesInRoot(child, p, directory, extensions);
+                parseNodesInRoot(child, p, directory, extensions, bundles);
             }
         } else {
             return;
@@ -262,7 +273,7 @@ public class Nodalizer implements IApplication {
     }
 
     private static void parseDeprecatedNodeList(final Path factoryListFile, final File directory,
-        final Map<String, ExtensionInfo> extensions) {
+        final Map<String, ExtensionInfo> extensions, final List<String> bundles) {
         if (factoryListFile == null) {
             return;
         }
@@ -292,18 +303,22 @@ public class Nodalizer implements IApplication {
                 final List<String> path = Collections.singletonList("Uncategorized");
 
                 fac.init(); // Some factories must be initialized or name/description throws NPE
-                if (b.getBundleName().isPresent() && b.getBundleVersion().isPresent()) {
+                if (b.getBundleName().isPresent() && b.getBundleVersion().isPresent()
+                    && b.getBundleSymbolicName().isPresent()) {
                     // always pass true for isDeprecated, even though the factory may not say it is deprecated
                     // pass the factory name in the file, not the name of the loaded class - due to factory class
                     // mapping these may not match
                     parseNodeAndPrint(fac, parts[0], path, categoryPath, fac.getNodeName(), b, true, directory,
-                        extensions);
+                        extensions, bundles);
                 } else {
                     if (!b.getBundleName().isPresent()) {
                         System.out.println("Bundle name is missing! " + factory);
                     }
                     if (!b.getBundleVersion().isPresent()) {
                         System.out.println("Bundle version is missing! " + factory);
+                    }
+                    if (!b.getBundleSymbolicName().isPresent()) {
+                        System.out.println("Bundle symbolic name is missing! " + factory);
                     }
                     throw new IllegalArgumentException("Bundle information is missing!");
                 }
@@ -316,20 +331,20 @@ public class Nodalizer implements IApplication {
 
     private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final List<String> path,
         final String categoryPath, final String name, final NodeAndBundleInformation nodeAndBundleInfo,
-        final boolean isDeprecated, final File directory, final Map<String, ExtensionInfo> extensions)
-        throws Exception {
+        final boolean isDeprecated, final File directory, final Map<String, ExtensionInfo> extensions,
+        final List<String> bundles) throws Exception {
         // Read update site info
         // Do this early to prevent instantiating unnecessary nodes.
         String extensionId = null;
         SiteInfo updateSite = null;
-        if (extensions != null) {
+        if (extensions != null && bundles != null) {
             // TODO: Check symbolic name and version once we support reading multiple extension versions
-            if (nodeAndBundleInfo.getFeatureSymbolicName().isPresent()
-                && extensions.containsKey(nodeAndBundleInfo.getFeatureSymbolicName().get())) {
+            if (extensions.containsKey(nodeAndBundleInfo.getFeatureSymbolicName().orElse(null))) {
                 final ExtensionInfo e = extensions.get(nodeAndBundleInfo.getFeatureSymbolicName().get());
                 updateSite = e.getUpdateSite();
                 extensionId = e.getId();
-            } else if (!nodeAndBundleInfo.getFeatureSymbolicName().isPresent()) {
+            } else if (!nodeAndBundleInfo.getFeatureSymbolicName().isPresent()
+                && bundles.contains(nodeAndBundleInfo.getBundleSymbolicName().orElse(null))) {
                 System.out.println(fac.getClass() + " does not contain extension information, skipping ...");
                 return;
             } else {
@@ -553,17 +568,15 @@ public class Nodalizer implements IApplication {
 
     // -- Parse Extension --
 
-    private Map<String, ExtensionInfo> parseExtensions(final URI updateSite, final File outputDir) {
-        final BundleContext c = FrameworkUtil.getBundle(getClass()).getBundleContext();
-        final ServiceReference<IProvisioningAgent> ref = c.getServiceReference(IProvisioningAgent.class);
-        final IProvisioningAgent agent = c.getService(ref);
+    private Map<String, ExtensionInfo> parseExtensions(final URI updateSite, final File outputDir,
+        final IProvisioningAgent agent) {
         final IMetadataRepositoryManager metadataManager =
             (IMetadataRepositoryManager)agent.getService(IMetadataRepositoryManager.SERVICE_NAME);
-        final boolean uninstall = !metadataManager.contains(updateSite);
+        final boolean uninstallMetadata = !metadataManager.contains(updateSite);
         try {
-            IMetadataRepository r = null;
+            IMetadataRepository mr = null;
             try {
-                r = metadataManager.loadRepository(updateSite, new NullProgressMonitor());
+                mr = metadataManager.loadRepository(updateSite, new NullProgressMonitor());
             } catch (final Exception ex) {
                 System.out.println("Failed to read extensions for " + updateSite.toString() + ". See details below.");
                 System.out.println(ex.getClass() + ": " + ex.getMessage());
@@ -572,8 +585,8 @@ public class Nodalizer implements IApplication {
             }
             // TODO: Modify query once we support reading multiple extension versions
             final IQueryResult<IInstallableUnit> ius =
-                r.query(QueryUtil.createLatestQuery(QueryUtil.createIUGroupQuery()), new NullProgressMonitor());
-            final SiteInfo siteInfo = parseUpdateSite(r);
+                mr.query(QueryUtil.createLatestQuery(QueryUtil.createIUGroupQuery()), new NullProgressMonitor());
+            final SiteInfo siteInfo = parseUpdateSite(mr);
             // TODO: Mapping symbolic name to extension may not be sufficient once we support reading multiple versions
             final Map<String, ExtensionInfo> extensions = new HashMap<>();
             for (final IInstallableUnit iu : ius) {
@@ -625,7 +638,7 @@ public class Nodalizer implements IApplication {
                     }
 
                     final List<String> categories = new ArrayList<>();
-                    getCategoryPath(r, iu, categories);
+                    getCategoryPath(mr, iu, categories);
                     ext.setCategoryPath(categories);
 
                     try {
@@ -641,8 +654,37 @@ public class Nodalizer implements IApplication {
             return extensions;
         } finally {
             // Without this the update site will be added to the update site in preferences in the KNIME AP instance
-            if (uninstall && metadataManager.contains(updateSite)) {
+            if (uninstallMetadata && metadataManager.contains(updateSite)) {
                 metadataManager.removeRepository(updateSite);
+            }
+        }
+    }
+
+    private static List<String> getSymbolicBundleNames(final URI updateSite, final IProvisioningAgent agent) {
+        final IArtifactRepositoryManager artifactManager =
+            (IArtifactRepositoryManager)agent.getService(IArtifactRepositoryManager.SERVICE_NAME);
+        final boolean uninstallArtifact = !artifactManager.contains(updateSite);
+        try {
+            IArtifactRepository ar = null;
+            try {
+                ar = artifactManager.loadRepository(updateSite, new NullProgressMonitor());
+            } catch (Exception ex) {
+                System.out.println("Failed to read extensions for " + updateSite.toString() + ". See details below.");
+                System.out.println(ex.getClass() + ": " + ex.getMessage());
+                ex.printStackTrace();
+                return null;
+            }
+
+            final IQueryResult<IArtifactKey> result = ar.query(
+                QueryUtil
+                    .createLatestQuery(QueryUtil.createMatchQuery(IArtifactKey.class, "classifier == 'osgi.bundle'")),
+                new NullProgressMonitor());
+            final List<String> bsn = new ArrayList<>();
+            result.forEach(a -> bsn.add(a.getId()));
+            return bsn;
+        } finally {
+            if (uninstallArtifact && artifactManager.contains(updateSite)) {
+                artifactManager.removeRepository(updateSite);
             }
         }
     }
@@ -758,4 +800,5 @@ public class Nodalizer implements IApplication {
             pw.write(json);
         }
     }
+
 }
