@@ -110,9 +110,9 @@ public final class OpenSubnodeWebViewAction extends Action {
         if (nc instanceof SubNodeContainerUI) {
             SubNodeContainerUI snc = (SubNodeContainerUI)nc;
             if (Wrapper.wraps(snc, SubNodeContainer.class)) {
-                return Optional.of(sncFct.apply(Wrapper.unwrap(snc, SubNodeContainer.class)));
+                return Optional.ofNullable(sncFct.apply(Wrapper.unwrap(snc, SubNodeContainer.class)));
             } else {
-                return Optional.of(sncUIFct.apply(snc));
+                return Optional.ofNullable(sncUIFct.apply(snc));
             }
         } else {
             return Optional.empty();
