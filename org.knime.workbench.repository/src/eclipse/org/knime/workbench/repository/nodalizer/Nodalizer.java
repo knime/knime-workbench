@@ -64,6 +64,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.equinox.app.IApplication;
 import org.eclipse.equinox.app.IApplicationContext;
@@ -583,13 +584,28 @@ public class Nodalizer implements IApplication {
                     System.out.println(iu.getId() + " has multiple licenses. Skipping ...");
                     continue;
                 }
+                if (StringUtils.isEmpty(iu.getId())) {
+                    System.out.println("Extension has no ID " + iu.toString() + ". Skipping ...");
+                    continue;
+                }
+                Version v = null;
+                try {
+                    v = new Version(iu.getVersion().toString());
+                } catch (final Exception ex) {
+                    // Once we want to extract multiple versions from a single update site, it will be necessary that
+                    // the IU has a valid version
+                    System.out.println(
+                        "Extension, " + iu.getId() + ", has invalid version " + iu.getVersion() + ". Skipping ...");
+                    continue;
+                }
+
                 final ExtensionInfo ext = new ExtensionInfo();
+                ext.setSymbolicName(iu.getId());
+                ext.setVersion(v);
                 ext.setName(iu.getProperty("org.eclipse.equinox.p2.name"));
                 ext.setDescription(iu.getProperty("org.eclipse.equinox.p2.description"));
                 ext.setDescriptionUrl(iu.getProperty("org.eclipse.equinox.p2.description.url"));
-                ext.setSymbolicName(iu.getId());
                 ext.setVendor(iu.getProperty("org.eclipse.equinox.p2.provider"));
-                ext.setVersion(new Version(iu.getVersion().toString()));
                 ext.setUpdateSite(siteInfo);
 
                 if (iu.getCopyright() != null) {
