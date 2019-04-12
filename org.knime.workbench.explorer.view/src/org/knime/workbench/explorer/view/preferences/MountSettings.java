@@ -51,8 +51,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.preferences.DefaultScope;
@@ -453,38 +452,14 @@ public class MountSettings {
      */
     public static List<MountSettings> loadSortedMountSettingsFromPreferenceNode() {
         // AP-8989 Switching to IEclipsePreferences
-        Map<Integer, MountSettings> defaultMountSettingsMap = new TreeMap<Integer, MountSettings>();
-        Map<Integer, MountSettings> instanceMountSettingsMap = new TreeMap<Integer, MountSettings>();
-        List<MountSettings> mountSettings = new ArrayList<MountSettings>();
-        IEclipsePreferences instanceMountPointsNode = getInstanceMountPointParentNode();
-        IEclipsePreferences defaultMountPointsNode  = getDefaultMountPointParentNode();
+        final List<MountSettings> mountSettings = new ArrayList<MountSettings>();
         try {
-            String[] defaultChildNodes = defaultMountPointsNode.childrenNames();
-            for (final String mountPointNodeName : defaultChildNodes) {
-                final Preferences childMountPointNode = defaultMountPointsNode.node(mountPointNodeName);
-                MountSettings ms = loadMountSettingsFromNode(childMountPointNode);
-                if (ms != null) {
-                    defaultMountSettingsMap.put(ms.getMountPointNumber(), ms);
-                }
-            }
-            String[] instanceChildNodes = instanceMountPointsNode.childrenNames();
-            for (final String mountPointNodeName : instanceChildNodes) {
-                final Preferences childMountPointNode = instanceMountPointsNode.node(mountPointNodeName);
-                MountSettings ms = loadMountSettingsFromNode(childMountPointNode);
-                if (ms != null) {
-                    instanceMountSettingsMap.put(ms.getMountPointNumber(), ms);
-                }
-            }
+            final List<MountSettings> defaultMountSettingsList = loadSortedMountSettingsFromDefaultPreferenceNode();
+            final List<MountSettings> instanceMountSettingsList =
+                    getSortedMountSettingsFromNode(getInstanceMountPointParentNode());
 
-
-            List<MountSettings> defaultMountSettingsList = new ArrayList<>(defaultMountSettingsMap.values());
-            List<MountSettings> instanceMountSettingsList = new ArrayList<>(instanceMountSettingsMap.values());
-
-            List<String> instanceMountIDs= new ArrayList<>();
-            for (Iterator<MountSettings> iterator = instanceMountSettingsList.iterator(); iterator.hasNext();) {
-                instanceMountIDs.add(iterator.next().getMountID());
-            }
-            instanceMountSettingsList.forEach(item -> instanceMountIDs.add(item.getMountID()));
+            final List<String> instanceMountIDs =
+                    instanceMountSettingsList.stream().map(ms -> ms.getMountID()).collect(Collectors.toList());
 
             for (Iterator<MountSettings> iterator = defaultMountSettingsList.iterator(); iterator.hasNext();) {
                 MountSettings defaultSetting = iterator.next();
@@ -508,6 +483,24 @@ public class MountSettings {
         return mountSettings;
     }
 
+    private static List<MountSettings> getSortedMountSettingsFromNode(final IEclipsePreferences preferenceNode)
+            throws BackingStoreException {
+        final List<MountSettings> mountSettings = new ArrayList<>();
+        final String[] instanceChildNodes = preferenceNode.childrenNames();
+        for (final String mountPointNodeName : instanceChildNodes) {
+            final Preferences childMountPointNode = preferenceNode.node(mountPointNodeName);
+            final MountSettings ms = loadMountSettingsFromNode(childMountPointNode);
+            if (ms != null) {
+                mountSettings.add(ms);
+            }
+        }
+
+        // Sort ascending by mountPointNumber
+        mountSettings.sort((o1,o2) -> o1.getMountPointNumber() - o2.getMountPointNumber());
+
+        return mountSettings;
+    }
+
     /**
      * Loads the MountSettings from the DefaultInstance {@link ExplorerActivator#PLUGIN_ID} preference node.
      *
@@ -516,25 +509,14 @@ public class MountSettings {
      */
     public static List<MountSettings> loadSortedMountSettingsFromDefaultPreferenceNode() {
         // AP-8989 Switching to IEclipsePreferences
-        Map<Integer, MountSettings> defaultMountSettingsMap = new TreeMap<Integer, MountSettings>();
-        List<MountSettings> mountSettings = new ArrayList<MountSettings>();
-        IEclipsePreferences defaultMountPointsNode  = getDefaultMountPointParentNode();
+        final List<MountSettings> defaultMountSettings = new ArrayList<>();
         try {
-            String[] defaultChildNodes = defaultMountPointsNode.childrenNames();
-            for (final String mountPointNodeName : defaultChildNodes) {
-                final Preferences childMountPointNode = defaultMountPointsNode.node(mountPointNodeName);
-                MountSettings ms = MountSettings.loadMountSettingsFromNode(childMountPointNode);
-                if (ms != null) {
-                    defaultMountSettingsMap.put(ms.getMountPointNumber(), ms);
-                }
-            }
-
-            mountSettings = new ArrayList<>(defaultMountSettingsMap.values());
+            defaultMountSettings.addAll(getSortedMountSettingsFromNode(getDefaultMountPointParentNode()));
         } catch (BackingStoreException e) {
             // ignore, return an empty list
         }
 
-        return mountSettings;
+        return defaultMountSettings;
     }
 
     /**
