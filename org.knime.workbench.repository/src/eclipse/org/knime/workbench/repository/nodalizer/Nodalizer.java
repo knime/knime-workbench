@@ -595,7 +595,9 @@ public class Nodalizer implements IApplication {
                 if (!iu.getId().startsWith("org.eclipse") && !iu.getId().contains(".source.feature.")
                     && !iu.getId().startsWith("org.knime.binary.jre")
                     && !iu.getId().equals("org.knime.targetPlatform.feature.group")
-                    && !iu.getId().endsWith(".externals.feature.group") && !QueryUtil.isProduct(iu)) {
+                    && !iu.getId().endsWith(".externals.feature.group")
+                    && !iu.getId().equals("org.knime.features.explorer.view.feature.group")
+                    && !QueryUtil.isProduct(iu)) {
                     if (iu.getLicenses().size() > 1) {
                         System.out.println(iu.getId() + " has multiple licenses. Skipping ...");
                         continue;
