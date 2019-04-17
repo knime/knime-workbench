@@ -1,6 +1,5 @@
 /*
  * ------------------------------------------------------------------------
- *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -41,72 +40,38 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ---------------------------------------------------------------------
- *
- * History
- *   24.03.2015 (tibuch): created
+ * ------------------------------------------------------------------------
  */
-package org.knime.workbench.editor2;
-
-import static org.knime.core.ui.wrapper.Wrapper.wraps;
-
-import java.util.Optional;
-
-import org.eclipse.gef.EditPartViewer;
-import org.eclipse.jface.util.LocalSelectionTransfer;
-import org.eclipse.swt.dnd.DND;
-import org.eclipse.swt.dnd.DropTargetEvent;
-import org.eclipse.swt.dnd.Transfer;
-import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.workbench.repository.model.MetaNodeTemplate;
+package org.knime.workbench.repository.model;
 
 /**
- * A DropTargetListener for metanode drops from the node repository.
+ * Abstract class for all metanode templates.
  *
- * @author Tim-Oliver Buchholz, KNIME AG, Zurich, Switzerland
+ * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-public class MetaNodeDropTargetListener extends
-    WorkflowEditorDropTargetListener<MetaNodeCreationFactory> {
+public abstract class AbstractMetaNodeTemplate extends AbstractNodeTemplate {
 
     /**
-     * @param viewer the viewer
+     * Creates a new metanode template.
+     *
+     * @param id the (unique) id of the node template
+     * @param name the name
+     * @param categoryPath the absolute path of the category in which this template should be placed
+     * @param contributingPlugin the contributing plug-in's ID
      */
-    protected MetaNodeDropTargetListener(final EditPartViewer viewer) {
-        super(viewer, new MetaNodeCreationFactory());
+    public AbstractMetaNodeTemplate(final String id, final String name,
+            final String categoryPath, final String contributingPlugin) {
+        super(id, name, contributingPlugin);
+        setAfterID("");
+        setCategoryPath(categoryPath);
     }
 
     /**
-     * {@inheritDoc}
+     * Creates a copy of the given object.
+     *
+     * @param copy the object to copy
      */
-    @Override
-    public boolean isEnabled(final DropTargetEvent event) {
-        Optional<MetaNodeTemplate> mnt = getDragSourceObject(MetaNodeTemplate.class);
-        //not yet supported by WorkflowManagerUI-implementations
-        if (mnt.isPresent() && wraps(getWorkflowManager(), WorkflowManager.class)) {
-            event.feedback = DND.FEEDBACK_SELECT;
-            event.operations = DND.DROP_COPY;
-            event.detail = DND.DROP_COPY;
-            return true;
-        }
-        return false;
+    protected AbstractMetaNodeTemplate(final AbstractMetaNodeTemplate copy) {
+        super(copy);
     }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void handleDrop() {
-        Optional<MetaNodeTemplate> template = getDragSourceObject(MetaNodeTemplate.class);
-        getFactory().setMetaNodeTemplate(template.get());
-        super.handleDrop();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Transfer getTransfer() {
-        return LocalSelectionTransfer.getTransfer();
-    }
-
 }

@@ -47,6 +47,8 @@
  */
 package org.knime.workbench.helpview;
 
+import static org.knime.core.ui.wrapper.NodeContainerWrapper.wrap;
+
 import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -227,7 +229,7 @@ public class HelpView extends ViewPart implements ISelectionListener,
                     // TODO: add support for MetaNodeTemplates and get the
                     // description out of them
                     NodeContainerUI manager
-                        = ((MetaNodeTemplate)sel).getManager();
+                        = wrap(((MetaNodeTemplate)sel).getManager());
                     DynamicNodeDescriptionCreator.instance()
                         .addDescription(manager,
                                 useSingleLine, content);

@@ -47,6 +47,8 @@
  */
 package org.knime.workbench.repository.util;
 
+import static org.knime.core.ui.wrapper.WorkflowManagerWrapper.wrap;
+
 import java.io.FileNotFoundException;
 import java.util.Set;
 
@@ -150,7 +152,7 @@ public final class DynamicNodeDescriptionCreator {
                     if (!idsDisplayed.contains(templ.getID())) {
                         idsDisplayed.add(templ.getID());
                         NodeContainerUI manager =
-                                ((MetaNodeTemplate)child).getManager();
+                                wrap(((MetaNodeTemplate)child).getManager());
                         addDescription(manager, /* useSingleLine */true, bld);
                     }
                 } else {
@@ -263,7 +265,7 @@ public final class DynamicNodeDescriptionCreator {
      */
     public void addDescription(final MetaNodeTemplate template,
             final boolean useSingleLine, final StringBuilder builder) {
-        WorkflowManagerUI manager = template.getManager();
+        WorkflowManagerUI manager = wrap(template.getManager());
         if (!useSingleLine) {
             builder.append(getHeader());
             builder.append("<h1>");

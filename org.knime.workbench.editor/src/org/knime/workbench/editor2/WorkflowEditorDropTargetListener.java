@@ -48,6 +48,7 @@ package org.knime.workbench.editor2;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.draw2d.geometry.Rectangle;
@@ -82,7 +83,6 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowInPortBarEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowOutPortBarEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
-import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
 
 /**
@@ -183,21 +183,28 @@ public abstract class WorkflowEditorDropTargetListener<T extends CreationFactory
     }
 
     /**
-     * @param event the drop target event
-     * @return the first dragged resource or null if the event contains a resource that is not of type
-     *         {@link ContentObject}
+     * Returns the drag source object (i.e. the very object that is being dragged, e.g., a selected node template) of
+     * the given class or an empty optional, if object is of another class.
+     *
+     * @param objClass
+     * @return the object or an empty optional if of another class
      */
-    protected ContentObject getDragResources(final DropTargetEvent event) {
+    @SuppressWarnings("unchecked")
+    protected <S> Optional<S> getDragSourceObject(final Class<S> objClass) {
         LocalSelectionTransfer transfer = (LocalSelectionTransfer)getTransfer();
         ISelection selection = transfer.getSelection();
         if (selection instanceof IStructuredSelection) {
             IStructuredSelection ss = (IStructuredSelection)selection;
+            if (ss.size() > 1) {
+                // allow dropping a single node only
+                return Optional.empty();
+            }
             Object firstElement = ss.getFirstElement();
-            if (firstElement instanceof ContentObject) {
-                return (ContentObject)firstElement;
+            if (objClass.isAssignableFrom(firstElement.getClass())) {
+                return Optional.of((S)firstElement);
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     /** {@inheritDoc} */
@@ -422,7 +429,7 @@ public abstract class WorkflowEditorDropTargetListener<T extends CreationFactory
      */
     @Override
     public boolean isEnabled(final DropTargetEvent event) {
-        return getDragResources(event) != null;
+        return getDragSourceObject(Object.class) != null;
     }
 
     @Override

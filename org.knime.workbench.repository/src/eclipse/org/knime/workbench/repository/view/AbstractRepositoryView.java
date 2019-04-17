@@ -111,6 +111,7 @@ import org.knime.core.util.KNIMEJob;
 import org.knime.workbench.core.nodeprovider.NodeProvider;
 import org.knime.workbench.repository.NodeUsageRegistry;
 import org.knime.workbench.repository.RepositoryManager;
+import org.knime.workbench.repository.model.AbstractMetaNodeTemplate;
 import org.knime.workbench.repository.model.AbstractRepositoryObject;
 import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.IContainerObject;
@@ -842,7 +843,7 @@ public abstract class AbstractRepositoryView extends ViewPart implements Reposit
      * {@inheritDoc}
      */
     @Override
-    public void newMetanode(final Root root, final MetaNodeTemplate metanode) {
+    public void newMetanode(final Root root, final AbstractMetaNodeTemplate metanode) {
         m_nodeCounter++;
         if (System.currentTimeMillis() - m_lastViewUpdate < 500) {
             return;
@@ -851,7 +852,7 @@ public abstract class AbstractRepositoryView extends ViewPart implements Reposit
         m_lastViewUpdate = System.currentTimeMillis();
     }
 
-    private void updateRepositoryView(final Root root) {
+    public void updateRepositoryView(final Root root) {
         final Root transformedRepository = transformRepository(root);
 
         Display.getDefault().asyncExec(new Runnable() {
