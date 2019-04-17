@@ -55,6 +55,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EventObject;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -510,6 +511,9 @@ public class WorkflowEditor extends GraphicalEditor implements
      * Returns all sub editors (of sub nodes / metanodes) of this editor.
      */
     private List<IEditorPart> getSubEditors() {
+        if (m_manager == null) {
+            return Collections.emptyList();
+        }
         List<IEditorPart> result = new ArrayList<IEditorPart>();
         for (NodeContainerUI nc : m_manager.getNodeContainers()) {
             result.addAll(getSubEditors(nc.getID()));

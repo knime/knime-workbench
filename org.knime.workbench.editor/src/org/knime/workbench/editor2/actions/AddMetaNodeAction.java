@@ -75,13 +75,15 @@ public class AddMetaNodeAction implements IEditorActionDelegate {
     @Override
     public void setActiveEditor(final IAction action,
             final IEditorPart targetEditor) {
-        m_editor = (WorkflowEditor)targetEditor;
-        boolean enabled = false;
-        if (m_editor != null) {
-            WorkflowManagerUI wm = m_editor.getWorkflowManagerUI();
-            enabled = wm != null && !wm.isWriteProtected() && Wrapper.wraps(wm, WorkflowManager.class);
+        if (targetEditor instanceof WorkflowEditor) {
+            m_editor = (WorkflowEditor)targetEditor;
+            boolean enabled = false;
+            if (m_editor != null) {
+                WorkflowManagerUI wm = m_editor.getWorkflowManagerUI();
+                enabled = wm != null && !wm.isWriteProtected() && Wrapper.wraps(wm, WorkflowManager.class);
+            }
+            action.setEnabled(enabled);
         }
-        action.setEnabled(enabled);
     }
 
     /**
