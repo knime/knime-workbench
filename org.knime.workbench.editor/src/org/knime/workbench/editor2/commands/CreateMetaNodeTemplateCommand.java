@@ -66,6 +66,8 @@ import org.knime.core.node.workflow.WorkflowPersistor.MetaNodeLinkUpdateResult;
 import org.knime.core.util.SWTUtilities;
 import org.knime.workbench.editor2.LoadMetaNodeTemplateRunnable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 
 /**
  * GEF command for adding a MetaNode from a file location to the workflow.
@@ -135,21 +137,25 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
         try {
             IWorkbench wb = PlatformUI.getWorkbench();
             IProgressService ps = wb.getProgressService();
-            // this one sets the workflow manager in the editor
-            loadRunnable = new LoadMetaNodeTemplateRunnable(getHostWFM(), m_templateKNIMEFolder);
-            ps.run(false, true, loadRunnable);
-            MetaNodeLinkUpdateResult result = loadRunnable.getLoadResult();
-            m_container = (NodeContainer)result.getLoadedInstance();
-            if (m_container == null) {
-                throw new RuntimeException("No template returned by load routine, see log for details");
-            }
             // create extra info and set it
             NodeUIInformation info = NodeUIInformation.builder()
                     .setNodeLocation(m_location.x, m_location.y, -1, -1)
                     .setHasAbsoluteCoordinates(false)
                     .setSnapToGrid(m_snapToGrid)
                     .setIsDropLocation(true).build();
-            m_container.setUIInformation(info);
+            // this one sets the workflow manager in the editor
+            loadRunnable = new LoadMetaNodeTemplateRunnable(getHostWFM(), m_templateKNIMEFolder, info);
+            if (m_templateKNIMEFolder instanceof RemoteExplorerFileStore) {
+                ps.busyCursorWhile(loadRunnable);
+            } else {
+                assert m_templateKNIMEFolder instanceof LocalExplorerFileStore;
+                ps.run(false, true, loadRunnable);
+            }
+            MetaNodeLinkUpdateResult result = loadRunnable.getLoadResult();
+            m_container = (NodeContainer)result.getLoadedInstance();
+            if (m_container == null) {
+                throw new RuntimeException("No template returned by load routine, see log for details");
+            }
         } catch (Throwable t) {
             Throwable cause = t;
             while ((cause.getCause() != null) && (cause.getCause() != cause)) {
