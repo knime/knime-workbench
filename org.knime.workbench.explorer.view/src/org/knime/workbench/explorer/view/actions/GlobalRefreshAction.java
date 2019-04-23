@@ -58,7 +58,6 @@ import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
-import org.knime.workbench.explorer.templates.CollectMetanodeTemplatesAndUpdateNodeRepoJob;
 import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -102,9 +101,6 @@ public class GlobalRefreshAction extends ExplorerAction {
         } else {
             new RefreshJob(stores).schedule();
         }
-
-        //TODO move somewhere else
-        new CollectMetanodeTemplatesAndUpdateNodeRepoJob().schedule();
     }
 
 
