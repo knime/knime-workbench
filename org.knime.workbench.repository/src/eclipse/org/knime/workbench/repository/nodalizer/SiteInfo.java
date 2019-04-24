@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.repository.nodalizer;
 
+import org.apache.commons.lang3.StringUtils;
 import org.knime.core.util.Version;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -67,6 +68,8 @@ public class SiteInfo {
     private final String m_version;
 
     /**
+     * Creates a POJO representing the update site information for a given object.
+     *
      * @param url update site url
      * @param enabledByDefault if the site is enabled by default in KNIME AP
      * @param trusted if the site is trusted
@@ -83,6 +86,9 @@ public class SiteInfo {
     }
 
     /**
+     * Creates a POJO representing the update site information for a given object. The version will be extracted from
+     * the {@code url} parameter if possible.
+     *
      * @param url update site url, the text following the final '/' will be used to determine the version if possible.
      *            If this text isn't a valid version, the version will be set to {@code null}
      * @param enabledByDefault if the site is enabled by default in KNIME AP
@@ -96,13 +102,17 @@ public class SiteInfo {
         m_name = name;
 
         final String versionString = m_url.substring(m_url.lastIndexOf('/') + 1, m_url.length());
-        Version v;
-        try {
-            v = new Version(versionString);
-        } catch (final Exception ex) {
-            v = null;
+        if (StringUtils.isEmpty(versionString)) {
+            m_version = null;
+        } else {
+            Version v;
+            try {
+                v = new Version(versionString);
+            } catch (final Exception ex) {
+                v = null;
+            }
+            m_version = v == null ? null : versionString;
         }
-        m_version = v == null ? null : versionString;
     }
 
     /**

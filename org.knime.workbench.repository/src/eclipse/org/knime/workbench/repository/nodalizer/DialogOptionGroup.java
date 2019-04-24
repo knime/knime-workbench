@@ -48,10 +48,12 @@
  */
 package org.knime.workbench.repository.nodalizer;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * POJO for dialog option group (i.e. one tab in the dialog).
@@ -75,7 +77,18 @@ public class DialogOptionGroup {
     public DialogOptionGroup(final String sectionName, final String sectionDescription, final List<NamedField> fields) {
         m_sectionName = sectionName;
         m_sectionDescription = sectionDescription;
-        m_fields = (fields != null && !fields.isEmpty()) ? fields : null;
+
+        if (fields != null) {
+            final List<NamedField> cleanedList = new ArrayList<>();
+            for (final NamedField f : fields) {
+                if (!f.isEmpty()) {
+                    cleanedList.add(f);
+                }
+            }
+            m_fields = cleanedList;
+        } else {
+            m_fields = null;
+        }
     }
 
     /**
@@ -103,5 +116,10 @@ public class DialogOptionGroup {
      */
     public List<NamedField> getFields() {
         return m_fields == null ? Collections.emptyList() : m_fields;
+    }
+
+    @JsonIgnore
+    boolean isEmpty() {
+        return m_sectionName == null && m_sectionDescription == null && getFields().isEmpty();
     }
 }

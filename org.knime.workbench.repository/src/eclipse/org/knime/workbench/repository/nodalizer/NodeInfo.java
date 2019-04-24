@@ -51,6 +51,7 @@ package org.knime.workbench.repository.nodalizer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -311,7 +312,17 @@ public class NodeInfo {
      * @param dialog a {@code List} of {@link DialogOptionGroup}s representing the dialog options per tab for the node
      */
     public void setDialog(final List<DialogOptionGroup> dialog) {
-        m_dialog = dialog;
+        if (dialog == null) {
+            m_dialog = null;
+            return;
+        }
+        final List<DialogOptionGroup> cleaned = new ArrayList<>();
+        for (final DialogOptionGroup dog : dialog) {
+            if (!dog.isEmpty()) {
+                cleaned.add(dog);
+            }
+        }
+        m_dialog = cleaned;
     }
 
     /**
@@ -320,7 +331,17 @@ public class NodeInfo {
      * @param views the node's views (name and description)
      */
     public void setViews(final List<NamedField> views) {
-        m_views = views;
+        if (views == null) {
+            m_views = null;
+            return;
+        }
+        final List<NamedField> cleaned = new ArrayList<>();
+        for (final NamedField nf : views) {
+            if (!nf.isEmpty()) {
+                cleaned.add(nf);
+            }
+        }
+        m_views = cleaned;
     }
 
     /**
@@ -329,7 +350,10 @@ public class NodeInfo {
      * @param interactiveView the node's interactive view (name and description)
      */
     public void setInteractiveView(final NamedField interactiveView) {
-        m_interactiveView = interactiveView;
+        if (interactiveView != null && !interactiveView.isEmpty()) {
+            m_interactiveView = interactiveView;
+        }
+        m_interactiveView = null;
     }
 
     /**

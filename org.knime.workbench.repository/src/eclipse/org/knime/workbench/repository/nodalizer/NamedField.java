@@ -48,7 +48,10 @@
  */
 package org.knime.workbench.repository.nodalizer;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * POJO for items which have a name and description.
@@ -88,5 +91,10 @@ public class NamedField {
      */
     public String getDescription() {
         return m_description;
+    }
+
+    @JsonIgnore
+    boolean isEmpty() {
+        return StringUtils.isEmpty(m_name) && StringUtils.isEmpty(m_description);
     }
 }
