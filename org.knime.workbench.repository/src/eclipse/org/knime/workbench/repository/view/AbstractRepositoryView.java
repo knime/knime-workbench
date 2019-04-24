@@ -414,7 +414,7 @@ public abstract class AbstractRepositoryView extends ViewPart implements Reposit
         RepositoryManager.INSTANCE.addLoadListener(this);
         Root repository = RepositoryManager.INSTANCE.getRoot(monitor);
 
-        updateRepositoryView(repository);
+        updateRepositoryViewAndToolTipInUIThread(repository);
 
         Display.getDefault().asyncExec(new Runnable() {
             @Override
@@ -834,7 +834,7 @@ public abstract class AbstractRepositoryView extends ViewPart implements Reposit
         if (System.currentTimeMillis() - m_lastViewUpdate < 500) {
             return;
         }
-        updateRepositoryView(root);
+        updateRepositoryViewAndToolTipInUIThread(root);
         m_lastViewUpdate = System.currentTimeMillis();
 
     }
@@ -848,11 +848,11 @@ public abstract class AbstractRepositoryView extends ViewPart implements Reposit
         if (System.currentTimeMillis() - m_lastViewUpdate < 500) {
             return;
         }
-        updateRepositoryView(root);
+        updateRepositoryViewAndToolTipInUIThread(root);
         m_lastViewUpdate = System.currentTimeMillis();
     }
 
-    public void updateRepositoryView(final Root root) {
+    private void updateRepositoryViewAndToolTipInUIThread(final Root root) {
         final Root transformedRepository = transformRepository(root);
 
         Display.getDefault().asyncExec(new Runnable() {
@@ -860,21 +860,35 @@ public abstract class AbstractRepositoryView extends ViewPart implements Reposit
             public void run() {
                 if (!m_viewer.getControl().isDisposed()) {
                     final String message = "Loading node repository... " + m_nodeCounter + " nodes found";
-
                     m_viewer.getControl().setToolTipText(message);
-                    if (m_viewer.getInput() != transformedRepository) {
-                        m_viewer.setInput(transformedRepository);
-                    } else {
-                        try {
-                            m_viewer.refresh(transformedRepository);
-                        } catch (ConcurrentModificationException ex) {
-                            // ignore, this may happen if new nodes
-                            // are added while the viewer is updating
-                        }
-                    }
+                    updateRepositoryView(transformedRepository);
                 }
             }
         });
+    }
+
+    /**
+     * Updates the repository by replacing the root with the given one. Updating is done in UI-thread.
+     *
+     * @param root the new root
+     */
+    public void updateRepositoryViewInUIThread(final Root root) {
+        Display.getDefault().asyncExec(() -> {
+            updateRepositoryView(root);
+        });
+    }
+
+    private void updateRepositoryView(final Root root) {
+        if (m_viewer.getInput() != root) {
+            m_viewer.setInput(root);
+        } else {
+            try {
+                m_viewer.refresh(root);
+            } catch (ConcurrentModificationException ex) {
+                // ignore, this may happen if new nodes
+                // are added while the viewer is updating
+            }
+        }
     }
 
     /**

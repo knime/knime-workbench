@@ -145,7 +145,7 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
             IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
             AbstractRepositoryView view =
                 (AbstractRepositoryView)activePage.findView("org.knime.workbench.repository.view.RepositoryView");
-            view.updateRepositoryView(RepositoryManager.INSTANCE.getRoot());
+            view.updateRepositoryViewInUIThread(RepositoryManager.INSTANCE.getRoot());
         });
     }
 
