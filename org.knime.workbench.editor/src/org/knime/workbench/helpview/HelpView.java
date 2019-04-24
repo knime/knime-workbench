@@ -74,6 +74,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.repository.model.Category;
+import org.knime.workbench.repository.model.ExplorerMetaNodeTemplate;
 import org.knime.workbench.repository.model.MetaNodeTemplate;
 import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.repository.util.DynamicNodeDescriptionCreator;
@@ -233,6 +234,9 @@ public class HelpView extends ViewPart implements ISelectionListener,
                     DynamicNodeDescriptionCreator.instance()
                         .addDescription(manager,
                                 useSingleLine, content);
+                } else if (sel instanceof ExplorerMetaNodeTemplate) {
+                    DynamicNodeDescriptionCreator.instance().addDescription((ExplorerMetaNodeTemplate)sel,
+                        useSingleLine, content);
                 }
             }
             if (useSingleLine) {
