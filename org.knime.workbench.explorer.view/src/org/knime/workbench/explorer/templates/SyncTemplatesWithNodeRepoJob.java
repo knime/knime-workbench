@@ -106,16 +106,7 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
         if (!isWorkflowGroup(m_explorerFileStore)) {
             if (m_explorerFileStore.getParent() == null) {
                 //it's an mountpoint that has no children anymore
-                Root root = RepositoryManager.INSTANCE.getRoot();
-                Category templates = (Category)root.getChildByID(TEMPLATES_CAT_ID, false);
-                if (templates != null) {
-                    Category mountpoint = (Category)templates.getChildByID(m_explorerFileStore.getMountID(), false);
-                    if (mountpoint != null) {
-                        templates.removeChild(mountpoint);
-                    }
-                    if (!templates.hasChildren()) {
-                        root.removeChild(templates);
-                    }
+                if (removeCorrespondingCategory(m_explorerFileStore)) {
                     refreshNodeRepo();
                 }
             }
@@ -126,9 +117,12 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
             //traverse entire sub-tree to find metanode templates and add it to the parent category
             List<AbstractRepositoryObject> children = traverseTree(m_explorerFileStore, monitor);
             if (!children.isEmpty()) {
-                Category cat = getOrCreatePathInNodeRepo(m_explorerFileStore);
+                Category cat = getOrCreatePathInNodeRepo(m_explorerFileStore, true);
                 cat.removeAllChildren();
                 cat.addAllChildren(children);
+            } else {
+                //no children found
+                removeCorrespondingCategory(m_explorerFileStore);
             }
         } catch (CoreException e) {
             throw new RuntimeException(e);
@@ -177,7 +171,7 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
             if (isWorkflowGroup(child)) {
                 List<AbstractRepositoryObject> objs = traverseTree(child, monitor);
                 if (!objs.isEmpty()) {
-                    Category cat = getOrCreateCategory(null, child.getName(), child.getName(), WorkflowGroup);
+                    Category cat = createCategory(child.getName(), child.getName(), WorkflowGroup);
                     cat.addAllChildren(objs);
                     newChildren.add(cat);
                 }
@@ -193,25 +187,38 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
     }
 
     /**
-     * Re-creates (if not already existent) the path in the node repository as represented by the file store.
+     * Get (and optionally create) the path (i.e. node categories) in the node repository as represented by the file
+     * store.
      *
-     * @param fileStore file store to re-create the path from
-     * @return the category that corresponds to the given file store
+     * @param fileStore file store to get (and optionally create) the path from
+     * @param createIfDoesntExist create the path if it doesn't exist
+     * @return the category that corresponds to the given file store or <code>null</code> if it doesn't exist (and
+     *         should not be created)
      */
-    private static Category getOrCreatePathInNodeRepo(final AbstractExplorerFileStore fileStore) {
+    private static Category getOrCreatePathInNodeRepo(final AbstractExplorerFileStore fileStore,
+        final boolean createIfDoesntExist) {
         Root root = RepositoryManager.INSTANCE.getRoot();
 
         Category templates =
-            getOrCreateCategory(root, TEMPLATES_CAT_ID, "Templates", DefaultMetaNodeIcon);
-        Category mountpoint =
-            getOrCreateCategory(templates, fileStore.getMountID(), fileStore.getMountID(), WorkflowGroup);
+            getOrCreateCategory(root, TEMPLATES_CAT_ID, "Templates", DefaultMetaNodeIcon, createIfDoesntExist);
+        if (templates == null) {
+            return null;
+        }
+        Category mountpoint = getOrCreateCategory(templates, fileStore.getMountID(), fileStore.getMountID(),
+            WorkflowGroup, createIfDoesntExist);
+        if (mountpoint == null) {
+            return null;
+        }
 
         //check the rest of the path
         String[] path = fileStore.getFullName().split("/");
         if (path.length > 1) {
-            Category cat = getOrCreateCategory(mountpoint, path[1], path[1], WorkflowGroup);
+            Category cat = getOrCreateCategory(mountpoint, path[1], path[1], WorkflowGroup, createIfDoesntExist);
             for (int i = 2; i < path.length; i++) {
-                cat = getOrCreateCategory(cat, path[i], path[i], WorkflowGroup);
+                if (cat == null) {
+                    return null;
+                }
+                cat = getOrCreateCategory(cat, path[i], path[i], WorkflowGroup, createIfDoesntExist);
             }
             return cat;
         }
@@ -225,21 +232,52 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
      * @param id
      * @param name
      * @param icon
+     * @param createIfDoesntExist
      * @return
      */
-    private static Category getOrCreateCategory(final AbstractContainerObject parent, final String id, final String name,
-        final SharedImages icon) {
+    private static Category getOrCreateCategory(final AbstractContainerObject parent, final String id,
+        final String name, final SharedImages icon, final boolean createIfDoesntExist) {
         Category cat = null;
-        if (parent != null) {
-            cat = (Category)parent.getChildByID(id, false);
-        }
-        if (cat == null) {
+        cat = (Category)parent.getChildByID(id, false);
+        if (cat == null && createIfDoesntExist) {
             cat = new Category(id, name, "TODO");
+            cat = createCategory(id, name, icon);
             cat.setIcon(ImageRepository.getIconImage(icon));
-            if (parent != null) {
-                parent.addChild(cat);
-            }
+            parent.addChild(cat);
         }
         return cat;
+    }
+
+    private static Category createCategory(final String id, final String name, final SharedImages icon) {
+        Category cat = new Category(id, name, "TODO");
+        cat.setIcon(ImageRepository.getIconImage(icon));
+        return cat;
+    }
+
+    /**
+     * Removes the category (and potentially empty parents) that corresponds to the given file store.
+     *
+     * @param fileStore
+     * @return <code>true</code> if something has been removed
+     */
+    private static boolean removeCorrespondingCategory(final AbstractExplorerFileStore fileStore) {
+        Category cat = getOrCreatePathInNodeRepo(fileStore, false);
+        if (cat != null) {
+            cat.removeAllChildren();
+            recursivelyRemoveEmptyCategories(cat);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @param cat the category to start with
+     */
+    private static void recursivelyRemoveEmptyCategories(final Category cat) {
+        if (!cat.hasChildren()) {
+            Category parent = (Category)cat.getParent();
+            parent.removeChild(cat);
+            recursivelyRemoveEmptyCategories(parent);
+        }
     }
 }
