@@ -455,13 +455,13 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
             @Override
             public void refresh(final Object element, final boolean updateLabels) {
-                NodeRepoSynchronizer.syncWithNodeRepo(element);
+                NodeRepoSynchronizer.getInstance().syncWithNodeRepo(element);
                 super.refresh(element, updateLabels);
             }
 
             @Override
             public void refresh(final Object element) {
-                NodeRepoSynchronizer.syncWithNodeRepo(element);
+                NodeRepoSynchronizer.getInstance().syncWithNodeRepo(element);
                 super.refresh(element);
             }
         };
@@ -844,7 +844,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 }
             });
         }
-        NodeRepoSynchronizer.syncWithNodeRepo(ExplorerMountTable.getMountedContent().get("LOCAL"));
+        NodeRepoSynchronizer.getInstance().syncWithNodeRepo(ExplorerMountTable.getMountedContent().get("LOCAL"));
     }
 
     /**

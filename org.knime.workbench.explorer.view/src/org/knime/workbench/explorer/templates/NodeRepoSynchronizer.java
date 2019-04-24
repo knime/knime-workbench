@@ -46,7 +46,7 @@
  */
 package org.knime.workbench.explorer.templates;
 
-import org.eclipse.core.runtime.jobs.Job;
+import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -57,10 +57,23 @@ import org.knime.workbench.explorer.view.ContentObject;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-public class NodeRepoSynchronizer {
+public final class NodeRepoSynchronizer {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(NodeRepoSynchronizer.class);
+
+    private static NodeRepoSynchronizer INSTANCE;
+
+    private SyncTemplatesWithNodeRepoJob m_syncJob = null;
 
     private NodeRepoSynchronizer() {
-        // utility class
+        // singleton
+    }
+
+    public static NodeRepoSynchronizer getInstance() {
+        if (INSTANCE == null) {
+            INSTANCE = new NodeRepoSynchronizer();
+        }
+        return INSTANCE;
     }
 
     /**
@@ -68,17 +81,14 @@ public class NodeRepoSynchronizer {
      * represented by the passed object.
      *
      * @param element represents an element in the explorer tree
-     * @return the <b>already scheduled(!)</b> synchronization job
      */
-    public static Job syncWithNodeRepo(final Object element) {
+    public void syncWithNodeRepo(final Object element) {
         if (element instanceof AbstractContentProvider) {
-            return syncWithNodeRepo((AbstractContentProvider)element);
+            syncWithNodeRepo((AbstractContentProvider)element);
         } else if (element instanceof ContentObject) {
-            return syncWithNodeRepo(((ContentObject)element).getFileStore());
+            syncWithNodeRepo(((ContentObject)element).getFileStore());
         } else if (element instanceof AbstractExplorerFileStore) {
-            return syncWithNodeRepo((AbstractExplorerFileStore)element);
-        } else {
-            return null;
+            syncWithNodeRepo((AbstractExplorerFileStore)element);
         }
     }
 
@@ -86,10 +96,9 @@ public class NodeRepoSynchronizer {
      * Synchronizes metanode templates contained in the given mount point with the node repository.
      *
      * @param mountPoint the mount point to collect the templates from
-     * @return the <b>already scheduled(!)</b> synchronization job
      */
-    public static Job syncWithNodeRepo(final AbstractContentProvider mountPoint) {
-        return syncWithNodeRepo(mountPoint.getFileStore("/"));
+    public void syncWithNodeRepo(final AbstractContentProvider mountPoint) {
+        syncWithNodeRepo(mountPoint.getFileStore("/"));
     }
 
     /**
@@ -97,11 +106,12 @@ public class NodeRepoSynchronizer {
      * represented by the passed file store.
      *
      * @param fileStore represents an element in the explorer tree
-     * @return the <b>already scheduled(!)</b> synchronization job
      */
-    public static Job syncWithNodeRepo(final AbstractExplorerFileStore fileStore) {
-        SyncTemplatesWithNodeRepoJob job = new SyncTemplatesWithNodeRepoJob(fileStore);
-        job.schedule();
-        return job;
+    public void syncWithNodeRepo(final AbstractExplorerFileStore fileStore) {
+        if (m_syncJob == null || (m_syncJob.getResult() != null && m_syncJob.getFileStore() != fileStore)) {
+            m_syncJob = new SyncTemplatesWithNodeRepoJob(fileStore);
+            m_syncJob.schedule();
+            LOGGER.debug("Explorer to Node Repo synchronization job scheduled on '" + fileStore + "'");
+        }
     }
 }

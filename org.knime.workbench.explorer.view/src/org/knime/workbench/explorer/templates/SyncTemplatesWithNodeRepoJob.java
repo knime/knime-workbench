@@ -138,6 +138,13 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
     }
 
     /**
+     * @return the file store this sync job has been scheduled on
+     */
+    AbstractExplorerFileStore getFileStore() {
+        return m_explorerFileStore;
+    }
+
+    /**
      * Triggers a refresh of the node repository.
      */
     private static void refreshNodeRepo() {
