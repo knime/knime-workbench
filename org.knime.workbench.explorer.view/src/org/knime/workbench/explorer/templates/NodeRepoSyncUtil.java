@@ -101,11 +101,11 @@ class NodeRepoSyncUtil {
     /**
      * Traverses the sub-tree of a workflow group in order to find metanode templates.
      *
-     * @param fs
+     * @param fs the explorer item to start from
      * @param the path to be included, all others will be ignored
-     * @param monitor
+     * @param monitor for cancellation
      * @return the found direct children of the provided fs (yet, as node repo object)
-     * @throws CoreException
+     * @throws CoreException thrown if children of the filestore couldn't be fetched
      */
     static List<AbstractRepositoryObject> traverseTree(final AbstractExplorerFileStore fs,
         final List<String> includedPaths, final IProgressMonitor monitor) throws CoreException {
@@ -141,12 +141,26 @@ class NodeRepoSyncUtil {
         return newChildren;
     }
 
+    /**
+     * Whether the path (represented by the file store) is a parent-path of at least one 'included path'.
+     *
+     * @param fileStore represents the path to check
+     * @param includedPaths a list of paths to check against
+     * @return <code>true</code> if is parent
+     */
     static boolean isParentOfAnyIncludedPath(final AbstractExplorerFileStore fileStore,
         final List<String> includedPaths) {
         String path = fileStore.getFullName();
         return includedPaths.stream().anyMatch(inc -> inc.startsWith(path));
     }
 
+    /**
+     * Whether a path (represented by the file store) is a sub-path of at least one 'included path'.
+     *
+     * @param fileStore represents the path to check
+     * @param includedPaths a list of paths to check against
+     * @return <code>true</code> if is sub-path
+     */
     static boolean isSubPathOfAnyIncludedPath(final AbstractExplorerFileStore fileStore,
         final List<String> includedPaths) {
         String path = fileStore.getFullName();
@@ -195,12 +209,16 @@ class NodeRepoSyncUtil {
     /**
      * Creates a new category in the node repository (if it doesn't exist, yet).
      *
-     * @param parent
-     * @param id
-     * @param name
-     * @param icon
-     * @param createIfDoesntExist
-     * @return
+     * @param parent the parent to look for the category, or, if it doesn't exist, the parent of the to be created
+     *            category (i.e. the returned category is always a direct child of parent)
+     * @param id the id of the category to look for (or of the new category if it doesn't exist)
+     * @param name the name of the new category (if newly created)
+     * @param icon the icon of the new category (if newly created)
+     * @param createIfDoesntExist if <code>true</code> and the category for the given id doesn't exist in
+     *            <code>parent</code>, a new category will be created. If <code>false</code>, <code>null</code> will be
+     *            returned
+     * @return the found or newly created category, or <code>null</code> if category wasn't found and
+     *         <code>createIfDoesntExist</code> is <code>false</code>
      */
     static Category getOrCreateCategory(final AbstractContainerObject parent, final String id,
         final String name, final SharedImages icon, final boolean createIfDoesntExist) {
@@ -215,8 +233,16 @@ class NodeRepoSyncUtil {
         return cat;
     }
 
+    /**
+     * Creates a new category and returns it.
+     *
+     * @param id id of the new cat
+     * @param name name of the new cat
+     * @param icon icon of the new cat
+     * @return the new cat
+     */
     static Category createCategory(final String id, final String name, final SharedImages icon) {
-        Category cat = new Category(id, name, "TODO");
+        Category cat = new Category(id, name, "Category doesn't belong to a KNIME extension");
         cat.setIcon(ImageRepository.getIconImage(icon));
         return cat;
     }
@@ -232,7 +258,7 @@ class NodeRepoSyncUtil {
     /**
      * Removes the category (and potentially empty parents) that corresponds to the given file store.
      *
-     * @param fileStore
+     * @param fileStore the filestore to start at (and then recursively going upwards in the path hierarchy)
      * @return <code>true</code> if something has been removed
      */
     static boolean removeCorrespondingCategory(final AbstractExplorerFileStore fileStore) {
@@ -246,6 +272,8 @@ class NodeRepoSyncUtil {
     }
 
     /**
+     * Recursively removes empty categories from their parents.
+     *
      * @param cat the category to start with
      */
     static void recursivelyRemoveEmptyCategories(final Category cat) {

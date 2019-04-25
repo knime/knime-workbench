@@ -61,7 +61,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 
 /**
- * A field editor to edit directory paths.
+ * A field editor to select workflow groups in all connected mount points.
  */
 public class WorkflowGroupListEditor extends ListEditor {
 

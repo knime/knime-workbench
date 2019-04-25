@@ -72,7 +72,6 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.workflow.FileNativeNodeContainerPersistor;
 import org.knime.workbench.repository.model.AbstractContainerObject;
-import org.knime.workbench.repository.model.AbstractMetaNodeTemplate;
 import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.DynamicNodeTemplate;
 import org.knime.workbench.repository.model.IContainerObject;
@@ -122,7 +121,7 @@ public final class RepositoryManager {
          * @param root the repository root
          * @param metanode the new category
          */
-        public void newMetanode(Root root, AbstractMetaNodeTemplate metanode);
+        public void newMetanode(Root root, MetaNodeTemplate metanode);
     }
 
     private static final NodeLogger LOGGER = NodeLogger

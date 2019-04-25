@@ -146,6 +146,7 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
             // this one sets the workflow manager in the editor
             loadRunnable = new LoadMetaNodeTemplateRunnable(getHostWFM(), m_templateKNIMEFolder, info);
             if (m_templateKNIMEFolder instanceof RemoteExplorerFileStore) {
+            	//workflow need to be downloaded first -> show budy cursor
                 ps.busyCursorWhile(loadRunnable);
             } else {
                 assert m_templateKNIMEFolder instanceof LocalExplorerFileStore;

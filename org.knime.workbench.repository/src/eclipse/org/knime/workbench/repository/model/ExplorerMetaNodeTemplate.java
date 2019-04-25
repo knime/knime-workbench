@@ -45,7 +45,7 @@
 package org.knime.workbench.repository.model;
 
 /**
- * A metanode templates that references a metanode in the explorer and only loads the respective metanode on demand.
+ * A metanode templates that references a metanode in the explorer.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
@@ -59,7 +59,6 @@ public class ExplorerMetaNodeTemplate extends AbstractMetaNodeTemplate {
      * @param id the (unique) id of the node template
      * @param name the name
      * @param categoryPath the absolute path of the category in which this template should be placed
-     * @param contributingPlugin the contributing plug-in's ID
      * @param metaNodeObject an object that represents or references the metanode
      */
     public ExplorerMetaNodeTemplate(final String id, final String name, final String categoryPath,

@@ -103,7 +103,6 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
     /**
      * {@inheritDoc}
      */
-    @SuppressWarnings("null")
     @Override
     public void run(final IProgressMonitor pm) {
         try {
