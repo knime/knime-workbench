@@ -54,7 +54,9 @@ import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.refreshNod
 import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.removeCorrespondingCategory;
 import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.traverseTree;
 
+import java.lang.ref.WeakReference;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -74,17 +76,18 @@ import org.knime.workbench.repository.model.Category;
  */
 class NodeRepoSyncJob extends ExplorerJob {
 
-
+    private WeakReference<AbstractExplorerFileStore> m_weakReferencedFileStore;
     private AbstractExplorerFileStore m_explorerFileStore;
     private List<String> m_includedPaths;
 
     /**
-     * @param explorerFileStore
-     * @param includedPaths
+     * @param explorerFileStore the starting point to start scanning for metanode templates
+     * @param includedPaths only paths given in that list are included, all others are ignored
      */
     public NodeRepoSyncJob(final AbstractExplorerFileStore explorerFileStore, final List<String> includedPaths) {
         super("Collect metanode templates from " + explorerFileStore.getMountID());
         m_explorerFileStore = explorerFileStore;
+        m_weakReferencedFileStore = new WeakReference<>(explorerFileStore);
         m_includedPaths = includedPaths;
     }
 
@@ -115,16 +118,20 @@ class NodeRepoSyncJob extends ExplorerJob {
                 removeCorrespondingCategory(m_explorerFileStore);
             }
         } catch (CoreException e) {
+            //should not happen
             throw new RuntimeException(e);
+        } finally {
+            m_explorerFileStore = null;
         }
         refreshNodeRepo();
         return Status.OK_STATUS;
     }
 
     /**
-     * @return the file store this sync job has been scheduled on
+     * @return the file store this sync job has been scheduled on or an empty optional if it the reference has been
+     *         cleared
      */
-    AbstractExplorerFileStore getFileStore() {
-        return m_explorerFileStore;
+    Optional<AbstractExplorerFileStore> getFileStore() {
+        return Optional.ofNullable(m_weakReferencedFileStore.get());
     }
 }

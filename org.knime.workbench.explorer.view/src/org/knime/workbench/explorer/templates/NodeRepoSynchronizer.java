@@ -56,6 +56,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.jface.preference.IPreferenceStore;
@@ -198,8 +199,18 @@ public final class NodeRepoSynchronizer {
 
     private boolean isSyncJobStillRunningOrFileStoreAlreadyProcessed(final AbstractExplorerFileStore fileStore) {
         String id = fileStore.getMountID();
-        return m_syncJobs.get(id) != null
-            && (m_syncJobs.get(id).getResult() == null || m_syncJobs.get(id).getFileStore() == fileStore);
+        if (m_syncJobs.get(id) != null) {
+            if (m_syncJobs.get(id).getResult() == null) {
+                //job still running
+                return true;
+            }
+
+            //check whether file store has been already processed, recently
+            Optional<AbstractExplorerFileStore> jobFileStore = m_syncJobs.get(id).getFileStore();
+            return jobFileStore.map(fs -> fs == fileStore).orElse(false);
+        } else {
+            return false;
+        }
     }
 
     private static boolean isConfiguredToBeIncluded(final AbstractExplorerFileStore fileStore,
