@@ -46,10 +46,26 @@
  */
 package org.knime.workbench.explorer.templates;
 
+import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.isParentOfAnyIncludedPath;
+import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.refreshNodeRepo;
+import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.removeCorrespondingCategory;
+import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.removeTemplateCategory;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
  * Bridge between the explorer's metanodes (i.e. templates) and the node repository. E.g. collects and populates
@@ -63,12 +79,63 @@ public final class NodeRepoSynchronizer {
 
     private static NodeRepoSynchronizer INSTANCE;
 
-    private SyncTemplatesWithNodeRepoJob m_syncJob = null;
+    private Map<String, NodeRepoSyncJob> m_syncJobs = new HashMap<>();
+
+    private Map<String, List<String>> m_includedPathsPerMointPoint = new HashMap<>();
+
+    private boolean m_isActivated;
 
     private NodeRepoSynchronizer() {
-        // singleton
+        loadFromPreferences();
+
+        ExplorerActivator.getDefault().getPreferenceStore().addPropertyChangeListener(e -> {
+            if (PreferenceConstants.P_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO.equals(e.getProperty())
+                || PreferenceConstants.P_EXPLORER_TEMPLATE_WORKFLOW_GROUPS_TO_NODE_REPO.equals(e.getProperty())) {
+                Set<String> oldMountIDs = new HashSet<String>(m_includedPathsPerMointPoint.keySet());
+                loadFromPreferences();
+                if (m_isActivated) {
+                    //remove removed mount points from node repo, too
+                    oldMountIDs.removeAll(m_includedPathsPerMointPoint.keySet());
+                    oldMountIDs.stream().forEach(id -> {
+                        removeCorrespondingCategory(ExplorerMountTable.getMountedContent().get(id).getFileStore("/"));
+                    });
+
+                    if (m_includedPathsPerMointPoint.size() > 0) {
+                        //update all remaining and added mount points in node repo
+                        m_includedPathsPerMointPoint.keySet().stream().forEach(id -> {
+                            AbstractContentProvider mountPointContent = ExplorerMountTable.getMountedContent().get(id);
+                            m_syncJobs.clear();
+                            syncWithNodeRepo(mountPointContent);
+                        });
+                    } else {
+                        refreshNodeRepo();
+                    }
+                } else {
+                    removeTemplateCategory();
+                    refreshNodeRepo();
+                }
+            }
+        });
     }
 
+    private void loadFromPreferences() {
+        IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
+        m_isActivated = prefStore.getBoolean(PreferenceConstants.P_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO);
+        String[] includedPaths =
+            prefStore.getString(PreferenceConstants.P_EXPLORER_TEMPLATE_WORKFLOW_GROUPS_TO_NODE_REPO).split(",");
+        m_includedPathsPerMointPoint.clear();
+        for(String p : includedPaths) {
+            if (p.contains(":")) {
+                String[] split = p.split(":");
+                assert split.length == 2;
+                m_includedPathsPerMointPoint.computeIfAbsent(split[0], k -> new ArrayList<String>()).add(split[1]);
+            }
+        }
+    }
+
+    /**
+     * @return the singleton instance
+     */
     public static NodeRepoSynchronizer getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new NodeRepoSynchronizer();
@@ -83,6 +150,9 @@ public final class NodeRepoSynchronizer {
      * @param element represents an element in the explorer tree
      */
     public void syncWithNodeRepo(final Object element) {
+        if (!m_isActivated) {
+            return;
+        }
         if (element instanceof AbstractContentProvider) {
             syncWithNodeRepo((AbstractContentProvider)element);
         } else if (element instanceof ContentObject) {
@@ -98,6 +168,9 @@ public final class NodeRepoSynchronizer {
      * @param mountPoint the mount point to collect the templates from
      */
     public void syncWithNodeRepo(final AbstractContentProvider mountPoint) {
+        if (!m_isActivated) {
+            return;
+        }
         syncWithNodeRepo(mountPoint.getFileStore("/"));
     }
 
@@ -108,10 +181,32 @@ public final class NodeRepoSynchronizer {
      * @param fileStore represents an element in the explorer tree
      */
     public void syncWithNodeRepo(final AbstractExplorerFileStore fileStore) {
-        if (m_syncJob == null || (m_syncJob.getResult() != null && m_syncJob.getFileStore() != fileStore)) {
-            m_syncJob = new SyncTemplatesWithNodeRepoJob(fileStore);
-            m_syncJob.schedule();
+        if (!m_isActivated) {
+            return;
+        }
+
+        List<String> includedPaths = m_includedPathsPerMointPoint.get(fileStore.getMountID());
+        if (!isSyncJobStillRunningOrFileStoreAlreadyProcessed(fileStore)
+            && isConfiguredToBeIncluded(fileStore, includedPaths)) {
+            //TODO pass included paths to job
+            NodeRepoSyncJob job = new NodeRepoSyncJob(fileStore, includedPaths);
+            m_syncJobs.put(fileStore.getMountID(), job);
+            job.schedule();
             LOGGER.debug("Explorer to Node Repo synchronization job scheduled on '" + fileStore + "'");
         }
+    }
+
+    private boolean isSyncJobStillRunningOrFileStoreAlreadyProcessed(final AbstractExplorerFileStore fileStore) {
+        String id = fileStore.getMountID();
+        return m_syncJobs.get(id) != null
+            && (m_syncJobs.get(id).getResult() == null || m_syncJobs.get(id).getFileStore() == fileStore);
+    }
+
+    private static boolean isConfiguredToBeIncluded(final AbstractExplorerFileStore fileStore,
+        final List<String> includedPaths) {
+        if (includedPaths == null || includedPaths.isEmpty()) {
+            return false;
+        }
+        return isParentOfAnyIncludedPath(fileStore, includedPaths);
     }
 }

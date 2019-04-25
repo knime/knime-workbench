@@ -43,8 +43,6 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * History
- *   Apr 11, 2019 (hornm): created
  */
 package org.knime.workbench.explorer.templates;
 
@@ -60,88 +58,38 @@ import java.util.List;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.AbstractContainerObject;
 import org.knime.workbench.repository.model.AbstractRepositoryObject;
 import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.ExplorerMetaNodeTemplate;
+import org.knime.workbench.repository.model.IContainerObject;
 import org.knime.workbench.repository.model.Root;
 import org.knime.workbench.repository.view.AbstractRepositoryView;
 
 /**
- * Collects the metanode templates recursively contained in a workflow group (represented by a
- * {@link AbstractExplorerFileStore}) and add/removes them to/from the node repository. Or put in different words: it
- * synchronizes the given workflow group with the respective category in the node repository.
+ * Utility methods to synchronize explorer templates with the node repository.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
+class NodeRepoSyncUtil {
 
     private static final String TEMPLATES_CAT_ID = "metanode_templates";
 
-    private AbstractExplorerFileStore m_explorerFileStore;
-
-    /**
-     * @param explorerFileStore
-     */
-    public SyncTemplatesWithNodeRepoJob(final AbstractExplorerFileStore explorerFileStore) {
-        super("Collect metanode templates from " + explorerFileStore.getMountID());
-        m_explorerFileStore = explorerFileStore;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected IStatus run(final IProgressMonitor monitor) {
-        if (!isWorkflowGroup(m_explorerFileStore)) {
-            if (m_explorerFileStore.getParent() == null) {
-                //it's an mountpoint that has no children anymore
-                if (removeCorrespondingCategory(m_explorerFileStore)) {
-                    refreshNodeRepo();
-                }
-            }
-            return Status.OK_STATUS;
-        }
-
-        try {
-            //traverse entire sub-tree to find metanode templates and add it to the parent category
-            List<AbstractRepositoryObject> children = traverseTree(m_explorerFileStore, monitor);
-            if (!children.isEmpty()) {
-                Category cat = getOrCreatePathInNodeRepo(m_explorerFileStore, true);
-                cat.removeAllChildren();
-                cat.addAllChildren(children);
-            } else {
-                //no children found
-                removeCorrespondingCategory(m_explorerFileStore);
-            }
-        } catch (CoreException e) {
-            throw new RuntimeException(e);
-        }
-        refreshNodeRepo();
-        return Status.OK_STATUS;
-    }
-
-    /**
-     * @return the file store this sync job has been scheduled on
-     */
-    AbstractExplorerFileStore getFileStore() {
-        return m_explorerFileStore;
+    private NodeRepoSyncUtil() {
+        // utility class
     }
 
     /**
      * Triggers a refresh of the node repository.
      */
-    private static void refreshNodeRepo() {
+    static void refreshNodeRepo() {
         Display.getDefault().syncExec(() -> {
             IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
             AbstractRepositoryView view =
@@ -154,28 +102,35 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
      * Traverses the sub-tree of a workflow group in order to find metanode templates.
      *
      * @param fs
+     * @param the path to be included, all others will be ignored
      * @param monitor
      * @return the found direct children of the provided fs (yet, as node repo object)
      * @throws CoreException
      */
-    private static List<AbstractRepositoryObject> traverseTree(final AbstractExplorerFileStore fs,
-        final IProgressMonitor monitor) throws CoreException {
+    static List<AbstractRepositoryObject> traverseTree(final AbstractExplorerFileStore fs,
+        final List<String> includedPaths, final IProgressMonitor monitor) throws CoreException {
         if (monitor.isCanceled()) {
             return Collections.emptyList();
         }
         assert isWorkflowGroup(fs);
+
         String[] childNames = fs.childNames(EFS.NONE, monitor);
         List<AbstractRepositoryObject> newChildren = new ArrayList<>(childNames.length);
         for (String name : childNames) {
             AbstractExplorerFileStore child = fs.getChild(name);
+            boolean isParent = isParentOfAnyIncludedPath(child, includedPaths);
+            boolean isSubPath = isSubPathOfAnyIncludedPath(child, includedPaths);
+            if (!isParent && !isSubPath) {
+                continue;
+            }
             if (isWorkflowGroup(child)) {
-                List<AbstractRepositoryObject> objs = traverseTree(child, monitor);
+                List<AbstractRepositoryObject> objs = traverseTree(child, includedPaths, monitor);
                 if (!objs.isEmpty()) {
                     Category cat = createCategory(child.getName(), child.getName(), WorkflowGroup);
                     cat.addAllChildren(objs);
                     newChildren.add(cat);
                 }
-            } else if (isWorkflowTemplate(child)) {
+            } else if (isSubPath && isWorkflowTemplate(child)) {
                 //TODO filter wrapped metanodes only
                 ExplorerMetaNodeTemplate metanodeTemplate = new ExplorerMetaNodeTemplate(name, name, "", "TODO", child);
                 metanodeTemplate.setIcon(ImageRepository.getIconImage(SharedImages.MetanodeRepository));
@@ -184,6 +139,18 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
             }
         }
         return newChildren;
+    }
+
+    static boolean isParentOfAnyIncludedPath(final AbstractExplorerFileStore fileStore,
+        final List<String> includedPaths) {
+        String path = fileStore.getFullName();
+        return includedPaths.stream().anyMatch(inc -> inc.startsWith(path));
+    }
+
+    private static boolean isSubPathOfAnyIncludedPath(final AbstractExplorerFileStore fileStore,
+        final List<String> includedPaths) {
+        String path = fileStore.getFullName();
+        return includedPaths.stream().anyMatch(inc -> path.startsWith(inc));
     }
 
     /**
@@ -195,7 +162,7 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
      * @return the category that corresponds to the given file store or <code>null</code> if it doesn't exist (and
      *         should not be created)
      */
-    private static Category getOrCreatePathInNodeRepo(final AbstractExplorerFileStore fileStore,
+    static Category getOrCreatePathInNodeRepo(final AbstractExplorerFileStore fileStore,
         final boolean createIfDoesntExist) {
         Root root = RepositoryManager.INSTANCE.getRoot();
 
@@ -235,7 +202,7 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
      * @param createIfDoesntExist
      * @return
      */
-    private static Category getOrCreateCategory(final AbstractContainerObject parent, final String id,
+    static Category getOrCreateCategory(final AbstractContainerObject parent, final String id,
         final String name, final SharedImages icon, final boolean createIfDoesntExist) {
         Category cat = null;
         cat = (Category)parent.getChildByID(id, false);
@@ -248,10 +215,18 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
         return cat;
     }
 
-    private static Category createCategory(final String id, final String name, final SharedImages icon) {
+    static Category createCategory(final String id, final String name, final SharedImages icon) {
         Category cat = new Category(id, name, "TODO");
         cat.setIcon(ImageRepository.getIconImage(icon));
         return cat;
+    }
+
+    /**
+     * Removes the entire template category from the node repository.
+     */
+    static void removeTemplateCategory() {
+        Root root = RepositoryManager.INSTANCE.getRoot();
+        root.removeChild((AbstractRepositoryObject)root.getChildByID(TEMPLATES_CAT_ID, false));
     }
 
     /**
@@ -260,7 +235,7 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
      * @param fileStore
      * @return <code>true</code> if something has been removed
      */
-    private static boolean removeCorrespondingCategory(final AbstractExplorerFileStore fileStore) {
+    static boolean removeCorrespondingCategory(final AbstractExplorerFileStore fileStore) {
         Category cat = getOrCreatePathInNodeRepo(fileStore, false);
         if (cat != null) {
             cat.removeAllChildren();
@@ -273,11 +248,13 @@ class SyncTemplatesWithNodeRepoJob extends ExplorerJob {
     /**
      * @param cat the category to start with
      */
-    private static void recursivelyRemoveEmptyCategories(final Category cat) {
+    static void recursivelyRemoveEmptyCategories(final Category cat) {
         if (!cat.hasChildren()) {
-            Category parent = (Category)cat.getParent();
+            IContainerObject parent = cat.getParent();
             parent.removeChild(cat);
-            recursivelyRemoveEmptyCategories(parent);
+            if (parent instanceof Category) {
+                recursivelyRemoveEmptyCategories((Category)parent);
+            }
         }
     }
 }

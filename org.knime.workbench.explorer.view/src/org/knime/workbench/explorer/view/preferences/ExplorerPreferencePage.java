@@ -47,8 +47,6 @@ package org.knime.workbench.explorer.view.preferences;
 import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
-import org.eclipse.jface.dialogs.MessageDialogWithToggle;
-import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
@@ -62,7 +60,6 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
     public static final String ID
             = "org.knime.workbench.explorer.view.explorer";
     private MountPointTableEditor m_mountEditor;
-    private ComboFieldEditor m_linkTemplateEditor;
 
     /**
     *
@@ -88,15 +85,6 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
         m_mountEditor = new MountPointTableEditor(getFieldEditorParent());
         addField(m_mountEditor);
 
-        m_linkTemplateEditor = new ComboFieldEditor(
-                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
-                "Link metanode when defining new template",
-                new String[][] {
-                        {"Never", MessageDialogWithToggle.NEVER},
-                        {"Prompt", MessageDialogWithToggle.PROMPT},
-                }, getFieldEditorParent());
-        addField(m_linkTemplateEditor);
-
         DefaultScope.INSTANCE.getNode(FrameworkUtil.getBundle(ExplorerActivator.class).getSymbolicName())
             .addPreferenceChangeListener(this);
     }
@@ -114,8 +102,6 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
 
         if (PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML.equals(event.getKey())) {
             m_mountEditor.load();
-        } else if (PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE.equals(event.getKey())) {
-            m_linkTemplateEditor.load();
         }
     }
 

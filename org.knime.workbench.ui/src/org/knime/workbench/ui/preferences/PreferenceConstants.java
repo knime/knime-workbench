@@ -121,6 +121,15 @@ public interface PreferenceConstants {
     public static final String P_EXPLORER_LINK_ON_NEW_TEMPLATE =
         "knime.explorer.link_on_new_template";
 
+    /** Pref constant whether to add metanode templates to the node repository. */
+    public static final String P_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO =
+        "knime.explorer.add_templates_to_node_repo";
+
+    /** Pref constant to define which workflow groups contribute their templates
+     * to the node repository. */
+    public static final String P_EXPLORER_TEMPLATE_WORKFLOW_GROUPS_TO_NODE_REPO =
+        "knime.explorer.template_workflow_groups_to_node_repo";
+
     /** Pref constant whether to show grid in workflow editor (boolean). */
     public static final String P_GRID_SHOW = "knime.showgrid";
 
