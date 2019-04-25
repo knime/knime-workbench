@@ -147,7 +147,7 @@ class NodeRepoSyncUtil {
         return includedPaths.stream().anyMatch(inc -> inc.startsWith(path));
     }
 
-    private static boolean isSubPathOfAnyIncludedPath(final AbstractExplorerFileStore fileStore,
+    static boolean isSubPathOfAnyIncludedPath(final AbstractExplorerFileStore fileStore,
         final List<String> includedPaths) {
         String path = fileStore.getFullName();
         return includedPaths.stream().anyMatch(inc -> path.startsWith(inc));

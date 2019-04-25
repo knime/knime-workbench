@@ -47,6 +47,7 @@
 package org.knime.workbench.explorer.templates;
 
 import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.isParentOfAnyIncludedPath;
+import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.isSubPathOfAnyIncludedPath;
 import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.refreshNodeRepo;
 import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.removeCorrespondingCategory;
 import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.removeTemplateCategory;
@@ -218,6 +219,7 @@ public final class NodeRepoSynchronizer {
         if (includedPaths == null || includedPaths.isEmpty()) {
             return false;
         }
-        return isParentOfAnyIncludedPath(fileStore, includedPaths);
+        return isParentOfAnyIncludedPath(fileStore, includedPaths)
+            || isSubPathOfAnyIncludedPath(fileStore, includedPaths);
     }
 }
