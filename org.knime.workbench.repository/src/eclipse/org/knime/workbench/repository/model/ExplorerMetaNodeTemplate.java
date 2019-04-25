@@ -63,8 +63,8 @@ public class ExplorerMetaNodeTemplate extends AbstractMetaNodeTemplate {
      * @param metaNodeObject an object that represents or references the metanode
      */
     public ExplorerMetaNodeTemplate(final String id, final String name, final String categoryPath,
-        final String contributingPlugin, final Object metaNodeObject) {
-        super(id, name, categoryPath, contributingPlugin);
+        final Object metaNodeObject) {
+        super(id, name, categoryPath, "Metanode Template that is not part of any KNIME extension");
         m_metaNodeObject = metaNodeObject;
     }
 

@@ -132,7 +132,7 @@ class NodeRepoSyncUtil {
                 }
             } else if (isSubPath && isWorkflowTemplate(child)) {
                 //TODO filter wrapped metanodes only
-                ExplorerMetaNodeTemplate metanodeTemplate = new ExplorerMetaNodeTemplate(name, name, "", "TODO", child);
+                ExplorerMetaNodeTemplate metanodeTemplate = new ExplorerMetaNodeTemplate(name, name, "", child);
                 metanodeTemplate.setIcon(ImageRepository.getIconImage(SharedImages.MetanodeRepository));
                 newChildren.add(metanodeTemplate);
                 monitor.worked(1);
