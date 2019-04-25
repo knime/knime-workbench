@@ -213,7 +213,7 @@ public class Nodalizer implements IApplication {
             if (bundles == null) {
                 return IApplication.EXIT_OK;
             }
-            extensions = parseExtensions(updateSite, extDir, agent);
+            extensions = parseExtensions(updateSite, agent);
             if (extensions == null) {
                 return IApplication.EXIT_OK;
             }
@@ -230,6 +230,24 @@ public class Nodalizer implements IApplication {
         parseNodesInRoot(root, null, nodeDir, extensions, bundles);
         if (factoryList != null) {
             parseDeprecatedNodeList(factoryList, nodeDir, extensions, bundles);
+        }
+
+        // Write extensions
+        if (extensions != null) {
+            for (final ExtensionInfo ext : extensions.values()) {
+                if (ext.hasNodes() || !ext.getCategoryPath().isEmpty()) {
+                    try {
+                        final String fileName = ext.getSymbolicName().replaceAll("\\.", "_");
+                        writeFile(extDir, fileName, ext);
+                    } catch (final JsonProcessingException | FileNotFoundException ex) {
+                        System.out.println("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName());
+                        System.out.println(ex.getClass() + ": " + ex.getMessage());
+                    }
+                } else {
+                    System.out.println("Extension " + ext.getName() + " " + ext.getSymbolicName()
+                        + " does not exist at any category path and has no nodes. Skipping ...");
+                }
+            }
         }
 
         System.out.println("Node (and Extension) JSON generation complete!");
@@ -343,6 +361,7 @@ public class Nodalizer implements IApplication {
             // TODO: Check symbolic name and version once we support reading multiple extension versions
             if (extensions.containsKey(nodeAndBundleInfo.getFeatureSymbolicName().orElse(null))) {
                 final ExtensionInfo e = extensions.get(nodeAndBundleInfo.getFeatureSymbolicName().get());
+                e.setHasNodes(true);
                 updateSite = e.getUpdateSite();
                 extensionId = e.getId();
             } else if (!nodeAndBundleInfo.getFeatureSymbolicName().isPresent()
@@ -570,8 +589,7 @@ public class Nodalizer implements IApplication {
 
     // -- Parse Extension --
 
-    private Map<String, ExtensionInfo> parseExtensions(final URI updateSite, final File outputDir,
-        final IProvisioningAgent agent) {
+    private Map<String, ExtensionInfo> parseExtensions(final URI updateSite, final IProvisioningAgent agent) {
         final IMetadataRepositoryManager metadataManager =
             (IMetadataRepositoryManager)agent.getService(IMetadataRepositoryManager.SERVICE_NAME);
         final boolean uninstallMetadata = !metadataManager.contains(updateSite);
@@ -592,11 +610,12 @@ public class Nodalizer implements IApplication {
             // TODO: Mapping symbolic name to extension may not be sufficient once we support reading multiple versions
             final Map<String, ExtensionInfo> extensions = new HashMap<>();
             for (final IInstallableUnit iu : ius) {
+                // Manual exclusions. Keep this despite node/category path check, because some exclusions (i.e. sources)
+                // have a category path but we still don't want to read them
                 if (!iu.getId().startsWith("org.eclipse") && !iu.getId().contains(".source.feature.")
                     && !iu.getId().startsWith("org.knime.binary.jre")
                     && !iu.getId().equals("org.knime.targetPlatform.feature.group")
                     && !iu.getId().endsWith(".externals.feature.group")
-                    && !iu.getId().equals("org.knime.features.explorer.view.feature.group")
                     && !QueryUtil.isProduct(iu)) {
                     if (iu.getLicenses().size() > 1) {
                         System.out.println(iu.getId() + " has multiple licenses. Skipping ...");
@@ -644,15 +663,7 @@ public class Nodalizer implements IApplication {
                     final List<String> categories = new ArrayList<>();
                     getCategoryPath(mr, iu, categories);
                     ext.setCategoryPath(categories);
-
-                    try {
-                        final String fileName = ext.getSymbolicName().replaceAll("\\.", "_");
-                        writeFile(outputDir, fileName, ext);
-                        extensions.put(ext.getSymbolicName(), ext);
-                    } catch (final JsonProcessingException | FileNotFoundException ex) {
-                        System.out.println("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName());
-                        System.out.println(ex.getClass() + ": " + ex.getMessage());
-                    }
+                    extensions.put(ext.getSymbolicName(), ext);
                 }
             }
             return extensions;

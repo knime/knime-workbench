@@ -80,6 +80,9 @@ public class ExtensionInfo {
     private String m_copyright;
     private List<String> m_categoryPath;
 
+    @JsonIgnore
+    private boolean m_hasNodes;
+
     /**
      * Returns the extension's id.
      *
@@ -294,6 +297,16 @@ public class ExtensionInfo {
     @JsonProperty(value = "version")
     String getVersionString() {
         return m_version == null ? null : m_version.toString();
+    }
+
+    @JsonIgnore
+    boolean hasNodes() {
+        return m_hasNodes;
+    }
+
+    @JsonIgnore
+    void setHasNodes(final boolean hasNodes) {
+        m_hasNodes = hasNodes;
     }
 
     /**
