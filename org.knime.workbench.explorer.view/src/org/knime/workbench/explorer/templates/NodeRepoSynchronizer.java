@@ -186,7 +186,7 @@ public final class NodeRepoSynchronizer {
      * @return the scheduled job or an empty optional if job hasn't been scheduled
      */
     public Optional<Job> syncWithNodeRepo(final AbstractContentProvider mountPoint) {
-        if (!m_isActivated) {
+        if (!m_isActivated || mountPoint == null) {
             return Optional.empty();
         }
         return syncWithNodeRepo(mountPoint.getFileStore("/"));
@@ -200,7 +200,7 @@ public final class NodeRepoSynchronizer {
      * @return the scheduled job or an empty optional if job hasn't been scheduled
      */
     public Optional<Job> syncWithNodeRepo(final AbstractExplorerFileStore fileStore) {
-        if (!m_isActivated) {
+        if (!m_isActivated || fileStore == null) {
             return Optional.empty();
         }
 

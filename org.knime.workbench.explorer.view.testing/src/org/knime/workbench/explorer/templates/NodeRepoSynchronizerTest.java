@@ -71,6 +71,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.AbstractContainerObject;
 import org.knime.workbench.repository.model.Category;
@@ -201,6 +202,21 @@ public class NodeRepoSynchronizerTest {
         job.get().join();
         noJob = NodeRepoSynchronizer.getInstance().syncWithNodeRepo(wg1);
         assertNull("synchronization job not expected to be scheduled", noJob.orElse(null));
+    }
+
+    /**
+     * Test what happens when <code>null</code> is passed.
+     */
+    @Test
+    public void testSyncOnNullObjects() {
+        Optional<Job> job = NodeRepoSynchronizer.getInstance().syncWithNodeRepo((AbstractExplorerFileStore)null);
+        assertNull("synchronization job not expected to be scheduled", job.orElse(null));
+
+        job = NodeRepoSynchronizer.getInstance().syncWithNodeRepo((AbstractContentProvider)null);
+        assertNull("synchronization job not expected to be scheduled", job.orElse(null));
+
+        job = NodeRepoSynchronizer.getInstance().syncWithNodeRepo((Object)null);
+        assertNull("synchronization job not expected to be scheduled", job.orElse(null));
     }
 
     private void checkPathInNodeRepo(final String path, final boolean checkExistence) {
