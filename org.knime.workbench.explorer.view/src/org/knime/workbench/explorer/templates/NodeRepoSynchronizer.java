@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -120,6 +121,17 @@ public final class NodeRepoSynchronizer {
         });
     }
 
+    /**
+     * For unit-testing only!!!
+     *
+     * @param isActivated
+     * @param includedPathsPerMountPoint
+     */
+    public void setPreferences(final boolean isActivated, final Map<String, List<String>> includedPathsPerMountPoint) {
+        m_isActivated = isActivated;
+        m_includedPathsPerMointPoint = includedPathsPerMountPoint;
+    }
+
     private void loadFromPreferences() {
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
         m_isActivated = prefStore.getBoolean(PreferenceConstants.P_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO);
@@ -150,30 +162,34 @@ public final class NodeRepoSynchronizer {
      * represented by the passed object.
      *
      * @param element represents an element in the explorer tree
+     * @return the scheduled job or an empty optional if job hasn't been scheduled (or the passed object is not of a
+     *         known type)
      */
-    public void syncWithNodeRepo(final Object element) {
+    public Optional<Job> syncWithNodeRepo(final Object element) {
         if (!m_isActivated) {
-            return;
+            return Optional.empty();
         }
         if (element instanceof AbstractContentProvider) {
-            syncWithNodeRepo((AbstractContentProvider)element);
+            return syncWithNodeRepo((AbstractContentProvider)element);
         } else if (element instanceof ContentObject) {
-            syncWithNodeRepo(((ContentObject)element).getFileStore());
+            return syncWithNodeRepo(((ContentObject)element).getFileStore());
         } else if (element instanceof AbstractExplorerFileStore) {
-            syncWithNodeRepo((AbstractExplorerFileStore)element);
+            return syncWithNodeRepo((AbstractExplorerFileStore)element);
         }
+        return Optional.empty();
     }
 
     /**
      * Synchronizes metanode templates contained in the given mount point with the node repository.
      *
      * @param mountPoint the mount point to collect the templates from
+     * @return the scheduled job or an empty optional if job hasn't been scheduled
      */
-    public void syncWithNodeRepo(final AbstractContentProvider mountPoint) {
+    public Optional<Job> syncWithNodeRepo(final AbstractContentProvider mountPoint) {
         if (!m_isActivated) {
-            return;
+            return Optional.empty();
         }
-        syncWithNodeRepo(mountPoint.getFileStore("/"));
+        return syncWithNodeRepo(mountPoint.getFileStore("/"));
     }
 
     /**
@@ -181,10 +197,11 @@ public final class NodeRepoSynchronizer {
      * represented by the passed file store.
      *
      * @param fileStore represents an element in the explorer tree
+     * @return the scheduled job or an empty optional if job hasn't been scheduled
      */
-    public void syncWithNodeRepo(final AbstractExplorerFileStore fileStore) {
+    public Optional<Job> syncWithNodeRepo(final AbstractExplorerFileStore fileStore) {
         if (!m_isActivated) {
-            return;
+            return Optional.empty();
         }
 
         List<String> includedPaths = m_includedPathsPerMointPoint.get(fileStore.getMountID());
@@ -195,7 +212,9 @@ public final class NodeRepoSynchronizer {
             m_syncJobs.put(fileStore.getMountID(), job);
             job.schedule();
             LOGGER.debug("Explorer to Node Repo synchronization job scheduled on '" + fileStore + "'");
+            return Optional.of(job);
         }
+        return Optional.empty();
     }
 
     private boolean isSyncJobStillRunningOrFileStoreAlreadyProcessed(final AbstractExplorerFileStore fileStore) {

@@ -80,7 +80,7 @@ import org.knime.workbench.repository.view.AbstractRepositoryView;
  */
 class NodeRepoSyncUtil {
 
-    private static final String TEMPLATES_CAT_ID = "metanode_templates";
+    public static final String TEMPLATES_CAT_ID = "metanode_templates";
 
     private NodeRepoSyncUtil() {
         // utility class
