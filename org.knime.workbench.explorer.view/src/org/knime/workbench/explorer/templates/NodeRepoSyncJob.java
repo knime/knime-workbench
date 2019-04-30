@@ -53,6 +53,7 @@ import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.getOrCreat
 import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.refreshNodeRepo;
 import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.removeCorrespondingCategory;
 import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.traverseTree;
+import static org.knime.workbench.explorer.templates.NodeRepoSyncUtil.waitForNodeRepoToBeLoaded;
 
 import java.lang.ref.WeakReference;
 import java.util.List;
@@ -96,6 +97,8 @@ class NodeRepoSyncJob extends ExplorerJob {
      */
     @Override
     protected IStatus run(final IProgressMonitor monitor) {
+        waitForNodeRepoToBeLoaded();
+
         if (!isWorkflowGroup(m_explorerFileStore)) {
             if (m_explorerFileStore.getParent() == null) {
                 //it's an mountpoint that has no children anymore

@@ -285,4 +285,11 @@ class NodeRepoSyncUtil {
             }
         }
     }
+
+    /**
+     * Blocks till the node repository has been loaded entirely. If loaded already it will return immediately.
+     */
+    static void waitForNodeRepoToBeLoaded() {
+        RepositoryManager.INSTANCE.getRoot();
+    }
 }
