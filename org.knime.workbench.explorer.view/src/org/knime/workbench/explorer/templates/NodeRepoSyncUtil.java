@@ -54,6 +54,7 @@ import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -61,9 +62,11 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation.TemplateType;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.meta.TemplateInfo;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.AbstractContainerObject;
 import org.knime.workbench.repository.model.AbstractRepositoryObject;
@@ -131,7 +134,12 @@ class NodeRepoSyncUtil {
                     newChildren.add(cat);
                 }
             } else if (isSubPath && isWorkflowTemplate(child)) {
-                //TODO filter wrapped metanodes only
+                Optional<TemplateType> type = child.fetchMetaInfo().flatMap(i -> ((TemplateInfo)i).getType());
+                if (type.isPresent() && type.get() == TemplateType.MetaNode) {
+                    // filter wrapped metanodes only (if this info is available)
+                    continue;
+                }
+
                 ExplorerMetaNodeTemplate metanodeTemplate = new ExplorerMetaNodeTemplate(name, name, "", child);
                 metanodeTemplate.setIcon(ImageRepository.getIconImage(SharedImages.MetanodeRepository));
                 newChildren.add(metanodeTemplate);
