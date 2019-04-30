@@ -54,6 +54,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Optional;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -63,6 +64,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
+import org.knime.workbench.explorer.filesystem.meta.MetaInfo;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.DeletionConfirmationResult;
 
@@ -119,6 +121,18 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      */
     @Override
     public abstract AbstractExplorerFileInfo fetchInfo();
+
+    /**
+     * Additional meta information about the objects (e.g., workflow, workflow group, template etc.) the underlying
+     * resource represents.
+     *
+     * @return the additional meta information if available
+     * @throws CoreException if, e.g., while meta info couldn't be read
+     * @since 8.4
+     */
+    public Optional<? extends MetaInfo> fetchMetaInfo() throws CoreException {
+        return Optional.empty();
+    }
 
     /**
      * {@inheritDoc}
