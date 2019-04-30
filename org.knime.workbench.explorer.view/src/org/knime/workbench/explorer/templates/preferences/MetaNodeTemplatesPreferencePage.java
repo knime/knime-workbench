@@ -51,7 +51,9 @@ import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.ListEditor;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -114,6 +116,8 @@ public class MetaNodeTemplatesPreferencePage extends FieldEditorPreferencePage i
             + "\ncontribute metanode templates to the node repository",
             parent);
         addField(m_consideredWorkflowGroups);
+
+        new Label(parent, SWT.NONE).setText("Note for local workspace: only wrapped metanodes are considered");
     }
 
     /** {@inheritDoc} */
