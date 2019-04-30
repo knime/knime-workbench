@@ -127,7 +127,7 @@ public final class NodeRepoSynchronizer {
      * @param isActivated
      * @param includedPathsPerMountPoint
      */
-    public void setPreferences(final boolean isActivated, final Map<String, List<String>> includedPathsPerMountPoint) {
+    void setPreferences(final boolean isActivated, final Map<String, List<String>> includedPathsPerMountPoint) {
         m_isActivated = isActivated;
         m_includedPathsPerMointPoint = includedPathsPerMountPoint;
     }
@@ -207,7 +207,6 @@ public final class NodeRepoSynchronizer {
         List<String> includedPaths = m_includedPathsPerMointPoint.get(fileStore.getMountID());
         if (!isSyncJobStillRunningOrFileStoreAlreadyProcessed(fileStore)
             && isConfiguredToBeIncluded(fileStore, includedPaths)) {
-            //TODO pass included paths to job
             NodeRepoSyncJob job = new NodeRepoSyncJob(fileStore, includedPaths);
             m_syncJobs.put(fileStore.getMountID(), job);
             job.schedule();

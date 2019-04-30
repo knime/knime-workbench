@@ -84,7 +84,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
     private MetaNodeLinkUpdateResult m_result;
 
-    private NodeUIInformation m_uiInfo;
+    private final NodeUIInformation m_uiInfo;
 
     /**
      *

@@ -77,9 +77,9 @@ import org.knime.workbench.repository.model.Category;
  */
 class NodeRepoSyncJob extends ExplorerJob {
 
-    private WeakReference<AbstractExplorerFileStore> m_weakReferencedFileStore;
+    private final WeakReference<AbstractExplorerFileStore> m_weakReferencedFileStore;
     private AbstractExplorerFileStore m_explorerFileStore;
-    private List<String> m_includedPaths;
+    private final List<String> m_includedPaths;
 
     /**
      * @param explorerFileStore the starting point to start scanning for metanode templates
