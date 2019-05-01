@@ -75,6 +75,7 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  * templates to the node repository.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
+ * @since 8.4
  */
 public final class NodeRepoSynchronizer {
 

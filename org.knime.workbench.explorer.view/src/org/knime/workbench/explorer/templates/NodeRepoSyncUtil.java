@@ -54,21 +54,27 @@ import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Future;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.workflow.FileWorkflowPersistor;
+import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
+import org.knime.workbench.editor2.LoadMetaNodeTemplateRunnable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.AbstractContainerObject;
 import org.knime.workbench.repository.model.AbstractRepositoryObject;
 import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.ExplorerMetaNodeTemplate;
+import org.knime.workbench.repository.model.ExplorerMetaNodeTemplate.TemplateLoader;
 import org.knime.workbench.repository.model.IContainerObject;
 import org.knime.workbench.repository.model.Root;
 import org.knime.workbench.repository.view.AbstractRepositoryView;
@@ -132,6 +138,13 @@ class NodeRepoSyncUtil {
                 }
             } else if (isSubPath && isWorkflowTemplate(child)) {
                 //TODO filter wrapped metanodes only
+                TemplateLoader templateLoader = parent -> {
+                    Future<FileWorkflowPersistor> persistor =
+                            TemplateRepository.getInstance().getTemplatePersistor(fileStore, new NullProgressMonitor());
+                        LoadMetaNodeTemplateRunnable loadRunnable =
+                            new LoadMetaNodeTemplateRunnable(TemplateRepository.getInstance().getTemplateRoot(), persistor,
+                                NodeUIInformation.builder().build(), fileStore.toURI());
+                };
                 ExplorerMetaNodeTemplate metanodeTemplate = new ExplorerMetaNodeTemplate(name, name, "", child);
                 metanodeTemplate.setIcon(ImageRepository.getIconImage(SharedImages.MetanodeRepository));
                 newChildren.add(metanodeTemplate);

@@ -49,7 +49,9 @@ package org.knime.workbench.editor2.commands;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.Future;
 
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.IWorkbench;
@@ -58,6 +60,7 @@ import org.eclipse.ui.progress.IProgressService;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.FileWorkflowPersistor;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
@@ -68,6 +71,7 @@ import org.knime.workbench.editor2.LoadMetaNodeTemplateRunnable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.templates.TemplateRepository;
 
 /**
  * GEF command for adding a MetaNode from a file location to the workflow.
@@ -143,15 +147,25 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
                     .setHasAbsoluteCoordinates(false)
                     .setSnapToGrid(m_snapToGrid)
                     .setIsDropLocation(true).build();
-            // this one sets the workflow manager in the editor
-            loadRunnable = new LoadMetaNodeTemplateRunnable(getHostWFM(), m_templateKNIMEFolder, info);
+
+            if (TemplateRepository.getInstance().hasTemplate(m_templateKNIMEFolder)) {
+                Future<FileWorkflowPersistor> persistor = TemplateRepository.getInstance()
+                    .getTemplatePersistor(m_templateKNIMEFolder, new NullProgressMonitor());
+                loadRunnable =
+                    new LoadMetaNodeTemplateRunnable(getHostWFM(), persistor, info, m_templateKNIMEFolder.toURI());
+            } else {
+                // this one sets the workflow manager in the editor
+                loadRunnable = new LoadMetaNodeTemplateRunnable(getHostWFM(), m_templateKNIMEFolder, info);
+            }
+
             if (m_templateKNIMEFolder instanceof RemoteExplorerFileStore) {
-            	//workflow need to be downloaded first -> show budy cursor
+                //workflow need to be downloaded first -> show busy cursor
                 ps.busyCursorWhile(loadRunnable);
             } else {
                 assert m_templateKNIMEFolder instanceof LocalExplorerFileStore;
                 ps.run(false, true, loadRunnable);
             }
+
             MetaNodeLinkUpdateResult result = loadRunnable.getLoadResult();
             m_container = (NodeContainer)result.getLoadedInstance();
             if (m_container == null) {

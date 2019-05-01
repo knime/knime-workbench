@@ -235,6 +235,7 @@ public class HelpView extends ViewPart implements ISelectionListener,
                         .addDescription(manager,
                                 useSingleLine, content);
                 } else if (sel instanceof ExplorerMetaNodeTemplate) {
+                    //TODO load workflow via the template in extra thread/job
                     DynamicNodeDescriptionCreator.instance().addDescription((ExplorerMetaNodeTemplate)sel,
                         useSingleLine, content);
                 }

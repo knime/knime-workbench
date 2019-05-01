@@ -44,6 +44,9 @@
  */
 package org.knime.workbench.repository.model;
 
+import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.WorkflowManager;
+
 /**
  * A metanode templates that references a metanode in the explorer.
  *
@@ -52,6 +55,7 @@ package org.knime.workbench.repository.model;
 public class ExplorerMetaNodeTemplate extends AbstractMetaNodeTemplate {
 
     private Object m_metaNodeObject;
+    private TemplateLoader m_templateLoader;
 
     /**
      * Creates a new lazy metanode template.
@@ -62,9 +66,10 @@ public class ExplorerMetaNodeTemplate extends AbstractMetaNodeTemplate {
      * @param metaNodeObject an object that represents or references the metanode
      */
     public ExplorerMetaNodeTemplate(final String id, final String name, final String categoryPath,
-        final Object metaNodeObject) {
+        final Object metaNodeObject, final TemplateLoader templateLoader) {
         super(id, name, categoryPath, "Metanode Template that is not part of any KNIME extension");
         m_metaNodeObject = metaNodeObject;
+        m_templateLoader = templateLoader;
     }
 
     /**
@@ -89,5 +94,15 @@ public class ExplorerMetaNodeTemplate extends AbstractMetaNodeTemplate {
      */
     public Object getMetaNodeObject() {
         return m_metaNodeObject;
+    }
+
+    public TemplateLoader getTemplateLoader() {
+        return m_templateLoader;
+    }
+
+    @FunctionalInterface
+    public interface TemplateLoader {
+
+        NodeContainer loadTemplate(final WorkflowManager parent);
     }
 }
