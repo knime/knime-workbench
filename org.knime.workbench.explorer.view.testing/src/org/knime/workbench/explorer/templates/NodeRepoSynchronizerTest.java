@@ -49,7 +49,7 @@ package org.knime.workbench.explorer.templates;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.knime.testing.explorer.LocalFileStoreTestUtils.createEmptyTemplate;
+import static org.knime.testing.explorer.LocalFileStoreTestUtils.createTemplate;
 import static org.knime.testing.explorer.LocalFileStoreTestUtils.createWorkflowGroup;
 
 import java.io.IOException;
@@ -121,7 +121,7 @@ public class NodeRepoSynchronizerTest {
     public void testAddAndRemoveSingleTemplate() throws Exception {
         setIncludedPaths("/");
         LocalExplorerFileStore wg1 = createWorkflowGroup(m_localExplorerRoot, "wg1");
-        LocalExplorerFileStore wt1 = createEmptyTemplate(wg1, "wt1");
+        LocalExplorerFileStore wt1 = createTemplate(wg1, "wt1", true);
         LocalFileStoreTestUtils.createEmptyWorkflow(wg1, "wf1");
         Job job = NodeRepoSynchronizer.getInstance().syncWithNodeRepo(m_localWorkspace).get();
         job.join();
@@ -147,11 +147,11 @@ public class NodeRepoSynchronizerTest {
     public void testIncludedPathThatIsNotTheRoot() throws Exception {
         setIncludedPaths("/wg2", "/wg3");
         LocalExplorerFileStore wg1 = createWorkflowGroup(m_localExplorerRoot, "wg1");
-        createEmptyTemplate(wg1, "wt1");
+        createTemplate(wg1, "wt1", true);
         LocalExplorerFileStore wg2 = createWorkflowGroup(m_localExplorerRoot, "wg2");
-        createEmptyTemplate(wg2, "wt2");
+        createTemplate(wg2, "wt2", true);
         LocalExplorerFileStore wg3 = createWorkflowGroup(m_localExplorerRoot, "wg3");
-        createEmptyTemplate(wg3, "wt3");
+        createTemplate(wg3, "wt3", true);
 
 
         Job job = NodeRepoSynchronizer.getInstance().syncWithNodeRepo(m_localExplorerRoot).get();
@@ -174,9 +174,9 @@ public class NodeRepoSynchronizerTest {
     public void testNoInlcudedPaths() throws Exception {
         setIncludedPaths();
         LocalExplorerFileStore wg1 = createWorkflowGroup(m_localExplorerRoot, "wg1");
-        createEmptyTemplate(wg1, "wt1");
+        createTemplate(wg1, "wt1", true);
         LocalExplorerFileStore wg2 = createWorkflowGroup(m_localExplorerRoot, "wg2");
-        createEmptyTemplate(wg2, "wt2");
+        createTemplate(wg2, "wt2", true);
 
         Optional<Job> noJob = NodeRepoSynchronizer.getInstance().syncWithNodeRepo(m_localExplorerRoot);
         assertNull("synchronization job not expected to be scheduled", noJob.orElse(null));
@@ -191,9 +191,9 @@ public class NodeRepoSynchronizerTest {
     public void testSuccessiveSynchronization() throws Exception {
         setIncludedPaths("/");
         LocalExplorerFileStore wg1 = createWorkflowGroup(m_localExplorerRoot, "wg1");
-        createEmptyTemplate(wg1, "wt1");
+        createTemplate(wg1, "wt1", true);
         LocalExplorerFileStore wg2 = createWorkflowGroup(m_localExplorerRoot, "wg2");
-        createEmptyTemplate(wg2, "wt2");
+        createTemplate(wg2, "wt2", true);
 
         Optional<Job> job = NodeRepoSynchronizer.getInstance().syncWithNodeRepo(wg1);
         assertNotNull("synchronization job expected to be scheduled", job.get());
@@ -217,6 +217,23 @@ public class NodeRepoSynchronizerTest {
 
         job = NodeRepoSynchronizer.getInstance().syncWithNodeRepo((Object)null);
         assertNull("synchronization job not expected to be scheduled", job.orElse(null));
+    }
+
+    /**
+     * Tests that only wrapped metanodes (aka subnodes) are included but not ordinary metanodes.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testWrappedMetanodesVsMetanodes() throws Exception {
+        setIncludedPaths("/");
+        createTemplate(m_localExplorerRoot, "wt1", true);
+        createTemplate(m_localExplorerRoot, "wt2", false);
+
+        NodeRepoSynchronizer.getInstance().syncWithNodeRepo(m_localExplorerRoot).get().join();
+
+        checkPathInNodeRepo("/LOCAL/wt1", true);
+        checkPathInNodeRepo("/LOCAL/wt2", false);
     }
 
     private void checkPathInNodeRepo(final String path, final boolean checkExistence) {
