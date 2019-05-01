@@ -94,7 +94,9 @@ class NodeRepoSyncUtil {
             IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
             AbstractRepositoryView view =
                 (AbstractRepositoryView)activePage.findView("org.knime.workbench.repository.view.RepositoryView");
-            view.updateRepositoryViewInUIThread(RepositoryManager.INSTANCE.getRoot());
+            if (view != null) { //node repo view might not be available (e.g. in case of unit-tests or when closed)
+                view.updateRepositoryViewInUIThread(RepositoryManager.INSTANCE.getRoot());
+            }
         });
     }
 
