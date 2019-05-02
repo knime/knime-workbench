@@ -196,12 +196,14 @@ public class NodeRepoSynchronizerTest {
         createEmptyTemplate(wg2, "wt2");
 
         Optional<Job> job = NodeRepoSynchronizer.getInstance().syncWithNodeRepo(wg1);
-        assertNotNull("synchronization job expected to be scheduled", job.get());
+        assertNotNull("synchronization job expected to be scheduled", job.orElse(null));
         Optional<Job> noJob = NodeRepoSynchronizer.getInstance().syncWithNodeRepo(wg1);
         assertNull("synchronization job not expected to be scheduled", noJob.orElse(null));
-        job.get().join();
         noJob = NodeRepoSynchronizer.getInstance().syncWithNodeRepo(wg1);
         assertNull("synchronization job not expected to be scheduled", noJob.orElse(null));
+        job.get().join();
+        job = NodeRepoSynchronizer.getInstance().syncWithNodeRepo(wg1);
+        assertNotNull("synchronization job expected to be scheduled", job.orElse(null));
     }
 
     /**
