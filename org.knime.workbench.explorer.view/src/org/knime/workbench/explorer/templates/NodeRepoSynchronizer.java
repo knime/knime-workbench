@@ -205,28 +205,28 @@ public final class NodeRepoSynchronizer {
         }
 
         List<String> includedPaths = m_includedPathsPerMointPoint.get(fileStore.getMountID());
-        if (!isSyncJobStillRunningOrFileStoreAlreadyProcessed(fileStore)
+        if (!isSyncJobStillRunning(fileStore)
             && isConfiguredToBeIncluded(fileStore, includedPaths)) {
             NodeRepoSyncJob job = new NodeRepoSyncJob(fileStore, includedPaths);
             m_syncJobs.put(fileStore.getMountID(), job);
-            job.schedule();
+            //delay job execution a bit to wait (and 'swallow' multiple sync-calls in quick succession)
+            job.schedule(200);
             LOGGER.debug("Explorer to Node Repo synchronization job scheduled on '" + fileStore + "'");
             return Optional.of(job);
         }
         return Optional.empty();
     }
 
-    private boolean isSyncJobStillRunningOrFileStoreAlreadyProcessed(final AbstractExplorerFileStore fileStore) {
+    private boolean isSyncJobStillRunning(final AbstractExplorerFileStore fileStore) {
         String id = fileStore.getMountID();
         if (m_syncJobs.get(id) != null) {
             if (m_syncJobs.get(id).getResult() == null) {
                 //job still running
                 return true;
+            } else {
+                m_syncJobs.remove(id);
+                return false;
             }
-
-            //check whether file store has been already processed, recently
-            Optional<AbstractExplorerFileStore> jobFileStore = m_syncJobs.get(id).getFileStore();
-            return jobFileStore.map(fs -> fs == fileStore).orElse(false);
         } else {
             return false;
         }
