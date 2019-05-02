@@ -46,6 +46,8 @@
  */
 package org.knime.workbench.explorer.templates;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -119,7 +121,7 @@ public class NodeRepoSynchronizerTest {
      */
     @Test
     public void testAddAndRemoveSingleTemplate() throws Exception {
-        setIncludedPaths("/");
+        setIncludedPathsInPrefs(m_localWorkspace, "/");
         LocalExplorerFileStore wg1 = createWorkflowGroup(m_localExplorerRoot, "wg1");
         LocalExplorerFileStore wt1 = createTemplate(wg1, "wt1", true);
         LocalFileStoreTestUtils.createEmptyWorkflow(wg1, "wf1");
@@ -145,7 +147,7 @@ public class NodeRepoSynchronizerTest {
      */
     @Test
     public void testIncludedPathThatIsNotTheRoot() throws Exception {
-        setIncludedPaths("/wg2", "/wg3");
+        setIncludedPathsInPrefs(m_localWorkspace, "/wg2", "/wg3");
         LocalExplorerFileStore wg1 = createWorkflowGroup(m_localExplorerRoot, "wg1");
         createTemplate(wg1, "wt1", true);
         LocalExplorerFileStore wg2 = createWorkflowGroup(m_localExplorerRoot, "wg2");
@@ -172,7 +174,7 @@ public class NodeRepoSynchronizerTest {
      */
     @Test
     public void testNoInlcudedPaths() throws Exception {
-        setIncludedPaths();
+        setIncludedPathsInPrefs(m_localWorkspace);
         LocalExplorerFileStore wg1 = createWorkflowGroup(m_localExplorerRoot, "wg1");
         createTemplate(wg1, "wt1", true);
         LocalExplorerFileStore wg2 = createWorkflowGroup(m_localExplorerRoot, "wg2");
@@ -189,7 +191,7 @@ public class NodeRepoSynchronizerTest {
      */
     @Test
     public void testSuccessiveSynchronization() throws Exception {
-        setIncludedPaths("/");
+        setIncludedPathsInPrefs(m_localWorkspace, "/");
         LocalExplorerFileStore wg1 = createWorkflowGroup(m_localExplorerRoot, "wg1");
         createTemplate(wg1, "wt1", true);
         LocalExplorerFileStore wg2 = createWorkflowGroup(m_localExplorerRoot, "wg2");
@@ -228,7 +230,7 @@ public class NodeRepoSynchronizerTest {
      */
     @Test
     public void testWrappedMetanodesVsMetanodes() throws Exception {
-        setIncludedPaths("/");
+        setIncludedPathsInPrefs(m_localWorkspace, "/");
         createTemplate(m_localExplorerRoot, "wt1", true);
         createTemplate(m_localExplorerRoot, "wt2", false);
 
@@ -236,6 +238,57 @@ public class NodeRepoSynchronizerTest {
 
         checkPathInNodeRepo("/LOCAL/wt1", true);
         checkPathInNodeRepo("/LOCAL/wt2", false);
+    }
+
+    /**
+     * Tests that the server-configured included paths and the repsective fallbacks (to the preferences or mount point
+     * default) work.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testServerConfiguredIncludedPathsAndFallbacks() throws Exception {
+        MockedLocalServerContentProvider server = (MockedLocalServerContentProvider)ExplorerMountTable
+            .mount("mockserver", MockedLocalServerContentProviderFactory.ID, null);
+        LocalExplorerFileStore root = (LocalExplorerFileStore)server.getFileStore("/");
+        LocalExplorerFileStore prefsFS = createWorkflowGroup(root, "prefs");
+        LocalExplorerFileStore serverConfigFS = createWorkflowGroup(root, "server-config");
+        LocalExplorerFileStore defaultFS = createWorkflowGroup(root, "default");
+        createTemplate(prefsFS, "wt", true);
+        createTemplate(serverConfigFS, "wt", true);
+        createTemplate(defaultFS, "wt", true);
+        setIncludedPathsInPrefs(server, "/prefs/wt");
+
+        //test that server-config is favored over prefs
+        server.setServerConfiguredTemplatePaths(asList("/server-config/wt"));
+        NodeRepoSynchronizer.getInstance().syncWithNodeRepo(server).get().join();
+        checkPathInNodeRepo("/mockserver/server-config/wt", true);
+        checkPathInNodeRepo("/mockserver/prefs/wt", false);
+        checkPathInNodeRepo("/mockserver/default/wt", false);
+
+        //test that server-config is cached
+        server.setServerConfiguredTemplatePaths(emptyList());
+        NodeRepoSynchronizer.getInstance().syncWithNodeRepo(server).get().join();
+        checkPathInNodeRepo("/mockserver/server-config/wt", true);
+        NodeRepoSyncSettings.getInstance().clearServerConfiguredPathsCache();
+        assertNull("job not expected to be scheduled, because no included paths configured",
+            NodeRepoSynchronizer.getInstance().syncWithNodeRepo(server).orElse(null));
+
+        //test fallback to preferences
+        server.setServerConfiguredTemplatePaths(null);
+        NodeRepoSyncSettings.getInstance().clearServerConfiguredPathsCache();
+        NodeRepoSynchronizer.getInstance().syncWithNodeRepo(server).get().join();
+        checkPathInNodeRepo("/mockserver/server-config/wt", false);
+        checkPathInNodeRepo("/mockserver/prefs/wt", true);
+        checkPathInNodeRepo("/mockserver/default/wt", false);
+
+        //test fallback to default
+        server.setDefaultTemplatePaths(asList("/default/wt"));
+        setIncludedPathsInPrefs(server);
+        NodeRepoSynchronizer.getInstance().syncWithNodeRepo(server).get().join();
+        checkPathInNodeRepo("/mockserver/server-config/wt", false);
+        checkPathInNodeRepo("/mockserver/prefs/wt", false);
+        checkPathInNodeRepo("/mockserver/default/wt", true);
     }
 
     private void checkPathInNodeRepo(final String path, final boolean checkExistence) {
@@ -269,10 +322,13 @@ public class NodeRepoSynchronizerTest {
         }
     }
 
-    private static void setIncludedPaths(final String... includedPaths) {
+    private static void setIncludedPathsInPrefs(final AbstractContentProvider mountPoint,
+        final String... includedPaths) {
         Map<String, List<String>> includedPathsPerMountPoint = new HashMap<>();
-        includedPathsPerMountPoint.put("LOCAL", Arrays.asList(includedPaths));
-        NodeRepoSynchronizer.getInstance().setPreferences(true, includedPathsPerMountPoint);
+        if (includedPaths != null && includedPaths.length > 0) {
+            includedPathsPerMountPoint.put(mountPoint.getMountID(), Arrays.asList(includedPaths));
+        }
+        NodeRepoSyncSettings.getInstance().setPreferences(true, includedPathsPerMountPoint);
     }
 
     private static void deleteFileStore(final LocalExplorerFileStore fs) throws CoreException {
@@ -282,6 +338,11 @@ public class NodeRepoSynchronizerTest {
         fs.delete(EFS.NONE, null);
     }
 
+    /**
+     * Deletes all created files stores.
+     *
+     * @throws Exception
+     */
     @After
     public void cleanWorkspace() throws Exception {
         m_localExplorerRoot.refresh();

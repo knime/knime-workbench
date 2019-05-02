@@ -95,10 +95,13 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalWorkspaceContentProvider.class);
 
     /**
+     * Mainly only sub-classed for unit-tests.
+     * 
      * @param factory the factory that created us.
      * @param id mount id
+     * @since 8.4
      */
-    LocalWorkspaceContentProvider(final LocalWorkspaceContentProviderFactory factory, final String id) {
+    protected LocalWorkspaceContentProvider(final LocalWorkspaceContentProviderFactory factory, final String id) {
         super(factory, id);
     }
 
