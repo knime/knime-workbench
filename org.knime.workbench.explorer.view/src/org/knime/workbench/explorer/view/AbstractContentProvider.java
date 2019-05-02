@@ -54,6 +54,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -124,6 +125,7 @@ import org.osgi.service.prefs.Preferences;
  * show the content of that one mount point.
  *
  * @author ohl, University of Konstanz
+ * @since 8.4
  */
 public abstract class AbstractContentProvider extends LabelProvider implements
         ITreeContentProvider, Comparable<AbstractContentProvider>, IColorProvider {
@@ -372,6 +374,35 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public abstract boolean dragStart(List<AbstractExplorerFileStore> fileStores);
 
+    /**
+     * The default list of paths (i.e. workflow groups) that shall contribute the contained metanode templates (if there
+     * are any) to the node repository.
+     *
+     * @return the list of paths that are enabled to contribute templates to the node repository by default (if not
+     *         otherwise configured). If the optional is empty or contains an empty list, no templates will be
+     *         contributed to the node repository by default.
+     *
+     * @since 8.4
+     */
+    public Optional<List<String>> getDefaultTemplatePaths() {
+        return Optional.empty();
+    }
+
+    /**
+     * Fetches the list of paths from the server that determines what paths (i.e. workflow groups) should contribute
+     * their contained metanode templates (if there are any) to the node repository. Should only be overridden by remote
+     * mount points (i.e. {@link #isRemote()} returns <code>true</code>).
+     *
+     * @return the list of paths that are enabled to contribute templates to the node repository. Or a non-empty
+     *         optional with an <b>empty list</b> in case that <b>no</b> paths should be included (i.e. server doesn't
+     *         contribute any templates to node repo). Or an empty optional if the configuration via the server failed
+     *         and alternative ways to determine the includes paths should be used.
+     *
+     * @since 8.4
+     */
+    public Optional<List<String>> fetchServerConfiguredTemplatePaths() {
+       return Optional.empty();
+    }
 
     /**
      * Saves the given metanode as template into the given file store. The metanode is marked as linked metanode
