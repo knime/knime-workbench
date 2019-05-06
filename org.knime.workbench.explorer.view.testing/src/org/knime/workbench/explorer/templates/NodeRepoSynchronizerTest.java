@@ -322,7 +322,7 @@ public class NodeRepoSynchronizerTest {
         }
     }
 
-    private static void setIncludedPathsInPrefs(final AbstractContentProvider mountPoint,
+    static void setIncludedPathsInPrefs(final AbstractContentProvider mountPoint,
         final String... includedPaths) {
         Map<String, List<String>> includedPathsPerMountPoint = new HashMap<>();
         if (includedPaths != null && includedPaths.length > 0) {

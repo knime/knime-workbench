@@ -206,8 +206,9 @@ public class NodeRepoSyncSettings {
      * The default template paths for a mount point.
      *
      * @param mountPoint the mount point to get the default paths for
-     * @return the paths if there are any, or an empty optional if (i) there are not paths (i.e. no defaults given) or
-     *         (ii) if the mount point is a server and already has 'server-configured' paths.
+     * @return the paths if there are any. Or an empty optional if (i) there are not paths (i.e. no defaults given) or
+     *         (ii) if the mount point is a server and already has 'server-configured' paths, or (iii) server has been
+     *         contacted, yet
      */
     public Optional<List<String>> getDefaultPaths(final AbstractContentProvider mountPoint) {
         Optional<Boolean> isServerConfigured = hasServerConfiguredPaths(mountPoint);
