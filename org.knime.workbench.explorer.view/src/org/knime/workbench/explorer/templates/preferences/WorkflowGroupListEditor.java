@@ -131,7 +131,8 @@ public class WorkflowGroupListEditor extends ListEditor {
             if (cp.getMountID().equals("LOCAL")) {
                 return true;
             } else if (isWorkflowGroup(cp.getFileStore("/"))) {
-                Optional<Boolean> isServerConfigured = NodeRepoSyncSettings.getInstance().hasServerConfiguredPaths(cp);
+                Optional<Boolean> isServerConfigured =
+                    NodeRepoSyncSettings.getInstance().hasServerConfiguredPaths(cp.getMountID());
                 if (isServerConfigured.isPresent()) {
                     return !isServerConfigured.get();
                 } else {

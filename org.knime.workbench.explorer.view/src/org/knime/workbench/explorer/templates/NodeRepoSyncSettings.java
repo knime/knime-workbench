@@ -168,14 +168,13 @@ public class NodeRepoSyncSettings {
     /**
      * If the included paths for the given mount point are configured by the server itself.
      *
-     * @param mountPoint mount point to test
+     * @param mountID mount point to test
      * @return <code>true</code> if paths are configured by the server, otherwise <code>false</code>. If an empty
      *         optional is returned means "don't know", server hasn't been connected, yet
      */
-    public Optional<Boolean> hasServerConfiguredPaths(final AbstractContentProvider mountPoint) {
-        if (m_serverConfiguredIncludedPaths.containsKey(mountPoint.getMountID())) {
-            if (m_serverConfiguredIncludedPaths
-                .get(mountPoint.getMountID()) == SERVER_CONFIG_NOT_AVAILABLE_PLACEHOLDER) {
+    public Optional<Boolean> hasServerConfiguredPaths(final String mountID) {
+        if (m_serverConfiguredIncludedPaths.containsKey(mountID)) {
+            if (m_serverConfiguredIncludedPaths.get(mountID) == SERVER_CONFIG_NOT_AVAILABLE_PLACEHOLDER) {
                 return Optional.of(false);
             } else {
                 return Optional.of(true);
@@ -183,7 +182,6 @@ public class NodeRepoSyncSettings {
         } else {
             return Optional.empty();
         }
-
     }
 
     /**
@@ -194,7 +192,7 @@ public class NodeRepoSyncSettings {
      *         been contacted, yet
      */
     public Optional<List<String>> getServerConfiguredPaths(final AbstractContentProvider mountPoint) {
-        Optional<Boolean> isServerConfigured = hasServerConfiguredPaths(mountPoint);
+        Optional<Boolean> isServerConfigured = hasServerConfiguredPaths(mountPoint.getMountID());
         if (isServerConfigured.isPresent() && isServerConfigured.get()) {
             return Optional.of(m_serverConfiguredIncludedPaths.get(mountPoint.getMountID()));
         } else {
@@ -211,7 +209,7 @@ public class NodeRepoSyncSettings {
      *         contacted, yet
      */
     public Optional<List<String>> getDefaultPaths(final AbstractContentProvider mountPoint) {
-        Optional<Boolean> isServerConfigured = hasServerConfiguredPaths(mountPoint);
+        Optional<Boolean> isServerConfigured = hasServerConfiguredPaths(mountPoint.getMountID());
         if (isServerConfigured.isPresent() && !isServerConfigured.get()) {
             return mountPoint.getDefaultTemplatePaths();
         } else {
@@ -251,7 +249,7 @@ public class NodeRepoSyncSettings {
                 //update all remaining and added mount points in node repo
                 m_prefsConfiguredIncludedPaths.keySet().stream().filter(mountID -> {
                     //ignore mount points configured via server
-                    return !m_serverConfiguredIncludedPaths.containsKey(mountID);
+                    return !NodeRepoSyncSettings.getInstance().hasServerConfiguredPaths(mountID).orElse(true);
                 }).forEach(id -> {
                     AbstractContentProvider mountPointContent = ExplorerMountTable.getMountedContent().get(id);
                     NodeRepoSynchronizer.getInstance().clearAllSyncJobs();

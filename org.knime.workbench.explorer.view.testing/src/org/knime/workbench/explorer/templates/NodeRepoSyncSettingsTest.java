@@ -91,7 +91,7 @@ public class NodeRepoSyncSettingsTest {
     @Test
     public void testHasAndGetServerConfiguredPaths() throws IOException {
         assertFalse("expected to return an empty optional because not touched, yet",
-            NodeRepoSyncSettings.getInstance().hasServerConfiguredPaths(m_server).isPresent());
+            NodeRepoSyncSettings.getInstance().hasServerConfiguredPaths(m_server.getMountID()).isPresent());
         assertFalse(NodeRepoSyncSettings.getInstance().getServerConfiguredPaths(m_server).isPresent());
 
         //set 'activated' to false to make sure that it still works when deactivated
@@ -99,14 +99,14 @@ public class NodeRepoSyncSettingsTest {
         NodeRepoSyncSettings.getInstance().getAndCacheIncludedPathsForMountID(m_server);
 
         assertFalse("expected to return false because no paths configured",
-            NodeRepoSyncSettings.getInstance().hasServerConfiguredPaths(m_server).get());
+            NodeRepoSyncSettings.getInstance().hasServerConfiguredPaths(m_server.getMountID()).get());
         assertFalse(NodeRepoSyncSettings.getInstance().getServerConfiguredPaths(m_server).isPresent());
 
         m_server.setServerConfiguredTemplatePaths(asList("foobar"));
         NodeRepoSyncSettings.getInstance().clearServerConfiguredPathsCache();
         NodeRepoSyncSettings.getInstance().getAndCacheIncludedPathsForMountID(m_server);
         assertTrue("expected to return true because a path is configured",
-            NodeRepoSyncSettings.getInstance().hasServerConfiguredPaths(m_server).get());
+            NodeRepoSyncSettings.getInstance().hasServerConfiguredPaths(m_server.getMountID()).get());
         assertThat("unexpected server paths returned",
             NodeRepoSyncSettings.getInstance().getServerConfiguredPaths(m_server).get(), is(asList("foobar")));
     }
