@@ -166,6 +166,59 @@ public class NodeRepoSyncSettings {
     }
 
     /**
+     * If the included paths for the given mount point are configured by the server itself.
+     *
+     * @param mountPoint mount point to test
+     * @return <code>true</code> if paths are configured by the server, otherwise <code>false</code>. If an empty
+     *         optional is returned means "don't know", server hasn't been connected, yet
+     */
+    public Optional<Boolean> hasServerConfiguredPaths(final AbstractContentProvider mountPoint) {
+        if (m_serverConfiguredIncludedPaths.containsKey(mountPoint.getMountID())) {
+            if (m_serverConfiguredIncludedPaths
+                .get(mountPoint.getMountID()) == SERVER_CONFIG_NOT_AVAILABLE_PLACEHOLDER) {
+                return Optional.of(false);
+            } else {
+                return Optional.of(true);
+            }
+        } else {
+            return Optional.empty();
+        }
+
+    }
+
+    /**
+     * The paths configured by the server if there are any.
+     *
+     * @param mountPoint the mountpoint to get the paths for
+     * @return the paths if server has some configured, an empty optional if there are not path or the server hasn't
+     *         been contacted, yet
+     */
+    public Optional<List<String>> getServerConfiguredPaths(final AbstractContentProvider mountPoint) {
+        Optional<Boolean> isServerConfigured = hasServerConfiguredPaths(mountPoint);
+        if (isServerConfigured.isPresent() && isServerConfigured.get()) {
+            return Optional.of(m_serverConfiguredIncludedPaths.get(mountPoint.getMountID()));
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * The default template paths for a mount point.
+     *
+     * @param mountPoint the mount point to get the default paths for
+     * @return the paths if there are any, or an empty optional if (i) there are not paths (i.e. no defaults given) or
+     *         (ii) if the mount point is a server and already has 'server-configured' paths.
+     */
+    public Optional<List<String>> getDefaultPaths(final AbstractContentProvider mountPoint) {
+        Optional<Boolean> isServerConfigured = hasServerConfiguredPaths(mountPoint);
+        if (isServerConfigured.isPresent() && !isServerConfigured.get()) {
+            return mountPoint.getDefaultTemplatePaths();
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Clears the included paths that have been memorized for already accessed servers.
      */
     public void clearServerConfiguredPathsCache() {
@@ -215,15 +268,21 @@ public class NodeRepoSyncSettings {
     private void loadFromPreferences() {
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
         m_isActivated = prefStore.getBoolean(PreferenceConstants.P_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO);
-        String[] includedPaths =
-            prefStore.getString(PreferenceConstants.P_EXPLORER_TEMPLATE_WORKFLOW_GROUPS_TO_NODE_REPO).split(",");
-        m_prefsConfiguredIncludedPaths.clear();
-        for(String p : includedPaths) {
+        String includedPaths =
+            prefStore.getString(PreferenceConstants.P_EXPLORER_TEMPLATE_WORKFLOW_GROUPS_TO_NODE_REPO);
+        m_prefsConfiguredIncludedPaths = parsePathsFromString(includedPaths);
+    }
+
+    private static Map<String, List<String>> parsePathsFromString(final String pathSettings) {
+        Map<String, List<String>> res = new HashMap<>();
+        String[] includedPaths = pathSettings.split(",");
+        for (String p : includedPaths) {
             if (p.contains(":")) {
                 String[] split = p.split(":");
                 assert split.length == 2;
-                m_prefsConfiguredIncludedPaths.computeIfAbsent(split[0], k -> new ArrayList<String>()).add(split[1]);
+                res.computeIfAbsent(split[0], k -> new ArrayList<String>()).add(split[1]);
             }
         }
+        return res;
     }
 }

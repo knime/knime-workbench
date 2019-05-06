@@ -46,17 +46,30 @@
  */
 package org.knime.workbench.explorer.templates.preferences;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
+import org.eclipse.jface.preference.FieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
-import org.eclipse.jface.preference.ListEditor;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.templates.NodeRepoSyncSettings;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.ui.preferences.HorizontalLineField;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -67,12 +80,11 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  */
 public class MetaNodeTemplatesPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
-    private ComboFieldEditor m_linkTemplateEditor;
+    private java.util.List<Control> m_composites = new ArrayList<>();
 
-    private ListEditor m_consideredWorkflowGroups;
+    private WorkflowGroupListEditor m_consideredWorkflowGroups;
 
     private BooleanFieldEditor m_addToNodeRepo;
-
 
     /**
      * Constructor.
@@ -90,14 +102,14 @@ public class MetaNodeTemplatesPreferencePage extends FieldEditorPreferencePage i
     public void createFieldEditors() {
         final Composite parent = getFieldEditorParent();
 
-        m_linkTemplateEditor = new ComboFieldEditor(
+        FieldEditor linkTemplateEditor = new ComboFieldEditor(
             PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
             "Link metanode when defining new template",
             new String[][] {
                     {"Never", MessageDialogWithToggle.NEVER},
                     {"Prompt", MessageDialogWithToggle.PROMPT},
             }, getFieldEditorParent());
-        addField(m_linkTemplateEditor);
+        addField(linkTemplateEditor);
 
         addField(new HorizontalLineField(parent));
 
@@ -106,18 +118,76 @@ public class MetaNodeTemplatesPreferencePage extends FieldEditorPreferencePage i
             @Override
             protected void valueChanged(final boolean oldValue, final boolean newValue) {
                 super.valueChanged(oldValue, newValue);
-                m_consideredWorkflowGroups.setEnabled(newValue, parent);
+                setWorkflowGroupConfigEnabled(newValue);
             }
         };
         addField(m_addToNodeRepo);
         m_consideredWorkflowGroups = new WorkflowGroupListEditor(
             PreferenceConstants.P_EXPLORER_TEMPLATE_WORKFLOW_GROUPS_TO_NODE_REPO,
             "Select the mount points and workflow groups that shall"
-            + "\ncontribute metanode templates to the node repository",
+                + "\ncontribute metanode templates to the node repository.",
             parent);
         addField(m_consideredWorkflowGroups);
 
-        new Label(parent, SWT.NONE).setText("Note for local workspace: only wrapped metanodes are considered");
+        Label notes = new Label(parent, SWT.NONE);
+        notes.setText("Notes:\nSome server mount points cannot be selected here"
+            + "\nbecause they provide their custom configuration (see below)."
+            + "\nOnly wrapped metanodes are considered in the local workspace.\n");
+        GridData gd = new GridData(GridData.FILL_HORIZONTAL);
+        gd.horizontalSpan = 2;
+        notes.setLayoutData(gd);
+        m_composites.add(notes);
+
+        Group serverGroup = new Group(parent, SWT.NONE);
+        serverGroup.setText("Server-configured workflow groups:");
+        serverGroup.setLayout(new GridLayout(1, false));
+        gd = new GridData(GridData.FILL_HORIZONTAL);
+        gd.horizontalSpan = 2;
+        serverGroup.setLayoutData(gd);
+        m_composites.add(serverGroup);
+
+        Label serverConfig = new Label(serverGroup, SWT.NONE);
+        final StringBuilder sb = new StringBuilder();
+        addPaths(sb, cp -> NodeRepoSyncSettings.getInstance().getServerConfiguredPaths(cp));
+        serverConfig.setText(sb.toString());
+        m_composites.add(serverConfig);
+
+        Group defaultGroup = new Group(parent, SWT.NONE);
+        defaultGroup.setText("Default workflow groups:");
+        defaultGroup.setLayout(new GridLayout(1, false));
+        gd = new GridData(GridData.FILL_HORIZONTAL);
+        gd.horizontalSpan = 2;
+        defaultGroup.setLayoutData(gd);
+        m_composites.add(defaultGroup);
+
+        Label defaultConfig = new Label(defaultGroup, SWT.NONE);
+        sb.setLength(0);
+        addPaths(sb, cp -> NodeRepoSyncSettings.getInstance().getDefaultPaths(cp));
+        defaultConfig.setText(sb.toString());
+        m_composites.add(defaultConfig);
+
+    }
+
+    private static void addPaths(final StringBuilder sb,
+        final Function<AbstractContentProvider, Optional<List<String>>> pathProvider) {
+        AtomicBoolean pathAppended = new AtomicBoolean(false);
+        ExplorerMountTable.getMountedContent().values().forEach(cp -> {
+            pathProvider.apply(cp).map(paths -> {
+                for (String p : paths) {
+                    sb.append(cp.getMountID());
+                    sb.append(":");
+                    sb.append(p);
+                    sb.append("\n");
+                }
+                pathAppended.set(true);
+                return paths;
+            });
+        });
+        if (!pathAppended.get()) {
+            sb.append("<None>");
+        } else if (sb.length() > 0) {
+            sb.setLength(sb.length() - 1);
+        }
     }
 
     /** {@inheritDoc} */
@@ -130,6 +200,12 @@ public class MetaNodeTemplatesPreferencePage extends FieldEditorPreferencePage i
     @Override
     protected void initialize() {
         super.initialize();
-        m_consideredWorkflowGroups.setEnabled(m_addToNodeRepo.getBooleanValue(), getFieldEditorParent());
+        boolean enabled = m_addToNodeRepo.getBooleanValue();
+        setWorkflowGroupConfigEnabled(enabled);
+    }
+
+    private void setWorkflowGroupConfigEnabled(final boolean enabled) {
+        m_consideredWorkflowGroups.setEnabled(enabled, getFieldEditorParent());
+        m_composites.forEach(c -> c.setEnabled(enabled));
     }
 }

@@ -49,6 +49,7 @@ package org.knime.workbench.explorer.templates.preferences;
 import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isWorkflowGroup;
 
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.jface.preference.ListEditor;
@@ -59,6 +60,7 @@ import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.templates.NodeRepoSyncSettings;
 
 /**
  * A field editor to select workflow groups in all connected mount points.
@@ -93,7 +95,7 @@ public class WorkflowGroupListEditor extends ListEditor {
     @Override
 	protected String getNewInputObject() {
 
-        String[] mountIDs = getConnectedMountPoints();
+        String[] mountIDs = getConnectedAndCustomizableMountPoints();
         SpaceResourceSelectionDialog dialog = new SpaceResourceSelectionDialog(getShell(), mountIDs, null);
         dialog.setTitle("Select workflow group");
         dialog.setHeader(
@@ -124,12 +126,18 @@ public class WorkflowGroupListEditor extends ListEditor {
         return stringList.split(",");
     }
 
-    private static String[] getConnectedMountPoints() {
+    private static String[] getConnectedAndCustomizableMountPoints() {
         return ExplorerMountTable.getMountedContent().values().stream().filter(cp -> {
             if (cp.getMountID().equals("LOCAL")) {
                 return true;
             } else if (isWorkflowGroup(cp.getFileStore("/"))) {
-                return true;
+                Optional<Boolean> isServerConfigured = NodeRepoSyncSettings.getInstance().hasServerConfiguredPaths(cp);
+                if (isServerConfigured.isPresent()) {
+                    return !isServerConfigured.get();
+                } else {
+                    //should actually not happen
+                    return false;
+                }
             }
             return false;
         }).map(cp -> cp.getMountID()).toArray(s -> new String[s]);
