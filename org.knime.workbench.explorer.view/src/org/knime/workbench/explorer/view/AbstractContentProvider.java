@@ -125,7 +125,6 @@ import org.osgi.service.prefs.Preferences;
  * show the content of that one mount point.
  *
  * @author ohl, University of Konstanz
- * @since 8.4
  */
 public abstract class AbstractContentProvider extends LabelProvider implements
         ITreeContentProvider, Comparable<AbstractContentProvider>, IColorProvider {
