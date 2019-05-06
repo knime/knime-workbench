@@ -100,9 +100,6 @@ public final class NodeRepoSynchronizer {
      *         known type)
      */
     public Optional<Job> syncWithNodeRepo(final Object element) {
-        if (!m_settings.isActivated()) {
-            return Optional.empty();
-        }
         if (element instanceof AbstractContentProvider) {
             return syncWithNodeRepo((AbstractContentProvider)element);
         } else if (element instanceof ContentObject) {
@@ -120,7 +117,7 @@ public final class NodeRepoSynchronizer {
      * @return the scheduled job or an empty optional if job hasn't been scheduled
      */
     public Optional<Job> syncWithNodeRepo(final AbstractContentProvider mountPoint) {
-        if (!m_settings.isActivated() || mountPoint == null) {
+        if (mountPoint == null) {
             return Optional.empty();
         }
         return syncWithNodeRepo(mountPoint.getFileStore("/"));
@@ -134,12 +131,15 @@ public final class NodeRepoSynchronizer {
      * @return the scheduled job or an empty optional if job hasn't been scheduled
      */
     public Optional<Job> syncWithNodeRepo(final AbstractExplorerFileStore fileStore) {
-        if (!m_settings.isActivated() || fileStore == null) {
+        if (fileStore == null) {
+            return Optional.empty();
+        }
+        List<String> includedPaths = m_settings.getAndCacheIncludedPathsForMountID(fileStore.getContentProvider());
+        if (!m_settings.isActivated()) {
             return Optional.empty();
         }
 
         if (!isSyncJobStillRunning(fileStore)) {
-            List<String> includedPaths = m_settings.getIncludedPathsForMountID(fileStore.getContentProvider());
             if (isConfiguredToBeIncluded(fileStore, includedPaths)) {
                 NodeRepoSyncJob job = new NodeRepoSyncJob(fileStore, includedPaths);
                 m_syncJobs.put(fileStore.getMountID(), job);

@@ -114,8 +114,8 @@ public class NodeRepoSyncSettings {
     }
 
     /**
-     * Determines and returns the included paths for a specific mount point. It uses different 'sources' to determine
-     * the paths in the following order:
+     * Determines (, potentially caches,) and returns the included paths for a specific mount point. It uses different
+     * 'sources' to determine the paths in the following order:
      * <ul>
      * <li>1. ask server for included paths</li>
      * <li>2. if not configured/available, use the preferences</li>
@@ -126,7 +126,7 @@ public class NodeRepoSyncSettings {
      * @param mountPoint the mount point to get the included paths for
      * @return list of included paths, might be empty but never <code>null</code>
      */
-    List<String> getIncludedPathsForMountID(final AbstractContentProvider mountPoint) {
+    List<String> getAndCacheIncludedPathsForMountID(final AbstractContentProvider mountPoint) {
         String mountID = mountPoint.getMountID();
         Optional<List<String>> paths;
 
