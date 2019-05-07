@@ -125,6 +125,9 @@ public interface PreferenceConstants {
     public static final String P_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO =
         "knime.explorer.add_templates_to_node_repo";
 
+    /** Default value for pref value whether to add metanode templates to the node repository */
+    public static final boolean P_DEFAULT_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO = false;
+
     /** Pref constant to define which workflow groups contribute their templates
      * to the node repository. */
     public static final String P_EXPLORER_TEMPLATE_WORKFLOW_GROUPS_TO_NODE_REPO =

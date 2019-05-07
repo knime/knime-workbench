@@ -97,8 +97,9 @@ public class ExplorerPreferenceInitializer extends
                 MessageDialogWithToggle.PROMPT);
 
         //defaults for explorer metanode templates
-        prefStore.setDefault(PreferenceConstants.P_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO, false);
-        prefStore.setDefault(PreferenceConstants.P_EXPLORER_TEMPLATE_WORKFLOW_GROUPS_TO_NODE_REPO, "/");
+        prefStore.setDefault(PreferenceConstants.P_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO,
+            PreferenceConstants.P_DEFAULT_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO);
+        prefStore.setDefault(PreferenceConstants.P_EXPLORER_TEMPLATE_WORKFLOW_GROUPS_TO_NODE_REPO, "");
     }
 
     /**
