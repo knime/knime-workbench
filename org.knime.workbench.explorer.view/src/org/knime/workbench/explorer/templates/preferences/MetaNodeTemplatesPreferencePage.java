@@ -100,7 +100,7 @@ public class MetaNodeTemplatesPreferencePage extends FieldEditorPreferencePage i
         addField(new HorizontalLineField(parent));
 
         m_addToNodeRepo = new BooleanFieldEditor(PreferenceConstants.P_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO,
-            "Add metanode templates to node repository", parent) {
+            "Add metanode templates to node repository (preview functionality)", parent) {
             @Override
             protected void valueChanged(final boolean oldValue, final boolean newValue) {
                 super.valueChanged(oldValue, newValue);
