@@ -25,12 +25,6 @@
                id="org.knime.workbench.explorer.view.explorer"
                name="KNIME Explorer">
          </page>
-         <page
-               category="org.knime.workbench.explorer.view.explorer"
-               class="org.knime.workbench.explorer.templates.preferences.MetaNodeTemplatesPreferencePage"
-               id="org.knime.workbench.explorer.view.metanode_templates"
-               name="Metanode Templates">
-         </page>
       </extension>
       <extension
             point="org.eclipse.core.runtime.preferences">

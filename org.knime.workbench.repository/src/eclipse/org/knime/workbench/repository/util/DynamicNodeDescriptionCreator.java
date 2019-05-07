@@ -47,8 +47,6 @@
  */
 package org.knime.workbench.repository.util;
 
-import static org.knime.core.ui.wrapper.WorkflowManagerWrapper.wrap;
-
 import java.io.FileNotFoundException;
 import java.util.Set;
 
@@ -64,7 +62,6 @@ import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.lazy.LazyWorkflowManagerUI;
 import org.knime.workbench.repository.model.Category;
-import org.knime.workbench.repository.model.ExplorerMetaNodeTemplate;
 import org.knime.workbench.repository.model.IRepositoryObject;
 import org.knime.workbench.repository.model.MetaNodeTemplate;
 import org.knime.workbench.repository.model.NodeTemplate;
@@ -153,14 +150,8 @@ public final class DynamicNodeDescriptionCreator {
                     if (!idsDisplayed.contains(templ.getID())) {
                         idsDisplayed.add(templ.getID());
                         NodeContainerUI manager =
-                                wrap(((MetaNodeTemplate)child).getManager());
+                                ((MetaNodeTemplate)child).getManager();
                         addDescription(manager, /* useSingleLine */true, bld);
-                    }
-                } else if (child instanceof ExplorerMetaNodeTemplate) {
-                    ExplorerMetaNodeTemplate templ = (ExplorerMetaNodeTemplate)child;
-                    if (!idsDisplayed.contains(templ.getID())) {
-                        idsDisplayed.add(templ.getID());
-                        addDescription(templ, true, bld);
                     }
                 } else {
                     bld.append(" - contains unknown object (internal err!) -");
@@ -272,7 +263,7 @@ public final class DynamicNodeDescriptionCreator {
      */
     public void addDescription(final MetaNodeTemplate template,
             final boolean useSingleLine, final StringBuilder builder) {
-        WorkflowManagerUI manager = wrap(template.getManager());
+        WorkflowManagerUI manager = template.getManager();
         if (!useSingleLine) {
             builder.append(getHeader());
             builder.append("<h1>");
@@ -288,28 +279,6 @@ public final class DynamicNodeDescriptionCreator {
         } else {
             builder.append("<dt><b>" + manager.getName() + "</b></dt>");
             builder.append("<dd>" + template.getDescription() + "</dd>");
-        }
-    }
-
-    /**
-     * @param template meta node template
-     * @param useSingleLine true if several nodes are selected
-     * @param builder gathers the HTML content
-     */
-    public void addDescription(final ExplorerMetaNodeTemplate template, final boolean useSingleLine,
-        final StringBuilder builder) {
-        String desc = "Metanode referencing a template in the explorer (" + template.getMetaNodeObject() + ")";
-        if (!useSingleLine) {
-            builder.append(getHeader());
-            builder.append("<h1>");
-            builder.append(template.getName());
-            builder.append("</h1>");
-            builder.append("<h2>Description:</h2>");
-            builder.append("<p>" + desc + "</p>");
-            builder.append("</body></html>");
-        } else {
-            builder.append("<dt><b>" + template.getName() + "</b></dt>");
-            builder.append("<dd>" + desc + "</dd>");
         }
     }
 

@@ -95,10 +95,6 @@ public class ExplorerPreferenceInitializer extends
         prefStore.setDefault(
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
                 MessageDialogWithToggle.PROMPT);
-
-        //defaults for explorer metanode templates
-        prefStore.setDefault(PreferenceConstants.P_EXPLORER_ADD_TEMPLATES_TO_NODE_REPO, false);
-        prefStore.setDefault(PreferenceConstants.P_EXPLORER_TEMPLATE_WORKFLOW_GROUPS_TO_NODE_REPO, "/");
     }
 
     /**

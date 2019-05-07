@@ -48,7 +48,6 @@ import static org.knime.core.ui.wrapper.Wrapper.wraps;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Optional;
 
 import org.eclipse.gef.EditPartViewer;
 import org.eclipse.jface.util.LocalSelectionTransfer;
@@ -84,9 +83,9 @@ public class WorkflowEditorSelectionDropListener extends
     /** {@inheritDoc} */
     @Override
     protected void handleDrop() {
-        Optional<ContentObject> obj = getDragSourceObject(ContentObject.class);
+        ContentObject obj = getDragResources(getCurrentEvent());
         try {
-            URL url =  obj.get().getObject().toURI().toURL();
+            URL url =  obj.getObject().toURI().toURL();
             getFactory().setReaderNodeSettings(
                     new ReaderNodeSettings(getNodeFactory(url), url));
             super.handleDrop();
@@ -103,12 +102,8 @@ public class WorkflowEditorSelectionDropListener extends
         if (!super.isEnabled(event)) {
             return false;
         }
-        Optional<ContentObject> contentObject =
-            getDragSourceObject(ContentObject.class);
-        if (!contentObject.isPresent()) {
-            return false;
-        }
-        AbstractExplorerFileStore fileStore = contentObject.get().getObject();
+        AbstractExplorerFileStore fileStore
+                = getDragResources(event).getObject();
         boolean enabled = !(AbstractExplorerFileStore.isMetaNode(fileStore)
                 || AbstractExplorerFileStore.isWorkflow(fileStore)
                 || AbstractExplorerFileStore.isWorkflowTemplate(fileStore)

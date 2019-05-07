@@ -57,8 +57,6 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.ExecutionMonitor;
-import org.knime.core.node.workflow.NodeContainer;
-import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.TemplateNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
@@ -84,25 +82,22 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
     private MetaNodeLinkUpdateResult m_result;
 
-    private final NodeUIInformation m_uiInfo;
-
     /**
      *
      * @param wfm target workflow (where to insert)
      * @param templateKNIMEFolder the workflow dir from which the template
      *            should be loaded
-     * @param uiInfo the node ui info (e.g. location) of the new metanode
      */
-    public LoadMetaNodeTemplateRunnable(final WorkflowManager wfm, final AbstractExplorerFileStore templateKNIMEFolder,
-        final NodeUIInformation uiInfo) {
+    public LoadMetaNodeTemplateRunnable(final WorkflowManager wfm,
+            final AbstractExplorerFileStore templateKNIMEFolder) {
         m_parentWFM = wfm;
         m_templateKNIMEFolder = templateKNIMEFolder;
-        m_uiInfo = uiInfo;
     }
 
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("null")
     @Override
     public void run(final IProgressMonitor pm) {
         try {
@@ -126,9 +121,6 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                     new MetaNodeLinkUpdateResult("Template from \"" + sourceURI + "\"");
             m_parentWFM.load(loadPersistor, loadResult, new ExecutionMonitor(progressMonitor), false);
             m_result = loadResult;
-            if (m_result.getLoadedInstance() != null) {
-                ((NodeContainer)m_result.getLoadedInstance()).setUIInformation(m_uiInfo);
-            }
             if (pm.isCanceled()) {
                 throw new InterruptedException();
             }

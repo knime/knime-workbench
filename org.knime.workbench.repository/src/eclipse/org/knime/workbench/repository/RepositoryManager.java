@@ -154,8 +154,6 @@ public final class RepositoryManager {
 
     private final Root m_completeRoot = new Root();
 
-    private boolean m_readRepository = true;
-
     /**
      * Creates the repository model. This instantiates all contributed
      * category/node extensions found in the global Eclipse PluginRegistry, and
@@ -165,9 +163,6 @@ public final class RepositoryManager {
     }
 
     private void readRepository(final IProgressMonitor monitor) {
-        if (!m_readRepository) {
-            return;
-        }
         assert !m_root.hasChildren();
         readCategories(monitor, m_root);
         if (monitor.isCanceled()) {
@@ -190,9 +185,6 @@ public final class RepositoryManager {
     }
 
     private void readCompleteRepository(final IProgressMonitor monitor) {
-        if(!m_readRepository) {
-            return;
-        }
         assert !m_completeRoot.hasChildren();
         readCategories(monitor, m_completeRoot);
         if (monitor.isCanceled()) {
@@ -709,14 +701,6 @@ public final class RepositoryManager {
      */
     public void addLoadListener(final Listener listener) {
         m_loadListeners.add(listener);
-    }
-
-    /**
-     * If called before calling {@link #getRoot()} the repository won't get read in which is useful for testing. For
-     * testing purposes only!
-     */
-    public void doNotReadRepositoryForTesting() {
-        m_readRepository = false;
     }
 
     /**

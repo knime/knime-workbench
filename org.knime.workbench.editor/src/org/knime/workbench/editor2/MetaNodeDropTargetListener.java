@@ -50,14 +50,15 @@ package org.knime.workbench.editor2;
 
 import static org.knime.core.ui.wrapper.Wrapper.wraps;
 
-import java.util.Optional;
-
+import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.gef.EditPartViewer;
 import org.eclipse.jface.util.LocalSelectionTransfer;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DropTargetEvent;
 import org.eclipse.swt.dnd.Transfer;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.workbench.repository.model.AbstractNodeTemplate;
 import org.knime.workbench.repository.model.MetaNodeTemplate;
 
 /**
@@ -80,9 +81,9 @@ public class MetaNodeDropTargetListener extends
      */
     @Override
     public boolean isEnabled(final DropTargetEvent event) {
-        Optional<MetaNodeTemplate> mnt = getDragSourceObject(MetaNodeTemplate.class);
+        AbstractNodeTemplate snt = getSelectionNodeTemplate();
         //not yet supported by WorkflowManagerUI-implementations
-        if (mnt.isPresent() && wraps(getWorkflowManager(), WorkflowManager.class)) {
+        if (snt != null && wraps(getWorkflowManager(), WorkflowManager.class)) {
             event.feedback = DND.FEEDBACK_SELECT;
             event.operations = DND.DROP_COPY;
             event.detail = DND.DROP_COPY;
@@ -96,9 +97,29 @@ public class MetaNodeDropTargetListener extends
      */
     @Override
     protected void handleDrop() {
-        Optional<MetaNodeTemplate> template = getDragSourceObject(MetaNodeTemplate.class);
-        getFactory().setMetaNodeTemplate(template.get());
+        MetaNodeTemplate template = getSelectionNodeTemplate();
+        getFactory().setMetaNodeTemplate(template);
         super.handleDrop();
+    }
+
+    private MetaNodeTemplate getSelectionNodeTemplate() {
+        if (LocalSelectionTransfer.getTransfer().getSelection() == null) {
+            return null;
+        }
+        if (((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).size() > 1) {
+            // allow dropping a single node only
+            return null;
+        }
+
+        Object template = ((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).getFirstElement();
+        if (template instanceof MetaNodeTemplate) {
+            return (MetaNodeTemplate)template;
+        }
+        // Last change: Ask adaptables for an adapter object
+        if (template instanceof IAdaptable) {
+            return (MetaNodeTemplate)((IAdaptable)template).getAdapter(MetaNodeTemplate.class);
+        }
+        return null;
     }
 
     /**

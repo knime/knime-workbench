@@ -47,18 +47,19 @@
  */
 package org.knime.workbench.editor2;
 
-import java.util.Optional;
-
+import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.gef.EditPartViewer;
 import org.eclipse.jface.util.LocalSelectionTransfer;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DropTargetEvent;
 import org.eclipse.swt.dnd.Transfer;
+import org.knime.workbench.repository.model.AbstractNodeTemplate;
 import org.knime.workbench.repository.model.NodeTemplate;
 
 /**
  * A drop target listener for normal node drops from the node repository to the workbench.
- *
+ * 
  * @author Tim-Oliver Buchholz, KNIME AG, Zurich, Switzerland
  */
 public class NodeDropTargetListener extends WorkflowEditorDropTargetListener<NodeCreationFactory> {
@@ -75,8 +76,8 @@ public class NodeDropTargetListener extends WorkflowEditorDropTargetListener<Nod
      */
     @Override
     public boolean isEnabled(final DropTargetEvent event) {
-        Optional<NodeTemplate> nt = getDragSourceObject(NodeTemplate.class);
-        if (nt.isPresent()) {
+        AbstractNodeTemplate snt = getSelectionNodeTemplate();
+        if (snt != null) {
             event.feedback = DND.FEEDBACK_SELECT;
             event.operations = DND.DROP_COPY;
             event.detail = DND.DROP_COPY;
@@ -90,9 +91,29 @@ public class NodeDropTargetListener extends WorkflowEditorDropTargetListener<Nod
      */
     @Override
     protected void handleDrop() {
-        Optional<NodeTemplate> template = getDragSourceObject(NodeTemplate.class);
-        getFactory().setNodeTemplate(template.get());
+        NodeTemplate template = getSelectionNodeTemplate();
+        getFactory().setNodeTemplate(template);
         super.handleDrop();
+    }
+
+    private NodeTemplate getSelectionNodeTemplate() {
+        if (LocalSelectionTransfer.getTransfer().getSelection() == null) {
+            return null;
+        }
+        if (((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).size() > 1) {
+            // allow dropping a single node only
+            return null;
+        }
+
+        Object template = ((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).getFirstElement();
+        if (template instanceof NodeTemplate) {
+            return (NodeTemplate)template;
+        }
+        // Last change: Ask adaptables for an adapter object
+        if (template instanceof IAdaptable) {
+            return (NodeTemplate)((IAdaptable)template).getAdapter(NodeTemplate.class);
+        }
+        return null;
     }
 
     /**

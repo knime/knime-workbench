@@ -123,7 +123,6 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
-import org.knime.workbench.explorer.templates.NodeRepoSynchronizer;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
 import org.knime.workbench.explorer.view.actions.ConfigureExplorerViewAction;
@@ -451,20 +450,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     private void createTreeViewer(final Composite parent,
             final ContentDelegator provider) {
-        m_viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL) {
-
-            @Override
-            public void refresh(final Object element, final boolean updateLabels) {
-                NodeRepoSynchronizer.getInstance().syncWithNodeRepo(element);
-                super.refresh(element, updateLabels);
-            }
-
-            @Override
-            public void refresh(final Object element) {
-                NodeRepoSynchronizer.getInstance().syncWithNodeRepo(element);
-                super.refresh(element);
-            }
-        };
+        m_viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL);
         m_viewer.getTree().setLayoutData(new GridData(GridData.FILL_BOTH));
         m_viewer.setComparator(new ExplorerViewComparator());
         m_viewer.setContentProvider(provider);
@@ -844,7 +830,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 }
             });
         }
-        NodeRepoSynchronizer.getInstance().syncWithNodeRepo(ExplorerMountTable.getMountedContent().get("LOCAL"));
     }
 
     /**

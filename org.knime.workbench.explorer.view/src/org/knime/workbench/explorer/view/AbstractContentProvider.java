@@ -66,8 +66,6 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.jface.dialogs.MessageDialogWithToggle;
-import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.IColorProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
@@ -103,7 +101,6 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
-import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
@@ -115,7 +112,6 @@ import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidat
 import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
 import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.osgi.service.prefs.Preferences;
 
 /**
@@ -696,24 +692,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     private LinkType promptLinkMetaNodeTemplate(final String oldName, final String newName,
         final Collection<LinkType> allowedLinkTypes) {
 
-        IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        String linkPrefs = prefStore.getString(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
-
-        if (MessageDialogWithToggle.PROMPT.equals(linkPrefs)) {
-            Shell activeShell = Display.getDefault().getActiveShell();
-            String msg = "Update metanode to link to the template?";
-            if (!oldName.equals(newName)) {
-                msg = msg + "\n(The node will be renamed to \"" + newName + "\".)";
-            }
-
-            LinkPrompt dlg = new LinkPrompt(activeShell, msg, allowedLinkTypes);
-            if (dlg.open() == Window.CANCEL) {
-                return null;
-            }
-            return dlg.getLinkType();
-        } else {
-            return LinkType.None;
+        Shell activeShell = Display.getDefault().getActiveShell();
+        String msg = "Update metanode to link to the template?";
+        if (!oldName.equals(newName)) {
+            msg = msg + "\n(The node will be renamed to \"" + newName + "\".)";
         }
+
+        LinkPrompt dlg = new LinkPrompt(activeShell, msg, allowedLinkTypes);
+        if (dlg.open() == Window.CANCEL) {
+            return null;
+        }
+        return dlg.getLinkType();
     }
 
     private static final class LinkPrompt extends MessageDialog {

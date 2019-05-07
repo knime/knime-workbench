@@ -49,8 +49,6 @@ package org.knime.workbench.editor2;
 
 import static org.knime.core.ui.wrapper.Wrapper.wraps;
 
-import java.util.Optional;
-
 import org.eclipse.gef.EditPartViewer;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.swt.dnd.DND;
@@ -59,7 +57,6 @@ import org.eclipse.swt.dnd.Transfer;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
-import org.knime.workbench.repository.model.ExplorerMetaNodeTemplate;
 
 /**
  * @author Bernd Wiswedel, KNIME.com, Zurich Switzerland
@@ -77,8 +74,9 @@ public class MetaNodeTemplateDropTargetListener extends WorkflowEditorDropTarget
     /** {@inheritDoc} */
     @Override
     protected void handleDrop() {
-        AbstractExplorerFileStore store = getFileStore();
-        if (store != null) {
+        final ContentObject obj = getDragResources(getCurrentEvent());
+        final AbstractExplorerFileStore store =  obj.getObject();
+        if (AbstractExplorerFileStore.isWorkflowTemplate(store)) {
             getFactory().setSourceFileStore(store);
             super.handleDrop();
         } else {
@@ -94,32 +92,16 @@ public class MetaNodeTemplateDropTargetListener extends WorkflowEditorDropTarget
         if (!super.isEnabled(event)) {
             return false;
         }
-
-        final AbstractExplorerFileStore fileStore = getFileStore();
+        final AbstractExplorerFileStore fileStore = getDragResources(event).getObject();
+        final boolean isMetaNodeTemplate = AbstractExplorerFileStore.isWorkflowTemplate(fileStore);
         //not yet supported by WorkflowManagerUI-implementations
-        if (fileStore != null && wraps(getWorkflowManager(), WorkflowManager.class)) {
+        if (isMetaNodeTemplate && wraps(getWorkflowManager(), WorkflowManager.class)) {
             event.feedback = DND.FEEDBACK_SELECT;
             event.operations = DND.DROP_COPY | DND.DROP_LINK;
             event.detail = DND.DROP_COPY;
             return true;
         }
         return false;
-    }
-
-    private AbstractExplorerFileStore getFileStore() {
-        final Optional<ContentObject> obj = getDragSourceObject(ContentObject.class);
-        if (obj.isPresent()) {
-            final AbstractExplorerFileStore store = obj.get().getObject();
-            if (AbstractExplorerFileStore.isWorkflowTemplate(store)) {
-                return store;
-            }
-        }
-
-        final Optional<ExplorerMetaNodeTemplate> metanodeTemplate = getDragSourceObject(ExplorerMetaNodeTemplate.class);
-        if (metanodeTemplate.isPresent()) {
-            return (AbstractExplorerFileStore)metanodeTemplate.get().getMetaNodeObject();
-        }
-        return null;
     }
 
     /**
