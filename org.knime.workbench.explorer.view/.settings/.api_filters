@@ -99,6 +99,31 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/export/WorkflowExportAction.java" type="org.knime.workbench.explorer.view.actions.export.WorkflowExportAction">
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="GlobalNodeStats"/>
+                <message_argument value="WorkflowExportAction"/>
+                <message_argument value="incWorkflowExport()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/imports/WorkflowImportAction.java" type="org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction">
+        <filter id="623939596">
+            <message_arguments>
+                <message_argument value="NodeTimer"/>
+                <message_argument value="WorkflowImportAction"/>
+                <message_argument value="GLOBAL_TIMER"/>
+            </message_arguments>
+        </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="GlobalNodeStats"/>
+                <message_argument value="WorkflowImportAction"/>
+                <message_argument value="incWorkflowImport()"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="src/org/knime/workbench/explorer/view/actions/imports/WorkflowImportOperation.java" type="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation">
         <filter id="338792546">
             <message_arguments>

@@ -50,6 +50,7 @@ package org.knime.workbench.explorer.view.actions.export;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
@@ -75,12 +76,12 @@ final class WorkflowExportHelper {
 
     static final String TOOLTIP = "Exports KNIME workflows from the workspace to an external directory or an archive";
 
-    static void openExportWizard(final Shell parentShell, final IStructuredSelection selection) {
+    static boolean openExportWizard(final Shell parentShell, final IStructuredSelection selection) {
         WorkflowExportWizard expWiz = new WorkflowExportWizard();
         expWiz.init(PlatformUI.getWorkbench(), selection);
 
         WizardDialog dialog = new WizardDialog(parentShell, expWiz);
         dialog.create();
-        dialog.open();
+        return dialog.open() != Window.CANCEL;
     }
 }

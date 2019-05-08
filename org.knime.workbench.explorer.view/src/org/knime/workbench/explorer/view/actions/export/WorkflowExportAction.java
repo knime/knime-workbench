@@ -49,6 +49,7 @@ package org.knime.workbench.explorer.view.actions.export;
 
 import java.util.List;
 
+import org.knime.core.node.workflow.NodeTimer;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
@@ -102,6 +103,8 @@ public class WorkflowExportAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        WorkflowExportHelper.openExportWizard(getParentShell(), getSelection());
+        if (WorkflowExportHelper.openExportWizard(getParentShell(), getSelection())) {
+            NodeTimer.GLOBAL_TIMER.incWorkflowExport();
+        }
     }
 }

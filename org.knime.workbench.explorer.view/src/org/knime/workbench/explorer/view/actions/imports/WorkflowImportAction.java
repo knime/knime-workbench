@@ -50,6 +50,7 @@ package org.knime.workbench.explorer.view.actions.imports;
 import java.util.List;
 import java.util.Map;
 
+import org.knime.core.node.workflow.NodeTimer;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
@@ -131,6 +132,7 @@ public class WorkflowImportAction extends ExplorerAction {
         AbstractExplorerFileStore destination =
             WorkflowImportHelper.openImportWizard(getParentShell(), m_destination, m_selectedFile);
         if (destination != null) {
+            NodeTimer.GLOBAL_TIMER.incWorkflowImport();
             Object object = ContentDelegator.getTreeObjectFor(destination);
             getViewer().refresh(object);
             getViewer().reveal(object);
