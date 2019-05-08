@@ -56,6 +56,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeTimer;
@@ -67,6 +68,7 @@ import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.async.OperationNotAllowedException;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.SWTUtilities;
+import org.knime.workbench.repository.NodeUsageRegistry;
 import org.knime.workbench.ui.async.AsyncUtil;
 
 /**
@@ -183,7 +185,11 @@ public class CreateNodeCommand extends AbstractKNIMECommand {
             }, hostWFM, "Adding new node ...");
             m_container = hostWFM.getNodeContainer(id);
             if (wraps(m_container, NodeContainer.class)) {
-                NodeTimer.GLOBAL_TIMER.addNodeCreation(Wrapper.unwrapNC(m_container));
+                NodeContainer nc = Wrapper.unwrapNC(m_container);
+                NodeTimer.GLOBAL_TIMER.addNodeCreation(nc);
+                if (nc instanceof NativeNodeContainer) {
+                    NodeUsageRegistry.addNode(((NativeNodeContainer)nc).getNode().getFactory());
+                }
             }
         } catch (Throwable t) {
             // if fails notify the user

@@ -109,7 +109,6 @@ import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.KNIMEJob;
 import org.knime.workbench.core.nodeprovider.NodeProvider;
-import org.knime.workbench.repository.NodeUsageRegistry;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.AbstractRepositoryObject;
 import org.knime.workbench.repository.model.Category;
@@ -502,10 +501,7 @@ public abstract class AbstractRepositoryView extends ViewPart implements Reposit
                         LOGGER.error("Unable to instantiate the selected node " + tmplt.getFactory().getName(), e);
                         return;
                     }
-                    boolean added = NodeProvider.INSTANCE.addNode(nodeFact);
-                    if (added) {
-                        NodeUsageRegistry.addNode(tmplt);
-                    }
+                    NodeProvider.INSTANCE.addNode(nodeFact);
                 } else if (o instanceof MetaNodeTemplate) {
                     MetaNodeTemplate mnt = (MetaNodeTemplate)o;
                     NodeID metaNode = mnt.getManager().getID();

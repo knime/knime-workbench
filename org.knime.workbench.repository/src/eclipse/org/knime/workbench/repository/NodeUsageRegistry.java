@@ -61,11 +61,15 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.IMemento;
+import org.knime.core.node.DynamicNodeFactory;
+import org.knime.core.node.NodeFactory;
 import org.knime.core.util.KNIMEJob;
 import org.knime.workbench.repository.model.NodeTemplate;
 import org.osgi.framework.FrameworkUtil;
 
 /**
+ * Let one register nodes in order to track their usage (last use, most frequent use) that is, e.g., displayed in the
+ * favorites view.
  *
  * @author Fabian Dill, University of Konstanz
  */
@@ -151,9 +155,22 @@ public final class NodeUsageRegistry {
     }
 
     /**
+     * Registers another node usage to be tracked.
      *
-     * @param node the last used node (is added to last used nodes and the
-     *            frequency is counted
+     * @param nodeFactory the last used node (is added to last used nodes and the frequency is counted)
+     */
+    public static void addNode(final NodeFactory<?> nodeFactory) {
+        String id = nodeFactory.getClass().getCanonicalName();
+        if (nodeFactory instanceof DynamicNodeFactory) {
+            id += "#" + nodeFactory.getNodeName();
+        }
+        addNode(RepositoryManager.INSTANCE.getNodeTemplate(id));
+    }
+
+    /**
+     * Registers another node usage to be tracked.
+     *
+     * @param node the last used node (is added to last used nodes and the frequency is counted)
      */
     public static void addNode(final NodeTemplate node) {
         NodeTemplateFrequency nodeFreq = new NodeTemplateFrequency(node);
