@@ -431,6 +431,24 @@ public final class ExplorerMountTable {
     }
 
     /**
+     * @return a list of all local mount IDs currently in use and not hidden
+     * @since 8.4
+     */
+    public static List<String> getAllVisibleLocalMountIDs() {
+        final ArrayList<String> result = new ArrayList<String>();
+        synchronized (MOUNTED) {
+            for (Map.Entry<String, MountPoint> e : MOUNTED.entrySet()) {
+                final MountPoint mountPoint = e.getValue();
+                if (!mountPoint.getProviderFactory().isTempSpace()
+                        && !mountPoint.getProvider().isRemote()) {
+                    result.add(e.getKey());
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
      * @return a list of all mount IDs currently in use.
      * @since 6.4
      */

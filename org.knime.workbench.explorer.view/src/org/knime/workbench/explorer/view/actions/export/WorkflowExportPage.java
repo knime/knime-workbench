@@ -78,7 +78,6 @@ import org.knime.core.node.KNIMEConstants;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -340,14 +339,7 @@ public class WorkflowExportPage extends WizardPage {
      */
     private void handleFlowSelect() {
         ContentObject initSel = ContentObject.forFile(m_selection);
-        List<String> allIDs = ExplorerMountTable.getAllVisibleMountIDs();
-        ArrayList<String> selIDs = new ArrayList<String>();
-        for (String id : allIDs) {
-            MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
-            if (!mountPoint.getProvider().isRemote()) {
-                selIDs.add(id);
-            }
-        }
+        final List<String> selIDs = ExplorerMountTable.getAllVisibleLocalMountIDs();
         SpaceResourceSelectionDialog dlg =
                 new SpaceResourceSelectionDialog(getShell(), selIDs.toArray(new String[selIDs.size()]), initSel);
         dlg.setTitle("Source Selection");
