@@ -158,6 +158,7 @@ import org.eclipse.ui.views.contentoutline.IContentOutlinePage;
 import org.eclipse.ui.views.properties.IPropertySheetPage;
 import org.eclipse.ui.views.properties.PropertySheetPage;
 import org.knime.core.internal.ReferencedFile;
+import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
@@ -176,11 +177,14 @@ import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.NodeUIInformationEvent;
 import org.knime.core.node.workflow.NodeUIInformationListener;
+import org.knime.core.node.workflow.TemplateNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
+import org.knime.core.node.workflow.WorkflowLoadHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.node.workflow.WorkflowPersistor.WorkflowLoadResult;
 import org.knime.core.node.workflow.WorkflowSaveHelper;
 import org.knime.core.ui.UI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
@@ -191,6 +195,7 @@ import org.knime.core.ui.wrapper.WorkflowManagerWrapper;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.Pointer;
 import org.knime.core.util.SWTUtilities;
+import org.knime.core.util.workflowalizer2.WorkflowBundle;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.nodeprovider.NodeProvider;
 import org.knime.workbench.core.nodeprovider.NodeProvider.EventListener;
@@ -258,6 +263,7 @@ import org.knime.workbench.editor2.figures.WorkflowFigure;
 import org.knime.workbench.editor2.svgexport.WorkflowSVGExport;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.RemoteWorkflowInput;
+import org.knime.workbench.explorer.dbworkspace.DBWorkflowEditorInput;
 import org.knime.workbench.explorer.dialogs.SaveAsValidator;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
@@ -1044,10 +1050,24 @@ public class WorkflowEditor extends GraphicalEditor implements
      * {@inheritDoc}
      */
     @Override
-    protected void setInput(final IEditorInput input) {
+    protected void setInput(IEditorInput input) {
         LOGGER.debug("Setting input into editor...");
         super.setInput(input);
         m_origRemoteLocation = null;
+
+        if(input instanceof DBWorkflowEditorInput) {
+            WorkflowBundle workflow = ((DBWorkflowEditorInput)input).getWorkflow();
+            try {
+                TemplateNodeContainerPersistor persistor = new WorkflowLoadHelper(new File("/tmp"))
+                        .createTemplateLoadPersistor(workflow);
+                WorkflowLoadResult load = WorkflowManager.ROOT.load(persistor, new ExecutionMonitor(), true);
+                input = new WorkflowManagerInput(WorkflowManagerWrapper.wrap(load.getWorkflowManager()),
+                    new File("/tmp/" + workflow.getWorkflow().getName()).toURI());
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }
 
         //order of instance check important here
         //see WorkflowManagerURIInput

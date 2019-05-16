@@ -59,6 +59,9 @@ import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeTimer;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.util.workflowalizer2.WorkflowBundle;
+import org.knime.workbench.explorer.dbworkspace.DBFileStore;
+import org.knime.workbench.explorer.dbworkspace.DBWorkflowEditorInput;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
@@ -117,6 +120,18 @@ public class OpenWorkflowAction extends ExplorerAction {
         }
 
         IEditorDescriptor editorDescriptor;
+        if(fileStore instanceof DBFileStore) {
+            WorkflowBundle workflow = ((DBFileStore)fileStore).getWorkflowBundle();
+            try {
+                PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()
+                    .openEditor(new DBWorkflowEditorInput(workflow), "org.knime.workbench.editor.WorkflowEditor");
+            } catch (PartInitException ex) {
+                LOGGER.warn("Cannot open editor for " + fileStore + ": " + ex.getMessage(), ex);
+                return false;
+            }
+            return true;
+        }
+
         try {
             editorDescriptor = IDE.getEditorDescriptor(fileStore.getName());
             PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()

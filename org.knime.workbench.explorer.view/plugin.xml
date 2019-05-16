@@ -16,6 +16,9 @@
          <KNIMEExplorerContentProvider
                ContentProviderFactory="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory">
          </KNIMEExplorerContentProvider>
+         <KNIMEExplorerContentProvider
+               ContentProviderFactory="org.knime.workbench.explorer.dbworkspace.DBContentProviderFactory">
+         </KNIMEExplorerContentProvider>
       </extension>
       <extension
             point="org.eclipse.ui.preferencePages">
