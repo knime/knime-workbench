@@ -49,6 +49,9 @@ package org.knime.workbench.editor2.editparts.policy;
 
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Optional;
 
 import org.eclipse.draw2d.geometry.Point;
@@ -88,6 +91,7 @@ import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 
 /**
  * Container policy, handles the creation of new nodes that are inserted into the workflow. The request wraps an object
@@ -137,12 +141,20 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             if (obj instanceof AbstractExplorerFileStore) {
                 final AbstractExplorerFileStore fs = (AbstractExplorerFileStore)obj;
                 if (AbstractExplorerFileStore.isWorkflowTemplate(fs)) {
-                    return handleMetaNodeTemplateDrop(manager.get(), cdr, fs);
+                    return handleMetaNodeTemplateDrop(manager.get(), cdr, fs.toURI(),
+                        fs instanceof RemoteExplorerFileStore);
                 }
             } else if (obj instanceof WorkflowPersistor) {
                 return handleMetaNodeDrop(manager.get(), (WorkflowPersistor)obj, cdr);
             } else if (obj instanceof ReaderNodeSettings) {
                 return handleFileDrop(manager.get(), (ReaderNodeSettings)obj, cdr);
+            } else if(obj instanceof URL) {
+                //TODO sanity check URL and decide how to handle it
+                try {
+                    return handleMetaNodeTemplateDrop(manager.get(), cdr, ((URL)obj).toURI(), true);
+                } catch (URISyntaxException e) {
+                    LOGGER.error("The URL '" + obj + "' couldn't be turned into an URI", e);
+                }
             } else {
                 LOGGER.error("Illegal drop object: " + obj);
             }
@@ -226,27 +238,27 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
      * @param filestore the location of the metanode template
      */
     private Command handleMetaNodeTemplateDrop(final WorkflowManager manager, final CreateDropRequest request,
-        final AbstractExplorerFileStore filestore) {
+        final URI templateURI, final boolean isRemoteLocation) {
         final RequestType requestType = request.getRequestType();
         final Point location = request.getLocation();
         final boolean snapToGrid = WorkflowEditor.getActiveEditorSnapToGrid();
 
         if (RequestType.CREATE.equals(requestType)) {
             // create metanode from template
-            return new CreateMetaNodeTemplateCommand(manager, filestore, location, snapToGrid);
+            return new CreateMetaNodeTemplateCommand(manager, templateURI, location, snapToGrid, isRemoteLocation);
         } else {
             final AbstractEditPart dropTarget = request.getEditPart();
 
             if (RequestType.INSERT.equals(requestType)) {
                 // insert metanode from template into connection
                 final InsertMetaNodeTempalteCommand insertCommand = new InsertMetaNodeTempalteCommand(manager,
-                    filestore, location, snapToGrid, (ConnectionContainerEditPart)dropTarget);
+                    templateURI, location, snapToGrid, (ConnectionContainerEditPart)dropTarget, isRemoteLocation);
 
                 return potentiallyAugmentCommandForSpacing(insertCommand, request);
             } else if (RequestType.REPLACE.equals(requestType)) {
                 // replace node with metanode from template
-                return new ReplaceMetaNodeTemplateCommand(manager, filestore, location, snapToGrid,
-                    (NodeContainerEditPart)dropTarget);
+                return new ReplaceMetaNodeTemplateCommand(manager, templateURI, location, snapToGrid,
+                    (NodeContainerEditPart)dropTarget, isRemoteLocation);
             }
             return null;
         }

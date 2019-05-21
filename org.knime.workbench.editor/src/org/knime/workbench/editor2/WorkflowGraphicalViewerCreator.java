@@ -119,6 +119,7 @@ public class WorkflowGraphicalViewerCreator {
         viewer.addDropTargetListener(new MetaNodeDropTargetListener(viewer));
         viewer.addDropTargetListener(new WorkflowEditorFileDropTargetListener(viewer));
         viewer.addDropTargetListener(new WorkflowEditorSelectionDropListener(viewer));
+        viewer.addDropTargetListener(new WorkflowEditorURLDropTargetListener(viewer));
 
         // DO NOT Add drag listener
         /* Don't add any drag listener here. Processing of drag events seems
