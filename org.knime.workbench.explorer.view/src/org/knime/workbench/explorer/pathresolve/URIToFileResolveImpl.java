@@ -160,6 +160,8 @@ public class URIToFileResolveImpl implements URIToFileResolve {
                 // use the original URL because otherwise the handler may not be invoked correctly
                 return fetchRemoteFile(uri.toURL());
             }
+        } else if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
+            return fetchRemoteFile(uri.toURL());
         } else {
             throw new IOException("Unable to resolve URI \"" + uri + "\" to local file, unknown scheme");
         }
