@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.editor2.commands;
 
+import java.net.URI;
 import java.util.Collections;
 
 import org.eclipse.draw2d.geometry.Point;
@@ -78,6 +79,7 @@ public class ReplaceMetaNodeTemplateCommand extends CreateMetaNodeTemplateComman
      * @param location the insert location of the new metanode template
      * @param snapToGrid should metanode snap to grid
      * @param node which will be replaced by this metanode template
+     * @throws IllegalArgumentException if the passed file store doesn't represent a workflow template
      */
     public ReplaceMetaNodeTemplateCommand(final WorkflowManager manager, final AbstractExplorerFileStore templateFolder,
         final Point location, final boolean snapToGrid, final NodeContainerEditPart node) {
@@ -87,6 +89,25 @@ public class ReplaceMetaNodeTemplateCommand extends CreateMetaNodeTemplateComman
         m_replaceHelper = new ReplaceHelper(manager, Wrapper.unwrapNC(m_node.getNodeContainer()));
         m_delete = new DeleteCommand(Collections.singleton(m_node), getHostWFM());
     }
+
+    /**
+     * @param manager the workflow manager
+     * @param templateURI the uri of the metanode template directory or file
+     * @param location the insert location of the new metanode template
+     * @param snapToGrid should metanode snap to grid
+     * @param node which will be replaced by this metanode template
+     * @param isRemoteLocation if the workflow template needs to be downloaded first (determines whether to show a busy
+     *            cursor on command execution)
+     */
+    public ReplaceMetaNodeTemplateCommand(final WorkflowManager manager, final URI templateURI, final Point location,
+        final boolean snapToGrid, final NodeContainerEditPart node, final boolean isRemoteLocation) {
+        super(manager, templateURI, location, snapToGrid, isRemoteLocation);
+        m_node = node;
+        m_root = node.getRoot();
+        m_replaceHelper = new ReplaceHelper(manager, Wrapper.unwrapNC(m_node.getNodeContainer()));
+        m_delete = new DeleteCommand(Collections.singleton(m_node), getHostWFM());
+    }
+
 
     /**
      * {@inheritDoc}

@@ -49,6 +49,7 @@ package org.knime.workbench.editor2;
 
 import java.io.File;
 import java.net.URI;
+import java.nio.file.Files;
 
 import javax.swing.UIManager;
 
@@ -57,13 +58,16 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.ExecutionMonitor;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.TemplateNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
 import org.knime.core.node.workflow.WorkflowPersistor.MetaNodeLinkUpdateResult;
+import org.knime.core.util.FileUtil;
 import org.knime.core.util.SWTUtilities;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 
 /**
  * A runnable which is used by the {@link WorkflowEditor} to load a workflow
@@ -78,9 +82,11 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
     private WorkflowManager m_parentWFM;
 
-    private AbstractExplorerFileStore m_templateKNIMEFolder;
+    private final URI m_templateURI;
 
     private MetaNodeLinkUpdateResult m_result;
+
+    private final boolean m_isKNIMERelativURI;
 
     /**
      *
@@ -89,15 +95,25 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
      *            should be loaded
      */
     public LoadMetaNodeTemplateRunnable(final WorkflowManager wfm,
-            final AbstractExplorerFileStore templateKNIMEFolder) {
+        final AbstractExplorerFileStore templateKNIMEFolder) {
         m_parentWFM = wfm;
-        m_templateKNIMEFolder = templateKNIMEFolder;
+        m_templateURI = templateKNIMEFolder.toURI();
+        m_isKNIMERelativURI = true;
+    }
+
+    /**
+     * @param wfm the target workflow (where to insert)
+     * @param templateURI URI to the workflow directory or file from which the template should be loaded
+     */
+    public LoadMetaNodeTemplateRunnable(final WorkflowManager wfm, final URI templateURI) {
+        m_parentWFM = wfm;
+        m_templateURI = templateURI;
+        m_isKNIMERelativURI = templateURI.getScheme().equals(ExplorerFileSystem.SCHEME);
     }
 
     /**
      * {@inheritDoc}
      */
-    @SuppressWarnings("null")
     @Override
     public void run(final IProgressMonitor pm) {
         try {
@@ -106,20 +122,35 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             final CheckCancelNodeProgressMonitor progressMonitor = new CheckCancelNodeProgressMonitor(pm);
             progressMonitor.addProgressListener(progressHandler);
 
-            URI sourceURI = m_templateKNIMEFolder.toURI();
-            File parentFile = ResolverUtil.resolveURItoLocalOrTempFile(sourceURI, pm);
+            File parentFile = ResolverUtil.resolveURItoLocalOrTempFile(m_templateURI, pm);
+            if (parentFile.isFile()) {
+                //unzip
+                File tempDir = FileUtil.createTempDir("template-workflow");
+                FileUtil.unzip(parentFile, tempDir);
+                Files.delete(parentFile.toPath());
+                parentFile = tempDir.listFiles()[0];
+            }
             if (pm.isCanceled()) {
                 throw new InterruptedException();
             }
 
             Display d = Display.getDefault();
+
             GUIWorkflowLoadHelper loadHelper =
-                    new GUIWorkflowLoadHelper(d, parentFile.getName(), sourceURI, parentFile, null, false, true);
+                new GUIWorkflowLoadHelper(d, parentFile.getName(), m_templateURI, parentFile, null, false, true);
             TemplateNodeContainerPersistor loadPersistor =
-                    loadHelper.createTemplateLoadPersistor(parentFile, sourceURI);
+                    loadHelper.createTemplateLoadPersistor(parentFile, m_templateURI);
             MetaNodeLinkUpdateResult loadResult =
-                    new MetaNodeLinkUpdateResult("Template from \"" + sourceURI + "\"");
+                    new MetaNodeLinkUpdateResult("Template from \"" + m_templateURI + "\"");
             m_parentWFM.load(loadPersistor, loadResult, new ExecutionMonitor(progressMonitor), false);
+
+
+            //don't link if not a knime uri
+            if (!m_isKNIMERelativURI) {
+                m_parentWFM.setTemplateInformation(loadResult.getLoadedInstance().getID(),
+                    MetaNodeTemplateInformation.NONE);
+            }
+
             m_result = loadResult;
             if (pm.isCanceled()) {
                 throw new InterruptedException();
@@ -162,7 +193,6 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             // IMPORTANT: Remove the reference to the file and the
             // editor!!! Otherwise the memory cannot be freed later
             m_parentWFM = null;
-            m_templateKNIMEFolder = null;
         }
     }
 

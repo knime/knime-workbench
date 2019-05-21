@@ -49,6 +49,7 @@ package org.knime.workbench.editor2.commands;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -66,6 +67,7 @@ import org.knime.core.node.workflow.WorkflowPersistor.MetaNodeLinkUpdateResult;
 import org.knime.core.util.SWTUtilities;
 import org.knime.workbench.editor2.LoadMetaNodeTemplateRunnable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 
 /**
  * GEF command for adding a MetaNode from a file location to the workflow.
@@ -76,7 +78,7 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(CreateMetaNodeTemplateCommand.class);
 
-    private final AbstractExplorerFileStore m_templateKNIMEFolder;
+    private final URI m_templateURI;
 
     /**
      * Location of the new metanode template.
@@ -96,6 +98,8 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
      */
     protected NodeContainer m_container;
 
+    private final boolean m_isRemoteLocation;
+
 
     /**
      * Creates a new command.
@@ -104,14 +108,38 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
      * @param templateFolder the directory underlying the template
      * @param location Initial visual location in the
      * @param snapToGrid if node should be placed on closest grid location
+     * @throws IllegalArgumentException if the passed file store doesn't represent a workflow template
      */
-    public CreateMetaNodeTemplateCommand(final WorkflowManager manager,
-            final AbstractExplorerFileStore templateFolder,
-            final Point location, final boolean snapToGrid) {
+    public CreateMetaNodeTemplateCommand(final WorkflowManager manager, final AbstractExplorerFileStore templateFolder,
+        final Point location, final boolean snapToGrid) {
         super(manager);
-        m_templateKNIMEFolder = templateFolder;
+        if (!AbstractExplorerFileStore.isWorkflowTemplate(templateFolder)) {
+            throw new IllegalArgumentException(
+                "Provided workflow '" + templateFolder.getMountIDWithFullPath() + "' is not a template");
+        }
+        m_templateURI = templateFolder.toURI();
         m_location = location;
         m_snapToGrid = snapToGrid;
+        m_isRemoteLocation = templateFolder instanceof RemoteExplorerFileStore;
+    }
+
+    /**
+     * Creates a new command.
+     *
+     * @param manager The workflow manager that should host the new node
+     * @param templateURI the URI to the directory or file of the underlying the template
+     * @param location Initial visual location in the
+     * @param snapToGrid if node should be placed on closest grid location
+     * @param isRemoteLocation if the workflow template needs to be downloaded first (determines whether to show a busy
+     *            cursor on command execution)
+     */
+    public CreateMetaNodeTemplateCommand(final WorkflowManager manager, final URI templateURI, final Point location,
+        final boolean snapToGrid, final boolean isRemoteLocation) {
+        super(manager);
+        m_templateURI = templateURI;
+        m_location = location;
+        m_snapToGrid = snapToGrid;
+        m_isRemoteLocation = isRemoteLocation;
     }
 
     /** We can execute, if all components were 'non-null' in the constructor.
@@ -121,10 +149,10 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
         if (!super.canExecute()) {
             return false;
         }
-        if (m_location == null || m_templateKNIMEFolder == null) {
+        if (m_location == null || m_templateURI == null) {
             return false;
         }
-        return AbstractExplorerFileStore.isWorkflowTemplate(m_templateKNIMEFolder);
+        return true;
     }
 
     /** {@inheritDoc} */
@@ -136,8 +164,12 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
             IWorkbench wb = PlatformUI.getWorkbench();
             IProgressService ps = wb.getProgressService();
             // this one sets the workflow manager in the editor
-            loadRunnable = new LoadMetaNodeTemplateRunnable(getHostWFM(), m_templateKNIMEFolder);
-            ps.run(false, true, loadRunnable);
+            loadRunnable = new LoadMetaNodeTemplateRunnable(getHostWFM(), m_templateURI);
+            if (m_isRemoteLocation) {
+                ps.busyCursorWhile(loadRunnable);
+            } else {
+                ps.run(false, true, loadRunnable);
+            }
             MetaNodeLinkUpdateResult result = loadRunnable.getLoadResult();
             m_container = (NodeContainer)result.getLoadedInstance();
             if (m_container == null) {

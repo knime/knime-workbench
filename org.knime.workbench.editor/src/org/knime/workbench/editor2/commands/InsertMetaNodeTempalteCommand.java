@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.editor2.commands;
 
+import java.net.URI;
 import java.util.Collections;
 
 import org.eclipse.draw2d.geometry.Point;
@@ -78,10 +79,31 @@ public class InsertMetaNodeTempalteCommand extends CreateMetaNodeTemplateCommand
      * @param location the insert location of the new metanode template
      * @param snapToGrid should metanode snap to grid
      * @param edge on which the metanode should be inserted
+     * @throws IllegalArgumentException if the passed file store doesn't represent a workflow template
      */
     public InsertMetaNodeTempalteCommand(final WorkflowManager manager, final AbstractExplorerFileStore templateFolder,
         final Point location, final boolean snapToGrid, final ConnectionContainerEditPart edge) {
         super(manager, templateFolder, location, snapToGrid);
+        m_edge = Wrapper.unwrapCC(edge.getModel());
+        m_root = edge.getRoot();
+        m_ih = new InsertHelper(getHostWFM(), m_edge);
+
+        // delete command handles undo and restores all connections and node correctly
+        m_delete = new DeleteCommand(Collections.singleton(edge), manager);
+    }
+
+    /**
+     * @param manager the workflow manager
+     * @param templateURI the URI to the folder or file of the metanode template
+     * @param location the insert location of the new metanode template
+     * @param snapToGrid should metanode snap to grid
+     * @param edge on which the metanode should be inserted
+     * @param isRemoteLocation if the workflow template needs to be downloaded first (determines whether to show a busy
+     *            cursor on command execution)
+     */
+    public InsertMetaNodeTempalteCommand(final WorkflowManager manager, final URI templateURI, final Point location,
+        final boolean snapToGrid, final ConnectionContainerEditPart edge, final boolean isRemoteLocation) {
+        super(manager, templateURI, location, snapToGrid, isRemoteLocation);
         m_edge = Wrapper.unwrapCC(edge.getModel());
         m_root = edge.getRoot();
         m_ih = new InsertHelper(getHostWFM(), m_edge);
