@@ -48,15 +48,19 @@
  */
 package org.knime.workbench.editor2;
 
+import static org.knime.core.ui.wrapper.Wrapper.wraps;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 
 import org.eclipse.gef.EditPartViewer;
 import org.eclipse.jface.util.Util;
+import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DropTargetEvent;
 import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.dnd.URLTransfer;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.WorkflowManager;
 
 /**
  * Listens to drops of URLs to the workflow editor workbench. The URLs can, e.g., be dragged and dropped from browsers.
@@ -125,12 +129,16 @@ public class WorkflowEditorURLDropTargetListener extends WorkflowEditorDropTarge
      * @param event the drop target event
      * @return <code>true</code> if drop should proceed, <code>false</code> if it should not.
      */
-    private static boolean dropTargetIsValid(final DropTargetEvent event) {
+    private boolean dropTargetIsValid(final DropTargetEvent event) {
         if (URLTransfer.getInstance().isSupportedType(event.currentDataType) && dropTargetDataIsValid(event)) {
-            return true;
-        } else {
-            return false;
+            if (wraps(getWorkflowManager(), WorkflowManager.class)) {
+                event.feedback = DND.FEEDBACK_SELECT;
+                event.operations = DND.DROP_COPY | DND.DROP_LINK;
+                event.detail = DND.DROP_COPY;
+                return true;
+            }
         }
+        return false;
     }
 
     /**
