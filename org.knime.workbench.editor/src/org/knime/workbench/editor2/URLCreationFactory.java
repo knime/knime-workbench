@@ -58,7 +58,7 @@ import org.eclipse.gef.requests.CreationFactory;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz Germany
  */
-public class URLCreationFactory implements CreationFactory {
+public final class URLCreationFactory implements CreationFactory {
 
     private URL m_url;
 

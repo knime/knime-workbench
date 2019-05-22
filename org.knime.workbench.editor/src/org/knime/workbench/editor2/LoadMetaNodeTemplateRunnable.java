@@ -48,6 +48,7 @@
 package org.knime.workbench.editor2;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 
@@ -128,7 +129,11 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 File tempDir = FileUtil.createTempDir("template-workflow");
                 FileUtil.unzip(parentFile, tempDir);
                 Files.delete(parentFile.toPath());
-                parentFile = tempDir.listFiles()[0];
+                File[] extractedFiles = tempDir.listFiles();
+                if (extractedFiles.length == 0) {
+                    throw new IOException("Unzipping of file '" + parentFile + "' failed");
+                }
+                parentFile = extractedFiles[0];
             }
             if (pm.isCanceled()) {
                 throw new InterruptedException();

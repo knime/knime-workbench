@@ -148,7 +148,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 return handleMetaNodeDrop(manager.get(), (WorkflowPersistor)obj, cdr);
             } else if (obj instanceof ReaderNodeSettings) {
                 return handleFileDrop(manager.get(), (ReaderNodeSettings)obj, cdr);
-            } else if(obj instanceof URL) {
+            } else if (obj instanceof URL) {
                 URL url = (URL)obj;
                 String query = url.getQuery();
                 if (query != null && query.contains("isComponent")) {
