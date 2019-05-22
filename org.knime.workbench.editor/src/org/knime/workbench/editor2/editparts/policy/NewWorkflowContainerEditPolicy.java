@@ -149,11 +149,17 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             } else if (obj instanceof ReaderNodeSettings) {
                 return handleFileDrop(manager.get(), (ReaderNodeSettings)obj, cdr);
             } else if(obj instanceof URL) {
-                //TODO sanity check URL and decide how to handle it
-                try {
-                    return handleMetaNodeTemplateDrop(manager.get(), cdr, ((URL)obj).toURI(), true);
-                } catch (URISyntaxException e) {
-                    LOGGER.error("The URL '" + obj + "' couldn't be turned into an URI", e);
+                URL url = (URL)obj;
+                String query = url.getQuery();
+                if (query != null && query.contains("isComponent")) {
+                    try {
+                        return handleMetaNodeTemplateDrop(manager.get(), cdr, ((URL)obj).toURI(), true);
+                    } catch (URISyntaxException e) {
+                        LOGGER.error("The URL '" + obj + "' couldn't be turned into an URI", e);
+                    }
+                } else {
+                    LOGGER.info("The object referenced by URL '" + url
+                        + "' cannot be added to the workbench. Not a KNIME component.");
                 }
             } else {
                 LOGGER.error("Illegal drop object: " + obj);
