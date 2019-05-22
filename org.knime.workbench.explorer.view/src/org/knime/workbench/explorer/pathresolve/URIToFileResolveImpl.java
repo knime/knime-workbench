@@ -52,6 +52,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import org.apache.commons.io.IOUtils;
 import org.eclipse.core.filesystem.EFS;
@@ -176,12 +180,25 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         }
     }
 
-    private File fetchRemoteFile(final URL url) throws IOException {
+    private static File fetchRemoteFile(final URL url) throws IOException {
         File f = FileUtil.createTempFile("download", ".bin");
-        try (InputStream is = url.openStream(); OutputStream os = new FileOutputStream(f)) {
+        try (InputStream is = addAuthHeaderAndOpenStream(url); OutputStream os = new FileOutputStream(f)) {
             IOUtils.copy(is, os);
         }
         return f;
+    }
+
+    private static InputStream addAuthHeaderAndOpenStream(final URL url) throws IOException {
+        String userInfo = url.getUserInfo();
+        if (userInfo != null) {
+            URLConnection uc = url.openConnection();
+            String urlDecodedUserInfo = URLDecoder.decode(userInfo, StandardCharsets.UTF_8.name());
+            String basicAuth = "Basic " + new String(Base64.getEncoder().encode(urlDecodedUserInfo.getBytes()));
+            uc.setRequestProperty("Authorization", basicAuth);
+            return uc.getInputStream();
+        } else {
+            return url.openStream();
+        }
     }
 
     /**
