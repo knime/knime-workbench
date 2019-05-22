@@ -53,13 +53,12 @@ import java.net.URL;
 import org.eclipse.gef.requests.CreationFactory;
 
 /**
- * A Factory that essentially just passes an {@link URL}.
+ * A Factory that essentially just passes an {@link URL} when it is dragged and dropped.
+ * See, e.g., {@link WorkflowEditorURLDropTargetListener}.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz Germany
  */
 public class URLCreationFactory implements CreationFactory {
-
-
 
     private URL m_url;
 

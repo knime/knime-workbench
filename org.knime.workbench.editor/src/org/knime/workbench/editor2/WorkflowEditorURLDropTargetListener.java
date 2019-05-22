@@ -125,7 +125,8 @@ public class WorkflowEditorURLDropTargetListener extends WorkflowEditorDropTarge
     }
 
     /**
-     * Determine whether the drop target is valid.  Subclasses may override.
+     * Determine whether the drop target is valid.
+     *
      * @param event the drop target event
      * @return <code>true</code> if drop should proceed, <code>false</code> if it should not.
      */
