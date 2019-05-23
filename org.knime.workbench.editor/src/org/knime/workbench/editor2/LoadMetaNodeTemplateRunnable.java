@@ -59,7 +59,6 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.ExecutionMonitor;
-import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.TemplateNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
@@ -68,7 +67,6 @@ import org.knime.core.util.FileUtil;
 import org.knime.core.util.SWTUtilities;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 
 /**
  * A runnable which is used by the {@link WorkflowEditor} to load a workflow
@@ -87,8 +85,6 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
     private MetaNodeLinkUpdateResult m_result;
 
-    private final boolean m_isKNIMERelativURI;
-
     /**
      *
      * @param wfm target workflow (where to insert)
@@ -99,7 +95,6 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
         final AbstractExplorerFileStore templateKNIMEFolder) {
         m_parentWFM = wfm;
         m_templateURI = templateKNIMEFolder.toURI();
-        m_isKNIMERelativURI = true;
     }
 
     /**
@@ -109,7 +104,6 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
     public LoadMetaNodeTemplateRunnable(final WorkflowManager wfm, final URI templateURI) {
         m_parentWFM = wfm;
         m_templateURI = templateURI;
-        m_isKNIMERelativURI = templateURI.getScheme().equals(ExplorerFileSystem.SCHEME);
     }
 
     /**
@@ -148,13 +142,6 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             MetaNodeLinkUpdateResult loadResult =
                     new MetaNodeLinkUpdateResult("Template from \"" + m_templateURI + "\"");
             m_parentWFM.load(loadPersistor, loadResult, new ExecutionMonitor(progressMonitor), false);
-
-
-            //don't link if not a knime uri
-            if (!m_isKNIMERelativURI) {
-                m_parentWFM.setTemplateInformation(loadResult.getLoadedInstance().getID(),
-                    MetaNodeTemplateInformation.NONE);
-            }
 
             m_result = loadResult;
             if (pm.isCanceled()) {

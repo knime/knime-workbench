@@ -55,6 +55,7 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.ui.IViewReference;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation.LinkType;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeID;
@@ -135,7 +136,8 @@ public class RevealMetaNodeTemplateAction extends AbstractNodeAction {
             Object model = p.getModel();
             if (model instanceof WorkflowManagerUI) {
                 WorkflowManagerUI wm = (WorkflowManagerUI)model;
-                if (Wrapper.unwrapWFM(wm).getTemplateInformation().getRole().equals(Role.Link)) {
+                MetaNodeTemplateInformation templateInfo = Wrapper.unwrapWFM(wm).getTemplateInformation();
+                if (templateInfo.getRole().equals(Role.Link) && templateInfo.getLinkType().equals(LinkType.Knime)) {
                     return true;
                 }
             }

@@ -158,8 +158,16 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
             // sub node must be linked and parent must not forbid the change
             return false;
         }
-        // we can reconfigure the template link - but only if template and flow are in the same mountpoint
+
         URI targetURI = subNode.getTemplateInformation().getSourceURI();
+
+        //we can't change the link type if the URI is not KNIME-relative
+        if (subNode.getTemplateInformation()
+            .getLinkType() == org.knime.core.node.workflow.MetaNodeTemplateInformation.LinkType.Web) {
+            return false;
+        }
+
+        // we can reconfigure the template link - but only if template and flow are in the same mountpoint
         try {
             if (ResolverUtil.isMountpointRelativeURL(targetURI)
                 || ResolverUtil.isWorkflowRelativeURL(targetURI)) {
@@ -168,6 +176,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
         } catch (IOException e) {
             return false;
         }
+
         // we can change absolute links if the mount points of flow and template are the same
         AbstractContentProvider workflowMountPoint = null;
         WorkflowContext wfc = subNode.getProjectWFM().getContext();
