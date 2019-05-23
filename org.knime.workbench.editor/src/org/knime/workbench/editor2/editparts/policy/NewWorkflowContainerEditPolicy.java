@@ -49,6 +49,7 @@ package org.knime.workbench.editor2.editparts.policy;
 
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -153,7 +154,14 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 String query = url.getQuery();
                 if (query != null && query.contains("isComponent")) {
                     try {
-                        return handleMetaNodeTemplateDrop(manager.get(), cdr, ((URL)obj).toURI(), true);
+                        //remove 'isComponent' from url
+                        url = new URL(url.toString().replaceFirst("(\\?|&)(isComponent)", ""));
+                    } catch (MalformedURLException e) {
+                        LOGGER.warn("The 'isComponent' query parameter couldn't be removed from the URL '" + url + "'",
+                            e);
+                    }
+                    try {
+                        return handleMetaNodeTemplateDrop(manager.get(), cdr, url.toURI(), true);
                     } catch (URISyntaxException e) {
                         LOGGER.error("The URL '" + obj + "' couldn't be turned into an URI", e);
                     }
