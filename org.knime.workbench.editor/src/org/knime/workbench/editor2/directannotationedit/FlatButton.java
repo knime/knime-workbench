@@ -625,7 +625,9 @@ public class FlatButton extends Canvas {
             if (newState != m_drawState) {
                 m_drawState = (byte)newState;
 
-                FlatButton.this.redraw();
+                if (!FlatButton.this.isDisposed()) {
+                    FlatButton.this.redraw();
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -42,87 +43,82 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * Created: May 27, 2011
- * Author: ohl
+ * History
+ *   May 9, 2019 (loki): created
  */
-package org.knime.workbench.explorer.view.actions;
+package org.knime.workbench.descriptionview.workflowmeta.atoms;
 
-import java.io.File;
+import javax.xml.transform.sax.TransformerHandler;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Label;
+import org.knime.workbench.descriptionview.workflowmeta.WorkflowMetaView;
+import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
+import org.knime.workbench.ui.workflow.metadata.MetadataXML;
+import org.xml.sax.SAXException;
 
 /**
- * @author ohl, University of Konstanz
+ * Currently this atom is always typed to {@link MetadataItemType#DESCRIPTION} as we have no other text area
+ * reliant types; i'm reluctant to call it something like <code>DescriptionMetaInfoAtom</code> as, like
+ * {@link ComboBoxMetaInfoAtom}, it seems plausible that there may be other text-area-UI dependent metadata in the
+ * future.
+ *
+ * @author loki der quaeler
  */
-public class NewWorkflowGroupWizard extends NewWorkflowWizard {
-
+public class TextAreaMetaInfoAtom extends AbstractTextMetaInfoAtom {
     /**
-     * Creates the wizard.
-     *
-     * @since 3.0
+     * @param label the label displayed with the value of this atom in some UI widget.
+     * @param value the displayed value of this atom.
+     * @param readOnly this has never been observed, and we don't currently have a use case in which we allow the user
+     *            to mark something as read-only, so consider this future-proofing.
      */
-    public NewWorkflowGroupWizard() {
-        super();
+    public TextAreaMetaInfoAtom(final String label, final String value, final boolean readOnly) {
+        super(MetadataItemType.DESCRIPTION, label, value, readOnly);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void addPages() {
-        NewWorkflowWizardPage page = new NewWorkflowWizardPage(getMountIDs(),
-                getInitialSelection(),
-                /* isWorkflow= */false);
-        addPage(page);
+    public void populateContainerForDisplay(final Composite parent) {
+        parent.setLayout(new FillLayout());
+
+        final Label l = new Label(parent, SWT.LEFT | SWT.WRAP);
+        l.setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
+        l.setForeground(WorkflowMetaView.TEXT_COLOR);
+
+        l.setText(m_value);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected void doFinish(final AbstractExplorerFileStore newItem,
-            final IProgressMonitor monitor) throws CoreException {
+    public void populateContainerForEdit(final Composite parent) {
+        final GridLayout gl = new GridLayout(1, false);
+        gl.marginTop = 5;
+        gl.marginBottom = 0;
+        parent.setLayout(gl);
 
-        if (newItem.fetchInfo().exists()) {
-            throwCoreException("Resource \"" + newItem.getFullName()
-                    + "\" already exists.", null);
-        }
+        final GridData gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+        gd.heightHint = 99;
 
-        if (!newItem.getParent().fetchInfo().exists()) {
-            throwCoreException("Parent directory doesn't exist. "
-                    + "Create a workflow group before you place "
-                    + "a workflow group in.", null);
-        }
-
-        // create workflow group dir
-        newItem.mkdir(EFS.NONE, monitor);
-
-        if (newItem instanceof LocalExplorerFileStore) {
-            // create a new empty meta info file
-            File locFile = newItem.toLocalFile(EFS.NONE, monitor);
-            if (locFile == null) {
-                // strange - can't create meta info file then
-                return;
-            }
-            MetaInfoFile.createOrGetMetaInfoFileForDirectory(locFile, false);
-        }
-
-        // Refresh parent of the newly created workflow group.
-        newItem.getParent().refresh();
-        // TODO handle meta file creation for remote files
+        createAndPlaceTextWidget(parent, (SWT.MULTI | SWT.V_SCROLL | SWT.WRAP | SWT.BORDER), gd);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected boolean isWorkflowCreated() {
-        return false;
+    public void save(final TransformerHandler parentElement) throws SAXException {
+        if (hasContent()) {
+            save(parentElement, MetadataXML.MULTILINE);
+        }
     }
-
 }

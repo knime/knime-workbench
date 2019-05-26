@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,46 +41,78 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ------------------------------------------------------------------------
+ * ---------------------------------------------------------------------
+ *
+ * History
+ *   May 13, 2019 (loki): created
  */
-package org.knime.workbench.ui.preferences;
+package org.knime.workbench.descriptionview.workflowmeta.atoms;
 
-import org.eclipse.jface.preference.FieldEditorPreferencePage;
-import org.eclipse.jface.preference.FileFieldEditor;
-import org.eclipse.jface.preference.IPreferenceStore;
-import org.eclipse.ui.IWorkbench;
-import org.eclipse.ui.IWorkbenchPreferencePage;
-import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
+import javax.xml.transform.sax.TransformerHandler;
+
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Label;
+import org.knime.workbench.descriptionview.workflowmeta.WorkflowMetaView;
+import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
+import org.knime.workbench.ui.workflow.metadata.MetadataXML;
+import org.xml.sax.SAXException;
 
 /**
- * @author Fabian Dill, KNIME.com AG
+ * This supports atoms which provide a single line text field as their edit UI.
+ *
+ * @author loki der quaeler
  */
-public class MetaInfoPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
+public class TextFieldMetaInfoAtom extends AbstractTextMetaInfoAtom {
     /**
-     * {@inheritDoc}
+     * A class for atoms whose edit-representation utilize a text field.
+     *
+     * @param type the atom type
+     * @param label the label displayed with the value of this atom in some UI widget.
+     * @param value the displayed value of this atom.
+     * @param readOnly this has never been observed, and we don't currently have a use case in which we allow the user
+     *            to mark something as read-only, so consider this future-proofing.
      */
-    @Override
-    protected void createFieldEditors() {
-        addField(new FileFieldEditor(
-                MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WF,
-                "Meta Info Template for workflows:", true,
-                getFieldEditorParent()));
-
-        addField(new FileFieldEditor(
-                MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WFS,
-                "Meta Info Template for workflow sets:", true,
-                getFieldEditorParent()));
+    public TextFieldMetaInfoAtom(final MetadataItemType type, final String label, final String value, final boolean readOnly) {
+        super(type, label, value, readOnly);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void init(final IWorkbench workbench) {
-        IPreferenceStore prefStore = KNIMEUIPlugin.getDefault().getPreferenceStore();
-        prefStore.setDefault(MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WF, "");
-        prefStore.setDefault(MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WFS, "");
-        setPreferenceStore(prefStore);
+    public void populateContainerForDisplay(final Composite parent) {
+        final Label l = new Label(parent, SWT.LEFT);
+        l.setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
+        l.setForeground(WorkflowMetaView.TEXT_COLOR);
+        l.setText(m_value);
+        final GridData gd = new GridData();
+        gd.horizontalAlignment = SWT.LEFT;
+        gd.verticalAlignment = SWT.BOTTOM;
+        gd.grabExcessHorizontalSpace = true;
+        l.setLayoutData(gd);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void populateContainerForEdit(final Composite parent) {
+        final GridData gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+
+        createAndPlaceTextWidget(parent, SWT.BORDER, gd);
+   }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void save(final TransformerHandler parentElement) throws SAXException {
+        if (hasContent()) {
+            save(parentElement, MetadataXML.TEXT);
+        }
     }
 }

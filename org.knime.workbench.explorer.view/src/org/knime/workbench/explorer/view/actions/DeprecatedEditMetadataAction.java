@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,77 +41,74 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ------------------------------------------------------------------------
+ * ---------------------------------------------------------------------
+ *
+ * History
+ *   Jun 5, 2019 (loki): created
  */
-package org.knime.workbench.ui.metainfo.model;
+package org.knime.workbench.explorer.view.actions;
 
-import javax.xml.transform.sax.TransformerHandler;
+import java.util.Optional;
 
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.ModifyEvent;
-import org.eclipse.swt.events.ModifyListener;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Text;
-import org.eclipse.ui.forms.widgets.FormToolkit;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.AttributesImpl;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerView;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
- * 
- * @author Fabian Dill, KNIME.com AG
+ * With the KAP 4.0 release this action has been kept in so as to not alarm existing users; it will simply show
+ *  a reminder to users where the new functionality sits.
+ *
+ * @author loki der quaeler
+ * @since 8.4
  */
-public class TextMetaGUIElement extends MetaGUIElement {
-    
-    private static final String FORM_TYPE = "text";
-    
-    public TextMetaGUIElement(final String label, final String value, 
-            final boolean isReadOnly) {
-        super(label, value, isReadOnly);
+public class DeprecatedEditMetadataAction extends ExplorerAction {
+    /** ID of the global rename action in the explorer menu. */
+    public static final String METAINFO_ACTION_ID = "org.knime.workbench.explorer.action.openMetaInfo";
+
+    private static final ImageDescriptor ICON =
+        AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID, "icons/meta_info_edit.png");
+
+
+    /**
+     * @param viewer the associated tree viewer
+     */
+    public DeprecatedEditMetadataAction(final ExplorerView viewer) {
+        super(viewer, "Edit Meta Information...");
+        setImageDescriptor(ICON);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Control createGUIElement(final FormToolkit toolkit, 
-            final Composite parent) { 
-
-            Text text = toolkit.createText(parent, getValue().trim(),
-                    SWT.BORDER | SWT.FILL);
-            text.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-            text.addModifyListener(new ModifyListener() {
-                @Override
-                public void modifyText(final ModifyEvent e) {
-                    fireModifiedEvent(e);
-                }
-            });
-            text.setEnabled(!isReadOnly());
-            setControl(text);
-            return text;
-    }
-    
-    private Text getTextControl() {
-        return (Text)getControl();
+    public String getId() {
+        return METAINFO_ACTION_ID;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void saveTo(final TransformerHandler parentElement) 
-        throws SAXException {
-        AttributesImpl atts = new AttributesImpl();
-        atts.addAttribute(null, null, MetaGUIElement.FORM, "CDATA", 
-                FORM_TYPE);
-        atts.addAttribute(null, null, MetaGUIElement.READ_ONLY, "CDATA", 
-                "" + isReadOnly());
-        atts.addAttribute(null, null, MetaGUIElement.NAME, "CDATA", getLabel());
-        parentElement.startElement(null, null, MetaGUIElement.ELEMENT, atts);
-        char[] value = getTextControl().getText().trim().toCharArray();
-        parentElement.characters(value, 0, value.length);
-        parentElement.endElement(null, null, MetaGUIElement.ELEMENT);
+    public void run() {
+        final Shell s = PlatformUI.getWorkbench().getDisplay().getActiveShell();
+
+        MessageDialog.openInformation(s, "Editing has moved...",
+            "You are now able to edit metadata in the 'Description' view. If the Description View is not "
+                    + "currently open, you can open it from the View menu.");
     }
 
+    @Override
+    public boolean isEnabled() {
+        return getSingleSelectedElement().isPresent();
+    }
+
+    private Optional<AbstractExplorerFileStore> getSingleSelectedElement() {
+        return super.getSingleSelectedElement(
+            fs -> AbstractExplorerFileStore.isWorkflow(fs) || AbstractExplorerFileStore.isWorkflowGroup(fs));
+    }
 }

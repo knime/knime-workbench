@@ -45,7 +45,7 @@
  * History
  *   27.08.2007 (Fabian Dill): created
  */
-package org.knime.workbench.helpview;
+package org.knime.workbench.descriptionview.node;
 
 import java.io.InputStream;
 import java.io.StringReader;
@@ -74,20 +74,17 @@ import org.knime.core.node.NodeLogger;
  * @author Fabian Dill, University of Konstanz
  */
 public class FallbackBrowser {
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(FallbackBrowser.class);
+    private static final String XSLT = "HTML2Text.xslt";
+    private static final String WARNING = "The operating systems web browser could not be found!\n"
+        + "Using fall back (text-only) browser";
+
 
     private Transformer m_transformer;
 
     private final StyledText m_text;
 
     private final StyleRange m_styleRange;
-
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            FallbackBrowser.class);
-    private static final String XSLT = "HTML2Text.xslt";
-
-    private static final String WARNING = "The operating systems web browser"
-        + " could not be found!\n"
-        + "Using fall back (text-only) browser";
 
     /**
      * @param parent parent
@@ -99,20 +96,27 @@ public class FallbackBrowser {
         m_styleRange.start = 0;
         m_styleRange.length = WARNING.length();
         m_styleRange.fontStyle = SWT.BOLD;
-        Color red = new Color(m_text.getDisplay(), 255, 0, 0);
+
+        final Color red = new Color(m_text.getDisplay(), 255, 0, 0);
         m_styleRange.foreground = red;
+
+        @SuppressWarnings("resource")
+        InputStream is = null;
         try {
-            InputStream is = getClass().getResourceAsStream(XSLT);
+            is = getClass().getResourceAsStream(XSLT);
             StreamSource stylesheet = new StreamSource(is);
-            m_transformer =
-                    TransformerFactory.newInstance().newTemplates(stylesheet)
-                            .newTransformer();
-            m_transformer.setOutputProperty(
-                    OutputKeys.OMIT_XML_DECLARATION, "yes");
+            m_transformer = TransformerFactory.newInstance().newTemplates(stylesheet).newTransformer();
+            m_transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
         } catch (TransformerConfigurationException e) {
             LOGGER.error(e.getMessage(), e);
         } catch (TransformerFactoryConfigurationError e) {
             LOGGER.error(e.getMessage(), e);
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (Exception e) { }  // NOPMD
+            }
         }
     }
 
@@ -134,9 +138,11 @@ public class FallbackBrowser {
 
     /**
      * Delegate to the wrapped Text component.
+     *
+     * @return the result of calling {@link StyledText#setFocus()} on the wrapped instance
      */
-    public void setFocus() {
-        m_text.setFocus();
+    public boolean setFocus() {
+        return m_text.setFocus();
     }
 
 
