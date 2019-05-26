@@ -682,12 +682,14 @@
     </extension>
     <extension
             point="org.eclipse.ui.views">
+         <!-- even though the id below (helpview) no longer matches the package it was preserved as it is
+         		referenced in potentially stored settings of earlier KNIME versions -->
          <view
             category="org.knime.workbench.ui.category"
-            class="org.knime.workbench.helpview.HelpView"
+            class="org.knime.workbench.descriptionview.DescriptionView"
             icon="icons/node_description.png"
             id="org.knime.workbench.helpview"
-            name="Node Description"/>
+            name="Description"/>
          <view
             category="org.knime.workbench.ui.category"
             class="org.knime.workbench.searchhubview.SearchHubView"

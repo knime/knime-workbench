@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,46 +41,70 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ------------------------------------------------------------------------
+ * ---------------------------------------------------------------------
+ *
+ * History
+ *   May 26, 2019 (loki): created
  */
-package org.knime.workbench.ui.preferences;
+package org.knime.workbench.ui.workflow.metadata;
 
-import org.eclipse.jface.preference.FieldEditorPreferencePage;
-import org.eclipse.jface.preference.FileFieldEditor;
-import org.eclipse.jface.preference.IPreferenceStore;
-import org.eclipse.ui.IWorkbench;
-import org.eclipse.ui.IWorkbenchPreferencePage;
-import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
+import java.util.HashMap;
 
 /**
- * @author Fabian Dill, KNIME.com AG
+ * An enum representing the different types of known workflow metadata 'atoms'.
+ *
+ * @author loki der quaeler
  */
-public class MetaInfoPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
-    /**
-     * {@inheritDoc}
+public enum MetadataItemType {
+    /*
+     * TODO the 'type' String has proved non-divergent from the enum name, and so: meaningless; unless we find
+     *              a use, we should stop using it and just use toString()
      */
-    @Override
-    protected void createFieldEditors() {
-        addField(new FileFieldEditor(
-                MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WF,
-                "Meta Info Template for workflows:", true,
-                getFieldEditorParent()));
+    /** The author metainfo **/
+    AUTHOR("AUTHOR"),
+    /** The description metainfo **/
+    CREATION_DATE("CREATION_DATE"),
+    /** The description metainfo **/
+    DESCRIPTION("DESCRIPTION"),
+    /** The license metainfo **/
+    LICENSE("LICENSE"),
+    /** The link metainfo **/
+    LINK("LINK"),
+    /** The tag metainfo **/
+    TAG("TAG"),
+    /** The title metainfo **/
+    TITLE("TITLE");
 
-        addField(new FileFieldEditor(
-                MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WFS,
-                "Meta Info Template for workflow sets:", true,
-                getFieldEditorParent()));
+
+    private static final HashMap<String, MetadataItemType> TYPE_ENUM_MAP = new HashMap<>();
+
+    private String m_type;
+
+    private MetadataItemType(final String type) {
+        m_type = type;
     }
 
     /**
-     * {@inheritDoc}
+     * @return the value of the 'type' attribute of the serialized metainfo element
      */
-    @Override
-    public void init(final IWorkbench workbench) {
-        IPreferenceStore prefStore = KNIMEUIPlugin.getDefault().getPreferenceStore();
-        prefStore.setDefault(MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WF, "");
-        prefStore.setDefault(MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WFS, "");
-        setPreferenceStore(prefStore);
+    public String getType() {
+        return m_type;
+    }
+
+
+    /**
+     * @param type the value returned by <code>getType()</code>
+     * @return the instance of the enum or null if none can be found for the provided <code>type</code>
+     */
+    public static MetadataItemType getInfoTypeForType (final String type) {
+        synchronized (TYPE_ENUM_MAP) {
+            if (TYPE_ENUM_MAP.size() == 0) {
+                for (final MetadataItemType it : MetadataItemType.values()) {
+                    TYPE_ENUM_MAP.put(it.getType(), it);
+                }
+            }
+        }
+
+        return TYPE_ENUM_MAP.get(type);
     }
 }
