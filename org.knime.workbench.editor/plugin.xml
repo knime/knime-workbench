@@ -690,6 +690,12 @@
             name="Node Description"/>
          <view
             category="org.knime.workbench.ui.category"
+            class="org.knime.workbench.searchhubview.SearchHubView"
+            icon="icons/knime.png"
+            id="org.knime.workbench.searchhubview"
+            name="Community Workflow Hub"/>
+         <view
+            category="org.knime.workbench.ui.category"
             class="org.knime.workbench.nodemonitorview.NodeMonitorView"
             icon="icons/node_monitor.png"
             id="org.knime.workbench.nodemonitorview.nodemonitorview"
