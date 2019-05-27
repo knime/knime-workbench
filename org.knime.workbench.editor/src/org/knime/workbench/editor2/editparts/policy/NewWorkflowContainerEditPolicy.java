@@ -49,12 +49,15 @@ package org.knime.workbench.editor2.editparts.policy;
 
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
 
-import java.net.MalformedURLException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
+import org.apache.commons.httpclient.URIException;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.gef.EditPart;
 import org.eclipse.gef.Request;
@@ -151,29 +154,52 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 return handleFileDrop(manager.get(), (ReaderNodeSettings)obj, cdr);
             } else if (obj instanceof URL) {
                 URL url = (URL)obj;
-                String query = url.getQuery();
-                if (query != null && query.contains("isComponent")) {
-                    try {
-                        //remove 'isComponent' from url
-                        url = new URL(url.toString().replaceFirst("(\\?|&)(isComponent)", ""));
-                    } catch (MalformedURLException e) {
-                        LOGGER.warn("The 'isComponent' query parameter couldn't be removed from the URL '" + url + "'",
-                            e);
-                    }
-                    try {
-                        return handleMetaNodeTemplateDrop(manager.get(), cdr, url.toURI(), true);
-                    } catch (URISyntaxException e) {
-                        LOGGER.error("The URL '" + obj + "' couldn't be turned into an URI", e);
-                    }
-                } else {
-                    LOGGER.info("The object referenced by URL '" + url
-                        + "' cannot be added to the workbench. Not a KNIME component.");
+                URI uri;
+                if ((uri = checkEncodeAndTransformURL(url)) != null) {
+                    return handleMetaNodeTemplateDrop(manager.get(), cdr, uri, true);
                 }
             } else {
                 LOGGER.error("Illegal drop object: " + obj);
             }
         }
         return null;
+    }
+
+    private static URI checkEncodeAndTransformURL(final URL url) {
+        URI uri;
+        try {
+            if (isURLEncoded(url.toString())) {
+                //URL is already encoded
+                uri = url.toURI();
+            } else {
+                //URL is not yet encoded!
+                uri =
+                    new URI(new org.apache.commons.httpclient.URI(url.toString(), false, StandardCharsets.UTF_8.name())
+                        .toString());
+            }
+        } catch (URISyntaxException | URIException | UnsupportedEncodingException e) {
+            LOGGER.error("The URL '" + url + "' couldn't be turned into an URI", e);
+            return null;
+        }
+
+        String query = uri.getQuery();
+        if (query != null && query.contains("isComponent")) {
+            try {
+                //remove 'isComponent' from uri
+                uri = new URI(uri.toString().replaceFirst("(\\?|&)(isComponent)", ""));
+            } catch (URISyntaxException e) {
+                LOGGER.warn("The 'isComponent' query parameter couldn't be removed from the URL '" + url + "'", e);
+            }
+            return uri;
+        } else {
+            LOGGER.info(
+                "The object referenced by URL '" + url + "' cannot be added to the workbench. Not a KNIME component.");
+        }
+        return null;
+    }
+
+    private static boolean isURLEncoded(final String urlString) throws UnsupportedEncodingException {
+        return !URLDecoder.decode(urlString, StandardCharsets.UTF_8.name()).equals(urlString);
     }
 
     @SuppressWarnings("static-method")
