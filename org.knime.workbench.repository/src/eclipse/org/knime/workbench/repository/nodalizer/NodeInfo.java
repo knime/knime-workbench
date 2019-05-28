@@ -352,6 +352,7 @@ public class NodeInfo {
     public void setInteractiveView(final NamedField interactiveView) {
         if (interactiveView != null && !interactiveView.isEmpty()) {
             m_interactiveView = interactiveView;
+            return;
         }
         m_interactiveView = null;
     }
