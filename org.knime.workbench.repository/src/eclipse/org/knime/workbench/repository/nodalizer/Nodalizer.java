@@ -508,7 +508,7 @@ public class Nodalizer implements IApplication {
             org.jsoup.nodes.Element sibling = doH2.nextElementSibling();
             if (sibling.tagName().equalsIgnoreCase("dl")) {
                 final List<NamedField> fields = new ArrayList<>();
-                parseDLTag(sibling, fields);
+                parseDLTag(sibling, fields, true);
                 dialogOptions.add(new DialogOptionGroup(null, null, fields));
             }
             if (sibling.tagName().equalsIgnoreCase("div")) {
@@ -524,7 +524,7 @@ public class Nodalizer implements IApplication {
                             descriptHTML = cleanHTML(c);
                         }
                         if (c.tagName().equals("dl")) {
-                            parseDLTag(c, fields);
+                            parseDLTag(c, fields, true);
                         }
                     }
                     dialogOptions.add(new DialogOptionGroup(nameHTML, descriptHTML, fields));
@@ -543,7 +543,7 @@ public class Nodalizer implements IApplication {
         if (viewH2 != null) {
             final org.jsoup.nodes.Element sib = viewH2.nextElementSibling();
             if (sib.tagName().equalsIgnoreCase("dl")) {
-                parseDLTag(sib, views);
+                parseDLTag(sib, views, false);
             }
         }
 
@@ -745,15 +745,35 @@ public class Nodalizer implements IApplication {
 
     // -- Helper methods --
 
-    private static void parseDLTag(final org.jsoup.nodes.Element dl, final List<NamedField> fields) {
+    private static void parseDLTag(final org.jsoup.nodes.Element dl, final List<NamedField> fields,
+        final boolean checkOptional) {
         String keyHTML = "";
+        boolean optional = false;
         for (final org.jsoup.nodes.Element child : dl.children()) {
             if (child.tagName().equals("dd")) {
-                final NamedField f = new NamedField(keyHTML, cleanHTML(child));
+                NamedField f;
+                if (checkOptional) {
+                    f = new NamedField(keyHTML, cleanHTML(child), optional);
+                } else {
+                    f = new NamedField(keyHTML, cleanHTML(child));
+                }
                 fields.add(f);
             }
             if (child.tagName().equals("dt")) {
                 keyHTML = cleanHTML(child);
+                if (checkOptional) {
+                    optional = false;
+                    if (!StringUtils.isEmpty(keyHTML)) {
+                        // strip out all HTML tags from field name
+                        keyHTML = child.ownText();
+                        for (final org.jsoup.nodes.Element e : child.children()) {
+                            if (e.tagName().equalsIgnoreCase("span") && e.text().equalsIgnoreCase("(optional)")) {
+                                optional = true;
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
     }

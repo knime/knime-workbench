@@ -63,6 +63,7 @@ public class NamedField {
 
     private final String m_name;
     private final String m_description;
+    private final Boolean m_optional;
 
     /**
      * Creates a POJO for a JSON field which has a name and a description.
@@ -73,6 +74,21 @@ public class NamedField {
     public NamedField(final String name, final String description) {
         m_name = name;
         m_description = description;
+        m_optional = null;
+    }
+
+    /**
+     * Creates a POJO for a potentially optional JSON field which has a name and a description.
+     *
+     * @param name the name of the field, can include html tags
+     * @param description description of the field, can include html tags
+     * @param optional determines if the field is optional or not. If this is {@code null} it means the field does not
+     *            support optional.
+     */
+    public NamedField(final String name, final String description, final Boolean optional) {
+        m_name = name;
+        m_description = description;
+        m_optional = optional;
     }
 
     /**
@@ -91,6 +107,16 @@ public class NamedField {
      */
     public String getDescription() {
         return m_description;
+    }
+
+    /**
+     * Returns {@code true} if the field is optional, {@code false} if the field is required, or {@code null} if this
+     * field does not support optional.
+     *
+     * @return if the field is optional
+     */
+    public Boolean getOptional() {
+        return m_optional;
     }
 
     @JsonIgnore
