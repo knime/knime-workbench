@@ -229,6 +229,8 @@ public final class ImageRepository {
         Warning("icons/warning.png"),
         /** Icon for information messages. */
         Info("icons/info.gif"),
+        /** Icon for tooltip indication. */
+        Info_Outline("icons/info_outline.png"),
         /** Icon icon in a round blue button. */
         InfoButton("icons/info.png"),
         /** Info icon in a little speech balloon. */
