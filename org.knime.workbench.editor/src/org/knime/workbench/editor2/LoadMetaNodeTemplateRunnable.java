@@ -47,6 +47,8 @@
  */
 package org.knime.workbench.editor2;
 
+import static org.knime.core.util.KnimeURIUtil.getDownloadURI;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -117,7 +119,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             final CheckCancelNodeProgressMonitor progressMonitor = new CheckCancelNodeProgressMonitor(pm);
             progressMonitor.addProgressListener(progressHandler);
 
-            File parentFile = ResolverUtil.resolveURItoLocalOrTempFile(m_templateURI, pm);
+            File parentFile = ResolverUtil.resolveURItoLocalOrTempFile(getDownloadURI(m_templateURI), pm);
             if (parentFile.isFile()) {
                 //unzip
                 File tempDir = FileUtil.createTempDir("template-workflow");

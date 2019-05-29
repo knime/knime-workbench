@@ -226,6 +226,7 @@ import org.knime.workbench.editor2.actions.LockSubNodeAction;
 import org.knime.workbench.editor2.actions.MetaNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.NodeConnectionContainerDeleteAction;
 import org.knime.workbench.editor2.actions.OpenDialogAction;
+import org.knime.workbench.editor2.actions.OpenComponentInBrowserAction;
 import org.knime.workbench.editor2.actions.PasteAction;
 import org.knime.workbench.editor2.actions.PasteActionContextMenu;
 import org.knime.workbench.editor2.actions.PauseLoopExecutionAction;
@@ -721,6 +722,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         final AbstractNodeAction defineSubNodeTemplate = new SaveAsSubNodeTemplateAction(this);
         final AbstractNodeAction checkUpdateSubNodeLink = new CheckUpdateMetaNodeLinkAction(this);
         final AbstractNodeAction revealSubNodeTemplate = new RevealSubNodeTemplateAction(this);
+        final AbstractNodeAction openComponentInBrowser = new OpenComponentInBrowserAction(this);
         final AbstractNodeAction disconnectSubNodeLink = new DisconnectSubNodeLinkAction(this);
         final AbstractNodeAction lockSubLink = new LockSubNodeAction(this);
 
@@ -796,6 +798,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         m_actionRegistry.registerAction(defineSubNodeTemplate);
         m_actionRegistry.registerAction(checkUpdateSubNodeLink);
         m_actionRegistry.registerAction(revealSubNodeTemplate);
+        m_actionRegistry.registerAction(openComponentInBrowser);
         m_actionRegistry.registerAction(disconnectSubNodeLink);
         m_actionRegistry.registerAction(lockSubLink);
 

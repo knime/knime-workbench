@@ -71,8 +71,10 @@ import org.knime.core.node.port.DataTableSpecProvider;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.flowvariable.FlowVariablePortObject;
 import org.knime.core.node.workflow.LoopEndNode;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation.LinkType;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.SingleNodeContainer;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.node.workflow.InteractiveWebViewsResultUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.SingleNodeContainerUI;
@@ -108,6 +110,7 @@ import org.knime.workbench.editor2.actions.OpenInteractiveViewAction;
 import org.knime.workbench.editor2.actions.OpenInteractiveWebViewAction;
 import org.knime.workbench.editor2.actions.OpenPortViewAction;
 import org.knime.workbench.editor2.actions.OpenSubNodeEditorAction;
+import org.knime.workbench.editor2.actions.OpenComponentInBrowserAction;
 import org.knime.workbench.editor2.actions.OpenSubnodeWebViewAction;
 import org.knime.workbench.editor2.actions.OpenSubworkflowEditorAction;
 import org.knime.workbench.editor2.actions.OpenViewAction;
@@ -508,20 +511,22 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
             }
         }
 
-        boolean addMetaNodeActions = false;
-        boolean addSubNodeActions = false;
+        int numSelectedMetanodes = 0;
+        int numSelectedSubNodes = 0;
+        SubNodeContainerUI lastSelectedSubNode = null;
         for (Object p : parts) {
             if (p instanceof NodeContainerEditPart) {
                 NodeContainerUI model = ((NodeContainerEditPart)p).getNodeContainer();
                 if (model instanceof WorkflowManagerUI) {
-                    addMetaNodeActions = true;
+                    numSelectedMetanodes++;
                 } else if (model instanceof SubNodeContainerUI) {
-                    addSubNodeActions = true;
+                    numSelectedSubNodes++;
+                    lastSelectedSubNode = (SubNodeContainerUI)model;
                 }
             }
         }
 
-        if (addMetaNodeActions) {
+        if (numSelectedMetanodes > 0) {
             metanodeMenuMgr = getMetaNodeMenuManager(metanodeMenuMgr, manager);
 
             // SAVE AS TEMPLATE
@@ -558,7 +563,7 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
 
         }
 
-        if (addSubNodeActions) {
+        if (numSelectedSubNodes > 0) {
 
             subnodeMenuMgr = getSubNodeMenuManager(subnodeMenuMgr, manager);
 
@@ -582,10 +587,19 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
             subnodeMenuMgr.appendToGroup(GROUP_SUBNODE_LINKS, action);
             ((AbstractNodeAction)action).update();
 
-            // REVEAL TEMPLATE (SUBNODE)
-            action = m_actionRegistry.getAction(RevealSubNodeTemplateAction.ID);
-            subnodeMenuMgr.appendToGroup(GROUP_SUBNODE_LINKS, action);
-            ((AbstractNodeAction)action).update();
+            //if exactly one subnodecontainer (aka component) is selected that links to a web url
+            if (numSelectedSubNodes == 1 && numSelectedMetanodes == 0
+                && Wrapper.unwrapOptional(lastSelectedSubNode, SubNodeContainer.class)
+                    .map(snc -> snc.getTemplateInformation().getLinkType() == LinkType.Web).orElse(false)) {
+                action = m_actionRegistry.getAction(OpenComponentInBrowserAction.ID);
+                subnodeMenuMgr.appendToGroup(GROUP_SUBNODE_LINKS, action);
+                ((AbstractNodeAction)action).update();
+            } else {
+                // REVEAL TEMPLATE (SUBNODE)
+                action = m_actionRegistry.getAction(RevealSubNodeTemplateAction.ID);
+                subnodeMenuMgr.appendToGroup(GROUP_SUBNODE_LINKS, action);
+                ((AbstractNodeAction)action).update();
+            }
 
             // LOCK SUBNODE
             if (Boolean.getBoolean(KNIMEConstants.PROPERTY_SHOW_METANODE_LOCK_ACTION)) {

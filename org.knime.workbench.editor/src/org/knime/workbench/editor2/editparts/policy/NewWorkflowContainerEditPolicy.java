@@ -48,6 +48,8 @@
 package org.knime.workbench.editor2.editparts.policy;
 
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
+import static org.knime.core.util.KnimeURIUtil.getEntityType;
+import static org.knime.core.util.KnimeURIUtil.isHubURI;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -74,6 +76,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.util.KnimeURIUtil.Type;
 import org.knime.workbench.editor2.CreateDropRequest;
 import org.knime.workbench.editor2.CreateDropRequest.RequestType;
 import org.knime.workbench.editor2.ReaderNodeSettings;
@@ -182,20 +185,18 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             return null;
         }
 
-        String query = uri.getQuery();
-        if (query != null && query.contains("isComponent")) {
-            try {
-                //remove 'isComponent' from uri
-                uri = new URI(uri.toString().replaceFirst("(\\?|&)(isComponent)", ""));
-            } catch (URISyntaxException e) {
-                LOGGER.warn("The 'isComponent' query parameter couldn't be removed from the URL '" + url + "'", e);
-            }
-            return uri;
-        } else {
-            LOGGER.info(
-                "The object referenced by URL '" + url + "' cannot be added to the workbench. Not a KNIME component.");
+        if (!isHubURI(uri)) {
+            LOGGER.info("The object referenced by URL '" + url
+                + "' cannot be added to the workbench. It doesn't originate from the KNIME Community Workflow Hub");
+            return null;
         }
-        return null;
+        if (getEntityType(uri) != Type.COMPONENT) {
+            LOGGER.info("The object referenced by URL '" + url
+                + "' cannot be added to the workbench. Not a KNIME component.");
+            return null;
+        }
+
+        return uri;
     }
 
     private static boolean isURLEncoded(final String urlString) throws UnsupportedEncodingException {
