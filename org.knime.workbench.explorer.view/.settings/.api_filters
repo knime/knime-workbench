@@ -77,6 +77,48 @@
                 <message_argument value="createProjectFile(IFileStore, IProgressMonitor)"/>
             </message_arguments>
         </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="Builder"/>
+                <message_argument value="LocalWorkspaceFileStore"/>
+                <message_argument value="build()"/>
+            </message_arguments>
+        </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="Builder"/>
+                <message_argument value="LocalWorkspaceFileStore"/>
+                <message_argument value="readWorkflowMeta()"/>
+            </message_arguments>
+        </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="TemplateInformation"/>
+                <message_argument value="LocalWorkspaceFileStore"/>
+                <message_argument value="getType()"/>
+            </message_arguments>
+        </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="TemplateMetadata"/>
+                <message_argument value="LocalWorkspaceFileStore"/>
+                <message_argument value="getTemplateInformation()"/>
+            </message_arguments>
+        </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="Workflowalizer"/>
+                <message_argument value="LocalWorkspaceFileStore"/>
+                <message_argument value="readTemplate(Path, WorkflowalizerConfiguration)"/>
+            </message_arguments>
+        </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="WorkflowalizerConfiguration"/>
+                <message_argument value="LocalWorkspaceFileStore"/>
+                <message_argument value="builder()"/>
+            </message_arguments>
+        </filter>
     </resource>
     <resource path="src/org/knime/workbench/explorer/pathresolve/URIToFileResolveImpl.java" type="org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl">
         <filter id="574619656">
