@@ -92,7 +92,6 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
                 "Link metanode when defining new template",
                 new String[][] {
-                        {"Always", MessageDialogWithToggle.ALWAYS},
                         {"Never", MessageDialogWithToggle.NEVER},
                         {"Prompt", MessageDialogWithToggle.PROMPT},
                 }, getFieldEditorParent());
