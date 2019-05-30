@@ -67,9 +67,10 @@ public class DatabasePreferencePage extends FieldEditorPreferencePage
 	 *
 	 */
 	public DatabasePreferencePage() {
-        super("Database preferences", null, GRID);
+        super("Database preferences (legacy)", null, GRID);
         setDescription("Let's you load additional database driver from Jar or Zip archive and set other database "
-            + "related preferences.");
+            + "related preferences for the legacy database framework. "
+            + "To register additional drivers for the new database framework go to the Databases prefrences page.");
 	}
 
 	/**

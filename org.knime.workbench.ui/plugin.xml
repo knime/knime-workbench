@@ -121,7 +121,7 @@
             category="org.knime.workbench.ui.preferences"
             class="org.knime.workbench.ui.database.DatabasePreferencePage"
             id="org.knime.workbench.ui.preferences.database"
-            name="Databases">
+            name="Databases (legacy)">
       </page>
       <page
             class="org.knime.workbench.ui.preferences.HeadlessPreferencePage"
