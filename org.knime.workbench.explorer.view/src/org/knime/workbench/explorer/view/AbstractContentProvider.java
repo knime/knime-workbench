@@ -693,13 +693,15 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         // default local implementation doesn't need to do nothing
     }
 
-    private LinkType promptLinkMetaNodeTemplate(final String oldName, final String newName,
+    private static LinkType promptLinkMetaNodeTemplate(final String oldName, final String newName,
         final Collection<LinkType> allowedLinkTypes) {
 
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
         String linkPrefs = prefStore.getString(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
 
-        if (MessageDialogWithToggle.PROMPT.equals(linkPrefs)) {
+        if (MessageDialogWithToggle.NEVER.equals(linkPrefs)) {
+            return LinkType.None;
+        } else {
             Shell activeShell = Display.getDefault().getActiveShell();
             String msg = "Update metanode to link to the template?";
             if (!oldName.equals(newName)) {
@@ -711,8 +713,6 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 return null;
             }
             return dlg.getLinkType();
-        } else {
-            return LinkType.None;
         }
     }
 
