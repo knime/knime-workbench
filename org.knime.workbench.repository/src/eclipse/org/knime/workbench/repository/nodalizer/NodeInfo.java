@@ -57,6 +57,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.knime.core.util.workflowalizer.NodeAndBundleInformation;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -86,6 +87,7 @@ public class NodeInfo {
     private boolean m_streamable;
     private PortInfo[] m_inPorts;
     private PortInfo[] m_outPorts;
+    private String m_owner;
 
     /**
      * Returns the title of this node.
@@ -247,6 +249,15 @@ public class NodeInfo {
      */
     public PortInfo[] getOutPorts() {
         return m_outPorts == null ? new PortInfo[0] : m_outPorts;
+    }
+
+    /**
+     * Returns the owner of this node.
+     *
+     * @return the owner
+     */
+    public String getOwner() {
+        return StringUtils.isEmpty(m_owner) ? null : m_owner;
     }
 
     /**
@@ -418,6 +429,15 @@ public class NodeInfo {
      */
     public void setOutPorts(final PortInfo[] outPorts) {
         m_outPorts = outPorts;
+    }
+
+    /**
+     * Sets the owner of this node.
+     *
+     * @param owner the owner name to set
+     */
+    public void setOwner(final String owner) {
+        m_owner = owner;
     }
 
     // -- Helper Classes --

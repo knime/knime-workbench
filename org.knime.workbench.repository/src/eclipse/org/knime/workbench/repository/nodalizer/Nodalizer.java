@@ -127,6 +127,8 @@ public class Nodalizer implements IApplication {
     private static final String PARAM_DIRECTORY = "-outDir";
     private static final String FACTORY_LIST = "-factoryListFile";
     private static final String UPDATE_SITE = "-updateSite";
+    private static final String OWNERS = "-owners";
+    private static final String DEFAULT_OWNER = "-defaultOwner";
 
     /**
      * {@inheritDoc}
@@ -140,6 +142,10 @@ public class Nodalizer implements IApplication {
      * <li>-updateSite &lt;update-site-url&gt;, causes the nodalizer to read both nodes and extensions of the given
      * update site. All other nodes/extensions in the given KNIME installation will be ignored. Node JSON will be
      * written to outDir/nodes and extensions to outDir/extensions.</li>
+     * <li>-owners &lt;path-to-owners-file&gt;, a file mapping owner to extension symbolic name. Each line should
+     * contain a single mapping, with the format symbolicName:owner</li>
+     * <li>-defaultOwner &lt;owner-name&gt;, the owner name to assign to extensions which do not have a mapping in the
+     * "owners" file</li>
      * </ul>
      */
     @Override
@@ -148,6 +154,8 @@ public class Nodalizer implements IApplication {
         File outputDir = null;
         Path factoryList = null;
         URI updateSite = null;
+        Map<String, String> owners = Collections.emptyMap();
+        String defaultOwner = null;
         if (args instanceof String[]) {
             final String[] params = (String[])args;
             for (int i = 0; i < params.length; i++) {
@@ -165,6 +173,31 @@ public class Nodalizer implements IApplication {
                         System.out.println(
                             "Invalid update site url: " + site + "\n" + UPDATE_SITE + " parameter will be ignored.");
                     }
+                }
+                if (params[i].equalsIgnoreCase(OWNERS) && (params.length > (i + 1))) {
+                    final Path o = Paths.get(params[i + 1]);
+                    if (Files.exists(o) && !Files.isDirectory(o)) {
+                        owners = new HashMap<>();
+                        for(final String line : Files.readAllLines(o)) {
+                            final String[] pieces = line.split(":");
+                            if (pieces.length == 2) {
+                                final String id = pieces[0].trim();
+                                final String owner = pieces[1].trim();
+                                if (!StringUtils.isEmpty(id) && !StringUtils.isEmpty(owner)) {
+                                    owners.put(id, owner);
+                                } else {
+                                    System.out.println("Extension id AND owner must be non-empty: " + line);
+                                }
+                            } else {
+                                System.out.println("Entry contains too many colons: " + line);
+                            }
+                        }
+                    } else {
+                        System.out.println("Invalid owner file: " + o);
+                    }
+                }
+                if (params[i].equalsIgnoreCase(DEFAULT_OWNER) && (params.length > (i + 1))) {
+                    defaultOwner = params[i + 1];
                 }
             }
         }
@@ -213,7 +246,7 @@ public class Nodalizer implements IApplication {
             if (bundles == null) {
                 return IApplication.EXIT_OK;
             }
-            extensions = parseExtensions(updateSite, agent);
+            extensions = parseExtensions(updateSite, agent, owners, defaultOwner);
             if (extensions == null) {
                 return IApplication.EXIT_OK;
             }
@@ -357,6 +390,7 @@ public class Nodalizer implements IApplication {
         // Do this early to prevent instantiating unnecessary nodes.
         String extensionId = null;
         SiteInfo updateSite = null;
+        String owner = null;
         if (extensions != null && bundles != null) {
             // TODO: Check symbolic name and version once we support reading multiple extension versions
             if (extensions.containsKey(nodeAndBundleInfo.getFeatureSymbolicName().orElse(null))) {
@@ -364,6 +398,7 @@ public class Nodalizer implements IApplication {
                 e.setHasNodes(true);
                 updateSite = e.getUpdateSite();
                 extensionId = e.getId();
+                owner = e.getOwner();
             } else if (!nodeAndBundleInfo.getFeatureSymbolicName().isPresent()
                 && bundles.contains(nodeAndBundleInfo.getBundleSymbolicName().orElse(null))) {
                 System.out.println(fac.getClass() + " does not contain extension information, skipping ...");
@@ -381,6 +416,7 @@ public class Nodalizer implements IApplication {
         final NodeInfo nInfo = new NodeInfo();
         nInfo.setAdditionalSiteInformation(updateSite);
         nInfo.setBundleInformation(nodeAndBundleInfo, extensionId);
+        nInfo.setOwner(owner);
 
         // Read from node
         final NodeSettings settings = new NodeSettings("");
@@ -589,7 +625,8 @@ public class Nodalizer implements IApplication {
 
     // -- Parse Extension --
 
-    private Map<String, ExtensionInfo> parseExtensions(final URI updateSite, final IProvisioningAgent agent) {
+    private Map<String, ExtensionInfo> parseExtensions(final URI updateSite, final IProvisioningAgent agent,
+        final Map<String, String> owners, final String defaultOwner) {
         final IMetadataRepositoryManager metadataManager =
             (IMetadataRepositoryManager)agent.getService(IMetadataRepositoryManager.SERVICE_NAME);
         final boolean uninstallMetadata = !metadataManager.contains(updateSite);
@@ -664,6 +701,7 @@ public class Nodalizer implements IApplication {
                     final List<String> categories = new ArrayList<>();
                     getCategoryPath(mr, iu, categories);
                     ext.setCategoryPath(categories);
+                    ext.setOwner(owners.getOrDefault(ext.getSymbolicName(), defaultOwner));
                     extensions.put(ext.getSymbolicName(), ext);
                 }
             }

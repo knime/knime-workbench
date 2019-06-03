@@ -55,6 +55,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.knime.core.util.Version;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -79,6 +80,7 @@ public class ExtensionInfo {
     private LicenseInfo m_license;
     private String m_copyright;
     private List<String> m_categoryPath;
+    private String m_owner;
 
     @JsonIgnore
     private boolean m_hasNodes;
@@ -196,6 +198,15 @@ public class ExtensionInfo {
     }
 
     /**
+     * Returns the owner of this extension.
+     *
+     * @return the owner
+     */
+    public String getOwner() {
+        return StringUtils.isEmpty(m_owner) ? null : m_owner;
+    }
+
+    /**
      * Sets the extension's name.
      *
      * @param name the name to set
@@ -283,6 +294,15 @@ public class ExtensionInfo {
      */
     public void setCategoryPath(final List<String> categoryPath) {
         m_categoryPath = categoryPath;
+    }
+
+    /**
+     * Sets the extension's owner.
+     *
+     * @param owner the owner name to set
+     */
+    public void setOwner(final String owner) {
+        m_owner = owner;
     }
 
     /**
