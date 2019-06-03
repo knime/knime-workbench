@@ -102,12 +102,12 @@ public class LocalWorkspaceFileStoreTest {
         LocalExplorerFileStore wt = createTemplate(m_localExplorerRoot, "wt1", false);
         MetaInfo metaInfo = wt.fetchMetaInfo().get();
         assertTrue("wrong meta info type", metaInfo instanceof TemplateInfo);
-        assertThat("wrong template type", ((TemplateInfo)metaInfo).getType().get(), is(TemplateType.MetaNode));
+        assertThat("wrong template type", ((TemplateInfo)metaInfo).getType(), is(TemplateType.MetaNode));
 
         wt = createTemplate(m_localExplorerRoot, "wt2", true);
         metaInfo = wt.fetchMetaInfo().get();
         assertTrue("wrong meta info type", metaInfo instanceof TemplateInfo);
-        assertThat("wrong template type", ((TemplateInfo)metaInfo).getType().get(), is(TemplateType.SubNode));
+        assertThat("wrong template type", ((TemplateInfo)metaInfo).getType(), is(TemplateType.SubNode));
     }
 
     /**

@@ -213,15 +213,12 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             return Optional.of(new TemplateInfo() {
 
                 @Override
-                public Optional<TemplateType> getType() {
+                public TemplateType getType() {
                     if (MetaNodeTemplateInformation.TemplateType.SubNode.toString()
                         .equals(templateMetadata.getTemplateInformation().getType())) {
-                        return Optional.of(MetaNodeTemplateInformation.TemplateType.SubNode);
-                    } else if (MetaNodeTemplateInformation.TemplateType.MetaNode.toString()
-                        .equals(templateMetadata.getTemplateInformation().getType())) {
-                        return Optional.of(MetaNodeTemplateInformation.TemplateType.MetaNode);
+                        return MetaNodeTemplateInformation.TemplateType.SubNode;
                     } else {
-                        return Optional.empty();
+                        return MetaNodeTemplateInformation.TemplateType.MetaNode;
                     }
                 }
 

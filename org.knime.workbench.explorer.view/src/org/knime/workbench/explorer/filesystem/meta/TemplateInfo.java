@@ -48,8 +48,6 @@
  */
 package org.knime.workbench.explorer.filesystem.meta;
 
-import java.util.Optional;
-
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.TemplateType;
 
 /**
@@ -63,8 +61,8 @@ public interface TemplateInfo extends MetaInfo {
     /**
      * The type of the template.
      *
-     * @return an empty optional if type is not known or not available
+     * @return the type
      */
-    Optional<TemplateType> getType();
+    TemplateType getType();
 
 }
