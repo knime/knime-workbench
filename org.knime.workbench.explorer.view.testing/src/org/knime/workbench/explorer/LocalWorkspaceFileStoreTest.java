@@ -82,7 +82,7 @@ public class LocalWorkspaceFileStoreTest {
 
     private LocalExplorerFileStore m_localExplorerRoot;
 
-    private WorkflowManager m_metaNodeRoot;
+    private static WorkflowManager METANODE_ROOT;
 
     /**
      * Setup local mountpoint etc.
@@ -120,16 +120,16 @@ public class LocalWorkspaceFileStoreTest {
      * @return the file store that represents the new template
      */
     @SuppressWarnings("unchecked")
-    private <T extends LocalExplorerFileStore> T createTemplate(final T parent, final String name, final boolean wrap) {
-        if (m_metaNodeRoot == null) {
-            m_metaNodeRoot = WorkflowManager.ROOT.createAndAddProject("KNIME Tmp MetaNode Repository",
+    static <T extends LocalExplorerFileStore> T createTemplate(final T parent, final String name, final boolean wrap) {
+        if (METANODE_ROOT== null) {
+            METANODE_ROOT = WorkflowManager.ROOT.createAndAddProject("KNIME Tmp MetaNode Repository",
                 createWorkflowCreationHelper(parent, null));
         }
         //deactivate prompt for linking type
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
         prefStore.setValue(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE, MessageDialogWithToggle.NEVER);
 
-        WorkflowManager metaNode = m_metaNodeRoot.createAndAddProject(name, createWorkflowCreationHelper(parent, name));
+        WorkflowManager metaNode = METANODE_ROOT.createAndAddProject(name, createWorkflowCreationHelper(parent, name));
         if (wrap) {
             metaNode.getParent().convertMetaNodeToSubNode(metaNode.getID());
             boolean success = parent.getContentProvider()
