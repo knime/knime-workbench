@@ -296,7 +296,12 @@ public final class ImageRepository {
         /** LocalSpace Explorer Icon: server root. */
         LocalSpaceIcon("icons/workflow_projects.png"),
         /** WorkflowDiff: action icon. */
-        WorkflowDiffIcon("icons/diff.png");
+        WorkflowDiffIcon("icons/diff.png"),
+
+        /** ServerSpace Workflow Hub Icon. */
+        WorkflowHub("icons/server_space/workflow_hub.png"),
+        /** ServerSpace Workflow Hub Icon yellow. */
+        WorkflowHubYellow("icons/server_space/workflow_hub_yellow.png");
 
         private final URL m_url;
 
