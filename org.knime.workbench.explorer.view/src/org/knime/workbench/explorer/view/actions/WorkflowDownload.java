@@ -132,7 +132,7 @@ public class WorkflowDownload extends TempExtractArchive {
 
         return sourceInfo.isWorkflow() || sourceInfo.isWorkflowGroup() || sourceInfo.isSnapshot()
                 || (sourceInfo.isFile() && targetContentProvider.canHostDataFiles())
-                || (sourceInfo.isWorkflowTemplate() && targetContentProvider.canHostMetaNodeTemplates());
+                || targetContentProvider.canHostWorkflowTemplate(getSourceFile());
 // copying of workflow jobs is disabled until implemented on server
 //        RemoteExplorerFileInfo info = getSourceFile().fetchInfo();
 //        return info.isWorkflow()

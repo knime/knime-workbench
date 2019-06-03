@@ -186,7 +186,7 @@ public final class CopyMove {
 
                 boolean isSrcRemote = srcFS instanceof RemoteExplorerFileStore;
                 boolean isDstRemote = destFS instanceof RemoteExplorerFileStore;
-                if (srcFSInfo.isWorkflowTemplate() && !destFS.getContentProvider().canHostMetaNodeTemplates()) {
+                if (srcFSInfo.isWorkflowTemplate() && !destFS.getContentProvider().canHostWorkflowTemplate(srcFS)) {
                     throw new UnsupportedOperationException("Cannot " + cmd + " metanode template '"
                         + srcFS.getFullName() + "' to " + destFS.getMountID() + "." + ". Unsupported operation.");
                 }

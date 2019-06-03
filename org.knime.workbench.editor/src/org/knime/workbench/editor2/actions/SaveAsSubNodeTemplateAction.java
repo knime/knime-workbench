@@ -149,7 +149,7 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
             }
             for (AbstractContentProvider p
                     : ExplorerMountTable.getMountedContent().values()) {
-                if (p.canHostMetaNodeTemplates()) {
+                if (p.canHostComponentTemplates()) {
                     return true;
                 }
             }
@@ -171,7 +171,7 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
         for (Map.Entry<String, AbstractContentProvider> entry
                 : ExplorerMountTable.getMountedContent().entrySet()) {
             AbstractContentProvider contentProvider = entry.getValue();
-            if (contentProvider.isWritable() && contentProvider.canHostMetaNodeTemplates()) {
+            if (contentProvider.isWritable() && contentProvider.canHostComponentTemplates()) {
                 validMountPointList.add(entry.getKey());
             }
         }
