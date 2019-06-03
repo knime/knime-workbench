@@ -82,26 +82,21 @@
       knime.synchronous.io=<em>(true|false)</em>
     </dt>
     <dd>
-      Can be used to disable the asynchronous writing of KNIME tables. By
-      default, each table container writing to disk performs the write operation
-      in a dedicated (potentially re-used) thread. Setting this field to
-      <tt>true</tt>
-      will instruct KNIME to always write synchronously, which in some cases may
-      be slower.
+	  Can be used to enforce the sequential processing of rows for KNIME tables.
+	  By default, each table container processes its rows asynchronously in a number of (potentially re-used) threads.
+	  The default value is <tt>false</tt>.
+	  Setting this field to <tt>true</tt> will instruct KNIME to always handle rows sequentially and synchronously, which in some cases may be slower.
     </dd>
 
     <dt>
       knime.async.io.cachesize=<em>&lt;number&gt;</em>
     </dt>
     <dd>
-      Sets the size of the write cache for asynchronous table writing. It
-      specifies the size of a temporary buffer for data rows that is used during
-      table creating. Once this buffer is full (or there are no more rows to
-      write), this buffer is handed over to the writing routines to write the
-      data output stream. The larger the buffer, the smaller the synchronization
-      overhead but the larger the memory requirements. <br /> The default value
-      is 10. This property has no effect if tables are written synchronously
-      (see above).
+	  Sets the batch size for non-sequential and asynchronous handling of rows (see knime.synchronous.io).
+	  It specifies the amount of data rows that are handled by a single container thread.
+	  The larger the buffer, the smaller the synchronization overhead but the larger the memory requirements.
+      This property has no effect if rows are handled sequentially.
+      The default value is 10.
     </dd>
 
     <dt>knime.domain.valuecount=<em>&lt;number&gt;</em></dt>
