@@ -666,11 +666,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         }
     }
     private void hookContextMenu() {
-        MenuManager menuMgr = new MenuManager("#PopupMenu");
+        MenuManager menuMgr = new KNIMEMenuManager("#PopupMenu");
         menuMgr.setRemoveAllWhenShown(true);
         menuMgr.addMenuListener(new IMenuListener() {
             @Override
             public void menuAboutToShow(final IMenuManager manager) {
+                ((KNIMEMenuManager) manager).setAllowAddingActions(true);
                 ExplorerView.this.fillContextMenu(manager);
             }
         });
@@ -715,7 +716,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new Separator());
         // Other plug-ins can contribute there actions here
         manager.add(new Separator(IWorkbenchActionConstants.MB_ADDITIONS));
-
     }
 
     private void addGlobalActions(final IMenuManager manager) {
