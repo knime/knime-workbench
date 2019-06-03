@@ -50,6 +50,7 @@ package org.knime.workbench.editor2.actions;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.wizard.WizardDialog;
+import org.knime.core.node.dialog.DialogNode;
 import org.knime.core.node.wizard.WizardNode;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -74,6 +75,10 @@ public class SubnodeLayoutAction extends AbstractNodeAction {
     /** filter for wizard node class */
     @SuppressWarnings("rawtypes")
     public static final NodeModelFilter<WizardNode> WIZARD_NODE_FILTER = new NodeModelFilter<WizardNode>();
+
+    /** filter for dialog node class */
+    @SuppressWarnings("rawtypes")
+    public static final NodeModelFilter<DialogNode> DIALOG_NODE_FILTER = new NodeModelFilter<DialogNode>();
 
     /**
      *
@@ -140,7 +145,9 @@ public class SubnodeLayoutAction extends AbstractNodeAction {
             return false;
         }
         if (manager.getDirectNCParent() instanceof SubNodeContainer) {
-            return !manager.findNodes(WizardNode.class, WIZARD_NODE_FILTER, false, true).isEmpty();
+            boolean containsViews = !manager.findNodes(WizardNode.class, WIZARD_NODE_FILTER, false, true).isEmpty();
+            boolean containsDialog = !manager.findNodes(DialogNode.class, DIALOG_NODE_FILTER, false, false).isEmpty();
+            return containsViews || containsDialog;
         }
         return false;
     }
