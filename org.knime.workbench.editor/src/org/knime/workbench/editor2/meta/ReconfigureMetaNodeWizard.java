@@ -108,7 +108,7 @@ public class ReconfigureMetaNodeWizard extends Wizard {
      */
     @Override
     public void addPages() {
-        String name = m_metaNode != null ? "Metanode" : "Wrapped Metanode";
+        String name = m_metaNode != null ? "Metanode" : "Component";
         setWindowTitle("Reconfigure " + name + " Wizard");
         setDefaultPageImageDescriptor(ImageDescriptor.createFromImage(
                 ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/meta/meta_node_wizard2.png")));

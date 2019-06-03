@@ -91,7 +91,7 @@ public class NodeUsageComposite extends Composite {
 
     /**
      * @param parent of the composite (e.g. a TabItem)
-     * @param viewNodes the quickforms and view nodes in this wrapped metanode
+     * @param viewNodes the quickforms and view nodes in this component
      * @param subNodeContainer the container of the wrapped meta node
      */
     public NodeUsageComposite(final Composite parent, final Map<NodeIDSuffix, ViewHideable> viewNodes,
@@ -138,10 +138,10 @@ public class NodeUsageComposite extends Composite {
         FontData fontData = wizardLabel.getFont().getFontData()[0];
         Font boldFont =
             new Font(Display.getCurrent(), new FontData(fontData.getName(), fontData.getHeight(), SWT.BOLD));
-        wizardLabel.setText("WebPortal /\nWrapped Metanode View");
+        wizardLabel.setText("WebPortal /\nComponent View");
         wizardLabel.setFont(boldFont);
         Label dialogLabel = new Label(composite, SWT.CENTER);
-        dialogLabel.setText("\nWrapped Metanode Dialog");
+        dialogLabel.setText("\nComponent Dialog");
         dialogLabel.setFont(boldFont);
 
         //select all checkboxes
@@ -177,7 +177,7 @@ public class NodeUsageComposite extends Composite {
                         checkAllSelected(m_dialogUsageMap, selectAllDialog);
                     }
                 });
-                dialogButton.setToolTipText("Enable/disable for usage in wrapped metanode configure dialog.");
+                dialogButton.setToolTipText("Enable/disable for usage in component configure dialog.");
                 dialogButton.setSelection(!((DialogNode<?, ?>)model).isHideInDialog());
                 m_dialogUsageMap.put(id, dialogButton);
             } else {

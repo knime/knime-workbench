@@ -203,9 +203,9 @@ public class CollapseMetaNodeCommand extends AbstractKNIMECommand {
                 }
             }
             // let the user enter a name
-            String name = "Metanode";
-            final InputDialog idia = new InputDialog(SWTUtilities.getActiveShell(), "Enter Name of Metanode",
-                "Enter name of Metanode:", name, null);
+            String name = encapsulateAsSubnode ? "Component" : "Metanode";
+            final InputDialog idia = new InputDialog(SWTUtilities.getActiveShell(), "Create " + name,
+                "Enter name of " + name + ":", name, null);
 
             final int dialogreturn = idia.open();
             if (dialogreturn == Window.CANCEL) {

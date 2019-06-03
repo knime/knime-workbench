@@ -101,7 +101,7 @@ public class SubNodeReconfigureAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Change name, ports and behaviour of Wrapped Metanode";
+        return "Change name, ports and behaviour of Component";
     }
 
     /**

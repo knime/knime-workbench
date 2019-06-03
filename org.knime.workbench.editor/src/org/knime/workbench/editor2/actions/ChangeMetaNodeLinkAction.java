@@ -221,7 +221,7 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
             }
 
             String msg = "This is a linked (read-only) Metanode. Only the link type can be changed.\n";
-            msg += "Please select the new type of the link to the metanode template.\n";
+            msg += "Please select the new type of the link to the metanode.\n";
             msg += "(current type: " + linkType + ", current link: " + targetURI + ")\n";
             msg += "The origin of the template will not be changed - just the way it is referenced.";
             LinkPrompt dlg = new LinkPrompt(getEditor().getSite().getShell(), msg, linkType);
@@ -277,7 +277,7 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
          *
          */
         public LinkPrompt(final Shell parentShell, final String message, final LinkType preSelect) {
-            super(parentShell, "Change Type of Link to Metanode Template", null, message,
+            super(parentShell, "Change Type of Link to Metanode", null, message,
                 MessageDialog.QUESTION_WITH_CANCEL, new String[]{IDialogConstants.OK_LABEL,
                     IDialogConstants.CANCEL_LABEL}, 0);
             setShellStyle(getShellStyle() | SWT.SHEET);

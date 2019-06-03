@@ -71,7 +71,7 @@ import org.knime.workbench.editor2.commands.ReconfigureMetaNodeCommand;
 import org.knime.workbench.editor2.meta.ConfigureMetaNodePortsPage;
 
 /**
- * Wizard to configure the setup of a wrapped metanode,
+ * Wizard to configure the setup of a component,
  * e.g. changing the name or the number and type of in
  * and out ports.
  *
@@ -104,7 +104,7 @@ public class SetupSubnodeWizard extends Wizard {
     */
    @Override
    public void addPages() {
-       setWindowTitle("Setup Wrapped Metanode Wizard");
+       setWindowTitle("Setup Component Wizard");
        setDefaultPageImageDescriptor(ImageDescriptor.createFromImage(
                ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/meta/meta_node_wizard2.png")));
 
@@ -121,7 +121,7 @@ public class SetupSubnodeWizard extends Wizard {
            }
        }
 
-       m_portsPage = new ConfigureMetaNodePortsPage("Change the Wrapped Metanode configuration");
+       m_portsPage = new ConfigureMetaNodePortsPage("Change the Component configuration");
        m_portsPage.setSubNode(m_subNode);
        m_portsPage.setTemplate(null);
        addPage(m_portsPage);

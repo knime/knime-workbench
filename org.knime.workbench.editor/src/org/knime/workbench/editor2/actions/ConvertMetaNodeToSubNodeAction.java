@@ -91,7 +91,7 @@ public class ConvertMetaNodeToSubNodeAction extends AbstractNodeAction {
      */
     @Override
     public String getText() {
-        return "Wrap";
+        return "Convert to Component";
     }
 
     /**
@@ -107,7 +107,7 @@ public class ConvertMetaNodeToSubNodeAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Converts this metanode to a functional, sharable unit";
+        return "Converts this metanode to a Component";
     }
 
     /**

@@ -71,6 +71,7 @@ import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerTemplate;
 import org.knime.core.node.workflow.NodeID;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowLoadHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
@@ -136,8 +137,8 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Checks whether a newer version of the underlying node "
-            + "template is available and updates the selected links";
+        return "Checks whether a newer version of the underlying metanodes and components"
+            + " are available and updates the selected links";
     }
 
 
@@ -209,8 +210,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         final Shell shell = SWTUtilities.getActiveShell();
         IWorkbench wb = PlatformUI.getWorkbench();
         IProgressService ps = wb.getProgressService();
-        LOGGER.debug("Checking for updates for " + candidateList.size()
-                + " node link(s)...");
+        LOGGER.debug("Checking for updates for " + candidateList.size() + " node link(s)...");
         CheckUpdateRunnableWithProgress runner =
             new CheckUpdateRunnableWithProgress(getManager(), candidateList);
         try {
@@ -226,7 +226,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         if (status.getSeverity() == IStatus.ERROR
                 || status.getSeverity() == IStatus.WARNING) {
             ErrorDialog.openError(SWTUtilities.getActiveShell(), null,
-                "Errors while checking for " + "updates on node links", status);
+                "Errors while checking for updates on node links", status);
             if (candidateList.size() == 1) {
                 /* As only one node is selected and its update failed,
                  * there is nothing else to do. */
@@ -236,6 +236,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
 
         // find nodes that will be reset as part of the update
         int nodesToResetCount = 0;
+        boolean hasOnlySelectedSubnodes = true;
         for (NodeID id : updateList) {
             NodeContainerTemplate templateNode =
                 (NodeContainerTemplate)getManager().findNodeContainer(id);
@@ -243,42 +244,46 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
             if (templateNode.containsExecutedNode()) {
                 nodesToResetCount += 1;
             }
+            if (!(templateNode instanceof SubNodeContainer)) {
+                hasOnlySelectedSubnodes = false;
+            }
         }
+
+        String nodeSLow = hasOnlySelectedSubnodes ? "component" : "node";
+        String nodeSUp = hasOnlySelectedSubnodes ? "Component" : "Node";
 
         if (updateList.isEmpty()) {
             if (m_showInfoMsgIfNoUpdateAvail) {
-                MessageDialog.openInformation(shell, "Node Update",
-                        "No updates available");
+                MessageDialog.openInformation(shell, "Update", "No updates available");
             } else {
-                LOGGER.info("No updates available ("
-                        + candidateList.size() + " node link(s))");
+                LOGGER.infoWithFormat("No updates available (%d %s link(s))", candidateList.size(), nodeSLow);
             }
         } else {
             boolean isSingle = updateList.size() == 1;
-            String title = "Update Node" + (isSingle ? "" : "s");
+            String title = "Update " + nodeSUp + (isSingle ? "" : "s");
             StringBuilder messageBuilder = new StringBuilder();
             messageBuilder.append("Update available for ");
             if (isSingle && candidateList.size() == 1) {
-                messageBuilder.append("node \"");
+                messageBuilder.append(nodeSLow);
+                messageBuilder.append(" \"");
                 messageBuilder.append(getManager().findNodeContainer(
                         candidateList.get(0)).getNameWithID());
                 messageBuilder.append("\".");
             } else if (isSingle) {
-                messageBuilder.append("one node.");
+                messageBuilder.append("one " + nodeSLow + ".");
             } else {
                 messageBuilder.append(updateList.size());
-                messageBuilder.append(" nodes.");
+                messageBuilder.append(" ").append(nodeSLow).append(".");
             }
             messageBuilder.append("\n\n");
             if (nodesToResetCount > 0) {
-                messageBuilder.append("Reset nodes and update now?");
+                messageBuilder.append("Reset " + nodeSLow + "s and update now?");
             } else {
                 messageBuilder.append("Update now?");
             }
             String message = messageBuilder.toString();
             if (MessageDialog.openQuestion(shell, title, message)) {
-                LOGGER.debug("Running update for " + updateList.size()
-                        + " node(s): " + updateList);
+                LOGGER.debug("Running update for " + updateList.size() + " node(s): " + updateList);
                 execute(new UpdateMetaNodeLinkCommand(getManager(),
                         updateList.toArray(new NodeID[updateList.size()])));
             }

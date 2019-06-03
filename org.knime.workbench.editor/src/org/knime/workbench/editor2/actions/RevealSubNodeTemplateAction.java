@@ -103,7 +103,7 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
      */
     @Override
     public String getText() {
-        return "Select Template in Explorer";
+        return "Select in Explorer";
     }
 
     /**
@@ -112,7 +112,7 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Selects the Wrapped Metanode template this metanode is linked to in the KNIME explorer";
+        return "Selects the shared component in the KNIME explorer";
     }
 
 

@@ -102,7 +102,7 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
     /** {@inheritDoc} */
     @Override
     public String getText() {
-        return "Save as Template...";
+        return "Share...";
     }
 
     /**
@@ -111,7 +111,7 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Saves the Wrapped Metanode as a reusable template";
+        return "Saves the component as a reusable shared component";
     }
 
 
@@ -183,8 +183,8 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
         final Shell shell = SWTUtilities.getActiveShell();
         ContentObject defSel = getDefaultSaveLocation(wm);
         SpaceResourceSelectionDialog dialog = new SpaceResourceSelectionDialog(shell, validMountPoints, defSel);
-        dialog.setTitle("Save As Wrapped Metanode Template");
-        dialog.setHeader("Select destination workflow group for Wrapped Metanode template");
+        dialog.setTitle("Save As Shared Component");
+        dialog.setHeader("Select destination workflow group for shared component");
         dialog.setValidator(new Validator() {
             @Override
             public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {

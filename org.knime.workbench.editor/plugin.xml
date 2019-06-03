@@ -25,9 +25,9 @@
             name="Reset Zoom"/>
       <command
             categoryId="knime.command.category"
-            description="Opens the settings dialog for the Wrapped Metanode layout."
+            description="Opens the settings dialog for the component layout."
             id="knime.commands.editor.subnodeLayout"
-            name="Wrapped Metanode Node Usage And Layout"/>
+            name="Component Usage And Layout"/>
       <command
             categoryId="knime.command.category"
             description="Moves the selected nodes up"
@@ -413,11 +413,11 @@
                disabledIcon="icons/layout_16_bw.png"
                icon="icons/layout_16.png"
                id="org.knime.workbench.editor.actions.subnodeLayout"
-               label="Wrapped Metanode Node Usage And Layout"
+               label="Component Usage And Layout"
                menubarPath="org.knime.workbench.editor.menu/group2"
                style="push"
                toolbarPath="org.knime.workbench.editor.menu/group2"
-               tooltip="Opens a dialog to edit usage and layout of Wrapped Metanode views and Quickforms."/>
+               tooltip="Opens a dialog to edit usage and layout of Component configuration nodes and views."/>
          
          
          <action

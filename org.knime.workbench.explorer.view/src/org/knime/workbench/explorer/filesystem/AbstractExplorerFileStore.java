@@ -393,7 +393,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
 
     /**
      * Utility method for a more fine-grain differentiation of a workflow template. I.e. whether it's a component
-     * template (i.e. aka Wrapped Metanode Template).
+     * template (i.e. aka Component Template).
      *
      * @param file
      * @return <code>true</code> if it's a component template otherwise <code>false</code>

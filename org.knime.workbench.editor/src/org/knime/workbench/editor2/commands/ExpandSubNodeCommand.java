@@ -130,7 +130,7 @@ public class ExpandSubNodeCommand extends AbstractKNIMECommand {
             }
 
         } catch (Exception e) {
-            String error = "Expanding Wrapped Metanode failed: " + e.getMessage();
+            String error = "Expanding Component failed: " + e.getMessage();
             LOGGER.error(error, e);
             MessageDialog.openError(SWTUtilities.getActiveShell(), "Expand failed", error);
         }

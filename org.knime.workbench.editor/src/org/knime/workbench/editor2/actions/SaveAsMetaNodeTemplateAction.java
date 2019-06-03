@@ -54,7 +54,6 @@ import java.util.Map;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -99,7 +98,7 @@ public class SaveAsMetaNodeTemplateAction extends AbstractNodeAction {
     /** {@inheritDoc} */
     @Override
     public String getText() {
-        return "Save as Template...";
+        return "Share...";
     }
 
     /**

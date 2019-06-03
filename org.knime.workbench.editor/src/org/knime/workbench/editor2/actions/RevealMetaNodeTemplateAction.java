@@ -100,7 +100,7 @@ public class RevealMetaNodeTemplateAction extends AbstractNodeAction {
      */
     @Override
     public String getText() {
-        return "Select Template in Explorer";
+        return "Select in Explorer";
     }
 
     /**
@@ -109,7 +109,7 @@ public class RevealMetaNodeTemplateAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Selects the metanode template this metanode is linked to in the KNIME explorer";
+        return "Selects the shared metanode in the KNIME explorer";
     }
 
 

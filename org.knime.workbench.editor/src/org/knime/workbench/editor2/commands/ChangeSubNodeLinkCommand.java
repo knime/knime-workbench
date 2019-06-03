@@ -103,7 +103,7 @@ public class ChangeSubNodeLinkCommand extends AbstractKNIMECommand {
     private boolean setLink(final URI link) {
         NodeContainer subNode = getHostWFM().getNodeContainer(m_subNodeID);
         if (!(subNode instanceof SubNodeContainer)) {
-            LOGGER.error("Command failed: Specified node is not a Wrapped Metanode");
+            LOGGER.error("Command failed: Specified node is not a Component");
             return false;
         }
         MetaNodeTemplateInformation templateInfo = ((SubNodeContainer)subNode).getTemplateInformation();
@@ -112,7 +112,7 @@ public class ChangeSubNodeLinkCommand extends AbstractKNIMECommand {
             newInfo = templateInfo.createLinkWithUpdatedSource(m_newLink);
         } catch (InvalidSettingsException e1) {
             // will not happen.
-            LOGGER.error("Command failed: Specified node is not a Wrapped Metanode with a link." + e1.getMessage(), e1);
+            LOGGER.error("Command failed: Specified node is not a Component with a link." + e1.getMessage(), e1);
             return false;
         }
         getHostWFM().setTemplateInformation(m_subNodeID, newInfo);

@@ -615,7 +615,7 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
     private static IMenuManager getSubNodeMenuManager(final IMenuManager subNodeManagerOrNull,
         final IMenuManager parentMenuManager) {
         if (subNodeManagerOrNull == null) {
-            MenuManager m = new MenuManager("Wrapped Metanode",
+            MenuManager m = new MenuManager("Component",
                 ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta/meta_menu.png"),
                 null);
             m.add(new Separator(GROUP_SUBNODE));

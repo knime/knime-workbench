@@ -102,8 +102,7 @@ public class DisconnectSubNodeLinkAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Removes the link to the Wrapped Metanode template and keeps a local, "
-            + "editable copy of the Wrapped Metanode.";
+        return "Removes the link to the shared component and keeps a local, editable copy of the it.";
     }
 
 

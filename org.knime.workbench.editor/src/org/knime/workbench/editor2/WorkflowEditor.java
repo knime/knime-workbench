@@ -2403,7 +2403,7 @@ public class WorkflowEditor extends GraphicalEditor implements
 
             if (getWorkflowManagerUI().isInWizardExecution()) {
                 viewer.setWarningMessage("Job started by WebPortal. Edit operations are not allowed. "
-                    + "Nodes following the currently active wrapped metanode (WebPortal page) are not executed.");
+                    + "Nodes following the currently active component (WebPortal page) are not executed.");
             }
         } else {
             viewer.clearAllMessages();

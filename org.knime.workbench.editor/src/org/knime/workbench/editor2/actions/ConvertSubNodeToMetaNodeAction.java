@@ -92,7 +92,7 @@ public class ConvertSubNodeToMetaNodeAction extends AbstractNodeAction {
      */
     @Override
     public String getText() {
-        return "Unwrap";
+        return "Convert to Metanode";
     }
 
     /**
@@ -153,7 +153,7 @@ public class ConvertSubNodeToMetaNodeAction extends AbstractNodeAction {
             if (manager.canResetNode(subNode.getID())) {
                 // yes: ask if we can reset, otherwise bail
                 MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.OK | SWT.CANCEL);
-                mb.setMessage("Executed Nodes inside WrappedNode will be reset - are you sure?");
+                mb.setMessage("Executed nodes inside component will be reset - are you sure?");
                 mb.setText("Reset Executed Nodes");
                 int dialogreturn = mb.open();
                 if (dialogreturn == SWT.CANCEL) {
@@ -168,7 +168,7 @@ public class ConvertSubNodeToMetaNodeAction extends AbstractNodeAction {
             execute(cmnc);
         } catch (IllegalArgumentException e) {
             MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ERROR);
-            mb.setMessage("Sorry, Unwrapping WrappedNode failed: " + e.getMessage());
+            mb.setMessage("Unwrapping component failed: " + e.getMessage());
             mb.setText("Convert failed");
             mb.open();
         }

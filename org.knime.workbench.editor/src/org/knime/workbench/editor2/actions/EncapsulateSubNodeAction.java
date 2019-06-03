@@ -57,7 +57,7 @@ import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
- * Action to encapsulate a selected set of nodes into wrapped metanode.
+ * Action to create a component from aa selected set of nodes.
  *
  * @author Bernd Wiswedel, KNIME AG, Zurich, Switzerland
  */
@@ -88,7 +88,7 @@ public class EncapsulateSubNodeAction extends AbstractNodeAction {
      */
     @Override
     public String getText() {
-        return "Encapsulate into Wrapped Metanode";
+        return "Create Component...";
     }
 
     /**
@@ -104,7 +104,7 @@ public class EncapsulateSubNodeAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Encapsulates nodes into new wrapped metanode";
+        return "Encapsulates nodes into new component";
     }
 
     /**

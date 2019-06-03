@@ -90,7 +90,7 @@ public class CollapseMetaNodeAction extends AbstractNodeAction {
      */
     @Override
     public String getText() {
-        return "Collapse into Metanode";
+        return "Create Metanode...";
     }
 
     /**
