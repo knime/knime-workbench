@@ -54,6 +54,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -93,6 +94,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation.TemplateType;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerParent;
 import org.knime.core.node.workflow.NodeContainerState;
@@ -110,6 +112,8 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.meta.MetaInfo;
+import org.knime.workbench.explorer.filesystem.meta.TemplateInfo;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
@@ -967,11 +971,61 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     /**
-     * @return whether this content provider is able to host metanode templates,
-     *         this is true for KNIME Server or KNIME TeamSpace but false for the LOCAL
-     *         space (or the the read-only EXAMPLES KNIME Server)
+     * Specifies whether this content provider is able to host metanode templates. To specify whether components can be
+     * hosted, overwrite {@link #canHostComponentTemplates()}.
+     *
+     * @return <code>true</code> if metanodes templates can be hosted
      */
     public abstract boolean canHostMetaNodeTemplates();
+
+    /**
+     * Specified whether this content provider is able to host component templates. To specify whether metanodes can be
+     * hosted, overwrite {@link #canHostMetaNodeTemplates()}.
+     *
+     * @return <code>true</code> if component templates can be hosted
+     * @since 8.4
+     */
+    public boolean canHostComponentTemplates() {
+        return canHostMetaNodeTemplates();
+    }
+
+    /**
+     * Helper method to determine whether the provided file store is a workflow template and can be hosted by this
+     * content provider.
+     *
+     * @param fileStore
+     * @return <code>true</code> if the passed file store is a workflow template and the template is of a type that can
+     *         be hosted (i.e. metanode or component), otherwise <code>false</code> (i.e. will also return
+     *         <code>false</code> if the passed file store doesn't represent a template
+     * @throws IllegalStateException if the template's meta info couldn't be retrieved
+     * @since 8.4
+     */
+    public final boolean canHostWorkflowTemplate(final AbstractExplorerFileStore fileStore) {
+        if (AbstractExplorerFileStore.isWorkflowTemplate(fileStore)) {
+            if (canHostMetaNodeTemplates() == canHostComponentTemplates()) {
+                return canHostMetaNodeTemplates();
+            }
+            try {
+                Optional<? extends MetaInfo> metaInfo = fileStore.fetchMetaInfo();
+                if (metaInfo.isPresent() && metaInfo.get() instanceof TemplateInfo) {
+                    TemplateType type = ((TemplateInfo)metaInfo.get()).getType();
+                    if (type == TemplateType.MetaNode && canHostMetaNodeTemplates()) {
+                        return true;
+                    } else if (type == TemplateType.SubNode && canHostComponentTemplates()) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                } else {
+                    throw new IllegalStateException("No template meta info available");
+                }
+            } catch (CoreException e) {
+                throw new IllegalStateException("Template meta info couldn't be read", e);
+            }
+        } else {
+            return false;
+        }
+    }
 
     /**
      * @return whether this content provider is able to host data files. This is true for KNIME Server or

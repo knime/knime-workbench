@@ -62,9 +62,11 @@ import org.eclipse.core.filesystem.provider.FileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation.TemplateType;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.meta.MetaInfo;
+import org.knime.workbench.explorer.filesystem.meta.TemplateInfo;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.DeletionConfirmationResult;
 
@@ -387,6 +389,59 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         }
         return file.fetchInfo().isWorkflowTemplate();
 
+    }
+
+    /**
+     * Utility method for a more fine-grain differentiation of a workflow template. I.e. whether it's a component
+     * template (i.e. aka Wrapped Metanode Template).
+     *
+     * @param file
+     * @return <code>true</code> if it's a component template otherwise <code>false</code>
+     * @throws IllegalStateException if the exact template type cannot be determined (e.g. because the server just
+     *             doesn't provide the information)
+     * @since 8.4
+     */
+    public static boolean isComponentTemplate(final AbstractExplorerFileStore file) {
+        if (!isWorkflowTemplate(file)) {
+            return false;
+        }
+        try {
+            Optional<? extends MetaInfo> metaInfo = file.fetchMetaInfo();
+            if (metaInfo.isPresent() && metaInfo.get() instanceof TemplateInfo) {
+                TemplateType type = ((TemplateInfo)metaInfo.get()).getType();
+                return type.equals(TemplateType.SubNode);
+            }
+        } catch (CoreException e) {
+            throw new IllegalStateException("Meta info of file '" + file.getFullName() + "' cannot be retrieved", e);
+        }
+
+        //information cannot be determined from meta info
+        AbstractContentProvider contentProvider = file.getContentProvider();
+        if (contentProvider.canHostMetaNodeTemplates() != contentProvider.canHostComponentTemplates()) {
+            //assumption here is that if a mountpoint can/cannot host component templates it will only/won't return those
+            return contentProvider.canHostComponentTemplates();
+        } else {
+            //still can't decide -> illegal state
+            throw new IllegalStateException(
+                "Type of workflow template '" + file.getFullName() + "' cannot be determined");
+        }
+    }
+
+    /**
+     * Utility method for a more fine-grain differentiation of a workflow template. I.e. whether it's a metanode
+     * template.
+     *
+     * @param file
+     * @return <code>true</code> if it's a metanode template otherwise <code>false</code>
+     * @throws IllegalStateException if the exact template type cannot be determined (e.g. because the server just
+     *             doesn't provide the information)
+     * @since 8.4
+     */
+    public static boolean isMetaNodeTemplate(final AbstractExplorerFileStore file) {
+        if (!isWorkflowTemplate(file)) {
+            return false;
+        }
+        return !isComponentTemplate(file);
     }
 
     /**
