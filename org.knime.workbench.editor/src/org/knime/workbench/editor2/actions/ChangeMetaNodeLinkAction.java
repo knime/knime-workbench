@@ -131,7 +131,7 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Change the type of the link to the template of the Metanode";
+        return "Change the link type to the shared metanode";
     }
 
     /**

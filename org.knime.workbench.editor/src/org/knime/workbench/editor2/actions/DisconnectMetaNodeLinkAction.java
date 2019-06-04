@@ -101,7 +101,7 @@ public class DisconnectMetaNodeLinkAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Removes the link to the metanode template and keeps a local, "
+        return "Removes the link to the shared metanode and keeps a local, "
             + "editable copy of the metanode.";
     }
 

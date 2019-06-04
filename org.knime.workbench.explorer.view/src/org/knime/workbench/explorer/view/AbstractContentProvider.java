@@ -453,7 +453,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             allowedLinkTypes.add(LinkType.MountpointRelative);
         }
 
-        LinkType linkType = promptLinkMetaNodeTemplate(originalName, newName, allowedLinkTypes);
+        LinkType linkType = promptLinkMetaNodeTemplate(originalName, newName, allowedLinkTypes, false);
         if (linkType == null) {
             // user canceled
             return false;
@@ -698,16 +698,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     private static LinkType promptLinkMetaNodeTemplate(final String oldName, final String newName,
-        final Collection<LinkType> allowedLinkTypes) {
+        final Collection<LinkType> allowedLinkTypes, final boolean isSubnode) {
 
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
         String linkPrefs = prefStore.getString(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
 
+        String s = isSubnode ? "component" : "metanode";
         if (MessageDialogWithToggle.NEVER.equals(linkPrefs)) {
             return LinkType.None;
         } else {
             Shell activeShell = Display.getDefault().getActiveShell();
-            String msg = "Update metanode to link to the template?";
+            String msg = "Link local instance to the shared " + s + "?";
             if (!oldName.equals(newName)) {
                 msg = msg + "\n(The node will be renamed to \"" + newName + "\".)";
             }
@@ -902,7 +903,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             allowedLinkTypes.add(LinkType.MountpointRelative);
         }
 
-        LinkType linkType = promptLinkMetaNodeTemplate(originalName, newName, allowedLinkTypes);
+        LinkType linkType = promptLinkMetaNodeTemplate(originalName, newName, allowedLinkTypes, true);
         if (linkType == null) {
             // user canceled
             return false;

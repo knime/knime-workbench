@@ -129,7 +129,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Change the type of the link to the Component";
+        return "Change the link type to the shared component";
     }
 
     /**
