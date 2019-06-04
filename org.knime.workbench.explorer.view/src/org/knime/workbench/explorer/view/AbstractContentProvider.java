@@ -402,8 +402,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         if (new FileStoreNameValidator().isValid(uniqueName) != null) {
             InputDialog dialog = new InputDialog(shell, "Metanode rename",
                     "The name \"" + uniqueName + "\" is not a valid "
-                    + "template name.\n\nChoose a new name under which the "
-                    + "template will be saved.", uniqueName,
+                    + "shared metanode name.\n\nChoose a new name under which "
+                    + "it will be saved.", uniqueName,
                     new FileStoreNameValidator());
             dialog.setBlockOnOpen(true);
             if (dialog.open() == Window.CANCEL) {
@@ -851,8 +851,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         if (new FileStoreNameValidator().isValid(uniqueName) != null) {
             InputDialog dialog = new InputDialog(shell, "Component rename",
                     "The name \"" + uniqueName + "\" is not a valid "
-                    + "template name.\n\nChoose a new name under which the "
-                    + "template will be saved.", uniqueName,
+                    + "shared component name.\n\nChoose a new name under which "
+                    + "it will be saved.", uniqueName,
                     new FileStoreNameValidator());
             dialog.setBlockOnOpen(true);
             if (dialog.open() == Window.CANCEL) {
@@ -955,9 +955,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     ((RemoteExplorerFileStore)templateLoc).createSnapshot(info.getComment());
                 }
             } catch (Exception e) {
-                String error = "Unable to save template: " + e.getMessage();
+                String error = "Unable to save shared component: " + e.getMessage();
                 LOGGER.warn(error, e);
-                MessageDialog.openError(shell, "Error while writing template",
+                MessageDialog.openError(shell, "Error while writing shared component",
                         error);
             }
 
