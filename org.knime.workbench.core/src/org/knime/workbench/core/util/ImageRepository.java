@@ -297,6 +297,8 @@ public final class ImageRepository {
         LocalSpaceIcon("icons/workflow_projects.png"),
         /** WorkflowDiff: action icon. */
         WorkflowDiffIcon("icons/diff.png"),
+        /** Copy URL action icon. */
+        CopyURLIcon("icons/actions/url.png"),
 
         /** ServerSpace Workflow Hub Icon. */
         WorkflowHub("icons/server_space/workflow_hub.png"),

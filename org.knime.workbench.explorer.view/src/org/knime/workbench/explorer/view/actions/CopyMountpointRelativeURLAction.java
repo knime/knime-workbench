@@ -55,10 +55,10 @@ import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
 import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
-import org.osgi.framework.FrameworkUtil;
 
 /**
  * Action for copying the mount-point relative URL of an item in the explorer tree to the clipboard.
@@ -82,7 +82,7 @@ public class CopyMountpointRelativeURLAction extends ExplorerAction {
         super(viewer, "Mountpoint-relative URL");
         m_cb = cb;
         setToolTipText("Copy mountpoint-relative URL to clipboard");
-        setImageDescriptor(ImageRepository.getIconDescriptor(FrameworkUtil.getBundle(getClass()).getSymbolicName(), "/icons/url.png"));
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.CopyURLIcon));
     }
 
     /**
