@@ -1494,4 +1494,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     protected void onDoubleClick(final AbstractExplorerFileStore fileStore, final ExplorerView view) {
         //do nothing by default
     }
+
+    /**
+     * Returns the upload limit in bytes. By default this is set to {@link Long#MAX_VALUE}.
+     *
+     * @return The upload limit in bytes.
+     * @since 8.4
+     */
+    public long getUploadLimit() {
+        return Long.MAX_VALUE;
+    }
 }
