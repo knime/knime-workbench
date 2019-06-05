@@ -187,7 +187,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
 
         if (!isHubURI(uri)) {
             LOGGER.info("The object referenced by URL '" + url
-                + "' cannot be added to the workbench. It doesn't originate from the KNIME Community Workflow Hub");
+                + "' cannot be added to the workbench. It doesn't originate from the KNIME Hub");
             return null;
         }
         if (getEntityType(uri) != Type.COMPONENT) {

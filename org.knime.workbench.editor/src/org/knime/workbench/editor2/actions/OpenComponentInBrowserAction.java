@@ -53,6 +53,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.LinkType;
@@ -60,6 +62,7 @@ import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.UI;
 import org.knime.core.util.DesktopUtil;
+import org.knime.core.util.SWTUtilities;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -106,7 +109,7 @@ public class OpenComponentInBrowserAction extends AbstractNodeAction {
      */
     @Override
     public String getToolTipText() {
-        return "Opens KNIME Community Hub's component page";
+        return "Opens KNIME Hub's component page";
     }
 
 
@@ -150,7 +153,11 @@ public class OpenComponentInBrowserAction extends AbstractNodeAction {
             try {
                 DesktopUtil.browse(pageURI.toURL());
             } catch (MalformedURLException e) {
-                LOGGER.error("Invalid URI: " + pageURI, e);
+                MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ERROR);
+                mb.setText("Problem opening KNIME Hub");
+                mb.setMessage("Invalid URI: " + pageURI);
+                mb.open();
+                LOGGER.error("Problem opening KNIME Hub. Invalid URI: " + pageURI, e);
             }
         }
     }
