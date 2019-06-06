@@ -94,10 +94,9 @@ import org.osgi.framework.FrameworkUtil;
  *
  * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
  */
-final class InstallMissingNodesJob extends Job {
+public final class InstallMissingNodesJob extends Job {
 
-    private final List<NodeAndBundleInformationPersistor> m_missingNodes;
-    private final List<TableStoreFormatInformation> m_missingTableFormats;
+    final List<KNIMEComponentInformation> m_missingComponents = new ArrayList<>();
 
     /**
      * Creates a new job.
@@ -108,17 +107,24 @@ final class InstallMissingNodesJob extends Job {
     InstallMissingNodesJob(final List<NodeAndBundleInformationPersistor> missingNodes,
         final List<TableStoreFormatInformation> missingTableFormats) {
         super("Find missing extensions");
-        m_missingNodes = missingNodes;
-        m_missingTableFormats = missingTableFormats;
+        missingNodes.stream().filter(distinctByKey(i -> i.getFactoryClass())).forEach(m_missingComponents::add);
+        missingTableFormats.stream().distinct().collect(Collectors.toList()).forEach(m_missingComponents::add);
+    }
+
+    /**
+     * Creates a new job.
+     *
+     * @param missingComponents a list of missing components
+     */
+    public InstallMissingNodesJob(final List<KNIMEComponentInformation> missingComponents) {
+        super("Find missing extensions");
+        m_missingComponents.addAll(missingComponents);
     }
 
     @Override
     protected IStatus run(final IProgressMonitor monitor) {
-        List<KNIMEComponentInformation> missingComponents = new ArrayList<>();
-        m_missingNodes.stream().filter(distinctByKey(i -> i.getFactoryClass())).forEach(missingComponents::add);
-        m_missingTableFormats.stream().distinct().collect(Collectors.toList()).forEach(missingComponents::add);
         Set<IInstallableUnit> featuresToInstall = new HashSet<>();
-        IStatus status = findExtensions(monitor, missingComponents, featuresToInstall);
+        IStatus status = findExtensions(monitor, m_missingComponents, featuresToInstall);
         if (!status.isOK()) {
             return status;
         } else if (featuresToInstall.isEmpty()) {
@@ -128,10 +134,10 @@ final class InstallMissingNodesJob extends Job {
             });
             return Status.OK_STATUS;
         } else {
-            if (!missingComponents.isEmpty()) {
+            if (!m_missingComponents.isEmpty()) {
                 Display.getDefault().syncExec(() -> {
                     MessageDialog.openWarning(SWTUtilities.getActiveShell(), "Not all extensions found",
-                        "No extensions for the following nodes were found: " + missingComponents.stream()
+                        "No extensions for the following nodes were found: " + m_missingComponents.stream()
                             .map(i -> i.getComponentName()).collect(Collectors.joining(", ")));
                 });
             }
@@ -235,3 +241,4 @@ final class InstallMissingNodesJob extends Job {
         }
     }
 }
+
