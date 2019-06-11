@@ -85,6 +85,7 @@ import org.jsoup.select.Elements;
 import org.knime.core.node.DynamicNodeFactory;
 import org.knime.core.node.NodeAndBundleInformationPersistor;
 import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
@@ -123,6 +124,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
 public class Nodalizer implements IApplication {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(Nodalizer.class);
 
     private static final String PARAM_DIRECTORY = "-outDir";
     private static final String FACTORY_LIST = "-factoryListFile";
@@ -170,8 +173,9 @@ public class Nodalizer implements IApplication {
                     try {
                         updateSite = URI.create(site);
                     } catch (final Exception ex) {
-                        System.out.println(
-                            "Invalid update site url: " + site + "\n" + UPDATE_SITE + " parameter will be ignored.");
+                        LOGGER.warn(
+                            "Invalid update site url: " + site + "\n" + UPDATE_SITE + " parameter will be ignored.",
+                            ex);
                     }
                 }
                 if (params[i].equalsIgnoreCase(OWNERS) && (params.length > (i + 1))) {
@@ -186,14 +190,14 @@ public class Nodalizer implements IApplication {
                                 if (!StringUtils.isEmpty(id) && !StringUtils.isEmpty(owner)) {
                                     owners.put(id, owner);
                                 } else {
-                                    System.out.println("Extension id AND owner must be non-empty: " + line);
+                                    LOGGER.warn("Extension id AND owner must be non-empty: " + line);
                                 }
                             } else {
-                                System.out.println("Entry contains too many colons: " + line);
+                                LOGGER.warn("Entry contains too many colons: " + line);
                             }
                         }
                     } else {
-                        System.out.println("Invalid owner file: " + o);
+                        LOGGER.warn("Invalid owner file: " + o);
                     }
                 }
                 if (params[i].equalsIgnoreCase(DEFAULT_OWNER) && (params.length > (i + 1))) {
@@ -203,7 +207,7 @@ public class Nodalizer implements IApplication {
         }
 
         if (outputDir == null) {
-            System.err.println("No output directory specified. Please specify a valid output directory with "
+            LOGGER.fatal("No output directory specified. Please specify a valid output directory with "
                 + PARAM_DIRECTORY + " flag");
             return IApplication.EXIT_OK;
         }
@@ -211,17 +215,17 @@ public class Nodalizer implements IApplication {
             outputDir.mkdirs();
         }
         if (!outputDir.isDirectory()) {
-            System.err.println("Given path is not a directory: " + outputDir.getAbsolutePath());
+            LOGGER.fatal("Given path is not a directory: " + outputDir.getAbsolutePath());
             return IApplication.EXIT_OK;
         }
 
         if (factoryList != null) {
             if (!Files.exists(factoryList)) {
-                System.err.println("Given factory list file does not exist: " + outputDir.getAbsolutePath());
+                LOGGER.fatal("Given factory list file does not exist: " + outputDir.getAbsolutePath());
                 return IApplication.EXIT_OK;
             }
             if (Files.isDirectory(factoryList)) {
-                System.err.println("Given factory list file cannot be a directory: " + outputDir.getAbsolutePath());
+                LOGGER.fatal("Given factory list file cannot be a directory: " + outputDir.getAbsolutePath());
                 return IApplication.EXIT_OK;
             }
         }
@@ -273,17 +277,16 @@ public class Nodalizer implements IApplication {
                         final String fileName = ext.getSymbolicName().replaceAll("\\.", "_");
                         writeFile(extDir, fileName, ext);
                     } catch (final JsonProcessingException | FileNotFoundException ex) {
-                        System.out.println("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName());
-                        System.out.println(ex.getClass() + ": " + ex.getMessage());
+                        LOGGER.error("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName(), ex);
                     }
                 } else {
-                    System.out.println("Extension " + ext.getName() + " " + ext.getSymbolicName()
+                    LOGGER.warn("Extension " + ext.getName() + " " + ext.getSymbolicName()
                         + " does not exist at any category path and has no nodes. Skipping ...");
                 }
             }
         }
 
-        System.out.println("Node (and Extension) JSON generation complete!");
+        LOGGER.info("Node (and Extension) JSON generation complete!");
         return IApplication.EXIT_OK;
     }
 
@@ -304,9 +307,7 @@ public class Nodalizer implements IApplication {
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
                     nodeAndBundleInfo, fac.isDeprecated(), directory, extensions, bundles);
             } catch (final Throwable e) {
-                System.out
-                    .println("Failed to read node: " + object.getName() + ". " + e.getClass() + ": " + e.getMessage());
-                e.printStackTrace();
+                    LOGGER.error("Failed to read node: " + object.getName() + ".", e);
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
@@ -333,7 +334,7 @@ public class Nodalizer implements IApplication {
         try {
             factories = Files.readAllLines(factoryListFile);
         } catch (final Exception e) {
-            System.out.println("Failed to read additional factories file: " + factoryListFile);
+            LOGGER.error("Failed to read additional factories file: " + factoryListFile, e);
             return;
         }
 
@@ -364,20 +365,18 @@ public class Nodalizer implements IApplication {
                         extensions, bundles);
                 } else {
                     if (!b.getBundleName().isPresent()) {
-                        System.out.println("Bundle name is missing! " + factory);
+                        LOGGER.warn("Bundle name is missing! " + factory);
                     }
                     if (!b.getBundleVersion().isPresent()) {
-                        System.out.println("Bundle version is missing! " + factory);
+                        LOGGER.warn("Bundle version is missing! " + factory);
                     }
                     if (!b.getBundleSymbolicName().isPresent()) {
-                        System.out.println("Bundle symbolic name is missing! " + factory);
+                        LOGGER.warn("Bundle symbolic name is missing! " + factory);
                     }
                     throw new IllegalArgumentException("Bundle information is missing!");
                 }
             } catch (final Throwable e) {
-                System.out.println(
-                    "Failed to read factory from list: " + factory + ". " + e.getClass() + ": " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.warn("Failed to read factory from list: " + factory + ". ", e);
             }
         }
     }
@@ -401,7 +400,7 @@ public class Nodalizer implements IApplication {
                 owner = e.getOwner();
             } else if (!nodeAndBundleInfo.getFeatureSymbolicName().isPresent()
                 && bundles.contains(nodeAndBundleInfo.getBundleSymbolicName().orElse(null))) {
-                System.out.println(fac.getClass() + " does not contain extension information, skipping ...");
+                LOGGER.warn(fac.getClass() + " does not contain extension information, skipping ...");
                 return;
             } else {
                 // Node doesn't belong to this update site, so skip. With any KNIME installation there will be
@@ -446,7 +445,7 @@ public class Nodalizer implements IApplication {
         final Element nodeXML = fac.getXMLDescription();
         Document nodeHTML = null;
         if (nodeXML == null) {
-            System.out.println("Node factory XML not found for " + fac.getClass() + ". Skipping ...");
+            LOGGER.warn("Node factory XML not found for " + fac.getClass() + ". Skipping ...");
             return;
         }
         final String s = NodeFactoryHTMLCreator.instance.readFullDescription(nodeXML);
@@ -635,9 +634,7 @@ public class Nodalizer implements IApplication {
             try {
                 mr = metadataManager.loadRepository(updateSite, new NullProgressMonitor());
             } catch (final Exception ex) {
-                System.out.println("Failed to read extensions for " + updateSite.toString() + ". See details below.");
-                System.out.println(ex.getClass() + ": " + ex.getMessage());
-                ex.printStackTrace();
+                LOGGER.error("Failed to read extensions for " + updateSite.toString(), ex);
                 return null;
             }
             // TODO: Modify query once we support reading multiple extension versions
@@ -656,11 +653,11 @@ public class Nodalizer implements IApplication {
                     && !iu.getId().equals("de.uni_heidelberg.ifi.pvs.feature.feature.group")
                     && !QueryUtil.isProduct(iu)) {
                     if (iu.getLicenses().size() > 1) {
-                        System.out.println(iu.getId() + " has multiple licenses. Skipping ...");
+                        LOGGER.warn(iu.getId() + " has multiple licenses. Skipping ...");
                         continue;
                     }
                     if (StringUtils.isEmpty(iu.getId())) {
-                        System.out.println("Extension has no ID " + iu.toString() + ". Skipping ...");
+                        LOGGER.warn("Extension has no ID " + iu.toString() + ". Skipping ...");
                         continue;
                     }
                     Version v = null;
@@ -669,7 +666,7 @@ public class Nodalizer implements IApplication {
                     } catch (final Exception ex) {
                         // Once we want to extract multiple versions from a single update site, it will be necessary
                         // that the IU has a valid version
-                        System.out.println(
+                        LOGGER.warn(
                             "Extension, " + iu.getId() + ", has invalid version " + iu.getVersion() + ". Skipping ...");
                         continue;
                     }
@@ -723,9 +720,7 @@ public class Nodalizer implements IApplication {
             try {
                 ar = artifactManager.loadRepository(updateSite, new NullProgressMonitor());
             } catch (Exception ex) {
-                System.out.println("Failed to read extensions for " + updateSite.toString() + ". See details below.");
-                System.out.println(ex.getClass() + ": " + ex.getMessage());
-                ex.printStackTrace();
+                LOGGER.error("Failed to read extensions for " + updateSite.toString(), ex);
                 return null;
             }
 
