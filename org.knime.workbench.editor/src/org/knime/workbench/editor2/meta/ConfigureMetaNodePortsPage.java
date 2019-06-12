@@ -696,7 +696,11 @@ public class ConfigureMetaNodePortsPage extends WizardPage {
         composite.setLayoutData(gridData);
         // label
         Label label = new Label(composite, SWT.NONE);
-        label.setText("Metanode Name:");
+        if (m_metaNode != null) {
+            label.setText("Metanode Name:");
+        } else {
+            label.setText("Component Name:");
+        }
         gridData = new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING,
                 GridData.VERTICAL_ALIGN_CENTER, false, false);
         label.setLayoutData(gridData);
