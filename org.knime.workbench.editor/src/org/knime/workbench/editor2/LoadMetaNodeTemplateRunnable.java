@@ -115,7 +115,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
     public void run(final IProgressMonitor pm) {
         try {
             // create progress monitor
-            ProgressHandler progressHandler = new ProgressHandler(pm, 101, "Loading metanode template...");
+            ProgressHandler progressHandler = new ProgressHandler(pm, 101, "Loading instance...");
             final CheckCancelNodeProgressMonitor progressMonitor = new CheckCancelNodeProgressMonitor(pm);
             progressMonitor.addProgressListener(progressHandler);
 
@@ -142,7 +142,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             TemplateNodeContainerPersistor loadPersistor =
                     loadHelper.createTemplateLoadPersistor(parentFile, m_templateURI);
             MetaNodeLinkUpdateResult loadResult =
-                    new MetaNodeLinkUpdateResult("Template from \"" + m_templateURI + "\"");
+                    new MetaNodeLinkUpdateResult("Shared instance from \"" + m_templateURI + "\"");
             m_parentWFM.load(loadPersistor, loadResult, new ExecutionMonitor(progressMonitor), false);
 
             m_result = loadResult;
