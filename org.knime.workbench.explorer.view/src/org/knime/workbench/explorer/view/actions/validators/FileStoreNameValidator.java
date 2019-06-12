@@ -71,17 +71,24 @@ public class FileStoreNameValidator implements IInputValidator {
     public FileStoreNameValidator() {
         m_initialName = null;
     }
+
     /**
      * {@inheritDoc}
      */
     @Override
     public String isValid(final String name) {
-        if (name == null || name.isEmpty()) {
+        if (name == null || name.trim().isEmpty()) {
             return "Please choose a name";
-        } else if (name.trim().equals(m_initialName)) {
-            return "Please choose a new name";
-        } else {
-            return ExplorerFileSystem.validateFilename(name.trim());
         }
+        if (Character.isWhitespace(name.charAt(0))) {
+            return "Name cannot contain leading whitespace.";
+        }
+        if (Character.isWhitespace(name.charAt(name.length() - 1))) {
+            return "Name cannot contain trailing whitespace.";
+        }
+        if (name.trim().equals(m_initialName)) {
+            return "Please choose a new name";
+        }
+        return ExplorerFileSystem.validateFilename(name.trim());
     }
 }

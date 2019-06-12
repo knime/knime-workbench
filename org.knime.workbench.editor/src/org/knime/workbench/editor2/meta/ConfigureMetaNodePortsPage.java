@@ -56,6 +56,8 @@ import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.FocusAdapter;
 import org.eclipse.swt.events.FocusEvent;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.events.SelectionEvent;
@@ -336,6 +338,9 @@ public class ConfigureMetaNodePortsPage extends WizardPage {
             return false;
         }
         if (m_template == null && m_metaNode == null && m_subNode == null) {
+            return false;
+        }
+        if (getMetaNodeName() == null || getMetaNodeName().isEmpty()) {
             return false;
         }
         return true;
@@ -718,6 +723,17 @@ public class ConfigureMetaNodePortsPage extends WizardPage {
             @Override
             public void focusGained(final FocusEvent e) {
                 m_name.selectAll();
+            }
+        });
+        m_name.addKeyListener(new KeyListener() {
+
+            @Override
+            public void keyReleased(final KeyEvent e) {
+                setPageComplete(isPageComplete());
+            }
+
+            @Override
+            public void keyPressed(final KeyEvent e) {
             }
         });
     }
