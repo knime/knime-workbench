@@ -323,7 +323,7 @@ public class ConfigureMetaNodePortsPage extends WizardPage {
      * @return the entered name for the metanode
      */
     public String getMetaNodeName() {
-        return m_name.getText();
+        return m_name.getText().trim();
     }
 
     /**
