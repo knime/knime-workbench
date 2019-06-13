@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -61,6 +62,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.ide.IDE;
+import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
@@ -86,17 +88,44 @@ public class OpenKnimeUrlAction extends Action {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(OpenKnimeUrlAction.class);
 
+    private static final String EXAMPLES = "knime://EXAMPLES/";
+
+    private static final String PATH_START = "/Users/knime/Examples/";
+
     /*--------- inner job class -------------------------------------------------------------------------*/
     private static class OpenURLJob extends ExplorerJob {
 
         private final IWorkbenchPage m_page;
 
-        private final URI m_url;
+        private URI m_url;
 
         OpenURLJob(final IWorkbenchPage page, final URI url) {
             super("Open KNIME URL");
             m_page = page;
-            m_url = url;
+            try {
+                m_url = parseURL(url);
+            } catch (URISyntaxException e) {
+                LOGGER.warn("Could not process URL " + url + ": " + e.getMessage(), e);
+                m_url = url;
+            }
+        }
+
+        /**
+         * Adjusts KNIME URIs that point to example server so that they work with KNIME Hub.
+         *
+         * @param url The original URI.
+         * @return The adjusted URI.
+         * @throws URISyntaxException If an error occurs.
+         */
+        private static URI parseURL(final URI url) throws URISyntaxException {
+            final String urlString = url.toString();
+
+            if (!urlString.startsWith(EXAMPLES)) {
+                return url;
+            }
+
+            return new URI(StringUtils.replace(urlString, EXAMPLES,
+                "knime://" + KNIMEConstants.KNIME_EXAMPLES_MOUNT_ID + PATH_START, 1));
         }
 
         /**
