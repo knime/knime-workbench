@@ -201,10 +201,7 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
 
         WorkflowManager metaNode = Wrapper.unwrapWFM(nodeParts[0].getNodeContainer());
         if (Role.Link.equals(metaNode.getTemplateInformation().getRole())) {
-            WorkflowManager wfm = metaNode;
-            while (!wfm.isProject()) {
-                wfm = wfm.getParent();
-            }
+            final WorkflowManager wfm = metaNode.getParent();
             URI targetURI = metaNode.getTemplateInformation().getSourceURI();
             LinkType linkType = LinkType.None;
             try {
