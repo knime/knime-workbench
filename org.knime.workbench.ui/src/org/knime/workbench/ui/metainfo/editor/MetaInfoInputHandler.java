@@ -1,6 +1,5 @@
 /*
  * ------------------------------------------------------------------------
- *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -41,77 +40,66 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ---------------------------------------------------------------------
- *
- * History
- *   May 24, 2019 (loki): created
+ * ------------------------------------------------------------------------
  */
-package org.knime.workbench.descriptionview.workflowmeta;
+package org.knime.workbench.ui.metainfo.editor;
 
 import java.util.ArrayList;
+import java.util.List;
+
+import org.knime.workbench.ui.metainfo.model.MetaGUIElement;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
 /**
- * This class embodies a license which may be applied to a workflow; it is non-instantiable outside of this class and
- * presently all license types are hard coded. Ideally this class has a static block that reads a properties file and
- * instantiates instances based on that.
  *
- * @author loki der quaeler
+ * @author Fabian Dill, KNIME.com AG
  */
-public class LicenseType {
-    /** The default license for not-yet-licensed metadata **/
-    public static final String DEFAULT_LICENSE_NAME = "CC-BY-4.0";
+public class MetaInfoInputHandler extends DefaultHandler {
 
-    /**
-     * @return the available licenses
-     */
-    public static ArrayList<LicenseType> getAvailableLicenses() {
-        return AVAILABLE_LICENSES;
+
+    private StringBuffer m_buffer = new StringBuffer();
+
+    private final List<MetaGUIElement>m_elements
+        = new ArrayList<MetaGUIElement>();
+
+    private String m_currentForm;
+    private String m_currentLabel;
+    private boolean m_isReadOnly;
+
+    @Override
+    public void characters(final char[] ch, final int start, final int length)
+            throws SAXException {
+        m_buffer.append(ch, start, length);
     }
 
-    /**
-     * @param name the display name of a license
-     * @return the index within AVAILABLE_LICENSES or -1 if one could not be matched
-     */
-    public static int getIndexForLicenseWithName(final String name) {
-        for (int i = 0; i < AVAILABLE_LICENSES.size(); i++) {
-            if (AVAILABLE_LICENSES.get(i).getDisplayName().equals(name)) {
-                return i;
-            }
+
+    @Override
+    public void startElement(final String uri, final String localName, final String name,
+            final Attributes atts) throws SAXException {
+        if (localName.equals(MetaGUIElement.ELEMENT)) {
+            m_currentForm = atts.getValue(MetaGUIElement.FORM);
+            m_currentLabel = atts.getValue(MetaGUIElement.NAME);
+            m_isReadOnly = Boolean.valueOf(
+                    atts.getValue(MetaGUIElement.READ_ONLY));
+
         }
-
-        return -1;
     }
 
-    private static final ArrayList<LicenseType> AVAILABLE_LICENSES;
+    @Override
+    public void endElement(final String uri, final String localName, final String name)
+            throws SAXException {
+        if (localName.equals(MetaGUIElement.ELEMENT)) {
+            m_elements.add(MetaGUIElement.create(m_currentForm, m_currentLabel,
+                    m_buffer.toString(), m_isReadOnly));
+            m_buffer = new StringBuffer();
+        }
+    }
 
-    static {
-        AVAILABLE_LICENSES = new ArrayList<>();
-
-        AVAILABLE_LICENSES.add(new LicenseType(DEFAULT_LICENSE_NAME, "https://creativecommons.org/licenses/by/4.0/"));
-        AVAILABLE_LICENSES.add(new LicenseType("CC0", "https://creativecommons.org/publicdomain/zero/1.0/"));
+    public List<MetaGUIElement>getElements() {
+        return m_elements;
     }
 
 
-
-    private final String m_displayName;
-    private final String m_url;
-
-    private LicenseType(final String name, final String url) {
-        m_displayName = name;
-        m_url = url;
-    }
-
-    /**
-     * @return the displayName
-     */
-    public String getDisplayName() {
-        return m_displayName;
-    }
-
-    /**
-     * @return the url
-     */
-    public String getURL() {
-        return m_url;
-    }
 }

@@ -50,12 +50,16 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
+import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
+ * 
  * @author Fabian Dill, KNIME.com AG
  */
-public class MetaInfoPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
+public class MetaInfoPreferencePage extends FieldEditorPreferencePage implements
+        IWorkbenchPreferencePage {
+    
+    
     /**
      * {@inheritDoc}
      */
@@ -63,13 +67,14 @@ public class MetaInfoPreferencePage extends FieldEditorPreferencePage implements
     protected void createFieldEditors() {
         addField(new FileFieldEditor(
                 MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WF,
-                "Meta Info Template for workflows:", true,
+                "Meta Info Template for workflows:", true, 
                 getFieldEditorParent()));
-
+        
         addField(new FileFieldEditor(
                 MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WFS,
-                "Meta Info Template for workflow sets:", true,
-                getFieldEditorParent()));
+                "Meta Info Template for workflow sets:", true, 
+                getFieldEditorParent()));        
+        
     }
 
     /**
@@ -77,9 +82,11 @@ public class MetaInfoPreferencePage extends FieldEditorPreferencePage implements
      */
     @Override
     public void init(final IWorkbench workbench) {
-        IPreferenceStore prefStore = KNIMEUIPlugin.getDefault().getPreferenceStore();
+        IPreferenceStore prefStore = KNIMEUIPlugin.getDefault()
+            .getPreferenceStore();
         prefStore.setDefault(MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WF, "");
         prefStore.setDefault(MetaInfoFile.PREF_KEY_META_INFO_TEMPLATE_WFS, "");
         setPreferenceStore(prefStore);
     }
+
 }

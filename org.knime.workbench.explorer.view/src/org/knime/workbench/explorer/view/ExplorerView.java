@@ -106,6 +106,7 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.part.ViewPart;
 import org.knime.core.internal.ReferencedFile;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeMessageEvent;
 import org.knime.core.node.workflow.NodeMessageListener;
@@ -129,7 +130,6 @@ import org.knime.workbench.explorer.view.actions.CopyLocationAction;
 import org.knime.workbench.explorer.view.actions.CopyMountpointRelativeURLAction;
 import org.knime.workbench.explorer.view.actions.CopyURLAction;
 import org.knime.workbench.explorer.view.actions.CutCopyToClipboardAction;
-import org.knime.workbench.explorer.view.actions.DeprecatedEditMetadataAction;
 import org.knime.workbench.explorer.view.actions.DownloadAndOpenWorkflowAction;
 import org.knime.workbench.explorer.view.actions.ExpandAction;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
@@ -138,6 +138,7 @@ import org.knime.workbench.explorer.view.actions.GlobalConfigureWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalCredentialVariablesDialogAction;
 import org.knime.workbench.explorer.view.actions.GlobalDeleteAction;
 import org.knime.workbench.explorer.view.actions.GlobalDeploytoServerAction;
+import org.knime.workbench.explorer.view.actions.GlobalEditMetaInfoAction;
 import org.knime.workbench.explorer.view.actions.GlobalExecuteWorkflowAction;
 import org.knime.workbench.explorer.view.actions.GlobalOpenWorkflowVariablesDialogAction;
 import org.knime.workbench.explorer.view.actions.GlobalQuickformWorkflowAction;
@@ -208,6 +209,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     /** The ID of the view as specified by the extension. */
     public static final String ID = "org.knime.workbench.explorer.view";
 
+    private static final NodeLogger LOGGER = NodeLogger
+            .getLogger(ExplorerView.class);
 
     private TreeViewer m_viewer;
 
@@ -740,7 +743,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         manager.add(new GlobalCredentialVariablesDialogAction(this));
         manager.add(new GlobalOpenWorkflowVariablesDialogAction(this));
         manager.add(new Separator());
-        manager.add(new DeprecatedEditMetadataAction(this));
+        manager.add(new GlobalEditMetaInfoAction(this));
+        manager.add(new Separator());
         manager.add(new Separator());
         manager.add(new GlobalRefreshAction(this));
         manager.add(new Separator());

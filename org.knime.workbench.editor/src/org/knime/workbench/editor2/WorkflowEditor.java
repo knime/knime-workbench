@@ -1274,16 +1274,6 @@ public class WorkflowEditor extends GraphicalEditor implements
                 updateWorkflowMessages();
             }
 
-            // Per AP-11628, we want the metadata to be displayed in the Description View when a workflow is opened
-            addAfterOpenRunnable(() -> {
-                final GraphicalViewer viewer = getGraphicalViewer();
-
-                viewer.deselectAll();
-                viewer.select(viewer.getRootEditPart().getContents());
-
-                setFocus();
-            });
-
             // update Actions, as now there's everything available
             updateActions();
         } else {

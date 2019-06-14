@@ -40,91 +40,88 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ---------------------------------------------------------------------
- *
- * Created: May 27, 2011
- * Author: ohl
+ * ------------------------------------------------------------------------
  */
 package org.knime.workbench.explorer.view.actions;
 
-import java.io.File;
+import java.util.Optional;
 
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.internal.filesystem.local.LocalFile;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.IDE;
+import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.view.ExplorerView;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
-/**
- *
- * @author ohl, University of Konstanz
- */
-public class NewWorkflowGroupWizard extends NewWorkflowWizard {
+public class GlobalEditMetaInfoAction extends ExplorerAction {
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(
+            GlobalEditMetaInfoAction.class);
+
+    /** ID of the global rename action in the explorer menu. */
+    public static final String METAINFO_ACTION_ID =
+        "org.knime.workbench.explorer.action.openMetaInfo";
+
+    private static final ImageDescriptor ICON = KNIMEUIPlugin
+    .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+            "icons/meta_info_edit.png");;
 
     /**
-     * Creates the wizard.
-     *
-     * @param spaceProvider the content provider to create a group in
-     * @since 3.0
+     * @param viewer the associated tree viewer
      */
-    public NewWorkflowGroupWizard() {
-        super();
+    public GlobalEditMetaInfoAction(final ExplorerView viewer) {
+        super(viewer, "Edit Meta Information...");
+        setImageDescriptor(ICON);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void addPages() {
-        NewWorkflowWizardPage page = new NewWorkflowWizardPage(getMountIDs(),
-                getInitialSelection(),
-                /* isWorkflow= */false);
-        addPage(page);
+    public String getId() {
+       return METAINFO_ACTION_ID;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected void doFinish(final AbstractExplorerFileStore newItem,
-            final IProgressMonitor monitor) throws CoreException {
-
-        if (newItem.fetchInfo().exists()) {
-            throwCoreException("Resource \"" + newItem.getFullName()
-                    + "\" already exists.", null);
-        }
-
-        if (!newItem.getParent().fetchInfo().exists()) {
-            throwCoreException("Parent directory doesn't exist. "
-                    + "Create a workflow group before you place "
-                    + "a workflow group in.", null);
-        }
-
-        // create workflow group dir
-        newItem.mkdir(EFS.NONE, monitor);
-
-        if (newItem instanceof LocalExplorerFileStore) {
-            // create a new empty meta info file
-            File locFile = newItem.toLocalFile(EFS.NONE, monitor);
-            if (locFile == null) {
-                // strange - can't create meta info file then
-                return;
+    public void run() {
+        try {
+            AbstractExplorerFileStore srcFileStore = getSingleSelectedElement()
+                    .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
+            AbstractExplorerFileStore metaInfo =
+                    srcFileStore.getChild(WorkflowPersistor.METAINFO_FILE);
+            AbstractExplorerFileInfo fetchInfo = metaInfo.fetchInfo();
+            if (!fetchInfo.exists() || (fetchInfo.getLength() == 0)) {
+                // create a new meta info file if it does not exist
+                MetaInfoFile.createMetaInfoFile(
+                        srcFileStore.toLocalFile(EFS.NONE, null),
+                        AbstractExplorerFileStore.isWorkflow(srcFileStore));
             }
-            MetaInfoFile.createMetaInfoFile(locFile, false);
+            IFileStore localFS = new LocalFile(
+                    metaInfo.toLocalFile(EFS.NONE, null));
+            IDE.openEditorOnFileStore(PlatformUI.getWorkbench()
+                    .getActiveWorkbenchWindow().getActivePage(), localFS);
+        } catch (Exception e) {
+            LOGGER.error("Could not open meta info editor.", e);
         }
-
-        // Refresh parent of the newly created workflow group.
-        newItem.getParent().refresh();
-        // TODO handle meta file creation for remote files
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    protected boolean isWorkflowCreated() {
-        return false;
+    public boolean isEnabled() {
+        return getSingleSelectedElement().isPresent();
+    }
+
+    private Optional<AbstractExplorerFileStore> getSingleSelectedElement() {
+        return super.getSingleSelectedElement(fs -> AbstractExplorerFileStore.isWorkflow(fs)
+            || AbstractExplorerFileStore.isWorkflowGroup(fs));
     }
 
 }

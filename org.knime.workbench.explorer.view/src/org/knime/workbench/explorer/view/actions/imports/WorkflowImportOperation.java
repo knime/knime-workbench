@@ -75,7 +75,7 @@ import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
-import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
+import org.knime.workbench.ui.metainfo.model.MetaInfoFile;
 
 /**
  * Imports workflows from an archive (Zip, tar.gz) file or directory into the workspace.
@@ -364,7 +364,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                 File metaInfoFile = new File(parent, WorkflowPersistor.METAINFO_FILE);
                 if (!metaInfoFile.exists() || (metaInfoFile.length() == 0)) {
                     // don't overwrite (use io.File for the test, AEFS hides the meta info file!)
-                    MetaInfoFile.createOrGetMetaInfoFileForDirectory(parent, false);
+                    MetaInfoFile.createMetaInfoFile(parent, false);
                 }
             }
         }
