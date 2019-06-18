@@ -62,6 +62,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -390,16 +391,25 @@ public class Nodalizer implements IApplication {
         String extensionId = null;
         SiteInfo updateSite = null;
         String owner = null;
+        NodeAndBundleInformation nabi = nodeAndBundleInfo;
         if (extensions != null && bundles != null) {
             // TODO: Check symbolic name and version once we support reading multiple extension versions
-            if (extensions.containsKey(nodeAndBundleInfo.getFeatureSymbolicName().orElse(null))) {
-                final ExtensionInfo e = extensions.get(nodeAndBundleInfo.getFeatureSymbolicName().get());
+            final String cleanedSymbolicName =
+                cleanSymbolicName(nabi.getFeatureSymbolicName().orElse(null));
+            if (extensions.containsKey(cleanedSymbolicName)) {
+                final ExtensionInfo e = extensions.get(cleanedSymbolicName);
                 e.setHasNodes(true);
                 updateSite = e.getUpdateSite();
                 extensionId = e.getId();
                 owner = e.getOwner();
-            } else if (!nodeAndBundleInfo.getFeatureSymbolicName().isPresent()
-                && bundles.contains(nodeAndBundleInfo.getBundleSymbolicName().orElse(null))) {
+                nabi = new NodeAndBundleInformation(nodeAndBundleInfo.getFactoryClass(),
+                    nodeAndBundleInfo.getBundleSymbolicName(), nodeAndBundleInfo.getBundleName(),
+                    nodeAndBundleInfo.getBundleVendor(), nodeAndBundleInfo.getNodeName(),
+                    nodeAndBundleInfo.getBundleVersion(), Optional.of(cleanedSymbolicName),
+                    nodeAndBundleInfo.getFeatureName(), nodeAndBundleInfo.getFeatureVendor(),
+                    nodeAndBundleInfo.getFeatureVersion());
+            } else if (!nabi.getFeatureSymbolicName().isPresent()
+                && bundles.contains(nabi.getBundleSymbolicName().orElse(null))) {
                 LOGGER.warn(fac.getClass() + " does not contain extension information, skipping ...");
                 return;
             } else {
@@ -414,7 +424,7 @@ public class Nodalizer implements IApplication {
         final org.knime.core.node.Node kcn = new org.knime.core.node.Node((NodeFactory<NodeModel>)fac);
         final NodeInfo nInfo = new NodeInfo();
         nInfo.setAdditionalSiteInformation(updateSite);
-        nInfo.setBundleInformation(nodeAndBundleInfo, extensionId);
+        nInfo.setBundleInformation(nabi, extensionId);
         nInfo.setOwner(owner);
 
         // Read from node
@@ -672,7 +682,7 @@ public class Nodalizer implements IApplication {
                     }
 
                     final ExtensionInfo ext = new ExtensionInfo();
-                    ext.setSymbolicName(iu.getId());
+                    ext.setSymbolicName(cleanSymbolicName(iu.getId()));
                     ext.setVersion(v);
                     ext.setName(iu.getProperty("org.eclipse.equinox.p2.name"));
                     ext.setDescription(iu.getProperty("org.eclipse.equinox.p2.description"));
@@ -870,4 +880,10 @@ public class Nodalizer implements IApplication {
         }
     }
 
+    private static String cleanSymbolicName(final String symbolicName) {
+        if (symbolicName != null && symbolicName.endsWith(".feature.group")) {
+            return symbolicName.substring(0, symbolicName.length() - 14);
+        }
+        return symbolicName;
+    }
 }
