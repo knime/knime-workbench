@@ -1005,7 +1005,11 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         if (AbstractExplorerFileStore.isWorkflowTemplate(fileStore)) {
             if (canHostMetaNodeTemplates() == canHostComponentTemplates()) {
                 return canHostMetaNodeTemplates();
+            } else if (this.equals(fileStore.getContentProvider())) {
+                // If the file is associated with this provider than it obviously can host it.
+                return true;
             }
+
             try {
                 Optional<? extends MetaInfo> metaInfo = fileStore.fetchMetaInfo();
                 if (metaInfo.isPresent() && metaInfo.get() instanceof TemplateInfo) {

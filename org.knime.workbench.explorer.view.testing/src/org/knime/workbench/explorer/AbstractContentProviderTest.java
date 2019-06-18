@@ -89,16 +89,24 @@ public class AbstractContentProviderTest {
         assertTrue(localWorkspace.canHostWorkflowTemplate(metanode));
 
         AbstractContentProvider abstractContentProvider =
-            mock(AbstractContentProvider.class, Mockito.CALLS_REAL_METHODS);
+                mock(AbstractContentProvider.class, Mockito.CALLS_REAL_METHODS);
+
+        LocalExplorerFileStore metanodeSpy = Mockito.spy(metanode);
+        LocalExplorerFileStore componentSpy = Mockito.spy(component);
+        when(componentSpy.getContentProvider()).thenReturn(abstractContentProvider);
+        when(metanodeSpy.getContentProvider()).thenReturn(abstractContentProvider);
+
         when(abstractContentProvider.canHostComponentTemplates()).thenReturn(false);
         when(abstractContentProvider.canHostMetaNodeTemplates()).thenReturn(true);
         assertFalse(abstractContentProvider.canHostWorkflowTemplate(component));
         assertTrue(abstractContentProvider.canHostWorkflowTemplate(metanode));
+        assertTrue(abstractContentProvider.canHostWorkflowTemplate(componentSpy));
 
         when(abstractContentProvider.canHostComponentTemplates()).thenReturn(true);
         when(abstractContentProvider.canHostMetaNodeTemplates()).thenReturn(false);
         assertTrue(abstractContentProvider.canHostWorkflowTemplate(component));
         assertFalse(abstractContentProvider.canHostWorkflowTemplate(metanode));
+        assertTrue(abstractContentProvider.canHostWorkflowTemplate(metanodeSpy));
 
         when(abstractContentProvider.canHostComponentTemplates()).thenReturn(false);
         when(abstractContentProvider.canHostMetaNodeTemplates()).thenReturn(false);
