@@ -703,17 +703,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
         String linkPrefs = prefStore.getString(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
 
-        String s = isSubnode ? "component" : "metanode";
         if (MessageDialogWithToggle.NEVER.equals(linkPrefs)) {
             return LinkType.None;
         } else {
             Shell activeShell = Display.getDefault().getActiveShell();
-            String msg = "Link local instance to the shared " + s + "?";
+            String msg = "Link local instance to the shared " + (isSubnode ? "component" : "metanode") + "?";
             if (!oldName.equals(newName)) {
                 msg = msg + "\n(The node will be renamed to \"" + newName + "\".)";
             }
+            final String title = "Link " + (isSubnode ? "Component" : "Metanode") + " Template";
 
-            LinkPrompt dlg = new LinkPrompt(activeShell, msg, allowedLinkTypes);
+            final LinkPrompt dlg = new LinkPrompt(activeShell, title, msg, allowedLinkTypes);
             if (dlg.open() == Window.CANCEL) {
                 return null;
             }
@@ -739,11 +739,13 @@ public abstract class AbstractContentProvider extends LabelProvider implements
          * Create a new dialog that prompts the user for the link type.
          *
          * @param parentShell the dialog's parent shell
-         * @param message the message that is shown in the dialog
+         * @param title the title that is shown in the dialog
+         * @param msg the message that is shown in the dialog
          * @param allowedLinkTypes a collection of allowed linked types
          */
-        LinkPrompt(final Shell parentShell, final String message, final Collection<LinkType> allowedLinkTypes) {
-            super(parentShell, "Link Metanode Template", null, message, MessageDialog.QUESTION_WITH_CANCEL,
+        LinkPrompt(final Shell parentShell, final String title, final String msg,
+            final Collection<LinkType> allowedLinkTypes) {
+            super(parentShell, title, null, msg, MessageDialog.QUESTION_WITH_CANCEL,
                 new String[]{IDialogConstants.OK_LABEL, IDialogConstants.CANCEL_LABEL}, 0);
             setShellStyle(getShellStyle() | SWT.SHEET);
             m_allowedLinkTypes = allowedLinkTypes;
@@ -813,7 +815,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
             m_noLink = new Button(group, SWT.RADIO);
             m_noLink.setLayoutData(data);
-            m_noLink.setText("Don't link metanode with saved template");
+            m_noLink.setText("Don't create link with saved template");
             m_noLink.setToolTipText("You will not be able to update the metanode from the template.");
             m_noLink.addSelectionListener(new SelectionAdapter() {
                 @Override
