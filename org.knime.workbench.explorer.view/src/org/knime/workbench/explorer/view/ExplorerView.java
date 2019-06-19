@@ -437,7 +437,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             if (firstElement instanceof ContentObject) {
                 AbstractExplorerFileStore fs = ((ContentObject) firstElement).getFileStore();
                 if ((fs instanceof MessageFileStore) && fs.getContentProvider().isRemote()) {
-                    fs.getContentProvider().connect();
+                    fs.getContentProvider().onDoubleClick(fs, this);
                     action = true;
                 }
             }
