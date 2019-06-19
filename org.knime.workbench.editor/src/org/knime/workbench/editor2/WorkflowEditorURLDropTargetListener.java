@@ -101,7 +101,7 @@ public class WorkflowEditorURLDropTargetListener extends WorkflowEditorDropTarge
                     String[] dataLines = ((String)event.data).split(System.getProperty("line.separator")); //$NON-NLS-1$
                     return new URL(dataLines[0]);
                 } catch (MalformedURLException e) {
-                    LOGGER.warn("URL dropped on workbench can not be parsed", e);
+                    LOGGER.warn("URL dropped on workbench cannot be parsed", e);
                 }
             }
         }

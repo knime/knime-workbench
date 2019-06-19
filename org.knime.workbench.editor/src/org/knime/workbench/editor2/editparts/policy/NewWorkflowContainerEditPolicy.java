@@ -49,7 +49,6 @@ package org.knime.workbench.editor2.editparts.policy;
 
 import static java.util.Arrays.asList;
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
-import static org.knime.core.util.KnimeURIUtil.guessEntityType;
 import static org.knime.core.util.KnimeURIUtil.isHubURI;
 
 import java.io.UnsupportedEncodingException;
@@ -96,7 +95,7 @@ import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.KnimeURIUtil;
-import org.knime.core.util.KnimeURIUtil.Type;
+import org.knime.core.util.KnimeURIUtil.HubEntityType;
 import org.knime.core.util.SWTUtilities;
 import org.knime.workbench.editor2.CreateDropRequest;
 import org.knime.workbench.editor2.CreateDropRequest.RequestType;
@@ -190,49 +189,18 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 URL url = (URL)obj;
                 URI uri;
                 if ((uri = checkEncodeAndTransformURL(url)) != null) {
-                    Type entityType = guessEntityType(uri);
-                    if (entityType == Type.OBJECT) {
-                        // FOR MARK TODO THIS HAS NOT BEEN TESTED YET. DONT KNOW WHAT RESPONSE IS. MORITZ/ALISON MIGHT KNOW IF
-                        // WE GET ALL INFO REQUIRED TO DETERMINE THAT THIS IS A COMPONENT.
-                        // IN CASE OF WORKFLOW / WORKFLOWGROUP ACTION WILL SIMPLY BE IGNORED.
-                        final JsonNode spaceEntityInfo =
-                            callHubEndpoint(KnimeURIUtil.getSpaceEntityEndpointURI(uri, false));
-                        if (spaceEntityInfo == null) {
-                            MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_WARNING);
-                            mb.setText("Component cannot be added!");
-                            mb.setMessage("No component found on the KNIME Hub at " + uri.getPath() + ".");
-                            mb.open();
-                            LOGGER.debug("Component defined in the URL: " + uri);
+                    switch (HubEntityType.getHubEntityType(uri)) {
+                        case OBJECT:
+                            return handleObjectDropFromURI(manager, cdr, uri);
+                        case NODE:
+                            return handleNodeDropFromURI(managerUI, uri, cdr);
+                        case EXTENSION:
+                            return handleExtensionDropFromURI(uri);
+                        default:
+                            showPopup("Unknown URL dropped!",
+                                "URL (" + uri.getPath() + ") can't be dropped to KNIME workbench!", SWT.ICON_WARNING);
+                            LOGGER.debug("Unknown URL dropped: " + uri);
                             return null;
-                        }
-                        // TODO if we change API we need to fix that as well.
-                        if (spaceEntityInfo.get("type").textValue().equalsIgnoreCase("WorkflowTemplate")) {
-                            return handleMetaNodeTemplateDrop(manager.get(), cdr, uri, true);
-                        }
-
-                    } else if (entityType == Type.NODE) {
-                        return handleNodeDropFromURI(managerUI, uri, cdr);
-                    } else if (entityType == Type.EXTENSION) {
-                        final JsonNode extensionEntityInfo = callHubEndpoint(KnimeURIUtil.getExtensionEndpointURI(uri));
-                        if (extensionEntityInfo == null) {
-                            MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_WARNING);
-                            mb.setText("Extension cannot be installed!");
-                            mb.setMessage("No extension found on the KNIME Hub at " + uri.getPath() + ".");
-                            mb.open();
-                            LOGGER.debug("Extension defined in the URL: " + uri + " can't be installed.");
-                            return null;
-                        }
-                        // TODO if we change API we need to fix that as well.
-                        handleExtensionDrop(extensionEntityInfo.get("name").asText(),
-                            extensionEntityInfo.get("symbolicName").asText());
-                        return null;
-                    } else {
-                        MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_WARNING);
-                        mb.setText("Unknown URL dropped!");
-                        mb.setMessage("URL (" + uri.getPath() + ") can't be dropped to KNIME workbench!");
-                        mb.open();
-                        LOGGER.debug("Unknown URL dropped: " + uri);
-                        return null;
                     }
                 }
             } else {
@@ -242,102 +210,84 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         return null;
     }
 
-    private static void handleExtensionDrop(final String featureName, final String featureSymbolicName) {
+    private Command handleObjectDropFromURI(final Optional<WorkflowManager> manager, final CreateDropRequest cdr,
+        final URI uri) {
+        // If the entity corresponds to a workflow (group) the action will be simply ignored
+        final JsonNode objectEntityInfo = callHubEndpoint(KnimeURIUtil.getObjectEntityEndpointURI(uri, false));
+        if (objectEntityInfo == null) {
+            showPopup("Component cannot be added!", "No component found on the KNIME Hub at " + uri.getPath() + ".",
+                SWT.ICON_WARNING);
+            LOGGER.debug("Component defined in the URL: " + uri);
+            return null;
+        }
+        // TODO: if we change API we need to fix that as well.
+        if (objectEntityInfo.get("type").textValue().equalsIgnoreCase("WorkflowTemplate")) {
+            return handleMetaNodeTemplateDrop(manager.get(), cdr, uri, true);
+        }
+        return null;
+    }
 
-        // currently all our extensions have "feature.group" suffix. if we change this in the hub, we have to change it here as well.
-        if (isFeatureInstalled(featureSymbolicName.replace(FEATURE_GROUP_SUFFIX, ""))) {
-            MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_INFORMATION);
-            mb.setMessage("Extension " + featureName + " is already installed.");
-            mb.open();
+    /**
+     * @param manager the workflow manager
+     * @param request the drop request
+     * @param filestore the location of the metanode template
+     */
+    private Command handleMetaNodeTemplateDrop(final WorkflowManager manager, final CreateDropRequest request,
+        final URI templateURI, final boolean isRemoteLocation) {
+        final RequestType requestType = request.getRequestType();
+        final Point location = request.getLocation();
+        final boolean snapToGrid = WorkflowEditor.getActiveEditorSnapToGrid();
+
+        if (RequestType.CREATE.equals(requestType)) {
+            // create metanode from template
+            return new CreateMetaNodeTemplateCommand(manager, templateURI, location, snapToGrid, isRemoteLocation);
+        } else {
+            final AbstractEditPart dropTarget = request.getEditPart();
+
+            if (RequestType.INSERT.equals(requestType)) {
+                // insert metanode from template into connection
+                final InsertMetaNodeTempalteCommand insertCommand = new InsertMetaNodeTempalteCommand(manager,
+                    templateURI, location, snapToGrid, (ConnectionContainerEditPart)dropTarget, isRemoteLocation);
+
+                return potentiallyAugmentCommandForSpacing(insertCommand, request);
+            } else if (RequestType.REPLACE.equals(requestType)) {
+                // replace node with metanode from template
+                return new ReplaceMetaNodeTemplateCommand(manager, templateURI, location, snapToGrid,
+                    (NodeContainerEditPart)dropTarget, isRemoteLocation);
+            }
+            return null;
+        }
+    }
+
+    private static Command handleExtensionDropFromURI(final URI uri) {
+        final JsonNode extensionEntityInfo = callHubEndpoint(KnimeURIUtil.getExtensionEndpointURI(uri));
+        if (extensionEntityInfo == null) {
+            showPopup("Extension cannot be installed!", "No extension found on the KNIME Hub at " + uri.getPath() + ".",
+                SWT.ICON_WARNING);
+            LOGGER.debug("Extension defined in the URL: " + uri + " can't be installed.");
+            return null;
+        }
+        // TODO: if we change API we need to fix that as well.
+        handleExtensionDrop(extensionEntityInfo.get("name").asText(), extensionEntityInfo.get("symbolicName").asText());
+        return null;
+    }
+
+    private static void handleExtensionDrop(final String featureName, final String featureSymbolicName) {
+        if (isFeatureInstalled(featureSymbolicName)) {
+            showPopup("Extension cannot be installed!", "Extension " + featureName + " is already installed",
+                SWT.ICON_INFORMATION);
             return;
         } else {
             final String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
             MessageDialog dialog = new MessageDialog(SWTUtilities.getActiveShell(), "Install Extension?", null,
-                "Do you want to search and install the extension '" + featureName + "'?", MessageDialog.WARNING,
+                "Do you want to search and install the extension '" + featureName + "'?", MessageDialog.QUESTION,
                 dialogButtonLabels, 0);
             if (dialog.open() == 0) {
 
                 //try installing the missing extension
-                Job j = new InstallMissingNodesJob(asList(new KNIMEComponentInformation() {
-
-                    @Override
-                    public Optional<String> getFeatureSymbolicName() {
-                        // Our internal update-sites require ".feature.group" suffix.
-                        return Optional.of(featureSymbolicName.endsWith(FEATURE_GROUP_SUFFIX) ? featureSymbolicName
-                            : featureSymbolicName + FEATURE_GROUP_SUFFIX);
-                    }
-
-                    @Override
-                    public String getComponentName() {
-                        return featureName;
-                    }
-
-                    @Override
-                    public Optional<String> getBundleSymbolicName() {
-                        return Optional.empty();
-                    }
-                }));
-                j.setUser(true);
-                j.schedule();
+                openInstallationJob(featureName, featureSymbolicName);
             }
         }
-    }
-
-    /**
-     * @param featureSymbolicName
-     * @return
-     */
-    private static boolean isFeatureInstalled(final String featureSymbolicName) {
-        for (IBundleGroupProvider provider : Platform.getBundleGroupProviders()) {
-            for (IBundleGroup feature : provider.getBundleGroups()) {
-                if (feature.getIdentifier().equals(featureSymbolicName)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private static URI checkEncodeAndTransformURL(final URL url) {
-        URI uri;
-        try {
-            if (isURLEncoded(url.toString())) {
-                //URL is already encoded
-                uri = url.toURI();
-            } else {
-                //URL is not yet encoded!
-                uri =
-                    new URI(new org.apache.commons.httpclient.URI(url.toString(), false, StandardCharsets.UTF_8.name())
-                        .toString());
-            }
-        } catch (URISyntaxException | URIException | UnsupportedEncodingException e) {
-            LOGGER.error("The URL '" + url + "' couldn't be turned into an URI", e);
-            return null;
-        }
-
-        if (!isHubURI(uri)) {
-            LOGGER.info("The object referenced by URL '" + url
-                + "' cannot be added to the workbench. It doesn't originate from the KNIME Hub.");
-            return null;
-        }
-        return uri;
-    }
-
-    private static boolean isURLEncoded(final String urlString) throws UnsupportedEncodingException {
-        return !URLDecoder.decode(urlString, StandardCharsets.UTF_8.name()).equals(urlString);
-    }
-
-    @SuppressWarnings("static-method")
-    private Command potentiallyAugmentCommandForSpacing(final Command command, final CreateDropRequest request) {
-        if (request.createSpace()) {
-            final WorkflowEditor we =
-                (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
-            final CreateSpaceAction csa = new CreateSpaceAction(we, request.getDirection(), request.getDistance());
-
-            return command.chain(csa.createCompoundCommand(csa.selectedParts()));
-        }
-
-        return command;
     }
 
     private Command handleFileDrop(final WorkflowManager manager, final ReaderNodeSettings settings,
@@ -397,35 +347,49 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
     }
 
-    /**
-     * @param manager the workflow manager
-     * @param request the drop request
-     * @param filestore the location of the metanode template
-     */
-    private Command handleMetaNodeTemplateDrop(final WorkflowManager manager, final CreateDropRequest request,
-        final URI templateURI, final boolean isRemoteLocation) {
-        final RequestType requestType = request.getRequestType();
-        final Point location = request.getLocation();
-        final boolean snapToGrid = WorkflowEditor.getActiveEditorSnapToGrid();
-
-        if (RequestType.CREATE.equals(requestType)) {
-            // create metanode from template
-            return new CreateMetaNodeTemplateCommand(manager, templateURI, location, snapToGrid, isRemoteLocation);
-        } else {
-            final AbstractEditPart dropTarget = request.getEditPart();
-
-            if (RequestType.INSERT.equals(requestType)) {
-                // insert metanode from template into connection
-                final InsertMetaNodeTempalteCommand insertCommand = new InsertMetaNodeTempalteCommand(manager,
-                    templateURI, location, snapToGrid, (ConnectionContainerEditPart)dropTarget, isRemoteLocation);
-
-                return potentiallyAugmentCommandForSpacing(insertCommand, request);
-            } else if (RequestType.REPLACE.equals(requestType)) {
-                // replace node with metanode from template
-                return new ReplaceMetaNodeTemplateCommand(manager, templateURI, location, snapToGrid,
-                    (NodeContainerEditPart)dropTarget, isRemoteLocation);
-            }
+    private Command handleNodeDropFromURI(final WorkflowManagerUI manager, final URI knimeUri,
+        final CreateDropRequest request) {
+        final JsonNode nodeInfo = callHubEndpoint(KnimeURIUtil.getNodeEndpointURI(knimeUri), "details", "full");
+        if (nodeInfo == null) {
+            showPopup("Node cannot be added!", "No node found on the KNIME Hub at " + knimeUri.getPath() + ".",
+                SWT.ICON_WARNING);
+            LOGGER.debug("Node defined in the URL: " + knimeUri + " can't be added.");
             return null;
+        }
+
+        final JsonNode bundleInfo = nodeInfo.get("bundleInformation");
+        final String featureName = bundleInfo.get("featureName").textValue();
+        final String featureSymbolicName = bundleInfo.get("featureSymbolicName").textValue();
+        // test with weka node drag drop from hub.dev
+        final String nodeFactory = getCanonicalNodeFactory(nodeInfo);
+
+        //assumes that ':' is used to separate a dynamic node factory and the node name
+        //(and that there is no other ':' in the node-factory string!)
+        NodeTemplate nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(nodeFactory);
+        if (nodeTemplate != null) {
+            try {
+                return handleNodeDrop(manager, nodeTemplate.createFactoryInstance(), request);
+            } catch (Exception e) {
+                //shouldn't happen
+                LOGGER.error("Cannot add node '" + nodeFactory + "'", e);
+                return null;
+            }
+        } else {
+            //try installing the missing extension
+            String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
+            Shell shell = SWTUtilities.getActiveShell();
+            // TODO: derive feature name from feature symbolic name (TODO)
+            MessageDialog dialog = new MessageDialog(shell, "The KNIME Extension for the node is not installed!", null,
+                "The extension '" + featureName + "' is not installed. Do you want to search and install it?"
+                    + "\n\nNote: Please drag and drop the node again once the installation process is finished.",
+                MessageDialog.QUESTION, dialogButtonLabels, 0);
+            if (dialog.open() == 0) {
+                openInstallationJob(featureName, featureSymbolicName);
+                // TODO: add the node once the extension has been installed
+                return null;
+            } else {
+                return null;
+            }
         }
     }
 
@@ -448,8 +412,9 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             return new CreateNodeCommand(manager, factory, absoluteLocation, snapToGrid);
         } else {
             if (!Wrapper.wraps(manager, WorkflowManager.class)) {
-                //node insertion and replacement not yet supported for non-standard workflow managers
-                //TODO: in order to enable the support, lines 158 and 167 of DragPositionProcessor need to be adopted, too
+                // node insertion and replacement not yet supported for non-standard workflow managers
+                // TODO: in order to enable the support, lines 158 and 167 of DragPositionProcessor need to be adopted,
+                // too
                 return null;
             }
 
@@ -469,71 +434,18 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
     }
 
-    private Command handleNodeDropFromURI(final WorkflowManagerUI manager, final URI knimeUri,
-        final CreateDropRequest request) {
-        final JsonNode nodeInfo = callHubEndpoint(KnimeURIUtil.getNodeEndpointURI(knimeUri), "details", "full");
-        if (nodeInfo == null) {
-            MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_WARNING);
-            mb.setText("Node cannot be added!");
-            mb.setMessage("No node found on the KNIME Hub at " + knimeUri.getPath() + ".");
-            mb.open();
-            LOGGER.debug("Node defined in the URL: " + knimeUri + " can't be added.");
-            return null;
+    /**
+     * @param nodeInfo
+     * @return
+     */
+    private static String getCanonicalNodeFactory(final JsonNode nodeInfo) {
+        String factory = nodeInfo.get("factoryName").textValue();
+        // hub saves dynamic nodes as {node_factory_class_name}:{randomId}
+        final int idx = factory.indexOf(":");
+        if (idx >= 0) {
+            factory = factory.substring(0, idx) + "#" + nodeInfo.get("title").textValue();
         }
-
-        final JsonNode bundleInfo = nodeInfo.get("bundleInformation");
-        final String featureName = bundleInfo.get("featureName").textValue();
-        final String featureSymbolicName = bundleInfo.get("featureSymbolicName").textValue();
-        final String nodeFactory = nodeInfo.get("factoryName").textValue();
-
-        //assumes that ':' is used to separate a dynamic node factory and the node name
-        //(and that there is no other ':' in the node-factory string!)
-        NodeTemplate nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(nodeFactory.replaceAll(":", "#"));
-        if (nodeTemplate != null) {
-            try {
-                return handleNodeDrop(manager, nodeTemplate.createFactoryInstance(), request);
-            } catch (Exception e) {
-                //shouldn't happen
-                LOGGER.error("Cannot add node '" + nodeFactory + "'", e);
-                return null;
-            }
-        } else {
-            //try installing the missing extension
-            String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
-            Shell shell = SWTUtilities.getActiveShell();
-            // TODO derive feature name from feature symbolic name (TODO)
-            MessageDialog dialog = new MessageDialog(shell, "The KNIME Extension for the node is not installed!", null,
-                "The extension '" + featureName + "' is not installed. Do you want to search and install it?"
-                    + "\n\nNote: Once the installation is finished and KNIME restarted, you will need to drag and drop the node again.",
-                MessageDialog.QUESTION, dialogButtonLabels, 0);
-            if (dialog.open() == 0) {
-                Job j = new InstallMissingNodesJob(asList(new KNIMEComponentInformation() {
-
-                    @Override
-                    public Optional<String> getFeatureSymbolicName() {
-                        // Our internal update-sites require ".feature.group" suffix.
-                        return Optional.of(featureSymbolicName.endsWith(FEATURE_GROUP_SUFFIX) ? featureSymbolicName
-                            : featureSymbolicName + FEATURE_GROUP_SUFFIX);
-                    }
-
-                    @Override
-                    public String getComponentName() {
-                        return featureName;
-                    }
-
-                    @Override
-                    public Optional<String> getBundleSymbolicName() {
-                        return Optional.empty();
-                    }
-                }));
-                j.setUser(true);
-                j.schedule();
-                //TODO Later: add the node once the extension has been installed
-                return null;
-            } else {
-                return null;
-            }
-        }
+        return factory;
     }
 
     /**
@@ -550,6 +462,101 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         return super.getTargetEditPart(request);
     }
 
+    private static void showPopup(final String text, final String msg, final int swtIcon) {
+        MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), swtIcon);
+        mb.setText(text);
+        mb.setMessage(msg);
+        mb.open();
+    }
+
+    /**
+     * Checks whether the provided feature is already installed or not.
+     *
+     * @param featureSymbolicName the feature's symbolic name
+     * @return {@code true} if the feature is already installed, {@code false} otherwise
+     */
+    static boolean isFeatureInstalled(final String featureSymbolicName) {
+        // currently all our extensions have "feature.group" suffix. if we change this in the hub, we have to change
+        // it here as well.
+        final String featureName = featureSymbolicName.endsWith(FEATURE_GROUP_SUFFIX)
+            ? featureSymbolicName.substring(0, featureSymbolicName.length() - FEATURE_GROUP_SUFFIX.length())
+            : featureSymbolicName;
+        for (IBundleGroupProvider provider : Platform.getBundleGroupProviders()) {
+            for (IBundleGroup feature : provider.getBundleGroups()) {
+                if (feature.getIdentifier().equals(featureName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static URI checkEncodeAndTransformURL(final URL url) {
+        URI uri;
+        try {
+            if (isURLEncoded(url.toString())) {
+                //URL is already encoded
+                uri = url.toURI();
+            } else {
+                //URL is not yet encoded!
+                uri =
+                    new URI(new org.apache.commons.httpclient.URI(url.toString(), false, StandardCharsets.UTF_8.name())
+                        .toString());
+            }
+        } catch (URISyntaxException | URIException | UnsupportedEncodingException e) {
+            LOGGER.error("The URL '" + url + "' couldn't be turned into an URI", e);
+            return null;
+        }
+
+        if (!isHubURI(uri)) {
+            LOGGER.info("The object referenced by URL '" + url
+                + "' cannot be added to the workbench. It doesn't originate from the KNIME Hub.");
+            return null;
+        }
+        return uri;
+    }
+
+    private static boolean isURLEncoded(final String urlString) throws UnsupportedEncodingException {
+        return !URLDecoder.decode(urlString, StandardCharsets.UTF_8.name()).equals(urlString);
+    }
+
+    @SuppressWarnings("static-method")
+    private Command potentiallyAugmentCommandForSpacing(final Command command, final CreateDropRequest request) {
+        if (request.createSpace()) {
+            final WorkflowEditor we =
+                (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+            final CreateSpaceAction csa = new CreateSpaceAction(we, request.getDirection(), request.getDistance());
+
+            return command.chain(csa.createCompoundCommand(csa.selectedParts()));
+        }
+
+        return command;
+    }
+
+    private static void openInstallationJob(final String featureName, final String featureSymbolicName) {
+        Job j = new InstallMissingNodesJob(asList(new KNIMEComponentInformation() {
+
+            @Override
+            public Optional<String> getFeatureSymbolicName() {
+                // Our internal update-sites require ".feature.group" suffix.
+                return Optional.of(featureSymbolicName.endsWith(FEATURE_GROUP_SUFFIX) ? featureSymbolicName
+                    : featureSymbolicName + FEATURE_GROUP_SUFFIX);
+            }
+
+            @Override
+            public String getComponentName() {
+                return featureName;
+            }
+
+            @Override
+            public Optional<String> getBundleSymbolicName() {
+                return Optional.empty();
+            }
+        }));
+        j.setUser(true);
+        j.schedule();
+    }
+
     private static JsonNode callHubEndpoint(final URI endpoint, final String query, final String value) {
         final HashMap<String, String> map = new HashMap<>();
         map.put(query, value);
@@ -560,7 +567,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         return callHubApi(endpoint, new HashMap<>());
     }
 
-    private static JsonNode callHubApi(final URI endpoint, final Map<String, String> queryParams) {
+    static JsonNode callHubApi(final URI endpoint, final Map<String, String> queryParams) {
         try {
             // Build client with 1s timeout
             final ClientBuilder clientBuilder = ClientBuilder.newBuilder();

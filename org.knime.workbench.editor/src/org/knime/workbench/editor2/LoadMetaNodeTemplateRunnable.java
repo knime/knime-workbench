@@ -120,7 +120,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             progressMonitor.addProgressListener(progressHandler);
 
             File parentFile = ResolverUtil
-                .resolveURItoLocalOrTempFile(KnimeURIUtil.getSpaceEntityEndpointURI(m_templateURI, true), pm);
+                .resolveURItoLocalOrTempFile(KnimeURIUtil.getObjectEntityEndpointURI(m_templateURI, true), pm);
             if (parentFile.isFile()) {
                 //unzip
                 File tempDir = FileUtil.createTempDir("template-workflow");
