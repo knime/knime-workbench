@@ -107,7 +107,7 @@ final class InstallMissingNodesJob extends Job {
      */
     InstallMissingNodesJob(final List<NodeAndBundleInformationPersistor> missingNodes,
         final List<TableStoreFormatInformation> missingTableFormats) {
-        super("Find extensions for missing components");
+        super("Find missing extensions");
         m_missingNodes = missingNodes;
         m_missingTableFormats = missingTableFormats;
     }
@@ -124,14 +124,14 @@ final class InstallMissingNodesJob extends Job {
         } else if (featuresToInstall.isEmpty()) {
             Display.getDefault().asyncExec(() -> {
                 MessageDialog.openWarning(SWTUtilities.getActiveShell(), "No suitable extension found",
-                    "Could not find any extension(s) that provides the missing component(s).");
+                    "Could not find any extension(s) that provides the missing node(s).");
             });
             return Status.OK_STATUS;
         } else {
             if (!missingComponents.isEmpty()) {
                 Display.getDefault().syncExec(() -> {
                     MessageDialog.openWarning(SWTUtilities.getActiveShell(), "Not all extensions found",
-                        "No extensions for the following components were found: " + missingComponents.stream()
+                        "No extensions for the following nodes were found: " + missingComponents.stream()
                             .map(i -> i.getComponentName()).collect(Collectors.joining(", ")));
                 });
             }
