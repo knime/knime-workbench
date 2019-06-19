@@ -62,8 +62,8 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.ide.IDE;
-import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.util.CoreConstants;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -125,7 +125,7 @@ public class OpenKnimeUrlAction extends Action {
             }
 
             return new URI(StringUtils.replace(urlString, EXAMPLES,
-                "knime://" + KNIMEConstants.KNIME_EXAMPLES_MOUNT_ID + PATH_START, 1));
+                "knime://" + CoreConstants.KNIME_EXAMPLES_MOUNT_ID + PATH_START, 1));
         }
 
         /**

@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -63,6 +64,8 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
 import org.knime.core.node.NodeSettingsWO;
+import org.knime.core.util.CoreConstants;
+import org.knime.workbench.core.util.KNIMEWorkspaceUtil;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -87,6 +90,12 @@ public class MountSettings {
     /** Used for separating the different setting elements. */
     private static final String ELEMENTS_SEPARATOR = ":";
 
+    /**
+     * The workspace version for which KNIME Hub has been added. If the version is less than this number then the KNIME
+     * Hub will be added automatically and the EXAMPLES will be renamed, as probably an AP update occurred.
+     */
+    private static final int HUB_WORKSPACE_VERSION = 20190627;
+
     private String m_displayName;
 
     private String m_mountID;
@@ -104,7 +113,6 @@ public class MountSettings {
     private int m_mountPointNumber;
 
     private boolean m_useRest;
-
 
     /**
      * Creates a new mount settings object based on the passed settings string.
@@ -136,7 +144,6 @@ public class MountSettings {
         }
 
     }
-
 
     /**
      * Creates a new mount settings object for the content provider.
@@ -248,9 +255,8 @@ public class MountSettings {
      * @since 6.0
      */
     public void setDefaultMountID(final String defaultMountID) {
-        if ((m_defaultMountID == null && defaultMountID != null)
-                || (m_defaultMountID != null && defaultMountID == null)
-                || (m_defaultMountID != null && defaultMountID != null && !defaultMountID.equals(m_defaultMountID))) {
+        if ((m_defaultMountID == null && defaultMountID != null) || (m_defaultMountID != null && defaultMountID == null)
+            || (m_defaultMountID != null && defaultMountID != null && !defaultMountID.equals(m_defaultMountID))) {
             m_state = null;
         }
         m_defaultMountID = defaultMountID;
@@ -306,7 +312,7 @@ public class MountSettings {
      * @since 8.3
      */
     public void setIsUseRest(final boolean useRest) {
-        if(m_useRest != useRest) {
+        if (m_useRest != useRest) {
             m_state = null;
         }
         m_useRest = useRest;
@@ -340,12 +346,10 @@ public class MountSettings {
      */
     public String getSettingsString() {
         if (m_state == null) {
-            m_state = getDisplayName() + VISIBILITY_SEPARATOR
-                    + m_mountID + ELEMENTS_SEPARATOR
-                    + m_factoryID + ELEMENTS_SEPARATOR
-                    + Boolean.toString(m_active) + ELEMENTS_SEPARATOR
-                    + (m_defaultMountID == null ? "" : m_defaultMountID) + ELEMENTS_SEPARATOR
-                    + m_content + ELEMENTS_SEPARATOR + m_useRest;
+            m_state = getDisplayName() + VISIBILITY_SEPARATOR + m_mountID + ELEMENTS_SEPARATOR + m_factoryID
+                + ELEMENTS_SEPARATOR + Boolean.toString(m_active) + ELEMENTS_SEPARATOR
+                + (m_defaultMountID == null ? "" : m_defaultMountID) + ELEMENTS_SEPARATOR + m_content
+                + ELEMENTS_SEPARATOR + m_useRest;
         }
         return m_state;
     }
@@ -360,7 +364,7 @@ public class MountSettings {
      * @since 6.2
      */
     public static List<MountSettings> parseSettings(final String settings,
-            final boolean excludeUnknownContentProviders)  {
+        final boolean excludeUnknownContentProviders) {
         List<MountSettings> ms = new ArrayList<MountSettings>();
         if (settings == null || settings.isEmpty()) {
             return ms;
@@ -393,13 +397,14 @@ public class MountSettings {
 
     /**
      * Checks if a given MountSettings object can be displayed.
+     *
      * @param mountSettings the settings to check
      * @return True, if the ContenProviderFactory of the given mountSettings is available.
      * @since 6.2
      */
     public static boolean isMountSettingsAddable(final MountSettings mountSettings) {
         AbstractContentProviderFactory contentProviderFactory =
-                ExplorerMountTable.getContentProviderFactory(mountSettings.getFactoryID());
+            ExplorerMountTable.getContentProviderFactory(mountSettings.getFactoryID());
         return contentProviderFactory != null;
     }
 
@@ -455,11 +460,34 @@ public class MountSettings {
         final List<MountSettings> mountSettings = new ArrayList<MountSettings>();
         try {
             final List<MountSettings> defaultMountSettingsList = loadSortedMountSettingsFromDefaultPreferenceNode();
-            final List<MountSettings> instanceMountSettingsList =
-                    getSortedMountSettingsFromNode(getInstanceMountPointParentNode());
+            final List<MountSettings> instanceMountSettingsList = new ArrayList<>();
+
+            final List<MountSettings> loadedSettingsList =
+                getSortedMountSettingsFromNode(getInstanceMountPointParentNode());
+
+            /* Add the KNIME Hub mount point if it is an update (SRV-2306). */
+            if (KNIMEWorkspaceUtil.getVersion() < HUB_WORKSPACE_VERSION && !loadedSettingsList.isEmpty()) {
+                final Optional<AbstractContentProviderFactory> factory =
+                    ExplorerMountTable.getContentProviderFactories().values().stream()
+                        .filter(e -> CoreConstants.KNIME_HUB_MOUNT_ID.equals(e.getDefaultMountID())).findFirst();
+
+                if (factory.isPresent()) {
+                    final MountSettings hubSettings =
+                        new MountSettings(factory.get().createContentProvider(CoreConstants.KNIME_HUB_MOUNT_ID));
+                    hubSettings.m_mountPointNumber = -2;
+                    instanceMountSettingsList.add(hubSettings);
+                }
+            }
+
+            instanceMountSettingsList.addAll(loadedSettingsList);
+
+            if (KNIMEWorkspaceUtil.getVersion() < HUB_WORKSPACE_VERSION && !loadedSettingsList.isEmpty()) {
+                KNIMEWorkspaceUtil.setVersion(HUB_WORKSPACE_VERSION);
+                saveMountSettings(instanceMountSettingsList);
+            }
 
             final List<String> instanceMountIDs =
-                    instanceMountSettingsList.stream().map(ms -> ms.getMountID()).collect(Collectors.toList());
+                instanceMountSettingsList.stream().map(ms -> ms.getMountID()).collect(Collectors.toList());
 
             for (Iterator<MountSettings> iterator = defaultMountSettingsList.iterator(); iterator.hasNext();) {
                 MountSettings defaultSetting = iterator.next();
@@ -484,7 +512,7 @@ public class MountSettings {
     }
 
     private static List<MountSettings> getSortedMountSettingsFromNode(final IEclipsePreferences preferenceNode)
-            throws BackingStoreException {
+        throws BackingStoreException {
         final List<MountSettings> mountSettings = new ArrayList<>();
         final String[] instanceChildNodes = preferenceNode.childrenNames();
         for (final String mountPointNodeName : instanceChildNodes) {
@@ -496,7 +524,7 @@ public class MountSettings {
         }
 
         // Sort ascending by mountPointNumber
-        mountSettings.sort((o1,o2) -> o1.getMountPointNumber() - o2.getMountPointNumber());
+        mountSettings.sort((o1, o2) -> o1.getMountPointNumber() - o2.getMountPointNumber());
 
         return mountSettings;
     }
@@ -536,11 +564,17 @@ public class MountSettings {
         if (childNodes == null || childNodes.length == 0) {
             // Backwards compatibility.
             IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-            String prefString = prefStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);;
+            String prefString = prefStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
+
             if (prefString == null || prefString.isEmpty()) {
                 prefString = prefStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
             }
             mountSettings = MountSettings.parseSettings(prefString, false);
+
+            // Sort Mount Points in such a way that the KNIME Hub is on top (SRV-2308)
+            mountSettings.sort((e1, e2) -> e1.getDefaultMountID().equals(CoreConstants.KNIME_HUB_MOUNT_ID) ? -1
+                : e2.getDefaultMountID().equals(CoreConstants.KNIME_HUB_MOUNT_ID) ? 1 : 0);
+
             mountSettings.addAll(loadSortedMountSettingsFromDefaultPreferenceNode());
             // ensures that preference nodes are present.
             saveMountSettings(mountSettings);
@@ -551,10 +585,10 @@ public class MountSettings {
     }
 
     /**
-     * Saves the given mountSettings to the {@link ExplorerActivator#PLUGIN_ID) preference node.
-     * The preferences are saved in the mount point ordering of the given List.
+     * Saves the given mountSettings to the {@link ExplorerActivator#PLUGIN_ID) preference node. The preferences are
+     * saved in the mount point ordering of the given List.
      *
-     * @param mountSettings  The MountSettings to be saved to the preference node
+     * @param mountSettings The MountSettings to be saved to the preference node
      * @since 8.2
      */
     public static void saveMountSettings(final List<MountSettings> mountSettings) {
@@ -564,27 +598,32 @@ public class MountSettings {
 
         IEclipsePreferences mountPointsNode = getInstanceMountPointParentNode();
         for (int i = 0; i < mountSettings.size(); i++) {
-                MountSettings ms = mountSettings.get(i);
-                IEclipsePreferences mountPointChildNode = (IEclipsePreferences)mountPointsNode.node(ms.getMountID());
-                saveMountSettingsToNode(ms, mountPointChildNode, i);
+            MountSettings ms = mountSettings.get(i);
+            IEclipsePreferences mountPointChildNode = (IEclipsePreferences)mountPointsNode.node(ms.getMountID());
+            saveMountSettingsToNode(ms, mountPointChildNode, i);
         }
     }
 
-
-
     private static String MOUNT_ID = "mountID";
+
     private static String FACTORY_ID = "factoryID";
+
     private static String DEFAULT_MOUNT_ID = "defaultMountID";
+
     private static String ACTIVE = "active";
+
     private static String MOUNTPOINT_NUMBER = "mountpointNumber";
+
     private static String USE_REST = "useRest";
 
     private static List<String> m_necessaryKeys = Arrays.asList(MOUNT_ID, FACTORY_ID);
 
-    private static void saveMountSettingsToNode(final MountSettings settings,
-        final IEclipsePreferences node, final int mountPointNumber) {
-        AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(settings.getFactoryID());
-        AbstractContentProvider contenProvider = factory.createContentProvider(settings.getMountID(), settings.getContent());
+    private static void saveMountSettingsToNode(final MountSettings settings, final IEclipsePreferences node,
+        final int mountPointNumber) {
+        AbstractContentProviderFactory factory =
+            ExplorerMountTable.getContentProviderFactories().get(settings.getFactoryID());
+        AbstractContentProvider contenProvider =
+            factory.createContentProvider(settings.getMountID(), settings.getContent());
 
         contenProvider.saveStateToPreferenceNode(node);
 
@@ -609,16 +648,17 @@ public class MountSettings {
         List<String> nodeKeys = Arrays.asList(node.keys());
         if (nodeKeys.containsAll(m_necessaryKeys)) {
             try {
-                String mountID = node.get(MOUNT_ID,"");
+                String mountID = node.get(MOUNT_ID, "");
                 String factoryID = node.get(FACTORY_ID, "");
 
-                AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactories().get(factoryID);
-                String content = "" ;
+                AbstractContentProviderFactory factory =
+                    ExplorerMountTable.getContentProviderFactories().get(factoryID);
+                String content = "";
                 String displayName = "";
-                if (factory != null ) {
+                if (factory != null) {
                     AbstractContentProvider contenProvider = factory.createContentProvider(mountID, "");
                     content = contenProvider.loadStateFromPreferenceNode(node);
-                    displayName = mountID + " (" +contenProvider.toString() + ")";
+                    displayName = mountID + " (" + contenProvider.toString() + ")";
                 }
 
                 String defaultMountID = node.get(DEFAULT_MOUNT_ID, "");
@@ -631,18 +671,18 @@ public class MountSettings {
 
                 return settings;
             } catch (Exception ex) {
-                NodeLogger.getLogger(MountSettings.class).error("Could not load mount point settings from node "
-                    + node.absolutePath() + ": " + ex.getMessage(), ex);
+                NodeLogger.getLogger(MountSettings.class).error(
+                    "Could not load mount point settings from node " + node.absolutePath() + ": " + ex.getMessage(),
+                    ex);
             }
         }
         return null;
     }
 
-
     /**
      * Removes the given MountSettings from the {@link ExplorerActivator#PLUGIN_ID} preference node.
      *
-     * @param mountSettings  The mounSettings to be removed from the preference node
+     * @param mountSettings The mounSettings to be removed from the preference node
      * @throws BackingStoreException if there is a failure in the backing store
      * @since 8.2
      */
