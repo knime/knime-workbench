@@ -13,7 +13,7 @@ import junit.framework.TestSuite;
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
  */
 @RunWith(AllTests.class)
-public class WorkbenchTestsCollector extends AbstractTestcaseCollector {
+public class WorkbenchEditorTestsCollector extends AbstractTestcaseCollector {
 
 	/**
 	 * This is called via the JUnit framework in order to collect all testcases.
@@ -26,7 +26,7 @@ public class WorkbenchTestsCollector extends AbstractTestcaseCollector {
 	public static TestSuite suite() throws Exception {
 		TestSuite suite = new TestSuite();
 
-		for (Class<?> testClass : new WorkbenchTestsCollector().getUnittestsClasses()) {
+		for (Class<?> testClass : new WorkbenchEditorTestsCollector().getUnittestsClasses()) {
 			suite.addTest(new JUnit4TestAdapter(testClass));
 		}
 

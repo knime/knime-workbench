@@ -4,7 +4,7 @@
    <extension
          point="org.knime.testing.TestcaseCollector">
       <TestcaseCollector
-            TestcaseCollector="org.knime.workbench.WorkbenchTestsCollector">
+            TestcaseCollector="org.knime.workbench.WorkbenchEditorTestsCollector">
       </TestcaseCollector>
    </extension>
 

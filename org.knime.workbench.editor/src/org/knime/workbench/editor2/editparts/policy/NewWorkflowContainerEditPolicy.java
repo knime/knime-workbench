@@ -227,11 +227,6 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         return null;
     }
 
-    /**
-     * @param manager the workflow manager
-     * @param request the drop request
-     * @param filestore the location of the metanode template
-     */
     private Command handleMetaNodeTemplateDrop(final WorkflowManager manager, final CreateDropRequest request,
         final URI templateURI, final boolean isRemoteLocation) {
         final RequestType requestType = request.getRequestType();
@@ -316,11 +311,6 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
     }
 
-    /**
-     * @param manager the workflow manager
-     * @param content the metanode content
-     * @param request the drop request
-     */
     private Command handleMetaNodeDrop(final WorkflowManager manager, final WorkflowPersistor content,
         final CreateDropRequest request) {
         final RequestType requestType = request.getRequestType();
@@ -393,11 +383,6 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
     }
 
-    /**
-     * @param manager the workflow manager
-     * @param factory the ndoe factory
-     * @param request the drop request
-     */
     private Command handleNodeDrop(final WorkflowManagerUI manager, final NodeFactory<? extends NodeModel> factory,
         final CreateDropRequest request) {
         final RequestType requestType = request.getRequestType();
@@ -434,10 +419,6 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
     }
 
-    /**
-     * @param nodeInfo
-     * @return
-     */
     private static String getCanonicalNodeFactory(final JsonNode nodeInfo) {
         String factory = nodeInfo.get("factoryName").textValue();
         // hub saves dynamic nodes as {node_factory_class_name}:{randomId}
@@ -448,9 +429,6 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         return factory;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public EditPart getTargetEditPart(final Request request) {
         final Object type = request.getType();
