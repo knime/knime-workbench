@@ -225,8 +225,8 @@ import org.knime.workbench.editor2.actions.LockMetaNodeAction;
 import org.knime.workbench.editor2.actions.LockSubNodeAction;
 import org.knime.workbench.editor2.actions.MetaNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.NodeConnectionContainerDeleteAction;
-import org.knime.workbench.editor2.actions.OpenDialogAction;
 import org.knime.workbench.editor2.actions.OpenComponentInBrowserAction;
+import org.knime.workbench.editor2.actions.OpenDialogAction;
 import org.knime.workbench.editor2.actions.PasteAction;
 import org.knime.workbench.editor2.actions.PasteActionContextMenu;
 import org.knime.workbench.editor2.actions.PauseLoopExecutionAction;
@@ -3072,23 +3072,18 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     /**
      * Returns true, if the active editor is a workflow editor and snap to grid is enabled. False otherwise.
+     *
      * @return true, if the active editor is a workflow editor and snap to grid is enabled. False otherwise
      * @see #getEditorSnapToGrid()
      */
     public static boolean getActiveEditorSnapToGrid() {
-        IWorkbenchWindow activeWorkbenchWindow = Workbench.getInstance().getActiveWorkbenchWindow();
-        if (activeWorkbenchWindow == null) {
-            return false;
-        }
-        IWorkbenchPage activePage = activeWorkbenchWindow.getActivePage();
-        if (activePage == null) {
-            return false;
-        }
-        IEditorPart activeEditor = activePage.getActiveEditor();
-        if (activeEditor instanceof WorkflowEditor) {
-            return ((WorkflowEditor)activeEditor).getEditorSnapToGrid();
-        }
-        return false;
+        @SuppressWarnings("restriction")
+        final Optional<Boolean> activeEditor = Optional.ofNullable(Workbench.getInstance())//
+            .map(b -> b.getActiveWorkbenchWindow())//
+            .map(w -> w.getActivePage())//
+            .map(p -> p.getActiveEditor())
+            .map(e -> e instanceof WorkflowEditor && ((WorkflowEditor)e).getEditorSnapToGrid());
+        return activeEditor.orElse(false);
     }
 
     /**
