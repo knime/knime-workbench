@@ -65,7 +65,6 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
 import org.knime.core.node.workflow.WorkflowPersistor.MetaNodeLinkUpdateResult;
 import org.knime.core.util.FileUtil;
-import org.knime.core.util.KnimeURIUtil;
 import org.knime.core.util.SWTUtilities;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -120,7 +119,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             progressMonitor.addProgressListener(progressHandler);
 
             File parentFile = ResolverUtil
-                .resolveURItoLocalOrTempFile(KnimeURIUtil.getObjectEntityEndpointURI(m_templateURI, true), pm);
+                .resolveURItoLocalOrTempFile(m_templateURI, pm);
             if (parentFile.isFile()) {
                 //unzip
                 File tempDir = FileUtil.createTempDir("template-workflow");

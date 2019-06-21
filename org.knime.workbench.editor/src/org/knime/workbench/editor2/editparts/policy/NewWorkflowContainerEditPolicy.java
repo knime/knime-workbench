@@ -94,6 +94,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.util.CoreConstants;
 import org.knime.core.util.KnimeURIUtil;
 import org.knime.core.util.KnimeURIUtil.HubEntityType;
 import org.knime.core.util.SWTUtilities;
@@ -213,7 +214,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
     private Command handleObjectDropFromURI(final Optional<WorkflowManager> manager, final CreateDropRequest cdr,
         final URI uri) {
         // If the entity corresponds to a workflow (group) the action will be simply ignored
-        final JsonNode objectEntityInfo = callHubEndpoint(KnimeURIUtil.getObjectEntityEndpointURI(uri, false));
+        final JsonNode objectEntityInfo = callHubEndpoint(KnimeURIUtil.getObjectEntityEndpointURI(uri));
         if (objectEntityInfo == null) {
             showPopup("Component cannot be added!", "No component found on the KNIME Hub at " + uri.getPath() + ".",
                 SWT.ICON_WARNING);
@@ -222,7 +223,9 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
         // TODO: if we change API we need to fix that as well.
         if (objectEntityInfo.get("type").textValue().equalsIgnoreCase("WorkflowTemplate")) {
-            return handleMetaNodeTemplateDrop(manager.get(), cdr, uri, true);
+            return handleMetaNodeTemplateDrop(manager.get(), cdr, URI.create(
+                "knime://" + CoreConstants.KNIME_HUB_MOUNT_ID + "/Users" + uri.getPath().replaceFirst("/space", "")),
+                true);
         }
         return null;
     }

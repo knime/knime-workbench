@@ -226,8 +226,7 @@ public class DragAndDropTests {
         // test component
         JsonNode objectEntityInfo = NewWorkflowContainerEditPolicy.callHubApi(KnimeURIUtil.getObjectEntityEndpointURI(
             new URI("https://hubdev.knime.com/knime/space/Examples/02_ETL_Data_Manipulation/01_Filtering/"
-                + "07_Four_Techniques_Outlier_Detection/_Templates/MapViz"),
-            false), new HashMap<>());
+                + "07_Four_Techniques_Outlier_Detection/_Templates/MapViz")), new HashMap<>());
 
         assertThat("Wrong result (MapViz)", objectEntityInfo != null, is(true));
 
@@ -236,8 +235,7 @@ public class DragAndDropTests {
 
         // test workflow
         objectEntityInfo = NewWorkflowContainerEditPolicy.callHubApi(KnimeURIUtil.getObjectEntityEndpointURI(new URI(
-            "https://hubdev.knime.com/knime/space/Examples/04_Analytics/13_Meta_Learning/02_Learning_a_Random_Forest"),
-            false), new HashMap<>());
+            "https://hubdev.knime.com/knime/space/Examples/04_Analytics/13_Meta_Learning/02_Learning_a_Random_Forest")), new HashMap<>());
 
         assertThat("Wrong result (Learning Random Forest)", objectEntityInfo != null, is(true));
 
@@ -247,7 +245,7 @@ public class DragAndDropTests {
         // test workflow group
         objectEntityInfo = NewWorkflowContainerEditPolicy.callHubApi(
             KnimeURIUtil.getObjectEntityEndpointURI(
-                new URI("https://hubdev.knime.com/knime/space/Examples/04_Analytics/13_Meta_Learning"), false),
+                new URI("https://hubdev.knime.com/knime/space/Examples/04_Analytics/13_Meta_Learning")),
             new HashMap<>());
 
         assertThat("Wrong result (Meta_Learning)", objectEntityInfo != null, is(true));
@@ -258,8 +256,7 @@ public class DragAndDropTests {
         // test non-existent object
         objectEntityInfo = NewWorkflowContainerEditPolicy.callHubApi(KnimeURIUtil.getObjectEntityEndpointURI(
             new URI("https://hubdev.knime.com/knime/space/Examples/02_ETL_Data_Manipulation/01_Filtering/"
-                + "07_Four_Techniques_Outlier_Detection/_Templates/MapViz23493"),
-            false), new HashMap<>());
+                + "07_Four_Techniques_Outlier_Detection/_Templates/MapViz23493")), new HashMap<>());
 
         assertThat("Wrong result (non-existent object)", objectEntityInfo == null, is(true));
     }
