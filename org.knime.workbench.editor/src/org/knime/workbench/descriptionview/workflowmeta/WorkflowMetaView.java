@@ -140,6 +140,9 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private static final String SERVER_WORKFLOW_TEXT =
         "We cannot display metadata of server workflows at the moment. You can still view it by downloading (Double-click for temporary download.)";
 
+    private static final String TEMPLATE_WORKFLOW_TEXT =
+        "Metadata cannot be shown nor edited for the type of item you have selected in the KNIME Explorer.";
+
     private static final Image CANCEL_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-cancel.png");
     private static final Image EDIT_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-edit.png");
     private static final Image SAVE_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-save.png");
@@ -202,6 +205,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
     private final Composite m_remoteServerNotificationPane;
 
+    private final Composite m_noUsableMetadataNotificationPane;
+
     private final Composite m_titleSection;
     private final Composite m_titleNoDataPane;
     private final Composite m_titleContentPane;
@@ -246,6 +251,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private MetadataModelFacilitator m_modelFacilitator;
 
     private final AtomicBoolean m_workflowIsOnServer;
+    private final AtomicBoolean m_workflowIsATemplate;
 
     private final AtomicBoolean m_metadataCanBeEdited;
 
@@ -266,6 +272,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_inEditMode = new AtomicBoolean(false);
         m_metadataCanBeEdited = new AtomicBoolean(false);
         m_workflowIsOnServer = new AtomicBoolean(false);
+        m_workflowIsATemplate = new AtomicBoolean(false);
 
         GridLayout gl = new GridLayout(1, false);
         gl.marginHeight = 3;
@@ -322,7 +329,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         gd.verticalIndent = 18;
         m_remoteServerNotificationPane.setLayoutData(gd);
         m_remoteServerNotificationPane.setLayout(new GridLayout(1, false));
-        final Label l = new Label(m_remoteServerNotificationPane, SWT.CENTER | SWT.WRAP);
+        Label l = new Label(m_remoteServerNotificationPane, SWT.CENTER | SWT.WRAP);
         l.setText(SERVER_WORKFLOW_TEXT);
         l.setForeground(TEXT_COLOR);
         l.setFont(ITALIC_CONTENT_FONT);
@@ -330,6 +337,25 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         gd.verticalAlignment = SWT.BOTTOM;
         gd.grabExcessHorizontalSpace = true;
         l.setLayoutData(gd);
+
+
+
+        m_noUsableMetadataNotificationPane = new Composite(m_contentPane, SWT.NONE);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+        gd.verticalIndent = 18;
+        m_noUsableMetadataNotificationPane.setLayoutData(gd);
+        m_noUsableMetadataNotificationPane.setLayout(new GridLayout(1, false));
+        l = new Label(m_noUsableMetadataNotificationPane, SWT.CENTER | SWT.WRAP);
+        l.setText(TEMPLATE_WORKFLOW_TEXT);
+        l.setForeground(TEXT_COLOR);
+        l.setFont(ITALIC_CONTENT_FONT);
+        gd.horizontalAlignment = SWT.LEFT;
+        gd.verticalAlignment = SWT.BOTTOM;
+        gd.grabExcessHorizontalSpace = true;
+        l.setLayoutData(gd);
+
 
 
         Composite[] sectionAndContentPane = createHorizontalSection("Title", NO_TITLE_TEXT);
@@ -428,6 +454,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         setHeaderBarButtons();
 
         SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane, false);
+        SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_titleContentPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_descriptionContentPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_tagsContentPane, false);
@@ -491,6 +518,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         final boolean canEditMetadata;
 
         m_workflowIsOnServer.set(false);
+        m_workflowIsATemplate.set(false);
         if (knimeExplorerItem) {
             final AbstractExplorerFileStore fs = ((ContentObject) o).getFileStore();
             final boolean isWorkflow = AbstractExplorerFileStore.isWorkflow(fs);
@@ -501,9 +529,14 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
                 return;
             }
 
+            final boolean isTemplate = (AbstractExplorerFileStore.isComponentTemplate(fs)
+                                            || AbstractExplorerFileStore.isMetaNodeTemplate(fs)
+                                            || AbstractExplorerFileStore.isWorkflowTemplate(fs));
+
             m_currentWorkflowName = fs.getName();
-            if (fs.getContentProvider().isRemote()) {
-                m_workflowIsOnServer.set(true);
+            if (fs.getContentProvider().isRemote() || isTemplate) {
+                m_workflowIsOnServer.set(fs.getContentProvider().isRemote());
+                m_workflowIsATemplate.set(isTemplate);
 
                 metadataFile = null;
                 canEditMetadata = false;
@@ -577,8 +610,9 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     }
 
     private void updateDisplay() {
-        if (m_workflowIsOnServer.get()) {
-            SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane, true);
+        if (m_workflowIsOnServer.get() || m_workflowIsATemplate.get()) {
+            SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane, m_workflowIsOnServer.get());
+            SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, m_workflowIsATemplate.get());
 
             SWTUtilities.spaceReclaimingSetVisible(m_titleSection, false);
             SWTUtilities.spaceReclaimingSetVisible(m_descriptionSection, false);
@@ -591,6 +625,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             final boolean editMode = m_inEditMode.get();
 
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane, false);
+            SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, false);
+
             SWTUtilities.spaceReclaimingSetVisible(m_titleSection, true);
             SWTUtilities.spaceReclaimingSetVisible(m_descriptionSection, true);
             SWTUtilities.spaceReclaimingSetVisible(m_authorSection, true);

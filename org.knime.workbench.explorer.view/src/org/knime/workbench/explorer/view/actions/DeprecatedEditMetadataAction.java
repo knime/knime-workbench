@@ -109,6 +109,9 @@ public class DeprecatedEditMetadataAction extends ExplorerAction {
 
     private Optional<AbstractExplorerFileStore> getSingleSelectedElement() {
         return super.getSingleSelectedElement(
-            fs -> AbstractExplorerFileStore.isWorkflow(fs) || AbstractExplorerFileStore.isWorkflowGroup(fs));
+            fs -> ((AbstractExplorerFileStore.isWorkflow(fs) || AbstractExplorerFileStore.isWorkflowGroup(fs))
+                    && !(AbstractExplorerFileStore.isComponentTemplate(fs)
+                            || AbstractExplorerFileStore.isMetaNodeTemplate(fs)
+                            || AbstractExplorerFileStore.isWorkflowTemplate(fs))));
     }
 }
