@@ -73,6 +73,8 @@ import org.xml.sax.SAXException;
  * @author loki der quaeler
  */
 public class DateMetaInfoAtom extends MetaInfoAtom {
+    private static final String TIME_OF_DAY_SUFFIX = "/12:00:01 +02:00";
+
     private static boolean compareCalendarDates(final Calendar c1, final Calendar c2) {
         if ((c1.get(Calendar.YEAR) != c2.get(Calendar.YEAR))
                 || (c1.get(Calendar.MONTH) != c2.get(Calendar.MONTH))
@@ -129,7 +131,7 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
     @Override
     public String getValue() {
         if (m_date != null) {
-            return MetaInfoFile.dateToStorageString(m_date);
+            return MetaInfoFile.dateToStorageString(m_date) + TIME_OF_DAY_SUFFIX;
         }
 
         return super.getValue();
@@ -167,7 +169,7 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
         m_date = Calendar.getInstance();
         m_date.set(m_datePicker.getYear(), m_datePicker.getMonth(), m_datePicker.getDay());
 
-        m_value = MetaInfoFile.dateToStorageString(m_date);
+        m_value = MetaInfoFile.dateToStorageString(m_date) + TIME_OF_DAY_SUFFIX;
 
         m_datePicker = null;
     }

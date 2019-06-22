@@ -309,6 +309,21 @@ public abstract class MetaInfoAtom {
      */
     protected void save(final TransformerHandler parentElement, final String form)
         throws SAXException {
+        save(parentElement, form, m_value);
+    }
+
+    /**
+     * Subclasses can use this to write the most common case of element storage from their save implementation;
+     *  subclasses should check for whether they have content and not bother calling this if they do not.
+     *
+     * @param parentElement the parent element
+     * @param form the value for the {@link MetadataXML#FORM} attribute
+     * @param atomValue the value which gets written as the element's text content
+     * @throws SAXException
+     * @see #save(TransformerHandler)
+     */
+    protected void save(final TransformerHandler parentElement, final String form, final String atomValue)
+        throws SAXException {
         final AttributesImpl attributes = new AttributesImpl();
         attributes.addAttribute(null, null, MetadataXML.FORM, "CDATA", form);
         attributes.addAttribute(null, null, MetadataXML.READ_ONLY, "CDATA", Boolean.toString(isReadOnly()));
@@ -319,7 +334,7 @@ public abstract class MetaInfoAtom {
 
         addAdditionalSaveTimeAttributes(attributes);
         parentElement.startElement(null, null, MetadataXML.ATOM_WRITE_ELEMENT, attributes);
-        final char[] value = m_value.toCharArray();
+        final char[] value = atomValue.toCharArray();
         parentElement.characters(value, 0, value.length);
         parentElement.endElement(null, null, MetadataXML.ATOM_WRITE_ELEMENT);
     }

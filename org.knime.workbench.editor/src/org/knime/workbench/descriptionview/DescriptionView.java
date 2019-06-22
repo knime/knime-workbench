@@ -49,6 +49,8 @@
 package org.knime.workbench.descriptionview;
 
 import java.lang.ref.WeakReference;
+import java.time.ZonedDateTime;
+import java.util.GregorianCalendar;
 
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
@@ -80,6 +82,9 @@ import org.knime.workbench.explorer.view.ContentObject;
  * @author loki der quaeler
  */
 public class DescriptionView extends ViewPart implements ISelectionListener {
+    /** The id string registered in the plugin.xml **/
+    public static final String ID = "org.knime.workbench.helpview";
+
     private static final String MIDST_EDIT_WARNING_TEXT =
         "You are still editing your workflow's metadata; do you want to save the metadata or discard any changes?";
     private static final String[] DIALOG_BUTTON_LABELS = {"Save", "Discard"};
@@ -135,12 +140,19 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
         iwp.removeSelectionListener(this);
     }
 
-    private void moveControlToTop(final Composite c) {
-        if (m_stackLayout.topControl != c) {
-            m_stackLayout.topControl = c;
-
-            m_control.layout();
-        }
+    /**
+     * This provides a sew-in point for the display of remotely fetched metadata as requested in AP-12082
+     *
+     * @param author
+     * @param legacyDescription
+     * @param creationDate
+     */
+    public void displayRemoteMetadata(final String author, final String legacyDescription,
+        final ZonedDateTime creationDate) {
+        PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
+            final GregorianCalendar c = (creationDate != null) ? GregorianCalendar.from(creationDate) : null;
+            m_workflowMetaView.handleAsynchronousRemoteMetadataPopulation(author, legacyDescription, c);
+        });
     }
 
     /**
@@ -182,6 +194,14 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
             } else {
                 finishSelectionChange(structuredSelection);
             }
+        }
+    }
+
+    private void moveControlToTop(final Composite c) {
+        if (m_stackLayout.topControl != c) {
+            m_stackLayout.topControl = c;
+
+            m_control.layout();
         }
     }
 

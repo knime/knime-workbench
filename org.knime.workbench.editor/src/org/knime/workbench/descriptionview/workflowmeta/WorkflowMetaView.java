@@ -51,8 +51,10 @@ package org.knime.workbench.descriptionview.workflowmeta;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -88,6 +90,7 @@ import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.internal.ReferencedFile;
@@ -132,13 +135,14 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     /** The fill color for the header bar and other widgets (like tag chiclets.) **/
     public static final Color GENERAL_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 240, 240, 241);
 
-    private static final String NO_TITLE_TEXT = "This workflow does not have a title yet.";
-    private static final String NO_DESCRIPTION_TEXT = "This workflow does not have a description yet.";
-    private static final String NO_LINKS_TEXT = "This workflow does not have any links yet.";
-    private static final String NO_TAGS_TEXT = "This workflow does not have any tags yet.";
+    private static final String NO_TITLE_TEXT = "No title has been set yet.";
+    private static final String NO_DESCRIPTION_TEXT = "No description has been set yet.";
+    private static final String NO_LINKS_TEXT = "No links have been added yet.";
+    private static final String NO_TAGS_TEXT = "No tags have been added yet.";
 
     private static final String SERVER_WORKFLOW_TEXT =
-        "We cannot display metadata of server workflows at the moment. You can still view it by downloading (Double-click for temporary download.)";
+        "The metadata will be displayed here momentarily if it is able to be fetched. You may also download it "
+            + "and view it locally (by double-clicking on it in the KNIME Explorer.)";
 
     private static final String TEMPLATE_WORKFLOW_TEXT =
         "Metadata cannot be shown nor edited for the type of item you have selected in the KNIME Explorer.";
@@ -151,8 +155,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
     private static final int HEADER_MARGIN_RIGHT = 9;
     private static final int LEFT_INDENT_HEADER_SUB_PANES = 9;
-    private static final int TOTAL_REQUIRED_HEADER_EMPTY_SPACE =
-        HEADER_MARGIN_RIGHT + (2 * LEFT_INDENT_HEADER_SUB_PANES);
+    private static final int TOTAL_HEADER_PADDING = HEADER_MARGIN_RIGHT + (2 * LEFT_INDENT_HEADER_SUB_PANES);
 
     private static Text addLabelTextFieldCouplet(final Composite parent, final String labelText,
         final String placeholderText) {
@@ -250,12 +253,19 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private File m_metadataFile;
     private MetadataModelFacilitator m_modelFacilitator;
 
-    private final AtomicBoolean m_workflowIsOnServer;
+    private final AtomicBoolean m_workflowMetadataNeedBeFetchedFromServer;
     private final AtomicBoolean m_workflowIsATemplate;
 
     private final AtomicBoolean m_metadataCanBeEdited;
 
     private final AtomicBoolean m_inEditMode;
+
+    private final AtomicBoolean m_workflowNameHasChanged;
+
+    private final AtomicInteger m_lastRenderedViewportWidth;
+    private final AtomicInteger m_lastRenderedViewportOriginX;
+    private final AtomicInteger m_lastRenderedViewportOriginY;
+    private final FloatingHeaderBarPositioner m_floatingHeaderPositioner;
 
     /**
      * @param parent
@@ -263,29 +273,36 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     public WorkflowMetaView(final Composite parent) {
         super(parent, SWT.H_SCROLL | SWT.V_SCROLL);
 
+
+        m_inEditMode = new AtomicBoolean(false);
+        m_metadataCanBeEdited = new AtomicBoolean(false);
+        m_workflowMetadataNeedBeFetchedFromServer = new AtomicBoolean(false);
+        m_workflowIsATemplate = new AtomicBoolean(false);
+
+        m_workflowNameHasChanged = new AtomicBoolean(false);
+
+        m_lastRenderedViewportWidth = new AtomicInteger(Integer.MIN_VALUE);
+        m_lastRenderedViewportOriginX = new AtomicInteger(Integer.MIN_VALUE);
+        m_lastRenderedViewportOriginY = new AtomicInteger(Integer.MIN_VALUE);
+
+
         setBackgroundMode(SWT.INHERIT_DEFAULT);
+
 
         m_contentPane = new Composite(this, SWT.NONE);
         m_contentPane.setBackground(ColorConstants.white);
         setContent(m_contentPane);
 
-        m_inEditMode = new AtomicBoolean(false);
-        m_metadataCanBeEdited = new AtomicBoolean(false);
-        m_workflowIsOnServer = new AtomicBoolean(false);
-        m_workflowIsATemplate = new AtomicBoolean(false);
-
         GridLayout gl = new GridLayout(1, false);
-        gl.marginHeight = 3;
+        gl.marginHeight = 0;
+        gl.marginBottom = 3;
         gl.marginWidth = 3;
         m_contentPane.setLayout(gl);
-        m_contentPane.addListener(SWT.Resize, (event) -> {
-            handleHeaderBarResize();
-        });
+
 
         m_headerBar = new Composite(m_contentPane, SWT.NONE);
         GridData gd = new GridData();
-        gd.horizontalAlignment = SWT.FILL;
-        gd.grabExcessHorizontalSpace = true;
+        gd.exclude = true;
         m_headerBar.setLayoutData(gd);
         gl = new GridLayout(2, false);
         gl.marginHeight = 0;
@@ -312,7 +329,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         gd.horizontalAlignment = SWT.RIGHT;
         gd.grabExcessHorizontalSpace = true;
         gd.heightHint = 24;
-        gd.widthHint = 48;
+        gd.widthHint = 45;
         gd.horizontalIndent = LEFT_INDENT_HEADER_SUB_PANES;
         m_headerButtonPane.setLayoutData(gd);
         gl = new GridLayout(2, true);
@@ -326,7 +343,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         gd = new GridData();
         gd.horizontalAlignment = SWT.FILL;
         gd.grabExcessHorizontalSpace = true;
-        gd.verticalIndent = 18;
+        gd.verticalIndent = 38;
         m_remoteServerNotificationPane.setLayoutData(gd);
         m_remoteServerNotificationPane.setLayout(new GridLayout(1, false));
         Label l = new Label(m_remoteServerNotificationPane, SWT.CENTER | SWT.WRAP);
@@ -344,7 +361,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         gd = new GridData();
         gd.horizontalAlignment = SWT.FILL;
         gd.grabExcessHorizontalSpace = true;
-        gd.verticalIndent = 18;
+        gd.verticalIndent = 38;
         m_noUsableMetadataNotificationPane.setLayoutData(gd);
         m_noUsableMetadataNotificationPane.setLayout(new GridLayout(1, false));
         l = new Label(m_noUsableMetadataNotificationPane, SWT.CENTER | SWT.WRAP);
@@ -362,19 +379,15 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_titleSection = sectionAndContentPane[0];
         m_titleNoDataPane = sectionAndContentPane[1];
         m_titleContentPane = sectionAndContentPane[2];
-
+        gd = (GridData)m_titleSection.getLayoutData();
+        gd.verticalIndent = 30;
+        m_titleSection.setLayoutData(gd);
 
 
         sectionAndContentPane = createVerticalSection("Description", NO_DESCRIPTION_TEXT);
         m_descriptionSection = sectionAndContentPane[0];
         m_descriptionNoDataLabelPane = sectionAndContentPane[1];
         m_descriptionContentPane = sectionAndContentPane[2];
-
-
-        sectionAndContentPane = createHorizontalSection("Author", null);
-        m_authorSection = sectionAndContentPane[0];
-        m_authorContentPane = sectionAndContentPane[1];
-
 
 
         sectionAndContentPane = createVerticalSection("Tags", NO_TAGS_TEXT);
@@ -404,7 +417,6 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         rl.marginWidth = 3;
         rl.marginHeight = 2;
         m_tagsTagsContentPane.setLayout(rl);
-
 
 
         sectionAndContentPane = createVerticalSection("Links", NO_LINKS_TEXT);
@@ -441,17 +453,22 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
         sectionAndContentPane = createHorizontalSection("Creation Date", null);
         m_creationDateSection = sectionAndContentPane[0];
+        m_creationDateContentPane = sectionAndContentPane[1];
+
+
+        sectionAndContentPane = createHorizontalSection("Author", null);
+        m_authorSection = sectionAndContentPane[0];
         gd = new GridData();
         gd.horizontalAlignment = SWT.FILL;
         gd.verticalAlignment = SWT.TOP;
         gd.grabExcessHorizontalSpace = true;
         gd.grabExcessVerticalSpace = true;
-        m_creationDateSection.setLayoutData(gd);
-        m_creationDateContentPane = sectionAndContentPane[1];
+        m_authorSection.setLayoutData(gd);
+        m_authorContentPane = sectionAndContentPane[1];
 
 
 
-        setHeaderBarButtons();
+        configureFloatingHeaderBarButtons();
 
         SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, false);
@@ -465,7 +482,32 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         setExpandHorizontal(true);
         setExpandVertical(true);
 
+        addListener(SWT.Resize, (event) -> {
+            updateFloatingHeaderBar();
+        });
+
+        ScrollBar sb = getHorizontalBar();
+        if (sb != null) {
+            sb.addListener(SWT.Selection, (event) -> {
+                updateFloatingHeaderBar();
+            });
+        }
+        sb = getVerticalBar();
+        if (sb != null) {
+            sb.addListener(SWT.Selection, (event) -> {
+                updateFloatingHeaderBar();
+            });
+            sb.addListener(SWT.Show, (event) -> {
+                updateFloatingHeaderBar();
+            });
+            sb.addListener(SWT.Hide, (event) -> {
+                updateFloatingHeaderBar();
+            });
+        }
+
         pack();
+
+        m_floatingHeaderPositioner = new FloatingHeaderBarPositioner();
     }
 
     @Override
@@ -508,6 +550,36 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     }
 
     /**
+     * Should the description view receive a remotely fetched metadata for a server-side object, it will facilitate its
+     * display by invoking this method. N.B. {@link #selectionChanged(IStructuredSelection)} has already been called for
+     * this item prior to receiving this invocation, and so <code>m_currentWorkflowName</code> has been correctly
+     * populated.
+     *
+     * @param author the author, or null
+     * @param legacyDescription the legacy-style description, or null
+     * @param creationDate the creation date, or null
+     */
+    public void handleAsynchronousRemoteMetadataPopulation(final String author, final String legacyDescription,
+        final Calendar creationDate) {
+        m_modelFacilitator = new MetadataModelFacilitator(author, legacyDescription, creationDate);
+        m_modelFacilitator.parsingHasFinished();
+        m_modelFacilitator.setModelObserver(this);
+
+        if (m_metadataCanBeEdited.get()) {
+            m_metadataCanBeEdited.set(false);
+            configureFloatingHeaderBarButtons();
+        }
+
+        m_metadataFile = null;
+
+        m_workflowMetadataNeedBeFetchedFromServer.set(false);
+        m_workflowIsATemplate.set(false);
+        getDisplay().asyncExec(() -> {
+            updateDisplay();
+        });
+    }
+
+    /**
      * @param selection the selection passed along from the ISelectionListener
      */
     public void selectionChanged(final IStructuredSelection selection) {
@@ -517,7 +589,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         final File metadataFile;
         final boolean canEditMetadata;
 
-        m_workflowIsOnServer.set(false);
+        m_workflowMetadataNeedBeFetchedFromServer.set(false);
         m_workflowIsATemplate.set(false);
         if (knimeExplorerItem) {
             final AbstractExplorerFileStore fs = ((ContentObject) o).getFileStore();
@@ -535,7 +607,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
             m_currentWorkflowName = fs.getName();
             if (fs.getContentProvider().isRemote() || isTemplate) {
-                m_workflowIsOnServer.set(fs.getContentProvider().isRemote());
+                m_workflowMetadataNeedBeFetchedFromServer.set(fs.getContentProvider().isRemote());
                 m_workflowIsATemplate.set(isTemplate);
 
                 metadataFile = null;
@@ -572,7 +644,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
         m_headerLabel.getDisplay().asyncExec(() -> {
             m_headerLabel.setText(m_currentWorkflowName);
-            m_headerBar.layout();
+            m_workflowNameHasChanged.set(true);
+            updateFloatingHeaderBar();
         });
 
 
@@ -599,7 +672,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
         if (m_metadataCanBeEdited.get() != canEditMetadata) {
             m_metadataCanBeEdited.set(canEditMetadata);
-            setHeaderBarButtons();
+            configureFloatingHeaderBarButtons();
         }
 
         m_metadataFile = metadataFile;
@@ -610,8 +683,9 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     }
 
     private void updateDisplay() {
-        if (m_workflowIsOnServer.get() || m_workflowIsATemplate.get()) {
-            SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane, m_workflowIsOnServer.get());
+        if (m_workflowMetadataNeedBeFetchedFromServer.get() || m_workflowIsATemplate.get()) {
+            SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane,
+                m_workflowMetadataNeedBeFetchedFromServer.get());
             SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, m_workflowIsATemplate.get());
 
             SWTUtilities.spaceReclaimingSetVisible(m_titleSection, false);
@@ -665,14 +739,6 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             } else {
                 SWTUtilities.spaceReclaimingSetVisible(m_descriptionContentPane, false);
                 SWTUtilities.spaceReclaimingSetVisible(m_descriptionNoDataLabelPane, true);
-            }
-
-            SWTUtilities.removeAllChildren(m_authorContentPane);
-            mia = m_modelFacilitator.getAuthor();
-            if (editMode) {
-                mia.populateContainerForEdit(m_authorContentPane);
-            } else {
-                mia.populateContainerForDisplay(m_authorContentPane);
             }
 
             SWTUtilities.removeAllChildren(m_tagsAddContentPane);
@@ -753,10 +819,19 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             } else {
                 mia.populateContainerForDisplay(m_creationDateContentPane);
             }
+
+            SWTUtilities.removeAllChildren(m_authorContentPane);
+            mia = m_modelFacilitator.getAuthor();
+            if (editMode) {
+                mia.populateContainerForEdit(m_authorContentPane);
+            } else {
+                mia.populateContainerForDisplay(m_authorContentPane);
+            }
         }
 
         layout(true, true);
-        handleHeaderBarResize();
+
+        updateFloatingHeaderBar();
 
         final Point minSize = m_contentPane.computeSize(m_contentPane.getParent().getSize().x, SWT.DEFAULT);
         setMinHeight(minSize.y);
@@ -804,7 +879,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private void performPostEditModeTransitionActions() {
         updateDisplay();
 
-        setHeaderBarButtons();
+        configureFloatingHeaderBarButtons();
 
         m_editSaveButton = null;
 
@@ -817,29 +892,36 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_linksAddButton = null;
     }
 
-    private void setHeaderBarButtons() {
+    private void configureFloatingHeaderBarButtons() {
         SWTUtilities.removeAllChildren(m_headerButtonPane);
 
         if (m_inEditMode.get()) {
             m_editSaveButton = new FlatButton(m_headerButtonPane, SWT.PUSH, SAVE_IMAGE, new Point(20, 20), true);
+            GridData gd = (GridData)m_editSaveButton.getLayoutData();
+            gd.verticalIndent += 3;
+            m_editSaveButton.setLayoutData(gd);
             m_editSaveButton.addClickListener((source) -> {
                 performSave();
             });
 
             final FlatButton fb = new FlatButton(m_headerButtonPane, SWT.PUSH, CANCEL_IMAGE, new Point(20, 20), true);
+            gd = (GridData)fb.getLayoutData();
+            gd.verticalIndent += 3;
+            fb.setLayoutData(gd);
             fb.addClickListener((source) -> {
                 performDiscard();
             });
 
-            m_headerBar.layout(true, true);
-
-            updateHeaderBarButtons();
+            updateEditSaveButton();
         } else {
             final Label l = new Label(m_headerButtonPane, SWT.LEFT);
             l.setLayoutData(new GridData(20, 20));
 
             if (m_metadataCanBeEdited.get()) {
                 final FlatButton fb = new FlatButton(m_headerButtonPane, SWT.PUSH, EDIT_IMAGE, new Point(20, 20), true);
+                final GridData gd = (GridData)fb.getLayoutData();
+                gd.verticalIndent += 3;
+                fb.setLayoutData(gd);
                 fb.addClickListener((source) -> {
                     m_inEditMode.set(true);
 
@@ -847,55 +929,35 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
                     updateDisplay();
 
-                    setHeaderBarButtons();
+                    configureFloatingHeaderBarButtons();
                 });
             } else {
                 final Label l2 = new Label(m_headerButtonPane, SWT.LEFT);
                 l2.setLayoutData(new GridData(20, 20));
             }
-
-            m_headerBar.layout(true, true);
         }
 
-        handleHeaderBarResize();
+        m_headerBar.layout(true, true);
     }
 
-    private void updateHeaderBarButtons() {
+    private void updateEditSaveButton() {
         if (m_inEditMode.get()) {
             m_editSaveButton.setVisible(m_modelFacilitator.modelIsDirty());
-            handleHeaderBarResize();
+            updateFloatingHeaderBar();
         }
     }
 
-    private void handleHeaderBarResize() {
+    private void updateFloatingHeaderBar() {
         if ((m_currentWorkflowName == null) || (m_currentWorkflowName.trim().length() == 0)) {
             return;
         }
 
-        final Point barSize = m_headerBar.getSize();
-        final Point neededButtonPaneSize = m_headerButtonPane.computeSize(SWT.DEFAULT, SWT.DEFAULT);
-        final int usableWidth = barSize.x - (TOTAL_REQUIRED_HEADER_EMPTY_SPACE + neededButtonPaneSize.x);
-        final GC gc = new GC(m_headerBar.getDisplay());
+        m_floatingHeaderPositioner.run();
 
-        try {
-            gc.setFont(m_headerLabel.getFont());
-            final Point fullStringSize = gc.textExtent(m_currentWorkflowName);
-
-            if (fullStringSize.x > usableWidth) {
-                // this could be made more precise by iterative size checks, but let's try this first for performance
-                final double percentage = (usableWidth * 0.94) / fullStringSize.x;
-                final int charCount = (int)(m_currentWorkflowName.length() * percentage);
-                final String substring = m_currentWorkflowName.substring(0, charCount) + "...";
-
-                m_headerLabel.setText(substring);
-            } else {
-                m_headerLabel.setText(m_currentWorkflowName);
-            }
-
-            layout(true, true);
-        } finally {
-            gc.dispose();
-        }
+        // the ol' "SWT occasionally hands us stale bounds at the moment of this mouse event inspired action so
+        //      let's give it a moment to sort itself out..." - we cue up one that doesn't actually fire until
+        //      the user releases a mouse down
+        getDisplay().asyncExec(m_floatingHeaderPositioner);
     }
 
     private Composite[] createHorizontalSection(final String label, final String noDataLabel) {
@@ -1160,6 +1222,58 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
      */
     @Override
     public void modelDirtyStateChanged() {
-        updateHeaderBarButtons();
+        updateEditSaveButton();
+    }
+
+
+    private class FloatingHeaderBarPositioner implements Runnable {
+        @Override
+        public void run() {
+            final Rectangle viewportBounds = getBounds();
+            final ScrollBar verticalSB = getVerticalBar();
+            final int sbWidth = (verticalSB.isVisible() ? verticalSB.getSize().x : 0);
+            final int viewportWidth = viewportBounds.width - ((2 * getBorderWidth()) + sbWidth);
+            final Point origin = getOrigin();
+
+            if ((m_lastRenderedViewportWidth.getAndSet(viewportWidth) == viewportWidth)
+                    && (m_lastRenderedViewportOriginX.getAndSet(origin.x) == origin.x)
+                    && (m_lastRenderedViewportOriginY.getAndSet(origin.y) == origin.y)
+                    && !m_workflowNameHasChanged.getAndSet(false)) {
+                return;
+            }
+
+            final Point neededButtonPaneSize = m_headerButtonPane.computeSize(SWT.DEFAULT, SWT.DEFAULT);
+            final Point labelSize = m_headerLabel.getSize();
+            final int barHeight = Math.max(neededButtonPaneSize.y, labelSize.y) + 4;
+            m_headerBar.setBounds(origin.x, origin.y, viewportWidth, barHeight);
+
+            final int labelWidth = viewportWidth - (TOTAL_HEADER_PADDING + neededButtonPaneSize.x);
+            m_headerLabel.setSize(labelWidth, labelSize.y);
+            final GridData gd = (GridData)m_headerLabel.getLayoutData();
+            gd.widthHint = labelWidth;
+            m_headerLabel.setLayoutData(gd);
+
+            final GC gc = new GC(m_headerBar.getDisplay());
+            try {
+                gc.setFont(m_headerLabel.getFont());
+                final Point fullStringSize = gc.textExtent(m_currentWorkflowName);
+
+                if (fullStringSize.x > labelWidth) {
+                    // this could be made more precise by iterative size checks,
+                    //      but let's try this first for performance
+                    final double percentage = (labelWidth * 0.87) / fullStringSize.x;
+                    final int charCount = (int)(m_currentWorkflowName.length() * percentage);
+                    final String substring = m_currentWorkflowName.substring(0, charCount) + "...";
+
+                    m_headerLabel.setText(substring);
+                } else {
+                    m_headerLabel.setText(m_currentWorkflowName);
+                }
+            } finally {
+                gc.dispose();
+            }
+
+            m_headerBar.layout(true, true);
+        }
     }
 }

@@ -71,6 +71,7 @@ import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.IColorProvider;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.LabelProviderChangedEvent;
@@ -971,6 +972,29 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
         target.refresh();
         return true;
+    }
+
+    /**
+     * Subclasses should override this if they are able to provide remote metadata content; if they return true, they
+     * should ensure they override {@link #provideRemoteMetadataToDescriptionView(IStructuredSelection)}
+     *
+     * @param selection the selection of view objects
+     * @return true if the provider can fetch remote metadata for the given selection
+     * @since 8.4
+     */
+    public boolean canProvideRemoteMetadataForSelection(final IStructuredSelection selection) {
+        return false;
+    }
+
+    /**
+     * Subclasses should override this if they are able to provide remote metadata content; this will only be invoked if
+     * the instance returned <code>true</code> from {@link #canProvideRemoteMetadataForSelection(IStructuredSelection)}
+     *
+     * @param selection the selection of view objects
+     * @since 8.4
+     */
+    public void provideRemoteMetadataToDescriptionView(final IStructuredSelection selection) {
+        // do nothing by default
     }
 
     /**

@@ -151,6 +151,10 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
     private final AtomicBoolean m_editStateIsDirty;
 
     MetadataModelFacilitator() {
+        this(null, null, null);
+    }
+
+    MetadataModelFacilitator(final String author, final String legacyDescription, final Calendar creationDate) {
         m_tagAtoms = new ArrayList<>();
         m_linkAtoms = new ArrayList<>();
 
@@ -160,6 +164,24 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         m_tagWasDeletedDuringEdit = new AtomicBoolean(false);
         m_linkWasDeletedDuringEdit = new AtomicBoolean(false);
         m_editStateIsDirty = new AtomicBoolean(false);
+
+        if (author != null) {
+            m_authorAtom = new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, MetadataXML.AUTHOR_LABEL, author, false);
+            m_authorAtom.addChangeListener(this);
+        }
+
+        if (legacyDescription != null) {
+            final String description = potentiallyParseOldStyleDescription(legacyDescription);
+
+            m_descriptionAtom = new TextAreaMetaInfoAtom(MetadataXML.DESCRIPTION_LABEL,
+                ((description.trim().length() == 0) ? null : description), false);
+            m_descriptionAtom.addChangeListener(this);
+        }
+
+        if (creationDate != null) {
+            m_creationDateAtom = new DateMetaInfoAtom(MetadataXML.CREATION_DATE_LABEL, creationDate, false);
+            m_creationDateAtom.addChangeListener(this);
+        }
     }
 
     /**

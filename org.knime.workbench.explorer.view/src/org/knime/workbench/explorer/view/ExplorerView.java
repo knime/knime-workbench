@@ -857,7 +857,20 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
      */
     @Override
     public void selectionChanged(final SelectionChangedEvent event) {
-        updateGlobalActions((IStructuredSelection)event.getSelection());
+        final IStructuredSelection iss = (IStructuredSelection)event.getSelection();
+
+        updateGlobalActions(iss);
+
+        final TreeSelection selection = (TreeSelection)m_viewer.getSelection();
+        final Map<AbstractContentProvider, List<AbstractExplorerFileStore>> providerMap =
+            DragAndDropUtils.getProviderMap(selection);
+        for (final AbstractContentProvider provider : providerMap.keySet()) {
+            if (provider.canProvideRemoteMetadataForSelection(iss)) {
+                provider.provideRemoteMetadataToDescriptionView(iss);
+
+                return;
+            }
+        }
     }
 
 }
