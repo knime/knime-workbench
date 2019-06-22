@@ -271,6 +271,16 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public abstract AbstractExplorerFileStore getFileStore(final String fullPath);
 
     /**
+     * Gets the root of this content provider.
+     *
+     * @return The root.
+     * @since 8.4
+     */
+    public AbstractExplorerFileStore getRootStore() {
+        return getFileStore("/");
+    }
+
+    /**
      * @param uri the uri of the item
      * @return the file store for the specified uri
      */

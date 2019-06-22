@@ -51,6 +51,7 @@ package org.knime.workbench.editor2.actions;
 import static org.knime.core.ui.wrapper.Wrapper.unwrap;
 import static org.knime.core.ui.wrapper.Wrapper.wraps;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -70,8 +71,10 @@ import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerView;
 
@@ -140,7 +143,24 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
             if (wraps(model, SubNodeContainer.class)) {
                 SubNodeContainer snc = unwrap((UI)model, SubNodeContainer.class);
                 MetaNodeTemplateInformation templateInfo = snc.getTemplateInformation();
-                if (templateInfo.getRole().equals(Role.Link) && templateInfo.getLinkType().equals(LinkType.Knime)) {
+
+                final URI uri = templateInfo.getSourceURI();
+                final AbstractContentProvider provider = ExplorerMountTable.getMountedContent().get(uri.getHost());
+
+                if (provider == null) {
+                    return false;
+                }
+
+                final AbstractExplorerFileStore fileStore = provider.getFileStore(uri);
+                final AbstractExplorerFileStore rootStore = provider.getRootStore();
+                final String rootPath =
+                    rootStore.getFullName().endsWith("/") ? rootStore.getFullName() : rootStore.getFullName() + "/";
+
+                /* To check if this action is enabled firstly check if the component exists and
+                 * if it's actually part of the mount point. This can be easily tested by getting the root of the mount
+                 * point and check if the Component is a descendant of the root, which is reflected by the full name. */
+                if (templateInfo.getRole().equals(Role.Link) && templateInfo.getLinkType().equals(LinkType.Knime)
+                    && fileStore.getFullName().startsWith(rootPath) && fileStore.fetchInfo().exists()) {
                     return true;
                 }
             }
