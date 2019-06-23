@@ -109,6 +109,20 @@
     "Keep only small tables in memory".
     </dd>
     
+    <dt>org.knime.container.threads.total=<em>&lt;number&gt;</em></dt>
+    <dd>
+	  Sets the maximum number of threads that can be used to write KNIME native output tables. By default this
+	  number equals the number of processors available to the JVM. <i>Note:</i> This value has to be greater than 0.
+    </dd>
+
+    <dt>org.knime.container.threads.instance=<em>&lt;number&gt;</em></dt>
+    <dd>
+	  Sets the maximum number of threads that can be used to write a <i>single</i> KNIME native output table. By
+	  default this number equals the number of processors available to the JVM. <i>Note:</i> This value  has to
+	  be greater than 0 and cannot be larger than <tt>org.knime.container.threads.total</tt>.
+    </dd>
+
+    
     <dt>
       knime.cache.tables=<em>(LRU|SMALL)</em>
     </dt>
@@ -117,7 +131,7 @@
       options are <tt>LRU</tt> and <tt>SMALL</tt>. If <tt>LRU</tt> is selected, tables of any size will be cached and
       dropped from the cache only if (a) they have not been used recently or (b) memory becomes scarce. Flushing to
       disk then happens as specified in <tt>knime.synchronous.io</tt>. If <tt>SMALL</tt> is selected,
-      tables are cached as in earlier versions of KNIME (&lt;v3.8). Specifically, only "small" tables (i.e., tables
+      tables are cached as in earlier versions of KNIME (&lt;v4.0). Specifically, only "small" tables (i.e., tables
       with a maximum of <tt>org.knime.container.cellsinmemory</tt> cells) are kept in memory, unless the node
       generating the table was specifically configured to flush tables to disk or keep tables in memory. Flushing of
       tables to disk then happens synchronously. The default is <tt>LRU</tt>.
