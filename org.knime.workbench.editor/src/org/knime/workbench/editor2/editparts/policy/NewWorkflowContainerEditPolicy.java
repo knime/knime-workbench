@@ -224,7 +224,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         // TODO: if we change API we need to fix that as well.
         if (objectEntityInfo.get("type").textValue().equalsIgnoreCase("WorkflowTemplate")) {
             return handleMetaNodeTemplateDrop(manager.get(), cdr, URI.create(
-                "knime://" + CoreConstants.KNIME_HUB_MOUNT_ID + "/Users" + uri.getPath().replaceFirst("/space", "")),
+                "knime://" + CoreConstants.KNIME_HUB_MOUNT_ID + "/Users" + uri.getPath().replaceFirst("/space/", "/")),
                 true);
         }
         return null;

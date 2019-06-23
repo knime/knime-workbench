@@ -51,24 +51,12 @@ package org.knime.workbench.editor2.editparts.policy;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.HashMap;
 
-import org.eclipse.draw2d.geometry.Point;
-import org.eclipse.gef.commands.Command;
-import org.eclipse.gef.requests.CreationFactory;
 import org.junit.Test;
-import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.ui.wrapper.WorkflowManagerWrapper;
 import org.knime.core.util.KnimeURIUtil;
-import org.knime.workbench.editor2.CreateDropRequest;
-import org.knime.workbench.editor2.CreateDropRequest.RequestType;
-import org.knime.workbench.editor2.commands.CreateMetaNodeTemplateCommand;
-import org.knime.workbench.editor2.commands.CreateNodeCommand;
-import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -261,79 +249,79 @@ public class DragAndDropTests {
         assertThat("Wrong result (non-existent object)", objectEntityInfo == null, is(true));
     }
 
-    /**
-     * Tests that the proper command is returned when a node is dragged and dropped into KAP.
-     */
-    @Test
-    public void testValidNodeDnDCommand() {
-        Command com = execCommand("https://hubdev.knime.com/knime/extensions/ignored/latest/"
-            + "org.knime.base.node.preproc.filter.row.RowFilterNodeFactory");
-        assertThat("Wrong command", com != null && com instanceof CreateNodeCommand, is(true));
-    }
-
-    /**
-     * Tests that the proper command is returned when a component is dragged and dropped into KAP.
-     */
-    @Test
-    public void testValidComponentDnDCommand() {
-        final Command com = execCommand("https://hubdev.knime.com/knime/space/Examples/02_ETL_Data_Manipulation/"
-            + "01_Filtering/07_Four_Techniques_Outlier_Detection/_Templates/MapViz");
-        assertThat("Wrong command", com != null && com instanceof CreateMetaNodeTemplateCommand, is(true));
-    }
-
-    /**
-     * Tests that the proper command is returned when a workflow is dragged and dropped into KAP.
-     */
-    @Test
-    public void testValidWorkflowDnDCommand() {
-        final Command com = execCommand(
-            "https://hubdev.knime.com/knime/space/Examples/04_Analytics/13_Meta_Learning/02_Learning_a_Random_Forest");
-        // TODO: has to be changed once we can DnD workflows
-        assertThat("Wrong command", com == null, is(true));
-    }
-
-    /**
-     * Tests that the proper command is returned when a workflowgroup is dragged and dropped into KAP.
-     */
-    @Test
-    public void testValidWorkflowGroupDnDCommand() {
-        final Command com = execCommand("https://hubdev.knime.com/knime/space/Examples/04_Analytics/13_Meta_Learning");
-        // TODO: has to be changed once we can DnD workflowgroups
-        assertThat("Wrong command", com == null, is(true));
-    }
-
-    private Command execCommand(final String url) {
-        final WorkflowRootEditPart workflowRootEditPart = new WorkflowRootEditPart();
-        workflowRootEditPart.setModel(WorkflowManagerWrapper.wrap(WorkflowManager.ROOT));
-        final NewWorkflowContainerEditPolicy contEditPolicy = new NewWorkflowContainerEditPolicy();
-        contEditPolicy.setHost(workflowRootEditPart);
-        return contEditPolicy.getCommand(createDropRequest(url));
-    }
-
-    private CreateDropRequest createDropRequest(final String url) {
-        final CreateDropRequest req = new CreateDropRequest();
-        final CreationFactory urlFac = new CreationFactory() {
-
-            @Override
-            public Object getNewObject() {
-                try {
-                    return new URL(url);
-                } catch (MalformedURLException e) {
-                }
-                return null;
-            }
-
-            @Override
-            public Object getObjectType() {
-                return URL.class;
-            }
-
-        };
-        req.setFactory(urlFac);
-        req.setRequestType(RequestType.CREATE);
-        req.setType("create child");
-        req.setLocation(new Point());
-        return req;
-    }
+//    /**
+//     * Tests that the proper command is returned when a node is dragged and dropped into KAP.
+//     */
+//    @Test
+//    public void testValidNodeDnDCommand() {
+//        Command com = execCommand("https://hubdev.knime.com/knime/extensions/ignored/latest/"
+//            + "org.knime.base.node.preproc.filter.row.RowFilterNodeFactory");
+//        assertThat("Wrong command", com != null && com instanceof CreateNodeCommand, is(true));
+//    }
+//
+//    /**
+//     * Tests that the proper command is returned when a component is dragged and dropped into KAP.
+//     */
+//    @Test
+//    public void testValidComponentDnDCommand() {
+//        final Command com = execCommand("https://hubdev.knime.com/knime/space/Examples/02_ETL_Data_Manipulation/"
+//            + "01_Filtering/07_Four_Techniques_Outlier_Detection/_Templates/MapViz");
+//        assertThat("Wrong command", com != null && com instanceof CreateMetaNodeTemplateCommand, is(true));
+//    }
+//
+//    /**
+//     * Tests that the proper command is returned when a workflow is dragged and dropped into KAP.
+//     */
+//    @Test
+//    public void testValidWorkflowDnDCommand() {
+//        final Command com = execCommand(
+//            "https://hubdev.knime.com/knime/space/Examples/04_Analytics/13_Meta_Learning/02_Learning_a_Random_Forest");
+//        // TODO: has to be changed once we can DnD workflows
+//        assertThat("Wrong command", com == null, is(true));
+//    }
+//
+//    /**
+//     * Tests that the proper command is returned when a workflowgroup is dragged and dropped into KAP.
+//     */
+//    @Test
+//    public void testValidWorkflowGroupDnDCommand() {
+//        final Command com = execCommand("https://hubdev.knime.com/knime/space/Examples/04_Analytics/13_Meta_Learning");
+//        // TODO: has to be changed once we can DnD workflowgroups
+//        assertThat("Wrong command", com == null, is(true));
+//    }
+//
+//    private Command execCommand(final String url) {
+//        final WorkflowRootEditPart workflowRootEditPart = new WorkflowRootEditPart();
+//        workflowRootEditPart.setModel(WorkflowManagerWrapper.wrap(WorkflowManager.ROOT));
+//        final NewWorkflowContainerEditPolicy contEditPolicy = new NewWorkflowContainerEditPolicy();
+//        contEditPolicy.setHost(workflowRootEditPart);
+//        return contEditPolicy.getCommand(createDropRequest(url));
+//    }
+//
+//    private CreateDropRequest createDropRequest(final String url) {
+//        final CreateDropRequest req = new CreateDropRequest();
+//        final CreationFactory urlFac = new CreationFactory() {
+//
+//            @Override
+//            public Object getNewObject() {
+//                try {
+//                    return new URL(url);
+//                } catch (MalformedURLException e) {
+//                }
+//                return null;
+//            }
+//
+//            @Override
+//            public Object getObjectType() {
+//                return URL.class;
+//            }
+//
+//        };
+//        req.setFactory(urlFac);
+//        req.setRequestType(RequestType.CREATE);
+//        req.setType("create child");
+//        req.setLocation(new Point());
+//        return req;
+//    }
 
 }
