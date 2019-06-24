@@ -1271,15 +1271,40 @@ public class WorkflowEditor extends GraphicalEditor implements
                 updateWorkflowMessages();
             }
 
+
             // Per AP-11628, we want the metadata to be displayed in the Description View when a workflow is opened
-            addAfterOpenRunnable(() -> {
+            final Runnable workflowSelectionForMetadataDisplay = () -> {
                 final GraphicalViewer viewer = getGraphicalViewer();
 
                 viewer.deselectAll();
                 viewer.select(viewer.getRootEditPart().getContents());
 
                 setFocus();
-            });
+            };
+            if (m_hasAfterOpenRun) {
+                KNIMEConstants.GLOBAL_THREAD_POOL.enqueue(() -> {
+                    final Display d = PlatformUI.getWorkbench().getDisplay();
+                    final GraphicalViewer viewer = getGraphicalViewer();
+
+                    // In this case, we potentially already have the workflow root as the selection, so we force
+                    //      a twiddle; this won't work for the case of a workflow undergoing save-as with
+                    //      no content (in which case, if downloaded from a server, the user will not see a refreshed
+                    //      edit button display automatically.)
+                    d.asyncExec(() -> {
+                        final EditPart editorPart = (EditPart)viewer.getRootEditPart().getChildren().get(0);
+                        final List<?> workflowAssets = editorPart.getChildren();
+
+                        viewer.deselectAll();
+                        if (workflowAssets.size() > 0) {
+                            viewer.select((EditPart)workflowAssets.get(0));
+                        }
+                        d.asyncExec(workflowSelectionForMetadataDisplay);
+                    });
+                });
+            } else {
+                addAfterOpenRunnable(workflowSelectionForMetadataDisplay);
+            }
+
 
             // update Actions, as now there's everything available
             updateActions();
