@@ -56,6 +56,7 @@ import java.util.stream.Collectors;
 
 import org.hamcrest.Matchers;
 import org.junit.Test;
+import org.knime.core.util.CoreConstants;
 import org.knime.workbench.explorer.view.preferences.MountSettings;
 
 /**
@@ -76,9 +77,10 @@ public class MountPointPreferencesTest {
         List<MountSettings> initialSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
         int numberOfSettings = initialSettings.size();
 
-        List<String> initialMountIDs= initialSettings.stream().map(ms -> ms.getMountID()).collect(Collectors.toList());
+        List<String> initialMountIDs = initialSettings.stream().map(ms -> ms.getMountID()).collect(Collectors.toList());
 
-        assertThat(initialMountIDs, Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2"));
+        assertThat(initialMountIDs,
+            Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2", CoreConstants.KNIME_HUB_MOUNT_ID));
 
 
 
@@ -101,8 +103,9 @@ public class MountPointPreferencesTest {
 
         List<String> newMountIDs= modifiedSettings.stream().map(ms -> ms.getMountID()).collect(Collectors.toList());
 
-        assertThat(modifiedSettings.size(), Matchers.is(numberOfSettings+1));
-        assertThat(newMountIDs, Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2", newMountSettings.getMountID()));
+        assertThat(modifiedSettings.size(), Matchers.is(numberOfSettings + 1));
+        assertThat(newMountIDs, Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2",
+            CoreConstants.KNIME_HUB_MOUNT_ID, newMountSettings.getMountID()));
 
     }
 
@@ -139,9 +142,10 @@ public class MountPointPreferencesTest {
 
         List<MountSettings> modifiedSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
 
-        assertThat(modifiedSettings.size(), Matchers.equalTo(numberOfSettings));
+        assertThat(modifiedSettings.size(), Matchers.equalTo(numberOfSettings + 1));
 
-        Optional<MountSettings> optoverwritteMS = modifiedSettings.stream().filter(ms -> ms.getMountID().equals("test-mountpoint1")).findFirst();
+        Optional<MountSettings> optoverwritteMS =
+            modifiedSettings.stream().filter(ms -> ms.getMountID().equals("test-mountpoint1")).findFirst();
 
         MountSettings overwrittenMountSettings = optoverwritteMS.orElse(null);
 
