@@ -471,7 +471,10 @@ public class MountSettings {
                     ExplorerMountTable.getContentProviderFactories().values().stream()
                         .filter(e -> CoreConstants.KNIME_HUB_MOUNT_ID.equals(e.getDefaultMountID())).findFirst();
 
-                if (factory.isPresent()) {
+                /* Load the mount point if it isn't loaded already. */
+                if (factory.isPresent() && !loadedSettingsList.stream()
+                    .filter(e -> CoreConstants.KNIME_HUB_MOUNT_ID.equals(e.getDefaultMountID())).findFirst()
+                    .isPresent()) {
                     final MountSettings hubSettings =
                         new MountSettings(factory.get().createContentProvider(CoreConstants.KNIME_HUB_MOUNT_ID));
                     hubSettings.m_mountPointNumber = -2;
