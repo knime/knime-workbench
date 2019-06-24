@@ -57,7 +57,9 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -119,10 +121,14 @@ import org.knime.workbench.editor2.commands.ReplaceReaderNodeCommand;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
+import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.NodeTemplate;
+import org.osgi.service.prefs.BackingStoreException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -223,11 +229,48 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
         // TODO: if we change API we need to fix that as well.
         if (objectEntityInfo.get("type").textValue().equalsIgnoreCase("WorkflowTemplate")) {
-            return handleMetaNodeTemplateDrop(manager.get(), cdr, URI.create(
-                "knime://" + CoreConstants.KNIME_HUB_MOUNT_ID + "/Users" + uri.getPath().replaceFirst("/space/", "/")),
-                true);
+            if (checkHubMountedAndAskToMount()) {
+                return handleMetaNodeTemplateDrop(manager.get(), cdr, URI.create("knime://"
+                    + CoreConstants.KNIME_HUB_MOUNT_ID + "/Users" + uri.getPath().replaceFirst("/space/", "/")), true);
+            }
         }
         return null;
+    }
+
+    private static boolean checkHubMountedAndAskToMount() {
+        final Optional<AbstractContentProviderFactory> hubContentProviderfactory =
+            ExplorerMountTable.getContentProviderFactories().values().stream()
+                .filter(e -> CoreConstants.KNIME_HUB_MOUNT_ID.equals(e.getDefaultMountID())).findFirst();
+        if(!hubContentProviderfactory.isPresent()) {
+            LOGGER.warn("No KNIME Hub mount point registered");
+            return false;
+        }
+        if (!ExplorerMountTable.isMounted(hubContentProviderfactory.get().getID())) {
+            final String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
+            MessageDialog dialog = new MessageDialog(SWTUtilities.getActiveShell(), "Mount KNIME Hub", null,
+                "Components can only be added when the KNIME Hub is mounted. Do you want to mount it?",
+                MessageDialog.QUESTION, dialogButtonLabels, 0);
+            if (dialog.open() == 0) {
+                List<MountSettings> mountSettings;
+                try {
+                    mountSettings =
+                        new ArrayList<MountSettings>(MountSettings.loadSortedMountSettingsFromPreferences());
+                } catch (BackingStoreException e) {
+                    LOGGER.error("Problem loading mount settings", e);
+                    return false;
+                }
+
+                final MountSettings hubSettings = new MountSettings(
+                    hubContentProviderfactory.get().createContentProvider(CoreConstants.KNIME_HUB_MOUNT_ID));
+                mountSettings.add(0, hubSettings);
+
+                MountSettings.saveMountSettings(mountSettings);
+                return true;
+            }
+            return false;
+        } else {
+            return true;
+        }
     }
 
     private Command handleMetaNodeTemplateDrop(final WorkflowManager manager, final CreateDropRequest request,
