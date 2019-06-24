@@ -601,9 +601,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
                 return;
             }
 
-            final boolean isTemplate = (AbstractExplorerFileStore.isComponentTemplate(fs)
-                                            || AbstractExplorerFileStore.isMetaNodeTemplate(fs)
-                                            || AbstractExplorerFileStore.isWorkflowTemplate(fs));
+            final boolean isTemplate = AbstractExplorerFileStore.isWorkflowTemplate(fs);
 
             m_currentWorkflowName = fs.getName();
             if (fs.getContentProvider().isRemote() || isTemplate) {
