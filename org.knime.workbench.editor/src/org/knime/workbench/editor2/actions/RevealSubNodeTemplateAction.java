@@ -155,11 +155,11 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
                 final String rootPath =
                     rootStore.getFullName().endsWith("/") ? rootStore.getFullName() : rootStore.getFullName() + "/";
 
-                /* To check if this action is enabled firstly check if the component exists and
-                 * if it's actually part of the mount point. This can be easily tested by getting the root of the mount
+                /* To check if this action is enabled firstly check if the component exists, the mount point is connected,
+                 * and if it's actually part of the mount point. This can be easily tested by getting the root of the mount
                  * point and check if the Component is a descendant of the root, which is reflected by the full name. */
                 if (templateInfo.getRole().equals(Role.Link) && fileStore.getFullName().startsWith(rootPath)
-                    && fileStore.fetchInfo().exists()) {
+                    && fileStore.fetchInfo().exists() && AbstractExplorerFileStore.isWorkflowGroup(rootStore)) {
                     return true;
                 }
             }
