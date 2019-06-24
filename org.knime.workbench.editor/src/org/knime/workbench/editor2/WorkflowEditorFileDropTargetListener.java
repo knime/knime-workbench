@@ -81,6 +81,9 @@ public class WorkflowEditorFileDropTargetListener
     @Override
     public void drop(final DropTargetEvent event) {
         String file = getFile(event);
+        if(file == null) {
+            return;
+        }
         // Set the factory on the current request
         URL url;
         try {
@@ -96,6 +99,9 @@ public class WorkflowEditorFileDropTargetListener
      * @return
      */
     private String getFile(final DropTargetEvent event) {
+        if(event.data == null) {
+            return null;
+        }
         String[] filePaths = (String[])event.data;
         if (filePaths.length > 1) {
             LOGGER.warn("Can currently only drop one item at a time");
