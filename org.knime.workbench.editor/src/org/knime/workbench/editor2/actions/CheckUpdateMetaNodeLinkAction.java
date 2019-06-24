@@ -66,7 +66,6 @@ import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.progress.IProgressService;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.MetaNodeTemplateInformation.LinkType;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerTemplate;
@@ -344,12 +343,8 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                     }
 
                     String msg = "Unable to check for update on "
-                        + "node \"" + tnc.getNameWithID() + "\""
-                        + (tnc.getTemplateInformation().getLinkType() == LinkType.Web
-                            ? " (host: " + tnc.getTemplateInformation().getSourceURI().getHost() + ")"
-                            : "")
-                        + ": "
-                        + causeMsg;
+                        + "node \"" + tnc.getNameWithID() + "\": "
+                        + cause.getMessage();
                     LOGGER.warn(msg, cause);
                     stat = new Status(IStatus.WARNING , idName, msg, null);
                     overallStatus = IStatus.WARNING;

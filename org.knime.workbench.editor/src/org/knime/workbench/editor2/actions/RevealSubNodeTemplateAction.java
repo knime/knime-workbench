@@ -60,7 +60,6 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.ui.IViewReference;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
-import org.knime.core.node.workflow.MetaNodeTemplateInformation.LinkType;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeID;
@@ -159,8 +158,8 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
                 /* To check if this action is enabled firstly check if the component exists and
                  * if it's actually part of the mount point. This can be easily tested by getting the root of the mount
                  * point and check if the Component is a descendant of the root, which is reflected by the full name. */
-                if (templateInfo.getRole().equals(Role.Link) && templateInfo.getLinkType().equals(LinkType.Knime)
-                    && fileStore.getFullName().startsWith(rootPath) && fileStore.fetchInfo().exists()) {
+                if (templateInfo.getRole().equals(Role.Link) && fileStore.getFullName().startsWith(rootPath)
+                    && fileStore.fetchInfo().exists()) {
                     return true;
                 }
             }
