@@ -144,6 +144,11 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
                 MetaNodeTemplateInformation templateInfo = snc.getTemplateInformation();
 
                 final URI uri = templateInfo.getSourceURI();
+
+                if (uri == null) {
+                    return false;
+                }
+
                 final AbstractContentProvider provider = ExplorerMountTable.getMountedContent().get(uri.getHost());
 
                 if (provider == null) {
