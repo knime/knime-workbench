@@ -86,6 +86,10 @@ import org.xml.sax.helpers.AttributesImpl;
 /**
  * This class provides a UI supported form of the metadata representation, as a wrapper with augmented functionality.
  *
+ * As part of https://knime-com.atlassian.net/browse/AP-12082 is was decided that the license field not be written in
+ *  the save metadata; i've gated this condition with a static boolean below (search 'AP-12082') so that future
+ *  generations can turn the license stuff back on when we support it more widely.
+ *
  * @author loki der quaeler
  */
 public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
@@ -99,6 +103,9 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
     private static final String PRE_38_METADATA_LICENSE_KEYWORD = "LICENSE";
 
     private static final String URL_LEGACY_KEYWORD_TYPE_NAME = "Website";
+
+    // AP-12082
+    private static final boolean WRITE_LICENSE_IN_OLD_STYLE_METADATA = false;
 
     private static final HashSet<String> PRE_38_KEYWORDS;
     static {
@@ -764,6 +771,7 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
 
     // Using "Specifications for workflows on EXAMPLES Server.pdf" as guidance, create an old style description
     //      block which wraps up title, description, tags, and links (and we've added in license now.)
+    @SuppressWarnings("unused")  // because we currently have a dead code block due to WRITE_LICENSE_IN_OLD_STYLE_METADATA = false
     private String createOldStyleDescriptionBlock() {
         final StringBuilder sb = new StringBuilder();
 
@@ -800,7 +808,7 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
             sb.append('\n');
         }
 
-        if (m_licenseAtom.hasContent()) { // is currently always true but who knows about the future
+        if (m_licenseAtom.hasContent() && WRITE_LICENSE_IN_OLD_STYLE_METADATA) {
             sb.append(PRE_38_METADATA_LICENSE_KEYWORD).append(": ").append(m_licenseAtom.getValue()).append('\n');
         }
 

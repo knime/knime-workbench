@@ -141,17 +141,21 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
     }
 
     /**
-     * This provides a sew-in point for the display of remotely fetched metadata as requested in AP-12082
+     * This provides a sew-in point for the display of remotely fetched metadata as requested in AP-12082; if
+     *  the author, description, and creation date are all null, it will be interpretted as a failure to
+     *  fetch remote metadata.
      *
-     * @param author
-     * @param legacyDescription
-     * @param creationDate
+     * @param author the author, or null
+     * @param legacyDescription the legacy-style description, or null
+     * @param creationDate the creation date, or null
+     * @param shouldShowCCBY40License if true, the CC-BY-4.0 license will be shown in the UI
      */
     public void displayRemoteMetadata(final String author, final String legacyDescription,
-        final ZonedDateTime creationDate) {
+        final ZonedDateTime creationDate, final boolean shouldShowCCBY40License) {
         PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
             final GregorianCalendar c = (creationDate != null) ? GregorianCalendar.from(creationDate) : null;
-            m_workflowMetaView.handleAsynchronousRemoteMetadataPopulation(author, legacyDescription, c);
+            m_workflowMetaView.handleAsynchronousRemoteMetadataPopulation(author, legacyDescription, c,
+                shouldShowCCBY40License);
         });
     }
 

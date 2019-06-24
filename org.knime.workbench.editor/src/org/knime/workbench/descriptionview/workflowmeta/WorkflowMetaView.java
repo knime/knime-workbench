@@ -120,6 +120,10 @@ import org.knime.workbench.explorer.view.ContentObject;
  *
  * The genesis for this view is https://knime-com.atlassian.net/browse/AP-11628
  *
+ * As part of https://knime-com.atlassian.net/browse/AP-12082 is was decided that the license field would only be shown
+ *  in cases where the metadata was coming from a KNIME Hub server; i've gated this condition with a static boolean
+ *  below (search 'AP-12082') so that future generations can turn the license stuff back on when we support it more widely.
+ *
  * @author loki der quaeler
  */
 public class WorkflowMetaView extends ScrolledComposite implements MetadataModelFacilitator.ModelObserver {
@@ -144,6 +148,10 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         "The metadata will be displayed here momentarily if it is able to be fetched. You may also download it "
             + "and view it locally (by double-clicking on it in the KNIME Explorer.)";
 
+    private static final String SERVER_WORKFLOW_FETCH_FAILED_TEXT =
+            "The metadata failed to be fetched from the server. If you would like to view its metadata, you may "
+                + "download it and then view it locally by double-clicking on the workflow in the KNIME Explorer.";
+
     private static final String TEMPLATE_WORKFLOW_TEXT =
         "Metadata cannot be shown nor edited for the type of item you have selected in the KNIME Explorer.";
 
@@ -156,6 +164,9 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private static final int HEADER_MARGIN_RIGHT = 9;
     private static final int LEFT_INDENT_HEADER_SUB_PANES = 9;
     private static final int TOTAL_HEADER_PADDING = HEADER_MARGIN_RIGHT + (2 * LEFT_INDENT_HEADER_SUB_PANES);
+
+    // AP-12082
+    private static final boolean SHOW_LICENSE_ONLY_FOR_HUB = true;
 
     private static Text addLabelTextFieldCouplet(final Composite parent, final String labelText,
         final String placeholderText) {
@@ -208,6 +219,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
     private final Composite m_remoteServerNotificationPane;
 
+    private final Composite m_remoteServerFailureNotificationPane;
+
     private final Composite m_noUsableMetadataNotificationPane;
 
     private final Composite m_titleSection;
@@ -254,10 +267,12 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private MetadataModelFacilitator m_modelFacilitator;
 
     private final AtomicBoolean m_workflowMetadataNeedBeFetchedFromServer;
+    private final AtomicBoolean m_workflowMetadataServerFetchFailed;
     private final AtomicBoolean m_workflowIsATemplate;
 
-    private final AtomicBoolean m_metadataCanBeEdited;
+    private final AtomicBoolean m_shouldDisplayLicenseSection;
 
+    private final AtomicBoolean m_metadataCanBeEdited;
     private final AtomicBoolean m_inEditMode;
 
     private final AtomicBoolean m_workflowNameHasChanged;
@@ -276,9 +291,12 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
         m_inEditMode = new AtomicBoolean(false);
         m_metadataCanBeEdited = new AtomicBoolean(false);
+
         m_workflowMetadataNeedBeFetchedFromServer = new AtomicBoolean(false);
+        m_workflowMetadataServerFetchFailed = new AtomicBoolean(false);
         m_workflowIsATemplate = new AtomicBoolean(false);
 
+        m_shouldDisplayLicenseSection = new AtomicBoolean(!SHOW_LICENSE_ONLY_FOR_HUB);
         m_workflowNameHasChanged = new AtomicBoolean(false);
 
         m_lastRenderedViewportWidth = new AtomicInteger(Integer.MIN_VALUE);
@@ -348,6 +366,24 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_remoteServerNotificationPane.setLayout(new GridLayout(1, false));
         Label l = new Label(m_remoteServerNotificationPane, SWT.CENTER | SWT.WRAP);
         l.setText(SERVER_WORKFLOW_TEXT);
+        l.setForeground(TEXT_COLOR);
+        l.setFont(ITALIC_CONTENT_FONT);
+        gd.horizontalAlignment = SWT.LEFT;
+        gd.verticalAlignment = SWT.BOTTOM;
+        gd.grabExcessHorizontalSpace = true;
+        l.setLayoutData(gd);
+
+
+
+        m_remoteServerFailureNotificationPane = new Composite(m_contentPane, SWT.NONE);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+        gd.verticalIndent = 38;
+        m_remoteServerFailureNotificationPane.setLayoutData(gd);
+        m_remoteServerFailureNotificationPane.setLayout(new GridLayout(1, false));
+        l = new Label(m_remoteServerFailureNotificationPane, SWT.CENTER | SWT.WRAP);
+        l.setText(SERVER_WORKFLOW_FETCH_FAILED_TEXT);
         l.setForeground(TEXT_COLOR);
         l.setFont(ITALIC_CONTENT_FONT);
         gd.horizontalAlignment = SWT.LEFT;
@@ -471,11 +507,13 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         configureFloatingHeaderBarButtons();
 
         SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane, false);
+        SWTUtilities.spaceReclaimingSetVisible(m_remoteServerFailureNotificationPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_titleContentPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_descriptionContentPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_tagsContentPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_linksContentPane, false);
+        SWTUtilities.spaceReclaimingSetVisible(m_licenseSection, m_shouldDisplayLicenseSection.get());
 
         setMinWidth(400);
         setMinHeight(625);
@@ -555,12 +593,16 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
      * this item prior to receiving this invocation, and so <code>m_currentWorkflowName</code> has been correctly
      * populated.
      *
+     * If the author, description, and creation date are all null, it will be interpretted as a failure to fetch remote
+     * metadata.
+     *
      * @param author the author, or null
      * @param legacyDescription the legacy-style description, or null
      * @param creationDate the creation date, or null
+     * @param shouldShowCCBY40License if true, the CC-BY-4.0 license will be shown in the UI
      */
     public void handleAsynchronousRemoteMetadataPopulation(final String author, final String legacyDescription,
-        final Calendar creationDate) {
+        final Calendar creationDate, final boolean shouldShowCCBY40License) {
         m_modelFacilitator = new MetadataModelFacilitator(author, legacyDescription, creationDate);
         m_modelFacilitator.parsingHasFinished();
         m_modelFacilitator.setModelObserver(this);
@@ -573,7 +615,10 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_metadataFile = null;
 
         m_workflowMetadataNeedBeFetchedFromServer.set(false);
+        m_workflowMetadataServerFetchFailed
+            .set((author == null) && (legacyDescription == null) && (creationDate == null));
         m_workflowIsATemplate.set(false);
+        m_shouldDisplayLicenseSection.set(shouldShowCCBY40License);
         getDisplay().asyncExec(() -> {
             updateDisplay();
         });
@@ -590,7 +635,9 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         final boolean canEditMetadata;
 
         m_workflowMetadataNeedBeFetchedFromServer.set(false);
+        m_workflowMetadataServerFetchFailed.set(false);
         m_workflowIsATemplate.set(false);
+        m_shouldDisplayLicenseSection.set(!SHOW_LICENSE_ONLY_FOR_HUB);
         if (knimeExplorerItem) {
             final AbstractExplorerFileStore fs = ((ContentObject) o).getFileStore();
             final boolean isWorkflow = AbstractExplorerFileStore.isWorkflow(fs);
@@ -681,9 +728,12 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     }
 
     private void updateDisplay() {
-        if (m_workflowMetadataNeedBeFetchedFromServer.get() || m_workflowIsATemplate.get()) {
+        if (m_workflowMetadataNeedBeFetchedFromServer.get() || m_workflowMetadataServerFetchFailed.get()
+                    || m_workflowIsATemplate.get()) {
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane,
                 m_workflowMetadataNeedBeFetchedFromServer.get());
+            SWTUtilities.spaceReclaimingSetVisible(m_remoteServerFailureNotificationPane,
+                m_workflowMetadataServerFetchFailed.get());
             SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, m_workflowIsATemplate.get());
 
             SWTUtilities.spaceReclaimingSetVisible(m_titleSection, false);
@@ -697,6 +747,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             final boolean editMode = m_inEditMode.get();
 
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane, false);
+            SWTUtilities.spaceReclaimingSetVisible(m_remoteServerFailureNotificationPane, false);
             SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, false);
 
             SWTUtilities.spaceReclaimingSetVisible(m_titleSection, true);
@@ -704,7 +755,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             SWTUtilities.spaceReclaimingSetVisible(m_authorSection, true);
             SWTUtilities.spaceReclaimingSetVisible(m_tagsSection, true);
             SWTUtilities.spaceReclaimingSetVisible(m_linksSection, true);
-            SWTUtilities.spaceReclaimingSetVisible(m_licenseSection, true);
+            SWTUtilities.spaceReclaimingSetVisible(m_licenseSection, m_shouldDisplayLicenseSection.get());
             SWTUtilities.spaceReclaimingSetVisible(m_creationDateSection, true);
 
             SWTUtilities.removeAllChildren(m_titleContentPane);
@@ -804,10 +855,6 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
                     gd.verticalIndent = Math.max(0, (gd.heightHint - 22));
                 }
                 m_licenseContentPane.setLayoutData(gd);
-
-                SWTUtilities.spaceReclaimingSetVisible(m_licenseSection, true);
-            } else {
-                SWTUtilities.spaceReclaimingSetVisible(m_licenseSection, false);
             }
 
             SWTUtilities.removeAllChildren(m_creationDateContentPane);
