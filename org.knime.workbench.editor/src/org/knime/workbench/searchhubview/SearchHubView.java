@@ -83,6 +83,8 @@ public final class SearchHubView extends ViewPart {
 
     private static final String URL_PREFIX = "https://hub.knime.com/search?q=";
 
+    private static final String URL_POSTFIX = "&src=knimeapp";
+
     private static final String LINUX_LABEL_TEXT = "Search:";
 
     private static final String HINT_TEXT = "Search workflows, nodes, and more...";
@@ -130,7 +132,7 @@ public final class SearchHubView extends ViewPart {
 
                     if (searchTerms.length() > 0) {
                         try {
-                            Program.launch(URL_PREFIX + URLEncoder.encode(searchTerms, "UTF-8"));
+                            Program.launch(URL_PREFIX + URLEncoder.encode(searchTerms, "UTF-8") + URL_POSTFIX);
                             m_searchTextField.setText("");
                         } catch (final Exception e) {
                             LOGGER.error("Problem attempting to invoke hub search: " + e);
