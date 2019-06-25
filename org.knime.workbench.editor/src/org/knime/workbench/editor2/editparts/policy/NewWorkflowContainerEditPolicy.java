@@ -238,10 +238,11 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
     }
 
     private static boolean checkHubMountedAndAskToMount() {
+        final String hubMPId = CoreConstants.KNIME_HUB_MOUNT_ID;
         final Optional<AbstractContentProviderFactory> hubContentProviderfactory =
             ExplorerMountTable.getContentProviderFactories().values().stream()
-                .filter(e -> CoreConstants.KNIME_HUB_MOUNT_ID.equals(e.getDefaultMountID())).findFirst();
-        if(!hubContentProviderfactory.isPresent()) {
+                .filter(e -> hubMPId.equals(e.getDefaultMountID())).findFirst();
+        if (!hubContentProviderfactory.isPresent()) {
             LOGGER.warn("No KNIME Hub mount point registered");
             return false;
         }
@@ -260,9 +261,15 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                     return false;
                 }
 
-                final MountSettings hubSettings = new MountSettings(
-                    hubContentProviderfactory.get().createContentProvider(CoreConstants.KNIME_HUB_MOUNT_ID));
-                mountSettings.add(0, hubSettings);
+                Optional<MountSettings> existingHubSettings =
+                    mountSettings.stream().filter(ms -> ms.getMountID().equals(hubMPId)).findFirst();
+                if (existingHubSettings.isPresent()) {
+                    existingHubSettings.get().setActive(true);
+                } else {
+                    final MountSettings hubSettings =
+                        new MountSettings(hubContentProviderfactory.get().createContentProvider(hubMPId));
+                    mountSettings.add(0, hubSettings);
+                }
 
                 MountSettings.saveMountSettings(mountSettings);
                 return true;
