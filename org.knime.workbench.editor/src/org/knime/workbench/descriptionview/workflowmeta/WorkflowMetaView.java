@@ -652,7 +652,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
             m_currentWorkflowName = fs.getName();
             if (fs.getContentProvider().isRemote() || isTemplate) {
-                m_workflowMetadataNeedBeFetchedFromServer.set(fs.getContentProvider().isRemote());
+                m_workflowMetadataNeedBeFetchedFromServer
+                    .set(fs.getContentProvider().isRemote() && !fs.fetchInfo().isWorkflowTemplate());
                 m_workflowIsATemplate.set(isTemplate);
 
                 metadataFile = null;
