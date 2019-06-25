@@ -703,7 +703,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                         break;
                     case RECOMMENDATIONS:
                         final int tipsCount = m_namesAndToolTips.size();
-                        final int otherColumnsWeighting = 60 / tipsCount;
+                        final int otherColumnsWeighting = 60 / Math.max(tipsCount, 1);
 
                         table.removeMouseListener(m_openPrefPageMouseListener);
                         table.setHeaderVisible(true);
