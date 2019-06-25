@@ -230,8 +230,14 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         // TODO: if we change API we need to fix that as well.
         if (objectEntityInfo.get("type").textValue().equalsIgnoreCase("WorkflowTemplate")) {
             if (checkHubMountedAndAskToMount()) {
-                return handleMetaNodeTemplateDrop(manager.get(), cdr, URI.create("knime://"
-                    + CoreConstants.KNIME_HUB_MOUNT_ID + "/Users" + uri.getPath().replaceFirst("/space/", "/")), true);
+                String newPath = uri.getPath().replaceFirst("/space/", "/");
+                try {
+                    return handleMetaNodeTemplateDrop(manager.get(), cdr,
+                        createEncodedURI("knime://" + CoreConstants.KNIME_HUB_MOUNT_ID + "/Users" + newPath), true);
+                } catch (URIException | URISyntaxException e) {
+                    LOGGER.error("Problem creating knime url from '" + uri + "'", e);
+                    return null;
+                }
             }
         }
         return null;
@@ -530,9 +536,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 uri = url.toURI();
             } else {
                 //URL is not yet encoded!
-                uri =
-                    new URI(new org.apache.commons.httpclient.URI(url.toString(), false, StandardCharsets.UTF_8.name())
-                        .toString());
+                uri = createEncodedURI(url.toString());
             }
         } catch (URISyntaxException | URIException | UnsupportedEncodingException e) {
             LOGGER.error("The URL '" + url + "' couldn't be turned into an URI", e);
@@ -549,6 +553,11 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
 
     private static boolean isURLEncoded(final String urlString) throws UnsupportedEncodingException {
         return !URLDecoder.decode(urlString, StandardCharsets.UTF_8.name()).equals(urlString);
+    }
+
+    private static URI createEncodedURI(final String uri)
+        throws URIException, URISyntaxException {
+        return new URI(new org.apache.commons.httpclient.URI(uri, false, StandardCharsets.UTF_8.name()).toString());
     }
 
     @SuppressWarnings("static-method")
