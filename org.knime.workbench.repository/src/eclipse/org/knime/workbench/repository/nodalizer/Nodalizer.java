@@ -780,7 +780,8 @@ public class Nodalizer implements IApplication {
 
     private static boolean siteEnabledByDefault(final String url) {
         return url.contains("://update.knime.com/analytics-platform")
-            || url.contains("://update.knime.com/community-contributions/trusted/");
+            || url.contains("://update.knime.com/community-contributions/trusted/")
+            || url.contains("://update.knime.com/partner/");
     }
 
     private static boolean isTrusted(final String url) {
