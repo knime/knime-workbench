@@ -303,7 +303,10 @@ public final class ImageRepository {
         /** ServerSpace Workflow Hub Icon. */
         WorkflowHub("icons/server_space/workflow_hub.png"),
         /** ServerSpace Workflow Hub Icon yellow. */
-        WorkflowHubYellow("icons/server_space/workflow_hub_yellow.png");
+        WorkflowHubYellow("icons/server_space/workflow_hub_yellow.png"),
+
+        /** Completely transparent icon */
+        EMPTY_ICON("icons/empty.png");
 
         private final URL m_url;
 
