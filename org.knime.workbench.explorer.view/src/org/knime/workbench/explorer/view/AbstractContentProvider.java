@@ -494,9 +494,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 }
             }
 
-            if (!metaTemplateDropPrepareForSave(templateLoc, directory,
-                    isOverwrite)) {
-                LOGGER.debug("Preparation for MetaTemplate save failed.");
+            if (!metaTemplateDropPrepareForSave(templateLoc, directory, isOverwrite, false)) {
+                LOGGER.debug("Preparation for saving shared metanode failed.");
                 return false;
             }
             try {
@@ -519,9 +518,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     ((RemoteExplorerFileStore)templateLoc).createSnapshot(info.getComment());
                 }
             } catch (Exception e) {
-                String error = "Unable to save template: " + e.getMessage();
+                String error = "Unable to save shared metanode: " + e.getMessage();
                 LOGGER.warn(error, e);
-                MessageDialog.openError(shell, "Error while writing template",
+                MessageDialog.openError(shell, "Error while writing shared metanode",
                         error);
             }
 
@@ -653,21 +652,35 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     /**
-     * Called right before the meta template is saved to the tmpDir. Locals may
-     * delete existing/overwritten templates. Target could be locked for
-     * writing.
+     * Called right before the meta template is saved to the tmpDir. Locals may delete existing/overwritten templates.
+     * Target could be locked for writing.
      *
      * @param target the final target
-     * @param tmpDir the dir provided by
-     *            {@link #metaTemplateDropGetTempDir(AbstractExplorerFileStore)}
-     * @param overwrite if true the target/tmpDir should be cleaned for the
-     *            following template save
-     * @return true if drop can proceed. If false is return the drop method
-     *         silently return.
+     * @param tmpDir the dir provided by {@link #metaTemplateDropGetTempDir(AbstractExplorerFileStore)}
+     * @param overwrite if true the target/tmpDir should be cleaned for the following template save
+     * @return true if drop can proceed. If false is return the drop method silently return.
+     * @deprecated use {@link #metaTemplateDropPrepareForSave(AbstractExplorerFileStore, File, boolean, boolean)}
+     *             instead
      */
-    protected boolean metaTemplateDropPrepareForSave(
-            final AbstractExplorerFileStore target, final File tmpDir,
-            final boolean overwrite) {
+    @Deprecated
+    protected boolean metaTemplateDropPrepareForSave(final AbstractExplorerFileStore target, final File tmpDir,
+        final boolean overwrite) {
+        return metaTemplateDropPrepareForSave(target, tmpDir, overwrite, false);
+    }
+
+    /**
+     * Called right before the meta template is saved to the tmpDir. Locals may delete existing/overwritten templates.
+     * Target could be locked for writing.
+     *
+     * @param target the final target
+     * @param tmpDir the dir provided by {@link #metaTemplateDropGetTempDir(AbstractExplorerFileStore)}
+     * @param overwrite if true the target/tmpDir should be cleaned for the following template save
+     * @param isSubNode whether the template is a subnode / component (as opposed to a metanode)
+     * @return true if drop can proceed. If false is return the drop method silently return.
+     * @since 8.4
+     */
+    protected boolean metaTemplateDropPrepareForSave(final AbstractExplorerFileStore target, final File tmpDir,
+        final boolean overwrite, final boolean isSubNode) {
         /*
          * default implementation assumes a local target file store and tries to
          * lock it for writing (and deletes it to provide a clean target)
@@ -722,7 +735,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             if (!oldName.equals(newName)) {
                 msg = msg + "\n(The node will be renamed to \"" + newName + "\".)";
             }
-            final String title = "Link " + (isSubnode ? "Component" : "Metanode") + " Template";
+            final String title = "Link Shared " + (isSubnode ? "Component" : "Metanode");
 
             final LinkPrompt dlg = new LinkPrompt(activeShell, title, msg, allowedLinkTypes);
             if (dlg.open() == Window.CANCEL) {
@@ -946,9 +959,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 }
             }
 
-            if (!metaTemplateDropPrepareForSave(templateLoc, directory,
-                    isOverwrite)) {
-                LOGGER.debug("Preparation for MetaTemplate save failed.");
+            if (!metaTemplateDropPrepareForSave(templateLoc, directory, isOverwrite, true)) {
+                LOGGER.debug("Preparation for saving shared component failed.");
                 return false;
             }
             try {
