@@ -49,7 +49,6 @@ package org.knime.workbench.editor2.editparts.policy;
 
 import static java.util.Arrays.asList;
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
-import static org.knime.core.util.KnimeURIUtil.isHubURI;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -57,17 +56,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
-
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.Response;
 
 import org.apache.commons.httpclient.URIException;
 import org.eclipse.core.runtime.IBundleGroup;
@@ -97,9 +86,12 @@ import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.util.CoreConstants;
-import org.knime.core.util.KnimeURIUtil;
-import org.knime.core.util.KnimeURIUtil.HubEntityType;
+import org.knime.workbench.core.imports.EntityImport;
+import org.knime.workbench.core.imports.ExtensionImport;
+import org.knime.workbench.core.imports.NodeImport;
+import org.knime.workbench.core.imports.RepoObjectImport;
+import org.knime.workbench.core.imports.RepoObjectImport.RepoObjectType;
+import org.knime.workbench.core.imports.URIImporterFinder;
 import org.knime.workbench.editor2.CreateDropRequest;
 import org.knime.workbench.editor2.CreateDropRequest.RequestType;
 import org.knime.workbench.editor2.InstallMissingNodesJob;
@@ -121,17 +113,10 @@ import org.knime.workbench.editor2.commands.ReplaceReaderNodeCommand;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
-import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
-import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.NodeTemplate;
-import org.osgi.service.prefs.BackingStoreException;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Container policy, handles the creation of new nodes that are inserted into the workflow. The request wraps an object
@@ -193,23 +178,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             } else if (obj instanceof ReaderNodeSettings) {
                 return handleFileDrop(manager.get(), (ReaderNodeSettings)obj, cdr);
             } else if (obj instanceof URL) {
-                URL url = (URL)obj;
-                URI uri;
-                if ((uri = checkEncodeAndTransformURL(url)) != null) {
-                    switch (HubEntityType.getHubEntityType(uri)) {
-                        case OBJECT:
-                            return handleObjectDropFromURI(manager, cdr, uri);
-                        case NODE:
-                            return handleNodeDropFromURI(managerUI, uri, cdr);
-                        case EXTENSION:
-                            return handleExtensionDropFromURI(uri);
-                        default:
-                            showPopup("Unknown URL dropped!",
-                                "URL (" + uri.getPath() + ") can't be dropped to KNIME workbench!", SWT.ICON_WARNING);
-                            LOGGER.debug("Unknown URL dropped: " + uri);
-                            return null;
-                    }
-                }
+                return handleURLDrop(managerUI, manager, (URL)obj, cdr);
             } else {
                 LOGGER.error("Illegal drop object: " + obj);
             }
@@ -217,73 +186,34 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         return null;
     }
 
-    private Command handleObjectDropFromURI(final Optional<WorkflowManager> manager, final CreateDropRequest cdr,
-        final URI uri) {
-        // If the entity corresponds to a workflow (group) the action will be simply ignored
-        final JsonNode objectEntityInfo = callHubEndpoint(KnimeURIUtil.getObjectEntityEndpointURI(uri));
-        if (objectEntityInfo == null) {
-            showPopup("Component cannot be added!", "No component found on the KNIME Hub at " + uri.getPath() + ".",
-                SWT.ICON_WARNING);
-            LOGGER.debug("Component defined in the URL: " + uri);
-            return null;
-        }
-        // TODO: if we change API we need to fix that as well.
-        if (objectEntityInfo.get("type").textValue().equalsIgnoreCase("WorkflowTemplate")) {
-            if (checkHubMountedAndAskToMount()) {
-                String newPath = uri.getPath().replaceFirst("/space/", "/");
-                try {
-                    return handleMetaNodeTemplateDrop(manager.get(), cdr,
-                        createEncodedURI("knime://" + CoreConstants.KNIME_HUB_MOUNT_ID + "/Users" + newPath), true);
-                } catch (URIException | URISyntaxException e) {
-                    LOGGER.error("Problem creating knime url from '" + uri + "'", e);
-                    return null;
+    private Command handleURLDrop(final WorkflowManagerUI managerUI, final Optional<WorkflowManager> manager, final URL url,
+        final CreateDropRequest cdr) {
+        URI uri;
+        if ((uri = convertToEncodedURI(url)) != null) {
+            Optional<EntityImport> entityImport = URIImporterFinder.getInstance().createEntityImportFor(uri);
+            if (entityImport.isPresent()) {
+                if (entityImport.get() instanceof RepoObjectImport) {
+                    return handleObjectDropFromURI(manager, cdr, (RepoObjectImport)entityImport.get());
+                } else if (entityImport.get() instanceof NodeImport) {
+                    return handleNodeDropFromURI(managerUI, (NodeImport)entityImport.get(), cdr);
+                } else if (entityImport.get() instanceof ExtensionImport) {
+                    return handleExtensionDropFromURI((ExtensionImport)entityImport.get());
                 }
             }
+            showPopup("Unknown URL dropped!", "URL (" + uri.getPath() + ") can't be dropped to KNIME workbench!",
+                SWT.ICON_WARNING);
+            LOGGER.debug("Unknown URL dropped: " + uri);
         }
         return null;
     }
 
-    private static boolean checkHubMountedAndAskToMount() {
-        final String hubMPId = CoreConstants.KNIME_HUB_MOUNT_ID;
-        final Optional<AbstractContentProviderFactory> hubContentProviderfactory =
-            ExplorerMountTable.getContentProviderFactories().values().stream()
-                .filter(e -> hubMPId.equals(e.getDefaultMountID())).findFirst();
-        if (!hubContentProviderfactory.isPresent()) {
-            LOGGER.warn("No KNIME Hub mount point registered");
-            return false;
+    private Command handleObjectDropFromURI(final Optional<WorkflowManager> manager, final CreateDropRequest cdr,
+        final RepoObjectImport uriImport) {
+        // If the entity corresponds to a workflow (group) the action will be simply ignored
+        if (uriImport.getType() == RepoObjectType.WorkflowTemplate) {
+            return handleMetaNodeTemplateDrop(manager.get(), cdr, uriImport.getKnimeURI(), true);
         }
-        if (!ExplorerMountTable.isMounted(hubContentProviderfactory.get().getID())) {
-            final String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
-            MessageDialog dialog = new MessageDialog(SWTUtilities.getActiveShell(), "Mount KNIME Hub", null,
-                "Components can only be added when the KNIME Hub is mounted. Do you want to mount it?",
-                MessageDialog.QUESTION, dialogButtonLabels, 0);
-            if (dialog.open() == 0) {
-                List<MountSettings> mountSettings;
-                try {
-                    mountSettings =
-                        new ArrayList<MountSettings>(MountSettings.loadSortedMountSettingsFromPreferences());
-                } catch (BackingStoreException e) {
-                    LOGGER.error("Problem loading mount settings", e);
-                    return false;
-                }
-
-                Optional<MountSettings> existingHubSettings =
-                    mountSettings.stream().filter(ms -> ms.getMountID().equals(hubMPId)).findFirst();
-                if (existingHubSettings.isPresent()) {
-                    existingHubSettings.get().setActive(true);
-                } else {
-                    final MountSettings hubSettings =
-                        new MountSettings(hubContentProviderfactory.get().createContentProvider(hubMPId));
-                    mountSettings.add(0, hubSettings);
-                }
-
-                MountSettings.saveMountSettings(mountSettings);
-                return true;
-            }
-            return false;
-        } else {
-            return true;
-        }
+        return null;
     }
 
     private Command handleMetaNodeTemplateDrop(final WorkflowManager manager, final CreateDropRequest request,
@@ -313,16 +243,8 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
     }
 
-    private static Command handleExtensionDropFromURI(final URI uri) {
-        final JsonNode extensionEntityInfo = callHubEndpoint(KnimeURIUtil.getExtensionEndpointURI(uri));
-        if (extensionEntityInfo == null) {
-            showPopup("Extension cannot be installed!", "No extension found on the KNIME Hub at " + uri.getPath() + ".",
-                SWT.ICON_WARNING);
-            LOGGER.debug("Extension defined in the URL: " + uri + " can't be installed.");
-            return null;
-        }
-        // TODO: if we change API we need to fix that as well.
-        handleExtensionDrop(extensionEntityInfo.get("name").asText(), extensionEntityInfo.get("symbolicName").asText());
+    private static Command handleExtensionDropFromURI(final ExtensionImport extImport) {
+        handleExtensionDrop(extImport.getName(), extImport.getSymbolicName());
         return null;
     }
 
@@ -396,24 +318,9 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
     }
 
-    private Command handleNodeDropFromURI(final WorkflowManagerUI manager, final URI knimeUri,
+    private Command handleNodeDropFromURI(final WorkflowManagerUI manager, final NodeImport nodeImport,
         final CreateDropRequest request) {
-        final JsonNode nodeInfo = callHubEndpoint(KnimeURIUtil.getNodeEndpointURI(knimeUri), "details", "full");
-        if (nodeInfo == null) {
-            showPopup("Node cannot be added!", "No node found on the KNIME Hub at " + knimeUri.getPath() + ".",
-                SWT.ICON_WARNING);
-            LOGGER.debug("Node defined in the URL: " + knimeUri + " can't be added.");
-            return null;
-        }
-
-        final JsonNode bundleInfo = nodeInfo.get("bundleInformation");
-        final String featureName = bundleInfo.get("featureName").textValue();
-        final String featureSymbolicName = bundleInfo.get("featureSymbolicName").textValue();
-        // test with weka node drag drop from hub.dev
-        final String nodeFactory = getCanonicalNodeFactory(nodeInfo);
-
-        //assumes that ':' is used to separate a dynamic node factory and the node name
-        //(and that there is no other ':' in the node-factory string!)
+        String nodeFactory = nodeImport.getCanonicalNodeFactory();
         NodeTemplate nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(nodeFactory);
         if (nodeTemplate != null) {
             try {
@@ -424,6 +331,8 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 return null;
             }
         } else {
+            String featureName = nodeImport.getFeatureName();
+            String featureSymbolicName = nodeImport.getFeatureSymbolicName();
             //try installing the missing extension
             String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
             Shell shell = SWTUtilities.getActiveShell();
@@ -478,16 +387,6 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
     }
 
-    private static String getCanonicalNodeFactory(final JsonNode nodeInfo) {
-        String factory = nodeInfo.get("factoryName").textValue();
-        // hub saves dynamic nodes as {node_factory_class_name}:{randomId}
-        final int idx = factory.indexOf(":");
-        if (idx >= 0) {
-            factory = factory.substring(0, idx) + "#" + nodeInfo.get("title").textValue();
-        }
-        return factory;
-    }
-
     @Override
     public EditPart getTargetEditPart(final Request request) {
         final Object type = request.getType();
@@ -528,7 +427,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         return false;
     }
 
-    private static URI checkEncodeAndTransformURL(final URL url) {
+    private static URI convertToEncodedURI(final URL url) {
         URI uri;
         try {
             if (isURLEncoded(url.toString())) {
@@ -540,12 +439,6 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             }
         } catch (URISyntaxException | URIException | UnsupportedEncodingException e) {
             LOGGER.error("The URL '" + url + "' couldn't be turned into an URI", e);
-            return null;
-        }
-
-        if (!isHubURI(uri)) {
-            LOGGER.info("The object referenced by URL '" + url
-                + "' cannot be added to the workbench. It doesn't originate from the KNIME Hub.");
             return null;
         }
         return uri;
@@ -595,41 +488,5 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }));
         j.setUser(true);
         j.schedule();
-    }
-
-    private static JsonNode callHubEndpoint(final URI endpoint, final String query, final String value) {
-        final HashMap<String, String> map = new HashMap<>();
-        map.put(query, value);
-        return callHubApi(endpoint, map);
-    }
-
-    private static JsonNode callHubEndpoint(final URI endpoint) {
-        return callHubApi(endpoint, new HashMap<>());
-    }
-
-    static JsonNode callHubApi(final URI endpoint, final Map<String, String> queryParams) {
-        try {
-            // Build client with 1s timeout
-            final ClientBuilder clientBuilder = ClientBuilder.newBuilder();
-            final Client client = clientBuilder.build();
-
-            WebTarget target = client.target(endpoint);
-            for (Entry<String, String> entry : queryParams.entrySet()) {
-                target = target.queryParam(entry.getKey(), entry.getValue());
-            }
-            final Response response = target.request().get();
-            try {
-                if (response.getStatus() != 200) {
-                    throw new IllegalArgumentException();
-                }
-
-                final String readEntity = response.readEntity(String.class);
-                return new ObjectMapper().readerFor(JsonNode.class).readValue(readEntity);
-            } finally {
-                response.close();
-            }
-        } catch (Exception e) {
-            return null;
-        }
     }
 }

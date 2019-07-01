@@ -47,11 +47,6 @@
  */
 package org.knime.workbench;
 
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.ext.RuntimeDelegate;
-
-import org.apache.cxf.jaxrs.client.spec.ClientBuilderImpl;
-import org.apache.cxf.jaxrs.impl.RuntimeDelegateImpl;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTError;
@@ -97,7 +92,6 @@ public class KNIMEEditorPlugin extends AbstractUIPlugin {
     @Override
     public void start(final BundleContext context) throws Exception {
         super.start(context);
-        initializeJaxRSRuntime();
         // TODO: temporary hug for preference page, to ensure that the
         // MasterKeySupplier is set correctly before the editor is started
         KNIMEUIPlugin.getDefault().getPreferenceStore();
@@ -122,11 +116,6 @@ public class KNIMEEditorPlugin extends AbstractUIPlugin {
             }
         }
 
-    }
-
-    private void initializeJaxRSRuntime() {
-        System.setProperty(ClientBuilder.JAXRS_DEFAULT_CLIENT_BUILDER_PROPERTY, ClientBuilderImpl.class.getName());
-        System.setProperty(RuntimeDelegate.JAXRS_RUNTIME_DELEGATE_PROPERTY, RuntimeDelegateImpl.class.getName());
     }
 
     /**
