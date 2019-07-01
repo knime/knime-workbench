@@ -55,7 +55,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -91,6 +93,8 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
     private final Shell m_shell;
 
+    private final Set<String> m_importedFiles = new HashSet<>();
+
     // stores those directories which not yet contain a metainfo file and
     // hence are not displayed - meta info file has to be created after the
     // import -> occurs when importing archive files containing directories
@@ -99,6 +103,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
     /**
      * Imports the elements specified in the passed collection.
+     *
      * @param workflows the import elements (file or archive entries) to import
      * @param targetPath the destination path within the workspace
      * @param shell the shell
@@ -113,6 +118,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
     /**
      * Imports the root element and its entire subtree.
+     *
      * @param rootElement
      * @param targetPath
      * @since 7.1
@@ -200,42 +206,32 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      */
     protected void importWorkflowFromFile(final WorkflowImportElementFromFile fileElement,
         final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException {
+        if (!m_importedFiles.contains(fileElement.getRenamedPath().toString())) {
+            // in the wizard page we make sure the destination doesn't exist
+            assert !destination.fetchInfo().exists();
 
-        // in the wizard page we make sure the destination doesn't exist
-        assert !destination.fetchInfo().exists();
+            if (destination.getContentProvider().isRemote()) {
+                try {
+                    AbstractExplorerFileStore tmpDestDir =
+                        ExplorerMountTable.createExplorerTempDir(fileElement.getRenamedPath().toString());
+                    tmpDestDir = tmpDestDir.getChild(fileElement.getRenamedPath().toString());
+                    SubMonitor progress = SubMonitor.convert(monitor, 1);
+                    tmpDestDir.mkdir(EFS.NONE, progress);
 
-        File dest = null;
-        try {
-            dest = destination.toLocalFile();
-        } catch (CoreException e) {
-            throw new IOException(e.getMessage(), e);
-        }
+                    importFromFile(fileElement, tmpDestDir, progress);
 
-        if (fileElement.isWorkflow() || fileElement.isTemplate()) {
-            File dir = fileElement.getFile();
-            FileUtil.copyDir(dir, dest);
-        } else if (fileElement.isFile()) {
-            FileUtil.copy(fileElement.getFile(), dest);
-        } else {
-            // copy the meta info file from a group - if it exists
-            try {
-                destination.mkdir(EFS.SHALLOW, monitor);
-            } catch (CoreException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-            if (m_recursive) {
-                File dir = fileElement.getFile();
-                FileUtil.copyDir(dir, dest);
-            } else {
-                File metaFile = new File(fileElement.getFile(), WorkflowPersistor.METAINFO_FILE);
-                if (metaFile.exists() && (metaFile.length() > 0)) {
-                    FileUtil.copy(metaFile, new File(dest, WorkflowPersistor.METAINFO_FILE));
+                    destination.getContentProvider().performUploadAsync((LocalExplorerFileStore)tmpDestDir,
+                        (RemoteExplorerFileStore)destination, true, false, null);
+                } catch (CoreException e) {
+                    throw new IOException(e);
                 }
+
+            } else {
+                importFromFile(fileElement, destination, monitor);
+                // we operated on the file system directly. Refresh file stores.
+                destination.refresh();
             }
-            m_missingMetaInfoLocations.add(destination);
         }
-        // we operated on the file system directly. Refresh file stores.
-        destination.refresh();
     }
 
     /**
@@ -249,8 +245,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      */
     protected void importWorkflowFromArchive(final WorkflowImportElementFromArchive archiveElement,
         final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException, CoreException {
-
-        if (archiveElement.isWorkflow() || archiveElement.isTemplate() || archiveElement.isFile()) {
+        if (!m_importedFiles.contains(archiveElement.getOriginalPath().toString())) {
             AbstractExplorerFileStore tmpDestDir;
             if (destination instanceof RemoteExplorerFileStore) {
                 tmpDestDir = ExplorerMountTable.createExplorerTempDir(archiveElement.getRenamedPath().toString());
@@ -265,62 +260,14 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                 destination.getContentProvider().performUploadAsync((LocalExplorerFileStore)tmpDestDir,
                     (RemoteExplorerFileStore)destination, true, false, null);
             }
-        } else if (archiveElement.isWorkflowGroup()) {
-            if (m_recursive) {
-                AbstractExplorerFileStore tmpDestDir;
-                if (destination instanceof RemoteExplorerFileStore) {
-                    tmpDestDir = ExplorerMountTable.createExplorerTempDir(archiveElement.getRenamedPath().toString());
-                    tmpDestDir = tmpDestDir.getChild(archiveElement.getRenamedPath().toString());
-                    SubMonitor progress = SubMonitor.convert(monitor, 1);
-                    tmpDestDir.mkdir(EFS.NONE, progress);
-                } else {
-                    tmpDestDir = destination;
-                }
-                importArchiveEntry(archiveElement.getProvider(), archiveElement.getEntry(), tmpDestDir, monitor);
-                if (destination instanceof RemoteExplorerFileStore) {
-                    destination.getContentProvider().performUploadAsync((LocalExplorerFileStore)tmpDestDir,
-                        (RemoteExplorerFileStore)destination, true, false, null);
-                }
-            } else {
-                try {
-                    destination.mkdir(EFS.SHALLOW, monitor);
-                } catch (CoreException e) {
-                    throw new IOException(e.getMessage(), e);
-                }
-                // copy the metainfo file in a group - if it exists
-                if (!importMetaInfoFile(archiveElement, destination, monitor)) {
-                    m_missingMetaInfoLocations.add(destination);
-                }
-            }
         }
-    }
-
-    /*
-     * Copies the meta info file from the passed group into the destination directory. Returns true if the meta info
-     * file exists, false if it doesn't.
-     */
-    private boolean importMetaInfoFile(final WorkflowImportElementFromArchive group,
-        final AbstractExplorerFileStore destinationDir, final IProgressMonitor monitor) throws IOException {
-        assert group.isWorkflowGroup();
-        assert destinationDir.fetchInfo().isDirectory();
-        for (IWorkflowImportElement ch : group.getChildren()) {
-            if ((ch instanceof WorkflowImportElementFromArchive) && ch.isFile()
-                    && ch.getName().equals(WorkflowPersistor.METAINFO_FILE)) {
-                WorkflowImportElementFromArchive child = (WorkflowImportElementFromArchive)ch;
-                importArchiveEntry(child.getProvider(), child.getEntry(),
-                    destinationDir.getChild(WorkflowPersistor.METAINFO_FILE), monitor);
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
      * Import the entire subtree.
      */
     private void importArchiveEntry(final ILeveledImportStructureProvider importProvider, final Object entry,
-        final AbstractExplorerFileStore destination, final IProgressMonitor monitor)
-        throws IOException {
+        final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException {
 
         //assert !destination.fetchInfo().exists();
 
@@ -354,6 +301,49 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             }
         }
 
+        final String path = importProvider.getFullPath(entry);
+        m_importedFiles.add(path.endsWith("/") ? path.substring(0, path.length() - 1) : path);
+    }
+
+    /**
+     * Copies the content of the provided file element to the destination.
+     *
+     * @param fileElement The file element to be imported.
+     * @param destination The destination that is used to copy files to.
+     * @param monitor The progress monitor.
+     * @throws IOException If an error occurs.
+     */
+    private void importFromFile(final WorkflowImportElementFromFile fileElement,
+        final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException {
+        File dest = null;
+        try {
+            dest = destination.toLocalFile();
+        } catch (CoreException e) {
+            throw new IOException(e.getMessage(), e);
+        }
+
+        if (fileElement.isFile()) {
+            FileUtil.copy(fileElement.getFile(), dest);
+        } else {
+            File dir = fileElement.getFile();
+            FileUtil.copyDir(dir, dest);
+        }
+
+        addImportedFiles(fileElement);
+    }
+
+    /**
+     * Adds the provided file element and all its descendants to the set containing the imported files.
+     *
+     * @param fileElement The file element to add.
+     */
+    private void addImportedFiles(final IWorkflowImportElement fileElement) {
+        final String path = fileElement.getRenamedPath().toString();
+        m_importedFiles.add(path);
+
+        for (IWorkflowImportElement child : fileElement.getChildren()) {
+            addImportedFiles(child);
+        }
     }
 
     private void createMetaInfo() throws Exception {
