@@ -310,6 +310,13 @@ public class TreeSelectionControl {
         return null;
     }
 
+    /**
+     * Refreshes the whole tree view.
+     */
+    public void refresh() {
+        m_treeViewer.refresh();
+    }
+
     public interface TreeSelectionChangeListener {
         void treeSelectionChanged(final Object newSelection, final boolean valid);
     }
