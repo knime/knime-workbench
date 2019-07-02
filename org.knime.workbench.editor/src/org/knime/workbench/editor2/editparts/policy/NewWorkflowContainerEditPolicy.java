@@ -49,16 +49,12 @@ package org.knime.workbench.editor2.editparts.policy;
 
 import static java.util.Arrays.asList;
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
+import static org.knime.core.util.URIEncodeUtil.convertToEncodedURI;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
-import org.apache.commons.httpclient.URIException;
 import org.eclipse.core.runtime.IBundleGroup;
 import org.eclipse.core.runtime.IBundleGroupProvider;
 import org.eclipse.core.runtime.Platform;
@@ -425,32 +421,6 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             }
         }
         return false;
-    }
-
-    private static URI convertToEncodedURI(final URL url) {
-        URI uri;
-        try {
-            if (isURLEncoded(url.toString())) {
-                //URL is already encoded
-                uri = url.toURI();
-            } else {
-                //URL is not yet encoded!
-                uri = createEncodedURI(url.toString());
-            }
-        } catch (URISyntaxException | URIException | UnsupportedEncodingException e) {
-            LOGGER.error("The URL '" + url + "' couldn't be turned into an URI", e);
-            return null;
-        }
-        return uri;
-    }
-
-    private static boolean isURLEncoded(final String urlString) throws UnsupportedEncodingException {
-        return !URLDecoder.decode(urlString, StandardCharsets.UTF_8.name()).equals(urlString);
-    }
-
-    private static URI createEncodedURI(final String uri)
-        throws URIException, URISyntaxException {
-        return new URI(new org.apache.commons.httpclient.URI(uri, false, StandardCharsets.UTF_8.name()).toString());
     }
 
     @SuppressWarnings("static-method")
