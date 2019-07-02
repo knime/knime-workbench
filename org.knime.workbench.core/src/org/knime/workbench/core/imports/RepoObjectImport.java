@@ -67,6 +67,18 @@ public interface RepoObjectImport extends EntityImport {
              */
             WorkflowTemplate,
             /**
+             * A workflowgroup.
+             */
+            WorkflowGroup,
+            /**
+             * A workflow.
+             */
+            Workflow,
+            /**
+             * A data file.
+             */
+            Data,
+            /**
              * Any other type of repository object.
              */
             Other;
@@ -78,9 +90,19 @@ public interface RepoObjectImport extends EntityImport {
     RepoObjectType getType();
 
     /**
+     * @return the object name
+     */
+    String getName();
+
+    /**
      * The knime-URI (i.e. https://knime/...) that references the repository object.
      *
      * @return a knime-URI
      */
     URI getKnimeURI();
+
+    /**
+     * @return an URI to download/get the object
+     */
+    URI getDataURI();
 }
