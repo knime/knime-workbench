@@ -293,7 +293,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
             }
         });
         m_tree.createTreeControl(parent);
-
+        m_treeInput.addPropertyChangeListener(e -> Display.getDefault().asyncExec(() -> m_tree.refresh()));
     }
 
     private void handleTreeSelectionChanged(final Object newSelection, final boolean valid) {
