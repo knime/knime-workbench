@@ -341,10 +341,9 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         File dstFile = destination.toLocalFile(options, monitor);
 
         if (srcFile.equals(dstFile)) {
-            throw new IllegalArgumentException(
-                    "Unable to move file. \"" + srcFile.getAbsolutePath()
-                    + "\" and \"" + dstFile.getAbsolutePath()
-                    + "\" are the same file.");
+            throw new CoreException(new Status(IStatus.ERROR, FrameworkUtil.getBundle(getClass()).getSymbolicName(),
+                "Unable to move file. \"" + srcFile.getAbsolutePath() + "\" and \"" + dstFile.getAbsolutePath()
+                    + "\" are the same file."));
         }
         super.cleanupDestination(destination, options, monitor);
 
