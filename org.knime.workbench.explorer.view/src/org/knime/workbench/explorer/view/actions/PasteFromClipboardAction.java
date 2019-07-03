@@ -44,7 +44,7 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
-import static org.knime.core.util.URIEncodeUtil.convertToEncodedURI;
+import static org.knime.core.util.URIUtil.createEncodedURI;
 
 import java.io.File;
 import java.io.IOException;
@@ -191,7 +191,7 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
     private boolean isValidURIToPaste() {
         Object c = getView().getClipboard().getContents(TextTransfer.getInstance());
         if (c != null && c instanceof String && ((String)c).startsWith("http")) {
-            URI encodedURI = convertToEncodedURI((String)c);
+            URI encodedURI = createEncodedURI((String)c);
 
             //is there a URIImporter for the given URI?
             Optional<URIImporter> uriImport = URIImporterFinder.getInstance().findURIImporterFor(encodedURI);
@@ -268,7 +268,7 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
     }
 
     private void pasteFromURI() {
-        URI knimeURI = convertToEncodedURI((String)getView().getClipboard().getContents(TextTransfer.getInstance()));
+        URI knimeURI = createEncodedURI((String)getView().getClipboard().getContents(TextTransfer.getInstance()));
         try {
             AtomicReference<File> file = new AtomicReference<File>();
             PlatformUI.getWorkbench().getProgressService().busyCursorWhile((monitor) -> {

@@ -49,7 +49,7 @@ package org.knime.workbench.editor2.editparts.policy;
 
 import static java.util.Arrays.asList;
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
-import static org.knime.core.util.URIEncodeUtil.convertToEncodedURI;
+import static org.knime.core.util.URIUtil.createEncodedURI;
 
 import java.net.URI;
 import java.net.URL;
@@ -185,7 +185,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
     private Command handleURLDrop(final WorkflowManagerUI managerUI, final Optional<WorkflowManager> manager, final URL url,
         final CreateDropRequest cdr) {
         URI uri;
-        if ((uri = convertToEncodedURI(url)) != null) {
+        if ((uri = createEncodedURI(url)) != null) {
             Optional<EntityImport> entityImport = URIImporterFinder.getInstance().createEntityImportFor(uri);
             if (entityImport.isPresent()) {
                 if (entityImport.get() instanceof RepoObjectImport) {
