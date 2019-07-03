@@ -335,7 +335,7 @@ public class WorkflowDownload extends TempExtractArchive {
                    Thread.sleep(1000);
                 }
 
-                String size = " / <unkown>";
+                String size = " / <unknown>";
                 final String taskMessage = "Downloading workflow " + m_source.getFullName()+ ": ";
                 long downloaded = 0;
 
