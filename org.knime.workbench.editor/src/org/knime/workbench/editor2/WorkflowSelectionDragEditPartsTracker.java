@@ -88,7 +88,7 @@ public class WorkflowSelectionDragEditPartsTracker extends DragEditPartsTracker 
         if (getSourceEditPart() instanceof AnnotationEditPart) {
             final Input i = getCurrentInput();
 
-            if (AnnotationModeExitEnabler.annotationDragTrackerShouldVeto(i.getMouseLocation())) {
+            if (AnnotationEditExitEnabler.annotationDragTrackerShouldVeto(i.getMouseLocation())) {
                 return false;
             }
         }

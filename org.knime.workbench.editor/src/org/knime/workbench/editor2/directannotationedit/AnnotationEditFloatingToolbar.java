@@ -60,6 +60,7 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Listener;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 
@@ -110,7 +111,6 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
     private final FlatButton m_italicToggleButton;
     private final FlatButton m_fontColorButton;
 
-    @SuppressWarnings("unused")  // we hang on to it by name for cleaner object graphs
     private final FlatButtonRadioGroup m_radioGroup;
     private final FlatButton m_alignLeftRadioButton;
     private final FlatButton m_alignCenterRadioButton;
@@ -125,13 +125,13 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
 
     private final StyledTextEditor m_styledTextEditor;
 
-    private final int m_requiredHeightForNumericPulldownDisplay;
-
     /**
      * @param parent the SWT container which holds the toolbar
      * @param editor the editor while is hosting the stylized annotation
+     * @param focusTransferor a click listener that shifts the focus back to the main KAP window
      */
-    public AnnotationEditFloatingToolbar(final Composite parent, final StyledTextEditor editor) {
+    AnnotationEditFloatingToolbar(final Composite parent, final StyledTextEditor editor,
+        final FlatButton.ClickListener focusTransferor) {
         super(parent, SWT.NONE);
 
         m_styledTextEditor = editor;
@@ -160,7 +160,7 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
         imageLabel
             .setImage(ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/annotations/font-size-icon.png"));
         imageLabel.setBackground(BACKGROUND_COLOR);
-        m_fontSizeButton = new NumericPulldownFlatButton(this, AVAILABLE_FONT_SIZES, editor);
+        m_fontSizeButton = new NumericPulldownFlatButton(this, AVAILABLE_FONT_SIZES);
         m_fontSizeButton.addClickListener(this);
         m_fontSizeButton.setBackground(BACKGROUND_COLOR);
         m_fontSizeButton.setToolTipText("Font Size");
@@ -169,6 +169,7 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
             ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/annotations/bold-icon.png"), null,
             DEFAULT_BUTTON_SIZE, true);
         m_boldToggleButton.addClickListener(this);
+        m_boldToggleButton.addClickListener(focusTransferor);
         m_boldToggleButton.setBackground(BACKGROUND_COLOR);
         m_boldToggleButton.setToolTipText("Bold Text");
 
@@ -176,6 +177,7 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
             ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/annotations/italic-icon.png"), null,
             DEFAULT_BUTTON_SIZE, true);
         m_italicToggleButton.addClickListener(this);
+        m_italicToggleButton.addClickListener(focusTransferor);
         m_italicToggleButton.setBackground(BACKGROUND_COLOR);
         m_italicToggleButton.setToolTipText("Italic Text");
 
@@ -195,25 +197,28 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
         final Label firstSeparator = new Label(this, SWT.SEPARATOR | SWT.VERTICAL);
         GridData gd = new GridData();
         gd.heightHint = DEFAULT_BUTTON_SIZE.y;
-        gd.verticalAlignment = SWT.CENTER;
+        gd.verticalAlignment = SWT.TOP;
         firstSeparator.setLayoutData(gd);
 
         m_alignLeftRadioButton = new FlatButton(this, SWT.TOGGLE,
             ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/annotations/left-align-icon.png"), null,
             DEFAULT_BUTTON_SIZE, true);
         m_alignLeftRadioButton.addClickListener(this);
+        m_alignLeftRadioButton.addClickListener(focusTransferor);
         m_alignLeftRadioButton.setBackground(BACKGROUND_COLOR);
         m_alignLeftRadioButton.setToolTipText("Align Left");
         m_alignCenterRadioButton = new FlatButton(this, SWT.TOGGLE,
             ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/annotations/center-align-icon.png"), null,
             DEFAULT_BUTTON_SIZE, true);
         m_alignCenterRadioButton.addClickListener(this);
+        m_alignCenterRadioButton.addClickListener(focusTransferor);
         m_alignCenterRadioButton.setBackground(BACKGROUND_COLOR);
         m_alignCenterRadioButton.setToolTipText("Align Center");
         m_alignRightRadioButton = new FlatButton(this, SWT.TOGGLE,
             ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/annotations/right-align-icon.png"), null,
             DEFAULT_BUTTON_SIZE, true);
         m_alignRightRadioButton.addClickListener(this);
+        m_alignRightRadioButton.addClickListener(focusTransferor);
         m_alignRightRadioButton.setBackground(BACKGROUND_COLOR);
         m_alignRightRadioButton.setToolTipText("Align Right");
         m_radioGroup =
@@ -230,7 +235,7 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
         imageLabel.setImage(
             ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/annotations/border-width-icon.png"));
         imageLabel.setBackground(BACKGROUND_COLOR);
-        m_borderWidthButton = new NumericPulldownFlatButton(this, AVAILABLE_BORDER_THICKNESSES, editor);
+        m_borderWidthButton = new NumericPulldownFlatButton(this, AVAILABLE_BORDER_THICKNESSES);
         m_borderWidthButton.addClickListener(this);
         m_borderWidthButton.setBackground(BACKGROUND_COLOR);
         m_borderWidthButton.setToolTipText("Border Width");
@@ -275,17 +280,19 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
 
         pack();
 
-        m_requiredHeightForNumericPulldownDisplay =
-            Math.max(m_fontSizeButton.getRequiredDropDownHeight(), m_borderWidthButton.getRequiredDropDownHeight());
-
         updateToolbarToReflectState();
+    }
+
+    void addShowHideListeners(final Listener showListener, final Listener hideListener) {
+        m_fontSizeButton.addShowHideListeners(showListener, hideListener);
+        m_borderWidthButton.addShowHideListeners(showListener, hideListener);
     }
 
     /**
      * This should be called when the toolbar need update its visual state to match what is currently selected, or at
      * place of insert, in the associated text editor.
      */
-    public void updateToolbarToReflectState() {
+    void updateToolbarToReflectState() {
         final int fontStyle = m_styledTextEditor.getCurrentFontStyle();
 
         m_boldToggleButton.setSelected((fontStyle & SWT.BOLD) == SWT.BOLD);
@@ -344,19 +351,9 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
     /**
      * This makes sure that all numeric pulldown buttons in the toolbar have hidden their edit assets.
      */
-    public void ensureEditAssetsAreNotVisible() {
+    void ensureEditAssetsAreNotVisible() {
         m_fontSizeButton.shouldHideEditAssets();
         m_borderWidthButton.shouldHideEditAssets();
-    }
-
-    /**
-     * This returns the height below the toolbar which will be need to fully display all pulldowns.
-     *
-     * @return an <code>int</code> describing the minimum addition height below the toolbar needed for all UI elements
-     *         to be interacted with by the user.
-     */
-    public int getRequiredMinimumHeightForDropdownAssets() {
-        return m_requiredHeightForNumericPulldownDisplay;
     }
 
     /**

@@ -68,6 +68,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
@@ -75,6 +76,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.LayoutExemptingLayout;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
+import org.knime.workbench.editor2.directannotationedit.StyledTextEditor;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.editor2.figures.WorkflowFigure;
 
@@ -278,6 +280,22 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
         if (control != null) {
             m_parent = control.getParent();
             m_parent.setLayout(new LayoutExemptingLayout());
+
+            if (control instanceof FigureCanvas) {
+                final FigureCanvas fc = (FigureCanvas)control;
+                ScrollBar sb = fc.getHorizontalBar();
+                if (sb != null) {
+                    sb.addListener(SWT.Selection, (event) -> {
+                        StyledTextEditor.toolbarLocationShouldUpdate();
+                    });
+                }
+                sb = fc.getVerticalBar();
+                if (sb != null) {
+                    sb.addListener(SWT.Selection, (event) -> {
+                        StyledTextEditor.toolbarLocationShouldUpdate();
+                    });
+                }
+            }
         }
 
         super.setControl(control);

@@ -332,7 +332,7 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     private ZoomWheelListener m_zoomWheelListener;
 
-    private AnnotationModeExitEnabler m_annotationModeExitEnabler;
+    private AnnotationEditExitEnabler m_annotationEditExitEnabler;
     private NodeSupplantDragListener m_nodeSupplantDragListener;
 
     private WorkflowEditorMode m_editorMode;
@@ -578,8 +578,8 @@ public class WorkflowEditor extends GraphicalEditor implements
         if (m_nodeSupplantDragListener != null) {
             m_nodeSupplantDragListener.dispose();
         }
-        if (m_annotationModeExitEnabler != null) {
-            m_annotationModeExitEnabler.dispose();
+        if (m_annotationEditExitEnabler != null) {
+            m_annotationEditExitEnabler.dispose();
         }
         if (m_fileResource != null && m_manager != null) {
             // disposed is also called when workflow load fails or is canceled
@@ -987,7 +987,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             m_manager.addListener(m_nodeSupplantDragListener);
         }
 
-        m_annotationModeExitEnabler = new AnnotationModeExitEnabler(this);
+        m_annotationEditExitEnabler = new AnnotationEditExitEnabler(this);
     }
 
     /**
@@ -1015,11 +1015,11 @@ public class WorkflowEditor extends GraphicalEditor implements
      * This is public exposure of the AE mode exit enabler which allows for interested consumers to register themselves
      * for notification of mode exit. This will return null until the graphical viewer has been created.
      *
-     * @return the <code>AnnotationModeExitEnabler</code> instance created and held by this instance
+     * @return the {@link AnnotationEditExitEnabler} instance created and held by this instance
      * @see #createGraphicalViewer(Composite)
      */
-    public AnnotationModeExitEnabler getAnnotationModeExitEnabler() {
-        return m_annotationModeExitEnabler;
+    public AnnotationEditExitEnabler getAnnotationEditExitEnabler() {
+        return m_annotationEditExitEnabler;
     }
 
     /**

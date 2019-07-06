@@ -73,6 +73,7 @@ import org.knime.core.ui.node.workflow.SingleNodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowInPortUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.WorkflowOutPortUI;
+import org.knime.workbench.editor2.directannotationedit.StyledTextEditor;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.MetaNodeOutPortEditPart;
@@ -260,7 +261,9 @@ public final class WorkflowEditPartFactory implements EditPartFactory, IPartList
      */
     @Override
     public void partDeactivated(final IWorkbenchPartReference partRef) {
-        //NOOP
+        if (WorkflowEditor.ID.equals(partRef.getId())) {
+            StyledTextEditor.relinquishFocusOfCurrentEditorIfInView();
+        }
     }
 
     /**
@@ -276,7 +279,6 @@ public final class WorkflowEditPartFactory implements EditPartFactory, IPartList
      */
     @Override
     public void partHidden(final IWorkbenchPartReference partRef) {
-        //NOOP
         if (WorkflowEditor.ID.equals(partRef.getId()) && m_activateContext != null) {
             m_activateContext.getContextService().deactivateContext(m_activateContext);
             m_activateContext = null;
