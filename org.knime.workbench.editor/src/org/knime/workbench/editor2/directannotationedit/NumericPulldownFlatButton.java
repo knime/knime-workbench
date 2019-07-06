@@ -65,14 +65,14 @@ import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Widget;
-import org.knime.workbench.core.LayoutExemptingLayout;
-import org.knime.workbench.editor2.ViewportPinningGraphicalViewer;
 
 /**
  * As part of AP-9129, this <code>FlatButton</code> specialization provides a numeric pulldown.
@@ -138,15 +138,12 @@ public class NumericPulldownFlatButton extends FlatButton
     private final DropDownValueList m_dropDownList;
     private final Text m_textBox;
 
-    private final StyledTextEditor m_styledTextEditor;
-
     /**
      * @param parent the parent widget which owns this instance; if the layout of this widget is <code>GridLayout</code>
      *            then size appropriate <code>GridData</code> will be set.
      * @param values the value choices this button will provide; it is expected to be naturally ordered
-     * @param editor the owning editor, if one exists
      */
-    public NumericPulldownFlatButton(final Composite parent, final int[] values, final StyledTextEditor editor) {
+    public NumericPulldownFlatButton(final Composite parent, final int[] values) {
         super(parent, SWT.PUSH, (PaintListener)null, PULLDOWN_WIDGET_SIZE);
 
         initializeSWTAssetsIfNecessary();
@@ -166,9 +163,12 @@ public class NumericPulldownFlatButton extends FlatButton
 
         m_chevronPath = createChevronPath(getDisplay(), m_pulldownBounds);
 
-        m_dropDownList = new DropDownValueList();
+        m_dropDownList = new DropDownValueList(parent.getShell());
 
-        m_textBox = new Text(ViewportPinningGraphicalViewer.getActiveViewportComposite(), SWT.BORDER);
+        m_textBox = new Text(parent.getShell(), SWT.BORDER);
+        final GridData gd = new GridData();
+        gd.exclude = true;
+        m_textBox.setLayoutData(gd);
         m_textBox.addKeyListener(KeyListener.keyPressedAdapter((event) -> {
             if (event.keyCode == SWT.CR) {
                 final String text = m_textBox.getText();
@@ -187,11 +187,13 @@ public class NumericPulldownFlatButton extends FlatButton
         m_textBox.setFont(VALUE_FONT);
         m_textBox.setVisible(false);
         m_textBox.moveBelow(null);
-        LayoutExemptingLayout.exemptControlFromLayout(m_textBox);
-
-        m_styledTextEditor = editor;
 
         addClickListener(this);
+    }
+
+    void addShowHideListeners(final Listener showListener, final Listener hideListener) {
+        m_dropDownList.addListener(SWT.Show, showListener);
+        m_dropDownList.addListener(SWT.Hide, hideListener);
     }
 
     /**
@@ -312,8 +314,6 @@ public class NumericPulldownFlatButton extends FlatButton
         m_textBox.setVisible(true);
         m_textBox.moveAbove(null);
 
-        m_styledTextEditor.setFocusLossAllowed(false);
-
         m_textBox.setFocus();
         m_textBox.selectAll();
     }
@@ -340,8 +340,6 @@ public class NumericPulldownFlatButton extends FlatButton
     private void userSelectedValue(final int value) {
         shouldHideEditAssets();
 
-        m_styledTextEditor.setFocusLossAllowed(true);
-
         setSelectedValue(value);
 
         messageListeners(true);
@@ -352,10 +350,12 @@ public class NumericPulldownFlatButton extends FlatButton
         private final LabelFlatButton[] m_buttons;
         private int m_selectedIndex;
 
-        DropDownValueList() {
-            super(ViewportPinningGraphicalViewer.getActiveViewportComposite(), SWT.NONE);
+        DropDownValueList(final Composite parent) {
+            super(parent, SWT.NONE);
 
-            LayoutExemptingLayout.exemptControlFromLayout(this);
+            final GridData gd = new GridData();
+            gd.exclude = true;
+            setLayoutData(gd);
 
             final GridLayout layout = new GridLayout(1, true);
             layout.marginHeight = 1;

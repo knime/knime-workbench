@@ -49,6 +49,7 @@
 package org.knime.workbench.editor2;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.draw2d.FigureCanvas;
@@ -60,6 +61,8 @@ import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.widgets.Display;
 import org.knime.workbench.editor2.actions.ToggleEditorModeAction;
+import org.knime.workbench.editor2.directannotationedit.StyledTextEditor;
+import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
@@ -69,7 +72,7 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  *
  * @author loki der quaeler
  */
-public class AnnotationModeExitEnabler implements MouseListener {
+public class AnnotationEditExitEnabler implements MouseListener {
     /**
      * Classes interested in being notified when annotation mode is exiting due to canvas click-away should implement
      * this interface and register themselves with the instance of this attached to the workflow's
@@ -83,7 +86,7 @@ public class AnnotationModeExitEnabler implements MouseListener {
          *
          * @param enabler the instance of this class which is notifying the listener
          */
-        void annotationModeWillExit(AnnotationModeExitEnabler enabler);
+        void annotationModeWillExit(AnnotationEditExitEnabler enabler);
     }
 
 
@@ -143,7 +146,7 @@ public class AnnotationModeExitEnabler implements MouseListener {
     /**
      * @param editor The editor containing the graphical viewer from which we'll track mouse events.
      */
-    public AnnotationModeExitEnabler(final WorkflowEditor editor) {
+    public AnnotationEditExitEnabler(final WorkflowEditor editor) {
         final GraphicalViewer viewer = editor.getGraphicalViewer();
 
         m_workflowEditor = editor;
@@ -220,7 +223,8 @@ public class AnnotationModeExitEnabler implements MouseListener {
 
             m_dragPositionProcessor.processDragEventAtPoint(me.display.getCursorLocation(), false, ss);
 
-            if (m_dragPositionProcessor.getAnnotation() == null) {
+            final AnnotationEditPart aep = m_dragPositionProcessor.getAnnotation();
+            if (aep == null) {
                 final ToggleEditorModeAction action = new ToggleEditorModeAction(m_workflowEditor, false);
                 final NodeContainerEditPart node = m_dragPositionProcessor.getNode();
                 final ConnectionContainerEditPart connection = m_dragPositionProcessor.getEdge();
@@ -241,10 +245,36 @@ public class AnnotationModeExitEnabler implements MouseListener {
                         sm.appendSelection(connection);
                     }
                 });
+            } else {
+                final Iterator<?> it = ss.iterator();
+                boolean maintainSelection = false;
+                while (it.hasNext()) {
+                    final Object o = it.next();
+
+                    if (o instanceof AnnotationEditPart) {
+                        maintainSelection = true;
+                        break;
+                    }
+                }
+
+                if (!maintainSelection) {
+                    StyledTextEditor.relinquishFocusOfCurrentEditorIfInView();
+
+                    Display.getDefault().asyncExec(() -> {
+                        sm.deselectAll();
+
+                        sm.appendSelection(aep);
+                    });
+                }
             }
 
             m_dragPositionProcessor.unmarkSelection();
             m_dragPositionProcessor.clearMarkingAvoidance();
+        } else {
+            // In case we're in the midst of an edit of an annotation edit on a node annotation; it's much cheaper to
+            //  just invoke this incase an editor is open than to bother determining what the click is upon and the
+            //  latter action would provide us with no useful deviation information.
+            StyledTextEditor.relinquishFocusOfCurrentEditorIfInView();
         }
     }
 

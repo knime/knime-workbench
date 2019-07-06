@@ -56,8 +56,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.core.commands.Command;
 import org.eclipse.core.runtime.Platform;
-import org.eclipse.draw2d.FigureCanvas;
-import org.eclipse.draw2d.Viewport;
 import org.eclipse.jface.viewers.CellEditor;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
@@ -95,17 +93,15 @@ import org.knime.core.node.workflow.NodeAnnotation;
 import org.knime.core.util.ColorUtilities;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
-import org.knime.workbench.editor2.AnnotationModeExitEnabler;
+import org.knime.workbench.editor2.AnnotationEditExitEnabler;
 import org.knime.workbench.editor2.AnnotationUtilities;
-import org.knime.workbench.editor2.ViewportPinningGraphicalViewer;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.FontStore;
-import org.knime.workbench.editor2.figures.WorkflowFigure;
 
 /**
  * @author ohl, KNIME AG, Zurich, Switzerland
  */
-public class StyledTextEditor extends CellEditor implements AnnotationModeExitEnabler.ExitListener {
+public class StyledTextEditor extends CellEditor implements AnnotationEditExitEnabler.ExitListener {
     static final boolean PLATFORM_IS_MAC = Platform.OS_MACOSX.equals(Platform.getOS());
     static final boolean PLATFORM_IS_LINUX = Platform.OS_LINUX.equals(Platform.getOS());
     static final boolean PLATFORM_IS_WINDOWS = Platform.OS_WIN32.equals(Platform.getOS());
@@ -143,6 +139,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
 
     // Context menu subsystem
     private static RGB[] LAST_COLORS = null;
+
+    private static StyledTextEditor CURRENT_INSTANCE_IN_VIEW;
 
     private static final int TAB_SIZE;
 
@@ -190,6 +188,30 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         }
     }
 
+    /**
+     * An avenue to allow the other listerners on the editor to alert us of the case where we should end current
+     * focus, for example:
+     *  . the drag processor detects another annotation selection
+     *  . we're editing a node annotation and the user is attempting to exit by click-away
+     *  . the current editor part is deactivating (due to another editor part being opened / switched to)
+     */
+    public static void relinquishFocusOfCurrentEditorIfInView() {
+        if (CURRENT_INSTANCE_IN_VIEW != null) {
+            CURRENT_INSTANCE_IN_VIEW.setFocusLossAllowed(true);
+            CURRENT_INSTANCE_IN_VIEW.lostFocus();
+        }
+    }
+
+    /**
+     * This allows for notifications of things impacting our location which we can't detect ourselves (such as viewport
+     * location changing.)
+     */
+    public static void toolbarLocationShouldUpdate() {
+        if (CURRENT_INSTANCE_IN_VIEW != null) {
+            CURRENT_INSTANCE_IN_VIEW.placeAndDisplayToolbar();
+        }
+    }
+
 
     private StyledText m_styledText;
 
@@ -214,7 +236,9 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
 
     private Color m_backgroundColor = null;
 
-    private final AtomicBoolean m_allowFocusLoss = new AtomicBoolean(true);
+    // now, especially, that we have the style toolbar in a different SWT shell, we need to be very strict about
+    //      not giving up focus (which ends the edit.)
+    private final AtomicBoolean m_allowFocusLoss = new AtomicBoolean(false);
 
     private final AtomicBoolean m_annotationIsNodeAnnotation = new AtomicBoolean(false);
 
@@ -224,10 +248,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
     private MenuItem m_leftAlignMenuItem;
     private MenuItem[] m_alignmentMenuItems;
 
+    private FloatingStyleToolbar m_toolbarWindow;
     private AnnotationEditFloatingToolbar m_toolbar;
-    private final AtomicBoolean m_toolbarDismissalShouldRemoveNorthTentStake = new AtomicBoolean(false);
-    private final AtomicBoolean m_toolbarDismissalShouldRemoveSouthTentStake = new AtomicBoolean(false);
-    private final AtomicBoolean m_toolbarDismissalShouldRemoveEastTentStake = new AtomicBoolean(false);
 
     private ColorDropDown m_colorDropDown;
 
@@ -277,148 +299,47 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         createShadowText(m_panel);
         applyBackgroundColor();
 
-        m_toolbar = new AnnotationEditFloatingToolbar(parent, this);
-        m_colorDropDown = new ColorDropDown(this, false);
+        m_toolbarWindow = new FloatingStyleToolbar(this);
+        m_toolbar = m_toolbarWindow.getToolbar();
+
+        m_colorDropDown = new ColorDropDown(m_toolbarWindow.getShell(), this, false);
+
+        m_toolbarWindow.registerListenersWithColorDropDown(m_colorDropDown);
         m_toolbar.getEditAssetGroup().addAssetProvider(m_colorDropDown);
         m_panel.addListener(SWT.Show, (e) -> {
-            placeToolbarAndEnsureVisible(true);
-        });
-        m_panel.addListener(SWT.Hide, (e) -> {
-            if (!m_colorDropDown.customColorChooserWasDisplayedInTheLastTimeWindow(400)) {
-                m_colorDropDown.setVisible(false);
-                hideToolbar();
-            }
+            placeAndDisplayToolbar();
+
+            // we add this listener as part of showing, as there are crazy shenanigans in jface's CellEditor
+            //      which actually produce a Hide event before a Show event.
+            m_panel.addListener(SWT.Hide, (event) -> {
+                if (!m_colorDropDown.customColorChooserWasDisplayedInTheLastTimeWindow(400)) {
+                    m_colorDropDown.setVisible(false);
+                    hideToolbar();
+                }
+            });
         });
 
         final WorkflowEditor we =
                 (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
-        we.getAnnotationModeExitEnabler().addListener(this);
+        we.getAnnotationEditExitEnabler().addListener(this);
+
+        CURRENT_INSTANCE_IN_VIEW = this;
 
         return m_panel;
     }
 
-    void placeToolbarAndEnsureVisible(final boolean includeScroll) {
-        if (m_panel.isDisposed() || m_toolbar.isDisposed()) {
+    void placeAndDisplayToolbar() {
+        if (m_panel.isDisposed() || m_toolbarWindow.isDisposed()) {
             return;
         }
 
-        final ViewportPinningGraphicalViewer viewer = ViewportPinningGraphicalViewer.getActiveViewer();
-        final WorkflowFigure workflowFigure = viewer.getWorkflowFigure();
-        final org.eclipse.draw2d.geometry.Rectangle workflowFigureBounds = workflowFigure.getBounds();
-        final FigureCanvas figureCanvas = (FigureCanvas)viewer.getControl();
-        final Viewport viewport = figureCanvas.getViewport();
-        final org.eclipse.draw2d.geometry.Point viewportLocation = viewport.getViewLocation();
-        final org.eclipse.draw2d.geometry.Rectangle viewportBounds = viewport.getBounds();
-        final Point annotationLocation = m_panel.getLocation();
-        final Point toolbarSize = m_toolbar.getSize();
-        final int localSpaceX = annotationLocation.x;
-        // +15 to account for a potential scroll bar obscuring the canvas
-        final int localSpaceX2 = annotationLocation.x + toolbarSize.x + m_colorDropDown.getBounds().width + 15;
-        final int localSpaceY = (m_panel.getLocation().y - toolbarSize.y - 14);
-        // this is the very bottom of the tallest displayed dropdown of the toolbar
-        final int localSpaceY2Prime =
-            (localSpaceY + toolbarSize.y + m_toolbar.getRequiredMinimumHeightForDropdownAssets());
-        final int absoluteSpaceX2 = viewportLocation.x + localSpaceX2;
-        final int absoluteSpaceY = viewportLocation.y + localSpaceY;
-        final int absoluteSpaceY2Prime = viewportLocation.y + localSpaceY2Prime;
-        final int preferredViewportY = (localSpaceY - 3);
-        final boolean needUpwardScroll = (preferredViewportY < viewportLocation.y);
-        final boolean needDownwardScroll = (localSpaceY2Prime > viewportBounds.height);
-        final boolean needRightwardScroll = (localSpaceX2 > viewportBounds.width);
-
-        if (absoluteSpaceX2 > workflowFigureBounds.width) {
-            final int bufferWidth = (absoluteSpaceX2 - workflowFigureBounds.width) + 6;
-
-            m_toolbarDismissalShouldRemoveEastTentStake.set(!workflowFigure.eastTentStakeHasBeenPlaced());
-
-            workflowFigure.placeTentStakeToAllowForRightWhitespaceBuffer(bufferWidth);
-        }
-
-        if (absoluteSpaceY2Prime > workflowFigureBounds.height) {
-            final int bufferHeight = (absoluteSpaceY2Prime - workflowFigureBounds.height) + 6;
-
-            m_toolbarDismissalShouldRemoveSouthTentStake.set(!workflowFigure.southTentStakeHasBeenPlaced());
-
-            workflowFigure.placeTentStakeToAllowForBottomWhitespaceBuffer(bufferHeight);
-        }
-
-        if (absoluteSpaceY < 0) {
-            m_toolbarDismissalShouldRemoveNorthTentStake.set(!workflowFigure.northTentStakeHasBeenPlaced());
-
-            workflowFigure.placeTentStakeToAllowForTopWhitespaceBuffer(-(absoluteSpaceY - 6));
-        }
-
-        if (includeScroll && (needUpwardScroll || needDownwardScroll || needRightwardScroll)) {
-            final int xLocation;
-            final int yLocation;
-            final int scrollX;
-            final int scrollY;
-
-            if (needRightwardScroll) {
-                final int xTranslate = (localSpaceX2 - viewportBounds.width) + 3;
-
-                xLocation = localSpaceX - xTranslate;
-                scrollX = viewportLocation.x + xTranslate;
-            } else {
-                xLocation = localSpaceX;
-                scrollX = viewportLocation.x;
-            }
-
-            if (needUpwardScroll) {
-                yLocation = 3;
-                scrollY = absoluteSpaceY - yLocation;
-            } else if (needDownwardScroll) {
-                final int yTranslate = (localSpaceY2Prime - viewportBounds.height);
-
-                yLocation = localSpaceY - yTranslate;
-                scrollY = viewportLocation.y + yTranslate;
-            } else {
-                yLocation = localSpaceY;
-                scrollY = viewportLocation.y;
-            }
-
-            m_styledText.getDisplay().asyncExec(() -> {
-                if (!m_toolbar.isDisposed()) {
-                    figureCanvas.scrollTo(scrollX, scrollY);
-
-                    m_toolbar.setLocation(xLocation, yLocation);
-                    if (!m_toolbar.isVisible()) {
-                        m_toolbar.setVisible(true);
-                    }
-                }
-            });
-
-            return;
-        }
-
-        m_toolbar.setLocation(localSpaceX, localSpaceY);
-        if (!m_toolbar.isVisible()) {
-            m_toolbar.setVisible(true);
-        }
+        m_toolbarWindow.setLocationFromAnnotationDisplayLocation(m_panel.toDisplay(0, 0));
+        m_toolbarWindow.open();
     }
 
     private void hideToolbar() {
-        if (!m_toolbar.isDisposed()) {
-            m_toolbar.setVisible(false);
-        }
-
-        if (m_toolbarDismissalShouldRemoveNorthTentStake != null) {
-            final boolean removeNorthStake = m_toolbarDismissalShouldRemoveNorthTentStake.getAndSet(false);
-            final boolean removeSouthStake = m_toolbarDismissalShouldRemoveSouthTentStake.getAndSet(false);
-            final boolean removeEastStake = m_toolbarDismissalShouldRemoveEastTentStake.getAndSet(false);
-            if (removeNorthStake || removeSouthStake || removeEastStake) {
-                final WorkflowFigure workflowFigure = ViewportPinningGraphicalViewer.getActiveViewer().getWorkflowFigure();
-
-                if (removeNorthStake) {
-                    workflowFigure.placeTentStakeToAllowForTopWhitespaceBuffer(0);
-                }
-                if (removeSouthStake) {
-                    workflowFigure.placeTentStakeToAllowForBottomWhitespaceBuffer(0);
-                }
-                if (removeEastStake) {
-                    workflowFigure.placeTentStakeToAllowForRightWhitespaceBuffer(0);
-                }
-            }
+        if (!m_toolbarWindow.isDisposed()) {
+            m_toolbarWindow.close();
         }
     }
 
@@ -552,19 +473,19 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         super.dispose();
 
         m_shadowStyledText.dispose();
-        m_toolbar.dispose();
+        m_toolbarWindow.dispose();
         m_colorDropDown.dispose();
 
         final WorkflowEditor we =
                 (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
-        we.getAnnotationModeExitEnabler().removeListener(this);
+        we.getAnnotationEditExitEnabler().removeListener(this);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void annotationModeWillExit(final AnnotationModeExitEnabler enabler) {
+    public void annotationModeWillExit(final AnnotationEditExitEnabler enabler) {
         if (m_toolbar.isDisposed()) {
             return;
         }
@@ -735,9 +656,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         }
     }
 
-    void setFocusLossAllowed(final boolean flag) {
-        // another funny little platform-ism; on Linux, the created control gets an SWT.Hide during the control
-        //      creation - which is during this super's init, which hasn't yet construct this ivar... sigh.
+    private void setFocusLossAllowed(final boolean flag) {
         if (m_allowFocusLoss != null) {
             m_allowFocusLoss.set(flag);
         }
@@ -856,6 +775,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
      *
      */
     protected void lostFocus() {
+        CURRENT_INSTANCE_IN_VIEW = null;
+
         super.focusLost();
     }
 
@@ -1148,8 +1069,6 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
             m_toolbar.updateToolbarToReflectState();
         }
 
-        setFocusLossAllowed(true);
-
         fireEditorValueChanged(true, true);
     }
 
@@ -1219,8 +1138,6 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
     private void displayColorDropDown(final Color color, final int colorSelectionTarget, final Point parentLocation) {
         final Rectangle bounds = m_toolbar.getBounds();
 
-        setFocusLossAllowed(false);
-
         m_colorDropDown.setSelectedColor(color);
         m_colorDropDown.setLocation((bounds.x + parentLocation.x), (bounds.y + bounds.height));
         m_colorDropDown.setVisible(true);
@@ -1248,18 +1165,9 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
     @SuppressWarnings("unused") // menu item instance creation with out assignation
     private void addMenu(final Composite parent) {
         final Menu menu = new Menu(parent);
-        // On some Linux systems the right click triggers focus loss, we need to disable this while the menu is open
-        menu.addListener(SWT.Show, new Listener() {
-            @Override
-            public void handleEvent(final Event event) {
-                m_allowFocusLoss.set(false);
-            }
-        });
         menu.addListener(SWT.Hide, new Listener() {
             @Override
             public void handleEvent(final Event event) {
-                m_allowFocusLoss.set(true);
-
                 markStyleDecorationCloseTime();
             }
         });
@@ -1321,17 +1229,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         final SelectionListener listener = new SelectionAdapter() {
             @Override
             public void widgetSelected(final SelectionEvent e) {
-                m_allowFocusLoss.set(false);
-                try {
-                    buttonClick(id);
-                } finally {
-                    m_allowFocusLoss.set(true);
-                }
-            }
-
-            @Override
-            public void widgetDefaultSelected(final SelectionEvent e) {
-                super.widgetSelected(e);
+                buttonClick(id);
             }
         };
         menuItem.addSelectionListener(listener);
@@ -1421,14 +1319,9 @@ public class StyledTextEditor extends CellEditor implements AnnotationModeExitEn
         FontData fd = f.getFontData()[0];
         FontStyleDialog dlg = new FontStyleDialog(m_styledText.getShell(), c, fd.getHeight(),
             (fd.getStyle() & SWT.BOLD) != 0, (fd.getStyle() & SWT.ITALIC) != 0);
-        m_allowFocusLoss.set(false);
-        try {
-            if (dlg.open() != Window.OK) {
-                // user canceled.
-                return;
-            }
-        } finally {
-            m_allowFocusLoss.set(true);
+        if (dlg.open() != Window.OK) {
+            // user canceled.
+            return;
         }
         RGB newRGB = dlg.getColor();
         Integer newSize = dlg.getSize();

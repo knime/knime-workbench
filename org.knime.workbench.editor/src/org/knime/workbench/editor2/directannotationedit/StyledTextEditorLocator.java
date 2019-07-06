@@ -70,6 +70,43 @@ import org.knime.workbench.editor2.figures.NodeAnnotationFigure;
  * @author ohl, KNIME AG, Zurich, Switzerland
  */
 public class StyledTextEditorLocator implements CellEditorLocator {
+    // There will only ever be one locator instance receiving UI events at any one time, but there will be
+    //      one instance per annotation created over the lifespan of a KAP instance.
+    private static final ExecutorService EXECUTOR_SERVICE =
+        new ThreadPoolExecutor(1,
+                               3,
+                               30,
+                               TimeUnit.SECONDS,
+                               new ArrayBlockingQueue<>(3),
+                               new ThreadPoolExecutor.DiscardOldestPolicy());
+
+    static private void scheduleToolbarUpdate(final Composite editControl, final StyledTextEditor styledTextEditor) {
+        final Runnable r = () -> {
+            // the problem here is that we need wait on the associated shifting of the viewport before we
+            //      can re-place (not replace) the toolbar in the viewport. if we do this ahead of the
+            //      viewport shift, the toolbar will end up in a location that is calculated correctly but
+            //      cemented in the old viewport.  SWT!
+            try {
+                Thread.sleep(150);
+            } catch (Exception e) { } // NOPMD
+
+            if (!editControl.isDisposed()
+                        && (editControl.getDisplay() != null)
+                        && !editControl.getDisplay().isDisposed()) {
+                editControl.getDisplay().asyncExec(() -> {
+                    styledTextEditor.placeAndDisplayToolbar();
+                });
+            }
+        };
+
+        // The executor policy means that the service should probably never reject any of these, but we don't really
+        //  care if some of these are, as this method gets invoked a ridiculous number of times per UI action...
+        try {
+            EXECUTOR_SERVICE.execute(r);
+        } catch (final RejectedExecutionException e) { } // NOPMD
+    }
+
+
     private final NodeAnnotationFigure m_figure;
 
     private final Viewport m_viewport;
@@ -77,8 +114,6 @@ public class StyledTextEditorLocator implements CellEditorLocator {
 
     private final ZoomManager m_zoomManager;
     private double m_lastBoundsImpactingZoom;
-
-    private final ExecutorService m_executorService;
 
     /**
      * @param figure the <code>Figure</code> which represents the GEF-version of the annotation
@@ -93,10 +128,6 @@ public class StyledTextEditorLocator implements CellEditorLocator {
 
         m_zoomManager = (ZoomManager)viewer.getProperty(ZoomManager.class.toString());
         m_lastBoundsImpactingZoom = m_zoomManager.getZoom();
-
-        final ArrayBlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(3);
-        m_executorService =
-            new ThreadPoolExecutor(1, 3, 30, TimeUnit.SECONDS, queue, new ThreadPoolExecutor.CallerRunsPolicy());
     }
 
     /**
@@ -108,10 +139,12 @@ public class StyledTextEditorLocator implements CellEditorLocator {
         final Rectangle textBounds = ste.getTextBounds();
         final Composite edit = (Composite)celleditor.getControl();
         final org.eclipse.draw2d.geometry.Rectangle figBounds = m_figure.getBounds().getCopy();
+        final boolean viewportHasMoved = !m_viewport.getViewLocation().equals(m_lastViewportLocation);
         final boolean zoomHasChanged = (m_lastBoundsImpactingZoom != m_zoomManager.getZoom());
-        final boolean needsJitter = !m_viewport.getViewLocation().equals(m_lastViewportLocation);
         // add OS editor borders or insets -- never verified (result always 0)
         final Rectangle trim = edit.computeTrim(0, 0, 0, 0);
+
+        boolean shouldUpdateToolbarLocation = false;
 
         figBounds.width += trim.width;
         figBounds.height += trim.height;
@@ -127,7 +160,7 @@ public class StyledTextEditorLocator implements CellEditorLocator {
             figBounds.width = Math.max((textBounds.width + 5), NodeAnnotationEditPart.getNodeAnnotationMinWidth());
 
             // center editor in case zoom != 1 (important for node annotations)
-            int x = absoluteWithZoomBounds.x + (absoluteWithZoomBounds.width - figBounds.width) / 2;
+            final int x = absoluteWithZoomBounds.x + (absoluteWithZoomBounds.width - figBounds.width) / 2;
 
             // use x,y from viewport coordinates,
             // w,h are original figure coordinates as editor doesn't grow with zoom
@@ -136,29 +169,7 @@ public class StyledTextEditorLocator implements CellEditorLocator {
                 edit.setBounds(newBounds);
             }
 
-            if (zoomHasChanged) {
-                Runnable r = () -> {
-                    // the problem here is that we need wait on the associated shifting of the viewport before we
-                    //      can re-place (not replace) the toolbar in the viewport. if we do this ahead of the
-                    //      viewport shift, the toolbar will end up in a location that is calculated correctly but
-                    //      cemented in the old viewport.  SWT!
-                    try {
-                        Thread.sleep(175);
-                    } catch (Exception e) { } // NOPMD
-
-                    if (!edit.isDisposed() && (edit.getDisplay() != null) && !edit.getDisplay().isDisposed()) {
-                        edit.getDisplay().asyncExec(() -> {
-                            ste.placeToolbarAndEnsureVisible(false);
-                        });
-                    }
-                };
-
-                // We don't really care if some of these get rejected, and this method gets invoked a ridiculous
-                //      number of times per UI action...
-                try {
-                    m_executorService.execute(r);
-                } catch (RejectedExecutionException e) { } // NOPMD
-            }
+            shouldUpdateToolbarLocation = (viewportHasMoved || zoomHasChanged);
 
             m_lastBoundsImpactingZoom = m_zoomManager.getZoom();
         } else {
@@ -192,17 +203,19 @@ public class StyledTextEditorLocator implements CellEditorLocator {
             if (!edit.getBounds().equals(newBounds)) {
                 edit.setBounds(newBounds);
 
-                if (zoomHasChanged || needsJitter) {
-                    ste.placeToolbarAndEnsureVisible(false);
-                }
+                shouldUpdateToolbarLocation = (viewportHasMoved || zoomHasChanged);
 
                 m_lastBoundsImpactingZoom = m_zoomManager.getZoom();
             }
         }
 
+        if (shouldUpdateToolbarLocation) {
+            scheduleToolbarUpdate(edit, ste);
+        }
+
         // The DirectEditManager will have no knowledge that we have "moved" and so will not move the cell editor's
         //      light-blue-with-shadow-drop border frame unless we notify it.
-        if (needsJitter) {
+        if (viewportHasMoved) {
             edit.notifyListeners(SWT.Move, null);
         }
 

@@ -60,6 +60,7 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.ColorDialog;
@@ -68,13 +69,10 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Widget;
 import org.knime.core.util.ColorUtilities;
-import org.knime.workbench.core.LayoutExemptingLayout;
-import org.knime.workbench.editor2.ViewportPinningGraphicalViewer;
 
 /**
  * This is a color drop down picker created originally to be used with the annotation styling toolbar, but presumably is
  * generic enough that it should be moved to a more central location at some point.
- *
  *
  * @author loki der quaeler
  */
@@ -163,13 +161,16 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
     /**
      * Constructs a color drop down picker
      *
+     * @param parent the owning composite of this widget
      * @param editor the editor while is hosting the stylized annotation
      * @param dropShadow if the panel should render a drop shadow, this should be set to true
      */
-    public ColorDropDown(final StyledTextEditor editor, final boolean dropShadow) {
-        super(ViewportPinningGraphicalViewer.getActiveViewportComposite(), SWT.NONE);
+    public ColorDropDown(final Composite parent, final StyledTextEditor editor, final boolean dropShadow) {
+        super(parent, SWT.NONE);
 
-        LayoutExemptingLayout.exemptControlFromLayout(this);
+        final GridData gd = new GridData();
+        gd.exclude = true;
+        setLayoutData(gd);
 
         initializeColorsIfNecessary();
 
