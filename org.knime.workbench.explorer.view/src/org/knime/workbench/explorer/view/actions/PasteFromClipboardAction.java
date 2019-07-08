@@ -271,6 +271,7 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
         URI knimeURI = createEncodedURI((String)getView().getClipboard().getContents(TextTransfer.getInstance()));
         try {
             AtomicReference<File> file = new AtomicReference<File>();
+            AtomicReference<File> tmpDir = new AtomicReference<File>();
             PlatformUI.getWorkbench().getProgressService().busyCursorWhile((monitor) -> {
                 monitor.beginTask("Downloading file...", 100);
                 try {
@@ -283,7 +284,7 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
                     RepoObjectImport objImport = ((RepoObjectImport)entityImport.get());
                     URI dataURI = objImport.getDataURI();
                     File tmpFile = ResolverUtil.resolveURItoLocalOrTempFile(dataURI, monitor);
-                    File tmpDir = FileUtil.createTempDir("download");
+                    tmpDir.set(FileUtil.createTempDir("download"));
 
                     //change file extension according to the data object to paste
                     RepoObjectType objType = objImport.getType();
@@ -294,7 +295,7 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
                         fileExt = "." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION;
                     }
 
-                    file.set(new File(tmpDir, objImport.getName() + fileExt));
+                    file.set(new File(tmpDir.get(), objImport.getName() + fileExt));
                     if (!tmpFile.renameTo(file.get())) {
                         LOGGER.warn("Pasting failed. The temporary file '" + file.get() + "' couldn't be renamed to '"
                             + file.get() + "'");
@@ -313,6 +314,11 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
             target.getContentProvider().performDrop(getView(), new String[]{file.get().getAbsolutePath()}, target,
                 DND.DROP_COPY);
             getViewer().refresh(ContentDelegator.getTreeObjectFor(target));
+
+            //remove temporary directory
+            if (!file.get().delete() || !tmpDir.get().delete()) {
+                LOGGER.warn("The temporary file '" + file.get() + "' couldn't be deleted");
+            }
         } catch (InvocationTargetException | InterruptedException e) {
             LOGGER.warn("Object from URI '" + knimeURI + "' couldn't be pasted", e);
         }
