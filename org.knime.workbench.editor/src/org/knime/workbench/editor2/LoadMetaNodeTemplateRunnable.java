@@ -57,7 +57,6 @@ import javax.swing.UIManager;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.workflow.TemplateNodeContainerPersistor;
@@ -65,7 +64,6 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
 import org.knime.core.node.workflow.WorkflowPersistor.MetaNodeLinkUpdateResult;
 import org.knime.core.util.FileUtil;
-import org.knime.core.util.SWTUtilities;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 
@@ -174,13 +172,9 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                                     + m_result.getFilteredError("",
                                             LoadResultEntryType.Warning), true);
             }
-            Display.getDefault().asyncExec(new Runnable() {
-                @Override
-                public void run() {
-                    // will not open if status is OK.
-                    ErrorDialog.openError(SWTUtilities.getActiveShell(), "Workflow Load", message, status);
-                }
-            });
+            if (!status.isOK()) {
+                LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message);
+            }
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         } finally {
