@@ -78,6 +78,7 @@ import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.WorkflowPersistor.LoadResult;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.node.workflow.WorkflowPersistor.WorkflowLoadResult;
@@ -283,7 +284,7 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
         }
     }
 
-    private void showLoadErrorDialog(final WorkflowLoadResult result, final IStatus status, final String message) {
+    static void showLoadErrorDialog(final LoadResult result, final IStatus status, final String message) {
         Display.getDefault().asyncExec(new Runnable() {
             @Override
             public void run() {
