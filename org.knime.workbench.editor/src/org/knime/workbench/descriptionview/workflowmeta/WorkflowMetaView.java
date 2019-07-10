@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -107,6 +108,7 @@ import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.directannotationedit.FlatButton;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo;
 import org.knime.workbench.explorer.view.ContentObject;
 
 /**
@@ -152,8 +154,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             "The metadata failed to be fetched from the server. If you would like to view its metadata, you may "
                 + "download it and then view it locally by double-clicking on the workflow in the KNIME Explorer.";
 
-    private static final String TEMPLATE_WORKFLOW_TEXT =
-        "Metadata cannot be shown nor edited for the type of item you have selected in the KNIME Explorer.";
+    private static final String NO_METADATA_TEXT =
+        "Metadata cannot be shown nor edited for the type of item you have selected.";
 
     private static final Image CANCEL_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-cancel.png");
     private static final Image EDIT_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-edit.png");
@@ -269,6 +271,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private final AtomicBoolean m_workflowMetadataNeedBeFetchedFromServer;
     private final AtomicBoolean m_workflowMetadataServerFetchFailed;
     private final AtomicBoolean m_workflowIsATemplate;
+    private final AtomicBoolean m_workflowIsAJob;
 
     private final AtomicBoolean m_shouldDisplayLicenseSection;
 
@@ -295,6 +298,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_workflowMetadataNeedBeFetchedFromServer = new AtomicBoolean(false);
         m_workflowMetadataServerFetchFailed = new AtomicBoolean(false);
         m_workflowIsATemplate = new AtomicBoolean(false);
+        m_workflowIsAJob = new AtomicBoolean(false);
 
         m_shouldDisplayLicenseSection = new AtomicBoolean(!SHOW_LICENSE_ONLY_FOR_HUB);
         m_workflowNameHasChanged = new AtomicBoolean(false);
@@ -401,7 +405,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_noUsableMetadataNotificationPane.setLayoutData(gd);
         m_noUsableMetadataNotificationPane.setLayout(new GridLayout(1, false));
         l = new Label(m_noUsableMetadataNotificationPane, SWT.CENTER | SWT.WRAP);
-        l.setText(TEMPLATE_WORKFLOW_TEXT);
+        l.setText(NO_METADATA_TEXT);
         l.setForeground(TEXT_COLOR);
         l.setFont(ITALIC_CONTENT_FONT);
         gd.horizontalAlignment = SWT.LEFT;
@@ -618,6 +622,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_workflowMetadataServerFetchFailed
             .set((author == null) && (legacyDescription == null) && (creationDate == null));
         m_workflowIsATemplate.set(false);
+        m_workflowIsAJob.set(false);
         m_shouldDisplayLicenseSection.set(shouldShowCCBY40License);
         getDisplay().asyncExec(() -> {
             updateDisplay();
@@ -637,24 +642,25 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_workflowMetadataNeedBeFetchedFromServer.set(false);
         m_workflowMetadataServerFetchFailed.set(false);
         m_workflowIsATemplate.set(false);
+        m_workflowIsAJob.set(false);
         m_shouldDisplayLicenseSection.set(!SHOW_LICENSE_ONLY_FOR_HUB);
         if (knimeExplorerItem) {
             final AbstractExplorerFileStore fs = ((ContentObject) o).getFileStore();
             final boolean isWorkflow = AbstractExplorerFileStore.isWorkflow(fs);
-            final boolean validFS = (isWorkflow
-                                            || AbstractExplorerFileStore.isWorkflowGroup(fs)
-                                            || AbstractExplorerFileStore.isWorkflowTemplate(fs));
+            final boolean isTemplate = AbstractExplorerFileStore.isWorkflowTemplate(fs);
+            final boolean isRemote = fs.getContentProvider().isRemote();
+            final boolean isJob = isRemote ? ((RemoteExplorerFileInfo)fs.fetchInfo()).isWorkflowJob() : false;
+            final boolean validFS =
+                (isWorkflow || AbstractExplorerFileStore.isWorkflowGroup(fs) || isTemplate || isJob);
             if (!validFS) {
                 return;
             }
 
-            final boolean isTemplate = AbstractExplorerFileStore.isWorkflowTemplate(fs);
-
             m_currentWorkflowName = fs.getName();
-            if (fs.getContentProvider().isRemote() || isTemplate) {
-                m_workflowMetadataNeedBeFetchedFromServer
-                    .set(fs.getContentProvider().isRemote() && !fs.fetchInfo().isWorkflowTemplate());
+            if (isRemote || isTemplate || isJob) {
+                m_workflowMetadataNeedBeFetchedFromServer.set(isRemote && !isTemplate && !isJob);
                 m_workflowIsATemplate.set(isTemplate);
+                m_workflowIsAJob.set(isJob);
 
                 metadataFile = null;
                 canEditMetadata = false;
@@ -672,16 +678,22 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         } else {
             final WorkflowRootEditPart wrep = (WorkflowRootEditPart)o;
             final WorkflowManagerUI wmUI = wrep.getWorkflowManager();
-            final WorkflowManager wm = Wrapper.unwrapWFM(wmUI);
-            final WorkflowManager projectWM = wm.getProjectWFM();
-            final ReferencedFile rf = projectWM.getWorkingDir();
+            final Optional<WorkflowManager> wm = Wrapper.unwrapWFMOptional(wmUI);
+            if (wm.isPresent()) {
+                final WorkflowManager projectWM = wm.get().getProjectWFM();
+                final ReferencedFile rf = projectWM.getWorkingDir();
 
-            metadataFile = new File(rf.getFile(), WorkflowPersistor.METAINFO_FILE);
-            m_currentWorkflowName = projectWM.getName();
+                metadataFile = new File(rf.getFile(), WorkflowPersistor.METAINFO_FILE);
+                m_currentWorkflowName = projectWM.getName();
 
-            final WorkflowEditor editor =
-                (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
-            canEditMetadata = !editor.isTempRemoteWorkflowEditor();
+                final WorkflowEditor editor = (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow()
+                    .getActivePage().getActiveEditor();
+                canEditMetadata = !editor.isTempRemoteWorkflowEditor();
+            } else {
+                m_workflowIsAJob.set(true);
+                metadataFile = null;
+                canEditMetadata = false;
+            }
         }
 
         if ((m_metadataFile != null) && m_metadataFile.equals(metadataFile)) {
@@ -730,12 +742,13 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
     private void updateDisplay() {
         if (m_workflowMetadataNeedBeFetchedFromServer.get() || m_workflowMetadataServerFetchFailed.get()
-                    || m_workflowIsATemplate.get()) {
+                    || m_workflowIsATemplate.get() || m_workflowIsAJob.get()) {
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane,
                 m_workflowMetadataNeedBeFetchedFromServer.get());
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerFailureNotificationPane,
                 m_workflowMetadataServerFetchFailed.get());
-            SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, m_workflowIsATemplate.get());
+            SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane,
+                m_workflowIsATemplate.get() || m_workflowIsAJob.get());
 
             SWTUtilities.spaceReclaimingSetVisible(m_titleSection, false);
             SWTUtilities.spaceReclaimingSetVisible(m_descriptionSection, false);
