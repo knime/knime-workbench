@@ -106,6 +106,14 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
      * {@inheritDoc}
      */
     @Override
+    public File toLocalFile(final int options, final IProgressMonitor monitor) throws CoreException {
+        return toLocalFile();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public String getName() {
         return m_wrappedFile.getName();
     }
