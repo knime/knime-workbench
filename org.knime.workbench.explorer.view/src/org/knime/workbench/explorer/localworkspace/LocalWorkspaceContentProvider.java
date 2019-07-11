@@ -45,13 +45,11 @@
 package org.knime.workbench.explorer.localworkspace;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -76,6 +74,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.TmpLocalExplorerFile;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.actions.AbstractCopyMoveAction;
@@ -424,8 +423,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             return copyOrMove(view, fileStores, target, performMove);
         } else if (data instanceof String[]) { // we have a file transfer
             String[] files = (String[])data;
+            List<AbstractExplorerFileStore> dropSource = new ArrayList<AbstractExplorerFileStore>();
             try {
-                File targetDir = target.toLocalFile(EFS.NONE, null);
                 for (String path : files) {
                     File src = new File(path);
                     if (!src.isFile()) {
@@ -435,22 +434,20 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 }
                 for (String path : files) {
                     File src = new File(path);
-                    if (src.exists()
-                            && !targetDir.equals(src.getParentFile())) {
+                    if (src.exists() && !target.toLocalFile(EFS.NONE, null).equals(src.getParentFile())) {
                         if (path.endsWith("." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION)
                             || path.endsWith("." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION)) {
                             new WorkflowImportAction(view, target, path).run();
                         } else {
-                            File dir = new File(targetDir, src.getName());
-                            FileUtils.copyFile(src, dir);
-                            LOGGER.debug("Copied directory " + src.getAbsolutePath() + " to directory "
-                                + dir.getAbsolutePath() + ".");
+                            dropSource.add(new TmpLocalExplorerFile(new File(path)));
                         }
                     }
                 }
-                return true;
-            } catch (IOException e) {
-                LOGGER.error("An error occurred while copying files to the User Space.", e);
+                if (!dropSource.isEmpty()) {
+                    return copyOrMove(view, dropSource, target, DND.DROP_MOVE == operation);
+                } else {
+                    return true;
+                }
             } catch (CoreException e) {
                 LOGGER.error("Could not get local file for item " + target.getFullName() + ".", e);
             }
