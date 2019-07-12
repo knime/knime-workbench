@@ -97,6 +97,8 @@ public class OverwriteRenameDialog extends Dialog {
 
     private final boolean m_multiple;
 
+    private final boolean m_showSnapshotPanel;
+
     private boolean m_isOverwriteDefault;
 
     private SnapshotPanel m_snapshotPanel;
@@ -150,16 +152,33 @@ public class OverwriteRenameDialog extends Dialog {
     *      additional skip option is added.
      * @param forbiddenStores stores that cannot be chosen as destination
     */
-    public OverwriteRenameDialog(final Shell parentShell,
-            final AbstractExplorerFileStore destination,
-            final boolean canWriteDest,
-            final boolean multiple,
-            final Set<AbstractExplorerFileStore> forbiddenStores) {
+    public OverwriteRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
+        final boolean canWriteDest, final boolean multiple, final Set<AbstractExplorerFileStore> forbiddenStores) {
+        this(parentShell, destination, canWriteDest, multiple, forbiddenStores, true);
+    }
+
+    /**
+     * Creates a new dialog.
+     *
+     * @param parentShell parent for the dialog
+     * @param destination the destination to select
+     * @param canWriteDest true, if the destination is writable
+     * @param multiple true, if the dialog is potentially show for multiple files. For this case the cancel button is
+     *            named cancel all and an additional skip option is added.
+     * @param forbiddenStores stores that cannot be chosen as destination
+     * @param showSnapshotPanel <code>true</code> if the create snapshot panel should be shown, <code>false</code>
+     *            otherwise.
+     * @since 8.4
+     */
+    public OverwriteRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
+        final boolean canWriteDest, final boolean multiple, final Set<AbstractExplorerFileStore> forbiddenStores,
+        final boolean showSnapshotPanel) {
         super(parentShell);
         m_destination = destination;
         m_canWriteDestination = canWriteDest;
         m_multiple = multiple;
         m_forbiddenStores = forbiddenStores;
+        m_showSnapshotPanel = showSnapshotPanel;
     }
 
     /** Can be called right after construction to programmatically set the
@@ -206,7 +225,11 @@ public class OverwriteRenameDialog extends Dialog {
 
         createHeader(overall);
         createTextPanel(overall);
-        createSnapshotPanel(overall);
+
+        if (m_showSnapshotPanel) {
+            createSnapshotPanel(overall);
+        }
+
         createError(overall);
 
         int height = (m_snapshotPanel != null) ? 370 : 280;
