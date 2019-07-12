@@ -57,10 +57,19 @@ package org.knime.workbench.core.imports;
 public interface NodeImport extends EntityImport {
 
     /**
-     * @return the node's canonical factory class name (with an additional node name in case of dynamic nodes, see
-     *         RepositoryManager#getNodeTemplate(String))
+     * @return the node's canonical factory class name
      */
     String getCanonicalNodeFactory();
+
+    /**
+     * @return the node's name/title
+     */
+    String getNodeName();
+
+    /**
+     * @return whether the node is a dynamic node (i.e. programmatically created)
+     */
+    boolean isDynamicNode();
 
     /**
      * @return the name of the feature (extensions/plugin) the node is part of
