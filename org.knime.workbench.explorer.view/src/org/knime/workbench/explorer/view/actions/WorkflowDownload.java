@@ -336,8 +336,10 @@ public class WorkflowDownload extends TempExtractArchive {
                 }
 
                 String size = " / <unknown>";
-                final String taskMessage = "Downloading workflow " + m_source.getFullName()+ ": ";
+                final String taskMessage = "Downloading " + m_source.getFullName()+ ": ";
                 long downloaded = 0;
+                boolean useKB = false;
+                boolean useGB = false;
 
                 if (monitor != null) {
                     int kbyte = IProgressMonitor.UNKNOWN;
@@ -346,9 +348,16 @@ public class WorkflowDownload extends TempExtractArchive {
                     // flows larger than 4GB. Have fun.
                     if (l >= 0) {
                         kbyte = (int)(l >> 10);
-                        size = " / (" + (kbyte >> 10) + " MB).";
+
+                        if (kbyte >> 10 == 0) {
+                            useKB = true;
+                            size = " / " + kbyte + " kB.";
+                        } else {
+                            useGB = kbyte >> 20 > 0;
+                            size = " / " + getDecimalSize(kbyte, useGB) + ".";
+                        }
                     }
-                    monitor.beginTask(taskMessage + "0 MB" + size, kbyte);
+                    monitor.beginTask(taskMessage + (useKB ? "0 kB" : useGB ? "0 GB" : "0 MB") + size, kbyte);
                 }
                 m_tmpFile = File.createTempFile("KNIMEServerDownload", ".tmp");
                 LOGGER.debug("Received server download stream for '" + m_source
@@ -364,7 +373,9 @@ public class WorkflowDownload extends TempExtractArchive {
                         if (monitor != null) {
                             monitor.worked(b >> 10);
                             downloaded += b;
-                            monitor.setTaskName(taskMessage + (downloaded >> 20) + " MB" + size);
+                            monitor.setTaskName(taskMessage
+                                + (useKB ? (downloaded >> 10) + " kB" : getDecimalSize(downloaded >> 10, useGB))
+                                + size);
                             if (monitor.isCanceled()) {
                                 m_cancel.set(true);
                             }
@@ -403,6 +414,24 @@ public class WorkflowDownload extends TempExtractArchive {
                 m_errorMsg = e.getMessage();
             } finally {
                 done();
+            }
+        }
+
+        /**
+         * Gets the size of the file with the first decimal digit.
+         *
+         * @param size The size in kB.
+         * @param useGB <code>true</code> if the size should be displayed in GB, <code>false</code> if the size should
+         *            be displayed in MB.
+         * @return The formatted string.
+         */
+        private static final String getDecimalSize(final long size, final boolean useGB) {
+            if (useGB) {
+                double gb = size / (1024.0 * 1024.0);
+                return String.format("%.1f GB", gb);
+            } else {
+                double mb = size / 1024.0;
+                return String.format("%.1f MB", mb);
             }
         }
 
