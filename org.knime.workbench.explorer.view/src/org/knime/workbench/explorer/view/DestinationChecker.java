@@ -74,6 +74,9 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
             DestinationChecker.class);
 
+    private static final OverwriteAndMergeInfo OVERWRITE_ALL_INFO =
+        new OverwriteAndMergeInfo(null, false, true, false, null);
+
     private final Shell m_shell;
     private boolean m_overwriteAll;
     private boolean m_abort;
@@ -178,40 +181,36 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
             result = destination;
         }
 
-        if (result != null && confirmOverwrite && !m_overwriteAll) {
-            AbstractExplorerFileInfo resultInfo = result.fetchInfo();
-            AbstractExplorerFileInfo srcInfo = source.fetchInfo();
-            Set<AbstractExplorerFileStore> forbiddenStores
-                = new HashSet<AbstractExplorerFileStore>(
-                        m_mappings.values());
-
-            if (m_fastDuplicate
-                    && source.getParent().equals(destination)) {
-                /* Skip the rename dialog if a file is copied into its own
-                 * parent. Overwriting makes no sense in this case and
-                 * chances are good that the user just wanted to duplicate
-                 * the file. */
-                result = (T)destination.getChild(
-                        OverwriteRenameDialog.getAlternativeName(
-                                destination.getChild(source.getName()),
-                                forbiddenStores));
+        if (result != null && confirmOverwrite) {
+            if (m_overwriteAll && !source.fetchInfo().isWorkflowGroup()) {
+                m_overwriteAndMergeInfos.put(result, OVERWRITE_ALL_INFO);
             } else {
-                if (srcInfo.isWorkflowGroup()
-                        && resultInfo.isWorkflowGroup()) {
-                    result = openMergeDialog(source, result);
+                AbstractExplorerFileInfo resultInfo = result.fetchInfo();
+                AbstractExplorerFileInfo srcInfo = source.fetchInfo();
+                Set<AbstractExplorerFileStore> forbiddenStores =
+                    new HashSet<AbstractExplorerFileStore>(m_mappings.values());
+
+                if (m_fastDuplicate && source.getParent().equals(destination)) {
+                    /* Skip the rename dialog if a file is copied into its own
+                     * parent. Overwriting makes no sense in this case and
+                     * chances are good that the user just wanted to duplicate
+                     * the file. */
+                    result = (T)destination.getChild(OverwriteRenameDialog
+                        .getAlternativeName(destination.getChild(source.getName()), forbiddenStores));
                 } else {
-                    boolean isModifiable =
-                        resultInfo.isModifiable()
+                    if (srcInfo.isWorkflowGroup() && resultInfo.isWorkflowGroup()) {
+                        result = openMergeDialog(source, result);
+                    } else {
+                        boolean isModifiable = resultInfo.isModifiable()
                             && ExplorerFileSystemUtils
                                 .isLockable((List<AbstractExplorerFileStore>)Arrays.asList(result), false) == null
                             && !ExplorerFileSystemUtils.hasOpenReports(Arrays.asList(result));
-                    /* Make sure that a workflow group is not overwritten by
-                     * a workflow, a template or a file or vice versa */
-                    boolean overwriteOk = !srcInfo.isWorkflowGroup()
-                            && !resultInfo.isWorkflowGroup()
-                            && m_isOverwriteEnabled;
-                    result = openOverwriteDialog(result,
-                            isModifiable && overwriteOk, forbiddenStores);
+                        /* Make sure that a workflow group is not overwritten by
+                         * a workflow, a template or a file or vice versa */
+                        boolean overwriteOk =
+                            !srcInfo.isWorkflowGroup() && !resultInfo.isWorkflowGroup() && m_isOverwriteEnabled;
+                        result = openOverwriteDialog(source, result, isModifiable && overwriteOk, forbiddenStores);
+                    }
                 }
             }
         }
@@ -290,34 +289,49 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
             final T dest,
             final boolean canOverwrite,
             final Set<AbstractExplorerFileStore> forbiddenStores) {
-        OverwriteRenameDialog dlg =
-                new OverwriteRenameDialog(m_shell, dest, canOverwrite,
-                        m_isMultiple, forbiddenStores);
+        return openOverwriteDialog(null, dest, canOverwrite, forbiddenStores);
+    }
+
+    /**
+     *
+     * @param source The source.
+     * @param dest The destination.
+     * @param canOverwrite <code>true</code> if overwrite is possible, <code>false</code> otherwise.
+     * @param forbiddenStores A set of forbidden file stores.
+     * @return New destination (same as <code>dest</code> if to overwrite) or <code>null</code> if canceled
+     */
+    private T openOverwriteDialog(final S source, final T dest, final boolean canOverwrite,
+        final Set<AbstractExplorerFileStore> forbiddenStores) {
+        final boolean showSnapshotPanel =
+            source == null || !dest.getContentProvider().equals(source.getContentProvider());
+
+        final OverwriteRenameDialog dlg =
+            new OverwriteRenameDialog(m_shell, dest, canOverwrite, m_isMultiple, forbiddenStores, showSnapshotPanel);
         if (canOverwrite && m_isOverwriteDefault) {
             dlg.setOverwriteAsDefault(true);
         }
         int returnCode = dlg.open();
 
         switch (returnCode) {
-        case IDialogConstants.CANCEL_ID:
-            return null;
-        case IDialogConstants.ABORT_ID:
-            m_abort = true;
-            return null;
-        case IDialogConstants.YES_TO_ALL_ID:
-            m_overwriteAll = true;
-            // continue to default case and return the overwrite name
-        default:
-            OverwriteAndMergeInfo info = dlg.getInfo();
-            if (info.overwrite()) {
-                m_overwriteAndMergeInfos.put(dest, info);
-                return dest;
-            } else {
-                // parents and childs are always of the same type
-                @SuppressWarnings("unchecked")
-                T newDest = (T)dest.getParent().getChild(info.getNewName());
-                return newDest;
-            }
+            case IDialogConstants.CANCEL_ID:
+                return null;
+            case IDialogConstants.ABORT_ID:
+                m_abort = true;
+                return null;
+            case IDialogConstants.YES_TO_ALL_ID:
+                m_overwriteAll = true;
+                // continue to default case and return the overwrite name
+            default:
+                OverwriteAndMergeInfo info = dlg.getInfo();
+                if (info.overwrite()) {
+                    m_overwriteAndMergeInfos.put(dest, info);
+                    return dest;
+                } else {
+                    // parents and childs are always of the same type
+                    @SuppressWarnings("unchecked")
+                    T newDest = (T)dest.getParent().getChild(info.getNewName());
+                    return newDest;
+                }
         }
     }
 

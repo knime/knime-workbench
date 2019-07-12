@@ -262,6 +262,18 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
             new DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore>(getParentShell(), m_cmd,
                 srcFileStores.size() > 1, !m_performMove);
         destChecker.setIsOverwriteDefault(true);
+
+        // Sort sources s.t. workflow groups are handled first as they don't have the 'Apply to all' button.
+        srcFileStores.sort((e1, e2) -> {
+            if (e1.fetchInfo().isDirectory()) {
+                return -1;
+            } else if (e2.fetchInfo().isDirectory()) {
+                return 1;
+            }
+
+            return 0;
+        });
+
         for (final AbstractExplorerFileStore srcFS : srcFileStores) {
             final AbstractExplorerFileStore destFS = destChecker.getAndCheckDestinationFlow(srcFS, m_target);
             if (destChecker.isAbort()) {
