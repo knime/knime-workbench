@@ -96,6 +96,7 @@ public class NodeAnnotationEditPart extends AnnotationEditPart {
             int w = anno.getWidth();
             int h = anno.getHeight();
             boolean update = false; // update only if anno has no ui info
+            boolean isDirty = false; // check if the workflow is already dirty
             final NodeUIInformation nodeUI = parent.getWorkflowManager().getNodeContainer(nodeID).getUIInformation();
             if ((w <= 0) || (h <= 0)) {
                 /* this code can be removed (but not for a bug fix release) as this
@@ -137,6 +138,7 @@ public class NodeAnnotationEditPart extends AnnotationEditPart {
                     offset = ncf.getOffsetToRefPoint(nodeUI);
                     nodeHeight = ncf.getPreferredSize().height;
                     symbFigWidth = ncf.getSymbolFigure().getPreferredSize().width;
+                    isDirty = nodePart.getNodeContainer().isDirty();
                 } else {
                     offset = new Point(65, 35);
                     nodeHeight = NodeContainerFigure.HEIGHT;
@@ -149,7 +151,15 @@ public class NodeAnnotationEditPart extends AnnotationEditPart {
                 update = true;
             }
             if (update) {
-                anno.setDimensionNoNotify(x, y, w, h);
+                if (isDirty) {
+                    /* If the workflow is already dirty we update the dimensions with notify to ensure that the new
+                     * dimensions are synched correctly (AP-11150). In case it is not dirty, which could happen when we
+                     * update the annotation and the dimension is set prior to altering the text, then the change of the
+                     * text triggers the sync, thus the possible race condition caused by async exec is no problem. */
+                    anno.setDimension(x, y, w, h);
+                } else {
+                    anno.setDimensionNoNotify(x, y, w, h);
+                }
             }
             parent.setLayoutConstraint(NodeAnnotationEditPart.this, annoFig, new Rectangle(x, y, w, h));
             refreshVisuals();
