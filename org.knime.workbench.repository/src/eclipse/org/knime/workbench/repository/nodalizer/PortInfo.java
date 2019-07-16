@@ -63,6 +63,7 @@ public class PortInfo {
     private final boolean m_optional;
     private final String m_dataType;
     private final String m_color;
+    private final String m_objectClass;
 
     /**
      * Creates a POJO representing a single in/outport of a node.
@@ -72,14 +73,16 @@ public class PortInfo {
      * @param optional if the port is optional
      * @param dataType type of port
      * @param color port color
+     * @param objectClass port object class
      */
     public PortInfo(final String name, final String description, final boolean optional, final String dataType,
-        final String color) {
+        final String color, final String objectClass) {
         m_name = name;
         m_description = description;
         m_optional = optional;
         m_color = color;
         m_dataType = dataType;
+        m_objectClass = objectClass;
     }
 
     /**
@@ -125,5 +128,14 @@ public class PortInfo {
      */
     public String getDataType() {
         return m_dataType;
+    }
+
+    /**
+     * Returns the port object class.
+     *
+     * @return the object class
+     */
+    public String getObjectClass() {
+        return m_objectClass;
     }
 }
