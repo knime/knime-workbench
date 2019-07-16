@@ -265,9 +265,9 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
 
         // Sort sources s.t. workflow groups are handled first as they don't have the 'Apply to all' button.
         srcFileStores.sort((e1, e2) -> {
-            if (e1.fetchInfo().isDirectory()) {
+            if (e1.fetchInfo().isWorkflowGroup()) {
                 return -1;
-            } else if (e2.fetchInfo().isDirectory()) {
+            } else if (e2.fetchInfo().isWorkflowGroup()) {
                 return 1;
             }
 
