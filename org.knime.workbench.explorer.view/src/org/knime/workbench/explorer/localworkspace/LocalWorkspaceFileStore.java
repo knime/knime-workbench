@@ -58,6 +58,9 @@ import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileStore;
@@ -83,6 +86,7 @@ import org.knime.workbench.explorer.filesystem.meta.MetaInfo;
 import org.knime.workbench.explorer.filesystem.meta.TemplateInfo;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.osgi.framework.FrameworkUtil;
+import org.xml.sax.SAXException;
 
 /**
  * Wraps the Eclipse LocalFile. Provides a file interface to the workspace.
@@ -223,7 +227,8 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
                 }
 
             });
-        } catch (IOException | URISyntaxException | InvalidSettingsException | ParseException e) {
+        } catch (IOException | URISyntaxException | InvalidSettingsException | ParseException | XPathExpressionException
+                | ParserConfigurationException | SAXException e) {
             throw newCoreException("Problem reading template meta information", e);
         }
     }
