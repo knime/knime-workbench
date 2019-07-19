@@ -55,6 +55,7 @@ import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DropTargetEvent;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.TransferData;
+import org.eclipse.swt.dnd.URLTransfer;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -88,6 +89,10 @@ public class ExplorerDropListener extends ViewerDropAdapter {
     public boolean performDrop(final Object data) {
         Object target = getCurrentTarget();
         AbstractExplorerFileStore dstFS = DragAndDropUtils.getFileStore(target);
+        if (data instanceof String) {
+            //it's supposedly an URL
+            ExplorerURIDropUtil.performDrop((String)data, m_view, dstFS);
+        }
         AbstractContentProvider acp = DragAndDropUtils.getContentProvider(
                 target);
         boolean result = acp.performDrop(m_view, data, dstFS,
@@ -105,12 +110,11 @@ public class ExplorerDropListener extends ViewerDropAdapter {
         boolean isLocalTransfer = LocalSelectionTransfer.getTransfer()
                 .isSupportedType(transferType);
 
+        AbstractExplorerFileStore dstFS = DragAndDropUtils.getFileStore(target);
         if (isLocalTransfer
                 || FileTransfer.getInstance().isSupportedType(transferType)
                 || WorkflowManagerTransfer.getTransfer().isSupportedType(
                         transferType)) {
-            AbstractExplorerFileStore dstFS
-                    = DragAndDropUtils.getFileStore(target);
             AbstractContentProvider acp = DragAndDropUtils.getContentProvider(
                     target);
             if (dstFS == null || acp == null) {
@@ -131,6 +135,9 @@ public class ExplorerDropListener extends ViewerDropAdapter {
             }
             // delegate the validation to the content provider
             return acp.validateDrop(dstFS, operation, transferType);
+        } else if (URLTransfer.getInstance().isSupportedType(transferType)) {
+            //URI drop
+            return ExplorerURIDropUtil.validateDrop(null, dstFS, transferType);
         } else {
             LOGGER.warn("Only files and items of the KNIME Explorer or the filesystem can be dropped.");
             return false;

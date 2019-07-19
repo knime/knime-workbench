@@ -87,6 +87,7 @@ import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.dnd.URLTransfer;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.KeyAdapter;
@@ -302,7 +303,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         m_viewer.addDragSupport(operation, new Transfer[]{selectionTransfer},
                 m_dragListener);
         m_viewer.addDropSupport(operation, new Transfer[]{selectionTransfer,
-                fileTransfer, wfmTransfer}, m_dropListener);
+                fileTransfer, wfmTransfer, URLTransfer.getInstance()}, m_dropListener);
     }
 
     private void hookGlobalActions() {

@@ -63,6 +63,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.FileTransfer;
 import org.eclipse.swt.dnd.TransferData;
+import org.eclipse.swt.dnd.URLTransfer;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
@@ -368,7 +369,8 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     return false;
                 }
             }
-        } else if (!FileTransfer.getInstance().isSupportedType(transferType)) {
+        } else if (!FileTransfer.getInstance().isSupportedType(transferType)
+            && !URLTransfer.getInstance().isSupportedType(transferType)) {
             return false;
         }
         boolean valid =
