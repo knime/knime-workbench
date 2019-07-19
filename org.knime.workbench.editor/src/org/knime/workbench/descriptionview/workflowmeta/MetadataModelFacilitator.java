@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.descriptionview.workflowmeta;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -350,39 +351,21 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         }
     }
 
-    // this writes the original description-holds-everything-glommed-together metadata file.
-    void writeOldStyleMetadata(final File metadataFile) throws IOException {
+    /**
+     * This writes the original description-holds-everything-glommed-together metadata file; note that if this method
+     *      is called while/after the underlying SWT widgets are being/have been disposed, this method will produce
+     *      undesired effects - consider using {@link #metadataSavedInLegacyFormat} instead
+     */
+    void writeLegacyStyleMetadataToFile(final File metadataFile) throws IOException {
         try (final OutputStream os = new FileOutputStream(metadataFile)) {
-            final SAXTransformerFactory fac = (SAXTransformerFactory)TransformerFactory.newInstance();
-            final TransformerHandler handler = fac.newTransformerHandler();
-            final Transformer t = handler.getTransformer();
-            t.setOutputProperty(OutputKeys.METHOD, "xml");
-            t.setOutputProperty(OutputKeys.INDENT, "yes");
-
-            handler.setResult(new StreamResult(os));
-
-            MetaInfoFile.startMetadataDocument(handler);
-
-            m_authorAtom.save(handler);
-            m_creationDateAtom.save(handler);
-
-            final AttributesImpl attributes = new AttributesImpl();
-            attributes.addAttribute(null, null, MetadataXML.FORM, "CDATA", MetadataXML.MULTILINE);
-            attributes.addAttribute(null, null, MetadataXML.READ_ONLY, "CDATA", Boolean.toString(false));
-            attributes.addAttribute(null, null, MetadataXML.NAME, "CDATA", MetadataXML.DESCRIPTION_LABEL);
-
-            // TODO including a type breaks server parsing of the metadata - 4.0.0
-//            attributes.addAttribute(null, null, MetadataXML.TYPE, "CDATA", m_descriptionAtom.getType().getType());
-
-            handler.startElement(null, null, MetadataXML.ATOM_WRITE_ELEMENT, attributes);
-            final char[] value = createOldStyleDescriptionBlock().toCharArray();
-            handler.characters(value, 0, value.length);
-            handler.endElement(null, null, MetadataXML.ATOM_WRITE_ELEMENT);
-
-            MetaInfoFile.endMetadataDocument(handler);
-        } catch (final SAXException | TransformerConfigurationException e) {
-            throw new IOException("Caught exception while writing metadata.", e);
+            writeLegacyStyleMetadataToStream(os);
         }
+    }
+
+    String metadataSavedInLegacyFormat() throws IOException {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        writeLegacyStyleMetadataToStream(baos);
+        return baos.toString("UTF-8");
     }
 
     /**
@@ -646,6 +629,40 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         }
     }
 
+    private void writeLegacyStyleMetadataToStream(final OutputStream os) throws IOException {
+        try {
+            final SAXTransformerFactory fac = (SAXTransformerFactory)TransformerFactory.newInstance();
+            final TransformerHandler handler = fac.newTransformerHandler();
+            final Transformer t = handler.getTransformer();
+            t.setOutputProperty(OutputKeys.METHOD, "xml");
+            t.setOutputProperty(OutputKeys.INDENT, "yes");
+
+            handler.setResult(new StreamResult(os));
+
+            MetaInfoFile.startMetadataDocument(handler);
+
+            m_authorAtom.save(handler);
+            m_creationDateAtom.save(handler);
+
+            final AttributesImpl attributes = new AttributesImpl();
+            attributes.addAttribute(null, null, MetadataXML.FORM, "CDATA", MetadataXML.MULTILINE);
+            attributes.addAttribute(null, null, MetadataXML.READ_ONLY, "CDATA", Boolean.toString(false));
+            attributes.addAttribute(null, null, MetadataXML.NAME, "CDATA", MetadataXML.DESCRIPTION_LABEL);
+
+            // TODO including a type will break the server parsing of the metadata - 4.0.0
+//            attributes.addAttribute(null, null, MetadataXML.TYPE, "CDATA", m_descriptionAtom.getType().getType());
+
+            handler.startElement(null, null, MetadataXML.ATOM_WRITE_ELEMENT, attributes);
+            final char[] value = createOldStyleDescriptionBlock().toCharArray();
+            handler.characters(value, 0, value.length);
+            handler.endElement(null, null, MetadataXML.ATOM_WRITE_ELEMENT);
+
+            MetaInfoFile.endMetadataDocument(handler);
+        } catch (final SAXException | TransformerConfigurationException e) {
+            throw new IOException("Caught exception while writing metadata.", e);
+        }
+    }
+
     // Using "Specifications for workflows on EXAMPLES Server.pdf" as guidance, check whether this description
     //      is smuggling in tags and links and if so, tease them out. This should return only the description
     //      itself.
@@ -697,67 +714,63 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
             while (lineIndex < lines.length) {
                 final String line = lines[lineIndex];
 
-                if (line.trim().length() == 0) {
-                    haveFinishedDescription = true;
-                } else {
-                    final int index = line.indexOf(':');
-                    boolean consumedLine = false;
+                final int index = line.indexOf(':');
+                boolean consumedLine = false;
 
-                    if ((index != -1) && (index < (line.length() - 2))) {
-                        final String initialText = line.substring(0, index);
+                if ((index != -1) && (index < (line.length() - 2))) {
+                    final String initialText = line.substring(0, index);
 
-                        if (PRE_38_KEYWORDS.contains(initialText)) {
-                            if (initialText.equals(PRE_38_METADATA_TAG_KEYWORD)
-                                        || initialText.equals(PRE_38_METADATA_TAGS_KEYWORD)) {
-                                final String tagsConcatenated = line.substring(index + 1).trim();
-                                final String[] tags = tagsConcatenated.split(",");
+                    if (PRE_38_KEYWORDS.contains(initialText)) {
+                        if (initialText.equals(PRE_38_METADATA_TAG_KEYWORD)
+                                    || initialText.equals(PRE_38_METADATA_TAGS_KEYWORD)) {
+                            final String tagsConcatenated = line.substring(index + 1).trim();
+                            final String[] tags = tagsConcatenated.split(",");
 
-                                for (final String tag : tags) {
-                                    addTag(tag.trim());
-                                }
-                            } else if (initialText.equals(PRE_38_METADATA_LICENSE_KEYWORD)) {
-                                m_licenseAtom = new ComboBoxMetaInfoAtom("legacy-license",
-                                    line.substring(index + 1).trim(), false);
-                                m_licenseAtom.addChangeListener(this);
+                            for (final String tag : tags) {
+                                addTag(tag.trim());
+                            }
+                        } else if (initialText.equals(PRE_38_METADATA_LICENSE_KEYWORD)) {
+                            m_licenseAtom = new ComboBoxMetaInfoAtom("legacy-license",
+                                line.substring(index + 1).trim(), false);
+                            m_licenseAtom.addChangeListener(this);
+                        } else {
+                            final String type;
+                            if (initialText.equals(PRE_38_METADATA_LINK_BLOG_KEYWORD)) {
+                                type = "Blog";
+                            } else if (initialText.equals(PRE_38_METADATA_LINK_URL_KEYWORD)) {
+                                type = URL_LEGACY_KEYWORD_TYPE_NAME;
                             } else {
-                                final String type;
-                                if (initialText.equals(PRE_38_METADATA_LINK_BLOG_KEYWORD)) {
-                                    type = "Blog";
-                                } else if (initialText.equals(PRE_38_METADATA_LINK_URL_KEYWORD)) {
-                                    type = URL_LEGACY_KEYWORD_TYPE_NAME;
-                                } else {
-                                    type = "Video";
-                                }
-
-                                final String lowercaseLine = line.toLowerCase(Locale.ROOT);
-                                int urlStart = lowercaseLine.indexOf("http:");
-                                if (urlStart == -1) {
-                                    urlStart = lowercaseLine.indexOf("https:");
-                                }
-
-                                if (urlStart == -1) {
-                                    LOGGER.warn("Could not find URL in old-style metadata link citation [" + line
-                                                        + "]");
-                                } else {
-                                    final String url = line.substring(urlStart);
-                                    final String title = line.substring((index + 1), urlStart).trim();
-
-                                    try {
-                                        addLink(url, title, type);
-                                    } catch (final MalformedURLException e) {
-                                        LOGGER.error("Could not parse incoming URL [" + url + "]", e);
-                                    }
-                                }
+                                type = "Video";
                             }
 
-                            consumedLine = true;
-                            haveFinishedDescription = true;
-                        }
-                    }
+                            final String lowercaseLine = line.toLowerCase(Locale.ROOT);
+                            int urlStart = lowercaseLine.indexOf("http:");
+                            if (urlStart == -1) {
+                                urlStart = lowercaseLine.indexOf("https:");
+                            }
 
-                    if (!consumedLine && !haveFinishedDescription) {
-                        actualDescription.append('\n').append(line);
+                            if (urlStart == -1) {
+                                LOGGER.warn("Could not find URL in legacy metadata link citation [" + line
+                                                    + "]");
+                            } else {
+                                final String url = line.substring(urlStart);
+                                final String title = line.substring((index + 1), urlStart).trim();
+
+                                try {
+                                    addLink(url, title, type);
+                                } catch (final MalformedURLException e) {
+                                    LOGGER.error("Could not parse incoming URL [" + url + "]", e);
+                                }
+                            }
+                        }
+
+                        consumedLine = true;
+                        haveFinishedDescription = true;
                     }
+                }
+
+                if (!consumedLine && !haveFinishedDescription) {
+                    actualDescription.append('\n').append(line);
                 }
 
                 lineIndex++;

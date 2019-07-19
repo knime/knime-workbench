@@ -50,7 +50,12 @@ package org.knime.workbench.descriptionview.workflowmeta;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
@@ -107,9 +112,11 @@ import org.knime.workbench.descriptionview.workflowmeta.atoms.MetaInfoAtom;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.directannotationedit.FlatButton;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo;
 import org.knime.workbench.explorer.view.ContentObject;
+import org.knime.workbench.repository.util.NodeUtil;
 
 /**
  * This is the view reponsible for displaying, and potentially allowing the editing of, the meta-information associated
@@ -130,16 +137,15 @@ import org.knime.workbench.explorer.view.ContentObject;
  */
 public class WorkflowMetaView extends ScrolledComposite implements MetadataModelFacilitator.ModelObserver {
     /** Display font which the author read-only should use. **/
-    public static final Font ITALIC_CONTENT_FONT =
-        JFaceResources.getFontRegistry().getItalic(JFaceResources.DIALOG_FONT);
+    public static final Font ITALIC_CONTENT_FONT;
     /** Display font which the read-only versions of metadata should use. **/
-    public static final Font VALUE_DISPLAY_FONT = JFaceResources.getFont(JFaceResources.DIALOG_FONT);
+    public static final Font VALUE_DISPLAY_FONT;
     /** Font which should be used with the n-ary close character. **/
-    public static final Font BOLD_CONTENT_FONT = JFaceResources.getFontRegistry().getBold(JFaceResources.DIALOG_FONT);
+    public static final Font BOLD_CONTENT_FONT;
     /** The read-only text color. **/
-    public static final Color TEXT_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 128, 128, 128);
+    public static final Color TEXT_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 62, 58, 57); // in 4.0.0: new Color(PlatformUI.getWorkbench().getDisplay(), 128, 128, 128);
     /** The fill color for the header bar and other widgets (like tag chiclets.) **/
-    public static final Color GENERAL_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 240, 240, 241);
+    public static final Color GENERAL_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 240, 240, 242);
 
     private static final String NO_TITLE_TEXT = "No title has been set yet.";
     private static final String NO_DESCRIPTION_TEXT = "No description has been set yet.";
@@ -157,18 +163,73 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private static final String NO_METADATA_TEXT =
         "Metadata cannot be shown nor edited for the type of item you have selected.";
 
+    private static final Font HEADER_FONT;
+    private static final Color HEADER_BORDER_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 229, 229, 229);
+    private static final Color HEADER_TEXT_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 87, 87, 87);
+    private static final Color SECTION_LABEL_TEXT_COLOR = TEXT_COLOR;
+
     private static final Image CANCEL_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-cancel.png");
     private static final Image EDIT_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-edit.png");
     private static final Image SAVE_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-save.png");
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowMetaView.class);
 
+    private static final int HEADER_VERTICAL_INSET = 10;
+    private static final int HEADER_TEXT_DRAW_Y = HEADER_VERTICAL_INSET + 5;
     private static final int HEADER_MARGIN_RIGHT = 9;
     private static final int LEFT_INDENT_HEADER_SUB_PANES = 9;
-    private static final int TOTAL_HEADER_PADDING = HEADER_MARGIN_RIGHT + (2 * LEFT_INDENT_HEADER_SUB_PANES);
+    private static final int TOTAL_HEADER_PADDING
+            = HEADER_MARGIN_RIGHT + (2 * LEFT_INDENT_HEADER_SUB_PANES) + (new GridLayout()).horizontalSpacing;
+    private static final int CONTENT_VERTICAL_INDENT = 30 + (2 * HEADER_VERTICAL_INSET);
 
     // AP-12082
     private static final boolean SHOW_LICENSE_ONLY_FOR_HUB = true;
+
+    static {
+        @SuppressWarnings("resource")   // stream is closed in loadFontFromInputStream(...)
+        final InputStream is = NodeUtil.class.getResourceAsStream("Proboto-Bold.ttf");
+        Font f = SWTUtilities.loadFontFromInputStream(is, 13, SWT.BOLD);
+
+        if (f != null) {
+            BOLD_CONTENT_FONT = f;
+        } else {
+            NodeLogger.getLogger(WorkflowMetaView.class).warn("Could not load bold font.");
+            BOLD_CONTENT_FONT = JFaceResources.getFontRegistry().getBold(JFaceResources.DIALOG_FONT);
+        }
+
+
+        // We do this annoying new declaration of InputStream instances because we otherwise can't apply
+        //      the warning suppression to anywhere but at class level
+        @SuppressWarnings("resource")   // stream is closed in loadFontFromInputStream(...)
+        final InputStream is2 = NodeUtil.class.getResourceAsStream("Proboto-Regular.ttf");
+        f = SWTUtilities.loadFontFromInputStream(is2, 13, SWT.NORMAL);
+
+        if (f != null) {
+            VALUE_DISPLAY_FONT = f;
+        } else {
+            NodeLogger.getLogger(WorkflowMetaView.class).warn("Could not load regular font.");
+            VALUE_DISPLAY_FONT = JFaceResources.getFont(JFaceResources.DIALOG_FONT);
+        }
+
+
+        // We do this annoying new declaration of InputStream instances because we otherwise can't apply
+        //      the warning suppression to anywhere but at class level
+        @SuppressWarnings("resource")   // stream is closed in loadFontFromInputStream(...)
+        final InputStream is3 = NodeUtil.class.getResourceAsStream("Proboto-Italic.ttf");
+        f = SWTUtilities.loadFontFromInputStream(is3, 13, SWT.ITALIC);
+
+        if (f != null) {
+            ITALIC_CONTENT_FONT = f;
+        } else {
+            NodeLogger.getLogger(WorkflowMetaView.class).warn("Could not load italic font.");
+            ITALIC_CONTENT_FONT = JFaceResources.getFontRegistry().getItalic(JFaceResources.DIALOG_FONT);
+        }
+
+
+        final FontData[] baseFD = BOLD_CONTENT_FONT.getFontData();
+        final FontData headerFD = new FontData(baseFD[0].getName(), 18, baseFD[0].getStyle());
+        HEADER_FONT = new Font(PlatformUI.getWorkbench().getDisplay(), headerFD);
+    }
 
     private static Text addLabelTextFieldCouplet(final Composite parent, final String labelText,
         final String placeholderText) {
@@ -214,8 +275,10 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private final Composite m_contentPane;
 
     private final Composite m_headerBar;
-    private final Label m_headerLabel;
+    private final Label m_headerLabelPlaceholder;
     private String m_currentWorkflowName;
+    private final AtomicInteger m_headerDrawX;
+    private String m_headerText;
     private FlatButton m_editSaveButton;
     private final Composite m_headerButtonPane;
 
@@ -260,11 +323,6 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private final Composite m_creationDateSection;
     private final Composite m_creationDateContentPane;
 
-    // resources to dispose
-    private final Font m_headerLabelFont;
-    private final Color m_headerLabelFontColor;
-    private final Color m_headerBarBorder;
-
     private File m_metadataFile;
     private MetadataModelFacilitator m_modelFacilitator;
 
@@ -307,6 +365,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_lastRenderedViewportOriginX = new AtomicInteger(Integer.MIN_VALUE);
         m_lastRenderedViewportOriginY = new AtomicInteger(Integer.MIN_VALUE);
 
+        m_headerDrawX = new AtomicInteger(0);
 
         setBackgroundMode(SWT.INHERIT_DEFAULT);
 
@@ -327,26 +386,45 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         gd.exclude = true;
         m_headerBar.setLayoutData(gd);
         gl = new GridLayout(2, false);
-        gl.marginHeight = 0;
+        gl.marginHeight = HEADER_VERTICAL_INSET;
         gl.marginWidth = 0;
         gl.marginRight = HEADER_MARGIN_RIGHT;
         m_headerBar.setLayout(gl);
-        m_headerBarBorder = new Color(parent.getDisplay(), 228, 228, 228);
-        m_headerBar.setBackground(GENERAL_FILL_COLOR);
+        m_headerBar.addPaintListener((event) -> {
+            final GC gc = event.gc;
+            final Rectangle size = m_headerBar.getClientArea();
 
-        m_headerLabel = new Label(m_headerBar, SWT.LEFT);
-        m_headerLabel.setText("");
+            gc.setAdvanced(true);
+            gc.setBackground(GENERAL_FILL_COLOR);
+            gc.setForeground(HEADER_BORDER_COLOR);
+            // the node description header bar actually renders as only the top left being a rounded rectangle
+            //      so we fill and draw something larger, letting the clip sort it out, and the paint the east
+            //      and south border lines individually.
+            gc.fillRoundRectangle(size.x, size.y, size.width + 15, size.height + 15, 10, 10);
+            final int x = size.x + 1;
+            final int y = size.y + 1;
+            gc.drawRoundRectangle(x, y, size.width + 15, size.height + 15, 10, 10);
+            final int x2 = x + size.width - 2;
+            final int y2 = y + size.height - 2;
+            gc.drawLine(x2, y, x2, y2);
+            gc.drawLine(x, y2, x2, y2);
+
+            gc.setFont(HEADER_FONT);
+            gc.setForeground(HEADER_TEXT_COLOR);
+            gc.setTextAntialias(SWT.ON);
+            gc.drawString(m_headerText, m_headerDrawX.intValue(), HEADER_TEXT_DRAW_Y);
+        });
+
+        m_headerLabelPlaceholder = new Label(m_headerBar, SWT.LEFT);
+        m_headerLabelPlaceholder.setText("");
         gd = new GridData();
         gd.horizontalIndent = LEFT_INDENT_HEADER_SUB_PANES;
-        m_headerLabel.setLayoutData(gd);
-        final FontData[] baseFD = BOLD_CONTENT_FONT.getFontData();
-        final FontData headerFD = new FontData(baseFD[0].getName(), 18, baseFD[0].getStyle());
-        m_headerLabelFont = new Font(parent.getDisplay(), headerFD);
-        m_headerLabel.setFont(m_headerLabelFont);
-        m_headerLabelFontColor = new Color(parent.getDisplay(), 88, 88, 88);
-        m_headerLabel.setForeground(m_headerLabelFontColor);
+        m_headerLabelPlaceholder.setLayoutData(gd);
+        m_headerLabelPlaceholder.setFont(HEADER_FONT);
+        m_headerLabelPlaceholder.setForeground(HEADER_TEXT_COLOR);
 
         m_headerButtonPane = new Composite(m_headerBar, SWT.NONE);
+        m_headerButtonPane.setBackground(GENERAL_FILL_COLOR);
         gd = new GridData();
         gd.horizontalAlignment = SWT.RIGHT;
         gd.grabExcessHorizontalSpace = true;
@@ -365,7 +443,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         gd = new GridData();
         gd.horizontalAlignment = SWT.FILL;
         gd.grabExcessHorizontalSpace = true;
-        gd.verticalIndent = 38;
+        gd.verticalIndent = CONTENT_VERTICAL_INDENT + 8;
         m_remoteServerNotificationPane.setLayoutData(gd);
         m_remoteServerNotificationPane.setLayout(new GridLayout(1, false));
         Label l = new Label(m_remoteServerNotificationPane, SWT.CENTER | SWT.WRAP);
@@ -383,7 +461,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         gd = new GridData();
         gd.horizontalAlignment = SWT.FILL;
         gd.grabExcessHorizontalSpace = true;
-        gd.verticalIndent = 38;
+        gd.verticalIndent = CONTENT_VERTICAL_INDENT + 8;
         m_remoteServerFailureNotificationPane.setLayoutData(gd);
         m_remoteServerFailureNotificationPane.setLayout(new GridLayout(1, false));
         l = new Label(m_remoteServerFailureNotificationPane, SWT.CENTER | SWT.WRAP);
@@ -401,7 +479,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         gd = new GridData();
         gd.horizontalAlignment = SWT.FILL;
         gd.grabExcessHorizontalSpace = true;
-        gd.verticalIndent = 38;
+        gd.verticalIndent = CONTENT_VERTICAL_INDENT + 8;
         m_noUsableMetadataNotificationPane.setLayoutData(gd);
         m_noUsableMetadataNotificationPane.setLayout(new GridLayout(1, false));
         l = new Label(m_noUsableMetadataNotificationPane, SWT.CENTER | SWT.WRAP);
@@ -420,7 +498,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_titleNoDataPane = sectionAndContentPane[1];
         m_titleContentPane = sectionAndContentPane[2];
         gd = (GridData)m_titleSection.getLayoutData();
-        gd.verticalIndent = 30;
+        gd.verticalIndent = CONTENT_VERTICAL_INDENT;
         m_titleSection.setLayoutData(gd);
 
 
@@ -552,16 +630,6 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_floatingHeaderPositioner = new FloatingHeaderBarPositioner();
     }
 
-    @Override
-    public void dispose() {
-        m_headerLabelFont.dispose();
-        m_headerLabelFontColor.dispose();
-
-        m_headerBarBorder.dispose();
-
-        super.dispose();
-    }
-
     /**
      * @return whether the view is currently in edit mode
      */
@@ -646,10 +714,16 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_shouldDisplayLicenseSection.set(!SHOW_LICENSE_ONLY_FOR_HUB);
         if (knimeExplorerItem) {
             final AbstractExplorerFileStore fs = ((ContentObject) o).getFileStore();
+            final AbstractExplorerFileInfo fileInfo = fs.fetchInfo();
+            if (!(fileInfo instanceof RemoteExplorerFileInfo)) {
+                LOGGER.debug("Received unexpected file info type: " + fileInfo.getClass());
+                return;
+            }
+
             final boolean isWorkflow = AbstractExplorerFileStore.isWorkflow(fs);
             final boolean isTemplate = AbstractExplorerFileStore.isWorkflowTemplate(fs);
             final boolean isRemote = fs.getContentProvider().isRemote();
-            final boolean isJob = isRemote ? ((RemoteExplorerFileInfo)fs.fetchInfo()).isWorkflowJob() : false;
+            final boolean isJob = isRemote ? ((RemoteExplorerFileInfo)fileInfo).isWorkflowJob() : false;
             final boolean validFS =
                 (isWorkflow || AbstractExplorerFileStore.isWorkflowGroup(fs) || isTemplate || isJob);
             if (!validFS) {
@@ -700,8 +774,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             return;
         }
 
-        m_headerLabel.getDisplay().asyncExec(() -> {
-            m_headerLabel.setText(m_currentWorkflowName);
+        m_headerLabelPlaceholder.getDisplay().asyncExec(() -> {
+            m_headerText = m_currentWorkflowName;
             m_workflowNameHasChanged.set(true);
             updateFloatingHeaderBar();
         });
@@ -905,25 +979,31 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
         performPostEditModeTransitionActions();
 
-        final File metadata = new File(m_metadataFile.getAbsolutePath());
-        final Job job = new WorkspaceJob("Saving workflow metadata...") {
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            public IStatus runInWorkspace(final IProgressMonitor monitor) throws CoreException {
-                try {
-                    m_modelFacilitator.writeOldStyleMetadata(metadata);
-                } catch (final IOException e) {
-                    throw new CoreException(new Status(IStatus.ERROR, KNIMEEditorPlugin.PLUGIN_ID, -1,
-                        "Failed to save metadata file.", e));
+        try {
+            final Path metadata = Paths.get(m_metadataFile.getAbsolutePath());
+            final String metadataXML = m_modelFacilitator.metadataSavedInLegacyFormat();
+            final Job job = new WorkspaceJob("Saving workflow metadata...") {
+                /**
+                 * {@inheritDoc}
+                 */
+                @Override
+                public IStatus runInWorkspace(final IProgressMonitor monitor) throws CoreException {
+                    try {
+                        Files.write(metadata, metadataXML.getBytes("UTF-8"), StandardOpenOption.CREATE,
+                            StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
+                    } catch (final IOException e) {
+                        throw new CoreException(new Status(IStatus.ERROR, KNIMEEditorPlugin.PLUGIN_ID, -1,
+                            "Failed to save the metadata to file.", e));
+                    }
+                    return Status.OK_STATUS;
                 }
-                return Status.OK_STATUS;
-            }
-        };
-        job.setRule(ResourcesPlugin.getWorkspace().getRoot());
-        job.setUser(true);
-        job.schedule();
+            };
+            job.setRule(ResourcesPlugin.getWorkspace().getRoot());
+            job.setUser(true);
+            job.schedule();
+        } catch (final IOException e) {
+            LOGGER.error("Failed to save metadata.", e);
+        }
     }
 
     private void performDiscard() {
@@ -962,6 +1042,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             m_editSaveButton.addClickListener((source) -> {
                 performSave();
             });
+            m_editSaveButton.setHighlightAsCircle(true);
 
             final FlatButton fb = new FlatButton(m_headerButtonPane, SWT.PUSH, CANCEL_IMAGE, new Point(20, 20), true);
             gd = (GridData)fb.getLayoutData();
@@ -970,6 +1051,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             fb.addClickListener((source) -> {
                 performDiscard();
             });
+            fb.setHighlightAsCircle(true);
 
             updateEditSaveButton();
         } else {
@@ -990,6 +1072,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
                     configureFloatingHeaderBarButtons();
                 });
+                fb.setHighlightAsCircle(true);
             } else {
                 final Label l2 = new Label(m_headerButtonPane, SWT.LEFT);
                 l2.setLayoutData(new GridData(20, 20));
@@ -1037,6 +1120,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         Label l = new Label(sectionAndContentPane[0], SWT.LEFT);
         l.setText(label);
         l.setFont(BOLD_CONTENT_FONT);
+        l.setForeground(SECTION_LABEL_TEXT_COLOR);
         gd = new GridData();
         gd.horizontalAlignment = SWT.LEFT;
         l.setLayoutData(gd);
@@ -1104,6 +1188,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         Label l = new Label(sectionAndContentPane[0], SWT.LEFT);
         l.setText(label);
         l.setFont(BOLD_CONTENT_FONT);
+        l.setForeground(SECTION_LABEL_TEXT_COLOR);
         gd = new GridData();
         gd.horizontalAlignment = SWT.LEFT;
         l.setLayoutData(gd);
@@ -1302,37 +1387,42 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             }
 
             final Point neededButtonPaneSize = m_headerButtonPane.computeSize(SWT.DEFAULT, SWT.DEFAULT);
-            final Point labelSize = m_headerLabel.getSize();
-            final int barHeight = Math.max(neededButtonPaneSize.y, labelSize.y) + 4;
+            final Point labelSize = m_headerLabelPlaceholder.getSize();
+            final int barHeight = Math.max(neededButtonPaneSize.y, labelSize.y) + 4 + (2 * HEADER_VERTICAL_INSET);
             m_headerBar.setBounds(origin.x, origin.y, viewportWidth, barHeight);
 
-            final int labelWidth = viewportWidth - (TOTAL_HEADER_PADDING + neededButtonPaneSize.x);
-            m_headerLabel.setSize(labelWidth, labelSize.y);
-            final GridData gd = (GridData)m_headerLabel.getLayoutData();
-            gd.widthHint = labelWidth;
-            m_headerLabel.setLayoutData(gd);
+            final int placeholderWidth = viewportWidth - (TOTAL_HEADER_PADDING + neededButtonPaneSize.x);
+            m_headerLabelPlaceholder.setSize(placeholderWidth, labelSize.y);
+            final GridData gd = (GridData)m_headerLabelPlaceholder.getLayoutData();
+            gd.widthHint = placeholderWidth;
+            m_headerLabelPlaceholder.setLayoutData(gd);
 
+            final int centerAlignedAvailableWidth
+                = viewportWidth - (2 * (LEFT_INDENT_HEADER_SUB_PANES + HEADER_MARGIN_RIGHT + neededButtonPaneSize.x));
             final GC gc = new GC(m_headerBar.getDisplay());
             try {
-                gc.setFont(m_headerLabel.getFont());
-                final Point fullStringSize = gc.textExtent(m_currentWorkflowName);
+                gc.setFont(m_headerLabelPlaceholder.getFont());
+                Point fullStringSize = gc.textExtent(m_currentWorkflowName);
 
-                if (fullStringSize.x > labelWidth) {
+                if (fullStringSize.x > centerAlignedAvailableWidth) {
                     // this could be made more precise by iterative size checks,
                     //      but let's try this first for performance
-                    final double percentage = (labelWidth * 0.87) / fullStringSize.x;
+                    final double percentage = (placeholderWidth * 0.87) / fullStringSize.x;
                     final int charCount = (int)(m_currentWorkflowName.length() * percentage);
                     final String substring = m_currentWorkflowName.substring(0, charCount) + "...";
 
-                    m_headerLabel.setText(substring);
+                    m_headerText = substring;
+                    fullStringSize = gc.textExtent(m_headerText);
                 } else {
-                    m_headerLabel.setText(m_currentWorkflowName);
+                    m_headerText = m_currentWorkflowName;
                 }
+                m_headerDrawX.set((viewportWidth - fullStringSize.x) / 2);
             } finally {
                 gc.dispose();
             }
 
             m_headerBar.layout(true, true);
+            m_headerBar.redraw();
         }
     }
 }

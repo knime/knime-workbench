@@ -89,7 +89,7 @@ public abstract class MetaInfoAtom {
     public static final boolean OS_IS_MAC = Platform.OS_MACOSX.equals(Platform.getOS());
 
     /** The read-only text color. **/
-    protected static final Color LINK_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 244, 184, 90);
+    protected static final Color LINK_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 255, 144, 0);
     /** Used in rendering a close 'icon' */
     protected static final String N_ARY_TIMES = "\u2A09";
     /** Used to denote a click-able surface. */

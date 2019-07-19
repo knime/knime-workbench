@@ -73,7 +73,7 @@ import org.xml.sax.helpers.AttributesImpl;
  * @author loki der quaeler
  */
 public class LinkMetaInfoAtom extends MetaInfoAtom {
-    private static final String BLACK_CIRCLE = "\u2022";
+    private static final String BLACK_CIRCLE = "\u25CF";
     private static final Color BULLET_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 68, 61, 65);
 
     private static final String HTTP_PREFIX = "http://";
