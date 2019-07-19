@@ -136,6 +136,7 @@ public class FlatButton extends Canvas {
     private final HashSet<ClickListener> m_listeners;
 
     private final UIPresenter m_uiPresenter;
+    private final AtomicBoolean m_highlightAsCircle;
 
     private PaintListener m_postRenderer;
 
@@ -352,6 +353,7 @@ public class FlatButton extends Canvas {
         m_listeners = new HashSet<>();
 
         m_uiPresenter = new UIPresenter();
+        m_highlightAsCircle = new AtomicBoolean(false);
         addMouseListener(m_uiPresenter);
         addMouseTrackListener(m_uiPresenter);
         addPaintListener(m_uiPresenter);
@@ -373,6 +375,17 @@ public class FlatButton extends Canvas {
         synchronized(m_listeners) {
             m_listeners.remove(listener);
         }
+    }
+
+    /**
+     * @param asCircle if true, the mouse over state will be rendered as a circle; it is a rectangle by default.
+     */
+    public void setHighlightAsCircle(final boolean asCircle) {
+        m_highlightAsCircle.set(asCircle);
+
+        getDisplay().asyncExec(() -> {
+            redraw();
+        });
     }
 
     /**
@@ -543,11 +556,20 @@ public class FlatButton extends Canvas {
 
                 if (fill != null) {
                     gc.setForeground(SELECTED_BORDER_COLOR);
-                    gc.drawRectangle(0, 0, (size.x - 1), (size.y - 1));
-
                     gc.setBackground(fill);
-                    gc.setAlpha(alpha);
-                    gc.fillRectangle(0, 0, size.x, size.y);
+
+                    if (m_highlightAsCircle.get()) {
+                        final int minimalDimension = Math.min(size.x, size.y);
+                        final int x = (size.x - minimalDimension) / 2;
+                        final int y = (size.y - minimalDimension) / 2;
+                        gc.drawOval(x, y, minimalDimension, minimalDimension);
+                        gc.setAlpha(alpha);
+                        gc.fillOval(x, y, minimalDimension, minimalDimension);
+                    } else {
+                        gc.drawRectangle(0, 0, (size.x - 1), (size.y - 1));
+                        gc.setAlpha(alpha);
+                        gc.fillRectangle(0, 0, size.x, size.y);
+                    }
                     gc.setAlpha(255);
                 }
             }
