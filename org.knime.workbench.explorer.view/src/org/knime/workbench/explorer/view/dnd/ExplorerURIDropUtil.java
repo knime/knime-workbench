@@ -86,7 +86,7 @@ import org.knime.workbench.explorer.view.actions.PasteFromClipboardAction;
  * validate/perform drop code in {@link ExplorerDropListener} even more.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
- * @since 8.4
+ * @since 8.5
  */
 public class ExplorerURIDropUtil {
 

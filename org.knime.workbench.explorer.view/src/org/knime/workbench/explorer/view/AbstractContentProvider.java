@@ -677,7 +677,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param overwrite if true the target/tmpDir should be cleaned for the following template save
      * @param isSubNode whether the template is a subnode / component (as opposed to a metanode)
      * @return true if drop can proceed. If false is return the drop method silently return.
-     * @since 8.4
+     * @since 8.5
      */
     protected boolean metaTemplateDropPrepareForSave(final AbstractExplorerFileStore target, final File tmpDir,
         final boolean overwrite, final boolean isSubNode) {
