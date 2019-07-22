@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <component id="org.knime.workbench.explorer.view" version="2">
+    <resource path="META-INF/MANIFEST.MF">
+        <filter id="924844039">
+            <message_arguments>
+                <message_argument value="8.4.0"/>
+                <message_argument value="8.4.0"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="META-INF/MANIFEST.MF" type="org.knime.workbench.explorer.view.actions.GlobalEditMetaInfoAction">
         <filter id="305324134">
             <message_arguments>
@@ -75,6 +83,13 @@
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore"/>
                 <message_argument value="saveJobAsWorkflow(RemoteExplorerFileStore)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/filesystem/TmpLocalExplorerFile.java" type="org.knime.workbench.explorer.filesystem.TmpLocalExplorerFile">
+        <filter id="1143996420">
+            <message_arguments>
+                <message_argument value="toLocalFile(int, IProgressMonitor)"/>
             </message_arguments>
         </filter>
     </resource>
