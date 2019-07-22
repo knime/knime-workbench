@@ -101,29 +101,34 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
         //        }
         //        LOGGER.debug(getView().getClipboard().getAvailableTypes());
 
-        if (isValidExplorerFileStoreToPaste()) {
-            return true;
+        Boolean valid;
+        if ((valid = isValidExplorerFileStoreToPaste()) != null) {
+            return valid;
         }
 
         return isValidURIToPaste();
 
     }
 
-    private boolean isValidExplorerFileStoreToPaste() {
+    /**
+     * @return <code>true</code>/<code>false</code> to indicate validity, <code>null</code> if the clipboard doesn't
+     *         contain files stores to paste
+     */
+    private Boolean isValidExplorerFileStoreToPaste() {
         ExplorerFileStoreTransfer transfer = ExplorerFileStoreTransfer.getInstance();
         Object c = getView().getClipboard().getContents(transfer);
         URI[] uri = (URI[])c;
         if (c != null && c instanceof URI[] && uri.length > 0) {
-            return isSelectionValid(uri);
+            return isSelectionValid();
         }
-        return false;
+        return null;
     }
 
     /**
      * @return true if the selected target is valid for pasting content, false
      *      otherwise
      */
-    private boolean isSelectionValid(final URI[] sourceURI) {
+    private boolean isSelectionValid() {
         // then check if the selected target is valid
         // only enabled if exactly on file is selected
         List<AbstractExplorerFileStore> files = getAllSelectedFiles();

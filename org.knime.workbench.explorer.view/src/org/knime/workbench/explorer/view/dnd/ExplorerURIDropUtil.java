@@ -92,8 +92,6 @@ public class ExplorerURIDropUtil {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(ExplorerURIDropUtil.class);
 
-    private static int m_validate = 0;
-
     private ExplorerURIDropUtil() {
         //utility class
     }
@@ -141,7 +139,6 @@ public class ExplorerURIDropUtil {
             td = transferData;
         }
         assert URLTransfer.getInstance().isSupportedType(td);
-        System.out.println("validate " + m_validate++);
         //let content provider (i.e. mount point) validate the drop, too
         return target.getContentProvider().validateDrop(target, DND.DROP_COPY, td);
     }
