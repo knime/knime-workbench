@@ -85,12 +85,20 @@ import org.xml.sax.helpers.AttributesImpl;
 public abstract class MetaInfoAtom {
     /** The read-only text color. **/
     protected static final Color LINK_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 255, 144, 0);
-    /** Used in rendering a close 'icon' */
+    /** Used in rendering a close 'icon' **/
     protected static final String N_ARY_TIMES = "\u2A09";
-    /** Used to denote a click-able surface. */
+    /** Used to denote a click-able surface. **/
     protected static final Cursor HAND_CURSOR = new Cursor(PlatformUI.getWorkbench().getDisplay(), SWT.CURSOR_HAND);
-    /** Cursor to return to. */
+    /** Cursor to return to. **/
     protected static final Cursor DEFAULT_CURSOR = new Cursor(PlatformUI.getWorkbench().getDisplay(), SWT.CURSOR_ARROW);
+    /** Font Metrics calculations on some platforms, with some fonts, calculate incorrectly; this is our fudge factor. **/
+    protected static final double FONT_METRICS_CORRECTION;
+
+    static {
+        final Double d = (Double)PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.FONT_METRICS_CORRECTION_DETAIL);
+
+        FONT_METRICS_CORRECTION = (d != null) ? d.doubleValue() : 1.0;
+    }
 
 
     /**
@@ -134,37 +142,41 @@ public abstract class MetaInfoAtom {
         final int horizontalInset, final int verticalInset, final boolean renderNAry) {
         final GC gc = new GC(widget);
 
-        gc.setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
-        final Point tagTextSize = gc.textExtent(text);
+        try {
+            gc.setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
+            final Point tagTextSize = gc.textExtent(text);
 
-        final Point nArySize;
-        if (renderNAry) {
-            gc.setFont(WorkflowMetaView.BOLD_CONTENT_FONT);
-            nArySize = gc.textExtent(N_ARY_TIMES);
-            if (PlatformSpecificUIisms.OS_IS_MAC) {
-                nArySize.y = nArySize.x;    // it's an equi-sided X, but some platform fonts give it a bottom inset
+            final Point nArySize;
+            if (renderNAry) {
+                gc.setFont(WorkflowMetaView.BOLD_CONTENT_FONT);
+                nArySize = gc.textExtent(N_ARY_TIMES);
+                if (PlatformSpecificUIisms.OS_IS_MAC) {
+                    nArySize.y = nArySize.x;    // it's an equi-sided X, but some platform fonts give it a bottom inset
+                }
+            } else {
+                nArySize = new Point(0, 0);
             }
-        } else {
-            nArySize = new Point(0, 0);
+
+            final int totalWidth
+                    = (int)(tagTextSize.x * FONT_METRICS_CORRECTION)
+                            + (2 * horizontalInset)
+                            + (renderNAry ? ((int)(nArySize.x * FONT_METRICS_CORRECTION) + horizontalInset) : 0);
+            final int totalHeight = Math.max(tagTextSize.y, nArySize.y) + (2 * verticalInset);
+
+            final Rectangle nAryBounds;
+            if (renderNAry) {
+                final int nAryX = totalWidth - horizontalInset - nArySize.x;
+                final int nAryY = (totalHeight - nArySize.y) / 2;
+
+                nAryBounds = new Rectangle(nAryX, nAryY, nArySize.x, nArySize.y);
+            } else {
+                nAryBounds = null;
+            }
+
+            return new RenderSizeData(new Point(totalWidth, totalHeight), nAryBounds);
+        } finally {
+            gc.dispose();
         }
-
-        final int totalWidth =
-            tagTextSize.x + (2 * horizontalInset) + (renderNAry ? (nArySize.x + horizontalInset) : 0);
-        final int totalHeight = Math.max(tagTextSize.y, nArySize.y) + (2 * verticalInset);
-
-        final Rectangle nAryBounds;
-        if (renderNAry) {
-            final int nAryX = totalWidth - horizontalInset - nArySize.x;
-            final int nAryY = (totalHeight - nArySize.y) / 2;
-
-            nAryBounds = new Rectangle(nAryX, nAryY, nArySize.x, nArySize.y);
-        } else {
-            nAryBounds = null;
-        }
-
-        gc.dispose();
-
-        return new RenderSizeData(new Point(totalWidth, totalHeight), nAryBounds);
     }
 
 
@@ -581,6 +593,8 @@ public abstract class MetaInfoAtom {
 
         private final String m_url;
 
+        private Point m_cachedComputedSize;
+
         /**
          * This uses the enclosing class' <code>m_value</code> as the display text.
          *
@@ -611,7 +625,10 @@ public abstract class MetaInfoAtom {
                 final Rectangle r = getClientArea();
 
                 gc.setAdvanced(true);
+                gc.setAntialias(SWT.ON);
                 gc.setTextAntialias(SWT.ON);
+                gc.setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
+
                 gc.drawString(m_displayText, (r.x + HORIZONTAL_INSET), (r.y + VERTICAL_INSET));
 
                 paintNAry(gc);
@@ -637,6 +654,10 @@ public abstract class MetaInfoAtom {
             addListener(SWT.MouseExit, (event) -> {
                 setCursor(DEFAULT_CURSOR);
             });
+
+            m_cachedComputedSize = null;
+
+            super.computeSize(0, 0);
         }
 
         /**
@@ -647,6 +668,18 @@ public abstract class MetaInfoAtom {
          */
         @Override
         protected void mouseMovedOutsideNAryBounds(final MouseEvent me) { }
+
+        @Override
+        public Point computeSize (final int wHint, final int hHint, final boolean changed) {
+            if (m_cachedComputedSize == null) {
+                final RenderSizeData rsd =
+                        calculateRenderSize(this, m_displayText, m_horizontalInset, m_verticalInset, m_renderEdit);
+
+                m_cachedComputedSize = rsd.getEntireSize();
+            }
+
+            return m_cachedComputedSize;
+        }
     }
 
     /**

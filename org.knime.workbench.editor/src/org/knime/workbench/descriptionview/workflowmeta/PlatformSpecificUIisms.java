@@ -63,6 +63,8 @@ public class PlatformSpecificUIisms {
     public static final String HEADER_FONT_SIZE_DETAIL = "headerFontSize";
     /** This will return an instance of Integer **/
     public static final String CONTENT_FONT_SIZE_DETAIL = "contentFontSize";
+    /** This will return an instance of Double **/
+    public static final String FONT_METRICS_CORRECTION_DETAIL = "fontMetricsCorrection";
     /** This will return an instance of String **/
     public static final String BLACK_CIRCLE_UNICODE_DETAIL = "blackCircleUnicode";
 
@@ -84,6 +86,7 @@ public class PlatformSpecificUIisms {
         // macOS
         detailMap.put(HEADER_FONT_SIZE_DETAIL, new Integer(18));
         detailMap.put(CONTENT_FONT_SIZE_DETAIL, new Integer(13));
+        detailMap.put(FONT_METRICS_CORRECTION_DETAIL, new Double(1.0));
         detailMap.put(BLACK_CIRCLE_UNICODE_DETAIL, "\u25CF");
         OS_DETAILS_MAP.put(Platform.OS_MACOSX, detailMap);
 
@@ -91,6 +94,7 @@ public class PlatformSpecificUIisms {
         detailMap = new HashMap<>();
         detailMap.put(HEADER_FONT_SIZE_DETAIL, new Integer(14));
         detailMap.put(CONTENT_FONT_SIZE_DETAIL, new Integer(10));
+        detailMap.put(FONT_METRICS_CORRECTION_DETAIL, new Double(1.0));
         detailMap.put(BLACK_CIRCLE_UNICODE_DETAIL, "\u2022");
         OS_DETAILS_MAP.put(Platform.OS_LINUX, detailMap);
 
@@ -98,7 +102,8 @@ public class PlatformSpecificUIisms {
         detailMap = new HashMap<>();
         detailMap.put(HEADER_FONT_SIZE_DETAIL, new Integer(14));
         detailMap.put(CONTENT_FONT_SIZE_DETAIL, new Integer(10));
-        detailMap.put(BLACK_CIRCLE_UNICODE_DETAIL, "\u25CF");
+        detailMap.put(FONT_METRICS_CORRECTION_DETAIL, new Double(1.1));
+        detailMap.put(BLACK_CIRCLE_UNICODE_DETAIL, "\u2022");
         OS_DETAILS_MAP.put(Platform.OS_WIN32, detailMap);
     }
 
