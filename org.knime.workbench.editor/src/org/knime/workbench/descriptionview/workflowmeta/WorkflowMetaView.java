@@ -186,9 +186,14 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private static final boolean SHOW_LICENSE_ONLY_FOR_HUB = true;
 
     static {
+        final Integer headerFontSize = (Integer)PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.HEADER_FONT_SIZE_DETAIL);
+        final Integer contentFontSize = (Integer)PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.CONTENT_FONT_SIZE_DETAIL);
+        final int headerSize = (headerFontSize != null) ? headerFontSize.intValue() : 16;
+        final int contentSize = (contentFontSize != null) ? contentFontSize.intValue() : 12;
+
         @SuppressWarnings("resource")   // stream is closed in loadFontFromInputStream(...)
         final InputStream is = NodeUtil.class.getResourceAsStream("Proboto-Bold.ttf");
-        Font f = SWTUtilities.loadFontFromInputStream(is, 13, SWT.BOLD);
+        Font f = SWTUtilities.loadFontFromInputStream(is, contentSize, SWT.BOLD);
 
         if (f != null) {
             BOLD_CONTENT_FONT = f;
@@ -202,7 +207,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         //      the warning suppression to anywhere but at class level
         @SuppressWarnings("resource")   // stream is closed in loadFontFromInputStream(...)
         final InputStream is2 = NodeUtil.class.getResourceAsStream("Proboto-Regular.ttf");
-        f = SWTUtilities.loadFontFromInputStream(is2, 13, SWT.NORMAL);
+        f = SWTUtilities.loadFontFromInputStream(is2, contentSize, SWT.NORMAL);
 
         if (f != null) {
             VALUE_DISPLAY_FONT = f;
@@ -216,7 +221,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         //      the warning suppression to anywhere but at class level
         @SuppressWarnings("resource")   // stream is closed in loadFontFromInputStream(...)
         final InputStream is3 = NodeUtil.class.getResourceAsStream("Proboto-Italic.ttf");
-        f = SWTUtilities.loadFontFromInputStream(is3, 13, SWT.ITALIC);
+        f = SWTUtilities.loadFontFromInputStream(is3, contentSize, SWT.ITALIC);
 
         if (f != null) {
             ITALIC_CONTENT_FONT = f;
@@ -227,7 +232,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
 
         final FontData[] baseFD = BOLD_CONTENT_FONT.getFontData();
-        final FontData headerFD = new FontData(baseFD[0].getName(), 18, baseFD[0].getStyle());
+        final FontData headerFD = new FontData(baseFD[0].getName(), headerSize, baseFD[0].getStyle());
         HEADER_FONT = new Font(PlatformUI.getWorkbench().getDisplay(), headerFD);
     }
 
@@ -409,10 +414,12 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             gc.drawLine(x2, y, x2, y2);
             gc.drawLine(x, y2, x2, y2);
 
-            gc.setFont(HEADER_FONT);
-            gc.setForeground(HEADER_TEXT_COLOR);
-            gc.setTextAntialias(SWT.ON);
-            gc.drawString(m_headerText, m_headerDrawX.intValue(), HEADER_TEXT_DRAW_Y);
+            if (m_headerText != null) {
+                gc.setFont(HEADER_FONT);
+                gc.setForeground(HEADER_TEXT_COLOR);
+                gc.setTextAntialias(SWT.ON);
+                gc.drawString(m_headerText, m_headerDrawX.intValue(), HEADER_TEXT_DRAW_Y);
+            }
         });
 
         m_headerLabelPlaceholder = new Label(m_headerBar, SWT.LEFT);

@@ -61,6 +61,7 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.PlatformUI;
+import org.knime.workbench.descriptionview.workflowmeta.PlatformSpecificUIisms;
 import org.knime.workbench.descriptionview.workflowmeta.WorkflowMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
@@ -73,7 +74,8 @@ import org.xml.sax.helpers.AttributesImpl;
  * @author loki der quaeler
  */
 public class LinkMetaInfoAtom extends MetaInfoAtom {
-    private static final String BLACK_CIRCLE = "\u25CF";
+    private static final String BLACK_CIRCLE =
+        (String)PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.BLACK_CIRCLE_UNICODE_DETAIL);
     private static final Color BULLET_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 68, 61, 65);
 
     private static final String HTTP_PREFIX = "http://";
