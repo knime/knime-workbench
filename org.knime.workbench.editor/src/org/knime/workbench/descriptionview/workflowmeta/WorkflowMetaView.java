@@ -820,7 +820,9 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_metadataFile = metadataFile;
 
         getDisplay().asyncExec(() -> {
-            updateDisplay();
+            if (!isDisposed()) {
+                updateDisplay();
+            }
         });
     }
 

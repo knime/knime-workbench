@@ -672,7 +672,9 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         boolean isOldStyle = (lines.length > 2);
 
         if (isOldStyle) {
-            // is the at least one blank line sandwiched between two non-blank lines?
+            // is the at least one blank line sandwiched between two non-blank lines? TODO - this will be an
+            //          insufficient check in the future since descriptions can have blank lines; for the moment
+            //          (aka 4.0) we know we have only 'legacy' format.
             isOldStyle = false;
             for (int i = 1; i < (lines.length - 1); i++) {
                 if ((lines[i].trim().length() == 0) && (lines[i + 1].trim().length() > 0)) {
