@@ -113,6 +113,7 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         PRE_38_KEYWORDS = new HashSet<>();
         PRE_38_KEYWORDS.add(PRE_38_METADATA_LINK_BLOG_KEYWORD);
         PRE_38_KEYWORDS.add(PRE_38_METADATA_LINK_URL_KEYWORD);
+        PRE_38_KEYWORDS.add(URL_LEGACY_KEYWORD_TYPE_NAME.toUpperCase());
         PRE_38_KEYWORDS.add(PRE_38_METADATA_LINK_VIDEO_KEYWORD);
         PRE_38_KEYWORDS.add(PRE_38_METADATA_TAG_KEYWORD);
         PRE_38_KEYWORDS.add(PRE_38_METADATA_TAGS_KEYWORD);
@@ -718,7 +719,7 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
                 boolean consumedLine = false;
 
                 if ((index != -1) && (index < (line.length() - 2))) {
-                    final String initialText = line.substring(0, index);
+                    final String initialText = line.substring(0, index).toUpperCase();
 
                     if (PRE_38_KEYWORDS.contains(initialText)) {
                         if (initialText.equals(PRE_38_METADATA_TAG_KEYWORD)
@@ -737,10 +738,10 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
                             final String type;
                             if (initialText.equals(PRE_38_METADATA_LINK_BLOG_KEYWORD)) {
                                 type = "Blog";
-                            } else if (initialText.equals(PRE_38_METADATA_LINK_URL_KEYWORD)) {
-                                type = URL_LEGACY_KEYWORD_TYPE_NAME;
-                            } else {
+                            } else if (initialText.equals(PRE_38_METADATA_LINK_VIDEO_KEYWORD)) {
                                 type = "Video";
+                            } else {
+                                type = URL_LEGACY_KEYWORD_TYPE_NAME;
                             }
 
                             final String lowercaseLine = line.toLowerCase(Locale.ROOT);
