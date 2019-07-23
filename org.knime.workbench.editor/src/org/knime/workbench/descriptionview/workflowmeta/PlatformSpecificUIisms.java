@@ -86,7 +86,7 @@ public class PlatformSpecificUIisms {
         // macOS
         detailMap.put(HEADER_FONT_SIZE_DETAIL, new Integer(18));
         detailMap.put(CONTENT_FONT_SIZE_DETAIL, new Integer(13));
-        detailMap.put(FONT_METRICS_CORRECTION_DETAIL, new Double(1.0));
+        detailMap.put(FONT_METRICS_CORRECTION_DETAIL, new Double(1.05));
         detailMap.put(BLACK_CIRCLE_UNICODE_DETAIL, "\u25CF");
         OS_DETAILS_MAP.put(Platform.OS_MACOSX, detailMap);
 
