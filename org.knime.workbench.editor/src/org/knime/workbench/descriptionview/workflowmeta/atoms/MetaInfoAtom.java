@@ -54,7 +54,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.xml.transform.sax.TransformerHandler;
 
-import org.eclipse.core.runtime.Platform;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
@@ -69,6 +68,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.PlatformUI;
+import org.knime.workbench.descriptionview.workflowmeta.PlatformSpecificUIisms;
 import org.knime.workbench.descriptionview.workflowmeta.WorkflowMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
@@ -83,11 +83,6 @@ import org.xml.sax.helpers.AttributesImpl;
  * @author loki der quaeler
  */
 public abstract class MetaInfoAtom {
-    /** Whether the platform is running on Linux **/
-    public static final boolean OS_IS_LINUX = Platform.OS_LINUX.equals(Platform.getOS());
-    /** Whether the platform is running on Mac **/
-    public static final boolean OS_IS_MAC = Platform.OS_MACOSX.equals(Platform.getOS());
-
     /** The read-only text color. **/
     protected static final Color LINK_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 255, 144, 0);
     /** Used in rendering a close 'icon' */
@@ -146,7 +141,7 @@ public abstract class MetaInfoAtom {
         if (renderNAry) {
             gc.setFont(WorkflowMetaView.BOLD_CONTENT_FONT);
             nArySize = gc.textExtent(N_ARY_TIMES);
-            if (OS_IS_MAC) {
+            if (PlatformSpecificUIisms.OS_IS_MAC) {
                 nArySize.y = nArySize.x;    // it's an equi-sided X, but some platform fonts give it a bottom inset
             }
         } else {
