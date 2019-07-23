@@ -94,7 +94,7 @@ public class PlatformSpecificUIisms {
         detailMap = new HashMap<>();
         detailMap.put(HEADER_FONT_SIZE_DETAIL, new Integer(14));
         detailMap.put(CONTENT_FONT_SIZE_DETAIL, new Integer(10));
-        detailMap.put(FONT_METRICS_CORRECTION_DETAIL, new Double(1.0));
+        detailMap.put(FONT_METRICS_CORRECTION_DETAIL, new Double(1.075));
         detailMap.put(BLACK_CIRCLE_UNICODE_DETAIL, "\u2022");
         OS_DETAILS_MAP.put(Platform.OS_LINUX, detailMap);
 
