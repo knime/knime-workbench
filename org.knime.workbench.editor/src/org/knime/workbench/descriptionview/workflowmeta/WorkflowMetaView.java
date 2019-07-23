@@ -115,6 +115,7 @@ import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo;
+import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileInfo;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.repository.util.NodeUtil;
 
@@ -173,6 +174,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private static final Image SAVE_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-save.png");
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowMetaView.class);
+
+    private static final int MINIMUM_CONTENT_PANE_WIDTH = 300;
 
     private static final int HEADER_VERTICAL_INSET = 10;
     private static final int HEADER_TEXT_DRAW_Y = HEADER_VERTICAL_INSET + 5;
@@ -428,7 +431,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         gd.horizontalIndent = LEFT_INDENT_HEADER_SUB_PANES;
         m_headerLabelPlaceholder.setLayoutData(gd);
         m_headerLabelPlaceholder.setFont(HEADER_FONT);
-        m_headerLabelPlaceholder.setForeground(HEADER_TEXT_COLOR);
+        m_headerLabelPlaceholder.setVisible(false);
 
         m_headerButtonPane = new Composite(m_headerBar, SWT.NONE);
         m_headerButtonPane.setBackground(GENERAL_FILL_COLOR);
@@ -604,7 +607,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         SWTUtilities.spaceReclaimingSetVisible(m_linksContentPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_licenseSection, m_shouldDisplayLicenseSection.get());
 
-        setMinWidth(400);
+        setMinWidth(MINIMUM_CONTENT_PANE_WIDTH);
         setMinHeight(625);
         setExpandHorizontal(true);
         setExpandVertical(true);
@@ -722,7 +725,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         if (knimeExplorerItem) {
             final AbstractExplorerFileStore fs = ((ContentObject) o).getFileStore();
             final AbstractExplorerFileInfo fileInfo = fs.fetchInfo();
-            if (!(fileInfo instanceof RemoteExplorerFileInfo)) {
+            if (!(fileInfo instanceof RemoteExplorerFileInfo) && !(fileInfo instanceof LocalWorkspaceFileInfo)) {
                 LOGGER.debug("Received unexpected file info type: " + fileInfo.getClass());
                 return;
             }
@@ -973,7 +976,14 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
         updateFloatingHeaderBar();
 
+        updateMinimumSizes();
+    }
+
+    private void updateMinimumSizes() {
         final Point minSize = m_contentPane.computeSize(m_contentPane.getParent().getSize().x, SWT.DEFAULT);
+        final Point linksSize = m_linksLinksContentPane.computeSize(SWT.DEFAULT, SWT.DEFAULT);
+        final Point titleSize = m_titleSection.computeSize(SWT.DEFAULT, SWT.DEFAULT);
+        setMinWidth(Math.max(Math.max(titleSize.x, linksSize.x), MINIMUM_CONTENT_PANE_WIDTH));
         setMinHeight(minSize.y);
     }
 
@@ -1282,8 +1292,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
         layout(true, true);
 
-        final Point minSize = m_contentPane.computeSize(m_contentPane.getParent().getSize().x, SWT.DEFAULT);
-        setMinHeight(minSize.y);
+        updateMinimumSizes();
     }
 
     private void createLinksAddUI() {
@@ -1349,8 +1358,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
             layout(true, true);
 
-            final Point minSize = m_contentPane.computeSize(m_contentPane.getParent().getSize().x, SWT.DEFAULT);
-            setMinHeight(minSize.y);
+            updateMinimumSizes();
         } catch (final MalformedURLException e) {
             MessageDialog.openError(PlatformUI.getWorkbench().getDisplay().getActiveShell(), "Bad URL",
                 "The specified URL [" + url + "] appears to be in an invalid format.");
@@ -1378,6 +1386,14 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
 
     private class FloatingHeaderBarPositioner implements Runnable {
+        private final double m_fontMetricsCorrectionFactor;
+
+        private FloatingHeaderBarPositioner() {
+            final Double d = (Double)PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.FONT_METRICS_CORRECTION_DETAIL);
+
+            m_fontMetricsCorrectionFactor = (d != null) ? d.doubleValue() : 1.0;
+        }
+
         @Override
         public void run() {
             final Rectangle viewportBounds = getBounds();
@@ -1410,11 +1426,12 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             try {
                 gc.setFont(m_headerLabelPlaceholder.getFont());
                 Point fullStringSize = gc.textExtent(m_currentWorkflowName);
+                final int stringWidth = (int)(fullStringSize.x * m_fontMetricsCorrectionFactor);
 
-                if (fullStringSize.x > centerAlignedAvailableWidth) {
+                if (stringWidth > centerAlignedAvailableWidth) {
                     // this could be made more precise by iterative size checks,
                     //      but let's try this first for performance
-                    final double percentage = (placeholderWidth * 0.87) / fullStringSize.x;
+                    final double percentage = (centerAlignedAvailableWidth * 0.87) / fullStringSize.x;
                     final int charCount = (int)(m_currentWorkflowName.length() * percentage);
                     final String substring = m_currentWorkflowName.substring(0, charCount) + "...";
 
@@ -1423,7 +1440,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
                 } else {
                     m_headerText = m_currentWorkflowName;
                 }
-                m_headerDrawX.set((viewportWidth - fullStringSize.x) / 2);
+                m_headerDrawX.set((viewportWidth - (int)(fullStringSize.x * m_fontMetricsCorrectionFactor)) / 2);
             } finally {
                 gc.dispose();
             }
