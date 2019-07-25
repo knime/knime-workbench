@@ -168,7 +168,7 @@ public class OverwriteRenameDialog extends Dialog {
      * @param forbiddenStores stores that cannot be chosen as destination
      * @param showSnapshotPanel <code>true</code> if the create snapshot panel should be shown, <code>false</code>
      *            otherwise.
-     * @since 8.4
+     * @since 8.5
      */
     public OverwriteRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
         final boolean canWriteDest, final boolean multiple, final Set<AbstractExplorerFileStore> forbiddenStores,
