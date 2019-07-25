@@ -58,7 +58,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.swt.dnd.DND;
-import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.dnd.URLTransfer;
 import org.eclipse.ui.PlatformUI;
@@ -106,8 +105,8 @@ public class ExplorerURIDropUtil {
      *            OS-dependent)
      * @param target where the URI is supposed to be dropped, can be <code>null</code> (will return <code>false</code>
      *            then)
-     * @param transferData the transfer data, if <code>null</code>, a default transfer data type is used (i.e.
-     *            '<code>text/unicode</code>', see {@link URLTransfer})
+     * @param transferData the transfer data, if <code>null</code>, a default transfer data type is used (i.e. the first
+     *            entry of {@link URLTransfer#getSupportedTypes()})
      * @return <code>true</code> if it's a valid drop (i.e. URI and target are valid)
      */
     public static boolean validateDrop(final String uri, final AbstractExplorerFileStore target,
@@ -132,13 +131,11 @@ public class ExplorerURIDropUtil {
         }
         TransferData td;
         if (transferData == null) {
-            //hack!
-            td = new TransferData();
-            td.type = Transfer.registerType("text/unicode");
+            //hacky!
+            td = URLTransfer.getInstance().getSupportedTypes()[0];
         } else {
             td = transferData;
         }
-        assert URLTransfer.getInstance().isSupportedType(td);
         //let content provider (i.e. mount point) validate the drop, too
         return target.getContentProvider().validateDrop(target, DND.DROP_COPY, td);
     }
