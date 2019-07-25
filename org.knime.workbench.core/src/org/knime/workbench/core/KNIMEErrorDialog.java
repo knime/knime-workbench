@@ -50,7 +50,7 @@ package org.knime.workbench.core;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.swt.widgets.Shell;
-import org.knime.core.util.SWTUtilities;
+import org.knime.core.ui.util.SWTUtilities;
 
 /**
  * JFace dialog presenting an (internal) error to the user.

@@ -68,7 +68,7 @@ import org.eclipse.swt.widgets.DirectoryDialog;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.List;
 import org.knime.core.node.port.database.DatabaseDriverLoader;
-import org.knime.core.util.SWTUtilities;
+import org.knime.core.ui.util.SWTUtilities;
 
 /**
  * {@link ListEditor} implementation that adds an add file button in addition to the add directory button.

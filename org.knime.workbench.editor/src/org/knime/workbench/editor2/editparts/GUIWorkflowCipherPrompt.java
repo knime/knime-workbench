@@ -51,7 +51,7 @@ import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.workflow.WorkflowCipherPrompt;
-import org.knime.core.util.SWTUtilities;
+import org.knime.core.ui.util.SWTUtilities;
 
 /**
  * Callback prompt to unlock metanode.

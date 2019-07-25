@@ -58,7 +58,7 @@ import org.eclipse.core.runtime.Platform;
  *
  * @author loki der quaeler
  */
-public class PlatformSpecificUIisms {
+public final class PlatformSpecificUIisms {
     /** This will return an instance of Integer **/
     public static final String HEADER_FONT_SIZE_DETAIL = "headerFontSize";
     /** This will return an instance of Integer **/
@@ -68,12 +68,8 @@ public class PlatformSpecificUIisms {
     /** This will return an instance of String **/
     public static final String BLACK_CIRCLE_UNICODE_DETAIL = "blackCircleUnicode";
 
-    /** Whether the platform is running on Linux **/
-    public static final boolean OS_IS_LINUX = Platform.OS_LINUX.equals(Platform.getOS());
     /** Whether the platform is running on Mac **/
     public static final boolean OS_IS_MAC = Platform.OS_MACOSX.equals(Platform.getOS());
-    /** Whether the platform is running on Windows **/
-    public static final boolean OS_IS_WINDOWS = Platform.OS_WIN32.equals(Platform.getOS());
 
 
     private static final HashMap<String, HashMap<String, Object>> OS_DETAILS_MAP = new HashMap<>();

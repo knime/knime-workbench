@@ -73,7 +73,7 @@ import org.knime.core.ui.node.workflow.async.AsyncUI;
 import org.knime.core.ui.node.workflow.async.AsyncWorkflowAnnotationUI;
 import org.knime.core.ui.node.workflow.async.AsyncWorkflowManagerUI;
 import org.knime.core.ui.node.workflow.async.CompletableFutureEx;
-import org.knime.core.util.SWTUtilities;
+import org.knime.core.ui.util.SWTUtilities;
 
 /**
  * Provides helper methods to deal with asynchronous methods as provided by subclasses of the {@link AsyncUI}-interface.

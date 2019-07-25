@@ -51,9 +51,9 @@ import org.eclipse.gef.commands.Command;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
+import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.WorkflowManagerWrapper;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.util.SWTUtilities;
 
 /**
  * Abstract super class for KNIME related commands. It holds a reference to
