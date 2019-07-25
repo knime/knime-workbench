@@ -353,16 +353,9 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
     }
 
     /**
-     * This writes the original description-holds-everything-glommed-together metadata file; note that if this method
-     *      is called while/after the underlying SWT widgets are being/have been disposed, this method will produce
-     *      undesired effects - consider using {@link #metadataSavedInLegacyFormat} instead
+     * This returns the original description-holds-everything-glommed-together format of this instance's metadata
+     *  state.
      */
-    void writeLegacyStyleMetadataToFile(final File metadataFile) throws IOException {
-        try (final OutputStream os = new FileOutputStream(metadataFile)) {
-            writeLegacyStyleMetadataToStream(os);
-        }
-    }
-
     String metadataSavedInLegacyFormat() throws IOException {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         writeLegacyStyleMetadataToStream(baos);

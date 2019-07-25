@@ -84,7 +84,7 @@ import org.knime.core.data.container.storage.TableStoreFormatInformation;
 import org.knime.core.node.KNIMEComponentInformation;
 import org.knime.core.node.NodeAndBundleInformationPersistor;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.util.SWTUtilities;
+import org.knime.core.ui.util.SWTUtilities;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
 
