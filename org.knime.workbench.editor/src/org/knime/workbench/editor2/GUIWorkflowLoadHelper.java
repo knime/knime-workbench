@@ -167,7 +167,8 @@ class GUIWorkflowLoadHelper extends WorkflowLoadHelper {
             }
         }
         // prompt for details for the credentials that haven't been prompted for
-        if (!credentialsToBePromptedList.isEmpty()) {
+        // (only for workflows, not for templates, solves a deadlock, see AP-12458)
+        if (!credentialsToBePromptedList.isEmpty() && !isTemplateFlow()) {
             // run sync'ly in UI thread
             m_display.syncExec(new Runnable() {
                 @Override
