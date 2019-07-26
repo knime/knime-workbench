@@ -50,6 +50,7 @@ package org.knime.workbench.descriptionview.workflowmeta.atoms;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.xml.transform.sax.TransformerHandler;
@@ -95,9 +96,10 @@ public abstract class MetaInfoAtom {
     protected static final double FONT_METRICS_CORRECTION;
 
     static {
-        final Double d = (Double)PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.FONT_METRICS_CORRECTION_DETAIL);
+        final Optional<Object> o =
+            PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.FONT_METRICS_CORRECTION_DETAIL);
 
-        FONT_METRICS_CORRECTION = (d != null) ? d.doubleValue() : 1.0;
+        FONT_METRICS_CORRECTION = o.isPresent() ? ((Double)o.get()).doubleValue() : 1.0;
     }
 
 
@@ -670,7 +672,7 @@ public abstract class MetaInfoAtom {
         protected void mouseMovedOutsideNAryBounds(final MouseEvent me) { }
 
         @Override
-        public Point computeSize (final int wHint, final int hHint, final boolean changed) {
+        public Point computeSize(final int wHint, final int hHint, final boolean changed) {
             if (m_cachedComputedSize == null) {
                 final RenderSizeData rsd =
                         calculateRenderSize(this, m_displayText, m_horizontalInset, m_verticalInset, m_renderEdit);
