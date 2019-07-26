@@ -131,8 +131,8 @@ import org.knime.workbench.repository.util.NodeUtil;
  * The genesis for this view is https://knime-com.atlassian.net/browse/AP-11628
  *
  * As part of https://knime-com.atlassian.net/browse/AP-12082 is was decided that the license field would only be shown
- *  in cases where the metadata was coming from a KNIME Hub server; i've gated this condition with a static boolean
- *  below (search 'AP-12082') so that future generations can turn the license stuff back on when we support it more widely.
+ * in cases where the metadata was coming from a KNIME Hub server; i've gated this condition with a static boolean below
+ * (search 'AP-12082') so that future generations can turn the license stuff back on when we support it more widely.
  *
  * @author loki der quaeler
  */
@@ -143,8 +143,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     public static final Font VALUE_DISPLAY_FONT;
     /** Font which should be used with the n-ary close character. **/
     public static final Font BOLD_CONTENT_FONT;
-    /** The read-only text color. **/
-    public static final Color TEXT_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 62, 58, 57); // in 4.0.0: new Color(PlatformUI.getWorkbench().getDisplay(), 128, 128, 128);
+    /** The read-only text color. **/  // in 4.0.0 was: 128, 128, 128
+    public static final Color TEXT_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 62, 58, 57);
     /** The fill color for the header bar and other widgets (like tag chiclets.) **/
     public static final Color GENERAL_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 240, 240, 242);
 
@@ -169,9 +169,14 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private static final Color HEADER_TEXT_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 87, 87, 87);
     private static final Color SECTION_LABEL_TEXT_COLOR = TEXT_COLOR;
 
-    private static final Image CANCEL_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-cancel.png");
-    private static final Image EDIT_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-edit.png");
-    private static final Image SAVE_IMAGE = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-save.png");
+    private static final Image CANCEL_IMAGE =
+        ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-cancel.png");
+
+    private static final Image EDIT_IMAGE =
+        ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-edit.png");
+
+    private static final Image SAVE_IMAGE =
+        ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-save.png");
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowMetaView.class);
 
@@ -189,17 +194,19 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private static final boolean SHOW_LICENSE_ONLY_FOR_HUB = true;
 
     static {
-        final Integer headerFontSize = (Integer)PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.HEADER_FONT_SIZE_DETAIL);
-        final Integer contentFontSize = (Integer)PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.CONTENT_FONT_SIZE_DETAIL);
-        final int headerSize = (headerFontSize != null) ? headerFontSize.intValue() : 16;
-        final int contentSize = (contentFontSize != null) ? contentFontSize.intValue() : 12;
+        final Optional<Object> headerFontSize =
+            PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.HEADER_FONT_SIZE_DETAIL);
+        final Optional<Object> contentFontSize =
+            PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.CONTENT_FONT_SIZE_DETAIL);
+        final int headerSize = headerFontSize.isPresent() ? ((Integer)headerFontSize.get()).intValue() : 16;
+        final int contentSize = contentFontSize.isPresent() ? ((Integer)contentFontSize.get()).intValue() : 12;
 
         @SuppressWarnings("resource")   // stream is closed in loadFontFromInputStream(...)
         final InputStream is = NodeUtil.class.getResourceAsStream("Proboto-Bold.ttf");
-        Font f = SWTUtilities.loadFontFromInputStream(is, contentSize, SWT.BOLD);
+        Optional<Font> f = SWTUtilities.loadFontFromInputStream(is, contentSize, SWT.BOLD);
 
-        if (f != null) {
-            BOLD_CONTENT_FONT = f;
+        if (f.isPresent()) {
+            BOLD_CONTENT_FONT = f.get();
         } else {
             NodeLogger.getLogger(WorkflowMetaView.class).warn("Could not load bold font.");
             BOLD_CONTENT_FONT = JFaceResources.getFontRegistry().getBold(JFaceResources.DIALOG_FONT);
@@ -212,8 +219,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         final InputStream is2 = NodeUtil.class.getResourceAsStream("Proboto-Regular.ttf");
         f = SWTUtilities.loadFontFromInputStream(is2, contentSize, SWT.NORMAL);
 
-        if (f != null) {
-            VALUE_DISPLAY_FONT = f;
+        if (f.isPresent()) {
+            VALUE_DISPLAY_FONT = f.get();
         } else {
             NodeLogger.getLogger(WorkflowMetaView.class).warn("Could not load regular font.");
             VALUE_DISPLAY_FONT = JFaceResources.getFont(JFaceResources.DIALOG_FONT);
@@ -226,8 +233,8 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         final InputStream is3 = NodeUtil.class.getResourceAsStream("Proboto-Italic.ttf");
         f = SWTUtilities.loadFontFromInputStream(is3, contentSize, SWT.ITALIC);
 
-        if (f != null) {
-            ITALIC_CONTENT_FONT = f;
+        if (f.isPresent()) {
+            ITALIC_CONTENT_FONT = f.get();
         } else {
             NodeLogger.getLogger(WorkflowMetaView.class).warn("Could not load italic font.");
             ITALIC_CONTENT_FONT = JFaceResources.getFontRegistry().getItalic(JFaceResources.DIALOG_FONT);
@@ -1391,9 +1398,10 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         private final double m_fontMetricsCorrectionFactor;
 
         private FloatingHeaderBarPositioner() {
-            final Double d = (Double)PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.FONT_METRICS_CORRECTION_DETAIL);
+            final Optional<Object> o =
+                PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.FONT_METRICS_CORRECTION_DETAIL);
 
-            m_fontMetricsCorrectionFactor = (d != null) ? d.doubleValue() : 1.0;
+            m_fontMetricsCorrectionFactor = o.isPresent() ? ((Double)o.get()).doubleValue() : 1.0;
         }
 
         @Override

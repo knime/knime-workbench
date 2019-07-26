@@ -51,6 +51,7 @@ package org.knime.workbench.descriptionview.workflowmeta.atoms;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.xml.transform.sax.TransformerHandler;
 
@@ -74,11 +75,20 @@ import org.xml.sax.helpers.AttributesImpl;
  * @author loki der quaeler
  */
 public class LinkMetaInfoAtom extends MetaInfoAtom {
-    private static final String BLACK_CIRCLE =
-        (String)PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.BLACK_CIRCLE_UNICODE_DETAIL);
+    private static final String BLACK_CIRCLE;
     private static final Color BULLET_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 68, 61, 65);
 
     private static final String HTTP_PREFIX = "http://";
+
+    static {
+        final Optional<Object> o = PlatformSpecificUIisms.getDetail(PlatformSpecificUIisms.BLACK_CIRCLE_UNICODE_DETAIL);
+
+        if (o.isPresent()) {
+            BLACK_CIRCLE = (String)o.get();
+        } else {
+            BLACK_CIRCLE = "\u2022";
+        }
+    }
 
 
     private String m_linkType;

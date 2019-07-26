@@ -49,12 +49,13 @@
 package org.knime.workbench.descriptionview.workflowmeta;
 
 import java.util.HashMap;
+import java.util.Optional;
 
 import org.eclipse.core.runtime.Platform;
 
 /**
- * As part of implementing AP-12001, we've entered a time when there is too much divergence from platform to platform on,
- *  at least, font-related issues. We dole out platform specific details through this class.
+ * As part of implementing AP-12001, we've entered a time when there is too much divergence from platform to platform
+ * on, at least, font-related issues. We dole out platform specific details through this class.
  *
  * @author loki der quaeler
  */
@@ -88,13 +89,13 @@ public final class PlatformSpecificUIisms {
 
         // Linux
         detailMap = new HashMap<>();
-        detailMap.put(HEADER_FONT_SIZE_DETAIL, new Integer(14));
+        detailMap.put(HEADER_FONT_SIZE_DETAIL, new Integer(13));
         detailMap.put(CONTENT_FONT_SIZE_DETAIL, new Integer(10));
         detailMap.put(FONT_METRICS_CORRECTION_DETAIL, new Double(1.075));
         detailMap.put(BLACK_CIRCLE_UNICODE_DETAIL, "\u2022");
         OS_DETAILS_MAP.put(Platform.OS_LINUX, detailMap);
 
-        // Linux
+        // Windows
         detailMap = new HashMap<>();
         detailMap.put(HEADER_FONT_SIZE_DETAIL, new Integer(14));
         detailMap.put(CONTENT_FONT_SIZE_DETAIL, new Integer(10));
@@ -105,25 +106,19 @@ public final class PlatformSpecificUIisms {
 
     /**
      * @param detailKey one of the "_DETAIL" static Strings defined in this class
-     * @return a detail for the current OS, or null if an unknown key is passed
+     * @return an {@link Optional} detail for the current OS
      */
-    public static Object getDetail(final String detailKey) {
+    public static Optional<Object> getDetail(final String detailKey) {
         return getDetailForOS(detailKey, Platform.getOS());
     }
 
     /**
      * @param detailKey one of the "_DETAIL" static Strings defined in this class
      * @param osString this should be a value returned by {@link Platform#getOS()}
-     * @return a detail for the current OS, or null if an unknown key is passed
+     * @return an {@link Optional} detail for the current OS
      */
-    public static Object getDetailForOS(final String detailKey, final String osString) {
-        final HashMap<String, Object> detailsMap = OS_DETAILS_MAP.get(osString);
-
-        if (detailsMap != null) {
-            return detailsMap.get(detailKey);
-        }
-
-        return null;
+    public static Optional<Object> getDetailForOS(final String detailKey, final String osString) {
+        return Optional.ofNullable(OS_DETAILS_MAP.get(osString)).map(d -> d.get(detailKey));
     }
 
 
