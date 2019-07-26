@@ -97,7 +97,7 @@ public final class PlatformSpecificUIisms {
 
         // Windows
         detailMap = new HashMap<>();
-        detailMap.put(HEADER_FONT_SIZE_DETAIL, new Integer(14));
+        detailMap.put(HEADER_FONT_SIZE_DETAIL, new Integer(13));
         detailMap.put(CONTENT_FONT_SIZE_DETAIL, new Integer(10));
         detailMap.put(FONT_METRICS_CORRECTION_DETAIL, new Double(1.1));
         detailMap.put(BLACK_CIRCLE_UNICODE_DETAIL, "\u2022");
