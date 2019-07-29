@@ -240,6 +240,14 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
      * {@inheritDoc}
      */
     @Override
+    public void focus() {
+        m_datePicker.setFocus();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void save(final TransformerHandler parentElement) throws SAXException {
         if (hasContent()) {
             save(parentElement, MetadataXML.DATE);

@@ -192,6 +192,14 @@ public class ComboBoxMetaInfoAtom extends MetaInfoAtom {
      * {@inheritDoc}
      */
     @Override
+    public void focus() {
+        m_editComboViewer.getCombo().setFocus();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void save(final TransformerHandler parentElement) throws SAXException {
         if (hasContent()) {
             save(parentElement, MetadataXML.COMBOBOX);

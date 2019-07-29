@@ -50,6 +50,8 @@ package org.knime.workbench.descriptionview.workflowmeta.atoms;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.swt.events.FocusAdapter;
+import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.layout.GridData;
@@ -127,6 +129,14 @@ public abstract class AbstractTextMetaInfoAtom extends MetaInfoAtom {
     }
 
     /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void focus() {
+        m_editTextWidget.setFocus();
+    }
+
+    /**
      * Subclasses should invoke this from their {@link #populateContainerForEdit(Composite)}
      *
      * @param parent the parent for the widget
@@ -155,6 +165,15 @@ public abstract class AbstractTextMetaInfoAtom extends MetaInfoAtom {
                 if (dirty != m_isDirty.getAndSet(dirty)) {
                     messageListeners(dirty ? ListenerEventType.DIRTY : ListenerEventType.CLEAN);
                 }
+            }
+        });
+        m_editTextWidget.addFocusListener(new FocusAdapter() {
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public void focusGained(final FocusEvent e) {
+                m_editTextWidget.selectAll();
             }
         });
     }

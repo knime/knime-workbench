@@ -157,14 +157,14 @@ public class SAXInputHandler extends DefaultHandler {
      * {@inheritDoc}
      */
     @Override
-    public void endDocument() throws SAXException {
-        m_modelFacilitator.parsingHasFinished();
-    }
+    public void endDocument() throws SAXException { }
 
     /**
-     * @return the model facilitator - if this is invoked mid-parse, it will only represent the elements which
-     *              had their closing tags consumed
+     * @return the model facilitator - if this is invoked mid-parse, it will only represent the elements which had their
+     *         closing tags consumed; if parsing has finished, the consumer should invoke
+     *         {@link MetadataModelFacilitator#parsingHasFinishedForWorkflowWithFilename(String)} appropriately.
      */
+    @SuppressWarnings("javadoc")
     public MetadataModelFacilitator getModelFacilitator() {
         return m_modelFacilitator;
     }

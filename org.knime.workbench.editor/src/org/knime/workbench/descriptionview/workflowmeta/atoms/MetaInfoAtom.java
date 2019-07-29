@@ -385,6 +385,12 @@ public abstract class MetaInfoAtom {
      */
     public abstract void populateContainerForEdit(final Composite parent);
 
+    /**
+     * Instances will only receive this notification while in edit mode; subclasses should override this to request
+     * focus for their main edit widget.
+     */
+    public abstract void focus();
+
 
     /**
      * Subclasses must implement this to serialize themselves and their value(s) to the element.
