@@ -285,7 +285,7 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         }
     }
 
-    void parsingHasFinished() {
+    void parsingHasFinishedForWorkflowWithFilename(final String workflowFileName) {
         if (m_authorAtom == null) {
             m_authorAtom = new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, MetadataXML.AUTHOR_LABEL,
                 System.getProperty("user.name"), false);
@@ -293,10 +293,12 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         }
 
         if (m_titleAtom == null) {
-            m_titleAtom = new TextFieldMetaInfoAtom(MetadataItemType.TITLE, "legacy-title", null, false);
+            m_titleAtom = new TextFieldMetaInfoAtom(MetadataItemType.TITLE, "legacy-title", workflowFileName, false);
             m_titleAtom.addChangeListener(this);
         } else if (MetaInfoFile.NO_TITLE_PLACEHOLDER_TEXT.equals(m_titleAtom.getValue())) {
-            m_titleAtom.setValue(null);
+            // This case will only occur in metadata written in KAP 4.0.0, subsequent releases started using
+            //      the workflow filename, per AP-12151
+            m_titleAtom.setValue(workflowFileName);
         }
 
         if (m_descriptionAtom == null) {
