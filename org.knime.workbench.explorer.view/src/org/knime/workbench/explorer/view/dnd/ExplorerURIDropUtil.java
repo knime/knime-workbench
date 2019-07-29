@@ -158,7 +158,7 @@ public class ExplorerURIDropUtil {
      */
     public static boolean performDrop(final String uri, final ExplorerView view,
         final AbstractExplorerFileStore target) {
-        URI knimeURI = createEncodedURI(uri);
+        URI knimeURI = createEncodedURI(uri.split("\n")[0]);
         try {
             AtomicReference<File> file = new AtomicReference<File>();
             AtomicReference<File> tmpDir = new AtomicReference<File>();
