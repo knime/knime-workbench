@@ -50,11 +50,16 @@ package org.knime.workbench.descriptionview.workflowmeta.atoms;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 
 import javax.xml.transform.sax.TransformerHandler;
 
+import org.apache.commons.collections4.bidimap.DualHashBidiMap;
+import org.apache.commons.lang3.text.WordUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.layout.GridData;
@@ -75,6 +80,31 @@ import org.xml.sax.helpers.AttributesImpl;
  * @author loki der quaeler
  */
 public class LinkMetaInfoAtom extends MetaInfoAtom {
+    /** The fixed acceptable link type for Blog links **/
+    public static final String LEGACY_METADATA_LINK_BLOG_TYPE_KEYWORD = "BLOG";
+    /** The fixed acceptable link type for general Website links **/
+    public static final String LEGACY_METADATA_LINK_URL_TYPE_KEYWORD = "URL";
+    /** The fixed acceptable link type for Video links **/
+    public static final String LEGACY_METADATA_LINK_VIDEO_TYPE_KEYWORD = "VIDEO";
+
+    /**
+     * A list in preferred combobox display order of link types; display name is on the left, metadata keyword is on the
+     * right.
+     **/
+    public static final ArrayList<Pair<String, String>> LEGACY_LINK_TYPES;
+
+    /**
+     * This set is different than LEGACY_LINK_TYPES as this contains what we have seen in terms of what people have
+     * historically used, whereas LEGACY_LINK_TYPES is an attempt to clamp down on what is legal going forward (until we
+     * switch over to a new format for the metadata storage.)
+     **/
+    public static final HashSet<String> LEGACY_VALID_INCOMING_TYPE_STRINGS;
+
+    // I've seen legacy metadata show up with this as a type:
+    private static final String URL_LEGACY_KEYWORD_TYPE_NAME = "Website";
+
+    private static final DualHashBidiMap<String, String> DISPLAY_KEYWORD_BIDI_MAP;
+
     private static final String BLACK_CIRCLE;
     private static final Color BULLET_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 68, 61, 65);
 
@@ -88,6 +118,40 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
         } else {
             BLACK_CIRCLE = "\u2022";
         }
+
+
+        LEGACY_LINK_TYPES = new ArrayList<>();
+        DISPLAY_KEYWORD_BIDI_MAP = new DualHashBidiMap<>();
+        addDisplayKeywordPair(URL_LEGACY_KEYWORD_TYPE_NAME, LEGACY_METADATA_LINK_URL_TYPE_KEYWORD);
+        addDisplayKeywordPair(LEGACY_METADATA_LINK_VIDEO_TYPE_KEYWORD, LEGACY_METADATA_LINK_VIDEO_TYPE_KEYWORD);
+        addDisplayKeywordPair(LEGACY_METADATA_LINK_BLOG_TYPE_KEYWORD, LEGACY_METADATA_LINK_BLOG_TYPE_KEYWORD);
+
+
+        LEGACY_VALID_INCOMING_TYPE_STRINGS = new HashSet<>();
+        LEGACY_VALID_INCOMING_TYPE_STRINGS.add(URL_LEGACY_KEYWORD_TYPE_NAME.toUpperCase());
+        LEGACY_VALID_INCOMING_TYPE_STRINGS.add(LEGACY_METADATA_LINK_BLOG_TYPE_KEYWORD);
+        LEGACY_VALID_INCOMING_TYPE_STRINGS.add(LEGACY_METADATA_LINK_URL_TYPE_KEYWORD);
+        LEGACY_VALID_INCOMING_TYPE_STRINGS.add(LEGACY_METADATA_LINK_VIDEO_TYPE_KEYWORD);
+    }
+
+    /**
+     * @param keyword the all-caps word beginning the link line in the legacy format metadata comments block
+     * @return the display text for the keyword; if none could be found, the display text associated to
+     *         {@link #LEGACY_METADATA_LINK_URL_TYPE_KEYWORD} will be returned
+     */
+    public static String getDisplayLinkTypeForKeyword(final String keyword) {
+        final String displayText = DISPLAY_KEYWORD_BIDI_MAP.getKey(keyword);
+
+        return (displayText != null)
+                    ? displayText
+                    : DISPLAY_KEYWORD_BIDI_MAP.getKey(LEGACY_METADATA_LINK_URL_TYPE_KEYWORD);
+    }
+
+    private static void addDisplayKeywordPair(final String display, final String keyword) {
+        final String capitalized = WordUtils.capitalizeFully(display);
+
+        LEGACY_LINK_TYPES.add(Pair.of(capitalized, keyword));
+        DISPLAY_KEYWORD_BIDI_MAP.put(capitalized, keyword);
     }
 
 
@@ -115,7 +179,7 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
      * @param label the label displayed with the value of this atom in some UI widget; this is historical and unused.
      * @param value the displayed value of this atom; if this is null or empty it will attempt to be derived from the
      *            url if that is non-null, non-empty
-     * @param type the type of the link of this atom.
+     * @param type the type of the link of this atom - the display text version of it
      * @param url the url the link of this atom; if this has no scheme prefix, it will be prefixed with the class static
      *            variable <code>HTTP_PREFIX</code>
      * @param readOnly this has never been observed, and we don't currently have a use case in which we allow the user
@@ -126,6 +190,9 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
         final boolean readOnly)
                 throws MalformedURLException {
         super(MetadataItemType.LINK, label, value, readOnly);
+
+        // TODO remove as part of the move to the new format for metadata
+        assert DISPLAY_KEYWORD_BIDI_MAP.keySet().contains(type);
 
         String urlToUse = url;
         if (url == null) {
@@ -162,20 +229,14 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
      * This kludge generates the link-line that gets crammed into description blocks for the older version of
      *  storing metadata. This will become obsolete when we move over to newer XML storage.
      *
-     * @param urlKeywordLinkTypeName
      * @return a string to be stuck in the description block
      */
-    public String getOldStyleDescriptionRepresentation(final String urlKeywordLinkTypeName) {
+    public String getLegacyDescriptionRepresentation() {
         final StringBuilder sb = new StringBuilder();
         final boolean urlMissing = (m_linkURL == null) || (m_linkURL.trim().length() == 0);
         final boolean titleMissing = (m_value == null) || (m_value.trim().length() == 0);
 
-        if (urlKeywordLinkTypeName.equals(m_linkType) || (m_linkType == null) || (m_linkType.trim().length() == 0)) {
-            sb.append("URL");
-        } else {
-            sb.append(m_linkType.toUpperCase());
-        }
-        sb.append(": ");
+        sb.append(DISPLAY_KEYWORD_BIDI_MAP.get(m_linkType)).append(": ");
 
         if (titleMissing) {
             sb.append("A link");

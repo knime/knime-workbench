@@ -65,6 +65,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.resources.WorkspaceJob;
@@ -76,7 +77,11 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.JFaceResources;
+import org.eclipse.jface.viewers.ArrayContentProvider;
+import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.events.KeyAdapter;
@@ -108,6 +113,7 @@ import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.descriptionview.workflowmeta.atoms.LinkMetaInfoAtom;
 import org.knime.workbench.descriptionview.workflowmeta.atoms.MetaInfoAtom;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.directannotationedit.FlatButton;
@@ -327,7 +333,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private final Composite m_linksLinksContentPane;
     private Text m_linksAddURLTextField;
     private Text m_linksAddTitleTextField;
-    private Text m_linksAddTypeTextField;
+    private ComboViewer m_linksAddTypeComboViewer;
     private Button m_linksAddButton;
 
     private final Composite m_licenseSection;
@@ -1052,7 +1058,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
         m_linksAddURLTextField = null;
         m_linksAddTitleTextField = null;
-        m_linksAddTypeTextField = null;
+        m_linksAddTypeComboViewer = null;
         m_linksAddButton = null;
     }
 
@@ -1324,8 +1330,33 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
                 }
             }
         });
-        m_linksAddTypeTextField = addLabelTextFieldCouplet(m_linksAddContentPane, "Type:", "e.g. BLOG");
-        m_linksAddTypeTextField.addKeyListener(new KeyAdapter() {
+        final Label l = new Label(m_linksAddContentPane, SWT.LEFT);
+        l.setText("Type:");
+        GridData gd = new GridData();
+        gd.horizontalAlignment = SWT.LEFT;
+        l.setLayoutData(gd);
+        m_linksAddTypeComboViewer = new ComboViewer(m_linksAddContentPane, SWT.READ_ONLY);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.LEFT;
+        gd.grabExcessHorizontalSpace = true;
+        m_linksAddTypeComboViewer.getCombo().setLayoutData(gd);
+        m_linksAddTypeComboViewer.setContentProvider(ArrayContentProvider.getInstance());
+        m_linksAddTypeComboViewer.setInput(LinkMetaInfoAtom.LEGACY_LINK_TYPES);
+        m_linksAddTypeComboViewer.setLabelProvider(new LabelProvider() {
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            @SuppressWarnings("unchecked")  // generic casting...
+            public String getText(final Object o) {
+                if (o instanceof Pair) {
+                    return ((Pair<String, String>)o).getLeft();
+                }
+
+                return null;
+            }
+        });
+        m_linksAddTypeComboViewer.getCombo().addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(final KeyEvent ke) {
                 if ((ke.character == SWT.CR) && m_linksAddButton.isEnabled()) {
@@ -1333,6 +1364,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
                 }
             }
         });
+        m_linksAddTypeComboViewer.getCombo().select(0);
 
         m_linksAddButton = new Button(m_linksAddContentPane, SWT.PUSH);
         m_linksAddButton.setText("Add");
@@ -1342,23 +1374,26 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
                 processLinkAdd();
             }
         });
-        GridData gd = new GridData();
+        gd = new GridData();
         gd.horizontalAlignment = SWT.RIGHT;
         gd.horizontalSpan = 2;
         m_linksAddButton.setLayoutData(gd);
         m_linksAddButton.setEnabled(false);
     }
 
+    @SuppressWarnings("unchecked")  // generics casting...
     private void processLinkAdd() {
         final String url = m_linksAddURLTextField.getText();
         final String title = m_linksAddTitleTextField.getText();
-        final String type = m_linksAddTypeTextField.getText();
+        final StructuredSelection selection = (StructuredSelection)m_linksAddTypeComboViewer.getSelection();
+        final Pair<String, String> selectedType = (Pair<String, String>)selection.getFirstElement();
+        final String type = selectedType.getLeft();
 
         try {
             final MetaInfoAtom link = m_modelFacilitator.addLink(url, title, type);
             m_linksAddURLTextField.setText("");
             m_linksAddTitleTextField.setText("");
-            m_linksAddTypeTextField.setText("");
+            m_linksAddTypeComboViewer.getCombo().select(0);
             m_linksAddButton.setEnabled(false);
             link.populateContainerForEdit(m_linksLinksContentPane);
 

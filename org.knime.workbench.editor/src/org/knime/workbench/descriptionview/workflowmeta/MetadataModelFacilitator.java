@@ -96,28 +96,22 @@ import org.xml.sax.helpers.AttributesImpl;
 public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(MetadataModelFacilitator.class);
 
-    private static final String PRE_38_METADATA_LINK_BLOG_KEYWORD = "BLOG";
-    private static final String PRE_38_METADATA_LINK_URL_KEYWORD = "URL";
-    private static final String PRE_38_METADATA_LINK_VIDEO_KEYWORD = "VIDEO";
-    private static final String PRE_38_METADATA_TAG_KEYWORD = "TAG";
-    private static final String PRE_38_METADATA_TAGS_KEYWORD = "TAGS";
-    private static final String PRE_38_METADATA_LICENSE_KEYWORD = "LICENSE";
+    // I've seen both "TAG:" and "TAGS:" - we write out the latter
+    private static final String LEGACY_METADATA_TAG_KEYWORD = "TAG";
+    private static final String LEGACY_METADATA_TAGS_KEYWORD = "TAGS";
 
-    private static final String URL_LEGACY_KEYWORD_TYPE_NAME = "Website";
+    private static final String LEGACY_METADATA_LICENSE_KEYWORD = "LICENSE";
 
     // AP-12082
     private static final boolean WRITE_LICENSE_IN_OLD_STYLE_METADATA = false;
 
-    private static final HashSet<String> PRE_38_KEYWORDS;
+    private static final HashSet<String> LEGACY_KEYWORDS;
     static {
-        PRE_38_KEYWORDS = new HashSet<>();
-        PRE_38_KEYWORDS.add(PRE_38_METADATA_LINK_BLOG_KEYWORD);
-        PRE_38_KEYWORDS.add(PRE_38_METADATA_LINK_URL_KEYWORD);
-        PRE_38_KEYWORDS.add(URL_LEGACY_KEYWORD_TYPE_NAME.toUpperCase());
-        PRE_38_KEYWORDS.add(PRE_38_METADATA_LINK_VIDEO_KEYWORD);
-        PRE_38_KEYWORDS.add(PRE_38_METADATA_TAG_KEYWORD);
-        PRE_38_KEYWORDS.add(PRE_38_METADATA_TAGS_KEYWORD);
-        PRE_38_KEYWORDS.add(PRE_38_METADATA_LICENSE_KEYWORD);
+        LEGACY_KEYWORDS = new HashSet<>();
+        LEGACY_KEYWORDS.addAll(LinkMetaInfoAtom.LEGACY_VALID_INCOMING_TYPE_STRINGS);
+        LEGACY_KEYWORDS.add(LEGACY_METADATA_TAG_KEYWORD);
+        LEGACY_KEYWORDS.add(LEGACY_METADATA_TAGS_KEYWORD);
+        LEGACY_KEYWORDS.add(LEGACY_METADATA_LICENSE_KEYWORD);
     }
 
     /**
@@ -718,29 +712,21 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
                 if ((index != -1) && (index < (line.length() - 2))) {
                     final String initialText = line.substring(0, index).toUpperCase();
 
-                    if (PRE_38_KEYWORDS.contains(initialText)) {
-                        if (initialText.equals(PRE_38_METADATA_TAG_KEYWORD)
-                                    || initialText.equals(PRE_38_METADATA_TAGS_KEYWORD)) {
+                    if (LEGACY_KEYWORDS.contains(initialText)) {
+                        if (initialText.equals(LEGACY_METADATA_TAG_KEYWORD)
+                                    || initialText.equals(LEGACY_METADATA_TAGS_KEYWORD)) {
                             final String tagsConcatenated = line.substring(index + 1).trim();
                             final String[] tags = tagsConcatenated.split(",");
 
                             for (final String tag : tags) {
                                 addTag(tag.trim());
                             }
-                        } else if (initialText.equals(PRE_38_METADATA_LICENSE_KEYWORD)) {
+                        } else if (initialText.equals(LEGACY_METADATA_LICENSE_KEYWORD)) {
                             m_licenseAtom = new ComboBoxMetaInfoAtom("legacy-license",
                                 line.substring(index + 1).trim(), false);
                             m_licenseAtom.addChangeListener(this);
                         } else {
-                            final String type;
-                            if (initialText.equals(PRE_38_METADATA_LINK_BLOG_KEYWORD)) {
-                                type = "Blog";
-                            } else if (initialText.equals(PRE_38_METADATA_LINK_VIDEO_KEYWORD)) {
-                                type = "Video";
-                            } else {
-                                type = URL_LEGACY_KEYWORD_TYPE_NAME;
-                            }
-
+                            final String type = LinkMetaInfoAtom.getDisplayLinkTypeForKeyword(initialText);
                             final String lowercaseLine = line.toLowerCase(Locale.ROOT);
                             int urlStart = lowercaseLine.indexOf("http:");
                             if (urlStart == -1) {
@@ -801,11 +787,11 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         sb.append("\n\n");
 
         for (final LinkMetaInfoAtom mia : m_linkAtoms) {
-            sb.append(mia.getOldStyleDescriptionRepresentation(URL_LEGACY_KEYWORD_TYPE_NAME)).append('\n');
+            sb.append(mia.getLegacyDescriptionRepresentation()).append('\n');
         }
 
         if (m_tagAtoms.size() > 0) {
-            sb.append(PRE_38_METADATA_TAGS_KEYWORD).append(": ");
+            sb.append(LEGACY_METADATA_TAGS_KEYWORD).append(": ");
 
             boolean appendDelimiter = false;
             for (final MetaInfoAtom mia : m_tagAtoms) {
@@ -820,7 +806,7 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         }
 
         if (m_licenseAtom.hasContent() && WRITE_LICENSE_IN_OLD_STYLE_METADATA) {
-            sb.append(PRE_38_METADATA_LICENSE_KEYWORD).append(": ").append(m_licenseAtom.getValue()).append('\n');
+            sb.append(LEGACY_METADATA_LICENSE_KEYWORD).append(": ").append(m_licenseAtom.getValue()).append('\n');
         }
 
         // old style does not include a trailing \n
