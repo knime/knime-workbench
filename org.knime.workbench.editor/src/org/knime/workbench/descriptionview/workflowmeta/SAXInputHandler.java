@@ -154,12 +154,6 @@ public class SAXInputHandler extends DefaultHandler {
     }
 
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void endDocument() throws SAXException { }
-
-    /**
      * @return the model facilitator - if this is invoked mid-parse, it will only represent the elements which had their
      *         closing tags consumed; if parsing has finished, the consumer should invoke
      *         {@link MetadataModelFacilitator#parsingHasFinishedForWorkflowWithFilename(String)} appropriately.
