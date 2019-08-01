@@ -684,6 +684,16 @@ public abstract class MetaInfoAtom {
                         calculateRenderSize(this, m_displayText, m_horizontalInset, m_verticalInset, m_renderEdit);
 
                 m_cachedComputedSize = rsd.getEntireSize();
+
+                /*
+                 * Here is some pretty lame hackery - for some indecipherable reason, we are with the above code
+                 *  telling SWT the very correct size that we should be. SWT takes the value and in our parent
+                 *  Composite's layout does some incorrect calculation and says - "oh, ok.. so you [of width X] and
+                 *  the bullet label [of with Y] horizontally preceding you and the 3 pixels of interspace between
+                 *  the two specified to me in my layout definition --- lemme sum that up.. oh - of course,
+                 *  my width should be "X + Y + 3 ..... minus ~15 for some reason!"
+                 */
+                m_cachedComputedSize.x += 15;
             }
 
             return m_cachedComputedSize;
