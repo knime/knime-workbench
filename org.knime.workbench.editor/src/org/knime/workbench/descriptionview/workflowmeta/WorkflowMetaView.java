@@ -154,6 +154,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     /** The fill color for the header bar and other widgets (like tag chiclets.) **/
     public static final Color GENERAL_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 240, 240, 242);
 
+    private static final String NO_TITLE_TEXT = "No title has been set yet.";
     private static final String NO_DESCRIPTION_TEXT = "No description has been set yet.";
     private static final String NO_LINKS_TEXT = "No links have been added yet.";
     private static final String NO_TAGS_TEXT = "No tags have been added yet.";
@@ -309,6 +310,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private final Composite m_noUsableMetadataNotificationPane;
 
     private final Composite m_titleSection;
+    private final Composite m_titleNoDataPane;
     private final Composite m_titleContentPane;
 
     private final Composite m_descriptionSection;
@@ -514,9 +516,10 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
 
 
-        Composite[] sectionAndContentPane = createHorizontalSection("Title", null);
+        Composite[] sectionAndContentPane = createHorizontalSection("Title", NO_TITLE_TEXT);
         m_titleSection = sectionAndContentPane[0];
-        m_titleContentPane = sectionAndContentPane[1];
+        m_titleNoDataPane = sectionAndContentPane[1];
+        m_titleContentPane = sectionAndContentPane[2];
         gd = (GridData)m_titleSection.getLayoutData();
         gd.verticalIndent = CONTENT_VERTICAL_INDENT;
         m_titleSection.setLayoutData(gd);
@@ -874,13 +877,19 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
             SWTUtilities.removeAllChildren(m_titleContentPane);
             MetaInfoAtom mia = m_modelFacilitator.getTitle();
-            // as of AP-12151, the title will always exist
-            if (editMode) {
-                mia.populateContainerForEdit(m_titleContentPane);
+            if (editMode || mia.hasContent()) {
+                if (editMode) {
+                    mia.populateContainerForEdit(m_titleContentPane);
+                } else {
+                    mia.populateContainerForDisplay(m_titleContentPane);
+                }
+
+                SWTUtilities.spaceReclaimingSetVisible(m_titleNoDataPane, false);
+                SWTUtilities.spaceReclaimingSetVisible(m_titleContentPane, true);
             } else {
-                mia.populateContainerForDisplay(m_titleContentPane);
+                SWTUtilities.spaceReclaimingSetVisible(m_titleContentPane, false);
+                SWTUtilities.spaceReclaimingSetVisible(m_titleNoDataPane, true);
             }
-            SWTUtilities.spaceReclaimingSetVisible(m_titleContentPane, true);
 
             SWTUtilities.removeAllChildren(m_descriptionContentPane);
             mia = m_modelFacilitator.getDescription();

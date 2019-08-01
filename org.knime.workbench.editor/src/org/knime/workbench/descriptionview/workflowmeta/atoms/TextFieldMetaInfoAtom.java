@@ -114,7 +114,7 @@ public class TextFieldMetaInfoAtom extends AbstractTextMetaInfoAtom {
         }
         l.setFont(f);
         l.setForeground(WorkflowMetaView.TEXT_COLOR);
-        l.setText(m_value);
+        l.setText((m_value != null) ? m_value : "");
         final GridData gd = new GridData();
         gd.horizontalAlignment = SWT.LEFT;
         gd.verticalAlignment = SWT.BOTTOM;
