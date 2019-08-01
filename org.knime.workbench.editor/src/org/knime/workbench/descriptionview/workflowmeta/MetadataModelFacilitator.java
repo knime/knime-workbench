@@ -296,9 +296,7 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
             m_titleAtom = new TextFieldMetaInfoAtom(MetadataItemType.TITLE, "legacy-title", workflowFileName, false);
             m_titleAtom.addChangeListener(this);
         } else if (MetaInfoFile.NO_TITLE_PLACEHOLDER_TEXT.equals(m_titleAtom.getValue())) {
-            // This case will only occur in metadata written in KAP 4.0.0, subsequent releases started using
-            //      the workflow filename, per AP-12151
-            m_titleAtom.setValue(workflowFileName);
+            m_titleAtom.setValue(null);
         }
 
         if (m_descriptionAtom == null) {
