@@ -839,7 +839,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
             m_noLink = new Button(group, SWT.RADIO);
             m_noLink.setLayoutData(data);
-            m_noLink.setText("Don't create link with saved template");
+            m_noLink.setText("Don't create link to shared instance");
             m_noLink.setToolTipText("You will not be able to update the metanode from the template.");
             m_noLink.addSelectionListener(new SelectionAdapter() {
                 @Override
