@@ -1402,7 +1402,6 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             final MetaInfoAtom link = m_modelFacilitator.addLink(url, title, type);
             m_linksAddURLTextField.setText("");
             m_linksAddTitleTextField.setText("");
-            m_linksAddTypeComboViewer.getCombo().select(0);
             m_linksAddButton.setEnabled(false);
             link.populateContainerForEdit(m_linksLinksContentPane);
 
