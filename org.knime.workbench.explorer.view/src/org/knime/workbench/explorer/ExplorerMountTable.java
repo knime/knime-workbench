@@ -747,6 +747,7 @@ public final class ExplorerMountTable {
                 mpSettings = pStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
             }
             if (StringUtils.isEmpty(mpSettings)) {
+                ExplorerPreferenceInitializer.loadDefaultMountPoints();
                 mpSettings = pStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
             }
              mountSettings = MountSettings.parseSettings(mpSettings, true);
