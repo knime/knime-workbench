@@ -466,7 +466,9 @@ public class MountSettings {
                 getSortedMountSettingsFromNode(getInstanceMountPointParentNode());
 
             /* Add the KNIME Hub mount point if it is an update (SRV-2306). */
-            if (KNIMEWorkspaceUtil.getVersion() < HUB_WORKSPACE_VERSION && !loadedSettingsList.isEmpty()) {
+            if (KNIMEWorkspaceUtil.getVersion() < HUB_WORKSPACE_VERSION && !loadedSettingsList.isEmpty()
+                && ExplorerPreferenceInitializer.getIncludedDefaultMountPoints()
+                    .contains(CoreConstants.KNIME_HUB_MOUNT_ID)) {
                 final Optional<AbstractContentProviderFactory> factory =
                     ExplorerMountTable.getContentProviderFactories().values().stream()
                         .filter(e -> CoreConstants.KNIME_HUB_MOUNT_ID.equals(e.getDefaultMountID())).findFirst();
@@ -511,7 +513,11 @@ public class MountSettings {
             // ignore, return an empty list
         }
 
-        return mountSettings;
+        // exlude default mps that are not part of the preference if enforce exclusion is enabled.
+        final List<String> excludedDefaultMPs = ExplorerPreferenceInitializer.getExcludedDefaultMountPoints();
+
+        return mountSettings.stream().filter(e -> !excludedDefaultMPs.contains(e.getDefaultMountID()))
+            .collect(Collectors.toList());
     }
 
     private static List<MountSettings> getSortedMountSettingsFromNode(final IEclipsePreferences preferenceNode)
@@ -570,6 +576,7 @@ public class MountSettings {
             String prefString = prefStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
 
             if (prefString == null || prefString.isEmpty()) {
+                ExplorerPreferenceInitializer.loadDefaultMountPoints();
                 prefString = prefStore.getDefaultString(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML);
             }
             mountSettings = MountSettings.parseSettings(prefString, false);

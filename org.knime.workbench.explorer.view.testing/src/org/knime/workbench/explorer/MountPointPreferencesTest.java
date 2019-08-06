@@ -74,6 +74,7 @@ public class MountPointPreferencesTest {
      */
     @Test
     public void testMountPointLoading() throws Exception {
+        ExplorerMountTable.unmount(CoreConstants.KNIME_HUB_MOUNT_ID);
         List<MountSettings> initialSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
         int numberOfSettings = initialSettings.size();
 
@@ -118,6 +119,7 @@ public class MountPointPreferencesTest {
      */
     @Test
     public void testDefaultOverwrite() throws Exception {
+        ExplorerMountTable.unmount(CoreConstants.KNIME_HUB_MOUNT_ID);
         List<MountSettings> initialSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
         int numberOfSettings = initialSettings.size();
 

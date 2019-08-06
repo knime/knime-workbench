@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.core.util;
 
+import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.knime.core.node.NodeLogger;
@@ -79,6 +80,13 @@ public final class KNIMEWorkspaceUtil {
      * @return The version.
      */
     public synchronized static int getVersion() {
+        final int version = DefaultScope.INSTANCE.getNode(PLUGIN_ID).getInt(WORKSPACE_VERSION, -1);
+
+        if (version != -1) {
+            setVersion(version);
+            return version;
+        }
+
         final IEclipsePreferences pref = InstanceScope.INSTANCE.getNode(PLUGIN_ID);
 
         return pref.getInt(WORKSPACE_VERSION, -1);
