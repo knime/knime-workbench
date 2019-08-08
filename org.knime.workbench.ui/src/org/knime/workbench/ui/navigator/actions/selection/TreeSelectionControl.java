@@ -314,7 +314,9 @@ public class TreeSelectionControl {
      * Refreshes the whole tree view.
      */
     public void refresh() {
-        m_treeViewer.refresh();
+        if (!m_treeViewer.getTree().isDisposed()) {
+            m_treeViewer.refresh();
+        }
     }
 
     public interface TreeSelectionChangeListener {
