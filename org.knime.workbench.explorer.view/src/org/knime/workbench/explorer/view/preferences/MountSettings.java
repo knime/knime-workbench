@@ -582,8 +582,8 @@ public class MountSettings {
             mountSettings = MountSettings.parseSettings(prefString, false);
 
             // Sort Mount Points in such a way that the KNIME Hub is on top (SRV-2308)
-            mountSettings.sort((e1, e2) -> e1.getDefaultMountID().equals(CoreConstants.KNIME_HUB_MOUNT_ID) ? -1
-                : e2.getDefaultMountID().equals(CoreConstants.KNIME_HUB_MOUNT_ID) ? 1 : 0);
+            mountSettings.sort((e1, e2) -> CoreConstants.KNIME_HUB_MOUNT_ID.equals(e1.getDefaultMountID()) ? -1
+                : CoreConstants.KNIME_HUB_MOUNT_ID.equals(e2.getDefaultMountID()) ? 1 : 0);
 
             mountSettings.addAll(loadSortedMountSettingsFromDefaultPreferenceNode());
             // ensures that preference nodes are present.
