@@ -151,4 +151,15 @@ public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
      * @since 8.3
      */
     public abstract String getOwner();
+
+    /**
+     * Checks whether the file is of unknown type.
+     *
+     * @return <code>true</code> if the type is unkown, <code>false</code> otherwise.
+     *
+     * @since 8.5
+     */
+    public boolean isUnknownType() {
+        return false;
+    }
 }
