@@ -291,6 +291,8 @@ public final class ImageRepository {
         ServerReplaceHead("icons/server_space/replace_head.png"),
         /** ServerSpace Explorer Menu Icon: download something from the server. */
         ServerDownload("icons/server_space/download.png"),
+        /** ServerSpace Explorer Icon: unknown item. */
+        ServerUnknownItem("icons/server_space/unknown_item.png"),
         /** ServerSpace Explorer Icon: idle job. */
         TeamSpaceIcon("icons/team_space/explorer_teamspace.png"),
         /** LocalSpace Explorer Icon: server root. */
