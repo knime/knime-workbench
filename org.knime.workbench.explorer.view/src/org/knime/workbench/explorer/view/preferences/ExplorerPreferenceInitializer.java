@@ -93,7 +93,7 @@ public class ExplorerPreferenceInitializer extends
      * Loads the default mount points into default {@link PreferenceConstants#P_EXPLORER_MOUNT_POINT_XML}. This should
      * be called if there are no other settings and you have to fall back to the old xml format.
      *
-     * @since 8.5
+     * @since 8.4
      */
     public static void loadDefaultMountPoints() {
         final IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
@@ -152,7 +152,7 @@ public class ExplorerPreferenceInitializer extends
      * Returns a list with all default mount points that shall be added.
      *
      * @return List with all default mount points that shall be added.
-     * @since 8.5
+     * @since 8.4
      */
     public static List<String> getIncludedDefaultMountPoints() {
         final String mpSetting =
@@ -175,7 +175,7 @@ public class ExplorerPreferenceInitializer extends
      * Returns a list with all default mount points that shall be excluded.
      *
      * @return List with all default mount points that shall be excluded.
-     * @since 8.5
+     * @since 8.4
      */
     public static List<String> getExcludedDefaultMountPoints() {
         if (DefaultScope.INSTANCE.getNode(MOUNTPOINT_PREFERENCE_LOCATION).getBoolean(ENFORCE_EXCLUSION, false)) {

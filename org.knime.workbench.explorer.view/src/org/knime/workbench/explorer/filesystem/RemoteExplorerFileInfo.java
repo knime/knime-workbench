@@ -157,7 +157,7 @@ public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
      *
      * @return <code>true</code> if the type is unkown, <code>false</code> otherwise.
      *
-     * @since 8.5
+     * @since 8.4
      */
     public boolean isUnknownType() {
         return false;
