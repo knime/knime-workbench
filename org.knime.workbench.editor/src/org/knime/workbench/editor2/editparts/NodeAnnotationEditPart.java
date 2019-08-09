@@ -53,6 +53,7 @@ import org.eclipse.gef.Request;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.workflow.Annotation;
+import org.knime.core.node.workflow.AnnotationData;
 import org.knime.core.node.workflow.NodeAnnotation;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeUIInformation;
@@ -156,7 +157,10 @@ public class NodeAnnotationEditPart extends AnnotationEditPart {
                      * dimensions are synched correctly (AP-11150). In case it is not dirty, which could happen when we
                      * update the annotation and the dimension is set prior to altering the text, then the change of the
                      * text triggers the sync, thus the possible race condition caused by async exec is no problem. */
-                    anno.setDimension(x, y, w, h);
+                    final AnnotationData data = anno.getData();
+                    if (data.getX() != x || data.getY() != y || data.getWidth() != w || data.getHeight() != h) {
+                        anno.setDimension(x, y, w, h);
+                    }
                 } else {
                     anno.setDimensionNoNotify(x, y, w, h);
                 }
