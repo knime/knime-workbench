@@ -84,34 +84,6 @@ class TreeViewerUpdater {
         //static utility class
     }
 
-    /**
-     * Collapses all branches.
-     */
-    static void collapseAll(final TreeViewer viewer) {
-        Point backup = null;
-
-        if (IS_OS_WINDOWS) {
-            Rectangle bounds = viewer.getTree().getParent().getShell().getBounds();
-            // Bug 2809 -
-            // on windows the search is much slower if the cursor is within the KNIME window.
-            // so we just set it somewhere outside and restore it afterwards
-            backup = Display.getCurrent().getCursorLocation();
-            Display.getCurrent().setCursorLocation(new Point(bounds.x - 2, bounds.y - 2));
-        }
-
-        viewer.getControl().setRedraw(false);
-        try {
-            viewer.collapseAll();
-        } finally {
-            if (backup != null) {
-                Display.getCurrent().setCursorLocation(backup);
-            }
-
-            viewer.getControl().setRedraw(true);
-        }
-
-    }
-
     /** Updates and filters the tree
     *
     * @param shouldExpand whether the tree should be expanded
