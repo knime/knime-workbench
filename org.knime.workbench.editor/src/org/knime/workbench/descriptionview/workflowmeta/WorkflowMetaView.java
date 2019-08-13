@@ -1448,6 +1448,10 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
         @Override
         public void run() {
+            if (isDisposed()) {
+                return;
+            }
+
             final Rectangle viewportBounds = getBounds();
             final ScrollBar verticalSB = getVerticalBar();
             final int sbWidth = (verticalSB.isVisible() ? verticalSB.getSize().x : 0);

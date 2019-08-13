@@ -2404,14 +2404,18 @@ public class WorkflowEditor extends GraphicalEditor implements
                 sb.append(
                     "\n  Use \"Save As...\" to save a permanent copy of the workflow to your local workspace, or a mounted KNIME Server.");
             }
-            viewer.setWarningMessage(sb.toString());
+            viewer.displayMessage(sb.toString(),
+                                  ViewportPinningGraphicalViewer.MessageAppearance.WARNING,
+                                  new String[] {"Save as..."},
+                                  new Runnable[] {() -> {
+                                      doSaveAs();
+                                  }});
         } else if (getWorkflowManagerUI() instanceof AsyncWorkflowManagerUI) {
             // if the underlying workflow manager is a AsyncWorkflowManagerUI instance
             assert m_refresher != null;
             if ((m_fileResource != null) && (m_parentEditor == null)) {
                 //root workflow
-                sb.append("This is a job running on KNIME Server (" + m_fileResource.getAuthority()
-                    + ").");
+                sb.append("This is a job running on KNIME Server (" + m_fileResource.getAuthority() + ").");
             } else {
                 //metanode editor
                 sb.append("This is a metanode of a job running on KNIME Server.");
@@ -2424,21 +2428,23 @@ public class WorkflowEditor extends GraphicalEditor implements
                     sb.append("\nWorkflow locked for edits. Enable edit operations in the preferences.");
                 }
             }
-            viewer.setInfoMessage(sb.toString());
+            viewer.displayMessage(sb.toString(), ViewportPinningGraphicalViewer.MessageAppearance.INFO);
 
             if (!m_refresher.isConnected() && !m_refresher.isWorkflowEditDisabled()) {
                 Optional<String> disconnectedMessage = m_refresher.getDisconnectedMessage();
                 sb.setLength(0);
-                sb.append("Remote Workflow Editor disconnected: " + disconnectedMessage.get()
-                    + "\nWorkflow will not refresh and no changes can be made.");
-                viewer.setErrorMessage(sb.toString());
+                sb.append("Remote Workflow Editor disconnected: ");
+                sb.append(disconnectedMessage.isPresent() ? disconnectedMessage.get() : "an unknown reason");
+                sb.append("\nWorkflow will not refresh and no changes can be made.");
+                viewer.displayMessage(sb.toString(), ViewportPinningGraphicalViewer.MessageAppearance.ERROR);
             } else {
-                viewer.setErrorMessage(null);
+                viewer.removeMessagesOfAppearance(ViewportPinningGraphicalViewer.MessageAppearance.ERROR);
             }
 
             if (getWorkflowManagerUI().isInWizardExecution()) {
-                viewer.setWarningMessage("Job started by WebPortal. Edit operations are not allowed. "
-                    + "Nodes following the currently active component (WebPortal page) are not executed.");
+                viewer.displayMessage("Job started by WebPortal. Edit operations are not allowed. "
+                        + "Nodes following the currently active component (WebPortal page) are not executed.",
+                    ViewportPinningGraphicalViewer.MessageAppearance.WARNING);
             }
         } else {
             viewer.clearAllMessages();

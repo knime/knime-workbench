@@ -48,8 +48,13 @@
  */
 package org.knime.workbench.editor2;
 
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.draw2d.FigureCanvas;
 import org.eclipse.draw2d.Label;
@@ -60,11 +65,12 @@ import org.eclipse.draw2d.geometry.Dimension;
 import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.gef.ui.parts.ScrollingGraphicalViewer;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.PaintEvent;
-import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
@@ -88,35 +94,56 @@ import org.knime.workbench.editor2.figures.WorkflowFigure;
  * @author loki der quaeler
  */
 public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
-    private static final int MESSAGE_BACKGROUND_OPACITY = 171;
-    private static final Color WARN_ERROR_MESSAGE_BACKGROUND = new Color(null, 255, 249, 0, MESSAGE_BACKGROUND_OPACITY);
-    private static final Color INFO_MESSAGE_BACKGROUND = new Color(null, 200, 200, 255, MESSAGE_BACKGROUND_OPACITY);
+    /**
+     * Consumers of the this viewer who want to add pinned messages can either use the constants defined in this inner
+     * class for 'standard' message types, or create a new instance providing their own color, and potentially
+     * iconographic, scheme.
+     *
+     * @see ViewportPinningGraphicalViewer#displayMessage(String, MessageAppearance)
+     * @see ViewportPinningGraphicalViewer#displayMessage(String, MessageAppearance, String[], Runnable[])
+     */
+    public static final class MessageAppearance {
+        /**
+         * The standard message appearance for an "info" message.
+         */
+        public static final MessageAppearance INFO =
+            new MessageAppearance(2, INFO_MESSAGE_BACKGROUND, SharedImages.Info, true);
+        /**
+         * The standard message appearance for an "warning" message.
+         */
+        public static final MessageAppearance WARNING =
+            new MessageAppearance(1, WARN_ERROR_MESSAGE_BACKGROUND, SharedImages.Warning, true);
+        /**
+         * The standard message appearance for an "error" message.
+         */
+        public static final MessageAppearance ERROR =
+            new MessageAppearance(0, WARN_ERROR_MESSAGE_BACKGROUND, SharedImages.Error, true);
 
-    private static final int MESSAGE_INSET = 10;
 
-    private static NodeLogger LOGGER = NodeLogger.getLogger(ViewportPinningGraphicalViewer.class);
-
-    private enum MessageAttributes {
-
-        INFO(0, INFO_MESSAGE_BACKGROUND, SharedImages.Info),
-        WARNING(1, WARN_ERROR_MESSAGE_BACKGROUND, SharedImages.Warning),
-        ERROR(2, WARN_ERROR_MESSAGE_BACKGROUND, SharedImages.Error);
-
-        private final int m_index;
+        private int m_index;
         private final Color m_fillColor;
         private final SharedImages m_icon;
-
-        MessageAttributes(final int index, final Color c, final SharedImages icon) {
-            m_index = index;
-            m_fillColor = c;
-            m_icon = icon;
-        }
+        private boolean m_internalConstant;
 
         /**
-         * @return the internal arrays' index for the message type
+         * The available constructor for consumers who want to display a message with a non-predefined appearance.
+         *
+         * @param c the background color for the message. <b>NOTE:</b> this instance will be disposed when the
+         *              message ceases to be displayed.
+         * @param icon the icon to display, or null - it will not be disposed
          */
-        public int getIndex() {
-            return m_index;
+        public MessageAppearance(final Color c, final SharedImages icon) {
+            assert(c != null);
+            m_index = Integer.MIN_VALUE;
+            m_fillColor = c;
+            m_icon = icon;
+            m_internalConstant = false;
+        }
+
+        private MessageAppearance(final int index, final Color c, final SharedImages icon, final boolean internal) {
+            this(c, icon);
+            m_index = index;
+            m_internalConstant = internal;
         }
 
         /**
@@ -132,7 +159,74 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
         public SharedImages getIcon() {
             return m_icon;
         }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((m_fillColor == null) ? 0 : m_fillColor.hashCode());
+            result = prime * result + ((m_icon == null) ? 0 : m_icon.hashCode());
+            result = prime * result + m_index;
+            result = prime * result + (m_internalConstant ? 1231 : 1237);
+            return result;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean equals(final Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+
+            final MessageAppearance other = (MessageAppearance)obj;
+
+            if (m_fillColor == null) {
+                if (other.m_fillColor != null) {
+                    return false;
+                }
+            } else if (!m_fillColor.equals(other.m_fillColor)) {
+                return false;
+            }
+            if (m_icon != other.m_icon) {
+                return false;
+            }
+            if (m_index != other.m_index) {
+                return false;
+            }
+            if (m_internalConstant != other.m_internalConstant) {
+                return false;
+            }
+            return true;
+        }
+
+        /**
+         * @return the internal ordering index for the message type
+         */
+        private int getIndex() {
+            return m_index;
+        }
+
+        private boolean isInternalConstant() {
+            return m_internalConstant;
+        }
     }
+
+    private static final int MESSAGE_BACKGROUND_OPACITY = 171;
+    private static final Color WARN_ERROR_MESSAGE_BACKGROUND = new Color(null, 255, 249, 0, MESSAGE_BACKGROUND_OPACITY);
+    private static final Color INFO_MESSAGE_BACKGROUND = new Color(null, 200, 200, 255, MESSAGE_BACKGROUND_OPACITY);
+
+    private static NodeLogger LOGGER = NodeLogger.getLogger(ViewportPinningGraphicalViewer.class);
 
     /**
      * This is a static convenience method which involves fetching the active page's active editor, and then returning
@@ -185,74 +279,168 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
 
     private final AtomicBoolean m_haveInitializedViewport = new AtomicBoolean(false);
     private final AtomicInteger m_currentMessageViewHeight = new AtomicInteger(0);
+    private final AtomicLong m_messageKeyCounter = new AtomicLong(1);
 
-    /* Message figures indexed per MessageIndex */
-    private final Label[] m_messages = new Label[MessageAttributes.values().length];
-
-    /* Background rectangles for the message figures; indexed per MessageIndex */
-    private final Composite[] m_fillRectangles = new Composite[MessageAttributes.values().length];
+    private final ConcurrentHashMap<Long, Message> m_messageMap = new ConcurrentHashMap<>();
+    private final TreeMap<Integer, ArrayList<Message>> m_orderedMessageMap = new TreeMap<>();
 
     private Composite m_parent;
 
     /**
-     * Sets an info message (with an info icon and light purple background) at the top of the editor (above an error
-     * message and above a warning message, if either or both exist.)
+     * Displays a message pinned to the top of the viewport with the given appearance. If multiple messages are
+     * displayed at the same time, their order of precendence depends on the {@link MessageAppearance}:
      *
-     * @param msg the message to display or <code>null</code> to remove it
+     *  |   a custom instantiation
+     *  |   an ERROR
+     *  |   a WARNING
+     *  V   an INFO
+     *
+     * If multiple messages of the same appearance type are displayed, they will be shown top-to-bottom in order of when
+     * they were requested to be displayed.
+     *
+     * This method calls <code>displayMessage(message, appearance, null, null)</code>
+     *
+     * @param message the message text to be displayed
+     * @param appearance an instance of {@link MessageAppearance}
+     * @return a message 'key' that should be handed to the remove message method to remove the message from the
+     *         viewport
+     * @see #removeMessage(Long)
      */
-    public void setInfoMessage(final String msg) {
-        Display.getDefault().asyncExec(() -> {
-            if (msg != null) {
-                removeAndSetMessage(msg, MessageAttributes.INFO);
-            } else {
-                removeMessageFromView(MessageAttributes.INFO);
-            }
-        });
+    public Long displayMessage(final String message, final MessageAppearance appearance) {
+        return displayMessage(message, appearance, null, null);
     }
 
     /**
-     * Sets a warning message displayed at the top of the editor (above an error message if there is any, and below an
-     * info message if there is any.)
+     * Displays a message pinned to the top of the viewport with the given appearance, and displaying right-aligned flat
+     * buttons with the specified titles, performing the specified actions dispatched on the SWT thread.
      *
-     * @param msg the message to display or <code>null</code> to remove it
+     * If multiple messages are displayed at the same time, their order of precendence depends on the
+     * {@link MessageAppearance}:
+     *
+     *  |   a custom instantiation
+     *  |   an ERROR
+     *  |   a WARNING
+     *  V   an INFO
+     *
+     * If multiple messages of the same appearance type are displayed, they will be shown top-to-bottom in order of when
+     * they were requested to be displayed.
+     *
+     * @param message the message text to be displayed
+     * @param appearance an instance of {@link MessageAppearance}
+     * @param buttonTitles if non-null and of cardinality 1 or more, flat buttons, right aligned within the message box
+     *            will be displayed; the buttons will be displayed left-to-right (i.e the title in the 0th index will be
+     *            the leftmost button.)
+     * @param buttonActions a parallel array of {@link Runnable} instances which correspond 1-1 to the button titles; an
+     *            action can be null, but <code>buttonTitles.length =must= buttonActions.length</code>
+     * @return a message 'key' that should be handed to the remove message method to remove the message from the
+     *         viewport
+     * @see #removeMessage(Long)
      */
-    public void setWarningMessage(final String msg) {
-        Display.getDefault().asyncExec(() -> {
-            if (msg != null) {
-                removeAndSetMessage(msg, MessageAttributes.WARNING);
-            } else {
-                removeMessageFromView(MessageAttributes.WARNING);
+    public Long displayMessage(final String message, final MessageAppearance appearance, final String[] buttonTitles,
+        final Runnable[] buttonActions) {
+        final VeryLightFlatButton[] buttons;
+
+        if ((buttonTitles != null) && (buttonTitles.length > 0)) {
+            assert(buttonActions != null);
+            assert(buttonActions.length == buttonTitles.length);
+
+            final Display d = PlatformUI.getWorkbench().getDisplay();
+            final Color c = appearance.getFillColor();
+
+            buttons = new VeryLightFlatButton[buttonTitles.length];
+            for (int i = 0; i < buttonTitles.length; i++) {
+                buttons[i] = new VeryLightFlatButton(buttonTitles[i], buttonActions[i], d, c);
             }
-        });
+        } else {
+            buttons = null;
+        }
+
+        final Long key = Long.valueOf(m_messageKeyCounter.getAndIncrement());
+        final Message m = new Message(m_parent, key, message, appearance, buttons);
+
+        synchronized (m_orderedMessageMap) {
+            final Integer orderedKey = Integer.valueOf(appearance.getIndex());
+            ArrayList<Message> messages = m_orderedMessageMap.get(orderedKey);
+
+            if (messages == null) {
+                messages = new ArrayList<>();
+                m_orderedMessageMap.put(orderedKey, messages);
+            }
+            messages.add(m);
+
+            m_messageMap.put(key, m);
+        }
+
+        performMessageLayout(true);
+
+        return key;
     }
 
     /**
-     * Sets an error message displayed at the top of the editor (underneath a warning message and underneath an info
-     * message, if either or both exist.)
+     * Removes a message from the display.
      *
-     * @param msg the message to display or <code>null</code> to remove it
+     * @param messageKey the value returned by one of the display methods in this class
+     * @see #displayMessage(String, MessageAppearance)
+     * @see #displayMessage(String, MessageAppearance, String[], Runnable[])
      */
-    public void setErrorMessage(final String msg) {
-        Display.getDefault().asyncExec(() -> {
-            if (msg != null) {
-                removeAndSetMessage(msg, MessageAttributes.ERROR);
-            } else {
-                removeMessageFromView(MessageAttributes.ERROR);
+    public void removeMessage(final Long messageKey) {
+        final Message message;
+
+        synchronized (m_orderedMessageMap) {
+            message = m_messageMap.remove(messageKey);
+
+            if (message != null) {
+                final Integer key = Integer.valueOf(message.getAppearance().getIndex());
+                final ArrayList<Message> messages = m_orderedMessageMap.get(key);
+                if (messages != null) {
+                    messages.remove(message);
+                }
             }
-        });
+        }
+
+        if (message != null) {
+            message.dispose();
+            performMessageLayout(true);
+        }
     }
 
     /**
-     * A less computationally / redraw intensive method to clear messages than call each set-message-type with null.
+     * Removes all messages associated to a given appearance.
+     *
+     * @param appearance the appearance
+     */
+    public void removeMessagesOfAppearance(final MessageAppearance appearance) {
+        synchronized (m_orderedMessageMap) {
+            final ArrayList<Message> messages = m_orderedMessageMap.remove(Integer.valueOf(appearance.getIndex()));
+
+            if (messages != null) {
+                messages.stream().forEach((message) -> {
+                    m_messageMap.remove(message.getMessageId());
+                    message.dispose();
+                });
+            }
+        }
+
+        performMessageLayout(true);
+    }
+
+    /**
+     * A less computationally / redraw intensive method to clear messages than calling {@link #removeMessage(Long)} N
+     * times.
      */
     public void clearAllMessages() {
         Display.getDefault().asyncExec(() -> {
-            boolean shouldUpdateView = false;
+            final boolean shouldUpdateView;
 
-            for (int i = 0; i < m_messages.length; i++) {
-                if (removeMessageFromView(i, false)) {
-                    shouldUpdateView = true;
-                }
+            synchronized (m_orderedMessageMap) {
+                shouldUpdateView = (m_messageMap.size() > 0);
+
+                m_messageMap.values().stream().forEach((message) -> {
+                    message.dispose();
+                });
+
+                m_messageMap.clear();
+                m_orderedMessageMap.clear();
             }
 
             m_currentMessageViewHeight.set(0);
@@ -301,32 +489,6 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
         super.setControl(control);
     }
 
-    private void removeMessageFromView(final MessageAttributes attributes) {
-        removeMessageFromView(attributes.getIndex(), true);
-
-        layoutMessages(true);
-    }
-
-    /**
-     * @return true if a there was a message for the given index which was removed
-     */
-    private boolean removeMessageFromView(final int index, final boolean triggerRepaint) {
-        if (m_messages[index] != null) {
-            m_messages[index] = null;
-
-            m_fillRectangles[index].dispose();
-            m_fillRectangles[index] = null;
-
-            if (triggerRepaint) {
-                repaint();
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
     private void repaint() {
         getFigureCanvas().redraw();
     }
@@ -346,65 +508,31 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
         }
     }
 
-    private void removeAndSetMessage(final String msg, final MessageAttributes attributes) {
-        assert(msg != null);
-
-        final int index = attributes.getIndex();
-
-        if ((m_messages[index] != null) && msg.equals(m_messages[index].getText())) {
-            //nothing has changed
-            return;
-        }
-
-        if (m_messages[index] != null) {
-            //remove an already present message first
-            removeMessageFromView(attributes);
-        }
-
-        final Composite messageRectangle = new Composite(m_parent, SWT.NONE);
-        messageRectangle.setBackground(attributes.getFillColor());
-        messageRectangle.addPaintListener(new MessagePainter(index));
-        messageRectangle.setVisible(false);
-        messageRectangle.moveBelow(null);
-        LayoutExemptingLayout.exemptControlFromLayout(messageRectangle);
-        m_fillRectangles[index] = messageRectangle;
-
-        final Label message = new Label(msg);
-        message.setOpaque(false);
-        message.setIcon(ImageRepository.getUnscaledIconImage(attributes.getIcon()));
-        message.setLabelAlignment(PositionConstants.LEFT);
-        m_messages[index] = message;
-
-        layoutMessages(true);
-    }
-
-    private void layoutMessages(final boolean requireTopWhitespaceReplacement) {
+    private void performMessageLayout(final boolean requireTopWhitespaceReplacement) {
         final Viewport v = getViewport();
 
         if (v != null) {
             final Rectangle bounds = v.getBounds();
             int yOffset = 0;
 
-            for (int i = 0; i < m_messages.length; i++) {
-                if (m_messages[i] != null) {
-                    final Dimension preferredMessageSize = m_messages[i].getPreferredSize();
-                    final Rectangle messageBounds = new Rectangle(MESSAGE_INSET, (yOffset + MESSAGE_INSET),
-                        (bounds.width - (2 * MESSAGE_INSET)), preferredMessageSize.height);
-                    final int rectangleHeight = (messageBounds.height + (2 * MESSAGE_INSET));
+            synchronized (m_orderedMessageMap) {
+                for (Map.Entry<Integer, ArrayList<Message>> me : m_orderedMessageMap.entrySet()) {
+                    final ArrayList<Message> messages = me.getValue();
 
-                    m_messages[i].setBounds(messageBounds);
-                    m_fillRectangles[i].setLocation(0, yOffset);
-                    m_fillRectangles[i].setSize(bounds.width, rectangleHeight);
-                    m_fillRectangles[i].moveAbove(null);
-                    m_fillRectangles[i].setVisible(true);
+                    for (final Message message : messages) {
+                        message.setLocation(0, yOffset);
+                        yOffset += message.calculateSpatialsAndReturnRequiredHeight(bounds.width);
 
-                    yOffset += rectangleHeight;
+                        if (!message.isVisible()) {
+                            message.moveAbove(null);
+                            message.setVisible(true);
+                        }
+                    }
                 }
             }
 
-            m_currentMessageViewHeight.set(yOffset);
-
-            if (requireTopWhitespaceReplacement) {
+            final boolean calculatedHeightChanged = (m_currentMessageViewHeight.getAndSet(yOffset) != yOffset);
+            if (requireTopWhitespaceReplacement || calculatedHeightChanged) {
                 updateTopWhitespaceBuffer();
             }
         } else {
@@ -422,7 +550,7 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
                 if (!m_haveInitializedViewport.getAndSet(true)) {
                     v.addFigureListener((figure) -> {
                         // this is invoked when the size of the viewport changes
-                        layoutMessages(false);
+                        performMessageLayout(false);
                     });
                 }
 
@@ -436,34 +564,287 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
     }
 
 
-    private class MessagePainter implements PaintListener {
-        private final int m_arrayIndex;
+    /*
+     * This is a flat button class removed entirely from the SWT class hierarchy; it's basically a mouse state
+     *  container which knows how to paint itself.
+     */
+    private static class VeryLightFlatButton {
+        private static final int HORIZONTAL_INSET = 15;
+        private static final int VERTICAL_INSET = 3;
+        private static final Color BORDER_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 163, 163, 163);
 
-        private MessagePainter(final int index) {
-            m_arrayIndex = index;
+        // TODO this belongs in ColorUtilities - but that's in knime-core which will trigger another refactor request
+        //          to get all UI code out of knime-core which i'd rather get done in one fell swoop in its own
+        //          ticket. So... at that point, consider moving this there.
+        // @param darker should be [0.0, 1.0] where 1.0 is no darker, and 0.0 is 'black.'
+        private static Color getDarkerColor(final Color originalColor, final Display display, final float darker) {
+            final float[] hsb = java.awt.Color.RGBtoHSB(originalColor.getRed(), originalColor.getGreen(),
+                originalColor.getBlue(), null);
+
+            hsb[2] *= darker;
+
+            final java.awt.Color awtDarker = java.awt.Color.getHSBColor(hsb[0], hsb[1], hsb[2]);
+            return new Color(display, awtDarker.getRed(), awtDarker.getGreen(), awtDarker.getBlue());
         }
 
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void paintControl(final PaintEvent pe) {
-            final Point location = m_fillRectangles[m_arrayIndex].getLocation();
 
-            final GC gc = pe.gc;
-            gc.setAdvanced(true);
-            gc.setAntialias(SWT.ON);
-            gc.setTextAntialias(SWT.ON);
+        private final String m_buttonTitle;
+        private final Runnable m_action;
+        private final AtomicBoolean m_mouseInBounds;
+        private final Point m_size;
+        private Point m_location;
+        private final Color m_fillColor;
+        private final Color m_mouseOverColor;
+        private final Color m_textColor;
 
-            final SWTGraphics g = new SWTGraphics(gc);
+        VeryLightFlatButton(final String title, final Runnable action, final Display display,
+                final Color parentBackgroundColor) {
+            m_buttonTitle = title;
+            m_action = action;
 
+            m_fillColor = getDarkerColor(parentBackgroundColor, display, 0.93f);
+            m_mouseOverColor = getDarkerColor(parentBackgroundColor, display, 0.75f);
+            m_textColor = display.getSystemColor(SWT.COLOR_BLACK);
+
+            m_mouseInBounds = new AtomicBoolean(false);
+
+            final GC gc = new GC(display);
             try {
-                g.translate(0, -location.y);
+                final Point textSize = gc.stringExtent(m_buttonTitle);
+                final int width = textSize.x + (2 * HORIZONTAL_INSET) + 2;  // +2s for border
+                final int height = textSize.y + (2 * VERTICAL_INSET) + 2;  // +2s for border
 
-                m_messages[m_arrayIndex].paint(g);
+                m_size = new Point(width, height);
             } finally {
-                g.dispose();
+                gc.dispose();
             }
+        }
+
+        void dispose() {
+            m_fillColor.dispose();
+            m_mouseOverColor.dispose();
+        }
+
+        Point getSize() {
+            return m_size;
+        }
+
+        Runnable getAction() {
+            return m_action;
+        }
+
+        void setLocation(final Point location) {
+            m_location = location;
+        }
+
+        /* returns true if the mouse was previously considered out of bounds  */
+        boolean mouseInBounds() {
+            return !m_mouseInBounds.getAndSet(true);
+        }
+
+        /* returns true if the mouse was previously considered in bounds  */
+        boolean mouseOutOfBounds() {
+            return m_mouseInBounds.getAndSet(false);
+        }
+
+        void paint(final GC gc) {
+            gc.setBackground(m_mouseInBounds.get() ? m_mouseOverColor : m_fillColor);
+            gc.fillRectangle(m_location.x, m_location.y, m_size.x, m_size.y);
+
+            gc.setForeground(m_textColor);
+            gc.drawText(m_buttonTitle, (m_location.x + HORIZONTAL_INSET), (m_location.y + VERTICAL_INSET));
+
+            gc.setForeground(BORDER_COLOR);
+            gc.drawRectangle(m_location.x, m_location.y, (m_size.x - 1), (m_size.y - 1));
+        }
+    }
+
+
+    /**
+     * The message "component" - note that we are continuing to use Draw2D's {@link Label} class to calculate required
+     * component height, as well as render the text, as the 'messages' have always done. I could foresee at somepoint,
+     * should messages become more varied, that we would want to move to a different text rendering system which does
+     * not truncate (ellipsis-ize) the text.
+     */
+    private static class Message extends Canvas {
+        private static final int HORIZONTAL_INSET = 10;
+        private static final int VERTICAL_INSET = 9;
+        private static final int INTER_BUTTON_WIDTH = 6;
+
+
+        private final Long m_messageId;
+        private final Label m_label;
+        private final MessageAppearance m_messageAppearance;
+        private final VeryLightFlatButton[] m_buttons;
+        private final Rectangle[] m_buttonBounds;
+        private final Dimension m_totalButtonSize;
+
+        private Message(final Composite parent, final Long id, final String message, final MessageAppearance appearance,
+            final VeryLightFlatButton[] buttons) {
+            super(parent, SWT.NONE);
+
+            m_messageId = id;
+
+            m_messageAppearance = appearance;
+            m_buttons = buttons;
+
+            m_label = new Label(message);
+            m_label.setOpaque(false);
+            m_label.setIcon(ImageRepository.getUnscaledIconImage(m_messageAppearance.getIcon()));
+            m_label.setLabelAlignment(PositionConstants.LEFT);
+            if (m_messageAppearance.getIcon() != null) {
+                m_label.setIconTextGap(6);
+            }
+
+            addPaintListener((event) -> {
+                final GC gc = event.gc;
+
+                gc.setAdvanced(true);
+                gc.setAntialias(SWT.ON);
+                gc.setTextAntialias(SWT.ON);
+
+                final SWTGraphics g = new SWTGraphics(gc);
+                try {
+                    m_label.paint(g);
+
+                    if (m_buttons != null) {
+                        for (final VeryLightFlatButton button : m_buttons) {
+                            button.paint(gc);
+                        }
+                    }
+                } finally {
+                    g.dispose();
+                }
+            });
+            if (m_buttons != null) {
+                m_buttonBounds = new Rectangle[m_buttons.length];
+
+                int totalButtonWidth = 0;
+                int buttonHeight = Integer.MIN_VALUE;
+                for (int i = 0; i < m_buttons.length; i++) {
+                    final VeryLightFlatButton button = m_buttons[i];
+                    final Point buttonSize = button.getSize();
+                    if (totalButtonWidth > 0) {
+                        totalButtonWidth += INTER_BUTTON_WIDTH;
+                    }
+                    totalButtonWidth += buttonSize.x;
+                    buttonHeight = Math.max(buttonHeight, buttonSize.y);
+                }
+                m_totalButtonSize = new Dimension(totalButtonWidth, buttonHeight);
+
+                addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseDown(final MouseEvent me) {
+                        for (int i = 0; i < m_buttonBounds.length; i++) {
+                            if (m_buttonBounds[i].contains(me.x, me.y)) {
+                                // this is technically incorrect, but UX correct
+                                m_buttons[i].mouseOutOfBounds();
+                                redraw(m_buttonBounds[i].x, m_buttonBounds[i].y, m_buttonBounds[i].width,
+                                    m_buttonBounds[i].height, false);
+
+                                final Runnable r = m_buttons[i].getAction();
+                                if (r != null) {
+                                    getDisplay().asyncExec(r);
+                                }
+
+                                return;
+                            }
+                        }
+                    }
+                });
+                addMouseMoveListener((event) -> {
+                    for (int i = 0; i < m_buttonBounds.length; i++) {
+                        final boolean repaint;
+                        if (m_buttonBounds[i].contains(event.x, event.y)) {
+                            repaint = m_buttons[i].mouseInBounds();
+                        } else {
+                            repaint = m_buttons[i].mouseOutOfBounds();
+                        }
+
+                        if (repaint) {
+                            redraw(m_buttonBounds[i].x, m_buttonBounds[i].y, m_buttonBounds[i].width,
+                                m_buttonBounds[i].height, false);
+                        }
+                    }
+                });
+            } else {
+                m_buttonBounds = null;
+                m_totalButtonSize = new Dimension(0, 0);
+            }
+
+            calculateSpatialsAndReturnRequiredHeight(2 * HORIZONTAL_INSET);
+
+            setBackground(m_messageAppearance.getFillColor());
+
+            setVisible(false);
+            moveBelow(null);
+
+            LayoutExemptingLayout.exemptControlFromLayout(this);
+        }
+
+        private int calculateSpatialsAndReturnRequiredHeight(final int width) {
+            int height = 0;
+            final int labelYLocation;
+            final int labelWidth;
+            final int labelHeight = m_label.getPreferredSize().height;
+
+            if ((m_buttons != null) && (width > 0)) {
+                final int totalButtonHeight = m_totalButtonSize.height;
+
+                height = Math.max(totalButtonHeight, labelHeight);
+                int buttonInset = VERTICAL_INSET;
+                if (height == labelHeight) {
+                    buttonInset += ((labelHeight - totalButtonHeight) / 2);
+                    labelYLocation = VERTICAL_INSET;
+                } else {
+                    labelYLocation = VERTICAL_INSET + ((totalButtonHeight - labelHeight) / 2);
+                }
+
+                int currentX = width - (m_totalButtonSize.width + HORIZONTAL_INSET);
+                labelWidth = currentX - HORIZONTAL_INSET;
+                for (int i = 0; i < m_buttons.length; i++) {
+                    final VeryLightFlatButton button = m_buttons[i];
+                    final Point buttonSize = button.getSize();
+
+                    button.setLocation(new Point(currentX, buttonInset));
+                    m_buttonBounds[i] = new Rectangle(currentX, buttonInset, buttonSize.x, buttonSize.y);
+
+                    currentX += buttonSize.x + INTER_BUTTON_WIDTH;
+                }
+
+                height += (2 * VERTICAL_INSET);
+            } else {
+                labelYLocation = VERTICAL_INSET;
+                labelWidth = width - (2 * HORIZONTAL_INSET);
+            }
+
+            m_label.setBounds(new Rectangle(HORIZONTAL_INSET, labelYLocation, labelWidth, labelHeight));
+            setSize(width, height);
+
+            return height;
+        }
+
+        private Long getMessageId() {
+            return m_messageId;
+        }
+
+        private MessageAppearance getAppearance() {
+            return m_messageAppearance;
+        }
+
+        @Override
+        public void dispose() {
+            if (!m_messageAppearance.isInternalConstant()) {
+                m_messageAppearance.getFillColor().dispose();
+            }
+
+            if (m_buttons != null) {
+                for (final VeryLightFlatButton button : m_buttons) {
+                    button.dispose();
+                }
+            }
+
+            super.dispose();
         }
     }
 }
