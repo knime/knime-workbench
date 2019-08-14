@@ -87,6 +87,16 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
     public abstract boolean isWorkflowTemplate();
 
     /**
+     * Checks whether a file represents a component.
+     *
+     * @return true if the file is a component, false otherwise
+     * @since 8.4
+     */
+    public boolean isComponent() {
+        return false;
+    }
+
+    /**
      * Checks whether a file represents a KNIME node.
      *
      * @return true if the file is a KNIME node, false otherwise
