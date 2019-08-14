@@ -90,7 +90,7 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
      * Checks whether a file represents a component.
      *
      * @return true if the file is a component, false otherwise
-     * @since 8.4
+     * @since 8.5
      */
     public boolean isComponent() {
         return false;
