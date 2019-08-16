@@ -157,9 +157,12 @@ public class ResetAction extends AbstractNodeAction {
         LOGGER.debug("Resetting " + nodeParts.length + " node(s)");
         try {
             for (int i = 0; i < nodeParts.length; i++) {
-                // skip locked nodes
-                getManagerUI().resetAndConfigureNode(
-                        nodeParts[i].getNodeContainer().getID());
+                NodeContainerEditPart part = nodeParts[i];
+                NodeContainerUI nc = part.getNodeContainer();
+                if (getManagerUI().canResetNode(nc.getID())) {
+                    // skip locked nodes
+                    getManagerUI().resetAndConfigureNode(nodeParts[i].getNodeContainer().getID());
+                }
             }
 
         } catch (Exception ex) {
