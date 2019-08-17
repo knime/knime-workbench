@@ -64,6 +64,7 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchPart;
@@ -246,9 +247,10 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
             final IWorkbenchPage iwp = iww.getActivePage();
 
             if (iwp != null) {
-                final WorkflowEditor we = (WorkflowEditor)iwp.getActiveEditor();
+                final IEditorPart iep = iwp.getActiveEditor();
 
-                if (we != null) {
+                if (iep instanceof WorkflowEditor) {
+                    final WorkflowEditor we = (WorkflowEditor)iep;
                     final ISelectionProvider provider = we.getEditorSite().getSelectionProvider();
 
                     if (provider != null) {
