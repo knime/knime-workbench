@@ -130,6 +130,7 @@ import org.knime.workbench.editor2.actions.ToggleFlowVarPortsAction;
 import org.knime.workbench.editor2.actions.UnlinkNodesAction;
 import org.knime.workbench.editor2.directannotationedit.StyledTextEditor;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
+import org.knime.workbench.editor2.editparts.NodeAnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowInPortBarEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowInPortEditPart;
@@ -295,7 +296,8 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
         //      more logically consistent to still show the submenu since there *is* a selected annotation
         //      (plus, in the future if we enable those actions in the future on multiple selections, this is
         //      one less place to change.)
-        if (parts.stream().anyMatch((p) -> (p instanceof AnnotationEditPart))) {
+        if (parts.stream()
+            .anyMatch((p) -> (p instanceof AnnotationEditPart && !(p instanceof NodeAnnotationEditPart)))) {
             final ImageDescriptor subMenuImage =
                 ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotation-forward.png");
             final MenuManager annotationSubmenu = new MenuManager("Arrange", subMenuImage, null);
@@ -412,7 +414,8 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                     // both (standard swing) interactive and web interactive views
                     // For subnodes the views are moved into a submenu (see further below)
                     if (!(container instanceof SubNodeContainerUI)) {
-                        InteractiveWebViewsResultUI interactiveWebViewsResult = container.getInteractiveWebViews();
+                        final InteractiveWebViewsResultUI<?, ?, ?> interactiveWebViewsResult =
+                            container.getInteractiveWebViews();
                         for (int i = 0; i < interactiveWebViewsResult.size(); i++) {
                             action = new OpenInteractiveWebViewAction(container, interactiveWebViewsResult.get(i));
                             manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
