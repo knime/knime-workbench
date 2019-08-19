@@ -329,6 +329,18 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     private GraphicalViewer m_graphicalViewer;
 
+    /*
+     * As part of AP-12516, we moved from an implementation of editor message displaying in which there could
+     *  only ever be one per type displayed across the application, to where N could be displayed (for example,
+     *  perhaps a consumer besides the WorkflowEditor would like to show a pinned message, as might be done in
+     *  AP-12503) per type. So message displaying code in this class would simply set a new message of type X
+     *  assuming it would replace the last message it set of type X. We now track what we set in this class
+     *  and remove it appropriately.
+     */
+    private Long m_lastDisplayedInfoMessageId = null;
+    private Long m_lastDisplayedWarningMessageId = null;
+    private Long m_lastDisplayedErrorMessageId = null;
+
     private ZoomWheelListener m_zoomWheelListener;
     private ZoomComboContributionItem m_zoomComboBox;
 
@@ -2424,12 +2436,14 @@ public class WorkflowEditor extends GraphicalEditor implements
                 sb.append(
                     "\n  Use \"Save As...\" to save a permanent copy of the workflow to your local workspace, or a mounted KNIME Server.");
             }
-            viewer.displayMessage(sb.toString(),
-                                  ViewportPinningGraphicalViewer.MessageAppearance.WARNING,
-                                  new String[] {"Save as..."},
-                                  new Runnable[] {() -> {
-                                      doSaveAs();
-                                  }});
+            viewer.removeMessage(m_lastDisplayedWarningMessageId);
+            m_lastDisplayedWarningMessageId =
+                viewer.displayMessage(sb.toString(),
+                                      ViewportPinningGraphicalViewer.MessageAppearance.WARNING,
+                                      new String[] {"Save as..."},
+                                      new Runnable[] {() -> {
+                                          doSaveAs();
+                                      }});
         } else if (getWorkflowManagerUI() instanceof AsyncWorkflowManagerUI) {
             // if the underlying workflow manager is a AsyncWorkflowManagerUI instance
             assert m_refresher != null;
@@ -2448,7 +2462,9 @@ public class WorkflowEditor extends GraphicalEditor implements
                     sb.append("\nWorkflow locked for edits. Enable edit operations in the preferences.");
                 }
             }
-            viewer.displayMessage(sb.toString(), ViewportPinningGraphicalViewer.MessageAppearance.INFO);
+            viewer.removeMessage(m_lastDisplayedInfoMessageId);
+            m_lastDisplayedInfoMessageId =
+                viewer.displayMessage(sb.toString(), ViewportPinningGraphicalViewer.MessageAppearance.INFO);
 
             if (!m_refresher.isConnected() && !m_refresher.isWorkflowEditDisabled()) {
                 Optional<String> disconnectedMessage = m_refresher.getDisconnectedMessage();
@@ -2456,18 +2472,29 @@ public class WorkflowEditor extends GraphicalEditor implements
                 sb.append("Remote Workflow Editor disconnected: ");
                 sb.append(disconnectedMessage.isPresent() ? disconnectedMessage.get() : "an unknown reason");
                 sb.append("\nWorkflow will not refresh and no changes can be made.");
-                viewer.displayMessage(sb.toString(), ViewportPinningGraphicalViewer.MessageAppearance.ERROR);
+                viewer.removeMessage(m_lastDisplayedErrorMessageId);
+                m_lastDisplayedErrorMessageId =
+                    viewer.displayMessage(sb.toString(), ViewportPinningGraphicalViewer.MessageAppearance.ERROR);
             } else {
-                viewer.removeMessagesOfAppearance(ViewportPinningGraphicalViewer.MessageAppearance.ERROR);
+                viewer.removeMessage(m_lastDisplayedErrorMessageId);
+                m_lastDisplayedErrorMessageId = null;
             }
 
             if (getWorkflowManagerUI().isInWizardExecution()) {
-                viewer.displayMessage("Job started by WebPortal. Edit operations are not allowed. "
+                viewer.removeMessage(m_lastDisplayedWarningMessageId);
+                m_lastDisplayedWarningMessageId = viewer.displayMessage(
+                    "Job started by WebPortal. Edit operations are not allowed. "
                         + "Nodes following the currently active component (WebPortal page) are not executed.",
                     ViewportPinningGraphicalViewer.MessageAppearance.WARNING);
             }
         } else {
-            viewer.clearAllMessages();
+            viewer.removeMessage(m_lastDisplayedInfoMessageId);
+            viewer.removeMessage(m_lastDisplayedWarningMessageId);
+            viewer.removeMessage(m_lastDisplayedErrorMessageId);
+
+            m_lastDisplayedInfoMessageId = null;
+            m_lastDisplayedWarningMessageId = null;
+            m_lastDisplayedErrorMessageId = null;
         }
 
         for (final IEditorPart ep : getSubEditors()) {

@@ -49,13 +49,14 @@
 package org.knime.workbench.editor2;
 
 import java.util.ArrayList;
-import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.eclipse.draw2d.FigureCanvas;
 import org.eclipse.draw2d.Label;
 import org.eclipse.draw2d.PositionConstants;
@@ -165,13 +166,8 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
          */
         @Override
         public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + ((m_fillColor == null) ? 0 : m_fillColor.hashCode());
-            result = prime * result + ((m_icon == null) ? 0 : m_icon.hashCode());
-            result = prime * result + m_index;
-            result = prime * result + (m_internalConstant ? 1231 : 1237);
-            return result;
+            final HashCodeBuilder hcb = new HashCodeBuilder();
+            return hcb.append(m_fillColor).append(m_icon).append(m_index).append(m_internalConstant).toHashCode();
         }
 
         /**
@@ -190,28 +186,18 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
             }
 
             final MessageAppearance other = (MessageAppearance)obj;
-
-            if (m_fillColor == null) {
-                if (other.m_fillColor != null) {
-                    return false;
-                }
-            } else if (!m_fillColor.equals(other.m_fillColor)) {
-                return false;
-            }
-            if (m_icon != other.m_icon) {
-                return false;
-            }
-            if (m_index != other.m_index) {
-                return false;
-            }
-            if (m_internalConstant != other.m_internalConstant) {
-                return false;
-            }
-            return true;
+            final EqualsBuilder eb = new EqualsBuilder();
+            return eb.append(m_fillColor, other.m_fillColor)
+                     .append(m_icon, other.m_icon)
+                     .append(m_index, other.m_index)
+                     .append(m_internalConstant, other.m_internalConstant)
+                     .isEquals();
         }
 
         /**
-         * @return the internal ordering index for the message type
+         * @return the internal ordering index for the message type; note that this index is a holdover from the original
+         *              design in which message ordering was based on type (e.g info; warning; etc..) See the developer
+         *              notes at the end of this class.
          */
         private int getIndex() {
             return m_index;
@@ -232,7 +218,7 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
      * This is a static convenience method which involves fetching the active page's active editor, and then returning
      * the instance of this class attached to it.
      *
-     * @return the glass pane SWT <code>ViewportPinningGraphicalViewer</code> or null if we were unable to get an active
+     * @return the glass pane <code>ViewportPinningGraphicalViewer</code> or null if we were unable to get an active
      *         page or an active editor for it.
      */
     public static ViewportPinningGraphicalViewer getActiveViewer() {
@@ -259,10 +245,10 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
      *
      * This is useful for classes that want to draw into the glass pane that is the viewport. <b>NOTE:</b> that any SWT
      * widget created which has a parent as this composite should call
-     * <code>LayoutExemptingLayout.exemptControlFromLayout(Control)</code>.
+     * {@link LayoutExemptingLayout#exemptControlFromLayout(Control)}.
      *
      * @return the glass pane SWT <code>Composite</code> or null in conditions where null would be returned from
-     *         <code>getActiveViewer()</code>
+     *         {@link #getActiveViewer()}
      * @see LayoutExemptingLayout#exemptControlFromLayout(Control)
      * @see #getActiveViewer()
      */
@@ -281,22 +267,16 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
     private final AtomicInteger m_currentMessageViewHeight = new AtomicInteger(0);
     private final AtomicLong m_messageKeyCounter = new AtomicLong(1);
 
+    /* See the developer comment block at the bottom of this class concerning ordering. */
     private final ConcurrentHashMap<Long, Message> m_messageMap = new ConcurrentHashMap<>();
-    private final TreeMap<Integer, ArrayList<Message>> m_orderedMessageMap = new TreeMap<>();
+    private final TreeMap<Integer, ArrayList<Message>> m_typeOrderedMessageMap = new TreeMap<>();
+    private final ArrayList<Message> m_orderedMessageList = new ArrayList<>();
 
     private Composite m_parent;
 
     /**
      * Displays a message pinned to the top of the viewport with the given appearance. If multiple messages are
-     * displayed at the same time, their order of precendence depends on the {@link MessageAppearance}:
-     *
-     *  |   a custom instantiation
-     *  |   an ERROR
-     *  |   a WARNING
-     *  V   an INFO
-     *
-     * If multiple messages of the same appearance type are displayed, they will be shown top-to-bottom in order of when
-     * they were requested to be displayed.
+     * displayed at the same time, their order of display is based on earliest added is the top most displayed.
      *
      * This method calls <code>displayMessage(message, appearance, null, null)</code>
      *
@@ -314,16 +294,8 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
      * Displays a message pinned to the top of the viewport with the given appearance, and displaying right-aligned flat
      * buttons with the specified titles, performing the specified actions dispatched on the SWT thread.
      *
-     * If multiple messages are displayed at the same time, their order of precendence depends on the
-     * {@link MessageAppearance}:
-     *
-     *  |   a custom instantiation
-     *  |   an ERROR
-     *  |   a WARNING
-     *  V   an INFO
-     *
-     * If multiple messages of the same appearance type are displayed, they will be shown top-to-bottom in order of when
-     * they were requested to be displayed.
+     * If multiple messages are displayed at the same time, their order of display is based on earliest added is the top
+     * most displayed.
      *
      * @param message the message text to be displayed
      * @param appearance an instance of {@link MessageAppearance}
@@ -358,17 +330,19 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
         final Long key = Long.valueOf(m_messageKeyCounter.getAndIncrement());
         final Message m = new Message(m_parent, key, message, appearance, buttons);
 
-        synchronized (m_orderedMessageMap) {
+        synchronized (m_typeOrderedMessageMap) {
             final Integer orderedKey = Integer.valueOf(appearance.getIndex());
-            ArrayList<Message> messages = m_orderedMessageMap.get(orderedKey);
+            ArrayList<Message> messages = m_typeOrderedMessageMap.get(orderedKey);
 
             if (messages == null) {
                 messages = new ArrayList<>();
-                m_orderedMessageMap.put(orderedKey, messages);
+                m_typeOrderedMessageMap.put(orderedKey, messages);
             }
             messages.add(m);
 
             m_messageMap.put(key, m);
+
+            m_orderedMessageList.add(m);
         }
 
         performMessageLayout(true);
@@ -384,17 +358,22 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
      * @see #displayMessage(String, MessageAppearance, String[], Runnable[])
      */
     public void removeMessage(final Long messageKey) {
-        final Message message;
+        if (messageKey == null) {
+            return;
+        }
 
-        synchronized (m_orderedMessageMap) {
+        final Message message;
+        synchronized (m_typeOrderedMessageMap) {
             message = m_messageMap.remove(messageKey);
 
             if (message != null) {
                 final Integer key = Integer.valueOf(message.getAppearance().getIndex());
-                final ArrayList<Message> messages = m_orderedMessageMap.get(key);
+                final ArrayList<Message> messages = m_typeOrderedMessageMap.get(key);
                 if (messages != null) {
                     messages.remove(message);
                 }
+
+                m_orderedMessageList.remove(message);
             }
         }
 
@@ -410,12 +389,13 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
      * @param appearance the appearance
      */
     public void removeMessagesOfAppearance(final MessageAppearance appearance) {
-        synchronized (m_orderedMessageMap) {
-            final ArrayList<Message> messages = m_orderedMessageMap.remove(Integer.valueOf(appearance.getIndex()));
+        synchronized (m_typeOrderedMessageMap) {
+            final ArrayList<Message> messages = m_typeOrderedMessageMap.remove(Integer.valueOf(appearance.getIndex()));
 
             if (messages != null) {
                 messages.stream().forEach((message) -> {
                     m_messageMap.remove(message.getMessageId());
+                    m_orderedMessageList.remove(message);
                     message.dispose();
                 });
             }
@@ -432,7 +412,7 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
         Display.getDefault().asyncExec(() -> {
             final boolean shouldUpdateView;
 
-            synchronized (m_orderedMessageMap) {
+            synchronized (m_typeOrderedMessageMap) {
                 shouldUpdateView = (m_messageMap.size() > 0);
 
                 m_messageMap.values().stream().forEach((message) -> {
@@ -440,7 +420,8 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
                 });
 
                 m_messageMap.clear();
-                m_orderedMessageMap.clear();
+                m_typeOrderedMessageMap.clear();
+                m_orderedMessageList.clear();
             }
 
             m_currentMessageViewHeight.set(0);
@@ -515,18 +496,15 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
             final Rectangle bounds = v.getBounds();
             int yOffset = 0;
 
-            synchronized (m_orderedMessageMap) {
-                for (Map.Entry<Integer, ArrayList<Message>> me : m_orderedMessageMap.entrySet()) {
-                    final ArrayList<Message> messages = me.getValue();
+            synchronized (m_typeOrderedMessageMap) {
+                /* for ordering by type, iterate over m_typeOrderedMessageMap.entrySet() */
+                for (final Message message : m_orderedMessageList) {
+                    message.setLocation(0, yOffset);
+                    yOffset += message.calculateSpatialsAndReturnRequiredHeight(bounds.width);
 
-                    for (final Message message : messages) {
-                        message.setLocation(0, yOffset);
-                        yOffset += message.calculateSpatialsAndReturnRequiredHeight(bounds.width);
-
-                        if (!message.isVisible()) {
-                            message.moveAbove(null);
-                            message.setVisible(true);
-                        }
+                    if (!message.isVisible()) {
+                        message.moveAbove(null);
+                        message.setVisible(true);
                     }
                 }
             }
@@ -811,14 +789,15 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
 
                     currentX += buttonSize.x + INTER_BUTTON_WIDTH;
                 }
-
-                height += (2 * VERTICAL_INSET);
             } else {
                 labelYLocation = VERTICAL_INSET;
                 labelWidth = width - (2 * HORIZONTAL_INSET);
+                height = labelHeight;
             }
 
             m_label.setBounds(new Rectangle(HORIZONTAL_INSET, labelYLocation, labelWidth, labelHeight));
+
+            height += (2 * VERTICAL_INSET);
             setSize(width, height);
 
             return height;
@@ -847,4 +826,32 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
             super.dispose();
         }
     }
+
+    /*
+     * A note on the code in this class involving the ordering of the displayed messages.
+     *
+     * Historically, viewport message ordering was done by message type, as such:
+     *
+     *  |   an INFO
+     *  |   a WARNING
+     *  V   an ERROR
+     *
+     * during the re-write done for AP-12516, which introduces both custom types and the ability to have more than one
+     * message per type displayed at the same time, this ordering was changed to:
+     *
+     *  |   a custom type
+     *  |   an ERROR
+     *  |   a WARNING
+     *  V   an INFO
+     *
+     * If multiple messages of the same appearance type were displayed, they would be shown top-to-bottom in order of
+     * when they were requested to be displayed.
+     *
+     * After a group Slack chat with Martin and Johannes (and Jon by proxy) it was decided that message display
+     * ordering should be temporally based - with the earliest addition will be at the top of the viewport.
+     *
+     * It's a relatively trivial weight and performance issue to maintain the parallel structures containing the newer
+     * ordering, so i am preserving them should there be a desire in the future to return to type-based message display
+     * ordering.
+     */
 }
