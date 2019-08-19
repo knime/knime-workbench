@@ -48,9 +48,6 @@
  */
 package org.knime.workbench.editor2;
 
-import java.util.Arrays;
-
-import org.eclipse.core.runtime.Platform;
 import org.eclipse.draw2d.FigureCanvas;
 import org.eclipse.gef.editparts.ZoomManager;
 import org.eclipse.swt.SWT;
@@ -67,16 +64,14 @@ import org.knime.core.node.NodeLogger;
  * and a ZoomManager instance.)
  */
 final class ZoomWheelListener implements MouseWheelListener {
-
-    private static final double SCROLL_ZOOM_MULTIPLIER = 0.02;
-
     private static final NodeLogger LOGGER = NodeLogger.getLogger(ZoomWheelListener.class);
 
-    private final int m_platformStateMaskModifier;
 
     private final ZoomManager m_zoomManager;
 
     private final FigureCanvas m_figureCanvas;
+
+    private double m_alternateZoomDelta;
 
     /**
      * Default constructor.
@@ -85,27 +80,19 @@ final class ZoomWheelListener implements MouseWheelListener {
      * @param fc the canvas from which we want wheel event notifications
      */
     ZoomWheelListener(final ZoomManager zm, final FigureCanvas fc) {
-        if (Platform.OS_MACOSX.equals(Platform.getOS())) {
-            m_platformStateMaskModifier = SWT.COMMAND;
-        } else {
-            m_platformStateMaskModifier = SWT.CTRL;
-        }
-
         m_zoomManager = zm;
 
         m_figureCanvas = fc;
         m_figureCanvas.addMouseWheelListener(this);
+
+        m_alternateZoomDelta = 0;
     }
 
-    private int getIndexOrNearestForZoomLevel(final double zoom) {
-        int rhett = Arrays.binarySearch(m_zoomManager.getZoomLevels(), zoom);
-
-        if (rhett < 0) {
-            rhett += 1;
-            rhett *= -1;
-        }
-
-        return rhett;
+    /**
+     * @param delta expected to be integer percentage points (i.e 5 => 5%)
+     */
+    void setZoomDelta(final int delta) {
+        m_alternateZoomDelta = delta / 100.0;
     }
 
     /**
@@ -132,30 +119,19 @@ final class ZoomWheelListener implements MouseWheelListener {
      */
     @Override
     public void mouseScrolled(final MouseEvent me) {
-        if ((me.stateMask & m_platformStateMaskModifier) == m_platformStateMaskModifier) {
+        if ((me.stateMask & SWT.MOD1) == SWT.MOD1) {
             final int scrollEventChange = me.count;
             final double newZoom;
 
             if ((me.stateMask & SWT.ALT) == SWT.ALT) {
-                newZoom = m_zoomManager.getZoom() + (SCROLL_ZOOM_MULTIPLIER * scrollEventChange);
+                final double delta = m_alternateZoomDelta * ((scrollEventChange > 0) ? 1.0 : -1.0);
+                newZoom = m_zoomManager.getZoom() + delta;
             } else {
-                final double currentZoom = m_zoomManager.getZoom();
-                int index = getIndexOrNearestForZoomLevel(currentZoom);
-
                 if (scrollEventChange < 0) {
-                    index--;
+                    newZoom = m_zoomManager.getPreviousZoomLevel();
                 } else {
-                    index++;
+                    newZoom = m_zoomManager.getNextZoomLevel();
                 }
-
-                double[] zoomLevels = m_zoomManager.getZoomLevels();
-                if (index < 0) {
-                    index = 0;
-                } else if (index >= zoomLevels.length) {
-                    index = zoomLevels.length - 1;
-                }
-
-                newZoom = zoomLevels[index];
             }
 
             m_zoomManager.setZoom(newZoom);

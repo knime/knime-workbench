@@ -45,6 +45,7 @@
  */
 package org.knime.workbench.ui.preferences;
 
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
@@ -94,7 +95,7 @@ public class WorkflowEditorPreferencePage extends FieldEditorPreferencePage impl
             new StringFieldEditor(PreferenceConstants.P_DEFAULT_NODE_LABEL, "Default node label (prefix): ", parent);
         addField(m_emptyNodeLabel);
         addField(m_nodeLabelPrefix);
-        IntegerFieldEditor fontSizeEditor = new IntegerFieldEditor(PreferenceConstants.P_NODE_LABEL_FONT_SIZE,
+        final IntegerFieldEditor fontSizeEditor = new IntegerFieldEditor(PreferenceConstants.P_NODE_LABEL_FONT_SIZE,
             "Change node name and label font size", parent);
         addField(fontSizeEditor);
 
@@ -102,13 +103,13 @@ public class WorkflowEditorPreferencePage extends FieldEditorPreferencePage impl
         addField(new LabelField(parent, "These grid preferences apply to new workflows only."));
         addField(new BooleanFieldEditor(PreferenceConstants.P_GRID_SHOW, "Show grid", parent));
         addField(new BooleanFieldEditor(PreferenceConstants.P_GRID_SNAP_TO, "Snap to grid", parent));
-        IntegerFieldEditor gridSizeXEditor =
+        final IntegerFieldEditor gridSizeXEditor =
             new IntegerFieldEditor(PreferenceConstants.P_GRID_SIZE_X, "Horiz. grid size (in px)", parent);
         gridSizeXEditor.setValidRange(3, 500);
         gridSizeXEditor.setTextLimit(3);
         gridSizeXEditor.load();
         addField(gridSizeXEditor);
-        IntegerFieldEditor gridSizeYEditor =
+        final IntegerFieldEditor gridSizeYEditor =
             new IntegerFieldEditor(PreferenceConstants.P_GRID_SIZE_Y, "Vertic. grid size (in px)", parent);
         gridSizeYEditor.setValidRange(3, 500);
         gridSizeYEditor.setTextLimit(3);
@@ -120,13 +121,28 @@ public class WorkflowEditorPreferencePage extends FieldEditorPreferencePage impl
         addField(new HorizontalLineField(parent));
         addField(new LabelField(parent, "These node connection settings apply to new workflows only."));
         addField(new BooleanFieldEditor(PreferenceConstants.P_CURVED_CONNECTIONS, "Curved connections", parent));
-        ComboFieldEditor lineWidthEditor = new ComboFieldEditor(PreferenceConstants.P_CONNECTIONS_LINE_WIDTH,
+        final ComboFieldEditor lineWidthEditor = new ComboFieldEditor(PreferenceConstants.P_CONNECTIONS_LINE_WIDTH,
             "Node connections line width", new String[][]{{"1", "1"}, {"2", "2"}, {"3", "3"}}, parent);
         lineWidthEditor.load();
         addField(lineWidthEditor);
         addField(new LabelField(parent,
             "To change the node connection settings of a workflow,\nuse the 'Workflow Editor Settings' "
                 + "toolbar button."));
+
+        addField(new HorizontalLineField(parent));
+        addField(new ZoomLevelsFieldEditor(PreferenceConstants.P_EDITOR_ZOOM_LEVELS,
+            "Comma delimited list of zoom values: ", parent));
+        String labelText = "Zoom level change when the ";
+        if (Platform.OS_MACOSX.equals(Platform.getOS())) {
+            labelText += "\u2318";
+        } else {
+            labelText += "CTRL";
+        }
+        labelText += "+ALT keys are held down: ";
+        final IntegerFieldEditor zoomDelta =
+            new IntegerFieldEditor(PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA, labelText, parent);
+        zoomDelta.setValidRange(1, 100);
+        addField(zoomDelta);
     }
 
     /** {@inheritDoc} */
@@ -141,5 +157,28 @@ public class WorkflowEditorPreferencePage extends FieldEditorPreferencePage impl
     protected void initialize() {
         super.initialize();
         m_nodeLabelPrefix.setEnabled(m_emptyNodeLabel.getBooleanValue(), getFieldEditorParent());
+    }
+
+
+    private static class ZoomLevelsFieldEditor extends StringFieldEditor {
+        ZoomLevelsFieldEditor(final String name, final String labelText, final Composite parent) {
+            super(name, labelText, parent);
+        }
+
+        @Override
+        protected boolean doCheckState() {
+            final String[] levels = getStringValue().split(",");
+
+            for (final String level : levels) {
+                try {
+                    Integer.parseInt(level.trim());
+                } catch (final NumberFormatException nfe) {
+                    setErrorMessage("Zoom levels must be integer values, with multiple separated by commas.");
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 }

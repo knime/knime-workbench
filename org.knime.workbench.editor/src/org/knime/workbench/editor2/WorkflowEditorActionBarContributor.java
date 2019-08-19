@@ -68,6 +68,9 @@ import org.knime.core.node.util.NodeExecutionJobManagerPool;
  * @author Florian Georg, University of Konstanz
  */
 public class WorkflowEditorActionBarContributor extends ActionBarContributor {
+    private WorkflowEditor m_editor;
+    private ZoomComboContributionItem m_zoomComboBox;
+
     /**
      * {@inheritDoc}
      */
@@ -100,9 +103,14 @@ public class WorkflowEditorActionBarContributor extends ActionBarContributor {
     @Override
     public void contributeToToolBar(final IToolBarManager tbm) {
         tbm.add(new Separator());
-        String[] zoomStrings = new String[] {ZoomManager.FIT_ALL,
-                ZoomManager.FIT_HEIGHT, ZoomManager.FIT_WIDTH};
-        tbm.add(new ZoomComboContributionItem(getPage(), zoomStrings));
+        final String[] zoomStrings = new String[]{ZoomManager.FIT_ALL, ZoomManager.FIT_HEIGHT, ZoomManager.FIT_WIDTH};
+        m_zoomComboBox = new ZoomComboContributionItem(getPage(), zoomStrings);
+        tbm.add(m_zoomComboBox);
+
+        // In 4.7 RCPs, this is called before setActiveEditor, but we check in both places as future-proofing
+        if (m_editor != null) {
+            m_editor.setZoomComboBox(m_zoomComboBox);
+        }
     }
 
     /**
@@ -113,6 +121,14 @@ public class WorkflowEditorActionBarContributor extends ActionBarContributor {
         if (NodeExecutionJobManagerPool.getNumberOfJobManagersFactories() <= 1) {
             editor.getEditorSite().getActionBars().getToolBarManager()
                     .remove("org.knime.workbench.editor.actions.openMultiDialog");
+        }
+        if (editor instanceof WorkflowEditor) {
+            m_editor = (WorkflowEditor)editor;
+
+            // In 4.7 RCPs, this is called after contributeToToolBar, but we check in both places as future-proofing
+            if (m_zoomComboBox != null) {
+                m_editor.setZoomComboBox(m_zoomComboBox);
+            }
         }
         super.setActiveEditor(editor);
     }

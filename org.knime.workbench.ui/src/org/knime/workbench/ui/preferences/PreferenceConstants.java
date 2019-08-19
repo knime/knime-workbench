@@ -183,4 +183,14 @@ public interface PreferenceConstants {
     public static final long P_DEFAULT_REMOTE_WORKFLOW_EDITOR_AUTO_REFRESH_INTERVAL_MS = 1000;
     /** Default whether remote workflow edits are enabled */
     public static final boolean P_DEFAULT_REMOTE_WORKFLOW_EDITOR_EDITS_DISABLED = false;
+
+    /** Preference constant for the comma delimited list of zoom levels */
+    public static final String P_EDITOR_ZOOM_LEVELS = "knime.zoom.levels";
+    /** The default value for editor zoom levels */
+    public static final String P_DEFAULT_EDITOR_ZOOM_LEVELS =
+        "10, 25, 33, 50, 67, 75, 90, 100, 110, 125, 150, 175, 200, 250";
+    /** Preference constant for the value of how much zoom changes when the modifier keys are held down */
+    public static final String P_EDITOR_ZOOM_MODIFIED_DELTA = "knime.zoom.alternate_delta";
+    /** The default value for the delta in modifier zoom change */
+    public static final int P_DEFAULT_EDITOR_ZOOM_MODIFIED_DELTA = 5;
 }

@@ -111,6 +111,7 @@ import org.eclipse.gef.ui.actions.SaveAction;
 import org.eclipse.gef.ui.actions.StackAction;
 import org.eclipse.gef.ui.actions.UndoAction;
 import org.eclipse.gef.ui.actions.WorkbenchPartAction;
+import org.eclipse.gef.ui.actions.ZoomComboContributionItem;
 import org.eclipse.gef.ui.actions.ZoomInAction;
 import org.eclipse.gef.ui.actions.ZoomOutAction;
 import org.eclipse.gef.ui.parts.GraphicalEditor;
@@ -311,8 +312,6 @@ public class WorkflowEditor extends GraphicalEditor implements
     private static final Color BG_COLOR_DEFAULT =
         Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
 
-    private static final double[] ZOOM_LEVELS = { 0.25, 0.5, 1.0, 1.5, 2.0, 2.5};
-
     /** root model object (=editor input) that is handled by the editor. * */
     private WorkflowManagerUI m_manager;
 
@@ -331,6 +330,7 @@ public class WorkflowEditor extends GraphicalEditor implements
     private GraphicalViewer m_graphicalViewer;
 
     private ZoomWheelListener m_zoomWheelListener;
+    private ZoomComboContributionItem m_zoomComboBox;
 
     private AnnotationEditExitEnabler m_annotationEditExitEnabler;
     private NodeSupplantDragListener m_nodeSupplantDragListener;
@@ -378,6 +378,24 @@ public class WorkflowEditor extends GraphicalEditor implements
      * {@link AsyncWorkflowManagerUI}.
      */
     private WorkflowEditorRefresher m_refresher = null;
+
+    /**
+     * Whether the dialog has passed the {@link #promptToSaveOnClose()} method.
+     * This helps us to distinguish whether we have to offer an exit dialog when
+     * executing nodes are not saveable. This flag is only true if the user
+     * closes the editor.
+     */
+    private boolean m_isClosing;
+
+    /**
+     * Whether node connections should be drawn curved or straight.
+     */
+    private Boolean m_hasCurvedConnections = null;
+
+    /**
+     * Width of the line connecting two nodes.
+     */
+    private int m_connectionLineWidth;
 
     /**
      * No arg constructor, creates the edit domain for this editor.
@@ -967,9 +985,9 @@ public class WorkflowEditor extends GraphicalEditor implements
         RootEditPart rep = getGraphicalViewer().getRootEditPart();
         ((WorkflowRootEditPart)rep.getChildren().get(0)).createToolTipHelper(getSite().getShell());
 
-        final ZoomManager zm = this.getZoomManager();
-        zm.setZoomLevels(ZOOM_LEVELS);
+        final ZoomManager zm = getZoomManager();
         m_zoomWheelListener = new ZoomWheelListener(zm, getFigureCanvas());
+        updateZoomLevelSettings();
 
         final ZoomInAction zoomIn = new ZoomInAction(zm);
         final ZoomOutAction zoomOut = new ZoomOutAction(zm);
@@ -1625,26 +1643,28 @@ public class WorkflowEditor extends GraphicalEditor implements
         } else {
             display.asyncExec(r);
         }
-
     }
 
-    /**
-     * Whether the dialog has passed the {@link #promptToSaveOnClose()} method.
-     * This helps us to distinguish whether we have to offer an exit dialog when
-     * executing nodes are not saveable. This flag is only true if the user
-     * closes the editor.
-     */
-    private boolean m_isClosing;
+    private void updateZoomLevelSettings () {
+        final ZoomManager zm = getZoomManager();
+        final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
 
-    /**
-     * Whether node connections should be drawn curved or straight.
-     */
-    private Boolean m_hasCurvedConnections = null;
+        m_zoomWheelListener.setZoomDelta(store.getInt(PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA));
 
-    /**
-     * Width of the line connecting two nodes.
-     */
-    private int m_connectionLineWidth;
+        final String zoomLevelsPreference = store.getString(PreferenceConstants.P_EDITOR_ZOOM_LEVELS);
+        final String[] levels = zoomLevelsPreference.split(",");
+        final double[] zoomLevels = new double[levels.length];
+        for (int i = 0; i < zoomLevels.length; i++) {
+            zoomLevels[i] = (Double.parseDouble(levels[i].trim())) / 100.0;
+        }
+        zm.setZoomLevels(zoomLevels);
+
+        if (m_zoomComboBox != null) {
+            // we need do this couplet due to the code in setZoomManager
+            m_zoomComboBox.setZoomManager(null);
+            m_zoomComboBox.setZoomManager(zm);
+        }
+    }
 
     /**
      * Brings up the Save-Dialog and sets the m_isClosing flag.
@@ -3455,6 +3475,10 @@ public class WorkflowEditor extends GraphicalEditor implements
         m_isDirty = dirty;
     }
 
+    void setZoomComboBox(final ZoomComboContributionItem combo) {
+        m_zoomComboBox = combo;
+    }
+
     /**
      * @return The selection tool
      */
@@ -3495,10 +3519,13 @@ public class WorkflowEditor extends GraphicalEditor implements
                 updateWorkflowMessages();
                 updateEditorBackgroundColor();
                 break;
+            case PreferenceConstants.P_EDITOR_ZOOM_LEVELS:
+            case PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA:
+                updateZoomLevelSettings();
+                break;
             default:
         }
     }
-
 
     private void openErrorDialogAndCloseEditor(final String message) {
         if (message != LoadWorkflowRunnable.INCOMPATIBLE_VERSION_MSG) { // string identiy is OK here

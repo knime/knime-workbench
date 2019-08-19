@@ -61,15 +61,13 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  * @author Florian Georg, University of Konstanz
  */
 public class PreferenceInitializer extends AbstractPreferenceInitializer {
-
     /**
      * {@inheritDoc}
      */
     @Override
     public void initializeDefaultPreferences() {
         // get the preference store for the UI plugin
-        IPreferenceStore store = KNIMEUIPlugin.getDefault()
-                .getPreferenceStore();
+        final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
 
         store.setDefault(PreferenceConstants.P_HIDE_TIPS_AND_TRICKS, false);
 
@@ -134,9 +132,13 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
         store.setDefault(PreferenceConstants.P_REMOTE_WORKFLOW_EDITOR_EDITS_DISABLED,
             PreferenceConstants.P_DEFAULT_REMOTE_WORKFLOW_EDITOR_EDITS_DISABLED);
 
+        store.setDefault(PreferenceConstants.P_EDITOR_ZOOM_LEVELS, PreferenceConstants.P_DEFAULT_EDITOR_ZOOM_LEVELS);
+        store.setDefault(PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA,
+            PreferenceConstants.P_DEFAULT_EDITOR_ZOOM_MODIFIED_DELTA);
+
         // TODO retrieve the utility factories from the data type extension point once we have it
         // this loads all registered renderers and initializes the default value
-        for (ExtensibleUtilityFactory fac : ExtensibleUtilityFactory.getAllFactories()) {
+        for (final ExtensibleUtilityFactory fac : ExtensibleUtilityFactory.getAllFactories()) {
             fac.getDefaultRenderer(); // this sets the default preference for the renderer for this data type
         }
         TableStoreFormatRegistry.getInstance().getDefaultTableStoreFormat();
