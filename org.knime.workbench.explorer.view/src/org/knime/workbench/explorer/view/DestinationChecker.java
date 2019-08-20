@@ -207,8 +207,7 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                             && !ExplorerFileSystemUtils.hasOpenReports(Arrays.asList(result));
                         /* Make sure that a workflow group is not overwritten by
                          * a workflow, a template or a file or vice versa */
-                        boolean overwriteOk =
-                            !srcInfo.isWorkflowGroup() && !resultInfo.isWorkflowGroup() && m_isOverwriteEnabled;
+                        final boolean overwriteOk = isSameType(srcInfo, resultInfo) && m_isOverwriteEnabled;
                         result = openOverwriteDialog(source, result, isModifiable && overwriteOk, forbiddenStores);
                     }
                 }
@@ -216,6 +215,15 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
         }
         m_mappings.put(source, result);
         return result;
+    }
+
+    private static boolean isSameType(final AbstractExplorerFileInfo srcInfo,
+        final AbstractExplorerFileInfo resultInfo) {
+        return srcInfo.isWorkflowGroup() && resultInfo.isWorkflowGroup()
+            || srcInfo.isWorkflow() && resultInfo.isWorkflow() || srcInfo.isFile() && resultInfo.isFile()
+            || (srcInfo.isMetaNode() || srcInfo.isWorkflowTemplate() || srcInfo.isComponent())
+                && (resultInfo.isMetaNode() || resultInfo.isWorkflowTemplate() || resultInfo.isComponent())
+            || srcInfo.isSnapshot() && resultInfo.isSnapshot();
     }
 
     private T openMergeDialog(final S source, final T dest) {

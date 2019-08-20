@@ -107,6 +107,7 @@ import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
@@ -423,10 +424,11 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             uniqueName = dialog.getValue();
         }
         AbstractExplorerFileStore templateLoc = target.getChild(uniqueName);
-        boolean doesTargetExist = templateLoc.fetchInfo().exists();
+        final AbstractExplorerFileInfo destInfo = templateLoc.fetchInfo();
+        final boolean doesTargetExist = destInfo.exists();
         // don't allow to overwrite existing workflow groups with a template
-        final boolean overwriteOK = doesTargetExist
-            && !AbstractExplorerFileStore.isWorkflowGroup(templateLoc);
+        final boolean overwriteOK =
+            doesTargetExist && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate() || destInfo.isComponent());
         boolean isOverwrite = false;
 
         OverwriteAndMergeInfo info = null;
@@ -888,10 +890,11 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             uniqueName = dialog.getValue();
         }
         AbstractExplorerFileStore templateLoc = target.getChild(uniqueName);
-        boolean doesTargetExist = templateLoc.fetchInfo().exists();
+        final AbstractExplorerFileInfo destInfo = templateLoc.fetchInfo();
+        final boolean doesTargetExist = destInfo.exists();
         // don't allow to overwrite existing workflow groups with a template
-        final boolean overwriteOK = doesTargetExist
-            && !AbstractExplorerFileStore.isWorkflowGroup(templateLoc);
+        final boolean overwriteOK =
+            doesTargetExist && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate() || destInfo.isComponent());
         boolean isOverwrite = false;
 
         OverwriteAndMergeInfo info = null;
