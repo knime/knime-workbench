@@ -61,7 +61,6 @@ import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.workflow.TemplateNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
 import org.knime.core.node.workflow.WorkflowPersistor.MetaNodeLinkUpdateResult;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.pathresolve.ResolverUtil;
@@ -160,20 +159,12 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                     break;
                 case IStatus.WARNING:
                     message = "Warnings during load";
-                    logPreseveLineBreaks(
-                            "Warnings during load: "
-                                    + m_result.getFilteredError("",
-                                            LoadResultEntryType.Warning), false);
                     break;
                 default:
                     message = "Errors during load";
-                    logPreseveLineBreaks(
-                            "Errors during load: "
-                                    + m_result.getFilteredError("",
-                                            LoadResultEntryType.Warning), true);
             }
             if (!status.isOK()) {
-                LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message);
+                LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);
             }
         } catch (Exception ex) {
             throw new RuntimeException(ex);
