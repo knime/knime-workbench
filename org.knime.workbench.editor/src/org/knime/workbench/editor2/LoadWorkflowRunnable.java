@@ -199,7 +199,7 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                         "Errors during load: " + result.getFilteredError("", LoadResultEntryType.Warning), true);
             }
             if (!status.isOK()) {
-                showLoadErrorDialog(result, status, message);
+                showLoadErrorDialog(result, status, message, true);
             }
             final List<NodeID> linkedMNs = wm.getLinkedMetaNodes(true);
             if (!linkedMNs.isEmpty()) {
@@ -284,14 +284,16 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
         }
     }
 
-    static void showLoadErrorDialog(final LoadResult result, final IStatus status, final String message) {
+    static void showLoadErrorDialog(final LoadResult result, final IStatus status, final String message,
+        final boolean isWorkflow) {
         Display.getDefault().asyncExec(new Runnable() {
             @Override
             public void run() {
                 Shell shell = SWTUtilities.getActiveShell();
                 if (result.getMissingNodes().isEmpty() && result.getMissingTableFormats().isEmpty()) {
+                    String title = isWorkflow ? "Workflow Load" : "Component Load";
                     // will not open if status is OK.
-                    ErrorDialog.openError(shell, "Workflow Load", message, status);
+                    ErrorDialog.openError(shell, title, message, status);
                 } else {
 
                     List<String> missingExtensionList = new ArrayList<>();
@@ -305,7 +307,9 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                     String missingExtensions = StringUtils.join(missingExtensionList, ", ");
 
                     String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
-                    MessageDialog dialog = new MessageDialog(shell, "Workflow contains missing extensions", null,
+                    String title =
+                        isWorkflow ? "Workflow contains missing extensions" : "Component contains missing extensions";
+                    MessageDialog dialog = new MessageDialog(shell, title, null,
                         message + " due to missing extensions (" + missingExtensions
                             + "). Do you want to search and install the required extensions?",
                         MessageDialog.WARNING, dialogButtonLabels, 0);
