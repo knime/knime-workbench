@@ -123,14 +123,29 @@ public class ContentDelegator extends LabelProvider
      */
     private final HashSet<MountPoint> m_provider;
 
+    private final boolean m_updateProvSettings;
+
     /**
      * Creates a new content delegator and registers it for property changes of
      * the explorer mount table. None of the mounted content is visible through
      * this constructor.
      */
     public ContentDelegator() {
-        m_provider = new LinkedHashSet<MountPoint>();
-        m_changeListener = new CopyOnWriteArrayList<IPropertyChangeListener>();
+        this(true);
+    }
+
+    /**
+     * Creates a new content delegator and registers it for property changes of the explorer mount table. None of the
+     * mounted content is visible through this constructor.
+     *
+     * @param updateProvSettings {@code true} if the settings of all content providers in the preferences should be
+     *            updated, {@code false} otherwise. Default is {@code true}.
+     * @since 8.5
+     */
+    public ContentDelegator(final boolean updateProvSettings) {
+        m_provider = new LinkedHashSet<>();
+        m_changeListener = new CopyOnWriteArrayList<>();
+        m_updateProvSettings = updateProvSettings;
         ExplorerMountTable.addPropertyChangeListener(this);
     }
 
@@ -177,7 +192,9 @@ public class ContentDelegator extends LabelProvider
      */
     @Override
     public void dispose() {
-        ExplorerMountTable.updateProviderSettings();
+        if (m_updateProvSettings) {
+            ExplorerMountTable.updateProviderSettings();
+        }
         removeAllMountPoints();
         ExplorerMountTable.removePropertyChangeListener(this);
         super.dispose();
