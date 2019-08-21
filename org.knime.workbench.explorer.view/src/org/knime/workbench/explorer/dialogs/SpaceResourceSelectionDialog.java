@@ -267,7 +267,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * @param parent the parent composite
      */
     protected void createTreeControl(final Composite parent) {
-        m_treeInput = new ContentDelegator();
+        m_treeInput = new ContentDelegator(false);
         for (String id : m_mountIDs) {
             MountPoint mp = ExplorerMountTable.getMountPoint(id);
             if (mp != null) {
