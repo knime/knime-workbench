@@ -80,8 +80,8 @@ import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResult;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
-import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.node.workflow.WorkflowPersistor.WorkflowLoadResult;
+import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.util.LockFailedException;
 import org.knime.workbench.editor2.actions.CheckUpdateMetaNodeLinkAllAction;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -307,8 +307,8 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                     String missingExtensions = StringUtils.join(missingExtensionList, ", ");
 
                     String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
-                    String title =
-                        isWorkflow ? "Workflow contains missing extensions" : "Component contains missing extensions";
+                    String title = isWorkflow ? "Workflow contains nodes from missing extensions"
+                        : "Component contains nodes from missing extensions";
                     MessageDialog dialog = new MessageDialog(shell, title, null,
                         message + " due to missing extensions (" + missingExtensions
                             + "). Do you want to search and install the required extensions?",
