@@ -126,6 +126,7 @@ public class AnnotationEditManager extends DirectEditManager {
         final Font defaultFont;
         if (editPart instanceof NodeAnnotationEditPart) {
             defaultFont = AnnotationUtilities.getNodeAnnotationDefaultFont();
+            stw.pruneMenuAndToolbarForNodeAnnotation();
         } else if (anno.getVersion() < AnnotationData.VERSION_20151012) {
             defaultFont = FontStore.INSTANCE.getSystemDefaultFont();
         } else {

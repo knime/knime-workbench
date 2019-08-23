@@ -116,6 +116,7 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
     private final FlatButton m_alignCenterRadioButton;
     private final FlatButton m_alignRightRadioButton;
 
+    private final Label m_borderWidthLabelIcon;
     private final NumericPulldownFlatButton m_borderWidthButton;
     private final FlatButton m_borderColorButton;
 
@@ -156,7 +157,7 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
         layout.verticalSpacing = 0;
         setLayout(layout);
 
-        Label imageLabel = new Label(this, SWT.NONE);
+        final Label imageLabel = new Label(this, SWT.NONE);
         imageLabel
             .setImage(ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/annotations/font-size-icon.png"));
         imageLabel.setBackground(BACKGROUND_COLOR);
@@ -231,10 +232,10 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
         gd.verticalAlignment = SWT.CENTER;
         secondSeparator.setLayoutData(gd);
 
-        imageLabel = new Label(this, SWT.NONE);
-        imageLabel.setImage(
+        m_borderWidthLabelIcon = new Label(this, SWT.NONE);
+        m_borderWidthLabelIcon.setImage(
             ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/annotations/border-width-icon.png"));
-        imageLabel.setBackground(BACKGROUND_COLOR);
+        m_borderWidthLabelIcon.setBackground(BACKGROUND_COLOR);
         m_borderWidthButton = new NumericPulldownFlatButton(this, AVAILABLE_BORDER_THICKNESSES);
         m_borderWidthButton.addClickListener(this);
         m_borderWidthButton.setBackground(BACKGROUND_COLOR);
@@ -289,6 +290,32 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
     }
 
     /**
+     * @return true if the toolbar was pruned, false if it was already pruned.
+     */
+    boolean pruneToolbarForNodeAnnotation() {
+        if (!m_borderWidthButton.isDisposed()) {
+            m_borderWidthLabelIcon.dispose();
+            m_borderWidthButton.dispose();
+            m_borderColorButton.dispose();
+
+            final GridLayout layout = new GridLayout(12, false);
+            layout.marginHeight = 0;
+            layout.marginTop = 4;
+            layout.marginBottom = 4;
+            layout.marginWidth = 5;
+            layout.horizontalSpacing = 4;
+            layout.verticalSpacing = 0;
+            setLayout(layout);
+
+            layout(true, true);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * This should be called when the toolbar need update its visual state to match what is currently selected, or at
      * place of insert, in the associated text editor.
      */
@@ -307,7 +334,9 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
 
         updateAlignmentButtons(m_styledTextEditor.getCurrentAlignment());
 
-        m_borderWidthButton.setSelectedValue(m_styledTextEditor.getCurrentBorderWidth());
+        if (!m_borderWidthButton.isDisposed()) {
+            m_borderWidthButton.setSelectedValue(m_styledTextEditor.getCurrentBorderWidth());
+        }
 
         getDisplay().asyncExec(() -> {
             if (isDisposed()) {
@@ -321,7 +350,9 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
                 //      buttons (so, for example, a custom color well will not be visually updated until some other
                 //      dirty-ing event like the mouse moving over it.)
                 m_fontColorButton.redraw();
-                m_borderColorButton.redraw();
+                if (!m_borderColorButton.isDisposed()) {
+                    m_borderColorButton.redraw();
+                }
                 m_backgroundColorButton.redraw();
             }
         });
@@ -353,7 +384,9 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
      */
     void ensureEditAssetsAreNotVisible() {
         m_fontSizeButton.shouldHideEditAssets();
-        m_borderWidthButton.shouldHideEditAssets();
+        if (!m_borderWidthButton.isDisposed()) {
+            m_borderWidthButton.shouldHideEditAssets();
+        }
     }
 
     /**

@@ -158,6 +158,12 @@ public class FloatingStyleToolbar {
         return m_toolbar;
     }
 
+    void pruneToolbarForNodeAnnotation() {
+        if (m_toolbar.pruneToolbarForNodeAnnotation()) {
+            recomputeRegion();
+        }
+    }
+
     private void recomputeRegion() {
         final Region region = new Region();
         final Point size = m_toolbar.computeSize(SWT.DEFAULT, SWT.DEFAULT);

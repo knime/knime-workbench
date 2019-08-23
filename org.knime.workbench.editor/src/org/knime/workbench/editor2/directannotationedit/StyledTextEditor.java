@@ -242,7 +242,9 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
 
     private final AtomicBoolean m_annotationIsNodeAnnotation = new AtomicBoolean(false);
 
-    // These four are for the context menu
+    // These six are for the context menu
+    private MenuItem m_borderMenuItem;
+    private MenuItem m_postBorderMenuItemSeparator;
     private MenuItem m_rightAlignMenuItem;
     private MenuItem m_centerAlignMenuItem;
     private MenuItem m_leftAlignMenuItem;
@@ -267,6 +269,9 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
     }
 
     /**
+     * This is the only constructor used, probably; (it is invoked via Constructor.newInstance in
+     * DirectEditManager.createCellEditorOn - the GEF superclass of our AnnotationEditManager.)
+     *
      * @param parent
      */
     public StyledTextEditor(final Composite parent) {
@@ -326,6 +331,15 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
         CURRENT_INSTANCE_IN_VIEW = this;
 
         return m_panel;
+    }
+
+    void pruneMenuAndToolbarForNodeAnnotation() {
+        if (!m_postBorderMenuItemSeparator.isDisposed()) {
+            m_postBorderMenuItemSeparator.dispose();
+            m_borderMenuItem.dispose();
+        }
+
+        m_toolbarWindow.pruneToolbarForNodeAnnotation();
     }
 
     void placeAndDisplayToolbar() {
@@ -1162,7 +1176,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
         }
     }
 
-    @SuppressWarnings("unused") // menu item instance creation with out assignation
+    @SuppressWarnings("unused") // menu item instance creation without assignation
     private void addMenu(final Composite parent) {
         final Menu menu = new Menu(parent);
         menu.addListener(SWT.Hide, new Listener() {
@@ -1208,9 +1222,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
 
         // border style
         image = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/border_10.png");
-        action = addMenuItem(menu, "border", SWT.PUSH, "Border...", image);
-
-        new MenuItem(menu, SWT.SEPARATOR);
+        m_borderMenuItem = addMenuItem(menu, "border", SWT.PUSH, "Border...", image);
+        m_postBorderMenuItemSeparator = new MenuItem(menu, SWT.SEPARATOR);
 
         // ok button
         image = ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations/ok_10.png");
