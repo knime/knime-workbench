@@ -24,6 +24,16 @@
             id="knime.actions.zoom_reset"
             name="Reset Zoom"/>
       <command
+            categoryId="org.eclipse.gef.category.view"
+            description="Zooms in using the ALTernate increment amount"
+            id="knime.actions.zoom_in_alternate_increment"
+            name="Zoom In with Alternate Increment"/>
+      <command
+            categoryId="org.eclipse.gef.category.view"
+            description="Zooms out using the ALTernate decrement amount"
+            id="knime.actions.zoom_out_alternate_increment"
+            name="Zoom Out with Alternate Decrement"/>
+      <command
             categoryId="knime.command.category"
             description="Opens the settings dialog for the component layout."
             id="knime.commands.editor.subnodeLayout"
@@ -554,11 +564,35 @@
             commandId="knime.actions.zoom_reset"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+0"/>
+      <key
+            commandId="knime.actions.zoom_out_alternate_increment"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+ALT+-"/>
             <!-- copied from org.eclipse.gef/plugin.xml without locale=de -->
       <key  
             commandId="org.eclipse.gef.zoom_in"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1++"/>
+            <!-- the preferred mapping, on Linux and Win10 -->
+      <key
+            commandId="knime.actions.zoom_in_alternate_increment"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+ALT++"/>
+            <!-- for users who treat the =/+ key like + without hitting shift, on Linux and Win10 -->
+      <key
+            commandId="knime.actions.zoom_in_alternate_increment"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+ALT+="/>
+            <!-- how Eclipse on macOS treats the COMMAND-ALT-= key press -->
+      <key
+            commandId="knime.actions.zoom_in_alternate_increment"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+ALT+≠"/>
+            <!-- how Eclipse on macOS treats the COMMAND-ALT-+ key press -->
+      <key
+            commandId="knime.actions.zoom_in_alternate_increment"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+ALT+±"/>
       <key
             commandId="knime.commands.openView"
             contextId="org.eclipse.ui.contexts.window"

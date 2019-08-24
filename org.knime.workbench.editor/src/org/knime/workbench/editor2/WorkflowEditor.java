@@ -247,6 +247,8 @@ import org.knime.workbench.editor2.actions.SubNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.ToggleEditorModeAction;
 import org.knime.workbench.editor2.actions.ToggleFlowVarPortsAction;
 import org.knime.workbench.editor2.actions.UnlinkNodesAction;
+import org.knime.workbench.editor2.actions.ZoomInAlternateIncrementAction;
+import org.knime.workbench.editor2.actions.ZoomOutAlternateIncrementAction;
 import org.knime.workbench.editor2.actions.ZoomResetAction;
 import org.knime.workbench.editor2.commands.CreateNewConnectedMetaNodeCommand;
 import org.knime.workbench.editor2.commands.CreateNewConnectedNodeCommand;
@@ -343,6 +345,8 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     private ZoomWheelListener m_zoomWheelListener;
     private ZoomComboContributionItem m_zoomComboBox;
+    private ZoomInAlternateIncrementAction m_alternateZoomInAction;
+    private ZoomOutAlternateIncrementAction m_alternateZoomOutAction;
 
     private AnnotationEditExitEnabler m_annotationEditExitEnabler;
     private NodeSupplantDragListener m_nodeSupplantDragListener;
@@ -999,18 +1003,23 @@ public class WorkflowEditor extends GraphicalEditor implements
 
         final ZoomManager zm = getZoomManager();
         m_zoomWheelListener = new ZoomWheelListener(zm, getFigureCanvas());
-        updateZoomLevelSettings();
 
         final ZoomInAction zoomIn = new ZoomInAction(zm);
+        m_alternateZoomInAction = new ZoomInAlternateIncrementAction(zm);
         final ZoomOutAction zoomOut = new ZoomOutAction(zm);
+        m_alternateZoomOutAction = new ZoomOutAlternateIncrementAction(zm);
         final ZoomResetAction zoomReset = new ZoomResetAction(zm);
         final ActionRegistry registry = getActionRegistry();
         registry.registerAction(zoomReset);
+        registry.registerAction(m_alternateZoomOutAction);
         registry.registerAction(zoomOut);
+        registry.registerAction(m_alternateZoomInAction);
         registry.registerAction(zoomIn);
 
         final IHandlerService handlerService = getSite().getService(IHandlerService.class);
         handlerService.activateHandler(ZoomResetAction.KEY_COMMAND_ID, zoomReset);
+        handlerService.activateHandler(ZoomInAlternateIncrementAction.KEY_COMMAND_ID, m_alternateZoomInAction);
+        handlerService.activateHandler(ZoomOutAlternateIncrementAction.KEY_COMMAND_ID, m_alternateZoomOutAction);
 
         m_nodeSupplantDragListener = new NodeSupplantDragListener(this);
         if (m_manager != null) {
@@ -1018,6 +1027,8 @@ public class WorkflowEditor extends GraphicalEditor implements
         }
 
         m_annotationEditExitEnabler = new AnnotationEditExitEnabler(this);
+
+        updateZoomLevelSettings();
     }
 
     /**
@@ -1660,8 +1671,11 @@ public class WorkflowEditor extends GraphicalEditor implements
     private void updateZoomLevelSettings () {
         final ZoomManager zm = getZoomManager();
         final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
+        final int alternateDelta = store.getInt(PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA);
 
-        m_zoomWheelListener.setZoomDelta(store.getInt(PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA));
+        m_zoomWheelListener.setZoomDelta(alternateDelta);
+        m_alternateZoomInAction.setZoomDelta(alternateDelta);
+        m_alternateZoomOutAction.setZoomDelta(alternateDelta);
 
         final String zoomLevelsPreference = store.getString(PreferenceConstants.P_EDITOR_ZOOM_LEVELS);
         final String[] levels = zoomLevelsPreference.split(",");
