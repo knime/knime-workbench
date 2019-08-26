@@ -53,6 +53,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
@@ -88,48 +89,68 @@ abstract class AbstractSaveRunnable extends PersistWorkflowRunnable {
     }
 
     @Override
-    public final void run(final IProgressMonitor pm) {
-        File workflowDir = getSaveLocation();
+    public final void run(final IProgressMonitor pm) throws InterruptedException {
+        final File workflowDir = getSaveLocation();
         try {
             final WorkflowManager wfm = m_editor.getWorkflowManager().get();
-            ProgressHandler progressHandler =
+            final ProgressHandler progressHandler =
                 new ProgressHandler(pm, wfm.getNodeContainers().size(), "Saving workflow... (cannot be canceled)");
             final CheckCancelNodeProgressMonitor progressMonitor = new CheckCancelNodeProgressMonitor(pm);
 
             progressMonitor.addProgressListener(progressHandler);
             final ExecutionMonitor exec = new ExecutionMonitor(progressMonitor);
 
-             save(wfm, exec);
-        } catch (FileNotFoundException fnfe) {
-            m_logger.fatal("File not found", fnfe);
+            save(wfm, exec);
+
+            m_monitor = null;
+        } catch (final FileNotFoundException fnfe) {
+            m_logger.fatal("File not found - this exception will be re-thrown as an InterruptedException.", fnfe);
             m_exceptionMessage.append("File access problems: " + fnfe.getMessage());
-            m_monitor.setCanceled(true);
-        } catch (IOException ioe) {
+            handleRunExceptionCleanUp(fnfe);
+        } catch (final IOException ioe) {
             if (new File(workflowDir, WorkflowPersistor.WORKFLOW_FILE).length() == 0) {
                 m_logger.info("New workflow created.");
+                m_monitor = null;
             } else {
-                m_logger.error("Could not save workflow: " + workflowDir.getName(), ioe);
+                m_logger.error("Could not save workflow to " + workflowDir.getName()
+                                    + " - this exception will be re-thrown as an InterruptedException.", ioe);
                 m_exceptionMessage.append("File access problems: " + ioe.getMessage());
-                m_monitor.setCanceled(true);
+                handleRunExceptionCleanUp(ioe);
             }
-        } catch (CanceledExecutionException cee) {
+        } catch (final CanceledExecutionException cee) {
             m_logger.info("Canceled saving workflow: " + workflowDir.getName());
             m_exceptionMessage.append("Saving workflow" + " was canceled.");
-            m_monitor.setCanceled(true);
-        } catch (Exception e) {
-            m_logger.error("Could not save workflow", e);
+            handleRunExceptionCleanUp(null);
+        } catch (final Exception e) {
+            m_logger.error("Could not save workflow - this exception will be re-thrown as an InterruptedException.", e);
             m_exceptionMessage.append("Could not save workflow: " + e.getMessage());
-            m_monitor.setCanceled(true);
+            handleRunExceptionCleanUp(e);
         } finally {
             pm.subTask("Finished.");
             pm.done();
             m_editor = null;
             m_exceptionMessage = null;
-            m_monitor = null;
         }
     }
 
     protected abstract File getSaveLocation();
 
     protected abstract void save(WorkflowManager wfm, ExecutionMonitor exec) throws IOException, CanceledExecutionException, LockFailedException;
+
+    // Here's the funny thing - WorkflowEditor.saveTo is written to show a dialog to the user on a save failure,
+    //      but only if it gets an exception; we swallowed all the exceptions in run(IProgressMonitor) above,
+    //      but then (prior to the fix for AP-11179) executed code which caused SWT to throw an exception, which
+    //      then resulted in the desired behavior of showing a dialog.
+    // Now that we have fixed the SWT problem with AP-11179, we must throw our own exception so that the dialog
+    //      continues to be shown.
+    private void handleRunExceptionCleanUp(final Exception rootCause) throws InterruptedException {
+        PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
+            m_monitor.setCanceled(true);
+            m_monitor = null;
+        });
+
+        if (rootCause != null) {
+            throw new InterruptedException(rootCause.getMessage());
+        }
+    }
 }
