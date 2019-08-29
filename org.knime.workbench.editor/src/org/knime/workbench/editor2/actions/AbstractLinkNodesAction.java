@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import org.eclipse.gef.EditPart;
 import org.eclipse.gef.commands.Command;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.NodeID;
@@ -96,34 +97,34 @@ abstract class AbstractLinkNodesAction extends AbstractNodeAction {
         final boolean sourceConnections, final WorkflowManager wm) {
         if ((cep instanceof WorkflowInPortBarEditPart) && sourceConnections) {
             final WorkflowInPortBarEditPart ipbep = (WorkflowInPortBarEditPart)cep;
+            final Set<ConnectionContainer> connectionContainers = new HashSet<>();
 
-            if (ipbep.getChildren().size() == 1) {
-                final WorkflowInPortEditPart editPart = (WorkflowInPortEditPart)ipbep.getChildren().get(0);
+            for (final EditPart ep : ipbep.getChildren()) {
+                final WorkflowInPortEditPart editPart = (WorkflowInPortEditPart)ep;
                 final List<ConnectionContainerUI> ccUIs = editPart.getModelSourceConnections();
-                final Set<ConnectionContainer> connectionContainers = new HashSet<>();
 
-                for (ConnectionContainerUI ccUI : ccUIs) {
+                for (final ConnectionContainerUI ccUI : ccUIs) {
                     connectionContainers.add(wm.getConnection(ccUI.getID()));
                 }
-
-                return connectionContainers;
             }
+
+            return connectionContainers;
         } else if ((cep instanceof WorkflowOutPortBarEditPart) && (!sourceConnections)) {
             final WorkflowOutPortBarEditPart opbep = (WorkflowOutPortBarEditPart)cep;
+            final Set<ConnectionContainer> connectionContainers = new HashSet<>();
 
-            if (opbep.getChildren().size() == 1) {
-                final WorkflowOutPortEditPart editPart = (WorkflowOutPortEditPart)opbep.getChildren().get(0);
+            for (final EditPart ep : opbep.getChildren()) {
+                final WorkflowOutPortEditPart editPart = (WorkflowOutPortEditPart)ep;
                 final List<ConnectionContainerUI> ccUIs = editPart.getModelTargetConnections();
-                final Set<ConnectionContainer> connectionContainers = new HashSet<>();
 
-                for (ConnectionContainerUI ccUI : ccUIs) {
+                for (final ConnectionContainerUI ccUI : ccUIs) {
                     connectionContainers.add(wm.getConnection(ccUI.getID()));
                 }
-
-                return connectionContainers;
             }
+
+            return connectionContainers;
         } else if (cep instanceof NodeContainerEditPart) {
-            NodeID nid = ((NodeContainerEditPart)cep).getNodeContainer().getID();
+            final NodeID nid = ((NodeContainerEditPart)cep).getNodeContainer().getID();
 
             return sourceConnections ? wm.getOutgoingConnectionsFor(nid) : wm.getIncomingConnectionsFor(nid);
         }
