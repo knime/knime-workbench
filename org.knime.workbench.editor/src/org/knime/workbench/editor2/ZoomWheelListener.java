@@ -49,7 +49,7 @@
 package org.knime.workbench.editor2;
 
 import org.eclipse.draw2d.FigureCanvas;
-import org.eclipse.gef.editparts.ZoomManager;
+import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseWheelListener;
@@ -67,7 +67,7 @@ final class ZoomWheelListener implements MouseWheelListener {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(ZoomWheelListener.class);
 
 
-    private final ZoomManager m_zoomManager;
+    private final CustomZoomManager m_zoomManager;
 
     private final FigureCanvas m_figureCanvas;
 
@@ -79,7 +79,7 @@ final class ZoomWheelListener implements MouseWheelListener {
      * @param zm
      * @param fc the canvas from which we want wheel event notifications
      */
-    ZoomWheelListener(final ZoomManager zm, final FigureCanvas fc) {
+    ZoomWheelListener(final CustomZoomManager zm, final FigureCanvas fc) {
         m_zoomManager = zm;
 
         m_figureCanvas = fc;
@@ -134,7 +134,7 @@ final class ZoomWheelListener implements MouseWheelListener {
                 }
             }
 
-            m_zoomManager.setZoom(newZoom);
+            m_zoomManager.setZoom(newZoom, new Point(me.x, me.y));
         }
     }
 

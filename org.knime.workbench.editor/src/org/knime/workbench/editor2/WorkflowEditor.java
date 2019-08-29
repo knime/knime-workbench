@@ -1001,7 +1001,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         RootEditPart rep = getGraphicalViewer().getRootEditPart();
         ((WorkflowRootEditPart)rep.getChildren().get(0)).createToolTipHelper(getSite().getShell());
 
-        final ZoomManager zm = getZoomManager();
+        final CustomZoomManager zm = getZoomManager();
         m_zoomWheelListener = new ZoomWheelListener(zm, getFigureCanvas());
 
         final ZoomInAction zoomIn = new ZoomInAction(zm);
@@ -2793,8 +2793,8 @@ public class WorkflowEditor extends GraphicalEditor implements
         return loc;
     }
 
-    private ZoomManager getZoomManager() {
-        return (ZoomManager)(getViewer().getProperty(ZoomManager.class.toString()));
+    private CustomZoomManager getZoomManager() {
+        return (CustomZoomManager)(getViewer().getProperty(ZoomManager.class.toString()));
     }
 
     private double getZoomfactor() {

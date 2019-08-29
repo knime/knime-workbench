@@ -48,8 +48,11 @@
 package org.knime.workbench.editor2;
 
 import org.eclipse.draw2d.ColorConstants;
+import org.eclipse.draw2d.ScalableFigure;
+import org.eclipse.draw2d.Viewport;
 import org.eclipse.gef.GraphicalViewer;
 import org.eclipse.gef.editparts.ScalableFreeformRootEditPart;
+import org.eclipse.gef.editparts.ZoomManager;
 import org.eclipse.gef.ui.actions.ActionRegistry;
 import org.eclipse.gef.ui.parts.GraphicalViewerKeyHandler;
 import org.eclipse.swt.widgets.Composite;
@@ -110,7 +113,15 @@ public class WorkflowGraphicalViewerCreator {
 
         // configure the m_viewer
         viewer.getControl().setBackground(ColorConstants.white);
-        final ScalableFreeformRootEditPart part = new ConnectionSelectingScalableFreeformRootEditPart();
+        final ScalableFreeformRootEditPart part = new ConnectionSelectingScalableFreeformRootEditPart() {
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            protected ZoomManager createZoomManager(final ScalableFigure scalableFigure, final Viewport viewport) {
+                return new CustomZoomManager(scalableFigure, viewport);
+            }
+        };
         viewer.setRootEditPart(part);
         viewer.setKeyHandler(new GraphicalViewerKeyHandler(viewer));
 
