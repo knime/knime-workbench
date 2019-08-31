@@ -124,23 +124,34 @@ public class CustomZoomManager extends ZoomManager {
         if (m_zoom != zoomToUse) {
             final Viewport v = getViewport();
             final double originalZoom = m_zoom;
-            final double invertedScaleRatio = (originalZoom / zoomToUse);
+            final Point scaledViewportLocation = v.getViewLocation();
 
             m_zoom = zoomToUse;
             getScalableFigure().setScale(m_zoom);
             getViewport().validate();
 
             if (mousePoint != null) {
-                Point workingMP = mousePoint.getCopy();
-                final Point nScaledMP = workingMP.scale(m_zoom);
+                final Point normalizedViewportLocation = scaledViewportLocation.getCopy();
+                normalizedViewportLocation.scale(1 / originalZoom);
+                final Point normalizedViewportedMP = mousePoint.getCopy();
+                normalizedViewportedMP.scale(1 / originalZoom);
+                final Point normalizedAbsoluteMP = normalizedViewportLocation.getCopy();
+                normalizedAbsoluteMP.translate(normalizedViewportedMP);
 
-                workingMP = nScaledMP.getCopy();
-                final Point ratioMP = workingMP.scale(invertedScaleRatio);
-                final Dimension translate = new Dimension(nScaledMP.x - ratioMP.x, nScaledMP.y - ratioMP.y);
+                final Dimension viewportSize = v.getSize();
+                final double xRatio = mousePoint.preciseX() / viewportSize.preciseWidth();
+                final double yRatio = mousePoint.preciseY() / viewportSize.preciseHeight();
+                final Dimension scaledNewViewportSize = viewportSize.getCopy();
+                scaledNewViewportSize.scale(1 / zoomToUse);
+                final double newViewportXTranslate = -(xRatio * scaledNewViewportSize.preciseWidth());
+                final double newViewportYTranslate = -(yRatio * scaledNewViewportSize.preciseHeight());
 
-                Point viewLocation = v.getViewLocation();
-                viewLocation.translate(translate);
-                v.setViewLocation(viewLocation);
+                final Point newScaledAbsoluteMP = normalizedAbsoluteMP.getCopy();
+                newScaledAbsoluteMP.scale(zoomToUse);
+
+                final Point newViewportLocation = newScaledAbsoluteMP.getCopy();
+                newViewportLocation.translate(newViewportXTranslate, newViewportYTranslate);
+                v.setViewLocation(newViewportLocation);
             }
 
             fireZoomChanged();
