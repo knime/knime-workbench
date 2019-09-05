@@ -45,56 +45,55 @@
  */
 package org.knime.workbench.ui.database;
 
+import static org.knime.workbench.core.WorkflowMigrationSettings.P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED;
+import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_DATABASE_DRIVERS;
+import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_DATABASE_TIMEOUT;
+
 import org.eclipse.jface.dialogs.IMessageProvider;
+import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.IntegerFieldEditor;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.knime.core.node.port.database.DatabaseConnectionSettings;
 import org.knime.workbench.core.KNIMECorePlugin;
-import org.knime.workbench.core.preferences.HeadlessPreferencesConstants;
 
 /**
  * Preference page used to load additional database drivers.
  *
  * @author Thomas Gabriel, University of Konstanz
  */
-public class DatabasePreferencePage extends FieldEditorPreferencePage
-    implements IWorkbenchPreferencePage {
+public class DatabasePreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
     /**
-	 *
-	 */
-	public DatabasePreferencePage() {
+     * Constructs a {@link DatabasePreferencePage}.
+     */
+    public DatabasePreferencePage() {
         super("Database preferences (legacy)", null, GRID);
-        setDescription("Let's you load additional database driver from Jar or Zip archive and set other database "
+        setDescription("Lets you load additional database drivers from Jar or Zip archives and set other database "
             + "related preferences for the legacy database framework. "
             + "To register additional drivers for the new database framework go to the Databases prefrences page.");
-	}
+    }
 
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	protected void createFieldEditors() {
-	    addField(new DatabaseDriverListEditor(HeadlessPreferencesConstants.P_DATABASE_DRIVERS,
-            "List of loaded database driver files and directories:",
-            getFieldEditorParent(), this));
-        addField(new IntegerFieldEditor(HeadlessPreferencesConstants.P_DATABASE_TIMEOUT,
-            "Timeout for database operations (in seconds)", getFieldEditorParent(), 5));
+    @Override
+    protected void createFieldEditors() {
+        final Composite fieldEditorParent = getFieldEditorParent();
+        addField(new DatabaseDriverListEditor(P_DATABASE_DRIVERS,
+            "List of loaded database driver files and directories:", fieldEditorParent, this));
+        addField(new IntegerFieldEditor(P_DATABASE_TIMEOUT, "Timeout for database operations (in seconds)",
+            fieldEditorParent, 5));
         if (DatabaseConnectionSettings.getSystemPropertyDatabaseTimeout() >= 0) {
             setMessage("Database timeout preference will override system property", IMessageProvider.WARNING);
         }
-	}
+        addField(new BooleanFieldEditor(P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED,
+            "Offer the migration of workflows that contain legacy database nodes", fieldEditorParent));
+    }
 
-    /**
-     * {@inheritDoc}
-     */
-	@Override
+    @Override
     public void init(final IWorkbench workbench) {
-        IPreferenceStore corePrefStore =
-            KNIMECorePlugin.getDefault().getPreferenceStore();
+        IPreferenceStore corePrefStore = KNIMECorePlugin.getDefault().getPreferenceStore();
         setPreferenceStore(corePrefStore);
     }
 

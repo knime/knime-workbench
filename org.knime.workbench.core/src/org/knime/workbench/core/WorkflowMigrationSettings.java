@@ -40,54 +40,41 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ------------------------------------------------------------------------
  */
-package org.knime.workbench.core.preferences;
-
-import static org.knime.workbench.core.KNIMECorePlugin.P_LOGLEVEL_CONSOLE;
-import static org.knime.workbench.core.WorkflowMigrationSettings.P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED;
-import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_DATABASE_TIMEOUT;
-import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE;
-import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOG_FILE_LOCATION;
-import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOG_GLOBAL_IN_WF_DIR;
-import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_MAXIMUM_THREADS;
-import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_SEND_ANONYMOUS_STATISTICS;
-import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_TEMP_DIR;
-
-import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
-import org.eclipse.jface.preference.IPreferenceStore;
-import org.knime.core.node.NodeLogger.LEVEL;
-import org.knime.core.node.port.database.DatabaseConnectionSettings;
-import org.knime.workbench.core.KNIMECorePlugin;
+package org.knime.workbench.core;
 
 /**
+ * Static workflow migration settings.
  *
- * @author Fabian Dill, University of Konstanz
+ * @author Noemi Balassa
  */
-public class HeadlessPreferencesInitializer extends AbstractPreferenceInitializer {
+public final class WorkflowMigrationSettings {
 
-    @Override
-    public void initializeDefaultPreferences() {
-        IPreferenceStore store = KNIMECorePlugin.getDefault().getPreferenceStore();
-        store.setDefault(P_MAXIMUM_THREADS, 2 * Runtime.getRuntime().availableProcessors());
+    private static volatile boolean notificationEnabled;
 
-        store.setDefault(P_TEMP_DIR, System.getProperty("java.io.tmpdir"));
+    /**
+     * Preference constant: whether migration notifications should ever appear.
+     */
+    public static final String P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED =
+        "knime.workflowMigration.notification.enabled";
 
-        store.setDefault(P_LOGLEVEL_LOG_FILE, LEVEL.WARN.name());
+    /**
+     * Gets whether workflow migration notifications are to be displayed.
+     *
+     * @return {@code true} iff if workflow migration notifications are to be displayed.
+     */
+    public static boolean isNotificationEnabled() {
+        return notificationEnabled;
+    }
 
-        store.setDefault(P_LOG_FILE_LOCATION, false);
-
-        store.setDefault(P_LOG_GLOBAL_IN_WF_DIR, false);
-
-        // set default values
-        store.setDefault(P_LOGLEVEL_CONSOLE, LEVEL.WARN.name());
-
-        store.setDefault(P_SEND_ANONYMOUS_STATISTICS, false);
-
-        int syspropTimeout = DatabaseConnectionSettings.getSystemPropertyDatabaseTimeout();
-        store.setDefault(P_DATABASE_TIMEOUT, syspropTimeout >= 0 ? syspropTimeout : 15);
-
-        store.setDefault(P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED, true);
+    /**
+     * Sets whether workflow migration notifications are to be displayed.
+     *
+     * @param enabled {@code true} if workflow migration notifications are to be displayed.
+     */
+    public static void setNotificationEnabled(final boolean enabled) {
+        notificationEnabled = enabled;
     }
 
 }

@@ -100,7 +100,6 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
     /** Preference constant: log level for console appender. */
     public static final String P_LOGLEVEL_CONSOLE = "logging.loglevel.console";
 
-
     /**
      * Keeps list of <code>ConsoleViewAppender</code>. TODO FIXME remove
      * static if you want to have a console for each Workbench
@@ -152,7 +151,8 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
 
                 @Override
                 public void propertyChange(final PropertyChangeEvent event) {
-                    if (event.getProperty().equals(HeadlessPreferencesConstants.P_MAXIMUM_THREADS)) {
+                    final String propertyName = event.getProperty();
+                    if (HeadlessPreferencesConstants.P_MAXIMUM_THREADS.equals(propertyName)) {
                         if (!(event.getNewValue() instanceof Integer)) {
                             // when preferences are imported and this value is
                             // not set, they send an empty string
@@ -165,7 +165,7 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
                         } catch (Exception e) {
                             LOGGER.error("Unable to get maximum thread count " + " from preference page.", e);
                         }
-                    } else if (event.getProperty().equals(HeadlessPreferencesConstants.P_TEMP_DIR)) {
+                    } else if (HeadlessPreferencesConstants.P_TEMP_DIR.equals(propertyName)) {
                         if (!(event.getNewValue() instanceof String)) {
                             // when preferences are imported and this value is
                             // not set, they send an empty string
@@ -182,7 +182,7 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
                         } catch (Exception e) {
                             LOGGER.error("Setting temp dir failed: " + e.getMessage(), e);
                         }
-                    } else if (event.getProperty().equals(HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE)) {
+                    } else if (HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE.equals(propertyName)) {
                         if (!(event.getNewValue() instanceof String)) {
                             // when preferences are imported and this value is
                             // not set, they send an empty string
@@ -199,21 +199,21 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
                             LOGGER.error("Invalid log level " + newName + ", using WARN");
                         }
                         NodeLogger.setAppenderLevelRange(NodeLogger.LOGFILE_APPENDER, level, LEVEL.FATAL);
-                    } else if (event.getProperty().equals(HeadlessPreferencesConstants.P_LOG_FILE_LOCATION)) {
+                    } else if (HeadlessPreferencesConstants.P_LOG_FILE_LOCATION.equals(propertyName)) {
                         if (!(event.getNewValue() instanceof Boolean)) {
                             // when preferences are imported and this value is not set, they send an empty string
                             return;
                         }
                         Boolean enable = (Boolean)event.getNewValue();
                         NodeLogger.logInWorkflowDir(enable);
-                    } else if (event.getProperty().equals(HeadlessPreferencesConstants.P_LOG_GLOBAL_IN_WF_DIR)) {
+                    } else if (HeadlessPreferencesConstants.P_LOG_GLOBAL_IN_WF_DIR.equals(propertyName)) {
                         if (!(event.getNewValue() instanceof Boolean)) {
                             // when preferences are imported and this value is not set, they send an empty string
                             return;
                         }
                         Boolean enable = (Boolean)event.getNewValue();
                         NodeLogger.logGlobalMsgsInWfDir(enable);
-                    } else if (P_LOGLEVEL_CONSOLE.equals(event.getProperty())) {
+                    } else if (P_LOGLEVEL_CONSOLE.equals(propertyName)) {
                         if (!(event.getNewValue() instanceof String)) {
                             // when preferences are imported and this value is
                             // not set, they send an empty string
@@ -224,11 +224,16 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
                             return;
                         }
                         setLogLevel(newName);
-                    } else if (HeadlessPreferencesConstants.P_DATABASE_DRIVERS.equals(event.getProperty())) {
+                    } else if (HeadlessPreferencesConstants.P_DATABASE_DRIVERS.equals(propertyName)) {
                         String dbDrivers = (String)event.getNewValue();
                         initDatabaseDriver(dbDrivers);
-                    } else if (HeadlessPreferencesConstants.P_DATABASE_TIMEOUT.equals(event.getProperty())) {
+                    } else if (HeadlessPreferencesConstants.P_DATABASE_TIMEOUT.equals(propertyName)) {
                         DatabaseConnectionSettings.setDatabaseTimeout(Integer.parseInt(event.getNewValue().toString()));
+                    } else if (WorkflowMigrationSettings.P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED.contentEquals(propertyName)) {
+                        final Object newValue = event.getNewValue();
+                        if (newValue instanceof Boolean) {
+                            WorkflowMigrationSettings.setNotificationEnabled((Boolean)newValue);
+                        }
                     }
                 }
             });
@@ -261,6 +266,9 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
 
             DatabaseConnectionSettings.setDatabaseTimeout(pStore
                 .getInt(HeadlessPreferencesConstants.P_DATABASE_TIMEOUT));
+
+            WorkflowMigrationSettings.setNotificationEnabled(pStore
+                .getBoolean(WorkflowMigrationSettings.P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED));
         } catch (Throwable e) {
             LOGGER.error(
                 "Error while starting workbench, some setting may not have been applied properly: " + e.getMessage(),

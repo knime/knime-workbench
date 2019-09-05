@@ -55,6 +55,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EventObject;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -197,6 +198,8 @@ import org.knime.workbench.core.nodeprovider.NodeProvider;
 import org.knime.workbench.core.nodeprovider.NodeProvider.EventListener;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
+import org.knime.workbench.editor2.WorkflowEditorEventListener.ActiveWorkflowEditorEvent;
+import org.knime.workbench.editor2.WorkflowEditorEventListener.WorkflowEditorEvent;
 import org.knime.workbench.editor2.actions.AbstractNodeAction;
 import org.knime.workbench.editor2.actions.AddAnnotationAction;
 import org.knime.workbench.editor2.actions.BringAnnotationForwardAction;
@@ -694,6 +697,8 @@ public class WorkflowEditor extends GraphicalEditor implements
         if (m_refresher != null) {
             m_refresher.dispose();
         }
+
+        notifyCloseEventListeners();
 
         super.dispose();
     }
@@ -1899,6 +1904,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         } else {
             saveTo(m_fileResource, monitor, true, null);
         }
+        notifySaveEventListeners();
     }
 
     /**
@@ -2022,6 +2028,8 @@ public class WorkflowEditor extends GraphicalEditor implements
                 newWorkflowDir.getParent().refresh();
             }
         }
+
+        notifySaveEventListeners();
     }
 
     private class AutoSaveJob extends Job {
@@ -3695,6 +3703,41 @@ public class WorkflowEditor extends GraphicalEditor implements
             String msg = "Failed to upload the workflow to its remote location\n(" + e.getMessage() + ")";
             LOGGER.error(msg, e);
             MessageDialog.openError(SWTUtilities.getActiveShell(), "Upload failed.", msg);
+        }
+    }
+
+    private void notifyCloseEventListeners() {
+        final Collection<WorkflowEditorEventListener> workflowEditorEventListeners =
+            WorkflowEditorEventListeners.getListeners();
+        if (!workflowEditorEventListeners.isEmpty()) {
+            SyncExecQueueDispatcher.asyncExec(() -> {
+                final WorkflowEditorEvent event = WorkflowEditorEventListeners.createWorkflowEditorEvent(this);
+                for (final WorkflowEditorEventListener listener : workflowEditorEventListeners) {
+                    try {
+                        listener.editorClosed(event);
+                    } catch (final Throwable throwable) {
+                        LOGGER.error("Workflow editor listener error.", throwable);
+                    }
+                }
+            });
+        }
+    }
+
+    private void notifySaveEventListeners() {
+        final Collection<WorkflowEditorEventListener> workflowEditorEventListeners =
+            WorkflowEditorEventListeners.getListeners();
+        if (!workflowEditorEventListeners.isEmpty()) {
+            SyncExecQueueDispatcher.asyncExec(() -> {
+                final ActiveWorkflowEditorEvent event =
+                    WorkflowEditorEventListeners.createActiveWorkflowEditorEvent(this);
+                for (final WorkflowEditorEventListener listener : workflowEditorEventListeners) {
+                    try {
+                        listener.workflowSaved(event);
+                    } catch (final Throwable throwable) {
+                        LOGGER.error("Workflow editor listener error.", throwable);
+                    }
+                }
+            });
         }
     }
 }

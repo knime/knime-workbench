@@ -2,6 +2,7 @@
 <?eclipse version="3.0"?>
 <plugin>
     <extension-point id="metanode_porttype" name="Port Type for Metanode Wizard" schema="schema/metanode_portype.exsd"/>
+    <extension-point id="WorkflowEditorEventListener" name="Workflow Editor Event Listener" schema="schema/WorkflowEditorEventListener.exsd"/>
     <extension
          point="org.eclipse.ui.commands">
       <category

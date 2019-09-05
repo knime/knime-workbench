@@ -52,6 +52,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -83,6 +84,7 @@ import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResult
 import org.knime.core.node.workflow.WorkflowPersistor.WorkflowLoadResult;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.util.LockFailedException;
+import org.knime.workbench.editor2.WorkflowEditorEventListener.ActiveWorkflowEditorEvent;
 import org.knime.workbench.editor2.actions.CheckUpdateMetaNodeLinkAllAction;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
@@ -98,8 +100,9 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  */
 class LoadWorkflowRunnable extends PersistWorkflowRunnable {
 
-    /** Message returned by {@link #getLoadingCanceledMessage()} in case the loading has been canceled
-     * due to a (future) version conflict. (See also AP-7982)
+    /**
+     * Message returned by {@link #getLoadingCanceledMessage()} in case the loading has been canceled due to a (future)
+     * version conflict. (See also AP-7982)
      */
     static final String INCOMPATIBLE_VERSION_MSG = "Canceled workflow load due to incompatible version";
 
@@ -211,6 +214,22 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                     }
                 });
             }
+            final Collection<WorkflowEditorEventListener> workflowEditorEventListeners =
+                WorkflowEditorEventListeners.getListeners();
+            if (!workflowEditorEventListeners.isEmpty()) {
+                final WorkflowEditor editor = m_editor;
+                editor.addAfterOpenRunnable(() -> {
+                    final ActiveWorkflowEditorEvent event =
+                        WorkflowEditorEventListeners.createActiveWorkflowEditorEvent(editor);
+                    for (final WorkflowEditorEventListener listener : workflowEditorEventListeners) {
+                        try {
+                            listener.workflowLoaded(event);
+                        } catch (final Throwable throwable) {
+                            LOGGER.error("Workflow editor listener error.", throwable);
+                        }
+                    }
+                });
+            }
         } catch (FileNotFoundException fnfe) {
             m_throwable = fnfe;
             LOGGER.fatal("File not found", fnfe);
@@ -307,8 +326,8 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                     String missingExtensions = StringUtils.join(missingExtensionList, ", ");
 
                     String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
-                    String title = isWorkflow ? "Workflow requires missing extensions"
-                        : "Component requires missing extensions";
+                    String title =
+                        isWorkflow ? "Workflow requires missing extensions" : "Component requires missing extensions";
                     MessageDialog dialog = new MessageDialog(shell, title, null,
                         message + " due to missing extensions (" + missingExtensions
                             + "). Do you want to search and install the required extensions?",
@@ -364,9 +383,8 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                 @Override
                 public void run() {
                     Shell activeShell = SWTUtilities.getActiveShell(display);
-                    MessageDialogWithToggle dlg =
-                        MessageDialogWithToggle.openYesNoCancelQuestion(activeShell, "Metanode Link Update", message,
-                            "Remember my decision", false, corePrefStore, pKey);
+                    MessageDialogWithToggle dlg = MessageDialogWithToggle.openYesNoCancelQuestion(activeShell,
+                        "Metanode Link Update", message, "Remember my decision", false, corePrefStore, pKey);
                     switch (dlg.getReturnCode()) {
                         case IDialogConstants.YES_ID:
                             result.set(true);
