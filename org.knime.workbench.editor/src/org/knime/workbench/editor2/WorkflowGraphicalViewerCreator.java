@@ -54,6 +54,7 @@ import org.eclipse.gef.ui.actions.ActionRegistry;
 import org.eclipse.gef.ui.parts.GraphicalViewerKeyHandler;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IEditorSite;
+import org.knime.workbench.editor2.viewport.ViewportPinningGraphicalViewer;
 
 /**
  * Helper class that creates the <code>GraphicalViewer</code> that is hosted inside the editor. This creates the root

@@ -62,9 +62,10 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Composite;
-import org.knime.workbench.editor2.ViewportPinningGraphicalViewer;
+import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.NodeAnnotationEditPart;
 import org.knime.workbench.editor2.figures.NodeAnnotationFigure;
+import org.knime.workbench.editor2.viewport.ViewportPinningGraphicalViewer;
 
 /**
  * @author ohl, KNIME AG, Zurich, Switzerland
@@ -122,7 +123,7 @@ public class StyledTextEditorLocator implements CellEditorLocator {
         figure.getClass(); // must not be null
         m_figure = figure;
 
-        final ViewportPinningGraphicalViewer viewer = ViewportPinningGraphicalViewer.getActiveViewer();
+        final ViewportPinningGraphicalViewer viewer = WorkflowEditor.getActiveViewer();
         m_viewport = ((FigureCanvas)viewer.getControl()).getViewport();
         m_lastViewportLocation = m_viewport.getViewLocation();
 

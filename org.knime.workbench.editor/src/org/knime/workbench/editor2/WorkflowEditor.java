@@ -259,6 +259,8 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.editor2.figures.WorkflowFigure;
 import org.knime.workbench.editor2.svgexport.WorkflowSVGExport;
+import org.knime.workbench.editor2.viewport.MessageAppearance;
+import org.knime.workbench.editor2.viewport.ViewportPinningGraphicalViewer;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.RemoteWorkflowInput;
 import org.knime.workbench.explorer.dialogs.SaveAsValidator;
@@ -328,8 +330,6 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     /** List with the action ids that are associated to this editor. * */
     private List<String> m_editorActions;
-
-    private GraphicalViewer m_graphicalViewer;
 
     /*
      * As part of AP-12516, we moved from an implementation of editor message displaying in which there could
@@ -961,7 +961,7 @@ public class WorkflowEditor extends GraphicalEditor implements
     @Override
     protected void createGraphicalViewer(final Composite parent) {
         final IEditorSite editorSite = getEditorSite();
-        final GraphicalViewer viewer =
+        final ViewportPinningGraphicalViewer viewer =
             new WorkflowGraphicalViewerCreator(editorSite, getActionRegistry()).createViewer(parent);
 
         // Add a listener to the static node provider
@@ -973,14 +973,10 @@ public class WorkflowEditor extends GraphicalEditor implements
         final KeyHandler parentKeyHandler = keyHandler.setParent(getCommonKeyHandler());
         viewer.setKeyHandler(parentKeyHandler);
 
-        // hook the viewer into the EditDomain
-        getEditDomain().addViewer(viewer);
+        setGraphicalViewer(viewer);
 
         // activate the viewer as selection provider for Eclipse
         getSite().setSelectionProvider(viewer);
-
-        // remember this viewer
-        m_graphicalViewer = viewer;
 
         // load properties like grid- or node-connections settings (e.g. width, curved)
         // needs to be called before getGraphicalViewer().setContents(m_manager), since
@@ -992,7 +988,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         getGraphicalViewer().setContents(m_manager);
 
         // add Help context
-        WorkbenchHelpSystem.getInstance().setHelp(m_graphicalViewer.getControl(),
+        WorkbenchHelpSystem.getInstance().setHelp(getGraphicalViewer().getControl(),
             "org.knime.workbench.help.flow_editor_context");
 
         updateEditorBackgroundColor();
@@ -1032,24 +1028,22 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     /**
-     * This does nothing by now, as all is handled by
-     * <code>createGraphicalViewer</code>.
+     * This does nothing by now, as all is handled by {@link #createGraphicalViewer(Composite)}
      *
-     * @see org.eclipse.gef.ui.parts.GraphicalEditor
-     *      #initializeGraphicalViewer()
+     * {@inheritDoc}
      */
     @Override
-    protected void initializeGraphicalViewer() {
-        // nothing
-    }
+    protected void initializeGraphicalViewer() { }
 
     /**
-     * @return The graphical viewer in this editor
-     * @see org.eclipse.gef.ui.parts.GraphicalEditor#getGraphicalViewer()
+     * Simply redeclared as other classes in this class' package invoke this protected method; needing to do this is,
+     * arguably, a fault of the resolution logic of 'protected' in the Java language.
+     *
+     * {@inheritDoc}
      */
     @Override
     protected GraphicalViewer getGraphicalViewer() {
-        return m_graphicalViewer;
+        return super.getGraphicalViewer();
     }
 
     /**
@@ -2453,7 +2447,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             viewer.removeMessage(m_lastDisplayedWarningMessageId);
             m_lastDisplayedWarningMessageId =
                 viewer.displayMessage(sb.toString(),
-                                      ViewportPinningGraphicalViewer.MessageAppearance.WARNING,
+                                      MessageAppearance.WARNING,
                                       new String[] {"Save as..."},
                                       new Runnable[] {() -> {
                                           doSaveAs();
@@ -2478,7 +2472,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             }
             viewer.removeMessage(m_lastDisplayedInfoMessageId);
             m_lastDisplayedInfoMessageId =
-                viewer.displayMessage(sb.toString(), ViewportPinningGraphicalViewer.MessageAppearance.INFO);
+                viewer.displayMessage(sb.toString(), MessageAppearance.INFO);
 
             if (!m_refresher.isConnected() && !m_refresher.isWorkflowEditDisabled()) {
                 Optional<String> disconnectedMessage = m_refresher.getDisconnectedMessage();
@@ -2488,7 +2482,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 sb.append("\nWorkflow will not refresh and no changes can be made.");
                 viewer.removeMessage(m_lastDisplayedErrorMessageId);
                 m_lastDisplayedErrorMessageId =
-                    viewer.displayMessage(sb.toString(), ViewportPinningGraphicalViewer.MessageAppearance.ERROR);
+                    viewer.displayMessage(sb.toString(), MessageAppearance.ERROR);
             } else {
                 viewer.removeMessage(m_lastDisplayedErrorMessageId);
                 m_lastDisplayedErrorMessageId = null;
@@ -2499,7 +2493,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 m_lastDisplayedWarningMessageId = viewer.displayMessage(
                     "Job started by WebPortal. Edit operations are not allowed. "
                         + "Nodes following the currently active component (WebPortal page) are not executed.",
-                    ViewportPinningGraphicalViewer.MessageAppearance.WARNING);
+                    MessageAppearance.WARNING);
             }
         } else {
             viewer.removeMessage(m_lastDisplayedInfoMessageId);
@@ -3111,6 +3105,32 @@ public class WorkflowEditor extends GraphicalEditor implements
             result.y = ((location.y / gridY) + stepY) * gridY;
         }
         return result;
+    }
+
+
+    /**
+     * This is a static convenience method which involves fetching the active page's active editor, and then returning
+     * the instance of this class attached to it.
+     *
+     * @return the glass pane {@code ViewportPinningGraphicalViewer} or null if we were unable to get an active
+     *         page or an active editor for it.
+     */
+    public static ViewportPinningGraphicalViewer getActiveViewer() {
+        final IWorkbenchWindow iw = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+
+        if (iw != null) {
+            final IWorkbenchPage page = iw.getActivePage();
+
+            if (page != null) {
+                final WorkflowEditor we = (WorkflowEditor)page.getActiveEditor();
+
+                if (we != null) {
+                    return (ViewportPinningGraphicalViewer)we.getGraphicalViewer();
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
