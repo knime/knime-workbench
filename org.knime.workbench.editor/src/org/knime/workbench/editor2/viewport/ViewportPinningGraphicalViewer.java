@@ -68,7 +68,6 @@ import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.LayoutExemptingLayout;
-import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.directannotationedit.StyledTextEditor;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.editor2.figures.WorkflowFigure;
@@ -82,29 +81,6 @@ import org.knime.workbench.editor2.figures.WorkflowFigure;
  */
 public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
     private static NodeLogger LOGGER = NodeLogger.getLogger(ViewportPinningGraphicalViewer.class);
-
-    /**
-     * This is a static convenience method which involves fetching the active page's active editor, and then getting the
-     * instance of this class attached to it, and the SWT <code>Composite</code> parent into which it draws.
-     *
-     * This is useful for classes that want to draw into the glass pane that is the viewport. <b>NOTE:</b> that any SWT
-     * widget created which has a parent as this composite should call
-     * {@link LayoutExemptingLayout#exemptControlFromLayout(Control)}.
-     *
-     * @return the glass pane SWT <code>Composite</code> or null in conditions where null would be returned from
-     *         {@link WorkflowEditor#getActiveViewer()}
-     * @see LayoutExemptingLayout#exemptControlFromLayout(Control)
-     * @see WorkflowEditor#getActiveViewer()
-     */
-    public static Composite getActiveViewportComposite() {
-        ViewportPinningGraphicalViewer viewer = WorkflowEditor.getActiveViewer();
-
-        if (viewer != null) {
-            return viewer.m_parent;
-        }
-
-        return null;
-    }
 
 
     private final AtomicBoolean m_haveInitializedViewport = new AtomicBoolean(false);
