@@ -343,7 +343,8 @@ public class WorkflowEditor extends GraphicalEditor implements
     private Long m_lastDisplayedWarningMessageId = null;
     private Long m_lastDisplayedErrorMessageId = null;
 
-    private ZoomWheelListener m_zoomWheelListener;
+    private EditorMouseWheelListener m_mouseWheelListener;
+
     private ZoomComboContributionItem m_zoomComboBox;
     private ZoomInAlternateIncrementAction m_alternateZoomInAction;
     private ZoomOutAlternateIncrementAction m_alternateZoomOutAction;
@@ -606,8 +607,8 @@ public class WorkflowEditor extends GraphicalEditor implements
     @Override
     public void dispose() {
         NodeLogger.getLogger(WorkflowEditor.class).debug("Disposing editor...");
-        if (m_zoomWheelListener != null) {
-            m_zoomWheelListener.dispose();
+        if (m_mouseWheelListener != null) {
+            m_mouseWheelListener.dispose();
         }
         if (m_nodeSupplantDragListener != null) {
             m_nodeSupplantDragListener.dispose();
@@ -998,7 +999,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         ((WorkflowRootEditPart)rep.getChildren().get(0)).createToolTipHelper(getSite().getShell());
 
         final ZoomManager zm = getZoomManager();
-        m_zoomWheelListener = new ZoomWheelListener(zm, getFigureCanvas());
+        m_mouseWheelListener = new EditorMouseWheelListener(zm, getFigureCanvas());
 
         final ZoomInAction zoomIn = new ZoomInAction(zm);
         m_alternateZoomInAction = new ZoomInAlternateIncrementAction(zm);
@@ -1667,7 +1668,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
         final int alternateDelta = store.getInt(PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA);
 
-        m_zoomWheelListener.setZoomDelta(alternateDelta);
+        m_mouseWheelListener.setZoomDelta(alternateDelta);
         m_alternateZoomInAction.setZoomDelta(alternateDelta);
         m_alternateZoomOutAction.setZoomDelta(alternateDelta);
 

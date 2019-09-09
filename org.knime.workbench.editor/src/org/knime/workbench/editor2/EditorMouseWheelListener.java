@@ -48,7 +48,10 @@
  */
 package org.knime.workbench.editor2;
 
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.draw2d.FigureCanvas;
+import org.eclipse.draw2d.RangeModel;
+import org.eclipse.draw2d.Viewport;
 import org.eclipse.gef.editparts.ZoomManager;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseEvent;
@@ -58,13 +61,16 @@ import org.knime.core.node.NodeLogger;
 
 /**
  * This class came into existence to address AP-5062 which asks for the functionality of CTRL+MouseWheel should change
- * the zoom level on the workflow editor.
+ * the zoom level on the workflow editor. It was then augmented and renamed to support the fix for AP-12675 (Eclipse
+ * under Windows does not support horizontal scroll via SHIFT+MouseWheel.)
  *
  * There will be one of these listeners per WorkflowEditor instance (since there is a 1-1 between an instance of such
  * and a ZoomManager instance.)
  */
-final class ZoomWheelListener implements MouseWheelListener {
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(ZoomWheelListener.class);
+final class EditorMouseWheelListener implements MouseWheelListener {
+    private static final boolean IS_WINDOWS = Platform.OS_WIN32.equals(Platform.getOS());
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(EditorMouseWheelListener.class);
 
 
     private final ZoomManager m_zoomManager;
@@ -79,7 +85,7 @@ final class ZoomWheelListener implements MouseWheelListener {
      * @param zm
      * @param fc the canvas from which we want wheel event notifications
      */
-    ZoomWheelListener(final ZoomManager zm, final FigureCanvas fc) {
+    EditorMouseWheelListener(final ZoomManager zm, final FigureCanvas fc) {
         m_zoomManager = zm;
 
         m_figureCanvas = fc;
@@ -101,12 +107,12 @@ final class ZoomWheelListener implements MouseWheelListener {
     public void dispose() {
         Display.getCurrent().asyncExec(() -> {
             try {
-                ZoomWheelListener outer = ZoomWheelListener.this;
+                final EditorMouseWheelListener outer = EditorMouseWheelListener.this;
                 if (outer.m_figureCanvas.isDisposed()) {
                     // this otherwise causes a "widget disposed" while removing the mouse listener
                     return;
                 }
-                outer.m_figureCanvas.removeMouseWheelListener(this);
+                outer.m_figureCanvas.removeMouseWheelListener(outer);
             } catch (Exception e) {
                 // canvas has likely already gone.
                 LOGGER.debug("We encountered an exception disposing of the zoom wheel listener.", e);
@@ -135,7 +141,12 @@ final class ZoomWheelListener implements MouseWheelListener {
             }
 
             m_zoomManager.setZoom(newZoom);
+        } else if (IS_WINDOWS && ((me.stateMask & SWT.SHIFT) == SWT.SHIFT)) {
+            final Viewport v = m_figureCanvas.getViewport();
+            final RangeModel horizontal = v.getHorizontalRangeModel();
+            final int delta = (int)(me.count * 4.5 * m_zoomManager.getZoom());
+
+            horizontal.setValue(horizontal.getValue() - delta);
         }
     }
-
 }
