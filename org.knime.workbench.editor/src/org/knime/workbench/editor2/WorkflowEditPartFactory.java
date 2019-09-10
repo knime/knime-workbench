@@ -50,7 +50,10 @@ package org.knime.workbench.editor2;
 import org.eclipse.gef.EditPart;
 import org.eclipse.gef.EditPartFactory;
 import org.eclipse.ui.IPartListener2;
+import org.eclipse.ui.IViewReference;
+import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchPartReference;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.contexts.IContextService;
@@ -73,6 +76,7 @@ import org.knime.core.ui.node.workflow.SingleNodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowInPortUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.WorkflowOutPortUI;
+import org.knime.workbench.descriptionview.DescriptionView;
 import org.knime.workbench.editor2.directannotationedit.StyledTextEditor;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
@@ -90,7 +94,8 @@ import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.editor2.model.WorkflowPortBar;
 
 /**
- * This factory creates the GEF <code>EditPart</code>s instances (the controller objects) for given model objects.
+ * This factory creates the GEF <code>EditPart</code>s instances (the controller objects) for given model objects;
+ * it also serves as a part listener of the workbench and so potentially should be renamed to better represent this.
  *
  * @author Florian Georg, University of Konstanz
  * @author Fabian Dill, University of Konstanz
@@ -235,9 +240,24 @@ public final class WorkflowEditPartFactory implements EditPartFactory, IPartList
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("restriction")
     @Override
     public void partActivated(final IWorkbenchPartReference partRef) {
-        //NOOP
+        final IWorkbenchWindow iww = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+
+        if (iww != null) {
+            final IWorkbenchPage page = iww.getActivePage();
+
+            if (page != null) {
+                final IViewReference descriptionViewReference = page.findViewReference(DescriptionView.ID);
+                final DescriptionView descriptionView = (DescriptionView)descriptionViewReference.getView(false);
+
+                if (descriptionView != null) {
+                    descriptionView.changeViewDueToPartActivation(
+                        org.eclipse.ui.internal.browser.WebBrowserEditor.WEB_BROWSER_EDITOR_ID.equals(partRef.getId()));
+                }
+            }
+        }
     }
 
     /**

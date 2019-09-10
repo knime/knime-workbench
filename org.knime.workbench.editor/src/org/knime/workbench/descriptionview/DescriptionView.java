@@ -62,6 +62,7 @@ import org.eclipse.swt.custom.StackLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IEditorPart;
@@ -93,8 +94,10 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
 
     private StackLayout m_stackLayout;
 
+    private Composite m_emptyView;
     private HelpView m_nodeDescriptionView;
     private WorkflowMetaView m_workflowMetaView;
+    private Control m_previousNonEmtpyView;
 
     private WeakReference<IStructuredSelection> m_lastSelection;
 
@@ -122,10 +125,12 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
         gd.verticalAlignment = SWT.FILL;
         m_control.setLayoutData(gd);
 
+        m_emptyView = new Composite(m_control, SWT.NONE);
         m_workflowMetaView = new WorkflowMetaView(m_control);
         m_nodeDescriptionView = new HelpView(m_control);
 
         m_stackLayout.topControl = m_nodeDescriptionView;
+        m_previousNonEmtpyView = m_nodeDescriptionView;
 
         parent.getDisplay().asyncExec(() -> {
             attemptToDisplayCurrentSelectionOrWorkflowMetadata();
@@ -158,6 +163,15 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
             m_workflowMetaView.handleAsynchronousRemoteMetadataPopulation(author, legacyDescription, c,
                 shouldShowCCBY40License);
         });
+    }
+
+    /**
+     * This gets messaged from {@code WorkflowEditPartFactory#partActivated}.
+     *
+     * @param isWelcomePage true if the part activated was the welcome page
+     */
+    public void changeViewDueToPartActivation(final boolean isWelcomePage) {
+        moveControlToTop(isWelcomePage ? m_emptyView : m_previousNonEmtpyView);
     }
 
     /**
@@ -202,8 +216,12 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
         }
     }
 
-    private void moveControlToTop(final Composite c) {
+    private void moveControlToTop(final Control c) {
         if (m_stackLayout.topControl != c) {
+            if (m_emptyView == c) {
+                m_previousNonEmtpyView = m_stackLayout.topControl;
+            }
+
             m_stackLayout.topControl = c;
 
             m_control.layout();
