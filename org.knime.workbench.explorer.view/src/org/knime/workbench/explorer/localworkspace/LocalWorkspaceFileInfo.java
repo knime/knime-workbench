@@ -51,12 +51,19 @@ import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.knime.core.node.workflow.FileSingleNodeContainerPersistor;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.util.workflowalizer.TemplateMetadata;
+import org.knime.core.util.workflowalizer.Workflowalizer;
+import org.knime.core.util.workflowalizer.WorkflowalizerConfiguration;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 
 
 public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
     private final IFileStore m_file;
+
+    //caches the isComponent flag
+    private Boolean m_isComponent = null;
 
     /**
      * @param file The file store this file info belongs to
@@ -142,6 +149,14 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
      * {@inheritDoc}
      */
     @Override
+    public boolean isComponent() {
+        return exists() && isComponent(m_file);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean isNode() {
         return exists() && isNode(m_file);
     }
@@ -208,6 +223,22 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
         IFileStore templateFile = file.getChild(
                 WorkflowPersistor.TEMPLATE_FILE);
         return templateFile.fetchInfo().exists();
+    }
+
+    private boolean isComponent(final IFileStore file) {
+        if (m_isComponent == null) {
+            IFileStore templateFile = file.getChild(WorkflowPersistor.TEMPLATE_FILE);
+            try {
+                TemplateMetadata templateMetadata =
+                    Workflowalizer.readTemplate(templateFile.getParent().toLocalFile(EFS.NONE, null).toPath(),
+                        WorkflowalizerConfiguration.builder().readWorkflowMeta().build());
+                m_isComponent = templateMetadata.getTemplateInformation().getType()
+                    .equals(MetaNodeTemplateInformation.TemplateType.SubNode.toString());
+            } catch (Exception e) {
+                throw new IllegalStateException("Problem reading template type", e);
+            }
+        }
+        return m_isComponent;
     }
 
     private static boolean isMetaNode(final IFileStore file) {
