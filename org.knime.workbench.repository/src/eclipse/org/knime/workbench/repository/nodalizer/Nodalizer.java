@@ -56,13 +56,16 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -133,6 +136,8 @@ public class Nodalizer implements IApplication {
     private static final String UPDATE_SITE = "-updateSite";
     private static final String OWNERS = "-owners";
     private static final String DEFAULT_OWNER = "-defaultOwner";
+    private static final String FEATURES = "-features";
+    private static final String BLACKLIST = "-blacklist";
 
     /**
      * {@inheritDoc}
@@ -143,23 +148,38 @@ public class Nodalizer implements IApplication {
      * files should be written</li>
      * <li>-factoryListFile &lt;path-to-factory-file&gt;, this is a path to a file containing a single factory class per
      * line. This is used for deprecated nodes.</li>
-     * <li>-updateSite &lt;update-site-url&gt;, causes the nodalizer to read both nodes and extensions of the given
-     * update site. All other nodes/extensions in the given KNIME installation will be ignored. Node JSON will be
-     * written to outDir/nodes and extensions to outDir/extensions.</li>
+     * <li>-updateSite &lt;update-site-url,update-site-url2,...&gt;, a comma delimited list of update sites with <b>no
+     * spaces</b>. The nodalizer will read both nodes and extensions on the given update sites. All other
+     * nodes/extensions in the given KNIME installation will be ignored. Node JSON will be written to outDir/nodes and
+     * extensions to outDir/extensions.</li>
      * <li>-owners &lt;path-to-owners-file&gt;, a file mapping owner to extension symbolic name. Each line should
      * contain a single mapping, with the format symbolicName:owner</li>
      * <li>-defaultOwner &lt;owner-name&gt;, the owner name to assign to extensions which do not have a mapping in the
      * "owners" file</li>
+     * <li>-features &lt;feature1,feature2,feature3,...&gt;, an optional list of feature symbolic names with <b>no
+     * spaces</b>. If provided the nodalizer will only parse these features; otherwise, the nodalizer attempts to read
+     * all nodes and extensions on the given update sites.</li>
+     * <li>-blacklist &lt;path-to-blacklist-file&gt;, a file in which each line contains a <b>regex rule</b> for an
+     * extension which should be "blacklisted" (not parsed). Also if a blacklist file is provided it may be written to
+     * if an extension is found which does not have a category path AND contains no nodes</li>
      * </ul>
      */
     @Override
+    @SuppressWarnings("null")
     public Object start(final IApplicationContext context) throws Exception {
+        if (System.getProperty("java.awt.headless") == null) {
+            System.setProperty("java.awt.headless", "true");
+        }
+
         final Object args = context.getArguments().get(IApplicationContext.APPLICATION_ARGS);
         File outputDir = null;
         Path factoryList = null;
-        URI updateSite = null;
+        List<URI> updateSites = null;
         Map<String, String> owners = Collections.emptyMap();
         String defaultOwner = null;
+        List<String> features = null;
+        Path blacklistFile = null;
+        List<String> blacklist = null;
         if (args instanceof String[]) {
             final String[] params = (String[])args;
             for (int i = 0; i < params.length; i++) {
@@ -170,13 +190,14 @@ public class Nodalizer implements IApplication {
                     factoryList = Paths.get(params[i + 1]);
                 }
                 if (params[i].equalsIgnoreCase(UPDATE_SITE) && (params.length > (i + 1))) {
-                    final String site = params[i + 1];
-                    try {
-                        updateSite = URI.create(site);
-                    } catch (final Exception ex) {
-                        LOGGER.warn(
-                            "Invalid update site url: " + site + "\n" + UPDATE_SITE + " parameter will be ignored.",
-                            ex);
+                    final String sites[] = params[i + 1].split(",");
+                    updateSites = new ArrayList<>(sites.length);
+                    for (final String site : sites) {
+                        try {
+                            updateSites.add(URI.create(site));
+                        } catch (final Exception ex) {
+                            LOGGER.warn("Invalid update site url: " + site + "\n" + site + " will be ignored.", ex);
+                        }
                     }
                 }
                 if (params[i].equalsIgnoreCase(OWNERS) && (params.length > (i + 1))) {
@@ -203,6 +224,18 @@ public class Nodalizer implements IApplication {
                 }
                 if (params[i].equalsIgnoreCase(DEFAULT_OWNER) && (params.length > (i + 1))) {
                     defaultOwner = params[i + 1];
+                }
+                if (params[i].equalsIgnoreCase(FEATURES) && (params.length > (i + 1))) {
+                    features = Arrays.asList(params[i+1].split(","));
+                }
+                if (params[i].equalsIgnoreCase(BLACKLIST) && (params.length > (i + 1))) {
+                    blacklistFile = Paths.get(params[i + 1]);
+                    if (Files.exists(blacklistFile) && !Files.isDirectory(blacklistFile)) {
+                        blacklist = Files.readAllLines(blacklistFile).stream().filter(l -> !StringUtils.isEmpty(l))
+                            .collect(Collectors.toList());
+                    } else {
+                        LOGGER.warn("Invalid blacklist file: " + blacklistFile.toString());
+                    }
                 }
             }
         }
@@ -233,9 +266,9 @@ public class Nodalizer implements IApplication {
 
         File nodeDir = outputDir;
         File extDir = null;
-        Map<String, ExtensionInfo> extensions = null;
+        Map<String, ExtensionInfo> extensions = new HashMap<>();
         List<String> bundles = null;
-        if (updateSite != null) {
+        if (updateSites != null) {
             nodeDir = new File(outputDir, "nodes");
             extDir = new File(outputDir, "extensions");
             if (!nodeDir.exists()) {
@@ -247,13 +280,27 @@ public class Nodalizer implements IApplication {
             final BundleContext c = FrameworkUtil.getBundle(getClass()).getBundleContext();
             final ServiceReference<IProvisioningAgent> ref = c.getServiceReference(IProvisioningAgent.class);
             final IProvisioningAgent agent = c.getService(ref);
-            bundles = getSymbolicBundleNames(updateSite, agent);
-            if (bundles == null) {
+            bundles = new ArrayList<>();
+            for (final URI site : updateSites) {
+                getSymbolicBundleNames(site, agent, bundles);
+            }
+            if (bundles.isEmpty()) {
                 return IApplication.EXIT_OK;
             }
-            extensions = parseExtensions(updateSite, agent, owners, defaultOwner);
-            if (extensions == null) {
+
+            for (final URI site : updateSites) {
+                parseExtensions(site, agent, owners, defaultOwner, features, blacklist, extensions);
+            }
+            if (extensions.isEmpty()) {
                 return IApplication.EXIT_OK;
+            }
+            if (features != null) {
+                for (final String feature : features) {
+                    final String cleanedName = cleanSymbolicName(feature.split("/")[0]);
+                    if (!extensions.containsKey(cleanedName)) {
+                        LOGGER.warn(cleanedName + " extension not found on given update sites");
+                    }
+                }
             }
         }
 
@@ -271,7 +318,7 @@ public class Nodalizer implements IApplication {
         }
 
         // Write extensions
-        if (extensions != null) {
+        if (!extensions.isEmpty()) {
             for (final ExtensionInfo ext : extensions.values()) {
                 if (ext.hasNodes() || !ext.getCategoryPath().isEmpty()) {
                     try {
@@ -281,8 +328,30 @@ public class Nodalizer implements IApplication {
                         LOGGER.error("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName(), ex);
                     }
                 } else {
-                    LOGGER.warn("Extension " + ext.getName() + " " + ext.getSymbolicName()
-                        + " does not exist at any category path and has no nodes. Skipping ...");
+                    final String msg = "Extension " + ext.getName() + " " + ext.getSymbolicName() + " does not exist"
+                        + " at any category path and has no nodes. Skipping ...";
+                    // no blacklist file specified, print warning about skipping nodes
+                    if (blacklistFile == null) {
+                        LOGGER.warn(msg);
+                    } else {
+                        // create blacklist file, if file was specified but doesn't actually exist
+                        if (!Files.exists(blacklistFile)) {
+                            Files.createFile(blacklistFile);
+                        }
+
+                        final String blsn = ext.getSymbolicName() + ".feature.group";
+                        final String escaped = blsn.replaceAll("\\.", "\\\\.");
+                        if (!blacklist.contains(escaped)) {
+                            LOGGER.warn(msg); // extension wasn't on blacklist, and is being skipped
+                            try {
+                                Files.write(blacklistFile, Collections.singletonList(escaped),
+                                    StandardOpenOption.APPEND);
+                            } catch (final Exception ex) {
+                                LOGGER.error("Failed to write extension, " + blsn + ", to blacklist: "
+                                    + blacklistFile.toString(), ex);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -637,7 +706,8 @@ public class Nodalizer implements IApplication {
     // -- Parse Extension --
 
     private Map<String, ExtensionInfo> parseExtensions(final URI updateSite, final IProvisioningAgent agent,
-        final Map<String, String> owners, final String defaultOwner) {
+        final Map<String, String> owners, final String defaultOwner, final List<String> features,
+        final List<String> blacklist, final Map<String, ExtensionInfo> extensions) {
         final IMetadataRepositoryManager metadataManager =
             (IMetadataRepositoryManager)agent.getService(IMetadataRepositoryManager.SERVICE_NAME);
         final boolean uninstallMetadata = !metadataManager.contains(updateSite);
@@ -654,65 +724,68 @@ public class Nodalizer implements IApplication {
                 mr.query(QueryUtil.createLatestQuery(QueryUtil.createIUGroupQuery()), new NullProgressMonitor());
             final SiteInfo siteInfo = parseUpdateSite(mr);
             // TODO: Mapping symbolic name to extension may not be sufficient once we support reading multiple versions
-            final Map<String, ExtensionInfo> extensions = new HashMap<>();
             for (final IInstallableUnit iu : ius) {
-                // Manual exclusions. Keep this despite node/category path check, because some exclusions (i.e. sources)
-                // have a category path but we still don't want to read them
-                if (!iu.getId().startsWith("org.eclipse") && !iu.getId().contains(".source.feature.")
-                    && !iu.getId().startsWith("org.knime.binary.jre")
-                    && !iu.getId().equals("org.knime.targetPlatform.feature.group")
-                    && !iu.getId().endsWith(".externals.feature.group")
-                    && !iu.getId().equals("de.uni_heidelberg.ifi.pvs.feature.feature.group")
-                    && !QueryUtil.isProduct(iu)) {
-                    if (iu.getLicenses().size() > 1) {
-                        LOGGER.warn(iu.getId() + " has multiple licenses. Skipping ...");
-                        continue;
-                    }
-                    if (StringUtils.isEmpty(iu.getId())) {
-                        LOGGER.warn("Extension has no ID " + iu.toString() + ". Skipping ...");
-                        continue;
-                    }
-                    Version v = null;
-                    try {
-                        v = new Version(iu.getVersion().toString());
-                    } catch (final Exception ex) {
-                        // Once we want to extract multiple versions from a single update site, it will be necessary
-                        // that the IU has a valid version
-                        LOGGER.warn(
-                            "Extension, " + iu.getId() + ", has invalid version " + iu.getVersion() + ". Skipping ...");
-                        continue;
-                    }
-
-                    final ExtensionInfo ext = new ExtensionInfo();
-                    ext.setSymbolicName(cleanSymbolicName(iu.getId()));
-                    ext.setVersion(v);
-                    ext.setName(iu.getProperty("org.eclipse.equinox.p2.name"));
-                    ext.setDescription(iu.getProperty("org.eclipse.equinox.p2.description"));
-                    ext.setDescriptionUrl(iu.getProperty("org.eclipse.equinox.p2.description.url"));
-                    ext.setVendor(iu.getProperty("org.eclipse.equinox.p2.provider"));
-                    ext.setUpdateSite(siteInfo);
-
-                    if (iu.getCopyright() != null) {
-                        ext.setCopyright(iu.getCopyright().getBody());
-                    }
-
-                    if (!iu.getLicenses().isEmpty()) {
-                        // Take just the first license
-                        final ILicense license = iu.getLicenses().iterator().next();
-                        final LicenseInfo licenseInfo = new LicenseInfo();
-                        final String licenseBody = license.getBody();
-                        licenseInfo.setName(licenseBody.split("\\r?\\n")[0]);
-                        licenseInfo.setText(licenseBody);
-                        licenseInfo.setUrl(license.getLocation() != null ? license.getLocation().toString() : null);
-                        ext.setLicense(licenseInfo);
-                    }
-
-                    final List<String> categories = new ArrayList<>();
-                    getCategoryPath(mr, iu, categories);
-                    ext.setCategoryPath(categories);
-                    ext.setOwner(owners.getOrDefault(ext.getSymbolicName(), defaultOwner));
-                    extensions.put(ext.getSymbolicName(), ext);
+                if (features != null && !features.contains(iu.getId() + "/" + iu.getVersion().toString())) {
+                    continue;
                 }
+
+                // Check blacklist if present. Items in the blacklist should be regex patterns with proper character
+                // escaping
+                if (blacklist != null
+                    && blacklist.stream().anyMatch(blackListItem -> iu.getId().matches(blackListItem))) {
+                    continue;
+                }
+
+                if (iu.getLicenses().size() > 1) {
+                    LOGGER.warn(iu.getId() + " has multiple licenses. Skipping ...");
+                    continue;
+                }
+
+                if (StringUtils.isEmpty(iu.getId())) {
+                    LOGGER.warn("Extension has no ID " + iu.toString() + ". Skipping ...");
+                    continue;
+                }
+
+                Version v = null;
+                try {
+                    v = new Version(iu.getVersion().toString());
+                } catch (final Exception ex) {
+                    // Once we want to extract multiple versions from a single update site, it will be necessary
+                    // that the IU has a valid version
+                    LOGGER.warn(
+                        "Extension, " + iu.getId() + ", has invalid version " + iu.getVersion() + ". Skipping ...");
+                    continue;
+                }
+
+                final ExtensionInfo ext = new ExtensionInfo();
+                ext.setSymbolicName(cleanSymbolicName(iu.getId()));
+                ext.setVersion(v);
+                ext.setName(iu.getProperty("org.eclipse.equinox.p2.name"));
+                ext.setDescription(iu.getProperty("org.eclipse.equinox.p2.description"));
+                ext.setDescriptionUrl(iu.getProperty("org.eclipse.equinox.p2.description.url"));
+                ext.setVendor(iu.getProperty("org.eclipse.equinox.p2.provider"));
+                ext.setUpdateSite(siteInfo);
+
+                if (iu.getCopyright() != null) {
+                    ext.setCopyright(iu.getCopyright().getBody());
+                }
+
+                if (!iu.getLicenses().isEmpty()) {
+                    // Take just the first license
+                    final ILicense license = iu.getLicenses().iterator().next();
+                    final LicenseInfo licenseInfo = new LicenseInfo();
+                    final String licenseBody = license.getBody();
+                    licenseInfo.setName(licenseBody.split("\\r?\\n")[0]);
+                    licenseInfo.setText(licenseBody);
+                    licenseInfo.setUrl(license.getLocation() != null ? license.getLocation().toString() : null);
+                    ext.setLicense(licenseInfo);
+                }
+
+                final List<String> categories = new ArrayList<>();
+                getCategoryPath(mr, iu, categories);
+                ext.setCategoryPath(categories);
+                ext.setOwner(owners.getOrDefault(ext.getSymbolicName(), defaultOwner));
+                extensions.put(ext.getSymbolicName(), ext);
             }
             return extensions;
         } finally {
@@ -723,7 +796,8 @@ public class Nodalizer implements IApplication {
         }
     }
 
-    private static List<String> getSymbolicBundleNames(final URI updateSite, final IProvisioningAgent agent) {
+    private static void getSymbolicBundleNames(final URI updateSite, final IProvisioningAgent agent,
+        final List<String> bundles) {
         final IArtifactRepositoryManager artifactManager =
             (IArtifactRepositoryManager)agent.getService(IArtifactRepositoryManager.SERVICE_NAME);
         final boolean uninstallArtifact = !artifactManager.contains(updateSite);
@@ -732,17 +806,15 @@ public class Nodalizer implements IApplication {
             try {
                 ar = artifactManager.loadRepository(updateSite, new NullProgressMonitor());
             } catch (Exception ex) {
-                LOGGER.error("Failed to read extensions for " + updateSite.toString(), ex);
-                return null;
+                LOGGER.error("Failed to read bundles for " + updateSite.toString(), ex);
+                return;
             }
 
             final IQueryResult<IArtifactKey> result = ar.query(
                 QueryUtil
                     .createLatestQuery(QueryUtil.createMatchQuery(IArtifactKey.class, "classifier == 'osgi.bundle'")),
                 new NullProgressMonitor());
-            final List<String> bsn = new ArrayList<>();
-            result.forEach(a -> bsn.add(a.getId()));
-            return bsn;
+            result.forEach(a -> bundles.add(a.getId()));
         } finally {
             if (uninstallArtifact && artifactManager.contains(updateSite)) {
                 artifactManager.removeRepository(updateSite);
