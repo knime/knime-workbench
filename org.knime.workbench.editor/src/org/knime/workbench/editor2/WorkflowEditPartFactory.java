@@ -250,11 +250,15 @@ public final class WorkflowEditPartFactory implements EditPartFactory, IPartList
 
             if (page != null) {
                 final IViewReference descriptionViewReference = page.findViewReference(DescriptionView.ID);
-                final DescriptionView descriptionView = (DescriptionView)descriptionViewReference.getView(false);
 
-                if (descriptionView != null) {
-                    descriptionView.changeViewDueToPartActivation(
-                        org.eclipse.ui.internal.browser.WebBrowserEditor.WEB_BROWSER_EDITOR_ID.equals(partRef.getId()));
+                if (descriptionViewReference != null) {
+                    final DescriptionView descriptionView = (DescriptionView)descriptionViewReference.getView(false);
+
+                    if (descriptionView != null) {
+                        descriptionView.changeViewDueToPartActivation(
+                            org.eclipse.ui.internal.browser.WebBrowserEditor.WEB_BROWSER_EDITOR_ID
+                                .equals(partRef.getId()));
+                    }
                 }
             }
         }

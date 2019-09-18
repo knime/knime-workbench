@@ -800,7 +800,9 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_headerLabelPlaceholder.getDisplay().asyncExec(() -> {
             m_headerText = m_currentWorkflowName;
             m_workflowNameHasChanged.set(true);
-            updateFloatingHeaderBar();
+            if (!isDisposed()) {
+                updateFloatingHeaderBar();
+            }
         });
 
 
