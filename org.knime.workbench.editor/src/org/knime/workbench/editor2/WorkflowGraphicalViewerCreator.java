@@ -48,7 +48,6 @@
 package org.knime.workbench.editor2;
 
 import org.eclipse.draw2d.ColorConstants;
-import org.eclipse.gef.GraphicalViewer;
 import org.eclipse.gef.editparts.ScalableFreeformRootEditPart;
 import org.eclipse.gef.ui.actions.ActionRegistry;
 import org.eclipse.gef.ui.parts.GraphicalViewerKeyHandler;
@@ -61,40 +60,32 @@ import org.knime.workbench.editor2.viewport.ViewportPinningGraphicalViewer;
  * edit part and the <code>NodeTemplateDropTargetListener</code> that is responsible for dropping
  * <code>NodeTemplates</code> into the viewer. (which get converted into <code>NodeContainer</code> objects.)
  *
- * TODO loki sez: we should consider deprecating this class and moving the createViewer(Composite) code
- *          elsewhere; the usage of this class within the codebase appears to be restricted to one place in
- *          the WorkflowEditor in which it is instantiated and dumped.
+ * TODO: We should deprecate this class; {@link #createViewer(Composite)} is used in a single place
+ * {@link WorkflowEditor#createGraphicalViewer(Composite)} in which an instance of this class is created simply to call
+ * that method.
  *
  * @author Florian Georg, University of Konstanz
  */
 public class WorkflowGraphicalViewerCreator {
-    /** the viewer. * */
-    private GraphicalViewer m_viewer;
-
     /** the editor's action registry. */
     private final ActionRegistry m_actionRegistry;
 
     private final IEditorSite m_editorSite;
 
+    private final WorkflowEditor m_workflowEditor;
+
     /**
      *
      * @param editorSite Current editor site
      * @param actionRegistry The action registry to use
+     * @param workflowEditor the editor for which we will construct a viewer
      */
-    public WorkflowGraphicalViewerCreator(final IEditorSite editorSite, final ActionRegistry actionRegistry) {
-
+    public WorkflowGraphicalViewerCreator(final IEditorSite editorSite, final ActionRegistry actionRegistry, final WorkflowEditor workflowEditor) {
         assert editorSite != null;
-        this.m_editorSite = editorSite;
-        this.m_actionRegistry = actionRegistry;
-    }
 
-    /**
-     * Creates a new <code>Viewer</code>, configures, registers and initializes it.
-     *
-     * @param parent the parent composite
-     */
-    public void createGraphicalViewer(final Composite parent) {
-        m_viewer = createViewer(parent);
+        m_editorSite = editorSite;
+        m_actionRegistry = actionRegistry;
+        m_workflowEditor = workflowEditor;
     }
 
     /**
@@ -104,14 +95,14 @@ public class WorkflowGraphicalViewerCreator {
      * @param parent Parent composite
      * @return The viewer
      */
-    protected ViewportPinningGraphicalViewer createViewer(final Composite parent) {
+    ViewportPinningGraphicalViewer createViewer(final Composite parent) {
         final ViewportPinningGraphicalViewer viewer = new ViewportPinningGraphicalViewer();
 
         viewer.createControl(parent);
 
         // configure the m_viewer
         viewer.getControl().setBackground(ColorConstants.white);
-        final ScalableFreeformRootEditPart part = new ConnectionSelectingScalableFreeformRootEditPart();
+        final ScalableFreeformRootEditPart part = new ConnectionSelectingScalableFreeformRootEditPart(m_workflowEditor);
         viewer.setRootEditPart(part);
         viewer.setKeyHandler(new GraphicalViewerKeyHandler(viewer));
 
@@ -138,12 +129,5 @@ public class WorkflowGraphicalViewerCreator {
         viewer.setEditPartFactory(new WorkflowEditPartFactory());
 
         return viewer;
-    }
-
-    /**
-     * @return Returns the m_viewer.
-     */
-    public GraphicalViewer getViewer() {
-        return m_viewer;
     }
 }

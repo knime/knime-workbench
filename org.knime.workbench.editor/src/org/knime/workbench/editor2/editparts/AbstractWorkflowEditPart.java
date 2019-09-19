@@ -1,4 +1,4 @@
-/* 
+/*
  * ------------------------------------------------------------------------
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
@@ -41,20 +41,30 @@
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
  * -------------------------------------------------------------------
- * 
+ *
  * History
  *   26.05.2005 (Florian Georg): created
  */
 package org.knime.workbench.editor2.editparts;
 
 import org.eclipse.gef.editparts.AbstractGraphicalEditPart;
+import org.knime.workbench.editor2.ConnectionSelectingScalableFreeformRootEditPart;
+import org.knime.workbench.editor2.WorkflowEditor;
 
 /**
  * Abstract base class for all edit parts that are not connections.
- * 
+ *
  * @author Florian Georg, University of Konstanz
  */
 public abstract class AbstractWorkflowEditPart extends
         AbstractGraphicalEditPart {
+    /**
+     * @return the editor associated to the root edit part of who this edit part is a child.
+     */
+    public WorkflowEditor getWorkflowEditor() {
+        final ConnectionSelectingScalableFreeformRootEditPart root =
+            (ConnectionSelectingScalableFreeformRootEditPart)getRoot();
 
+        return root.getWorkflowEditor();
+    }
 }

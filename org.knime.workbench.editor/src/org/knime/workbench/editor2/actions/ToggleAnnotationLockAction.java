@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,60 +41,73 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
  * History
- *   28.02.2006 (sieb): created
+ *   Sep 23, 2019 (loki): created
  */
-package org.knime.workbench.editor2;
+package org.knime.workbench.editor2.actions;
 
-import org.eclipse.gef.DragTracker;
-import org.eclipse.gef.Request;
-import org.eclipse.gef.editparts.GridLayer;
-import org.eclipse.gef.editparts.ScalableFreeformRootEditPart;
+import org.eclipse.jface.action.Action;
+import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.actions.delegates.AbstractEditorAction;
+import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
- * Overrides the default <code>ScalableFreeformRootEditPart</code> to return
- * <code>MarqueeSelectionTool</code>s selecting also connections.
+ * An action which supports the toggling of a workflow editor's annotation-lock status.
  *
- * @author Christoph Sieb, University of Konstanz
+ * N.B We don't necessarily want to inherit from anything other than {@link Action} but we _do_ want to get the workflow
+ * editor which an accompanying delegate {@link AbstractEditorAction} can provide; that editor action, though, must
+ * return an instance of {@code AbstractNodeAction}
+ *
+ * @author loki der quaeler
  */
-public class ConnectionSelectingScalableFreeformRootEditPart extends ScalableFreeformRootEditPart {
-    private final WorkflowEditor m_workflowEditor;
+public class ToggleAnnotationLockAction extends AbstractNodeAction {
+    /** the id of this action (not to be confused with ids used in the plugin.xml) */
+    public static final String ID = "knime.action.toggle_annotation_lock";
+
 
     /**
-     * @param workflowEditor
+     * @param editor the workflow editor on which this action operates.
      */
-    public ConnectionSelectingScalableFreeformRootEditPart(final WorkflowEditor workflowEditor) {
-        m_workflowEditor = workflowEditor;
+    public ToggleAnnotationLockAction(final WorkflowEditor editor) {
+        super(editor);
     }
 
     /**
-     * @return the owning editor for this root edit part.
+     * {@inheritDoc}
      */
-    public WorkflowEditor getWorkflowEditor() {
-        return m_workflowEditor;
+    @Override
+    public String getId() {
+        return ID;
     }
 
     /**
-     * Creates a MarqueeDragTracker selecting also connections.
+     * {@inheritDoc}
      *
-     * {@inheritDoc}
+     * We override this as we don't need the overhead of collecting the selected nodes which our parent's implementation
+     * performs.
      */
     @Override
-    public DragTracker getDragTracker(final Request request) {
-        /*
-         * The root will only be asked for a drag tracker if for some reason the
-         * contents editpart says it is neither selector nor opaque.
-         */
-        return new WorkflowMarqueeSelectionTool();
+    public void runInSWT() {
+        final WorkflowEditor we = getEditor();
+
+        we.setAnnotationsLocked(!we.getAnnotationsLocked());
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected GridLayer createGridLayer() {
-        return new LightGridLayer();
+    public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
+        throw new UnsupportedOperationException("This method should never be called.");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean internalCalculateEnabled() {
+        return true;
     }
 }

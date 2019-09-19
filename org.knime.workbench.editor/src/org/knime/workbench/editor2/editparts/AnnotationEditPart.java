@@ -284,11 +284,16 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart
      * {@inheritDoc}
      *
      * We don't want to be selected if:
+     * . workflow annotations are locked (AP-11857)
      * . we're in Annotation Edit mode, but our figure is not an instance of WorkflowAnnotationFigure (because that sort
      * of annotation figure is semantically actually part of a node.)
      */
     @Override
     public EditPart getTargetEditPart(final Request request) {
+        if (getWorkflowEditor().getAnnotationsLocked()) {
+            return null;
+        }
+
         if (m_currentEditorMode.equals(WorkflowEditorMode.ANNOTATION_EDIT) && !figureIsForWorkflowAnnotation()) {
             return null;
         }

@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,60 +41,30 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
  * History
- *   28.02.2006 (sieb): created
+ *   Sep 23, 2019 (loki): created
  */
-package org.knime.workbench.editor2;
+package org.knime.workbench.editor2.actions.delegates;
 
-import org.eclipse.gef.DragTracker;
-import org.eclipse.gef.Request;
-import org.eclipse.gef.editparts.GridLayer;
-import org.eclipse.gef.editparts.ScalableFreeformRootEditPart;
+import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.actions.AbstractNodeAction;
+import org.knime.workbench.editor2.actions.ToggleAnnotationLockAction;
 
 /**
- * Overrides the default <code>ScalableFreeformRootEditPart</code> to return
- * <code>MarqueeSelectionTool</code>s selecting also connections.
+ * The editor action delegate for {@link ToggleAnnotationLockAction}
  *
- * @author Christoph Sieb, University of Konstanz
+ * @author loki der quaeler
  */
-public class ConnectionSelectingScalableFreeformRootEditPart extends ScalableFreeformRootEditPart {
-    private final WorkflowEditor m_workflowEditor;
-
-    /**
-     * @param workflowEditor
-     */
-    public ConnectionSelectingScalableFreeformRootEditPart(final WorkflowEditor workflowEditor) {
-        m_workflowEditor = workflowEditor;
-    }
-
-    /**
-     * @return the owning editor for this root edit part.
-     */
-    public WorkflowEditor getWorkflowEditor() {
-        return m_workflowEditor;
-    }
-
-    /**
-     * Creates a MarqueeDragTracker selecting also connections.
-     *
-     * {@inheritDoc}
-     */
-    @Override
-    public DragTracker getDragTracker(final Request request) {
-        /*
-         * The root will only be asked for a drag tracker if for some reason the
-         * contents editpart says it is neither selector nor opaque.
-         */
-        return new WorkflowMarqueeSelectionTool();
-    }
-
+public class ToggleAnnotationLockEditorAction extends AbstractEditorAction {
     /**
      * {@inheritDoc}
      */
     @Override
-    protected GridLayer createGridLayer() {
-        return new LightGridLayer();
+    protected AbstractNodeAction createAction(final WorkflowEditor editor) {
+        final ToggleAnnotationLockAction action = new ToggleAnnotationLockAction(editor);
+        action.setChecked(editor.getAnnotationsLocked());
+        return action;
     }
 }

@@ -82,7 +82,8 @@ public class AnnotationEditManager extends DirectEditManager {
      *         nothing is being edited
      */
     public static boolean partShouldVetoSelection(final AnnotationEditPart aep) {
-        return (PART_CURRENTLY_IN_EDIT != null) && (!aep.equals(PART_CURRENTLY_IN_EDIT));
+        return aep.getWorkflowEditor().getAnnotationsLocked()
+                    || ((PART_CURRENTLY_IN_EDIT != null) && (!aep.equals(PART_CURRENTLY_IN_EDIT)));
     }
 
 

@@ -81,6 +81,11 @@
             name="Send to Back"/>
       <command
             categoryId="knime.command.category"
+            description="Toggle whether annotations are locked to the canvas"
+            id="knime.commands.toggleAnnotationLock"
+            name="Toggle Annotations Lock"/>
+      <command
+            categoryId="knime.command.category"
             description="Opens the configuration dialog on the selected node"
             id="knime.commands.openDialog"
             name="Configure..."/>
@@ -278,6 +283,17 @@
                style="toggle"
                toolbarPath="org.knime.workbench.editor.menu/group1"
                tooltip="Append the IDs to node names"/>
+         <action
+               class="org.knime.workbench.editor2.actions.delegates.ToggleAnnotationLockEditorAction"
+               definitionId="knime.commands.toggleAnnotationLock"
+               disabledIcon="icons/annotation_lock_disabled.png"
+               icon="icons/annotation_lock.png"
+               id="org.knime.workbench.editor.actions.toggleAnnotationLock"
+               label="Toggle Annotations Lock"
+               menubarPath="org.knime.workbench.editor.menu/group1"
+               style="toggle"
+               toolbarPath="org.knime.workbench.editor.menu/group1"
+               tooltip="Toggle whether annotations are locked to the canvas"/>
          <action
                class="org.knime.workbench.editor2.actions.AddMetaNodeAction"
                definitionId="knime.commands.addMetaNode"

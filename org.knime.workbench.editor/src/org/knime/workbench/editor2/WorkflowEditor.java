@@ -356,6 +356,7 @@ public class WorkflowEditor extends GraphicalEditor implements
     private NodeSupplantDragListener m_nodeSupplantDragListener;
 
     private WorkflowEditorMode m_editorMode;
+    private volatile boolean m_annotationsLocked;
 
     /** path to the workflow directory (that contains the workflow.knime file). */
     private URI m_fileResource;
@@ -439,6 +440,8 @@ public class WorkflowEditor extends GraphicalEditor implements
         createActions();
 
         m_editorMode = INITIAL_EDITOR_MODE;
+
+        m_annotationsLocked = false;
     }
 
     /**
@@ -480,6 +483,20 @@ public class WorkflowEditor extends GraphicalEditor implements
      */
     public void setEditorMode(final WorkflowEditorMode wme) {
         m_editorMode = wme;
+    }
+
+    /**
+     * @return true if the annotations are locked for this editor, false otherwise.
+     */
+    public boolean getAnnotationsLocked() {
+        return m_annotationsLocked;
+    }
+
+    /**
+     * @param locked whether annotations should be locked (i.e they can not be selected nor individually dragged.)
+     */
+    public void setAnnotationsLocked(final boolean locked) {
+        m_annotationsLocked = locked;
     }
 
     /**
@@ -968,7 +985,7 @@ public class WorkflowEditor extends GraphicalEditor implements
     protected void createGraphicalViewer(final Composite parent) {
         final IEditorSite editorSite = getEditorSite();
         final ViewportPinningGraphicalViewer viewer =
-            new WorkflowGraphicalViewerCreator(editorSite, getActionRegistry()).createViewer(parent);
+            new WorkflowGraphicalViewerCreator(editorSite, getActionRegistry(), this).createViewer(parent);
 
         // Add a listener to the static node provider
         NodeProvider.INSTANCE.addListener(this);
