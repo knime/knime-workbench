@@ -240,6 +240,15 @@ public class FontStore {
     }
 
     /**
+     * @param font the font to query
+     * @param swtStyle the SWT style (e.g SWT.BOLD)
+     * @return whether the font contains the style in question
+     */
+    public boolean fontContainsStyle(final Font font, final int swtStyle) {
+        return ((font.getFontData()[0].getStyle() & swtStyle) != 0);
+    }
+
+    /**
      * Returns the specified font with at least the specified style(s) set.
      *
      * @param font the font to add styles to

@@ -48,7 +48,7 @@
  */
 package org.knime.workbench.editor2.directannotationedit;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.swt.SWT;
@@ -133,7 +133,7 @@ public class FlatButton extends Canvas {
     private final Image m_selectedImage;
     private final Point m_imageDrawLocation;
 
-    private final HashSet<ClickListener> m_listeners;
+    private final ArrayList<ClickListener> m_listeners;
 
     private final UIPresenter m_uiPresenter;
     private final AtomicBoolean m_highlightAsCircle;
@@ -350,7 +350,7 @@ public class FlatButton extends Canvas {
 
         m_avoidSelectionAndMouseRendering = new AtomicBoolean(false);
 
-        m_listeners = new HashSet<>();
+        m_listeners = new ArrayList<>();
 
         m_uiPresenter = new UIPresenter();
         m_highlightAsCircle = new AtomicBoolean(false);
@@ -360,7 +360,8 @@ public class FlatButton extends Canvas {
     }
 
     /**
-     * @param listener an implementor of ClickListener which wishes to hear about clicks on this instance
+     * @param listener an implementor of ClickListener which wishes to hear about clicks on this instance; listeners are
+     *            notified in the order in which they are added to this instance
      */
     public void addClickListener(final ClickListener listener) {
         synchronized(m_listeners) {

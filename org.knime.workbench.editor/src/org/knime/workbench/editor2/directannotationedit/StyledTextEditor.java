@@ -64,14 +64,15 @@ import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
-import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
@@ -217,7 +218,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
 
     /**
      * instance used to get layout info in a non-word-wrapping editor (the foreground text editor must be auto-wrapped
-     * otherwise the alignment is ignored!).
+     * otherwise the alignment is ignored!)
      */
     private StyledText m_shadowStyledText;
 
@@ -255,7 +256,20 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
 
     private ColorDropDown m_colorDropDown;
 
+    private Point m_mouseDownLocation;
+
     private int m_currentColorSelectionTarget;
+
+    /*
+     * If styles are being applied to a caret placement (no existing text selection,) then we stick them here and apply
+     * them on next text entry.
+     */
+    private StyleRange m_pendingStyle;
+    private List<StyleRange> m_currentSelectionStyles;
+    private SelectionEvent m_activeSelection;
+    private volatile boolean m_caretEventWillBeDueToSelectionReplacingKeyPress;
+
+    private int m_lastCaretMovementOffset;
 
 
     /**
@@ -291,6 +305,13 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
     }
 
     /**
+     * @param p the location of the mouse click which started the edit using this editor
+     */
+    public void setMouseDownLocation(final Point p) {
+        m_mouseDownLocation = p;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -322,6 +343,21 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
                     hideToolbar();
                 }
             });
+        });
+        m_styledText.addPaintListener((e) -> {
+            final int width = getCurrentBorderWidth();
+            if (width > 0) {
+                final Color c = getCurrentBorderColor();
+                if (c != null) {
+                    final GC gc = e.gc;
+                    gc.setAntialias(SWT.ON);
+                    gc.setForeground(c);
+
+                    final Point size = m_panel.getSize();
+                    gc.setLineWidth(width * 2);
+                    gc.drawRectangle(0, 0, size.x, size.y);
+                }
+            }
         });
 
         final WorkflowEditor we =
@@ -371,7 +407,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
         m_shadowStyledText.setStyleRanges(m_styledText.getStyleRanges());
         m_shadowStyledText.setAlignment(m_styledText.getAlignment());
         m_shadowStyledText.setBackground(m_styledText.getBackground());
-        int m = m_styledText.getRightMargin();
+        final int m = m_styledText.getRightMargin();
         m_shadowStyledText.setMargins(m, m, m, m);
         m_shadowStyledText.setMarginColor(m_styledText.getMarginColor());
     }
@@ -397,21 +433,23 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
             }
         });
         // forward some events to the cell editor
-        m_styledText.addKeyListener(new KeyAdapter() {
+        m_styledText.addKeyListener(new KeyListener() {
+            @Override
+            public void keyPressed(final KeyEvent ke) {
+                if ((ke.stateMask & SWT.MOD1) != 0) {
+                    if (ke.keyCode == 'b') {
+                        setSWTStyle(SWT.BOLD);
+                        m_toolbar.updateToolbarToReflectState();
+                    } else if ((ke.keyCode == 'i')
+                                || ((PLATFORM_IS_LINUX || PLATFORM_IS_WINDOWS) && (ke.keyCode == 105))) {
+                        setSWTStyle(SWT.ITALIC);
+                        m_toolbar.updateToolbarToReflectState();
+                    }
+                }
+            }
             @Override
             public void keyReleased(final KeyEvent ke) {
                 keyReleaseOccured(ke);
-            }
-        });
-        m_styledText.addListener(SWT.KeyDown, (e) -> {
-            if ((e.stateMask & SWT.MOD1) != 0) {
-                if (e.keyCode == 'b') {
-                    setSWTStyle(SWT.BOLD);
-                    m_toolbar.updateToolbarToReflectState();
-                } else if ((e.keyCode == 'i') || ((PLATFORM_IS_LINUX || PLATFORM_IS_WINDOWS) && (e.keyCode == 105))) {
-                    setSWTStyle(SWT.ITALIC);
-                    m_toolbar.updateToolbarToReflectState();
-                }
             }
         });
         m_styledText.addFocusListener(new FocusListener() {
@@ -439,9 +477,36 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
                 }
             }
         });
-        m_styledText.addCaretListener((e) -> {
+        m_styledText.addCaretListener((event) -> {
+            final int newOffset = m_styledText.getCaretOffset();
+            final int delta = newOffset - m_lastCaretMovementOffset;
+
+            m_lastCaretMovementOffset = newOffset;
+
+            // If the user places the style elsewhere, the current pending style should go away
+            if (delta != 1) {
+                m_pendingStyle = null;
+            }
+            // if we're replacing text, the nuking of the current selection styles will take place in the
+            //      textInserted(int,int) method which gets notification after the caret listener notification
+            if (!m_caretEventWillBeDueToSelectionReplacingKeyPress) {
+                m_currentSelectionStyles = null;
+            }
+
+            m_activeSelection = null;
+
             if (m_toolbar != null) {
                 m_toolbar.updateToolbarToReflectState();
+            }
+        });
+        m_styledText.addVerifyListener((event) -> {
+            // we get this notification prior to the caret listener implementation
+            if ((m_activeSelection != null)
+                    && (m_activeSelection.x == event.start)
+                    && (m_activeSelection.y == event.end)) {
+                m_caretEventWillBeDueToSelectionReplacingKeyPress = true;
+            } else {
+                m_caretEventWillBeDueToSelectionReplacingKeyPress = false;
             }
         });
         m_styledText.addModifyListener((event) -> {
@@ -458,13 +523,13 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
         });
         m_styledText.addSelectionListener(new SelectionListener() {
             @Override
-            public void widgetSelected(final SelectionEvent e) {
-                selectionChanged();
+            public void widgetSelected(final SelectionEvent se) {
+                selectionChanged(se);
             }
 
             @Override
-            public void widgetDefaultSelected(final SelectionEvent e) {
-                selectionChanged();
+            public void widgetDefaultSelected(final SelectionEvent se) {
+                selectionChanged(se);
             }
         });
         m_styledText.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
@@ -474,7 +539,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
 
         // enable the style buttons as appropriate
         // Context menu subsystem
-        selectionChanged();
+        selectionChanged(null);
 
         return m_styledText;
     }
@@ -580,7 +645,11 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
      *         selection.
      */
     Color getCurrentFontColor() {
-        List<StyleRange> selection = getStylesInSelection();
+        if (m_pendingStyle != null) {
+            return m_pendingStyle.foreground;
+        }
+
+        final List<StyleRange> selection = getStylesInSelection();
 
         if (selection.size() == 0) {
             final StyleRange styleRange = getStyleRangeAtCaret();
@@ -620,8 +689,11 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
      *         selection.
      */
     int getCurrentFontSize() {
-        List<StyleRange> selection = getStylesInSelection();
+        if (m_pendingStyle != null) {
+            return m_pendingStyle.font.getFontData()[0].getHeight();
+        }
 
+        final List<StyleRange> selection = getStylesInSelection();
         if (selection.size() == 0) {
             final StyleRange styleRange = getStyleRangeAtCaret();
             final Font f = (styleRange != null) ? styleRange.font : m_styledText.getFont();
@@ -652,8 +724,11 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
      *         position if there is no selection.
      */
     int getCurrentFontStyle() {
-        List<StyleRange> selection = getStylesInSelection();
+        if (m_pendingStyle != null) {
+            return m_pendingStyle.font.getFontData()[0].getStyle();
+        }
 
+        final List<StyleRange> selection = getStylesInSelection();
         if (selection.size() == 0) {
             final StyleRange styleRange = getStyleRangeAtCaret();
             final Font f = (styleRange != null) ? styleRange.font : m_styledText.getFont();
@@ -685,6 +760,13 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
         super.fireEditorValueChanged(oldValidState, newValidState);
     }
 
+    private void updateCachedStyleSelectionIfNecessary() {
+        if (m_styledText.getSelectionCount() > 1) {
+            m_currentSelectionStyles = getStylesInSelection();
+        }
+    }
+
+    // TODO in the future consider combining this and getNeighboringStyle(int, int)
     private StyleRange getStyleRangeAtCaret() {
         if (m_styledText.isDisposed()) {
             return null;
@@ -708,40 +790,114 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
      * Sets the style range for the new text. Copies it from the left neighbor (or from the right neighbor, if there is
      * no left neighbor).
      *
-     * @param startIdx
+     * @param start
      * @param length
      */
-    private void textInserted(final int startIdx, final int length) {
-        if (m_styledText.getCharCount() <= length) {
+    private void textInserted(final int start, final int length) {
+        StyleRange styleToAffect = null;
+        if (m_pendingStyle != null) {
+            styleToAffect = createNewStyleRange(start, 0); // 0 length as length is addressed below
+
+            if (styleToAffect.font != null) {
+                final FontStore fs = FontStore.INSTANCE;
+                if (fs.fontContainsStyle(m_pendingStyle.font, SWT.BOLD)) {
+                    if (!fs.fontContainsStyle(styleToAffect.font, SWT.BOLD)) {
+                        styleToAffect.font = fs.addStyleToFont(styleToAffect.font, SWT.BOLD);
+                    }
+                }
+                if (fs.fontContainsStyle(m_pendingStyle.font, SWT.ITALIC)) {
+                    if (!fs.fontContainsStyle(styleToAffect.font, SWT.ITALIC)) {
+                        styleToAffect.font = fs.addStyleToFont(styleToAffect.font, SWT.ITALIC);
+                    }
+                }
+                final FontData fd = styleToAffect.font.getFontData()[0];
+                if (fd.getHeight() != m_pendingStyle.font.getFontData()[0].getHeight()) {
+                    styleToAffect.font = fs.getFont(fd.getName(), m_pendingStyle.font.getFontData()[0].getHeight(),
+                        fd.getStyle());
+                }
+            } else {
+                styleToAffect.font = m_pendingStyle.font;
+            }
+
+            if (m_pendingStyle.foreground != null) {
+                styleToAffect.foreground = m_pendingStyle.foreground;
+            }
+
+            m_pendingStyle = null;
+        } else if (m_currentSelectionStyles != null) {
+            // The case in which a selection has been replaced but we want to preserve its style with the new text
+            if (m_currentSelectionStyles.size() > 0) {
+                styleToAffect = m_currentSelectionStyles.get(0);
+            }
+
+            m_currentSelectionStyles = null;
+
+            if (styleToAffect == null) {
+                return;
+            }
+
+            styleToAffect.start = start;
+            styleToAffect.length = 0;       // length is addressed below
+        } else if (m_styledText.getCharCount() <= length) {
             // no left nor right neighbor
             return;
-        }
-        StyleRange[] newStyles = m_styledText.getStyleRanges(startIdx, length);
-        if (newStyles != null && newStyles.length > 0 && newStyles[0] != null) {
-            // inserted text already has a style (shouldn't really happen)
-            return;
-        }
-        StyleRange[] extStyles;
-        if (startIdx == 0) {
-            extStyles = m_styledText.getStyleRanges(length, 1);
         } else {
-            extStyles = m_styledText.getStyleRanges(startIdx - 1, 1);
+            final StyleRange[] currentStyles = m_styledText.getStyleRanges(start, length);
+            if ((currentStyles != null) && (currentStyles.length > 0) && (currentStyles[0] != null)) {
+                // inserted text already has a style (shouldn't really happen)
+                return;
+            }
+
+            styleToAffect = getNeighboringStyle(start, length);
         }
-        if (extStyles == null || extStyles.length != 1 || extStyles[0] == null) {
-            // no style to extend over inserted text
+
+        if (styleToAffect == null) {
+            // should not be possible
             return;
         }
-        if (startIdx == 0) {
-            extStyles[0].start = 0;
+
+        if (start == 0) {
+            styleToAffect.start = 0;
         }
-        extStyles[0].length += length;
-        m_styledText.setStyleRange(extStyles[0]);
+        styleToAffect.length += length;
+
+        m_styledText.setStyleRange(styleToAffect);
     }
 
-    private void selectionChanged() {
+    /**
+     * Gets style from the left neighbor (or from the right neighbor, if there is no left neighbor).
+     *
+     * TODO this should handle L10N RTL-isms
+     *
+     * @param start
+     * @param length
+     */
+    private StyleRange getNeighboringStyle(final int start, final int length) {
+        final StyleRange[] neighborStyles;
+        if (start == 0) {
+            if (length >= m_styledText.getCharCount()) {
+                return null;
+            }
+
+            neighborStyles = m_styledText.getStyleRanges(length, 1);
+        } else {
+            neighborStyles = m_styledText.getStyleRanges(start - 1, 1);
+        }
+
+        if ((neighborStyles == null) || (neighborStyles.length != 1) || (neighborStyles[0] == null)) {
+            // no style to extend over inserted text
+            return null;
+        }
+
+        return neighborStyles[0];
+    }
+
+    private void selectionChanged(final SelectionEvent se) {
         if (m_toolbar != null) {
             m_toolbar.updateToolbarToReflectState();
         }
+
+        m_pendingStyle = null;
 
         fireEnablementChanged(COPY);
         fireEnablementChanged(CUT);
@@ -756,6 +912,13 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
             enableStyleButtons = (length > 0);
         }
         enableStyleButtons(enableStyleButtons);
+
+        if ((se != null) && ((se.y - se.x) > 0)) {  // why they don't instead populate se.width? SWT!
+            m_currentSelectionStyles = getStylesInSelection();
+            m_activeSelection = se;
+        } else {
+            m_activeSelection = null;
+        }
     }
 
     private void applyBackgroundColor() {
@@ -835,12 +998,28 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
     @Override
     protected void doSetFocus() {
         assert m_styledText != null : "Control not created!";
-        String text = m_styledText.getText();
         if (m_selectAllUponFocusGain) {
             performSelectAll();
         }
         m_styledText.setFocus();
-        m_styledText.setCaretOffset(text.length());
+        if (m_mouseDownLocation != null) {
+            if (m_styledText.getCharCount() > 0) {
+                final Point parentLocation = m_panel.getLocation();
+                // this is more or less a correct translation - certainly better that the results of SWT's toControl(Point)
+                final Point translatedLocation =
+                    new Point((m_mouseDownLocation.x - parentLocation.x), (m_mouseDownLocation.y - parentLocation.y));
+                try {
+                    final int charOffset = m_styledText.getOffsetAtLocation(translatedLocation);
+                    m_styledText.setCaretOffset(charOffset);
+                } catch (final IllegalArgumentException e) {
+                    // thrown when the point is not within the text bounds
+                    m_styledText.setCaretOffset(m_styledText.getCharCount());
+                }
+            }
+        } else {
+            m_styledText.setCaretOffset(m_styledText.getCharCount());
+        }
+        m_lastCaretMovementOffset = m_styledText.getCaretOffset();
     }
 
     /**
@@ -952,27 +1131,62 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
     @Override
     public void performSelectAll() {
         m_styledText.selectAll();
-        selectionChanged();
+        selectionChanged(null);
     }
 
     void setSWTStyle(final int swtStyle) {
-        final List<StyleRange> styles = getStylesInSelection();
-        boolean shouldSetAttribute = true;
-        for (final StyleRange s : styles) {
-            if ((s.font != null) && (s.font.getFontData()[0].getStyle() & swtStyle) != 0) {
-                shouldSetAttribute = false;
-                break;
-            }
-        }
-        for (final StyleRange s : styles) {
-            if (shouldSetAttribute) {
-                s.font = FontStore.INSTANCE.addStyleToFont(s.font, swtStyle);
+        final FontStore fs = FontStore.INSTANCE;
+
+        if (m_styledText.getSelectionCount() == 0) {
+            createPendingStyleIfNeeded();
+
+            if (fs.fontContainsStyle(m_pendingStyle.font, swtStyle)) {
+                m_pendingStyle.font = fs.removeStyleFromFont(m_pendingStyle.font, swtStyle);
             } else {
-                s.font = FontStore.INSTANCE.removeStyleFromFont(s.font, swtStyle);
+                m_pendingStyle.font = fs.addStyleToFont(m_pendingStyle.font, swtStyle);
             }
-            m_styledText.setStyleRange(s);
+        } else {
+            final List<StyleRange> styles = getStylesInSelection();
+            boolean shouldSetAttribute = true;
+            for (final StyleRange s : styles) {
+                if ((s.font != null) && fs.fontContainsStyle(s.font, swtStyle)) {
+                    shouldSetAttribute = false;
+                    break;
+                }
+            }
+            for (final StyleRange s : styles) {
+                if (shouldSetAttribute) {
+                    s.font = fs.addStyleToFont(s.font, swtStyle);
+                } else {
+                    s.font = fs.removeStyleFromFont(s.font, swtStyle);
+                }
+                m_styledText.setStyleRange(s);
+            }
+
+            updateCachedStyleSelectionIfNecessary();
+
+            fireEditorValueChanged(true, true);
         }
-        fireEditorValueChanged(true, true);
+    }
+
+    private StyleRange createNewStyleRange(final int start, final int length) {
+        final StyleRange newStyle = new StyleRange();
+        newStyle.font = m_styledText.getFont();
+        newStyle.start = start;
+        newStyle.length = length;
+        return newStyle;
+    }
+
+    private void createPendingStyleIfNeeded() {
+        if (m_pendingStyle == null) {
+            m_pendingStyle = getNeighboringStyle(m_styledText.getCaretOffset(), 1);
+
+            if (m_pendingStyle == null) {
+                m_pendingStyle = new StyleRange();
+                m_pendingStyle.font = m_styledText.getFont();
+                m_pendingStyle.foreground = AnnotationUtilities.getAnnotationDefaultForegroundColor();
+            }
+        }
     }
 
     /**
@@ -997,7 +1211,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
         final int start = selection.x;
         final int length = selection.y;
         final StyleRange[] styles = m_styledText.getStyleRanges(start, length);
-        if (styles == null || styles.length == 0) {
+        if ((styles == null) || (styles.length == 0)) {
             // no existing styles in selection
             final StyleRange newStyle = new StyleRange();
             newStyle.font = m_styledText.getFont();
@@ -1067,13 +1281,20 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
         if (color != null) {
             switch (m_currentColorSelectionTarget) {
                 case FONT_COLOR_SELECTION:
-                    for (final StyleRange style : getStylesInSelection()) {
-                        style.foreground = color;
-                        m_styledText.setStyleRange(style);
+                    if (m_styledText.getSelectionCount() == 0) {
+                        createPendingStyleIfNeeded();
+                        m_pendingStyle.foreground = color;
+                    } else {
+                        for (final StyleRange style : getStylesInSelection()) {
+                            style.foreground = color;
+                            m_styledText.setStyleRange(style);
+                        }
+                        updateCachedStyleSelectionIfNecessary();
                     }
                     break;
                 case BORDER_COLOR_SELECTION:
                     m_styledText.setMarginColor(color);
+                    m_panel.redraw();
                     break;
                 case BACKGROUND_COLOR_SELECTION:
                     setBackgroundColor(color);
@@ -1087,43 +1308,66 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
     }
 
     void fontSizeWasSelected(final int size) {
-        for (final StyleRange style : getStylesInSelection()) {
-            final FontData styleFD = style.font.getFontData()[0];
-            final boolean bold = (styleFD.getStyle() & SWT.BOLD) != 0;
-            final boolean italic = (styleFD.getStyle() & SWT.ITALIC) != 0;
+        if (m_styledText.getSelectionCount() == 0) {
+            createPendingStyleIfNeeded();
 
-            style.font = FontStore.INSTANCE.getDefaultFont(size, bold, italic);
-            m_styledText.setStyleRange(style);
+            final FontData fd = m_pendingStyle.font.getFontData()[0];
+            final boolean bold = (fd.getStyle() & SWT.BOLD) != 0;
+            final boolean italic = (fd.getStyle() & SWT.ITALIC) != 0;
+            m_pendingStyle.font = FontStore.INSTANCE.getDefaultFont(size, bold, italic);
+        } else {
+            for (final StyleRange style : getStylesInSelection()) {
+                final FontData styleFD = style.font.getFontData()[0];
+                final boolean bold = (styleFD.getStyle() & SWT.BOLD) != 0;
+                final boolean italic = (styleFD.getStyle() & SWT.ITALIC) != 0;
+
+                style.font = FontStore.INSTANCE.getDefaultFont(size, bold, italic);
+                m_styledText.setStyleRange(style);
+            }
+
+            updateCachedStyleSelectionIfNecessary();
+
+            fireEditorValueChanged(true, true);
         }
-
-        fireEditorValueChanged(true, true);
     }
 
     void userWantsToAffectFontColor(final Point clickSourceLocation) {
         Color color = null;
-        final List<StyleRange> styles = getStylesInSelection();
         boolean multipleColorsExist = false;
 
-        for (final StyleRange style : styles) {
-            final Color c;
+        if (m_pendingStyle != null) {
+            color = m_pendingStyle.foreground;
+        } else {
+            final List<StyleRange> styles = getStylesInSelection();
+            for (final StyleRange style : styles) {
+                final Color c;
 
-            if (style.foreground != null) {
-                c = style.foreground;
-            } else {
-                c = AnnotationUtilities.getAnnotationDefaultForegroundColor();
+                if (style.foreground != null) {
+                    c = style.foreground;
+                } else {
+                    c = AnnotationUtilities.getAnnotationDefaultForegroundColor();
+                }
+
+                if (color == null) {
+                    color = c;
+                } else if (!c.equals(color)) {
+                    multipleColorsExist = true;
+
+                    break;
+                }
             }
 
             if (color == null) {
-                color = c;
-            } else if (!c.equals(color)) {
-                multipleColorsExist = true;
+                final StyleRange sr = getNeighboringStyle(m_styledText.getCaretOffset(), 0);
 
-                break;
+                if (sr != null) {
+                    color = sr.foreground;
+                }
             }
-        }
 
-        if (color == null) {
-            color = AnnotationUtilities.getAnnotationDefaultForegroundColor();
+            if (color == null) {
+                color = AnnotationUtilities.getAnnotationDefaultForegroundColor();
+            }
         }
 
         displayColorDropDown((multipleColorsExist ? null : color), FONT_COLOR_SELECTION, clickSourceLocation);
@@ -1318,77 +1562,106 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
     }
 
     private void font() {
-        List<StyleRange> sel = getStylesInSelection();
+        final List<StyleRange> selectionStyles = getStylesInSelection();
         Font f = m_styledText.getFont();
         Color c = null;
         // set the first font style in the selection
-        for (StyleRange style : sel) {
+        for (final StyleRange style : selectionStyles) {
             if (style.font != null) {
                 f = style.font;
                 c = style.foreground;
                 break;
             }
         }
-        FontData fd = f.getFontData()[0];
-        FontStyleDialog dlg = new FontStyleDialog(m_styledText.getShell(), c, fd.getHeight(),
+        final FontData fd = f.getFontData()[0];
+        final FontStyleDialog dlg = new FontStyleDialog(m_styledText.getShell(), c, fd.getHeight(),
             (fd.getStyle() & SWT.BOLD) != 0, (fd.getStyle() & SWT.ITALIC) != 0);
         if (dlg.open() != Window.OK) {
             // user canceled.
             return;
         }
-        RGB newRGB = dlg.getColor();
-        Integer newSize = dlg.getSize();
-        Boolean newBold = dlg.getBold();
-        Boolean newItalic = dlg.getItalic();
-        Color newCol = newRGB == null ? null : ColorUtilities.RGBtoColor(newRGB);
-        for (StyleRange style : sel) {
-            if (newSize != null || newBold != null || newItalic != null) {
-                FontData stylefd = style.font.getFontData()[0];
-                boolean b = (stylefd.getStyle() & SWT.BOLD) != 0;
-                if (newBold != null) {
-                    b = newBold.booleanValue();
-                }
-                boolean i = (stylefd.getStyle() & SWT.ITALIC) != 0;
-                if (newItalic != null) {
-                    i = newItalic.booleanValue();
-                }
-                int s = stylefd.getHeight();
-                if (newSize != null) {
-                    s = newSize.intValue();
-                }
-                style.font = FontStore.INSTANCE.getDefaultFont(s, b, i);
+
+        final RGB newRGB = dlg.getColor();
+        final Integer newSize = dlg.getSize();
+        final Boolean newBold = dlg.getBold();
+        final Boolean newItalic = dlg.getItalic();
+        final Color newColor = (newRGB == null) ? null : ColorUtilities.RGBtoColor(newRGB);
+        if (m_styledText.getSelectionCount() == 0) {
+            if (newColor != null) {
+                m_currentColorSelectionTarget = FONT_COLOR_SELECTION;
+                colorWasSelected(newColor);
             }
-            if (newCol != null) {
-                style.foreground = newCol;
+            if (newSize != null) {
+                fontSizeWasSelected(newSize.intValue());
             }
-            m_styledText.setStyleRange(style);
+            if (newBold != null) {
+                setSWTStyle(SWT.BOLD);
+            }
+            if (newItalic != null) {
+                setSWTStyle(SWT.ITALIC);
+            }
+        } else {
+            for (final StyleRange style : selectionStyles) {
+                if ((newSize != null) || (newBold != null) || (newItalic != null)) {
+                    final FontData stylefd = style.font.getFontData()[0];
+                    boolean b = (stylefd.getStyle() & SWT.BOLD) != 0;
+                    if (newBold != null) {
+                        b = newBold.booleanValue();
+                    }
+                    boolean i = (stylefd.getStyle() & SWT.ITALIC) != 0;
+                    if (newItalic != null) {
+                        i = newItalic.booleanValue();
+                    }
+                    int s = stylefd.getHeight();
+                    if (newSize != null) {
+                        s = newSize.intValue();
+                    }
+                    style.font = FontStore.INSTANCE.getDefaultFont(s, b, i);
+                }
+                if (newColor != null) {
+                    style.foreground = newColor;
+                }
+                m_styledText.setStyleRange(style);
+            }
+
+            updateCachedStyleSelectionIfNecessary();
         }
+
         m_toolbar.updateToolbarToReflectState();
     }
 
     private void fontColor() {
         Color col = AnnotationUtilities.getAnnotationDefaultForegroundColor();
-        List<StyleRange> sel = getStylesInSelection();
+        final List<StyleRange> selectionStyles = getStylesInSelection();
         // set the color of the first selection style
-        for (StyleRange style : sel) {
+        for (final StyleRange style : selectionStyles) {
             if (style.foreground != null) {
                 col = style.foreground;
                 break;
             }
         }
-        ColorDialog colDlg = new ColorDialog(m_styledText.getShell());
-        colDlg.setText("Change Font Color in Selection");
-        colDlg.setRGB(col.getRGB());
-        RGB newRGB = colDlg.open();
+        final ColorDialog colorDialog = new ColorDialog(m_styledText.getShell());
+        colorDialog.setText("Change Font Color in Selection");
+        colorDialog.setRGB(col.getRGB());
+        final RGB newRGB = colorDialog.open();
         if (newRGB == null) {
             // user canceled
             return;
         }
-        Color newCol = ColorUtilities.RGBtoColor(newRGB);
-        for (StyleRange style : sel) {
-            style.foreground = newCol;
-            m_styledText.setStyleRange(style);
+
+        final Color newColor = ColorUtilities.RGBtoColor(newRGB);
+        if (m_styledText.getSelectionCount() == 0) {
+            m_currentColorSelectionTarget = FONT_COLOR_SELECTION;
+            colorWasSelected(newColor);
+        } else {
+            for (final StyleRange style : selectionStyles) {
+                style.foreground = newColor;
+                m_styledText.setStyleRange(style);
+            }
+
+            updateCachedStyleSelectionIfNecessary();
         }
+
         m_toolbar.updateToolbarToReflectState();
     }
 

@@ -936,7 +936,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         }
         if (selectedAnnoParts.size() == 1) {
             AnnotationEditPart next = selectedAnnoParts.iterator().next();
-            next.performEdit();
+            next.performEdit(null);
         }
     }
 

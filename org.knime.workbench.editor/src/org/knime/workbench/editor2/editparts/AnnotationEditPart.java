@@ -56,6 +56,7 @@ import org.eclipse.gef.EditPolicy;
 import org.eclipse.gef.Request;
 import org.eclipse.gef.RequestConstants;
 import org.eclipse.gef.SelectionManager;
+import org.eclipse.gef.requests.DirectEditRequest;
 import org.eclipse.gef.requests.LocationRequest;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.IPropertyChangeListener;
@@ -184,7 +185,13 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart
         if ((request.getType() == RequestConstants.REQ_OPEN)
             || (WorkflowEditorMode.ANNOTATION_EDIT.equals(m_currentEditorMode) && (getSelected() != SELECTED_NONE))) {
             // REQ_OPEN is caused by a double click on this edit part
-            performEdit();
+            final Point location;
+            if (request instanceof DirectEditRequest) {
+                location = ((DirectEditRequest)request).getLocation();
+            } else {
+                location = null;
+            }
+            performEdit(location);
             // we ignore REQ_DIRECT_EDIT as we want to allow editing only after a double-click, or click on selected
         } else {
             super.performRequest(request);
@@ -193,8 +200,11 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart
 
     /**
      * Opens the editor to directly edit the annotation in place.
+     *
+     * @param clickLocation the location of the mouse click which started the edit using this editor, if it is known. If
+     *            this is non-null, it will be used to set the caret position on display of the editor.
      */
-    public void performEdit() {
+    public void performEdit(final Point clickLocation) {
         // Only allow the edit if we're in AE mode, or we're editing the node's name annotation
         if (WorkflowEditorMode.ANNOTATION_EDIT.equals(m_currentEditorMode)
             || (this instanceof NodeAnnotationEditPart)) {
@@ -214,6 +224,8 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart
                         new AnnotationEditManager(this, new StyledTextEditorLocator((NodeAnnotationFigure)getFigure()));
                 }
 
+                m_directEditManager
+                    .setMouseDownLocation(((clickLocation != null) ? clickLocation.getSWTPoint() : null));
                 m_directEditManager.show();
             });
         }

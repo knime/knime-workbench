@@ -53,6 +53,7 @@ import org.eclipse.gef.tools.CellEditorLocator;
 import org.eclipse.gef.tools.DirectEditManager;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.PlatformUI;
@@ -99,6 +100,8 @@ public class AnnotationEditManager extends DirectEditManager {
     private IAction m_selectAll;
     private IAction m_delete;
 
+    private Point m_mouseDownLocation;
+
     /**
      * Constructs an instace of the edit manager.
      *
@@ -121,19 +124,20 @@ public class AnnotationEditManager extends DirectEditManager {
         editPart.getRoot().getViewer().deselectAll();
         editPart.getFigure().setVisible(false);
 
-        final StyledTextEditor stw = (StyledTextEditor)getCellEditor();
-        final Annotation anno = ((AnnotationEditPart)editPart).getModel();
+        final StyledTextEditor editor = (StyledTextEditor)getCellEditor();
+        final Annotation annotation = ((AnnotationEditPart)editPart).getModel();
         final Font defaultFont;
         if (editPart instanceof NodeAnnotationEditPart) {
             defaultFont = AnnotationUtilities.getNodeAnnotationDefaultFont();
-            stw.pruneMenuAndToolbarForNodeAnnotation();
-        } else if (anno.getVersion() < AnnotationData.VERSION_20151012) {
+            editor.pruneMenuAndToolbarForNodeAnnotation();
+        } else if (annotation.getVersion() < AnnotationData.VERSION_20151012) {
             defaultFont = FontStore.INSTANCE.getSystemDefaultFont();
         } else {
             defaultFont = AnnotationUtilities.getWorkflowAnnotationDefaultFont();
         }
-        stw.setDefaultFont(defaultFont);
-        stw.setValue(anno);
+        editor.setDefaultFont(defaultFont);
+        editor.setValue(annotation);
+        editor.setMouseDownLocation(m_mouseDownLocation);
 
         // Hook the cell editor's copy/paste actions to the actionBars so that
         // they can
@@ -145,6 +149,14 @@ public class AnnotationEditManager extends DirectEditManager {
         m_actionHandler = new CellEditorActionHandler(m_actionBars);
         m_actionHandler.addCellEditor(getCellEditor());
         m_actionBars.updateActionBars();
+    }
+
+    /**
+     * @param p the location of the mouse click which started the edit using this editor, if it is known. If this is
+     *            non-null, it will be used to set the caret position on display of the editor.
+     */
+    public void setMouseDownLocation(final Point p) {
+        m_mouseDownLocation = p;
     }
 
     /**

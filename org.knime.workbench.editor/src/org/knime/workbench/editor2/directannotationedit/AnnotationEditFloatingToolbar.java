@@ -166,6 +166,10 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
         m_fontSizeButton.setBackground(BACKGROUND_COLOR);
         m_fontSizeButton.setToolTipText("Font Size");
 
+        /*
+         * Note that we add the focusTransferor such that it is notified after the state changing messaging.
+         */
+
         m_boldToggleButton = new FlatButton(this, SWT.TOGGLE,
             ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/annotations/bold-icon.png"), null,
             DEFAULT_BUTTON_SIZE, true);
