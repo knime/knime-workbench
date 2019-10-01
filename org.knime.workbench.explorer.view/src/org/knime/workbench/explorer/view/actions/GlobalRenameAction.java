@@ -122,6 +122,7 @@ public class GlobalRenameAction extends ExplorerAction {
         // find affected workflows
         List<AbstractExplorerFileStore> affectedFlows =
                 getAllContainedWorkflows(stores);
+        affectedFlows.addAll(getAllContainedComponents(stores));
 
         // try locking all local workflows for renaming
         List<LocalExplorerFileStore> localWFs =
@@ -284,8 +285,8 @@ public class GlobalRenameAction extends ExplorerAction {
         MessageBox mb =
                 new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
         mb.setText("Can't Rename");
-        mb.setMessage("At least one of the workflows affected by the renaming"
-                + " are still opened in the editor and have to be closed.");
+        mb.setMessage("At least one of the workflows or components affected by the renaming"
+            + " are still opened in the editor and have to be closed.");
         mb.open();
     }
 

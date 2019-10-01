@@ -120,7 +120,7 @@ class GUIWorkflowLoadHelper extends WorkflowLoadHelper {
      */
     GUIWorkflowLoadHelper(final Display display, final String workflowName, final URI uri, final File workflowFile,
         final File mountpointRoot, final boolean isTemporaryCopy) {
-        this(display, workflowName, uri, workflowFile, mountpointRoot, isTemporaryCopy, false);
+        this(display, workflowName, uri, workflowFile, mountpointRoot, isTemporaryCopy, false, false);
     }
 
     /**
@@ -133,10 +133,12 @@ class GUIWorkflowLoadHelper extends WorkflowLoadHelper {
      * @param isTemporaryCopy <code>true</code> if the workflow is a temporary copy of a workflow that lives somewhere
      *            else, e.g. on a server, <code>false</code> if the workflow is in its original location
      * @param isTemplate Whether the loaded workflow is a reference to a template (don't load data)
+     * @param isTemplateProject Whether the loaded workflow is a template which is not embedded in a workflow (keep
+     *            location information from where it's loaded)
      */
     GUIWorkflowLoadHelper(final Display display, final String workflowName, final URI uri, final File workflowDirectory,
-        final File mountpointRoot, final boolean isTemporaryCopy, final boolean isTemplate) {
-        super(isTemplate, createWorkflowContext(uri, workflowDirectory, mountpointRoot, isTemporaryCopy));
+        final File mountpointRoot, final boolean isTemporaryCopy, final boolean isTemplate, final boolean isTemplateProject) {
+        super(isTemplate, isTemplateProject, createWorkflowContext(uri, workflowDirectory, mountpointRoot, isTemporaryCopy));
         m_display = display;
         m_workflowName = workflowName;
     }

@@ -84,8 +84,17 @@ public class OpenWorkflowAction extends ExplorerAction {
      * @param view viewer the associated tree viewer
      */
     public OpenWorkflowAction(final ExplorerView view) {
+        this(view, false);
+    }
+
+    /**
+     * @param view viewer the associated tree viewer
+     * @param isComponent indicates whether the workflow to be opened is part of a component
+     * @since 8.5
+     */
+    public OpenWorkflowAction(final ExplorerView view, final boolean isComponent) {
         super(view, "Open");
-        setDescription("Opens a new workflow editor.");
+        setDescription("Opens a new " + (isComponent ? "component" : "workflow") + " editor.");
         setToolTipText(getDescription());
     }
 

@@ -50,14 +50,28 @@ package org.knime.workbench.editor2.actions;
 
 import static org.knime.core.ui.wrapper.Wrapper.unwrap;
 
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.progress.IProgressService;
+import org.knime.core.node.NodeLogger;
+import org.knime.core.node.port.PortObject;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -83,6 +97,8 @@ import org.knime.workbench.explorer.view.ContentObject;
  * @author Bernd Wiswedel, KNIME AG, Zurich, Switzerland
  */
 public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(SaveAsSubNodeTemplateAction.class);
 
     /** Action ID. */
     public static final String ID = "knime.action.sub_node_save_as_template";
@@ -182,25 +198,37 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
         String[] validMountPoints = validMountPointList.toArray(new String[0]);
         final Shell shell = SWTUtilities.getActiveShell();
         ContentObject defSel = getDefaultSaveLocation(wm);
-        SpaceResourceSelectionDialog dialog = new SpaceResourceSelectionDialog(shell, validMountPoints, defSel);
-        dialog.setTitle("Save As Shared Component");
-        dialog.setHeader("Select destination workflow group for shared component");
-        dialog.setValidator(new Validator() {
-            @Override
-            public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {
-                final AbstractExplorerFileInfo info = selection.fetchInfo();
-                if (info.isWorkflowGroup()) {
-                    return null;
-                }
-                return "Only workflow groups can be selected as target.";
-            }
-        });
+        DestinationSelectionDialog dialog = new DestinationSelectionDialog(shell, validMountPoints, defSel);
         if (dialog.open() != Window.OK) {
             return;
         }
         AbstractExplorerFileStore target = dialog.getSelection();
         AbstractContentProvider contentProvider = target.getContentProvider();
-        contentProvider.saveSubNodeTemplate(snc, target);
+        AtomicReference<PortObject[]> exampleInputData = new AtomicReference<PortObject[]>();
+        if (dialog.m_isIncludeInputData) {
+            //fetch input data
+            IProgressService ps = PlatformUI.getWorkbench().getProgressService();
+            try {
+                ps.run(true, false, mon -> {
+                    try {
+                        mon.setTaskName("Executing upstream nodes ...");
+                        exampleInputData.set(snc.fetchInputDataFromParent());
+                    } catch (ExecutionException e) {
+                        throw new InvocationTargetException(e);
+                    }
+                });
+            } catch (InvocationTargetException e) {
+                String error =
+                    "An error occurred while executing upstream nodes: " + e.getTargetException().getMessage();
+                LOGGER.warn(error, e.getTargetException());
+                MessageDialog.openError(shell, "Problem saving component with example input data", error);
+            } catch (InterruptedException e) {
+                String error = "Execution of upstream nodes interrupted: " + e.getMessage();
+                LOGGER.warn(error, e);
+                MessageDialog.openError(shell, "Problem saving component with example input data", error);
+            }
+        }
+        contentProvider.saveSubNodeTemplate(snc, target, exampleInputData.get());
     }
 
     private ContentObject getDefaultSaveLocation(
@@ -220,4 +248,51 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
         return null;
     }
 
+    /** Dialog to select the mountpoint + destination folder. Also contains a checkbox whether to include input data. */
+    private static final class DestinationSelectionDialog extends SpaceResourceSelectionDialog {
+
+        private Button m_includeInputDataButton;
+
+        private boolean m_isIncludeInputData;
+
+        /**
+         * @param parentShell
+         * @param mountIDs
+         * @param initialSelection
+         */
+        public DestinationSelectionDialog(final Shell parentShell, final String[] mountIDs,
+            final ContentObject initialSelection) {
+            super(parentShell, mountIDs, initialSelection);
+            setTitle("Save As Shared Component");
+            setHeader("Select destination workflow group for shared component");
+            setValidator(new Validator() {
+                @Override
+                public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {
+                    final AbstractExplorerFileInfo info = selection.fetchInfo();
+                    if (info.isWorkflowGroup()) {
+                        return null;
+                    }
+                    return "Only workflow groups can be selected as target.";
+                }
+            });
+        }
+
+        @Override
+        protected void createCustomFooterField(final Composite parent) {
+            m_includeInputDataButton = new Button(parent, SWT.CHECK);
+            m_isIncludeInputData = false;
+            m_includeInputDataButton.setSelection(m_isIncludeInputData);
+            m_includeInputDataButton.setText("Include input data with component");
+            m_includeInputDataButton.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(final SelectionEvent e) {
+                    Button b = (Button)e.widget;
+                    m_isIncludeInputData = b.getSelection();
+                }
+            });
+            Label hint = new Label(parent, SWT.NONE);
+            hint.setText("Including input data in a component facilitates their direct editing later on.\n"
+                + "Please note that upstream nodes need to be executed (or will be executed on save)\nif input data is to be included.");
+        }
+    }
 }

@@ -46,6 +46,7 @@ package org.knime.workbench.explorer.view;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -62,12 +63,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
+import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.util.LocalSelectionTransfer;
 import org.eclipse.jface.viewers.IColorProvider;
@@ -92,8 +95,12 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.progress.IProgressService;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.port.PortObject;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.TemplateType;
 import org.knime.core.node.workflow.NodeContainer;
@@ -856,7 +863,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
     /**
      * Saves the given sub node as template into the given file store. The sub node is marked as linked sub node
-     * in its parent workflow manager. The user is queried if s/he wants to link back to the tamples and what kind
+     * in its parent workflow manager. The user is queried if s/he wants to link back to the templates and what kind
      * of link it should be.
      *
      * @param subNode the sub node
@@ -864,9 +871,25 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @return <code>true</code> if the operation was successful, <code>false</code> otherwise
      * @since 6.4
      */
-    @SuppressWarnings("unchecked")
     public boolean saveSubNodeTemplate(final SubNodeContainer subNode,
             final AbstractExplorerFileStore target) {
+         return saveSubNodeTemplate(subNode, target, null);
+     }
+
+    /**
+     * Saves the given sub node as template into the given file store. The sub node is marked as linked sub node in its
+     * parent workflow manager. The user is queried if s/he wants to link back to the templates and what kind of link it
+     * should be.
+     *
+     * @param subNode the sub node
+     * @param target the target for the template
+     * @param exampleInputData optional example input data to be stored with the template, can be <code>null</code>
+     * @return <code>true</code> if the operation was successful, <code>false</code> otherwise
+     * @since 8.5
+     */
+    @SuppressWarnings("unchecked")
+    public boolean saveSubNodeTemplate(final SubNodeContainer subNode, final AbstractExplorerFileStore target,
+        final PortObject[] exampleInputData) {
 
         if (!AbstractExplorerFileStore.isWorkflowGroup(target)) {
             return false;
@@ -966,32 +989,49 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 LOGGER.debug("Preparation for saving shared component failed.");
                 return false;
             }
-            try {
-                MetaNodeTemplateInformation template = subNode.saveAsTemplate(directory, new ExecutionMonitor());
-                if (!linkType.equals(LinkType.None)) {
-                    // TODO this needs to be done via the command stack,
-                    // the rename can currently not be undone.
-                    if (!originalName.equals(newName)) {
-                        subNode.setName(newName);
-                    }
+            final AbstractExplorerFileStore finalTemplateLoc = templateLoc;
+            OverwriteAndMergeInfo finalInfo = info;
+            IRunnableWithProgress runnable = pm -> {
+                pm.setTaskName("Saving component ...");
+                try {
+                    MetaNodeTemplateInformation template =
+                        subNode.saveAsTemplate(directory, new ExecutionMonitor(), exampleInputData);
+                    if (!linkType.equals(LinkType.None)) {
+                        // TODO this needs to be done via the command stack,
+                        // the rename can currently not be undone.
+                        if (!originalName.equals(newName)) {
+                            subNode.setName(newName);
+                        }
 
-                    URI uri = createMetanodeLinkUri(subNode, templateLoc, linkType);
-                    MetaNodeTemplateInformation link = template.createLink(uri);
-                    subNode.getParent().setTemplateInformation(
-                            subNode.getID(), link);
+                        URI uri = createMetanodeLinkUri(subNode, finalTemplateLoc, linkType);
+                        MetaNodeTemplateInformation link = template.createLink(uri);
+                        subNode.getParent().setTemplateInformation(subNode.getID(), link);
+                    }
+                    if ((finalInfo != null) && (finalTemplateLoc instanceof RemoteExplorerFileStore)
+                        && finalInfo.createSnapshot()) {
+                        ((RemoteExplorerFileStore)finalTemplateLoc).createSnapshot(finalInfo.getComment());
+                    }
+                } catch (Exception e) {
+                    throw new InvocationTargetException(e);
                 }
-                if ((info != null) && (templateLoc instanceof RemoteExplorerFileStore) && info.createSnapshot()) {
-                    ((RemoteExplorerFileStore)templateLoc).createSnapshot(info.getComment());
-                }
-            } catch (Exception e) {
-                String error = "Unable to save shared component: " + e.getMessage();
-                LOGGER.warn(error, e);
-                MessageDialog.openError(shell, "Error while writing shared component",
-                        error);
+            };
+            if(exampleInputData == null) {
+                runnable.run(new NullProgressMonitor());
+            } else {
+                //if example data is to be stored with the template/component, run the save-process in another non-UI-thread
+                IWorkbench wb = PlatformUI.getWorkbench();
+                IProgressService ps = wb.getProgressService();
+                ps.busyCursorWhile(runnable);
             }
 
             metaTemplateDropFinish(templateLoc, directory);
-
+        } catch (InvocationTargetException e) {
+            String error = "Unable to save shared component: " + e.getTargetException().getMessage();
+            LOGGER.warn(error, e.getTargetException());
+            MessageDialog.openError(shell, "Error while writing shared component", error);
+        } catch (InterruptedException e) {
+            //can't actually happen
+            throw new RuntimeException(e);
         } finally {
             metaTemplateDropCleanup(directory);
         }

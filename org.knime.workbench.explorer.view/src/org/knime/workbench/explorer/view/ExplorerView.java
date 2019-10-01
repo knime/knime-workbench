@@ -119,9 +119,11 @@ import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.core.WorkflowManagerTransfer;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileInfo;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.explorer.view.actions.CollapseAction;
 import org.knime.workbench.explorer.view.actions.CollapseAllAction;
@@ -378,7 +380,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                 try {
                     ContentObject co = (ContentObject)sel;
                     AbstractExplorerFileStore fs = co.getObject();
-                    if (fs.fetchInfo().isWorkflow()) {
+                    AbstractExplorerFileInfo info = fs.fetchInfo();
+                    if (info.isWorkflow() || info.isComponent()) {
                         if (fs instanceof RemoteExplorerFileStore) {
                             remoteWorkflowsToOpen.add(co);
                         } else {
@@ -688,12 +691,13 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         }
         final TreeSelection selection = (TreeSelection) m_viewer.getSelection();
 
-        //add 'open workflow' action when selected item is a local workflow
+        //add 'open workflow/component' action when selected item is a local workflow/component
         if (selection != null) {
             List<AbstractExplorerFileStore> files = DragAndDropUtils.getExplorerFileStores(selection);
             if (files.size() == 1 && files.get(0) instanceof LocalWorkspaceFileStore) {
-                if (((LocalWorkspaceFileStore)files.get(0)).fetchInfo().isWorkflow()) {
-                    manager.add(new OpenWorkflowAction(this));
+                LocalWorkspaceFileInfo info = ((LocalWorkspaceFileStore)files.get(0)).fetchInfo();
+                if (info.isWorkflow() || info.isComponent()) {
+                    manager.add(new OpenWorkflowAction(this, info.isComponent()));
                     manager.add(new Separator());
                 }
             }

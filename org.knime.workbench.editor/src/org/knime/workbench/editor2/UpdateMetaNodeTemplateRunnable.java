@@ -62,8 +62,8 @@ import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
-import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.node.workflow.WorkflowPersistor.NodeContainerTemplateLinkUpdateResult;
+import org.knime.core.ui.util.SWTUtilities;
 
 
 /**
@@ -120,7 +120,8 @@ public class UpdateMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 exec.createSubProgress(1.0 / m_ids.length);
             String progMsg = "Node Link \"" + tnc.getNameWithID() + "\"";
             exec.setMessage(progMsg);
-            GUIWorkflowLoadHelper loadHelper = new GUIWorkflowLoadHelper(d, progMsg, null, null, null, false, true);
+            GUIWorkflowLoadHelper loadHelper =
+                new GUIWorkflowLoadHelper(d, progMsg, null, null, null, false, true, false);
             NodeContainerTemplateLinkUpdateResult updateMetaNodeLinkResult;
             try {
                 updateMetaNodeLinkResult =

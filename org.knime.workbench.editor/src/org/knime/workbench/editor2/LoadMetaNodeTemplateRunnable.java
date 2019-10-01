@@ -59,8 +59,11 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.ExecutionMonitor;
+import org.knime.core.node.workflow.NodeContainerTemplate;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.TemplateNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.node.workflow.WorkflowPersistor.MetaNodeLinkUpdateResult;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.pathresolve.ResolverUtil;
@@ -80,6 +83,8 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
     private WorkflowManager m_parentWFM;
 
     private final URI m_templateURI;
+
+    private WorkflowEditor m_editor;
 
     private MetaNodeLinkUpdateResult m_result;
 
@@ -105,6 +110,18 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
     }
 
     /**
+     * Used if a template is to be loaded into the workflow editor as a project (i.e. not embedded in another workflow).
+     *
+     * @param editor the editor to open the component with
+     * @param templateURI URI to the workflow directory or file from which the template should be loaded
+     */
+    public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI) {
+        m_parentWFM = WorkflowManager.ROOT;
+        m_templateURI = templateURI;
+        m_editor = editor;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -117,6 +134,12 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
             File parentFile = ResolverUtil
                 .resolveURItoLocalOrTempFile(m_templateURI, pm);
+            if (m_editor != null && parentFile.getName().equals(WorkflowPersistor.WORKFLOW_FILE)) {
+                //if components are opened as a project in the workflow editor
+            	//the URI points to the 'workflow.knime'-file instead of the actual component directory
+                //-> this fixes it
+                parentFile = parentFile.getParentFile();
+            }
             if (parentFile.isFile()) {
                 //unzip
                 File tempDir = FileUtil.createTempDir("template-workflow");
@@ -134,8 +157,8 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
             Display d = Display.getDefault();
 
-            GUIWorkflowLoadHelper loadHelper =
-                new GUIWorkflowLoadHelper(d, parentFile.getName(), m_templateURI, parentFile, null, false, true);
+            GUIWorkflowLoadHelper loadHelper = new GUIWorkflowLoadHelper(d, parentFile.getName(), m_templateURI,
+                parentFile, null, false, true, m_editor != null);
             TemplateNodeContainerPersistor loadPersistor =
                     loadHelper.createTemplateLoadPersistor(parentFile, m_templateURI);
             MetaNodeLinkUpdateResult loadResult =
@@ -166,7 +189,20 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             if (!status.isOK()) {
                 LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);
             }
+            if(m_editor != null) {
+                NodeContainerTemplate template = m_result.getLoadedInstance();
+                if (template instanceof SubNodeContainer) {
+                    WorkflowManager wm = ((SubNodeContainer)template).getWorkflowManager();
+                    m_editor.setWorkflowManager(wm);
+                    if (wm.isDirty()) {
+                        m_editor.markDirty();
+                    }
+                }
+            }
         } catch (Exception ex) {
+            if(m_editor != null) {
+                m_editor.setWorkflowManager(null);
+            }
             throw new RuntimeException(ex);
         } finally {
             // IMPORTANT: Remove the reference to the file and the

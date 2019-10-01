@@ -45,6 +45,8 @@
 package org.knime.workbench.ui.navigator;
 
 
+import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
+
 import java.net.URI;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -65,6 +67,7 @@ import org.knime.core.node.workflow.NodePropertyChangedEvent;
 import org.knime.core.node.workflow.NodePropertyChangedListener;
 import org.knime.core.node.workflow.NodeStateChangeListener;
 import org.knime.core.node.workflow.NodeStateEvent;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -406,6 +409,13 @@ public final class ProjectWorkflowMap {
                     // i.e. those represented by an ordinary WorkflowManager.
                     // For all other WorkflowManagerUI implementations this is not done.
                     if (Wrapper.wraps(manager, WorkflowManager.class)) {
+                        NodeID nodeIDToRemove;
+                        WorkflowManager wfm = unwrapWFM(manager);
+                        if (wfm.getParent() == WorkflowManager.ROOT) {
+                            nodeIDToRemove = wfm.getID();
+                        } else {
+                            nodeIDToRemove = ((SubNodeContainer)wfm.getDirectNCParent()).getID();
+                        }
                         if (manager.getNodeContainerState().isExecutionInProgress()) {
                             ThreadUtils.threadWithContext(() -> {
                                 final int timeout = 20;
@@ -423,10 +433,10 @@ public final class ProjectWorkflowMap {
                                 } else {
                                     LOGGER.debug("Workflow now canceled - will remove from parent");
                                 }
-                                WorkflowManager.ROOT.removeProject(manager.getID());
+                                WorkflowManager.ROOT.removeProject(nodeIDToRemove);
                             }, "Removal workflow - " + manager.getNameWithID()).start();
                         } else {
-                            WorkflowManager.ROOT.removeProject(manager.getID());
+                            WorkflowManager.ROOT.removeProject(nodeIDToRemove);
                         }
                     }
                 }

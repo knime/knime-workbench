@@ -106,6 +106,7 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
@@ -777,15 +778,22 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             final WorkflowManagerUI wmUI = wrep.getWorkflowManager();
             final Optional<WorkflowManager> wm = Wrapper.unwrapWFMOptional(wmUI);
             if (wm.isPresent()) {
-                final WorkflowManager projectWM = wm.get().getProjectWFM();
-                final ReferencedFile rf = projectWM.getWorkingDir();
+                if (wm.get().getDirectNCParent() instanceof SubNodeContainer) {
+                    //it's a component project (i.e. component not embedded in a workflow)
+                    m_workflowIsAJob.set(false);
+                    metadataFile = null;
+                    canEditMetadata = false;
+                } else {
+                    final WorkflowManager projectWM = wm.get().getProjectWFM();
+                    final ReferencedFile rf = projectWM.getWorkingDir();
 
-                metadataFile = new File(rf.getFile(), WorkflowPersistor.METAINFO_FILE);
-                m_currentWorkflowName = projectWM.getName();
+                    metadataFile = new File(rf.getFile(), WorkflowPersistor.METAINFO_FILE);
+                    m_currentWorkflowName = projectWM.getName();
 
-                final WorkflowEditor editor = (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow()
-                    .getActivePage().getActiveEditor();
-                canEditMetadata = !editor.isTempRemoteWorkflowEditor();
+                    final WorkflowEditor editor = (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow()
+                        .getActivePage().getActiveEditor();
+                    canEditMetadata = !editor.isTempRemoteWorkflowEditor();
+                }
             } else {
                 m_workflowIsAJob.set(true);
                 metadataFile = null;

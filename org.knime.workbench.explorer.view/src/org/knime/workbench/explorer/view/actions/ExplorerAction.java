@@ -308,18 +308,36 @@ public abstract class ExplorerAction extends Action {
      * @return a new list with workflows contained (directly or indirectly) in
      *         the argument
      */
-    public static List<AbstractExplorerFileStore> getAllContainedWorkflows(
-            final List<? extends AbstractExplorerFileStore> selected) {
-        List<AbstractExplorerFileStore> result =
-                new LinkedList<AbstractExplorerFileStore>();
+    public static List<AbstractExplorerFileStore>
+        getAllContainedWorkflows(final List<? extends AbstractExplorerFileStore> selected) {
+        return getAllContainedObjectsRecursivelyThatComplyingWith(f -> AbstractExplorerFileStore.isWorkflow(f),
+            selected);
+    }
+
+    /**
+     * Returns a new list with components that are contained in the parameter list (either directly or in any sub
+     * directory of the list).
+     *
+     * @param selected the list to return contained components from
+     * @return a new list with components contained (directly or indirectly) in the argument
+     * @since 8.5
+     */
+    public static List<AbstractExplorerFileStore>
+        getAllContainedComponents(final List<? extends AbstractExplorerFileStore> selected) {
+        return getAllContainedObjectsRecursivelyThatComplyingWith(f -> AbstractExplorerFileStore.isComponent(f),
+            selected);
+    }
+
+    private static List<AbstractExplorerFileStore> getAllContainedObjectsRecursivelyThatComplyingWith(
+        final Predicate<AbstractExplorerFileStore> test, final List<? extends AbstractExplorerFileStore> selected) {
+        List<AbstractExplorerFileStore> result = new LinkedList<AbstractExplorerFileStore>();
         for (AbstractExplorerFileStore f : selected) {
-            if (AbstractExplorerFileStore.isWorkflow(f)) {
+            if (test.test(f)) {
                 result.add(f);
             } else if (f.fetchInfo().isDirectory()) {
                 try {
-                    AbstractExplorerFileStore[] children =
-                            f.childStores(EFS.NONE, null);
-                    result.addAll(getAllContainedWorkflows(Arrays.asList(children)));
+                    AbstractExplorerFileStore[] children = f.childStores(EFS.NONE, null);
+                    result.addAll(getAllContainedObjectsRecursivelyThatComplyingWith(test, Arrays.asList(children)));
                 } catch (CoreException e) {
                     // ignore - no workflows contained.
                 }

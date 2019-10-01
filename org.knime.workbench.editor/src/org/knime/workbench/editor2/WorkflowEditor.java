@@ -178,6 +178,7 @@ import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.NodeUIInformationEvent;
 import org.knime.core.node.workflow.NodeUIInformationListener;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
@@ -1105,6 +1106,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             File wfFile;
             AbstractExplorerFileStore wfFileFileStore = null;
             File mountPointRoot = null;
+            boolean isTemplate = false;
             URI uri = ((IURIEditorInput)input).getURI();
             if (input instanceof RemoteWorkflowInput) {
                 m_origRemoteLocation = ((RemoteWorkflowInput)input).getRemoteOriginalLocation();
@@ -1151,6 +1153,9 @@ public class WorkflowEditor extends GraphicalEditor implements
                     LOGGER.warn(
                         "Could not determine mount point root for " + wfFile.getParent() + ": " + ex.getMessage(), ex);
                 }
+                AbstractExplorerFileStore parent = filestore.getParent();
+                isTemplate = AbstractExplorerFileStore.isComponent(parent)
+                    || AbstractExplorerFileStore.isWorkflowTemplate(parent);
             } else {
                 LOGGER.error("Unsupported scheme for workflow URI: " + uri);
                 openErrorDialogAndCloseEditor("Unsupported scheme for workflow URI: " + uri);
@@ -1282,13 +1287,21 @@ public class WorkflowEditor extends GraphicalEditor implements
                     IWorkbench wb = PlatformUI.getWorkbench();
                     IProgressService ps = wb.getProgressService();
                     // this one sets the workflow manager in the editor
-                    LoadWorkflowRunnable loadWorkflowRunnable =
-                        new LoadWorkflowRunnable(this, m_origRemoteLocation != null ? m_origRemoteLocation : uri,
-                            wfFile, mountPointRoot, m_origRemoteLocation != null);
-                    ps.busyCursorWhile(loadWorkflowRunnable);
+                    LoadWorkflowRunnable loadWorkflowRunnable = null;
+                    if (!isTemplate) {
+                        loadWorkflowRunnable =
+                            new LoadWorkflowRunnable(this, m_origRemoteLocation != null ? m_origRemoteLocation : uri,
+                                wfFile, mountPointRoot, m_origRemoteLocation != null);
+                        ps.busyCursorWhile(loadWorkflowRunnable);
+                    } else {
+                        LoadMetaNodeTemplateRunnable loadTemplateRunnable = new LoadMetaNodeTemplateRunnable(this,
+                            m_origRemoteLocation != null ? m_origRemoteLocation : uri);
+                        ps.busyCursorWhile(loadTemplateRunnable);
+                    }
+
                     // check if the editor should be disposed
                     // non-null if set by workflow runnable above
-                    if (m_manager == null) {
+                    if (m_manager == null && loadWorkflowRunnable != null) {
                         if (loadWorkflowRunnable.hasLoadingBeenCanceled()) {
                             String cancelError = loadWorkflowRunnable.getLoadingCanceledMessage();
                             openErrorDialogAndCloseEditor(cancelError);
@@ -1458,7 +1471,12 @@ public class WorkflowEditor extends GraphicalEditor implements
         if (m_parentEditor == null) {
             final String path =
                 m_origRemoteLocation == null ? m_fileResource.getPath() : m_origRemoteLocation.getPath();
-            return prefix + m_manager.getID().toString() + ": " + new Path(path).lastSegment();
+            if (isComponentWorkflow()) {
+                //remove trailing ":0" from id
+                return prefix + m_manager.getID().toString().replace(":0", "") + ": " + new Path(path).lastSegment();
+            } else {
+                return prefix + m_manager.getID().toString() + ": " + new Path(path).lastSegment();
+            }
         } else {
             // we are a metanode editor
             // return id and node name (custom name)
@@ -1784,11 +1802,22 @@ public class WorkflowEditor extends GraphicalEditor implements
         try {
             final File workflowDir = new File(fileResource);
             AbstractSaveRunnable saveRunnable;
-            if (newContext != null) {
-                saveRunnable = new SaveAsRunnable(this, exceptionMessage, monitor, newContext);
+            if (isComponentWorkflow()) {
+                //it's a workflow of an opened component
+                //-> use different save routine
+                if (newContext != null) {
+                    saveRunnable =
+                        new SaveComponentRunnable(this, exceptionMessage, monitor, newContext.getCurrentLocation());
+                } else {
+                    saveRunnable = new SaveComponentRunnable(this, exceptionMessage, monitor, workflowDir);
+                }
             } else {
-                WorkflowSaveHelper saveHelper = new WorkflowSaveHelper(saveWithData, false);
-                saveRunnable = new InplaceSaveRunnable(this, exceptionMessage, saveHelper, monitor, workflowDir);
+                if (newContext != null) {
+                    saveRunnable = new SaveAsRunnable(this, exceptionMessage, monitor, newContext);
+                } else {
+                    WorkflowSaveHelper saveHelper = new WorkflowSaveHelper(saveWithData, false);
+                    saveRunnable = new InplaceSaveRunnable(this, exceptionMessage, saveHelper, monitor, workflowDir);
+                }
             }
 
             IWorkbench wb = PlatformUI.getWorkbench();
@@ -1814,14 +1843,17 @@ public class WorkflowEditor extends GraphicalEditor implements
             getCommandStack().markSaveLocation();
 
         } catch (Exception e) {
-            LOGGER.error("Could not save workflow: " + exceptionMessage, e);
+            boolean isWfm = !isComponentWorkflow();
+            LOGGER.error("Could not save  + " + (isWfm ? "workflow" : "component") + ": " + exceptionMessage, e);
 
             // inform the user
             if (exceptionMessage.length() > 0) {
-                showInfoMessage("Workflow could not be saved ...", exceptionMessage.toString());
+                showInfoMessage((isWfm ? "Workflow" : "Component") + " could not be saved ...",
+                    exceptionMessage.toString());
             }
 
-            throw new OperationCanceledException("Workflow was not saved: " + exceptionMessage.toString());
+            throw new OperationCanceledException(
+                (isWfm ? "Workflow" : "Component") + " was not saved: " + exceptionMessage.toString());
         }
 
         Display.getDefault().asyncExec(new Runnable() {
@@ -1907,7 +1939,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             saveBackToServer();
             updateWorkflowMessages();
         } else {
-            saveTo(m_fileResource, monitor, true, null);
+            saveTo(m_fileResource, monitor, !isComponentWorkflow(), null);
         }
         notifySaveEventListeners();
     }
@@ -2020,14 +2052,19 @@ public class WorkflowEditor extends GraphicalEditor implements
                 LOGGER.warn("Could not determine mount point root for " + newWorkflowDir + ": " + ex.getMessage(), ex);
             }
 
-            WorkflowContext context = getWorkflowManager().get().getContext().createCopy()
-                        .setCurrentLocation(localNewWorkflowDir)
-                        .setMountpointRoot(mountPointRoot)
-                        .setMountpointURI(newWorkflowDir.toURI())
-                        .setTemporaryCopy(false)
-                        .createContext();
+            WorkflowContext.Factory contextFactory;
+            if(getWorkflowManager().get().getContext() != null) {
+                contextFactory = getWorkflowManager().get().getContext().createCopy();
+                contextFactory.setCurrentLocation(localNewWorkflowDir);
+            } else {
+                contextFactory = new WorkflowContext.Factory(localNewWorkflowDir);
+            }
+            contextFactory
+                .setMountpointRoot(mountPointRoot)
+                .setMountpointURI(newWorkflowDir.toURI())
+                .setTemporaryCopy(false);
 
-            saveTo(localNewWorkflowDir.toURI(), new NullProgressMonitor(), true, context);
+            saveTo(localNewWorkflowDir.toURI(), new NullProgressMonitor(), true, contextFactory.createContext());
             setInput(new FileStoreEditorInput(newWorkflowFile));
             if (newWorkflowDir.getParent() != null) {
                 newWorkflowDir.getParent().refresh();
@@ -3358,6 +3395,9 @@ public class WorkflowEditor extends GraphicalEditor implements
                     getViewer().getContents().refresh();
                     break;
                 case WORKFLOW_DIRTY:
+                    //TODO we somehow need to filter out the
+                    //dirty events due to node state changes
+                    //but not due to, e.g., settings changes (which might come with a node state change?)
                     markDirty();
                     break;
                 default:
@@ -3577,7 +3617,17 @@ public class WorkflowEditor extends GraphicalEditor implements
      */
     @Override
     public void stateChanged(final NodeStateEvent state) {
-        markDirty();
+        if (!isComponentWorkflow()) {
+            //in case of component, execution states changes are not saved
+            markDirty();
+        }
+    }
+
+    /**
+     * @return <code>true</code> if the opened workflow is a workflow of a component that is edited directly
+     */
+    private boolean isComponentWorkflow() {
+        return getWorkflowManager().map(wfm -> (wfm.getDirectNCParent() instanceof SubNodeContainer)).orElse(false);
     }
 
     /**
