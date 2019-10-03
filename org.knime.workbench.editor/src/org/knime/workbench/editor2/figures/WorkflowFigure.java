@@ -47,23 +47,38 @@
  */
 package org.knime.workbench.editor2.figures;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.eclipse.draw2d.Figure;
+import org.eclipse.draw2d.FigureListener;
 import org.eclipse.draw2d.FreeformLayeredPane;
 import org.eclipse.draw2d.Graphics;
+import org.eclipse.draw2d.IFigure;
+import org.eclipse.draw2d.Viewport;
 import org.eclipse.draw2d.geometry.Dimension;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.widgets.Display;
+import org.knime.core.node.workflow.WorkflowEvent;
+import org.knime.core.node.workflow.WorkflowListener;
 
 /**
  * The root figure, containing potentially a progress tool tip helper and an image representing the job manager.
  *
  * @author Florian Georg, University of Konstanz
  */
-public class WorkflowFigure extends FreeformLayeredPane {
+public class WorkflowFigure extends FreeformLayeredPane implements ControlListener, FigureListener, WorkflowListener {
     private static final int WATERMARK_TRANSPARENCY = 10;
+    private static final Point SINGLE_NODE_DIMENSION = new Point(70, 80);
+    private static final int BUFFER_NODE_MULTIPLIER = 3;
+    private static final int X_BUFFER = (SINGLE_NODE_DIMENSION.x * BUFFER_NODE_MULTIPLIER);
+    private static final int Y_BUFFER = (SINGLE_NODE_DIMENSION.y * BUFFER_NODE_MULTIPLIER);
+
 
     private ProgressToolTipHelper m_progressToolTipHelper;
 
@@ -78,6 +93,8 @@ public class WorkflowFigure extends FreeformLayeredPane {
     private final TentStakeFigure m_northTentStakeFigure;
     private final TentStakeFigure m_southTentStakeFigure;
     private final TentStakeFigure m_eastTentStakeFigure;
+
+    private Viewport m_viewport;
 
     /**
      * New workflow root figure.
@@ -104,11 +121,32 @@ public class WorkflowFigure extends FreeformLayeredPane {
         add(m_eastTentStakeFigure);
 
         if (backgroundWatermark != null) {
-            ImageData imgData = backgroundWatermark.getImageData();
+            final ImageData imgData = backgroundWatermark.getImageData();
             imgData.alpha = WATERMARK_TRANSPARENCY;
             m_backgroundWatermark = new Image(Display.getDefault(), imgData);
             m_backgroundWatermarkImageWidth = backgroundWatermark.getBounds().width;
             m_backgroundWatermarkImageHeight = backgroundWatermark.getBounds().height;
+        }
+    }
+
+    /**
+     * @param viewport the viewport in which we sit
+     */
+    public void setViewport(final Viewport viewport) {
+        m_viewport = viewport;
+
+        ensureExpandedCanvas();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void add(final IFigure child, final Object constraint, final int index) {
+        super.add(child, constraint, index);
+
+        if ((child instanceof WorkflowAnnotationFigure) || (child instanceof NodeContainerFigure)) {
+            child.addFigureListener(this);
         }
     }
 
@@ -139,17 +177,17 @@ public class WorkflowFigure extends FreeformLayeredPane {
 
     private void paintWatermarkWallpaper(final Graphics graphics) {
         if (m_backgroundWatermark != null) {
-            Rectangle b = getBounds();
-            int fromX = b.x / m_backgroundWatermarkImageWidth;
-            int fromY = b.y / m_backgroundWatermarkImageHeight;
-            int toX = fromX + b.width / m_backgroundWatermarkImageWidth;
-            int toY = fromY + b.height / m_backgroundWatermarkImageHeight;
+            final Rectangle b = getBounds();
+            final int fromX = b.x / m_backgroundWatermarkImageWidth;
+            final int fromY = b.y / m_backgroundWatermarkImageHeight;
+            final int toX = fromX + (b.width / m_backgroundWatermarkImageWidth);
+            final int toY = fromY + (b.height / m_backgroundWatermarkImageHeight);
             for (int y = fromY; y <= toY; y++) {
-                for (int x = fromX; x <= toX + y % 2; x++) {
+                for (int x = fromX; x <= (toX + (y % 2)); x++) {
                     //don't put the images in a grid but displace them by half the image-width in every row
-                    int x_offset = y % 2 * -(m_backgroundWatermarkImageWidth / 2);
-                    graphics.drawImage(m_backgroundWatermark, x * m_backgroundWatermarkImageWidth + x_offset,
-                        y * m_backgroundWatermarkImageHeight);
+                    final int x_offset = (y % 2) * -(m_backgroundWatermarkImageWidth / 2);
+                    graphics.drawImage(m_backgroundWatermark, (x * m_backgroundWatermarkImageWidth + x_offset),
+                        (y * m_backgroundWatermarkImageHeight));
                 }
             }
         }
@@ -215,8 +253,7 @@ public class WorkflowFigure extends FreeformLayeredPane {
         //      so therefore do not know whether this width request would be satisfied by a prior stake placement
         //      (which we can judge in the top scenario, because we always have the negative space.) So we treat
         //      a call to this method as a request for an additional pixelWidth increase to the right.
-        final Rectangle canvasBounds = getBounds();
-        m_eastTentStakeFigure.setLocation(new Point((canvasBounds.width + pixelWidth), canvasBounds.height));
+        augmentRightWhitespaceBuffer(pixelWidth, calculateStakelessBoundingRectangle(false));
     }
 
     /**
@@ -238,8 +275,7 @@ public class WorkflowFigure extends FreeformLayeredPane {
         //      so therefore do not know whether this height request would be satisfied by a prior stake placement
         //      (which we can judge in the top scenario, because we always have the negative space.) So we treat
         //      a call to this method as a request for an additional pixelHeight increase to the bottom.
-        final Rectangle canvasBounds = getBounds();
-        m_southTentStakeFigure.setLocation(new Point(canvasBounds.width, (canvasBounds.height + pixelHeight)));
+        augmentBottomWhitespaceBuffer(pixelHeight, calculateStakelessBoundingRectangle(false));
     }
 
     /**
@@ -272,6 +308,158 @@ public class WorkflowFigure extends FreeformLayeredPane {
 
         return ((location.x != 0) || (location.y != 0));
     }
+
+    // pixelWidth should be non-zero; if zero - use placeTentStakeToAllowForRightWhitespaceBuffer(int)
+    private void augmentRightWhitespaceBuffer(final int pixelWidth, final Rectangle canvasBounds) {
+        m_eastTentStakeFigure.setLocation(new Point((canvasBounds.width + pixelWidth), canvasBounds.height));
+    }
+
+    // pixelHeight should be non-zero; if zero - use placeTentStakeToAllowForBottomWhitespaceBuffer(int)
+    private void augmentBottomWhitespaceBuffer(final int pixelHeight, final Rectangle canvasBounds) {
+        m_southTentStakeFigure.setLocation(new Point(canvasBounds.width, (canvasBounds.height + pixelHeight)));
+    }
+
+    // This should be called on the SWT thread.
+    private void ensureExpandedCanvas() {
+        if (getChildren().size() == 3) {
+            // There are only tent stakes in the canvas
+            return;
+        }
+
+        if (m_viewport == null) {
+            return;
+        }
+
+        final Rectangle viewportBounds = m_viewport.getClientArea();
+        final Rectangle canvasBounds = calculateStakelessBoundingRectangle(false);
+
+        final int xDelta = viewportBounds.width - canvasBounds.width;
+        final int xAugmentation;
+        if (xDelta > 0) {
+            xAugmentation = xDelta + X_BUFFER;
+        } else {
+            xAugmentation = X_BUFFER;
+        }
+
+        final int yDelta = viewportBounds.height - canvasBounds.height;
+        final int yAugmentation;
+        if (yDelta > 0) {
+            yAugmentation = yDelta + Y_BUFFER;
+        } else {
+            yAugmentation = Y_BUFFER;
+        }
+
+        augmentRightWhitespaceBuffer(xAugmentation, canvasBounds);
+        augmentBottomWhitespaceBuffer(yAugmentation, canvasBounds);
+    }
+
+    // This returns the minimum bounds of the workflow canvas without tent stakes
+    private Rectangle calculateStakelessBoundingRectangle(final boolean minimumBounding) {
+        final List<?> children = getChildren();
+        final int count = children.size();
+
+        if (count < 4) {
+            return new Rectangle(0, 0, 0, 0);
+        }
+
+        final int[] leftCandidates = new int[count];
+        final int[] rightCandidates = new int[count];
+        final int[] topCandidates = new int[count];
+        final int[] bottomCandidates = new int[count];
+        int index = 0;
+
+        for (Object child : children) {
+            final IFigure f = (IFigure)child;
+
+            if ((f instanceof NodeContainerFigure) || (f instanceof WorkflowAnnotationFigure)) {
+                final Rectangle childBounds = f.getBounds();
+
+                if (minimumBounding) {
+                    leftCandidates[index] = childBounds.x;
+                    topCandidates[index] = childBounds.y;
+                }
+                rightCandidates[index] = childBounds.x + childBounds.width;
+                bottomCandidates[index] = childBounds.y + childBounds.height;
+
+                index++;
+            }
+        }
+
+        if (index == 0) {
+            return new Rectangle(0, 0, 0, 0);
+        }
+
+        if (index < count) {
+            // Some of the children were NodeAnnotationFigure instances; load up the null populated indices of the
+            //      arrays for sorting with values that won't affect the min-max conclusions.
+            for (int i = index; i < count; i++) {
+                if (minimumBounding) {
+                    leftCandidates[i] = leftCandidates[i - 1];
+                    topCandidates[i] = topCandidates[i - 1];
+                }
+                rightCandidates[i] = rightCandidates[i - 1];
+                bottomCandidates[i] = bottomCandidates[i - 1];
+            }
+        }
+
+        if (minimumBounding) {
+            Arrays.sort(leftCandidates);
+            Arrays.sort(topCandidates);
+        }
+        Arrays.sort(rightCandidates);
+        Arrays.sort(bottomCandidates);
+
+        final int x0 = minimumBounding ? leftCandidates[0] : 0;
+        final int y0 = minimumBounding ? topCandidates[0] : 0;
+        final int width = (rightCandidates[count - 1] - x0);
+        final int height = (bottomCandidates[count - 1] - y0);
+
+        return new Rectangle(x0, y0, width, height);
+    }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void controlMoved(final ControlEvent ce) { }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void controlResized(final ControlEvent ce) {
+        // Since the viewport size has changed, so should the locations of the tent stakes.
+        ensureExpandedCanvas();
+    }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void figureMoved(final IFigure source) {
+        ensureExpandedCanvas();
+    }
+
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void workflowChanged(final WorkflowEvent we) {
+        switch (we.getType()) {
+            case NODE_REMOVED:
+            case NODE_ADDED:
+                Display.getDefault().asyncExec(() -> {
+                    ensureExpandedCanvas();
+                });
+
+                break;
+            default:
+        }
+    }
+
 
     /**
      * This figure is an invisible 1 x 1 figure which represent the stakes with which we 'stretch the canvas with by

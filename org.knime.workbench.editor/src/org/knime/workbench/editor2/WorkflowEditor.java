@@ -990,8 +990,14 @@ public class WorkflowEditor extends GraphicalEditor implements
         // to be set by then
         loadProperties();
 
-        // We already have the model - set it into the viewer
-        getGraphicalViewer().setContents(m_manager);
+        // We already have the model - set it into the viewer; this action instantiates our WorkflowFigure
+        viewer.setContents(m_manager);
+        final WorkflowFigure workflowFigure = getWorkflowFigure();
+        final FigureCanvas canvas = getFigureCanvas();
+        workflowFigure.setViewport(canvas.getViewport());
+        // TODO don't we want the viewport and not the figure canvas for 'control listening'?
+        canvas.addControlListener(workflowFigure);
+
 
         // add Help context
         WorkbenchHelpSystem.getInstance().setHelp(getGraphicalViewer().getControl(),
@@ -1024,8 +1030,9 @@ public class WorkflowEditor extends GraphicalEditor implements
         handlerService.activateHandler(ZoomOutAlternateIncrementAction.KEY_COMMAND_ID, m_alternateZoomOutAction);
 
         m_nodeSupplantDragListener = new NodeSupplantDragListener(this);
-        if (m_manager != null) {
+        if (m_manager != null) { // should "never" be null here...
             m_manager.addListener(m_nodeSupplantDragListener);
+            m_manager.addListener(workflowFigure);
         }
 
         m_annotationEditExitEnabler = new AnnotationEditExitEnabler(this);
@@ -1413,9 +1420,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         } else {
             image = null;
         }
-        final WorkflowFigure workflowFigure =
-            ((WorkflowRootEditPart)getViewer().getRootEditPart().getContents()).getFigure();
-        workflowFigure.setJobManagerFigure(image);
+        getWorkflowFigure().setJobManagerFigure(image);
     }
 
     private void updatePartName() {
@@ -2720,6 +2725,10 @@ public class WorkflowEditor extends GraphicalEditor implements
         return null;
     }
 
+    private WorkflowFigure getWorkflowFigure() {
+        return ((WorkflowRootEditPart)getViewer().getRootEditPart().getContents()).getFigure();
+    }
+
     /**
      * @return a location in the middle of the visible part of the editor. These
      *         are absolute coordinates.
@@ -3431,6 +3440,9 @@ public class WorkflowEditor extends GraphicalEditor implements
             if (m_nodeSupplantDragListener != null) {
                 m_manager.removeListener(m_nodeSupplantDragListener);
             }
+            if (getViewer() != null) {
+                m_manager.removeListener(getWorkflowFigure());
+            }
             m_manager.removeNodePropertyChangedListener(this);
             m_manager.removeNodeStateChangeListener(this);
             m_manager.removeUIInformationListener(this);
@@ -3440,6 +3452,9 @@ public class WorkflowEditor extends GraphicalEditor implements
             m_manager.addListener(this);
             if (m_nodeSupplantDragListener != null) {
                 m_manager.addListener(m_nodeSupplantDragListener);
+            }
+            if (getViewer() != null) {
+                m_manager.addListener(getWorkflowFigure());
             }
             m_manager.addNodePropertyChangedListener(this);
             m_manager.addNodeStateChangeListener(this);

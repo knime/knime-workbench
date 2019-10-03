@@ -343,16 +343,16 @@ public class WorkflowRootEditPart extends AbstractWorkflowEditPart implements
      */
     @Override
     protected WorkflowFigure createFigure() {
-        WorkflowFigure backgroundFigure;
+        final WorkflowFigure backgroundFigure;
         if (isWorkflowOnServer()) {
-            Image watermark =
+            final Image watermark =
                 ImageRepository.getUnscaledImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/workflow/background_server.png");
             backgroundFigure = new WorkflowFigure(watermark);
         } else {
             backgroundFigure = new WorkflowFigure();
         }
 
-        LayoutManager l = new WorkflowLayout();
+        final LayoutManager l = new WorkflowLayout();
         backgroundFigure.setLayoutManager(l);
 
         return backgroundFigure;
