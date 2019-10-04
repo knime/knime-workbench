@@ -172,9 +172,10 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             pm.subTask("Finished.");
             pm.done();
 
-            final IStatus status =
-                    createStatus(m_result,
-                            !m_result.getGUIMustReportDataLoadErrors());
+            // components are always stored with node stati IDLE and without data
+            // -> don't report data load errors neither node state changes if component is loaded as project
+            final IStatus status = createStatus(m_result,
+               !m_result.getGUIMustReportDataLoadErrors() || m_editor != null, m_editor != null);
             final String message;
             switch (status.getSeverity()) {
                 case IStatus.OK:
@@ -186,19 +187,14 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 default:
                     message = "Errors during load";
             }
-            if (!status.isOK()) {
-                LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);
-            }
             if(m_editor != null) {
                 NodeContainerTemplate template = m_result.getLoadedInstance();
                 if (template instanceof SubNodeContainer) {
                     WorkflowManager wm = ((SubNodeContainer)template).getWorkflowManager();
                     m_editor.setWorkflowManager(wm);
-                    if (wm.isDirty()) {
-                        m_editor.markDirty();
-                    }
                 }
             }
+            LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);
         } catch (Exception ex) {
             if(m_editor != null) {
                 m_editor.setWorkflowManager(null);

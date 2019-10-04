@@ -61,6 +61,7 @@ import org.knime.core.node.workflow.NodeProgress;
 import org.knime.core.node.workflow.NodeProgressEvent;
 import org.knime.core.node.workflow.NodeProgressListener;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry;
+import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryCause;
 import org.knime.workbench.KNIMEEditorPlugin;
 
 /**
@@ -184,9 +185,10 @@ abstract class PersistWorkflowRunnable implements IRunnableWithProgress {
      *
      * @param loadResult Load result.
      * @param treatDataLoadErrorsAsOK data loading is OK (exported with no data)
+     * @param treatStateChangeWarningsAsOK warning about node state changes on load are OK
      * @return The IStatus object to be shown. */
-    protected IStatus createStatus(final LoadResultEntry loadResult,
-            final boolean treatDataLoadErrorsAsOK) {
+    protected IStatus createStatus(final LoadResultEntry loadResult, final boolean treatDataLoadErrorsAsOK,
+        final boolean treatStateChangeWarningsAsOK) {
         LoadResultEntry[] children = loadResult.getChildren();
         if (children.length == 0) {
             int severity;
@@ -199,7 +201,12 @@ abstract class PersistWorkflowRunnable implements IRunnableWithProgress {
                 severity = IStatus.ERROR;
                 break;
             case Warning:
-                severity = IStatus.WARNING;
+                if (treatStateChangeWarningsAsOK && loadResult.getCause().isPresent()
+                    && loadResult.getCause().get().equals(LoadResultEntryCause.NodeStateChanged)) {
+                    severity = IStatus.OK;
+                } else {
+                    severity = IStatus.WARNING;
+                }
                 break;
             default:
                 severity = IStatus.OK;
@@ -209,7 +216,7 @@ abstract class PersistWorkflowRunnable implements IRunnableWithProgress {
         }
         IStatus[] subStatus = new IStatus[children.length];
         for (int i = 0; i < children.length; i++) {
-            subStatus[i] = createStatus(children[i], treatDataLoadErrorsAsOK);
+            subStatus[i] = createStatus(children[i], treatDataLoadErrorsAsOK, treatStateChangeWarningsAsOK);
         }
         return createMultiStatus(loadResult.getMessage(), subStatus);
     }

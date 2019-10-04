@@ -138,7 +138,7 @@ public class UpdateMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             }
             // metanodes don't have data
             // data load errors are unexpected but OK
-            IStatus status = createStatus(updateMetaNodeLinkResult, true);
+            IStatus status = createStatus(updateMetaNodeLinkResult, true, false);
             subExec.setProgress(1.0);
             switch (status.getSeverity()) {
             case IStatus.OK:

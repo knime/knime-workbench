@@ -185,7 +185,7 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                 m_editor.markDirty();
             }
 
-            final IStatus status = createStatus(result, !result.getGUIMustReportDataLoadErrors());
+            final IStatus status = createStatus(result, !result.getGUIMustReportDataLoadErrors(), false);
             String message;
             switch (status.getSeverity()) {
                 case IStatus.OK:
