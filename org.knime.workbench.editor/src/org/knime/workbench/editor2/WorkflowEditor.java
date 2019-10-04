@@ -1876,7 +1876,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         // check if the workflow manager is in execution
         // this happens if the user pressed "Yes" on save confirmation dialog
         // or simply saves (Ctrl+S)
-        if (wasInProgress) {
+        if (wasInProgress && !isComponentWorkflow()) {
             markDirty();
             final Pointer<Boolean> abortPointer = new Pointer<Boolean>();
             abortPointer.set(Boolean.FALSE);

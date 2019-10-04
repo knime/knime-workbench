@@ -114,6 +114,7 @@ import org.knime.core.util.VMFileLocker;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.dialogs.SaveAsValidator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
@@ -915,9 +916,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         AbstractExplorerFileStore templateLoc = target.getChild(uniqueName);
         final AbstractExplorerFileInfo destInfo = templateLoc.fetchInfo();
         final boolean doesTargetExist = destInfo.exists();
-        // don't allow to overwrite existing workflow groups with a template
+
+        // don't allow to overwrite if
+        // * existing workflow groups with same name
+        // * there is component with the same name whose component editor is opened
         final boolean overwriteOK =
-            doesTargetExist && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate() || destInfo.isComponent());
+            doesTargetExist && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate() || destInfo.isComponent())
+                && (!destInfo.isComponent() || !isAnyEditorToWorkflowOpen(templateLoc));
+
         boolean isOverwrite = false;
 
         OverwriteAndMergeInfo info = null;
@@ -1037,6 +1043,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         }
         target.refresh();
         return true;
+    }
+
+    private static boolean isAnyEditorToWorkflowOpen(final AbstractExplorerFileStore fileStore) {
+        try {
+            return SaveAsValidator.isAnyEditorToWorkflowOpen(fileStore.toLocalFile().toURI());
+        } catch (CoreException e) {
+            return false;
+        }
     }
 
     /**
