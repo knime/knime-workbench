@@ -52,6 +52,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
+import java.util.List;
 
 import javax.swing.UIManager;
 
@@ -59,7 +60,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.ExecutionMonitor;
-import org.knime.core.node.workflow.NodeContainerTemplate;
+import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.TemplateNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -110,7 +111,8 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
     }
 
     /**
-     * Used if a template is to be loaded into the workflow editor as a project (i.e. not embedded in another workflow).
+     * Used if a template/component is to be loaded into the workflow editor as a project (i.e. not embedded in another
+     * workflow).
      *
      * @param editor the editor to open the component with
      * @param templateURI URI to the workflow directory or file from which the template should be loaded
@@ -134,7 +136,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
             File parentFile = ResolverUtil
                 .resolveURItoLocalOrTempFile(m_templateURI, pm);
-            if (m_editor != null && parentFile.getName().equals(WorkflowPersistor.WORKFLOW_FILE)) {
+            if (isComponentProject() && parentFile.getName().equals(WorkflowPersistor.WORKFLOW_FILE)) {
                 //if components are opened as a project in the workflow editor
             	//the URI points to the 'workflow.knime'-file instead of the actual component directory
                 //-> this fixes it
@@ -172,10 +174,10 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             pm.subTask("Finished.");
             pm.done();
 
-            // components are always stored with node stati IDLE and without data
+            // components are always stored without data
             // -> don't report data load errors neither node state changes if component is loaded as project
             final IStatus status = createStatus(m_result,
-               !m_result.getGUIMustReportDataLoadErrors() || m_editor != null, m_editor != null);
+                !m_result.getGUIMustReportDataLoadErrors() || isComponentProject(), isComponentProject());
             final String message;
             switch (status.getSeverity()) {
                 case IStatus.OK:
@@ -187,16 +189,29 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 default:
                     message = "Errors during load";
             }
-            if(m_editor != null) {
-                NodeContainerTemplate template = m_result.getLoadedInstance();
-                if (template instanceof SubNodeContainer) {
-                    WorkflowManager wm = ((SubNodeContainer)template).getWorkflowManager();
-                    m_editor.setWorkflowManager(wm);
+            if (isComponentProject() && m_result.getLoadedInstance() instanceof SubNodeContainer) {
+                WorkflowManager wm = ((SubNodeContainer)m_result.getLoadedInstance()).getWorkflowManager();
+                m_editor.setWorkflowManager(wm);
+                if (!status.isOK()) {
+                    LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);
+                }
+                final List<NodeID> linkedMNs = wm.getLinkedMetaNodes(true);
+                if (!linkedMNs.isEmpty()) {
+                    final WorkflowEditor editor = m_editor;
+                    m_editor.addAfterOpenRunnable(new Runnable() {
+                        @Override
+                        public void run() {
+                            LoadWorkflowRunnable.postLoadCheckForMetaNodeUpdates(editor, wm, linkedMNs);
+                        }
+                    });
+                }
+            } else {
+                if (!status.isOK()) {
+                    LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);
                 }
             }
-            LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);
         } catch (Exception ex) {
-            if(m_editor != null) {
+            if(isComponentProject()) {
                 m_editor.setWorkflowManager(null);
             }
             throw new RuntimeException(ex);
@@ -205,6 +220,10 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             // editor!!! Otherwise the memory cannot be freed later
             m_parentWFM = null;
         }
+    }
+
+    private boolean isComponentProject() {
+        return m_editor != null;
     }
 
     /** @return the result */
