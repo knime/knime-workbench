@@ -227,6 +227,11 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
                 LOGGER.warn(error, e);
                 MessageDialog.openError(shell, "Problem saving component with example input data", error);
             }
+            if (exampleInputData.get() == null) {
+                MessageDialog.openError(shell, "Problem saving component with example input data",
+                    "No data available at the component's input ports most likely because the exeuction of upstream nodes failed.");
+                return;
+            }
         }
         contentProvider.saveSubNodeTemplate(snc, target, exampleInputData.get());
     }
