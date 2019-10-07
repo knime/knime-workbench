@@ -50,6 +50,7 @@ package org.knime.workbench.editor2.commands;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Objects;
 
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -59,8 +60,11 @@ import org.eclipse.ui.progress.IProgressService;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.NodeContainerParent;
 import org.knime.core.node.workflow.NodeUIInformation;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.MetaNodeLinkUpdateResult;
@@ -182,6 +186,22 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
                     .setSnapToGrid(m_snapToGrid)
                     .setIsDropLocation(true).build();
             m_container.setUIInformation(info);
+
+            if (m_container instanceof SubNodeContainer) {
+                SubNodeContainer projectComponent = getProjectComponent(getHostWFM());
+                if (projectComponent != null) {
+                    // unlink component if it's added to itself
+                    MetaNodeTemplateInformation projectTemplateInformation = projectComponent.getTemplateInformation();
+                    MetaNodeTemplateInformation templateInformation =
+                        ((SubNodeContainer)m_container).getTemplateInformation();
+                    if (Objects.equals(templateInformation.getSourceURI(), projectTemplateInformation.getSourceURI())) {
+                        MessageDialog.openWarning(SWTUtilities.getActiveShell(), "Disconnect Link",
+                            "Components can only be added to themselves without linking. Will be disconnected.");
+                        m_container.getParent().setTemplateInformation(m_container.getID(),
+                            MetaNodeTemplateInformation.NONE);
+                    }
+                }
+            }
         } catch (Throwable t) {
             Throwable cause = t;
             while ((cause.getCause() != null) && (cause.getCause() != cause)) {
@@ -212,7 +232,20 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
         }
     }
 
-
+    private SubNodeContainer getProjectComponent(final WorkflowManager wfm) {
+        if (wfm.isProject()) {
+            return null;
+        } else if (wfm.isComponentProjectWFM()) {
+            return (SubNodeContainer)wfm.getDirectNCParent();
+        } else {
+            NodeContainerParent directNCParent = wfm.getDirectNCParent();
+            if (directNCParent instanceof WorkflowManager) {
+                return getProjectComponent((WorkflowManager)directNCParent);
+            } else {
+                return getProjectComponent((WorkflowManager)directNCParent.getDirectNCParent());
+            }
+        }
+    }
 
     /** {@inheritDoc} */
     @Override

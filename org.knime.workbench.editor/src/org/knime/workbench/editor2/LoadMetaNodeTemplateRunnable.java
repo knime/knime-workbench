@@ -51,6 +51,7 @@ package org.knime.workbench.editor2;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.List;
 
@@ -119,7 +120,20 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
      */
     public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI) {
         m_parentWFM = WorkflowManager.ROOT;
-        m_templateURI = templateURI;
+
+        //strip "workflow.file" from the URI which is append if
+        //local component project is opened in workflow editor
+        if (templateURI.toString().endsWith(WorkflowPersistor.WORKFLOW_FILE)) {
+            String s = templateURI.toString();
+            try {
+                m_templateURI = new URI(s.substring(0, s.length() - WorkflowPersistor.WORKFLOW_FILE.length() - 1));
+            } catch (URISyntaxException e) {
+                //should never happen
+                throw new RuntimeException(e);
+            }
+        } else {
+            m_templateURI = templateURI;
+        }
         m_editor = editor;
     }
 
@@ -136,12 +150,6 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
             File parentFile = ResolverUtil
                 .resolveURItoLocalOrTempFile(m_templateURI, pm);
-            if (isComponentProject() && parentFile.getName().equals(WorkflowPersistor.WORKFLOW_FILE)) {
-                //if components are opened as a project in the workflow editor
-            	//the URI points to the 'workflow.knime'-file instead of the actual component directory
-                //-> this fixes it
-                parentFile = parentFile.getParentFile();
-            }
             if (parentFile.isFile()) {
                 //unzip
                 File tempDir = FileUtil.createTempDir("template-workflow");
