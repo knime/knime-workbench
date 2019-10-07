@@ -272,7 +272,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 messageBuilder.append("one " + nodeSLow + ".");
             } else {
                 messageBuilder.append(updateList.size());
-                messageBuilder.append(" ").append(nodeSLow).append(".");
+                messageBuilder.append(" ").append(nodeSLow).append("s.");
             }
             messageBuilder.append("\n\n");
             if (nodesToResetCount > 0) {
