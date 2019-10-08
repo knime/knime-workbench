@@ -178,7 +178,6 @@ import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.NodeUIInformationEvent;
 import org.knime.core.node.workflow.NodeUIInformationListener;
-import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
@@ -1311,6 +1310,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                         }
                     }
                     ProjectWorkflowMap.putWorkflowUI(m_fileResource, m_manager);
+                    setupChangesTracker();
                 }
                 if (oldManager == null) { // not null if via doSaveAs
                     // in any case register as client (also if the workflow was already loaded by another client
@@ -1397,6 +1397,16 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     }
 
+    /* Only called on project or component project wfms */
+    private void setupChangesTracker() {
+        if(getWorkflowManager().isPresent()) {
+            WorkflowManager wfm = getWorkflowManager().get();
+            if (wfm.isComponentProjectWFM()) {
+                wfm.getProjectComponent().initChangesTracker();
+            }
+        }
+    }
+
     /** Opens dialog to ask user for action when auto-save copy is found. Return values:
      * <ul>
      * <li>0: Open Copy</li>
@@ -1471,7 +1481,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         if (m_parentEditor == null) {
             final String path =
                 m_origRemoteLocation == null ? m_fileResource.getPath() : m_origRemoteLocation.getPath();
-            if (isComponentWorkflow()) {
+            if (isComponentProjectWFM()) {
                 //remove trailing ":0" from id
                 return prefix + m_manager.getID().toString().replace(":0", "") + ": " + new Path(path).lastSegment();
             } else {
@@ -1802,7 +1812,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         try {
             final File workflowDir = new File(fileResource);
             AbstractSaveRunnable saveRunnable;
-            if (isComponentWorkflow()) {
+            if (isComponentProjectWFM()) {
                 //it's a workflow of an opened component
                 //-> use different save routine
                 if (newContext != null) {
@@ -1843,7 +1853,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             getCommandStack().markSaveLocation();
 
         } catch (Exception e) {
-            boolean isWfm = !isComponentWorkflow();
+            boolean isWfm = !isComponentProjectWFM();
             LOGGER.error("Could not save  + " + (isWfm ? "workflow" : "component") + ": " + exceptionMessage, e);
 
             // inform the user
@@ -1876,7 +1886,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         // check if the workflow manager is in execution
         // this happens if the user pressed "Yes" on save confirmation dialog
         // or simply saves (Ctrl+S)
-        if (wasInProgress && !isComponentWorkflow()) {
+        if (wasInProgress && !isComponentProjectWFM()) {
             markDirty();
             final Pointer<Boolean> abortPointer = new Pointer<Boolean>();
             abortPointer.set(Boolean.FALSE);
@@ -1939,7 +1949,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             saveBackToServer();
             updateWorkflowMessages();
         } else {
-            saveTo(m_fileResource, monitor, !isComponentWorkflow(), null);
+            saveTo(m_fileResource, monitor, !isComponentProjectWFM(), null);
         }
         notifySaveEventListeners();
     }
@@ -3395,9 +3405,15 @@ public class WorkflowEditor extends GraphicalEditor implements
                     getViewer().getContents().refresh();
                     break;
                 case WORKFLOW_DIRTY:
-                    //TODO we somehow need to filter out the
-                    //dirty events due to node state changes
-                    //but not due to, e.g., settings changes (which might come with a node state change?)
+                case NODE_SETTINGS_CHANGED:
+                    if(isComponentProjectWFM()) {
+                        //filter out the dirty events due to node state changes
+                        //because component projects are saved without node states
+                        if (getWorkflowManager().get().getProjectComponent().getTrackedChanges()
+                            .map(tc -> tc.hasNodeStateChanges() && !tc.hasOtherChanges()).orElse(false)) {
+                            break;
+                        }
+                    }
                     markDirty();
                     break;
                 default:
@@ -3617,17 +3633,18 @@ public class WorkflowEditor extends GraphicalEditor implements
      */
     @Override
     public void stateChanged(final NodeStateEvent state) {
-        if (!isComponentWorkflow()) {
+        if (!isComponentProjectWFM()) {
             //in case of component, execution states changes are not saved
             markDirty();
         }
     }
 
     /**
-     * @return <code>true</code> if the opened workflow is a workflow of a component that is edited directly
+     * @return <code>true</code> if the opened workflow is a workflow of a component that is edited directly (i.e. a
+     *         components project's workflow)
      */
-    private boolean isComponentWorkflow() {
-        return getWorkflowManager().map(wfm -> (wfm.getDirectNCParent() instanceof SubNodeContainer)).orElse(false);
+    private boolean isComponentProjectWFM() {
+        return getWorkflowManager().map(wfm -> wfm.isComponentProjectWFM()).orElse(false);
     }
 
     /**

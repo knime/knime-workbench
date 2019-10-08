@@ -62,7 +62,6 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.NodeContainer;
-import org.knime.core.node.workflow.NodeContainerParent;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
@@ -188,7 +187,7 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
             m_container.setUIInformation(info);
 
             if (m_container instanceof SubNodeContainer) {
-                SubNodeContainer projectComponent = getProjectComponent(getHostWFM());
+                SubNodeContainer projectComponent = getHostWFM().getProjectComponent();
                 if (projectComponent != null) {
                     // unlink component if it's added to itself
                     MetaNodeTemplateInformation projectTemplateInformation = projectComponent.getTemplateInformation();
@@ -228,21 +227,6 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
                     cause.getClass().getSimpleName(), cause.getMessage()), cause);
                 error += ": " + cause.getMessage();
                 MessageDialog.openError(SWTUtilities.getActiveShell(), "Node cannot be created.", error);
-            }
-        }
-    }
-
-    private SubNodeContainer getProjectComponent(final WorkflowManager wfm) {
-        if (wfm.isProject()) {
-            return null;
-        } else if (wfm.isComponentProjectWFM()) {
-            return (SubNodeContainer)wfm.getDirectNCParent();
-        } else {
-            NodeContainerParent directNCParent = wfm.getDirectNCParent();
-            if (directNCParent instanceof WorkflowManager) {
-                return getProjectComponent((WorkflowManager)directNCParent);
-            } else {
-                return getProjectComponent((WorkflowManager)directNCParent.getDirectNCParent());
             }
         }
     }
