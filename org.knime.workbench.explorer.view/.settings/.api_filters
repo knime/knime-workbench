@@ -23,19 +23,11 @@
             </message_arguments>
         </filter>
     </resource>
-    <resource path="src/org/knime/workbench/explorer/localworkspace/LocalWorkspaceFileStore.java" type="org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore">
-        <filter id="640712815">
+    <resource path="src/org/knime/workbench/explorer/filesystem/AbstractExplorerFileStore.java" type="org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore">
+        <filter comment="method recently introduced and removed again" id="338792546">
             <message_arguments>
-                <message_argument value="TemplateInformation"/>
-                <message_argument value="LocalWorkspaceFileStore"/>
-                <message_argument value="getType()"/>
-            </message_arguments>
-        </filter>
-        <filter id="640712815">
-            <message_arguments>
-                <message_argument value="TemplateMetadata"/>
-                <message_argument value="LocalWorkspaceFileStore"/>
-                <message_argument value="getTemplateInformation()"/>
+                <message_argument value="org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore"/>
+                <message_argument value="fetchMetaInfo()"/>
             </message_arguments>
         </filter>
     </resource>
