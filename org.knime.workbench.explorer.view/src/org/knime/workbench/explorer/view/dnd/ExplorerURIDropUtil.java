@@ -115,7 +115,10 @@ public class ExplorerURIDropUtil {
             return false;
         }
         if (uri != null && uri.startsWith("http")) {
-            URI encodedURI = createEncodedURI(uri);
+            URI encodedURI = createEncodedURI(uri).orElse(null);
+            if (encodedURI == null) {
+                return false;
+            }
 
             //is there a URIImporter for the given URI?
             Optional<URIImporter> uriImport = URIImporterFinder.getInstance().findURIImporterFor(encodedURI);
@@ -158,7 +161,10 @@ public class ExplorerURIDropUtil {
      */
     public static boolean performDrop(final String uri, final ExplorerView view,
         final AbstractExplorerFileStore target) {
-        URI knimeURI = createEncodedURI(uri.split("\n")[0]);
+        URI knimeURI = createEncodedURI(uri.split("\n")[0]).orElse(null);
+        if (knimeURI == null) {
+            return false;
+        }
         try {
             AtomicReference<File> file = new AtomicReference<File>();
             AtomicReference<File> tmpDir = new AtomicReference<File>();

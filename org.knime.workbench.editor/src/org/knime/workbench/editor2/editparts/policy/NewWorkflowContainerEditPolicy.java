@@ -185,7 +185,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
     private Command handleURLDrop(final WorkflowManagerUI managerUI, final Optional<WorkflowManager> manager, final URL url,
         final CreateDropRequest cdr) {
         URI uri;
-        if ((uri = createEncodedURI(url)) != null) {
+        if ((uri = createEncodedURI(url).orElse(null)) != null) {
             Optional<EntityImport> entityImport = URIImporterFinder.getInstance().createEntityImportFor(uri);
             if (entityImport.isPresent()) {
                 if (entityImport.get() instanceof RepoObjectImport) {
