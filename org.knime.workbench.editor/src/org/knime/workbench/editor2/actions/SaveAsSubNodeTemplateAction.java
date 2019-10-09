@@ -297,7 +297,8 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
             });
             Label hint = new Label(parent, SWT.NONE);
             hint.setText("Including input data in a component facilitates their direct editing later on.\n"
-                + "Please note that upstream nodes need to be executed (or will be executed on save)\nif input data is to be included.");
+                + "Please note that upstream nodes need to be executed (or will be executed on save)\nif input data is to be included. "
+                + "It is advised to keep the input data as small as possible.");
         }
     }
 }
