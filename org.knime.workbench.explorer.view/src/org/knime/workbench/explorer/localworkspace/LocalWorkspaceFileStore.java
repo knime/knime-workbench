@@ -51,15 +51,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.Optional;
-
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPathExpressionException;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -71,22 +65,12 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
-import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.workflow.MetaNodeTemplateInformation;
-import org.knime.core.node.workflow.MetaNodeTemplateInformation.TemplateType;
-import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.PathUtils;
-import org.knime.core.util.workflowalizer.TemplateMetadata;
-import org.knime.core.util.workflowalizer.Workflowalizer;
-import org.knime.core.util.workflowalizer.WorkflowalizerConfiguration;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.meta.MetaInfo;
-import org.knime.workbench.explorer.filesystem.meta.TemplateInfo;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.osgi.framework.FrameworkUtil;
-import org.xml.sax.SAXException;
 
 /**
  * Wraps the Eclipse LocalFile. Provides a file interface to the workspace.
@@ -191,46 +175,6 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     @Override
     public LocalWorkspaceFileInfo fetchInfo() {
         return new LocalWorkspaceFileInfo(m_file);
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * @since 8.4
-     */
-    @Override
-    public Optional<? extends MetaInfo> fetchMetaInfo() throws CoreException {
-        LocalWorkspaceFileInfo info = fetchInfo();
-        if (info.isWorkflowTemplate()) {
-            return fetchTemplateInfo();
-        } else {
-            return Optional.empty();
-        }
-    }
-
-    private Optional<TemplateInfo> fetchTemplateInfo() throws CoreException {
-        LocalExplorerFileStore templateFile = getChild(WorkflowPersistor.TEMPLATE_FILE);
-        try {
-            TemplateMetadata templateMetadata =
-                Workflowalizer.readTemplate(templateFile.getParent().toLocalFile().toPath(),
-                    WorkflowalizerConfiguration.builder().readWorkflowMeta().build());
-            return Optional.of(new TemplateInfo() {
-
-                @Override
-                public TemplateType getType() {
-                    if (MetaNodeTemplateInformation.TemplateType.SubNode.toString()
-                        .equals(templateMetadata.getTemplateInformation().getType())) {
-                        return MetaNodeTemplateInformation.TemplateType.SubNode;
-                    } else {
-                        return MetaNodeTemplateInformation.TemplateType.MetaNode;
-                    }
-                }
-
-            });
-        } catch (IOException | URISyntaxException | InvalidSettingsException | ParseException | XPathExpressionException
-                | ParserConfigurationException | SAXException e) {
-            throw newCoreException("Problem reading template meta information", e);
-        }
     }
 
     /**

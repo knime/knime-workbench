@@ -381,7 +381,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                     ContentObject co = (ContentObject)sel;
                     AbstractExplorerFileStore fs = co.getObject();
                     AbstractExplorerFileInfo info = fs.fetchInfo();
-                    if (info.isWorkflow() || info.isComponent()) {
+                    if (info.isWorkflow() || info.isComponentTemplate()) {
                         if (fs instanceof RemoteExplorerFileStore) {
                             remoteWorkflowsToOpen.add(co);
                         } else {
@@ -696,8 +696,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             List<AbstractExplorerFileStore> files = DragAndDropUtils.getExplorerFileStores(selection);
             if (files.size() == 1 && files.get(0) instanceof LocalWorkspaceFileStore) {
                 LocalWorkspaceFileInfo info = ((LocalWorkspaceFileStore)files.get(0)).fetchInfo();
-                if (info.isWorkflow() || info.isComponent()) {
-                    manager.add(new OpenWorkflowAction(this, info.isComponent()));
+                if (info.isWorkflow() || info.isComponentTemplate()) {
+                    manager.add(new OpenWorkflowAction(this, info.isComponentTemplate()));
                     manager.add(new Separator());
                 }
             }

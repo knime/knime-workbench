@@ -1105,7 +1105,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             File wfFile;
             AbstractExplorerFileStore wfFileFileStore = null;
             File mountPointRoot = null;
-            boolean isTemplate = false;
+            boolean isComponentTemplate = false;
             URI uri = ((IURIEditorInput)input).getURI();
             if (input instanceof RemoteWorkflowInput) {
                 m_origRemoteLocation = ((RemoteWorkflowInput)input).getRemoteOriginalLocation();
@@ -1153,8 +1153,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                         "Could not determine mount point root for " + wfFile.getParent() + ": " + ex.getMessage(), ex);
                 }
                 AbstractExplorerFileStore parent = filestore.getParent();
-                isTemplate = AbstractExplorerFileStore.isComponent(parent)
-                    || AbstractExplorerFileStore.isWorkflowTemplate(parent);
+                isComponentTemplate = AbstractExplorerFileStore.isWorkflowTemplate(parent);
             } else {
                 LOGGER.error("Unsupported scheme for workflow URI: " + uri);
                 openErrorDialogAndCloseEditor("Unsupported scheme for workflow URI: " + uri);
@@ -1287,7 +1286,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                     IProgressService ps = wb.getProgressService();
                     // this one sets the workflow manager in the editor
                     LoadWorkflowRunnable loadWorkflowRunnable = null;
-                    if (!isTemplate) {
+                    if (!isComponentTemplate) {
                         loadWorkflowRunnable =
                             new LoadWorkflowRunnable(this, m_origRemoteLocation != null ? m_origRemoteLocation : uri,
                                 wfFile, mountPointRoot, m_origRemoteLocation != null);

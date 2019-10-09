@@ -55,7 +55,6 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -102,7 +101,6 @@ import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
-import org.knime.core.node.workflow.MetaNodeTemplateInformation.TemplateType;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerParent;
 import org.knime.core.node.workflow.NodeContainerState;
@@ -122,8 +120,6 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.meta.MetaInfo;
-import org.knime.workbench.explorer.filesystem.meta.TemplateInfo;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
@@ -436,7 +432,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         final boolean doesTargetExist = destInfo.exists();
         // don't allow to overwrite existing workflow groups with a template
         final boolean overwriteOK =
-            doesTargetExist && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate() || destInfo.isComponent());
+            doesTargetExist && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate());
         boolean isOverwrite = false;
 
         OverwriteAndMergeInfo info = null;
@@ -920,9 +916,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         // don't allow to overwrite if
         // * existing workflow groups with same name
         // * there is component with the same name whose component editor is opened
-        final boolean overwriteOK =
-            doesTargetExist && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate() || destInfo.isComponent())
-                && (!destInfo.isComponent() || !isAnyEditorToWorkflowOpen(templateLoc));
+        final boolean overwriteOK = doesTargetExist
+            && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate())
+            && (!destInfo.isComponentTemplate() || !isAnyEditorToWorkflowOpen(templateLoc));
 
         boolean isOverwrite = false;
 
@@ -1103,7 +1099,6 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @return <code>true</code> if the passed file store is a workflow template and the template is of a type that can
      *         be hosted (i.e. metanode or component), otherwise <code>false</code> (i.e. will also return
      *         <code>false</code> if the passed file store doesn't represent a template
-     * @throws IllegalStateException if the template's meta info couldn't be retrieved
      * @since 8.4
      */
     public final boolean canHostWorkflowTemplate(final AbstractExplorerFileStore fileStore) {
@@ -1113,24 +1108,15 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             } else if (this.equals(fileStore.getContentProvider())) {
                 // If the file is associated with this provider than it obviously can host it.
                 return true;
-            }
-
-            try {
-                Optional<? extends MetaInfo> metaInfo = fileStore.fetchMetaInfo();
-                if (metaInfo.isPresent() && metaInfo.get() instanceof TemplateInfo) {
-                    TemplateType type = ((TemplateInfo)metaInfo.get()).getType();
-                    if (type == TemplateType.MetaNode && canHostMetaNodeTemplates()) {
-                        return true;
-                    } else if (type == TemplateType.SubNode && canHostComponentTemplates()) {
-                        return true;
-                    } else {
-                        return false;
-                    }
+            } else {
+                AbstractExplorerFileInfo info = fileStore.fetchInfo();
+                if (info.isComponentTemplate() && canHostComponentTemplates()) {
+                    return true;
+                } else if (info.isMetaNodeTemplate() && canHostMetaNodeTemplates()) {
+                    return true;
                 } else {
-                    throw new IllegalStateException("No template meta info available");
+                    return false;
                 }
-            } catch (CoreException e) {
-                throw new IllegalStateException("Template meta info couldn't be read", e);
             }
         } else {
             return false;

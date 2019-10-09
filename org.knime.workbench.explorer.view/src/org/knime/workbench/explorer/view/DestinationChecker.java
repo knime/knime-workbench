@@ -220,9 +220,10 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
     private static boolean isSameType(final AbstractExplorerFileInfo srcInfo,
         final AbstractExplorerFileInfo resultInfo) {
         return srcInfo.isWorkflowGroup() && resultInfo.isWorkflowGroup()
-            || srcInfo.isWorkflow() && resultInfo.isWorkflow() || srcInfo.isFile() && resultInfo.isFile()
-            || (srcInfo.isMetaNode() || srcInfo.isWorkflowTemplate() || srcInfo.isComponent())
-                && (resultInfo.isMetaNode() || resultInfo.isWorkflowTemplate() || resultInfo.isComponent())
+            || srcInfo.isWorkflow() && resultInfo.isWorkflow()
+            || srcInfo.isFile() && resultInfo.isFile()
+            || srcInfo.isMetaNodeTemplate() && resultInfo.isMetaNodeTemplate()
+            || srcInfo.isComponentTemplate() && resultInfo.isComponentTemplate()
             || srcInfo.isSnapshot() && resultInfo.isSnapshot();
     }
 

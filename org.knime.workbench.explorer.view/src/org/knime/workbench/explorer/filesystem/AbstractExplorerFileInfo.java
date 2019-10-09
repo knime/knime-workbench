@@ -87,13 +87,23 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
     public abstract boolean isWorkflowTemplate();
 
     /**
-     * Checks whether a file represents a component.
+     * Checks whether a file represents a component template.
      *
-     * @return true if the file is a component, false otherwise
+     * @return true if the file is a component template, false otherwise or if the type is not known
      * @since 8.5
      */
-    public boolean isComponent() {
-        return false;
+    public boolean isComponentTemplate() {
+        return isWorkflowTemplate();
+    }
+
+    /**
+     * Checks whether a file represent a metanode template.
+     *
+     * @return <code>true</code> if file is metanode template, <code>false</code> otherwise or if the type is not known
+     * @since 8.5
+     */
+    public boolean isMetaNodeTemplate() {
+        return isWorkflowTemplate();
     }
 
     /**

@@ -324,7 +324,7 @@ public abstract class ExplorerAction extends Action {
      */
     public static List<AbstractExplorerFileStore>
         getAllContainedComponents(final List<? extends AbstractExplorerFileStore> selected) {
-        return getAllContainedObjectsRecursivelyThatComplyingWith(f -> AbstractExplorerFileStore.isComponent(f),
+        return getAllContainedObjectsRecursivelyThatComplyingWith(f -> AbstractExplorerFileStore.isComponentTemplate(f),
             selected);
     }
 

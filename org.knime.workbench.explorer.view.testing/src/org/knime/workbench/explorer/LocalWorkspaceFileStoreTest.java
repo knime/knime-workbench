@@ -48,9 +48,8 @@
  */
 package org.knime.workbench.explorer;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertTrue;
+import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isMetaNodeTemplate;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,15 +61,12 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.swt.widgets.Display;
 import org.junit.Before;
 import org.junit.Test;
-import org.knime.core.node.workflow.MetaNodeTemplateInformation.TemplateType;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.meta.MetaInfo;
-import org.knime.workbench.explorer.filesystem.meta.TemplateInfo;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
@@ -102,14 +98,10 @@ public class LocalWorkspaceFileStoreTest {
     @Test
     public void testFetchTemplateMetaInfo() throws CoreException {
         LocalExplorerFileStore wt = createTemplate(m_localExplorerRoot, "wt1", false);
-        MetaInfo metaInfo = wt.fetchMetaInfo().get();
-        assertTrue("wrong meta info type", metaInfo instanceof TemplateInfo);
-        assertThat("wrong template type", ((TemplateInfo)metaInfo).getType(), is(TemplateType.MetaNode));
+        assertTrue("wrong template type", isMetaNodeTemplate(wt));
 
         wt = createTemplate(m_localExplorerRoot, "wt2", true);
-        metaInfo = wt.fetchMetaInfo().get();
-        assertTrue("wrong meta info type", metaInfo instanceof TemplateInfo);
-        assertThat("wrong template type", ((TemplateInfo)metaInfo).getType(), is(TemplateType.SubNode));
+        assertTrue("wrong template type", AbstractExplorerFileStore.isComponentTemplate(wt));
     }
 
     /**

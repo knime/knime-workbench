@@ -149,8 +149,16 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
      * {@inheritDoc}
      */
     @Override
-    public boolean isComponent() {
-        return exists() && isComponent(m_file);
+    public boolean isComponentTemplate() {
+        return exists() && isWorkflowTemplate() && isComponentTemplate(m_file);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isMetaNodeTemplate() {
+        return exists() && isWorkflowTemplate() && !isComponentTemplate(m_file);
     }
 
     /**
@@ -225,7 +233,7 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
         return templateFile.fetchInfo().exists();
     }
 
-    private boolean isComponent(final IFileStore file) {
+    private boolean isComponentTemplate(final IFileStore file) {
         if (m_isComponent == null) {
             IFileStore templateFile = file.getChild(WorkflowPersistor.TEMPLATE_FILE);
             try {
