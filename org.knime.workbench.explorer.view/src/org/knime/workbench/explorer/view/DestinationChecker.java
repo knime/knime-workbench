@@ -222,6 +222,7 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
         return srcInfo.isWorkflowGroup() && resultInfo.isWorkflowGroup()
             || srcInfo.isWorkflow() && resultInfo.isWorkflow()
             || srcInfo.isFile() && resultInfo.isFile()
+            || srcInfo.isMetaNode() && resultInfo.isMetaNode()
             || srcInfo.isMetaNodeTemplate() && resultInfo.isMetaNodeTemplate()
             || srcInfo.isComponentTemplate() && resultInfo.isComponentTemplate()
             || srcInfo.isSnapshot() && resultInfo.isSnapshot();

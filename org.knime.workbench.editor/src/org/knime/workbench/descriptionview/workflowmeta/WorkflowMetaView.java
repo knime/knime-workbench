@@ -106,7 +106,6 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
@@ -778,8 +777,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             final WorkflowManagerUI wmUI = wrep.getWorkflowManager();
             final Optional<WorkflowManager> wm = Wrapper.unwrapWFMOptional(wmUI);
             if (wm.isPresent()) {
-                if (wm.get().getDirectNCParent() instanceof SubNodeContainer) {
-                    //it's a component project (i.e. component not embedded in a workflow)
+                if (wm.get().isComponentProjectWFM()) {
                     m_workflowIsAJob.set(false);
                     metadataFile = null;
                     canEditMetadata = false;

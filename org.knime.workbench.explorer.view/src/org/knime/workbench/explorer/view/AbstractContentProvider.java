@@ -430,7 +430,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         AbstractExplorerFileStore templateLoc = target.getChild(uniqueName);
         final AbstractExplorerFileInfo destInfo = templateLoc.fetchInfo();
         final boolean doesTargetExist = destInfo.exists();
-        // don't allow to overwrite existing workflow groups with a template
+        // don't allow to overwrite existing workflow groups nor workflows with a template
         final boolean overwriteOK =
             doesTargetExist && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate());
         boolean isOverwrite = false;
@@ -914,7 +914,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         final boolean doesTargetExist = destInfo.exists();
 
         // don't allow to overwrite if
-        // * existing workflow groups with same name
+        // * existing workflow groups or workflow with same name
         // * there is component with the same name whose component editor is opened
         final boolean overwriteOK = doesTargetExist
             && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate())

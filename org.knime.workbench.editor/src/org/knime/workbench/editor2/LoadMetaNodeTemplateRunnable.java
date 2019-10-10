@@ -121,7 +121,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
     public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI) {
         m_parentWFM = WorkflowManager.ROOT;
 
-        //strip "workflow.file" from the URI which is append if
+        //strip "workflow.knime" from the URI which is append if
         //local component project is opened in workflow editor
         if (templateURI.toString().endsWith(WorkflowPersistor.WORKFLOW_FILE)) {
             String s = templateURI.toString();
