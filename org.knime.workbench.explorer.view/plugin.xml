@@ -129,5 +129,11 @@
            protocol="knime"
            serviceClass="org.knime.workbench.explorer.ExplorerURLStreamHandler">
      </urlStreamHandlerService>
+  </extension>
+  <extension
+        point="org.knime.filehandling.core.MountPointIDProvider">
+     <MountPointIDProvider
+           MountPointIDProvider="org.knime.workbench.explorer.ExplorerMountPointIDProvider">
+     </MountPointIDProvider>
   </extension>   
 </plugin>
