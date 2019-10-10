@@ -243,6 +243,10 @@ public final class WorkflowEditPartFactory implements EditPartFactory, IPartList
     @SuppressWarnings("restriction")
     @Override
     public void partActivated(final IWorkbenchPartReference partRef) {
+        if (DescriptionView.ID.equals(partRef.getId())) {
+            return;
+        }
+
         final IWorkbenchWindow iww = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 
         if (iww != null) {
