@@ -56,6 +56,7 @@ import org.knime.filehandling.core.util.MountPointIDProvider;
  * Implementation Of {@link MountPointIDProvider} backed by {@link ExplorerMountTable}.
  *
  * @author Gabriel Einsdorf
+ * @since 8.5
  */
 public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
