@@ -49,8 +49,11 @@
 package org.knime.workbench.editor2.directannotationedit;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.events.ShellListener;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Region;
@@ -70,6 +73,9 @@ public class FloatingStyleToolbar {
     private final Shell m_mainApplicationWindow;
     private final Shell m_toolbarWindow;
 
+    private final AtomicBoolean m_mainWindowActiveState;
+    private final AtomicBoolean m_toolbarActiveState;
+
     private final AnnotationEditFloatingToolbar m_toolbar;
 
     private final ArrayList<Region> m_regionsToDispose;
@@ -80,12 +86,18 @@ public class FloatingStyleToolbar {
     private final Listener m_showListener;
     private final Listener m_hideListener;
 
+    private final MainWindowListener m_shellListener;
+
     /**
      * @param editor the editor which owns this toolbar
      */
     public FloatingStyleToolbar(final StyledTextEditor editor) {
         final Display display = PlatformUI.getWorkbench().getDisplay();
         m_mainApplicationWindow = display.getActiveShell();
+
+        m_shellListener = new MainWindowListener();
+        m_mainApplicationWindow.addShellListener(m_shellListener);
+        m_mainWindowActiveState = new AtomicBoolean(true);
 
         m_toolbarWindow = new Shell(display, SWT.NO_TRIM | SWT.ON_TOP);
         final GridLayout gl = new GridLayout(1, false);
@@ -96,6 +108,9 @@ public class FloatingStyleToolbar {
         m_toolbar = new AnnotationEditFloatingToolbar(m_toolbarWindow, editor, (source) -> {
             m_mainApplicationWindow.forceActive();
         });
+
+        m_toolbarWindow.addShellListener(new ToolbarListener());
+        m_toolbarActiveState = new AtomicBoolean(false);
 
         m_showListener = (event) -> {
             m_controlsInView.add((Control)event.widget);
@@ -134,6 +149,8 @@ public class FloatingStyleToolbar {
             region.dispose();
         }
         m_regionsToDispose.clear();
+
+        m_mainApplicationWindow.removeShellListener(m_shellListener);
 
         m_toolbar.dispose();
         m_toolbarWindow.dispose();
@@ -180,5 +197,111 @@ public class FloatingStyleToolbar {
         m_toolbarWindow.setRegion(region);
         m_toolbarWindow.setSize(region.getBounds().width, region.getBounds().height);
         m_regionsToDispose.add(region);
+    }
+
+
+    private class MainWindowListener implements ShellListener {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellActivated(final ShellEvent se) {
+            m_toolbarWindow.setVisible(true);
+            m_mainWindowActiveState.set(true);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellClosed(final ShellEvent se) { }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellDeactivated(final ShellEvent se) {
+            m_mainWindowActiveState.set(false);
+
+            // as this will be an infrequently occuring case, i have no qualm in not take a thread from a pool
+            (new Thread(new ToolbarHideDecider())).start();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellDeiconified(final ShellEvent se) {
+            m_toolbarWindow.setVisible(true);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellIconified(final ShellEvent se) {
+            m_toolbarWindow.setVisible(false);
+            m_toolbarActiveState.set(false);
+        }
+    }
+
+
+    private class ToolbarListener implements ShellListener {
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellActivated(final ShellEvent se) {
+            m_toolbarActiveState.set(true);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellClosed(final ShellEvent se) { }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellDeactivated(final ShellEvent se) {
+            m_toolbarActiveState.set(false);
+
+            // as this will be an infrequently occuring case, i have no qualm in not take a thread from a pool
+            (new Thread(new ToolbarHideDecider())).start();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellDeiconified(final ShellEvent se) { }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellIconified(final ShellEvent se) { }
+    }
+
+
+    // we are not guaranteed an ordering of notifications, so we wait briefly and then determine whether
+    //  the multi-varitate state is met requiring the toolbar to be hidden.
+    private class ToolbarHideDecider implements Runnable {
+        @Override
+        public void run () {
+            try {
+                Thread.sleep(80);
+            } catch (final Exception e) { }
+
+            if (!m_toolbarActiveState.get() && !m_mainWindowActiveState.get() && !m_toolbarWindow.isDisposed()) {
+                m_toolbarWindow.getDisplay().asyncExec(() -> {
+                    if (!m_toolbarWindow.isDisposed()) {
+                        m_toolbarWindow.setVisible(false);
+                    }
+                });
+            }
+        }
     }
 }
