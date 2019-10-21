@@ -1401,7 +1401,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         if(getWorkflowManager().isPresent()) {
             WorkflowManager wfm = getWorkflowManager().get();
             if (wfm.isComponentProjectWFM()) {
-                wfm.getProjectComponent().initChangesTracker();
+                wfm.getProjectComponent().get().initChangesTracker();
             }
         }
     }
@@ -3404,15 +3404,15 @@ public class WorkflowEditor extends GraphicalEditor implements
                     getViewer().getContents().refresh();
                     break;
                 case WORKFLOW_DIRTY:
-                case NODE_SETTINGS_CHANGED:
-                    if(isComponentProjectWFM()) {
+                    if (isComponentProjectWFM()) {
                         //filter out the dirty events due to node state changes
                         //because component projects are saved without node states
-                        if (getWorkflowManager().get().getProjectComponent().getTrackedChanges()
+                        if (getWorkflowManager().get().getProjectComponent().get().getTrackedChanges()
                             .map(tc -> tc.hasNodeStateChanges() && !tc.hasOtherChanges()).orElse(false)) {
                             break;
                         }
                     }
+                case NODE_SETTINGS_CHANGED:
                     markDirty();
                     break;
                 default:

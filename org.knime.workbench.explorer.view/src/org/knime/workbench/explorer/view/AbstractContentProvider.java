@@ -1017,7 +1017,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     throw new InvocationTargetException(e);
                 }
             };
-            if(exampleInputData == null) {
+            if (exampleInputData == null) {
                 runnable.run(new NullProgressMonitor());
             } else {
                 //if example data is to be stored with the template/component, run the save-process in another non-UI-thread

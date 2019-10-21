@@ -187,7 +187,7 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
             m_container.setUIInformation(info);
 
             if (m_container instanceof SubNodeContainer) {
-                SubNodeContainer projectComponent = getHostWFM().getProjectComponent();
+                SubNodeContainer projectComponent = getHostWFM().getProjectComponent().orElse(null);
                 if (projectComponent != null) {
                     // unlink component if it's added to itself
                     MetaNodeTemplateInformation projectTemplateInformation = projectComponent.getTemplateInformation();
