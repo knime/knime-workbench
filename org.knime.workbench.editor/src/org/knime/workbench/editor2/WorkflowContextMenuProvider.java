@@ -55,6 +55,7 @@ import org.eclipse.gef.GraphicalViewer;
 import org.eclipse.gef.ui.actions.ActionRegistry;
 import org.eclipse.gef.ui.actions.GEFActionConstants;
 import org.eclipse.gef.ui.actions.UpdateAction;
+import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.MenuManager;
@@ -74,6 +75,7 @@ import org.knime.core.node.workflow.LoopEndNode;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.ui.node.workflow.InteractiveWebViewsResultUI;
+import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.SingleNodeContainerUI;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
@@ -128,6 +130,7 @@ import org.knime.workbench.editor2.actions.StepLoopAction;
 import org.knime.workbench.editor2.actions.SubNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.ToggleFlowVarPortsAction;
 import org.knime.workbench.editor2.actions.UnlinkNodesAction;
+import org.knime.workbench.editor2.actions.ports.PortActionCreator;
 import org.knime.workbench.editor2.directannotationedit.StyledTextEditor;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeAnnotationEditPart;
@@ -135,7 +138,6 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowInPortBarEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowInPortEditPart;
 import org.knime.workbench.editor2.model.WorkflowPortBar;
-
 
 /**
  * Provider for the Workflow editor's context menus.
@@ -146,10 +148,16 @@ import org.knime.workbench.editor2.model.WorkflowPortBar;
 public class WorkflowContextMenuProvider extends ContextMenuProvider {
 
     private static final String GROUP_METANODE = "group.knime.metanode";
+
     private static final String GROUP_METANODE_LINKS = "group.knime.metanode.links";
+
     private static final String GROUP_SUBNODE = "group.knime.subnode";
+
     private static final String GROUP_SUBNODE_LINKS = "group.knime.subnode.links";
+
     private static final String GROUP_SUBNODE_VIEWS = "group.knime.subnode.views";
+
+    private static final String GROUP_NATIVENODE_PORTS = "group.knime.nativenode.ports";
 
     private final ActionRegistry m_actionRegistry;
 
@@ -159,18 +167,15 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
     private final Point m_lastLocation = new Point(0, 0);
 
     /**
-     * Creates a new context menu provider, that is, registers some actions from
-     * the action registry.
+     * Creates a new context menu provider, that is, registers some actions from the action registry.
      *
      * @param actionRegistry The action registry of the editor
      * @param viewer The graphical viewer
      */
-    public WorkflowContextMenuProvider(final ActionRegistry actionRegistry,
-            final GraphicalViewer viewer) {
+    public WorkflowContextMenuProvider(final ActionRegistry actionRegistry, final GraphicalViewer viewer) {
         super(viewer);
         m_viewer = viewer;
-        assert actionRegistry != null : "WorkflowContextMenuProvider "
-                + "needs an action registry !";
+        assert actionRegistry != null : "WorkflowContextMenuProvider " + "needs an action registry !";
 
         m_actionRegistry = actionRegistry;
         m_viewer.getControl().addMenuDetectListener(new MenuDetectListener() {
@@ -376,11 +381,10 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                 manager.add(new Separator("outPortViews"));
                 for (Object o : p.getChildren()) {
                     EditPart child = (EditPart)o;
-                    if (child instanceof WorkflowInPortEditPart
-                            && ((WorkflowInPortEditPart)child).isSelected()) {
+                    if (child instanceof WorkflowInPortEditPart && ((WorkflowInPortEditPart)child).isSelected()) {
                         final WorkflowManagerUI wm = ((WorkflowPortBar)root.getModel()).getWorkflowManager();
-                        action = new OpenWorkflowPortViewAction(wm,
-                            ((WorkflowInPortEditPart)child).getIndex(), wm.getNrInPorts());
+                        action = new OpenWorkflowPortViewAction(wm, ((WorkflowInPortEditPart)child).getIndex(),
+                            wm.getNrInPorts());
                         manager.appendToGroup("outPortViews", action);
                         ((WorkflowInPortEditPart)child).setSelected(false);
                     }
@@ -485,7 +489,7 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                             }
                         }
 
-                        action = new OpenSubnodeWebViewAction((SubNodeContainerUI) container);
+                        action = new OpenSubnodeWebViewAction((SubNodeContainerUI)container);
                         manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
                     }
                 }
@@ -508,6 +512,10 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                     manager.appendToGroup("outPortViews", action);
                 }
 
+                // add options for native nodes with configurable ports
+                if (container instanceof NativeNodeContainerUI) {
+                    createPortConfigMenu(manager, (NodeContainerEditPart)p);
+                }
             }
         }
 
@@ -601,12 +609,34 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
         manager.updateAll(true);
     }
 
+    private static void createPortConfigMenu(final IMenuManager manager, final NodeContainerEditPart editPart) {
+        final PortActionCreator portCreator = new PortActionCreator(editPart);
+        if (portCreator.hasActions()) {
+            manager.add(new Separator(GROUP_NATIVENODE_PORTS));
+            addActions(manager, portCreator.getAddPortActions(), "Add ports");
+            addActions(manager, portCreator.getRemovePortActions(), "Remove ports");
+            addActions(manager, portCreator.getExchangePortActions(), "Exchange ports");
+        }
+    }
+
+    private static void addActions(final IMenuManager parentManager, final List<? extends Action> actions,
+        final String menuEntryName) {
+        if (!actions.isEmpty()) {
+            if (actions.size() == 1) {
+                parentManager.appendToGroup(GROUP_NATIVENODE_PORTS, actions.get(0));
+            } else {
+                MenuManager subMenuManager = new MenuManager(menuEntryName);
+                actions.stream().forEach(action -> subMenuManager.add(action));
+                parentManager.appendToGroup(GROUP_NATIVENODE_PORTS, subMenuManager);
+            }
+        }
+    }
+
     private static IMenuManager getMetaNodeMenuManager(final IMenuManager metaNodeManagerOrNull,
         final IMenuManager parentMenuManager) {
         if (metaNodeManagerOrNull == null) {
             MenuManager m = new MenuManager("Metanode",
-                ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta/meta_menu.png"),
-                null);
+                ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta/meta_menu.png"), null);
             m.add(new Separator(GROUP_METANODE));
             m.add(new Separator(GROUP_METANODE_LINKS));
             parentMenuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, m);
@@ -619,8 +649,7 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
         final IMenuManager parentMenuManager) {
         if (subNodeManagerOrNull == null) {
             MenuManager m = new MenuManager("Component",
-                ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta/meta_menu.png"),
-                null);
+                ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta/meta_menu.png"), null);
             m.add(new Separator(GROUP_SUBNODE));
             m.add(new Separator(GROUP_SUBNODE_LINKS));
             parentMenuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, m);
@@ -629,11 +658,11 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
         return subNodeManagerOrNull;
     }
 
-    private static IMenuManager getSingleSubNodeViewsMenuManager(final IMenuManager singleViewsManagerOrNull, final IMenuManager parentMenuManager) {
+    private static IMenuManager getSingleSubNodeViewsMenuManager(final IMenuManager singleViewsManagerOrNull,
+        final IMenuManager parentMenuManager) {
         if (singleViewsManagerOrNull == null) {
             MenuManager m = new MenuManager("Individual Views",
-                ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "/icons/openInteractiveView.png"),
-                null);
+                ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "/icons/openInteractiveView.png"), null);
             m.add(new Separator(GROUP_SUBNODE_VIEWS));
             parentMenuManager.appendToGroup(GROUP_SUBNODE, m);
             return m;

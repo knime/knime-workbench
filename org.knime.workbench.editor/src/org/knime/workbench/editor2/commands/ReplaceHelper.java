@@ -135,15 +135,19 @@ public class ReplaceHelper {
         return Integer.compare(o1.getSourcePort(), o2.getSourcePort());
     };
 
-    private WorkflowManager m_wfm;
-
-    private ArrayList<ConnectionContainer> m_incomingConnections;
-
-    private ArrayList<ConnectionContainer> m_outgoingConnections;
-
     private NodeContainer m_oldNode;
 
-    private Map<ConnectionContainerUI, ConnectionUIInformation> m_connectionUIInfoMap;
+    /** The connection ui infos. */
+    protected Map<ConnectionContainerUI, ConnectionUIInformation> m_connectionUIInfoMap;
+
+    /** The workflow manager. */
+    protected final WorkflowManager m_wfm;
+
+    /** The incoming node connections. */
+    protected final ArrayList<ConnectionContainer> m_incomingConnections;
+
+    /** The outgoing node connections. */
+    protected final ArrayList<ConnectionContainer> m_outgoingConnections;
 
     /**
      * @param wfm the workflow manager
@@ -191,15 +195,7 @@ public class ReplaceHelper {
      */
     public void reconnect(final NodeContainer container) {
         // reset node location
-        final NodeUIInformation uiInformation = m_oldNode.getUIInformation();
-        final int[] bounds = uiInformation.getBounds();
-        final NodeUIInformation info = NodeUIInformation.builder()
-                                                        .setNodeLocation(bounds[0], bounds[1], -1, -1)
-                                                        .setHasAbsoluteCoordinates(true)
-                                                        .setSnapToGrid(uiInformation.getSnapToGrid())
-                                                        .setIsDropLocation(false).build();
-
-        container.setUIInformation(info);
+        setUIInformation(container);
 
         int inShift;
         int outShift;
@@ -252,14 +248,7 @@ public class ReplaceHelper {
             if (m_wfm.canAddConnection(c.getSource(), c.getSourcePort(), newId, c.getDestPort() + inShift)) {
                 final ConnectionContainer cc =
                     m_wfm.addConnection(c.getSource(), c.getSourcePort(), newId, c.getDestPort() + inShift);
-
-                if (m_connectionUIInfoMap != null) {
-                    final ConnectionUIInformation uiInfo = m_connectionUIInfoMap.get(c);
-
-                    if (uiInfo != null) {
-                        cc.setUIInfo(uiInfo);
-                    }
-                }
+                setConnectionUIInfo(c, cc);
             } else {
                 break;
             }
@@ -270,17 +259,39 @@ public class ReplaceHelper {
             if (m_wfm.canAddConnection(newId, c.getSourcePort() + outShift, c.getDest(), c.getDestPort())) {
                 final ConnectionContainer cc =
                     m_wfm.addConnection(newId, c.getSourcePort() + outShift, c.getDest(), c.getDestPort());
-
-                if (m_connectionUIInfoMap != null) {
-                    final ConnectionUIInformation uiInfo = m_connectionUIInfoMap.get(c);
-
-                    if (uiInfo != null) {
-                        cc.setUIInfo(uiInfo);
-                    }
-                }
+                setConnectionUIInfo(c, cc);
             } else {
                 break;
             }
         }
+    }
+
+    /**
+     * Sets the connection ui info.
+     * @param infoSrc the connection container carrying the information
+     * @param infoTgt the connection container to add the information to
+     */
+    protected void setConnectionUIInfo(final ConnectionContainer infoSrc, final ConnectionContainer infoTgt) {
+        if (m_connectionUIInfoMap != null) {
+            @SuppressWarnings("unlikely-arg-type")
+            final ConnectionUIInformation uiInfo = m_connectionUIInfoMap.get(infoSrc);
+            if (uiInfo != null) {
+                infoTgt.setUIInfo(uiInfo);
+            }
+        }
+    }
+
+    /**
+     * Copies the UI information from the old to the new container.
+     *
+     * @param container the new node container
+     */
+    protected void setUIInformation(final NodeContainer container) {
+        final NodeUIInformation uiInformation = m_oldNode.getUIInformation();
+        final int[] bounds = uiInformation.getBounds();
+        final NodeUIInformation info =
+            NodeUIInformation.builder().setNodeLocation(bounds[0], bounds[1], -1, -1).setHasAbsoluteCoordinates(true)
+                .setSnapToGrid(uiInformation.getSnapToGrid()).setIsDropLocation(false).build();
+        container.setUIInformation(info);
     }
  }

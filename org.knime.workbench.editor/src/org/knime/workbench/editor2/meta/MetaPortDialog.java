@@ -48,9 +48,11 @@
 package org.knime.workbench.editor2.meta;
 
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.eclipse.draw2d.ColorConstants;
@@ -91,6 +93,7 @@ public class MetaPortDialog extends Dialog {
     private Combo m_type;
 
     private PortType m_port = null;
+    private final Predicate<PortType> m_acceptsPort;
 
     private static final Comparator<PortType> PORT_TYPE_COMPARATOR = new Comparator<PortType>() {
         @Override
@@ -131,8 +134,32 @@ public class MetaPortDialog extends Dialog {
      * @param parent the parent
      */
     public MetaPortDialog(final Shell parent) {
+        this(parent, "Add Meta Port", p -> true);
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param parent the parent shell
+     * @param title the dialog's title
+     * @param supportedPorts supported port types
+     */
+    public MetaPortDialog(final Shell parent, final String title, final PortType[] supportedPorts) {
+        this(parent,title, p1 -> Arrays.stream(supportedPorts).anyMatch(p2 -> p1.equals(p2)));
+    }
+
+
+    /**
+     * Constructor.
+     *
+     * @param parent the parent shell
+     * @param title the dialog's title
+     * @param acceptsPorts predicate defining the supported port types
+     */
+    private MetaPortDialog(final Shell parent, final String title, final Predicate<PortType> acceptsPorts) {
         super(parent);
-        setText("Add Meta Port");
+        setText(title);
+        m_acceptsPort = acceptsPorts;
     }
 
     /**
@@ -182,11 +209,11 @@ public class MetaPortDialog extends Dialog {
         m_typeLabel.setText("Port Type:");
         m_type = new Combo(composite,
                 SWT.DROP_DOWN | SWT.SIMPLE | SWT.READ_ONLY | SWT.BORDER);
-        String[] names = new String[PORT_TYPES.size()];
-        int i = 0;
-        for (PortType pt : PORT_TYPES) {
-            names[i++] = pt.getName();
-        }
+
+        final String[] names = PORT_TYPES.stream()//
+            .filter(m_acceptsPort)//
+            .map(PortType::getName).toArray(String[]::new);
+
         m_type.setItems(names);
         m_type.select(0);
         m_type.addFocusListener(new FocusAdapter() {
