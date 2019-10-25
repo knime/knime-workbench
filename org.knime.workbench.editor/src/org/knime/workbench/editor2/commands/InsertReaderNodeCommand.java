@@ -51,7 +51,7 @@ import java.util.Collections;
 
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.gef.RootEditPart;
-import org.knime.core.node.ContextAwareNodeFactory;
+import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.NodeCreationContext;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.workflow.ConnectionContainer;
@@ -82,7 +82,7 @@ public class InsertReaderNodeCommand extends CreateReaderNodeCommand {
      * @param snapToGrid if location should be rounded to closest grid location
      * @param edge on which the metanode should be inserted
      */
-    public InsertReaderNodeCommand(final WorkflowManager manager, final ContextAwareNodeFactory<NodeModel> factory,
+    public InsertReaderNodeCommand(final WorkflowManager manager, final ConfigurableNodeFactory<NodeModel> factory,
         final NodeCreationContext context, final Point location, final boolean snapToGrid,
         final ConnectionContainerEditPart edge) {
         super(manager, factory, context, location, snapToGrid);

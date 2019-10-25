@@ -49,10 +49,11 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
-import org.knime.core.node.ContextAwareNodeFactory;
+import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.NodeCreationContext;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.context.ModifiableNodeCreationConfiguration;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeUIInformation;
@@ -84,7 +85,7 @@ public class CreateReaderNodeCommand extends AbstractKNIMECommand {
      */
     protected NodeContainer m_container;
 
-    private final ContextAwareNodeFactory<NodeModel> m_factory;
+    private final ConfigurableNodeFactory<NodeModel> m_factory;
 
     private final NodeCreationContext m_dropContext;
 
@@ -97,7 +98,7 @@ public class CreateReaderNodeCommand extends AbstractKNIMECommand {
      * @param location initial visual location on the canvas
      * @param snapToGrid if location should be rounded to closest grid location
      */
-    public CreateReaderNodeCommand(final WorkflowManager manager, final ContextAwareNodeFactory<NodeModel> factory,
+    public CreateReaderNodeCommand(final WorkflowManager manager, final ConfigurableNodeFactory<NodeModel> factory,
         final NodeCreationContext context, final Point location, final boolean snapToGrid) {
         super(manager);
         m_factory = factory;
@@ -120,7 +121,9 @@ public class CreateReaderNodeCommand extends AbstractKNIMECommand {
         // Add node to workflow and get the container
         final WorkflowManager hostWFM = getHostWFM();
         try {
-            final NodeID id = hostWFM.addNodeAndApplyContext(m_factory, m_dropContext);
+            final ModifiableNodeCreationConfiguration config = m_factory.createNodeCreationConfig();
+            config.setURLConfiguration(m_dropContext.getUrl());
+            final NodeID id = hostWFM.addNodeAndApplyContext(m_factory, config);
             m_container = hostWFM.getNodeContainer(id);
             // create extra info and set it
             NodeUIInformation info = NodeUIInformation.builder()

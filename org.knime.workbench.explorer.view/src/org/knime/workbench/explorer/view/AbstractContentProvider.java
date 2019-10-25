@@ -123,7 +123,7 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
-import org.knime.workbench.repository.util.ContextAwareNodeFactoryMapper;
+import org.knime.workbench.repository.util.ConfigurableNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.osgi.service.prefs.Preferences;
@@ -1279,7 +1279,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             return ImageRepository.getIconImage(SharedImages.MetaNodeTemplate);
         }
         if (AbstractExplorerFileStore.isDataFile(efs)) {
-            Image img = ContextAwareNodeFactoryMapper.getImage(efs.getName());
+            Image img = ConfigurableNodeFactoryMapper.getImage(efs.getName());
             if (img != null) {
                 return img;
             }

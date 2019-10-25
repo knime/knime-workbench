@@ -54,6 +54,7 @@ import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.InvalidRegistryObjectException;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.swt.graphics.Image;
+import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.ContextAwareNodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
@@ -61,16 +62,16 @@ import org.knime.core.util.Pair;
 import org.knime.workbench.core.util.ImageRepository;
 
 
-public final class ContextAwareNodeFactoryMapper {
-    private ContextAwareNodeFactoryMapper() {
+public final class ConfigurableNodeFactoryMapper {
+    private ConfigurableNodeFactoryMapper() {
         // utility class should not be instantiated
     }
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            ContextAwareNodeFactoryMapper.class);
-    private static final Map<String, Pair<Class<? extends ContextAwareNodeFactory<?>>, Image>> EXTENSION_REGISTRY;
+            ConfigurableNodeFactoryMapper.class);
+    private static final Map<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>> EXTENSION_REGISTRY;
 
     static {
-        EXTENSION_REGISTRY = new TreeMap<String, Pair<Class<? extends ContextAwareNodeFactory<?>>,Image>>();
+        EXTENSION_REGISTRY = new TreeMap<String, Pair<Class<? extends ConfigurableNodeFactory<?>>,Image>>();
         IExtensionRegistry registry = Platform.getExtensionRegistry();
         for (IConfigurationElement element : registry
                 .getConfigurationElementsFor(
@@ -97,7 +98,7 @@ public final class ContextAwareNodeFactoryMapper {
                             icon = ImageRepository.getIconImage(o);
                         }
                         EXTENSION_REGISTRY.put(extension,
-                            new Pair<Class<? extends ContextAwareNodeFactory<?>>, Image>(clazz, icon));
+                            new Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>(clazz, icon));
                     } // else already registered -> first come first serve
                 }
             } catch (InvalidRegistryObjectException | CoreException e) {
@@ -117,8 +118,8 @@ public final class ContextAwareNodeFactoryMapper {
       * @return the node factory registered for this extension, or null if
       *      the extension is not registered.
       */
-     public static Class<? extends ContextAwareNodeFactory<?>> getNodeFactory(final String url) {
-        for (Map.Entry<String, Pair<Class<? extends ContextAwareNodeFactory<?>>, Image>> e : EXTENSION_REGISTRY
+     public static Class<? extends ConfigurableNodeFactory<?>> getNodeFactory(final String url) {
+        for (Map.Entry<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>> e : EXTENSION_REGISTRY
             .entrySet()) {
             if (StringUtils.endsWithIgnoreCase(url, e.getKey())) {
                 return e.getValue().getFirst();
@@ -135,7 +136,7 @@ public final class ContextAwareNodeFactoryMapper {
       * @since 2.7
       */
      public static Image getImage(final String url) {
-        for (Map.Entry<String, Pair<Class<? extends ContextAwareNodeFactory<?>>, Image>> e : EXTENSION_REGISTRY
+        for (Map.Entry<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>> e : EXTENSION_REGISTRY
             .entrySet()) {
             if (url.endsWith(e.getKey())) {
                 return e.getValue().getSecond();
