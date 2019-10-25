@@ -75,7 +75,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.util.GUIDeadlockDetector;
+import org.knime.core.util.ThreadUtils;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
@@ -641,7 +641,7 @@ public class ContentDelegator extends LabelProvider
                         hasLoggedBugSRV715 = true;
                         LOGGER.infoWithFormat("Logging mount point preference change to '%s'", LOG_MOUNT_REMOVE_SRV_715);
                         try (BufferedWriter s = Files.newBufferedWriter(Paths.get(LOG_MOUNT_REMOVE_SRV_715), StandardOpenOption.CREATE)) {
-                            s.write(GUIDeadlockDetector.createStacktrace());
+                            s.write(ThreadUtils.getJVMStacktraces());
                         } catch (IOException e) {
                             LOGGER.error("Couldn't log details for SRV-715", e);
                         }
