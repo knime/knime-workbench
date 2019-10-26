@@ -739,6 +739,27 @@
             name="Node Monitor"/>
     </extension>
     <extension
+    		point="org.eclipse.ui.menus">
+    	<menuContribution
+    			locationURI="menu:file?after=closeAll">
+    		<separator
+		            name="org.knime.workbench.editor2.menu.premrufilemenu"
+		            visible="true"/>
+    		<menu
+	    			id="org.knime.workbench.editor2.menu.mrufilemenu"
+	    			label="Recent Workflows"
+	    			tooltip="The most recently opened workflows">
+		    	<dynamic
+			    		class="org.knime.workbench.editor2.menu.MRUFileMenuItem"
+			    		id="org.knime.workbench.editor2.menu.mrufilemenuitem">
+		    	</dynamic>
+		    </menu>
+    		<separator
+		            name="org.knime.workbench.editor2.menu.postmrufilemenu"
+		            visible="true"/>
+    	</menuContribution>
+	</extension>
+    <extension
            point="org.eclipse.ui.contexts">
         <context
               description="KNIME editor context, for key bindings for the knime perspective only"
