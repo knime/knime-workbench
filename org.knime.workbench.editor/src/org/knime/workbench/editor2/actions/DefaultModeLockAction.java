@@ -44,70 +44,55 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Sep 23, 2019 (loki): created
+ *   Oct 27, 2019 (loki): created
  */
 package org.knime.workbench.editor2.actions;
 
-import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IToolBarManager;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.knime.workbench.KNIMEEditorPlugin;
+import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.actions.delegates.AbstractEditorAction;
-import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.editor2.WorkflowEditorMode;
 
 /**
- * An action which supports the toggling of a workflow editor's annotation-lock status.
- *
- * N.B We don't necessarily want to inherit from anything other than {@link Action} but we _do_ want to get the workflow
- * editor which an accompanying delegate {@link AbstractEditorAction} can provide; that editor action, though, must
- * return an instance of {@code AbstractNodeAction}
+ * This action is the default mode lock action (that nothing is locked.)
  *
  * @author loki der quaeler
  */
-public class ToggleAnnotationLockAction extends AbstractNodeAction {
-    /** the id of this action (not to be confused with ids used in the plugin.xml) */
-    public static final String ID = "knime.action.toggle_annotation_lock";
+public class DefaultModeLockAction extends AbstractLockModeAction {
+    /** The id under which instances of this are registered with the toolbar manager. **/
+    public static final String ID = "org.knime.workbench.editor2.actions.defaultModeLockAction";
 
 
     /**
-     * @param editor the workflow editor on which this action operates.
+     * @param editor
+     * @param tbm
      */
-    public ToggleAnnotationLockAction(final WorkflowEditor editor) {
-        super(editor);
+    public DefaultModeLockAction(final WorkflowEditor editor, final IToolBarManager tbm) {
+        super(editor, tbm, ID, NodeLockAction.ID, AnnotationLockAction.ID);
+
+        m_editor = editor;
+
+        setChecked(true);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public String getId() {
-        return ID;
-    }
-
-    /**
-     * {@inheritDoc}
-     *
-     * We override this as we don't need the overhead of collecting the selected nodes which our parent's implementation
-     * performs.
-     */
-    @Override
-    public void runInSWT() {
-        final WorkflowEditor we = getEditor();
-
-        we.setAnnotationsLocked(!we.getAnnotationsLocked());
+    public ImageDescriptor getImageDescriptor() {
+        return ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "icons/nodes-annotations.png");
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
-        throw new UnsupportedOperationException("This method should never be called.");
-    }
+    protected void performAction() {
+        m_editor.setAnnotationsLocked(false);
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected boolean internalCalculateEnabled() {
-        return true;
+        final ToggleEditorModeAction toggleAction = getToggleEditorModeAction();
+        toggleAction.toggleToModeIfNecessary(WorkflowEditorMode.NODE_EDIT);
     }
 }

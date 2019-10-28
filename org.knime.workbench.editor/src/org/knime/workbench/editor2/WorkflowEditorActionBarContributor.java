@@ -61,6 +61,9 @@ import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.actions.RetargetAction;
 import org.knime.core.node.util.NodeExecutionJobManagerPool;
+import org.knime.workbench.editor2.actions.AnnotationLockAction;
+import org.knime.workbench.editor2.actions.DefaultModeLockAction;
+import org.knime.workbench.editor2.actions.NodeLockAction;
 
 /**
  * Contributes action to the toolbar / menu bar.
@@ -70,6 +73,10 @@ import org.knime.core.node.util.NodeExecutionJobManagerPool;
 public class WorkflowEditorActionBarContributor extends ActionBarContributor {
     private WorkflowEditor m_editor;
     private ZoomComboContributionItem m_zoomComboBox;
+
+    private AnnotationLockAction m_annotationLockAction;
+    private DefaultModeLockAction m_defaultModeLockAction;
+    private NodeLockAction m_nodeLockAction;
 
     /**
      * {@inheritDoc}
@@ -107,6 +114,14 @@ public class WorkflowEditorActionBarContributor extends ActionBarContributor {
         m_zoomComboBox = new ZoomComboContributionItem(getPage(), zoomStrings);
         tbm.add(m_zoomComboBox);
 
+        m_nodeLockAction = new NodeLockAction(m_editor, tbm);
+        m_defaultModeLockAction = new DefaultModeLockAction(m_editor, tbm);
+        m_annotationLockAction = new AnnotationLockAction(m_editor, tbm);
+        tbm.add(new Separator());
+        tbm.add(m_nodeLockAction);
+        tbm.add(m_defaultModeLockAction);
+        tbm.add(m_annotationLockAction);
+
         // In 4.7 RCPs, this is called before setActiveEditor, but we check in both places as future-proofing
         if (m_editor != null) {
             m_editor.setZoomComboBox(m_zoomComboBox);
@@ -128,6 +143,11 @@ public class WorkflowEditorActionBarContributor extends ActionBarContributor {
             // In 4.7 RCPs, this is called after contributeToToolBar, but we check in both places as future-proofing
             if (m_zoomComboBox != null) {
                 m_editor.setZoomComboBox(m_zoomComboBox);
+            }
+            if (m_nodeLockAction != null) {
+                m_nodeLockAction.setWorkflowEditor(m_editor);
+                m_defaultModeLockAction.setWorkflowEditor(m_editor);
+                m_annotationLockAction.setWorkflowEditor(m_editor);
             }
         }
         super.setActiveEditor(editor);

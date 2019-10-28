@@ -120,11 +120,31 @@ public class ToggleEditorModeAction extends AbstractNodeAction {
     }
 
     /**
+     * This will run the toggle action if the specified mode is not the current mode. This method must be called in the
+     * SWT thread.
+     *
+     * @param mode the desired worfklow editor mode to be in
+     */
+    public void toggleToModeIfNecessary(final WorkflowEditorMode mode) {
+        final WorkflowEditor we = getEditor();
+
+        if (we != null) {
+            final WorkflowEditorMode currentMode = we.getEditorMode();
+
+            if (!currentMode.equals(mode)) {
+                runInSWT();
+            }
+        } else {
+            LOGGER.error("Somehow we failed to get the workflow editor instance.");
+        }
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public void runInSWT() {
-        final WorkflowEditor we = (WorkflowEditor)getWorkbenchPart();
+        final WorkflowEditor we = getEditor();
 
         if (we != null) {
             final WorkflowEditorMode currentMode = we.getEditorMode();

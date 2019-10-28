@@ -44,27 +44,53 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Sep 23, 2019 (loki): created
+ *   Oct 27, 2019 (loki): created
  */
-package org.knime.workbench.editor2.actions.delegates;
+package org.knime.workbench.editor2.actions;
 
+import org.eclipse.jface.action.IToolBarManager;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.knime.workbench.KNIMEEditorPlugin;
+import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.actions.AbstractNodeAction;
-import org.knime.workbench.editor2.actions.ToggleAnnotationLockAction;
+import org.knime.workbench.editor2.WorkflowEditorMode;
 
 /**
- * The editor action delegate for {@link ToggleAnnotationLockAction}
+ * This action locks the nodes on the canvas (i.e this action allows annotations to be edited.)
  *
  * @author loki der quaeler
  */
-public class ToggleAnnotationLockEditorAction extends AbstractEditorAction {
+public class NodeLockAction extends AbstractLockModeAction {
+    /** The id under which instances of this are registered with the toolbar manager. **/
+    public static final String ID = "org.knime.workbench.editor2.actions.nodeLockAction";
+
+
+    /**
+     * @param editor
+     * @param tbm
+     */
+    public NodeLockAction(final WorkflowEditor editor, final IToolBarManager tbm) {
+        super(editor, tbm, ID, DefaultModeLockAction.ID, AnnotationLockAction.ID);
+
+        m_editor = editor;
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
-    protected AbstractNodeAction createAction(final WorkflowEditor editor) {
-        final ToggleAnnotationLockAction action = new ToggleAnnotationLockAction(editor);
-        action.setChecked(editor.getAnnotationsLocked());
-        return action;
+    public ImageDescriptor getImageDescriptor() {
+        return ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "icons/annotations-only.png");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void performAction() {
+        m_editor.setAnnotationsLocked(false);
+
+        final ToggleEditorModeAction toggleAction = getToggleEditorModeAction();
+        toggleAction.toggleToModeIfNecessary(WorkflowEditorMode.ANNOTATION_EDIT);
     }
 }

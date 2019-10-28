@@ -78,29 +78,12 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  * @author Florian Georg, University of Konstanz
  */
 public abstract class AbstractNodeAction extends SelectionAction {
-
     /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void update() {
-        super.update();
-        // update hotkey text after the hotkey was changed in the
-        // preferences
-        setText(getText());
-    }
-
-    private final WorkflowEditor m_editor;
-
-    /**
-     *
      * @param editor The editor that is associated with this action
      */
     public AbstractNodeAction(final WorkflowEditor editor) {
         super(editor);
         setLazyEnablementCalculation(true);
-        m_editor = editor;
-
     }
 
     /**
@@ -118,6 +101,22 @@ public abstract class AbstractNodeAction extends SelectionAction {
     }
 
     /**
+     * Sets the workbench part / editor to which this action is associated.
+     *
+     * @param editor
+     */
+    public void setEditor(final WorkflowEditor editor) {
+        setWorkbenchPart(editor);
+    }
+
+    /**
+     * @return the {@link WorkflowEditor} set via the constructor, or via {@link #setEditor(WorkflowEditor)}
+     */
+    protected WorkflowEditor getEditor() {
+        return (WorkflowEditor)getWorkbenchPart();
+    }
+
+    /**
      * Note that this return may be <code>null</code> if the editor has not already been created completely!
      *
      * @return The manager that is edited by the current editor. Subclasses may want to have a reference to this.
@@ -130,7 +129,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
             throw new IllegalStateException(
                 "This action can supposedly handle the WorkflowManagerUI but tries to retrieve the WorkflowManager.");
         }
-        return m_editor.getWorkflowManager().get();
+        return getEditor().getWorkflowManager().get();
     }
 
     /**
@@ -141,7 +140,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
      * already been created completely !
      */
     protected final WorkflowManagerUI getManagerUI() {
-        return m_editor.getWorkflowManagerUI();
+        return getEditor().getWorkflowManagerUI();
     }
 
     /**
@@ -152,15 +151,21 @@ public abstract class AbstractNodeAction extends SelectionAction {
      */
     @Override
     public final void run() {
-
         // call implementation of this action in the SWT UI thread
-        Display.getCurrent().syncExec(new Runnable() {
-            @Override
-            public void run() {
-                runInSWT();
-            }
-
+        Display.getCurrent().syncExec(() -> {
+            runInSWT();
         });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void update() {
+        super.update();
+        // update hotkey text after the hotkey was changed in the
+        // preferences
+        setText(getText());
     }
 
     /**
@@ -169,10 +174,8 @@ public abstract class AbstractNodeAction extends SelectionAction {
      */
     public void runInSWT() {
         // get selected parts...
-        final NodeContainerEditPart[] parts =
-            getSelectedParts(NodeContainerEditPart.class);
+        final NodeContainerEditPart[] parts = getSelectedParts(NodeContainerEditPart.class);
         runOnNodes(parts);
-
     }
 
     /**
@@ -266,7 +269,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
     // (which is arguably code that need be tweaked...)
     @SuppressWarnings("rawtypes")
     protected List getSelectedObjects() {
-        final ISelectionProvider provider = m_editor.getEditorSite().getSelectionProvider();
+        final ISelectionProvider provider = getEditor().getEditorSite().getSelectionProvider();
         if (provider == null) {
             return Collections.EMPTY_LIST;
         }
@@ -283,7 +286,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
      */
     protected SelectionManager getSelectionManager() {
         final ScrollingGraphicalViewer provider =
-            (ScrollingGraphicalViewer)m_editor.getEditorSite().getSelectionProvider();
+            (ScrollingGraphicalViewer)getEditor().getEditorSite().getSelectionProvider();
 
         if (provider == null) {
             return null;
@@ -300,7 +303,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
      */
     protected List<?> getAllObjects() {
         final ScrollingGraphicalViewer provider =
-            (ScrollingGraphicalViewer)m_editor.getEditorSite().getSelectionProvider();
+            (ScrollingGraphicalViewer)getEditor().getEditorSite().getSelectionProvider();
         if (provider == null) {
             return Collections.EMPTY_LIST;
         }
@@ -321,13 +324,6 @@ public abstract class AbstractNodeAction extends SelectionAction {
      * @param nodeParts The parts that the action should be executed on.
      */
     public abstract void runOnNodes(final NodeContainerEditPart[] nodeParts);
-
-    /**
-     * @return the underlying editor for this action
-     */
-    protected WorkflowEditor getEditor() {
-        return m_editor;
-    }
 
     /**
      * {@inheritDoc}

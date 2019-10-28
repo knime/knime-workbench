@@ -99,6 +99,7 @@ import org.eclipse.gef.EditPartViewer;
 import org.eclipse.gef.GraphicalViewer;
 import org.eclipse.gef.KeyHandler;
 import org.eclipse.gef.RootEditPart;
+import org.eclipse.gef.SelectionManager;
 import org.eclipse.gef.SnapToGeometry;
 import org.eclipse.gef.SnapToGrid;
 import org.eclipse.gef.commands.Command;
@@ -497,6 +498,27 @@ public class WorkflowEditor extends GraphicalEditor implements
      */
     public void setAnnotationsLocked(final boolean locked) {
         m_annotationsLocked = locked;
+
+        if (locked) {
+            final Display d = PlatformUI.getWorkbench().getDisplay();
+
+            d.asyncExec(() -> {
+                final EditPart editorPart = (EditPart)getViewer().getRootEditPart().getChildren().get(0);
+                final SelectionManager sm = editorPart.getViewer().getSelectionManager();
+                final IStructuredSelection selection = (IStructuredSelection)sm.getSelection();
+
+                if (selection.size() > 0) {
+                    final Iterator<?> it = selection.iterator();
+                    while (it.hasNext()) {
+                        final Object o = it.next();
+                        if (o instanceof AnnotationEditPart) {
+                            sm.deselect((AnnotationEditPart)o);
+                        }
+                    }
+                }
+            });
+
+        }
     }
 
     /**
