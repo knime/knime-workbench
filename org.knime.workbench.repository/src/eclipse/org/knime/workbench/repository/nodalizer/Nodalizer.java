@@ -49,6 +49,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -938,7 +939,7 @@ public class Nodalizer implements IApplication {
     }
 
     private static void writeFile(final File outputDir, final String baseFileName, final Object pojoToWrite)
-        throws JsonProcessingException, FileNotFoundException {
+        throws JsonProcessingException, FileNotFoundException, UnsupportedEncodingException {
         final ObjectMapper map = new ObjectMapper();
         map.setSerializationInclusion(Include.NON_ABSENT);
         map.enable(SerializationFeature.INDENT_OUTPUT);
@@ -950,7 +951,7 @@ public class Nodalizer implements IApplication {
             f = new File(outputDir, fileName + count + ".json");
             count++;
         }
-        try (final PrintWriter pw = new PrintWriter(f)) {
+        try (final PrintWriter pw = new PrintWriter(f, StandardCharsets.UTF_8.displayName())) {
             pw.write(json);
         }
     }
