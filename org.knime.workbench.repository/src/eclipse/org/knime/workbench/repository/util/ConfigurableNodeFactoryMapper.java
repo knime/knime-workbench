@@ -55,27 +55,28 @@ import org.eclipse.core.runtime.InvalidRegistryObjectException;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.swt.graphics.Image;
 import org.knime.core.node.ConfigurableNodeFactory;
-import org.knime.core.node.ContextAwareNodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.util.Pair;
 import org.knime.workbench.core.util.ImageRepository;
 
-
+/**
+ * Mapper for all registered configurable node factories.
+ */
 public final class ConfigurableNodeFactoryMapper {
     private ConfigurableNodeFactoryMapper() {
         // utility class should not be instantiated
     }
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            ConfigurableNodeFactoryMapper.class);
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(ConfigurableNodeFactoryMapper.class);
+
     private static final Map<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>> EXTENSION_REGISTRY;
 
     static {
-        EXTENSION_REGISTRY = new TreeMap<String, Pair<Class<? extends ConfigurableNodeFactory<?>>,Image>>();
+        EXTENSION_REGISTRY = new TreeMap<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>>();
         IExtensionRegistry registry = Platform.getExtensionRegistry();
         for (IConfigurationElement element : registry
-                .getConfigurationElementsFor(
-                   "org.knime.workbench.repository.registeredFileExtensions")) {
+            .getConfigurationElementsFor("org.knime.workbench.repository.registeredFileExtensions")) {
             try {
                 /*
                  * Use the configuration element method to load an object of the
@@ -83,11 +84,11 @@ public final class ConfigurableNodeFactoryMapper {
                  * is used providing access to all extension points.
                  */
                 @SuppressWarnings("unchecked")
-                final ContextAwareNodeFactory<NodeModel> o =
-                        (ContextAwareNodeFactory<NodeModel>)element.createExecutableExtension("NodeFactory");
+                final ConfigurableNodeFactory<NodeModel> o =
+                    (ConfigurableNodeFactory<NodeModel>)element.createExecutableExtension("NodeFactory");
                 @SuppressWarnings("unchecked")
-                Class<? extends ContextAwareNodeFactory<?>> clazz =
-                    (Class<? extends ContextAwareNodeFactory<?>>)o.getClass();
+                Class<? extends ConfigurableNodeFactory<?>> clazz =
+                    (Class<? extends ConfigurableNodeFactory<?>>)o.getClass();
 
                 for (IConfigurationElement child : element.getChildren()) {
                     String extension = child.getAttribute("extension");
@@ -107,18 +108,16 @@ public final class ConfigurableNodeFactoryMapper {
             }
         }
         for (String key : EXTENSION_REGISTRY.keySet()) {
-            LOGGER.debug("File extension: \"" + key + "\" registered for "
-                    + "Node Factory: "
-                    + EXTENSION_REGISTRY.get(key).getFirst().getSimpleName() + ".");
+            LOGGER.debug("File extension: \"" + key + "\" registered for Node Factory: "
+                + EXTENSION_REGISTRY.get(key).getFirst().getSimpleName() + ".");
         }
     }
 
-     /**
-      * @param url the url for which a node factory should be returned
-      * @return the node factory registered for this extension, or null if
-      *      the extension is not registered.
-      */
-     public static Class<? extends ConfigurableNodeFactory<?>> getNodeFactory(final String url) {
+    /**
+     * @param url the url for which a node factory should be returned
+     * @return the node factory registered for this extension, or null if the extension is not registered.
+     */
+    public static Class<? extends ConfigurableNodeFactory<?>> getNodeFactory(final String url) {
         for (Map.Entry<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>> e : EXTENSION_REGISTRY
             .entrySet()) {
             if (StringUtils.endsWithIgnoreCase(url, e.getKey())) {
@@ -126,16 +125,17 @@ public final class ConfigurableNodeFactoryMapper {
             }
         }
         return null;
-     }
+    }
 
-     /**
-      * Return the image to the registered extension, of null, if it is not a registered extension, or the node doesn't
-      * provide an image.
-      * @param url
-      * @return
-      * @since 2.7
-      */
-     public static Image getImage(final String url) {
+    /**
+     * Return the image to the registered extension, of null, if it is not a registered extension, or the node doesn't
+     * provide an image.
+     *
+     * @param url
+     * @return the image
+     * @since 2.7
+     */
+    public static Image getImage(final String url) {
         for (Map.Entry<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>> e : EXTENSION_REGISTRY
             .entrySet()) {
             if (url.endsWith(e.getKey())) {
@@ -143,5 +143,5 @@ public final class ConfigurableNodeFactoryMapper {
             }
         }
         return null;
-     }
+    }
 }
