@@ -1305,6 +1305,10 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
         }
 
         fireEditorValueChanged(true, true);
+
+        m_styledText.getDisplay().asyncExec(() -> {
+            m_styledText.forceFocus();
+        });
     }
 
     void fontSizeWasSelected(final int size) {
