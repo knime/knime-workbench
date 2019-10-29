@@ -74,6 +74,7 @@ import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
+import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler;
@@ -151,25 +152,10 @@ public class MRUFileMenuItem extends ContributionItem {
                     final String[] parts = uri.split("/");
                     if (parts.length > 2) {
                         final URL u = new URL(uri);
-                        final ExplorerURLStreamHandler handler = new ExplorerURLStreamHandler();
-
-                        // This test for existence could become a performance issue when there have been a lot
-                        //      of recent network mounted workflows and network performance is not-so-hot.
-                        try {
-                            final URLConnection connection = handler.openConnection(u);
-                            try (final InputStream is = connection.getInputStream()) {
-                                if (connection.getContentLength() < 1) {
-                                    continue;
-                                }
-                            }
-                        } catch (IOException ioe) {
-                            LOGGER.debug("Unable to open a connection to a recent workflow [" + uri + "].", ioe);
-                            continue;
-                        }
-
                         final MenuItem mi = new MenuItem(menu, SWT.PUSH);
                         mi.setText(URLDecoder.decode(parts[parts.length - 2], "UTF-8"));
                         mi.setToolTipText(URLDecoder.decode(uri, "UTF-8").replaceAll("/workflow\\.knime$", ""));
+                        mi.setEnabled(false);
                         mi.addSelectionListener(new SelectionAdapter() {
                             @Override
                             public void widgetSelected(final SelectionEvent se) {
@@ -184,12 +170,52 @@ public class MRUFileMenuItem extends ContributionItem {
                                 }
                             }
                         });
+
+                        KNIMEConstants.GLOBAL_THREAD_POOL.enqueue(new AssetExistenceResolver(mi, u));
                     }
                 }
             }
         }
         catch (final Exception e) {
             LOGGER.error("Exception encountered while updating the Recent Workflows submenu.", e);
+        }
+    }
+
+
+    private static class AssetExistenceResolver implements Runnable {
+        private final MenuItem m_menuItem;
+        private final URL m_assetURL;
+
+        private AssetExistenceResolver(final MenuItem menuItem, final URL url) {
+            m_menuItem = menuItem;
+            m_assetURL = url;
+        }
+
+        @Override
+        public void run() {
+            final ExplorerURLStreamHandler handler = new ExplorerURLStreamHandler();
+
+            try {
+                final URLConnection connection = handler.openConnection(m_assetURL);
+                try (final InputStream is = connection.getInputStream()) {
+                    if (connection.getContentLength() > 0) {
+                        PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
+                            m_menuItem.setEnabled(true);
+                        });
+                    } else {
+                        PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
+                            m_menuItem.dispose();
+                        });
+                    }
+                }
+            } catch (IOException ioe) {
+                LOGGER.debug("Unable to open a connection to a recent workflow [" + m_assetURL.toExternalForm() + "].",
+                    ioe);
+
+                PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
+                    m_menuItem.dispose();
+                });
+            }
         }
     }
 }
