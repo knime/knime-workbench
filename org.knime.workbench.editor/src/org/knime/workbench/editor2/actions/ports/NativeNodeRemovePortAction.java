@@ -53,6 +53,7 @@ import org.knime.core.node.context.ports.ExtendablePortGroup;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
+ * An port action for native node container nodes that allows to remove ports.
  *
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
  */

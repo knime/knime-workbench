@@ -54,6 +54,7 @@ import org.knime.core.node.port.PortType;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
+ * An port action for native node container nodes that allows to add ports.
  *
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
  */

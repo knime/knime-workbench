@@ -60,6 +60,7 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.meta.MetaPortDialog;
 
 /**
+ * An abstract port action for native node container nodes that allows to change a node's ports.
  *
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
  */

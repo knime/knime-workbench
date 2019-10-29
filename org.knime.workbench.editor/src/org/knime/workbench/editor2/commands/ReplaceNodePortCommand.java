@@ -64,6 +64,7 @@ import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
+ * Command that adds, removes, or exchanges ports of a native node.
  *
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
  */
@@ -151,10 +152,12 @@ public class ReplaceNodePortCommand extends CreateNodeCommand {
     private static class ReplacePortConnectionHelper extends ReplaceHelper {
 
         /**
-         * @param wfm
-         * @param oldNode
+         * Constructor.
+         *
+         * @param wfm the workflow manager
+         * @param oldNode the node which was replaced
          */
-        public ReplacePortConnectionHelper(final WorkflowManager wfm, final NodeContainer oldNode) {
+        ReplacePortConnectionHelper(final WorkflowManager wfm, final NodeContainer oldNode) {
             super(wfm, oldNode);
         }
 
