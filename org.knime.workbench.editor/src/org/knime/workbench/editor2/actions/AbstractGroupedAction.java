@@ -48,16 +48,17 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import org.eclipse.jface.action.Action;
+import org.eclipse.gef.ui.actions.WorkbenchPartAction;
 import org.eclipse.jface.action.ActionContributionItem;
 import org.eclipse.jface.action.IToolBarManager;
+import org.knime.workbench.editor2.WorkflowEditor;
 
 /**
  * This action is to be subclassed by N toggle actions that wish to function as a radio button group.
  *
  * @author loki der quaeler
  */
-abstract class AbstractGroupedAction extends Action {
+abstract class AbstractGroupedAction extends WorkbenchPartAction {
 
     private final String m_id;
     private final String[] m_otherIds;
@@ -65,19 +66,44 @@ abstract class AbstractGroupedAction extends Action {
     private final IToolBarManager m_toolbarManager;
 
     /**
-     * TODO
-     *
-     * @param tbm
-     * @param id
-     * @param otherId
+     * @param editor the {@code WorkflowEditor} upon which this action will act
+     * @param tbm the toolbar manager in which this action's item will sit
+     * @param id the id of this action
+     * @param otherId the ids of the other actions in this group
      */
-    protected AbstractGroupedAction(final IToolBarManager tbm, final String id, final String ... otherId) {
-        super(null, AS_CHECK_BOX);
+    protected AbstractGroupedAction(final WorkflowEditor editor, final IToolBarManager tbm, final String id,
+            final String... otherId) {
+        super(editor, AS_CHECK_BOX);
 
         m_toolbarManager = tbm;
 
         m_id = id;
         m_otherIds = otherId;
+    }
+
+    /**
+     * This is invoked, on the SWT thread, if the action is being run, after all of the buttons in the group have had
+     * their state set correctly.
+     */
+    protected abstract void performAction();
+
+    /**
+     * Sets the workbench part / editor to which this action is associated.
+     *
+     * Due to ordering of invocations in Eclipse 4.7 related to toolbar setup and setting of active editor, we
+     *  need provide a non-constructor way to set this.
+     *
+     * @param editor
+     */
+    public void setWorkflowEditor(final WorkflowEditor editor) {
+        setWorkbenchPart(editor);
+    }
+
+    /**
+     * @return the {@link WorkflowEditor} set via the constructor, or via {@code setWorkflowEditor(WorkflowEditor)}
+     */
+    protected WorkflowEditor getWorkflowEditor() {
+        return (WorkflowEditor)getWorkbenchPart();
     }
 
     /**
@@ -87,11 +113,6 @@ abstract class AbstractGroupedAction extends Action {
     public String getId() {
         return m_id;
     }
-
-    /**
-     * TODO
-     */
-    protected abstract void performAction();
 
 
     /**

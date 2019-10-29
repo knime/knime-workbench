@@ -57,31 +57,26 @@ import org.knime.workbench.editor2.WorkflowEditor;
  * @author loki der quaeler
  */
 abstract class AbstractLockModeAction extends AbstractGroupedAction {
-    protected WorkflowEditor m_editor;
-
     private ToggleEditorModeAction m_toggleEditorModeAction;
 
-    protected AbstractLockModeAction(final WorkflowEditor editor, final IToolBarManager tbm, final String id, final String ... otherId) {
-        super(tbm, id, otherId);
-
-        m_editor = editor;
-    }
-
-    /**
-     * Due to ordering of invocations in Eclipse 4.7 related to toolbar setup and setting of active editor, we
-     *  need provide a non-constructor way to set this.
-     *
-     * @param editor
-     */
-    public final void setWorkflowEditor(final WorkflowEditor editor) {
-        m_editor = editor;
+    protected AbstractLockModeAction(final WorkflowEditor editor, final IToolBarManager tbm, final String id,
+            final String... otherId) {
+        super(editor, tbm, id, otherId);
     }
 
     protected ToggleEditorModeAction getToggleEditorModeAction() {
         if (m_toggleEditorModeAction == null) {
-            m_toggleEditorModeAction = new ToggleEditorModeAction(m_editor);
+            m_toggleEditorModeAction = new ToggleEditorModeAction(getWorkflowEditor());
         }
 
         return m_toggleEditorModeAction;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected boolean calculateEnabled() {
+        return true;
     }
 }

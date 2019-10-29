@@ -203,6 +203,7 @@ import org.knime.workbench.editor2.WorkflowEditorEventListener.ActiveWorkflowEdi
 import org.knime.workbench.editor2.WorkflowEditorEventListener.WorkflowEditorEvent;
 import org.knime.workbench.editor2.actions.AbstractNodeAction;
 import org.knime.workbench.editor2.actions.AddAnnotationAction;
+import org.knime.workbench.editor2.actions.AnnotationLockAction;
 import org.knime.workbench.editor2.actions.BringAnnotationForwardAction;
 import org.knime.workbench.editor2.actions.BringAnnotationToFrontAction;
 import org.knime.workbench.editor2.actions.CancelAction;
@@ -215,6 +216,7 @@ import org.knime.workbench.editor2.actions.ConvertMetaNodeToSubNodeAction;
 import org.knime.workbench.editor2.actions.ConvertSubNodeToMetaNodeAction;
 import org.knime.workbench.editor2.actions.CopyAction;
 import org.knime.workbench.editor2.actions.CutAction;
+import org.knime.workbench.editor2.actions.DefaultModeLockAction;
 import org.knime.workbench.editor2.actions.DefaultOpenViewAction;
 import org.knime.workbench.editor2.actions.DisconnectMetaNodeLinkAction;
 import org.knime.workbench.editor2.actions.DisconnectSubNodeLinkAction;
@@ -230,6 +232,7 @@ import org.knime.workbench.editor2.actions.LockMetaNodeAction;
 import org.knime.workbench.editor2.actions.LockSubNodeAction;
 import org.knime.workbench.editor2.actions.MetaNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.NodeConnectionContainerDeleteAction;
+import org.knime.workbench.editor2.actions.NodeLockAction;
 import org.knime.workbench.editor2.actions.OpenDialogAction;
 import org.knime.workbench.editor2.actions.PasteAction;
 import org.knime.workbench.editor2.actions.PasteActionContextMenu;
@@ -891,6 +894,10 @@ public class WorkflowEditor extends GraphicalEditor implements
         m_editorActions.add(delete.getId());
         m_editorActions.add(save.getId());
         m_editorActions.add(saveAs.getId());
+
+        m_editorActions.add(AnnotationLockAction.ID);
+        m_editorActions.add(DefaultModeLockAction.ID);
+        m_editorActions.add(NodeLockAction.ID);
 
         m_editorActions.add(openDialog.getId());
         m_editorActions.add(execute.getId());

@@ -71,8 +71,6 @@ public class AnnotationLockAction extends AbstractLockModeAction {
      */
     public AnnotationLockAction(final WorkflowEditor editor, final IToolBarManager tbm) {
         super(editor, tbm, ID, NodeLockAction.ID, DefaultModeLockAction.ID);
-
-        m_editor = editor;
     }
 
     /**
@@ -88,9 +86,19 @@ public class AnnotationLockAction extends AbstractLockModeAction {
      */
     @Override
     public void performAction() {
-        m_editor.setAnnotationsLocked(true);
+        getWorkflowEditor().setAnnotationsLocked(true);
 
         final ToggleEditorModeAction toggleAction = getToggleEditorModeAction();
         toggleAction.toggleToModeIfNecessary(WorkflowEditorMode.NODE_EDIT);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void refresh() {
+        super.refresh();
+
+        setChecked(getWorkflowEditor().getAnnotationsLocked());
     }
 }

@@ -49,6 +49,7 @@ package org.knime.workbench.editor2;
 
 import org.eclipse.gef.editparts.ZoomManager;
 import org.eclipse.gef.ui.actions.ActionBarContributor;
+import org.eclipse.gef.ui.actions.ActionRegistry;
 import org.eclipse.gef.ui.actions.DeleteRetargetAction;
 import org.eclipse.gef.ui.actions.RedoRetargetAction;
 import org.eclipse.gef.ui.actions.UndoRetargetAction;
@@ -125,6 +126,11 @@ public class WorkflowEditorActionBarContributor extends ActionBarContributor {
         // In 4.7 RCPs, this is called before setActiveEditor, but we check in both places as future-proofing
         if (m_editor != null) {
             m_editor.setZoomComboBox(m_zoomComboBox);
+
+            final ActionRegistry ar = m_editor.getActionRegistry();
+            ar.registerAction(m_annotationLockAction);
+            ar.registerAction(m_defaultModeLockAction);
+            ar.registerAction(m_nodeLockAction);
         }
     }
 
@@ -148,6 +154,11 @@ public class WorkflowEditorActionBarContributor extends ActionBarContributor {
                 m_nodeLockAction.setWorkflowEditor(m_editor);
                 m_defaultModeLockAction.setWorkflowEditor(m_editor);
                 m_annotationLockAction.setWorkflowEditor(m_editor);
+
+                final ActionRegistry ar = m_editor.getActionRegistry();
+                ar.registerAction(m_annotationLockAction);
+                ar.registerAction(m_defaultModeLockAction);
+                ar.registerAction(m_nodeLockAction);
             }
         }
         super.setActiveEditor(editor);

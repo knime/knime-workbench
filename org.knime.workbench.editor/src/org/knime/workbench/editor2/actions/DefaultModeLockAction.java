@@ -72,8 +72,6 @@ public class DefaultModeLockAction extends AbstractLockModeAction {
     public DefaultModeLockAction(final WorkflowEditor editor, final IToolBarManager tbm) {
         super(editor, tbm, ID, NodeLockAction.ID, AnnotationLockAction.ID);
 
-        m_editor = editor;
-
         setChecked(true);
     }
 
@@ -90,9 +88,20 @@ public class DefaultModeLockAction extends AbstractLockModeAction {
      */
     @Override
     protected void performAction() {
-        m_editor.setAnnotationsLocked(false);
+        getWorkflowEditor().setAnnotationsLocked(false);
 
         final ToggleEditorModeAction toggleAction = getToggleEditorModeAction();
         toggleAction.toggleToModeIfNecessary(WorkflowEditorMode.NODE_EDIT);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void refresh() {
+        super.refresh();
+
+        final WorkflowEditor we = getWorkflowEditor();
+        setChecked(!we.getAnnotationsLocked() && we.getEditorMode().equals(WorkflowEditorMode.NODE_EDIT));
     }
 }
