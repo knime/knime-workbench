@@ -123,7 +123,7 @@ abstract class AbstractNativeNodePortAction extends Action {
      * @return the selected port type, can be null
      */
     protected static final PortType createDialog(final String title, final PortType[] supportedTypes) {
-        return new MetaPortDialog(SWTUtilities.getActiveShell(), title, supportedTypes).open();
+        return new MetaPortDialog(SWTUtilities.getKNIMEWorkbenchShell(), title, supportedTypes).open();
     }
 
     /**

@@ -45,6 +45,7 @@
  */
 package org.knime.workbench.editor2.figures;
 
+import java.awt.MouseInfo;
 import java.util.List;
 import java.util.Objects;
 
@@ -55,6 +56,8 @@ import org.eclipse.draw2d.FlowLayout;
 import org.eclipse.draw2d.Graphics;
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.Label;
+import org.eclipse.draw2d.MouseEvent;
+import org.eclipse.draw2d.MouseListener;
 import org.eclipse.draw2d.OrderedLayout;
 import org.eclipse.draw2d.RectangleFigure;
 import org.eclipse.draw2d.RelativeLocator;
@@ -62,13 +65,22 @@ import org.eclipse.draw2d.ToolbarLayout;
 import org.eclipse.draw2d.geometry.Dimension;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.draw2d.geometry.Rectangle;
+import org.eclipse.jface.action.Action;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NativeNodeContainer;
@@ -84,7 +96,9 @@ import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.EditorModeParticipant;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.WorkflowEditorMode;
+import org.knime.workbench.editor2.actions.ports.PortActionCreator;
 import org.knime.workbench.editor2.editparts.FontStore;
+import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.figures.ProgressFigure.ProgressMode;
 
 /**
@@ -412,6 +426,15 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
     public void setNodeLockIcon(final Image icon, final String lockToolTip) {
         m_nodeLockIcon = icon;
         m_symbolFigure.refreshNodeLockIcon(lockToolTip);
+    }
+
+    /**
+     * Sets the modifiable port icon.
+     *
+     * @param nodeContainerEditPart the node container edit part
+     */
+    public void setModifiablePortIcon(final NodeContainerEditPart nodeContainerEditPart) {
+        m_symbolFigure.setModifiablePortIcon(nodeContainerEditPart);
     }
 
     /**
@@ -939,6 +962,8 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
 
         private Label m_nodeLockLabel;
 
+        private Label m_modifiablePortLabel;
+
         private NodeType m_nodeType;
 
         /**
@@ -1064,6 +1089,95 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                     lockToolTip != null && lockToolTip.length() > 0 ? new NewToolTipFigure(lockToolTip) : null);
                 repaint();
             }
+        }
+
+
+        /**
+         * Creates the modifiable port icon and its menu.
+         *
+         * @param nodeContainerEditPart the node container edit part
+         */
+        public void setModifiablePortIcon(final NodeContainerEditPart nodeContainerEditPart) {
+            if (m_modifiablePortLabel == null) {
+                // setup the label
+                m_modifiablePortLabel = new Label();
+                m_modifiablePortLabel.setOpaque(false);
+                m_backgroundIcon.add(m_modifiablePortLabel);
+                m_backgroundIcon.setConstraint(m_modifiablePortLabel, new RelativeLocator(m_backgroundIcon, 0.19, .83));
+                m_modifiablePortLabel.setIcon(
+                    ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/node/add_plus_quadrant.png"));
+                m_modifiablePortLabel.setToolTip(new NewToolTipFigure("Click to modify ports"));
+
+                // add an hidden button and display to allow changing ports
+                final Display display = PlatformUI.getWorkbench().getDisplay();
+                final Shell popupShell = new Shell(display, SWT.NO_TRIM | SWT.ON_TOP);
+                final GridLayout gl = new GridLayout(1, false);
+                gl.marginHeight = 0;
+                gl.marginWidth = 0;
+                gl.verticalSpacing = 0;
+                popupShell.setLayout(gl);
+                final Button hiddenUselessButton = new Button(popupShell, SWT.NONE);
+                final Menu popUpMenu = new Menu(hiddenUselessButton);
+                // fill the popupMenu
+                fillMenu(nodeContainerEditPart, popUpMenu);
+
+                m_modifiablePortLabel.addMouseListener(new MouseListener() {
+                    @Override
+                    public void mousePressed(final MouseEvent me) {
+                        me.consume();
+                        // we could try to convert the mouse event location to the display, but this is easier:
+                        final java.awt.Point screenPoint = MouseInfo.getPointerInfo().getLocation();
+                        popUpMenu.setLocation(screenPoint.x, (screenPoint.y + (popUpMenu.getItemCount() * 21)));
+                        popUpMenu.setVisible(true);
+                    }
+
+                    @Override
+                    public void mouseReleased(final MouseEvent me) {
+                    }
+
+                    @Override
+                    public void mouseDoubleClicked(final MouseEvent me) {
+                    }
+                });
+                repaint();
+            }
+        }
+
+        private void fillMenu(final NodeContainerEditPart nodeContainerEditPart, final Menu popUpMenu) {
+            final PortActionCreator portCreator = new PortActionCreator(nodeContainerEditPart);
+            if (portCreator.hasActions()) {
+                addActions(popUpMenu, portCreator.getAddPortActions(), "Add ports");
+                addActions(popUpMenu, portCreator.getRemovePortActions(), "Remove ports");
+                addActions(popUpMenu, portCreator.getExchangePortActions(), "Exchange ports");
+            }
+        }
+
+        private void addActions(final Menu popupMenu, final List<? extends Action> actions,
+            final String menuEntryName) {
+            if (!actions.isEmpty()) {
+                if (actions.size() == 1) {
+                    createMenuItem(popupMenu, actions.get(0));
+                } else {
+                    final MenuItem mi = new MenuItem(popupMenu, SWT.CASCADE);
+                    mi.setText(menuEntryName);
+                    Menu subMenuManager = new Menu(popupMenu);
+                    mi.setMenu(subMenuManager);
+                    actions.stream().forEach(action -> createMenuItem(subMenuManager, action));
+                }
+            }
+        }
+
+        private void createMenuItem(final Menu popupMenu, final Action action) {
+            final MenuItem mi = new MenuItem(popupMenu, SWT.PUSH);
+            mi.setText(action.getText());
+            mi.setEnabled(action.isEnabled());
+            mi.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(final SelectionEvent se) {
+                    popupMenu.setVisible(false);
+                    action.run();
+                }
+            });
         }
 
         /**

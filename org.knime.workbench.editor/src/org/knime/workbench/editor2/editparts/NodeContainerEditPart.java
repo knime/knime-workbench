@@ -51,6 +51,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -112,6 +113,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NotConfigurableException;
 import org.knime.core.node.workflow.AbstractNodeExecutionJobManager;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
+import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeAnnotation;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerTemplate;
@@ -129,6 +131,7 @@ import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.NodeUIInformationEvent;
 import org.knime.core.node.workflow.NodeUIInformationListener;
 import org.knime.core.node.workflow.WorkflowCipherPrompt;
+import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.NodePortUI;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
@@ -197,8 +200,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
         ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/meta/metanode_unlock_decorator.png");
 
     private static final Image NODE_LOCK_ICON =
-            ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/meta/metanode_lock_decorator.png");
-
+        ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/meta/metanode_lock_decorator.png");
 
     /**
      * true, if the figure was initialized from the node extra info object.
@@ -283,6 +285,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
         checkMetaNodeTemplateIcon();
         checkMetaNodeLockIcon();
         checkNodeLockIcon();
+        checkModifiablePortIcon();
         // set the active (or disabled) state
         ((NodeContainerFigure)getFigure()).setStateFromNC(cont);
         // set the node message
@@ -1115,6 +1118,17 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
         }
         NodeContainerFigure fig = (NodeContainerFigure)getFigure();
         fig.setNodeLockIcon(i, toolTip.toString());
+    }
+
+    private void checkModifiablePortIcon() {
+        if (getNodeContainer() instanceof NativeNodeContainerUI) {
+            Optional<NativeNodeContainer> nnc = Wrapper.unwrapOptional(getNodeContainer(), NativeNodeContainer.class);
+            if (nnc.isPresent() && nnc.get().getNode().getCopyOfCreationConfig()
+                .map(ncc -> ncc.getPortConfig().isPresent()).orElse(false)) {
+                NodeContainerFigure fig = (NodeContainerFigure)getFigure();
+                fig.setModifiablePortIcon(this);
+            }
+        }
     }
 
     /** {@inheritDoc} */
