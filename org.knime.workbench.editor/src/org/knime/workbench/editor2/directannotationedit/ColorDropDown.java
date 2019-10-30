@@ -51,7 +51,9 @@ package org.knime.workbench.editor2.directannotationedit;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.draw2d.ColorConstants;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
@@ -69,6 +71,8 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Widget;
 import org.knime.core.util.ColorUtilities;
+import org.knime.workbench.ui.KNIMEUIPlugin;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
  * This is a color drop down picker created originally to be used with the annotation styling toolbar, but presumably is
@@ -77,8 +81,11 @@ import org.knime.core.util.ColorUtilities;
  * @author loki der quaeler
  */
 public class ColorDropDown extends Canvas implements TransientEditAssetGroup.AssetProvider {
+    private static final boolean IS_OS_WINDOWS = Platform.OS_WIN32.equals(Platform.getOS());
 
     private static final int DROP_SHADOW_OUTSET = 2;
+
+    private static final String SERIALIZED_COLORS_DELIMITER = ",";
 
     private static final Point GRID_WELL_SIZE = new Point(18, 18);
     private static final Rectangle GRID_WELL_PAINT_BOUNDS = new Rectangle(0, 0, GRID_WELL_SIZE.x, GRID_WELL_SIZE.y);
@@ -137,6 +144,52 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
         }
     }
 
+    private static String serializeRGB(final RGB color) {
+        return Integer.toString(color.red) + '.' + color.green + '.' + color.blue;
+    }
+
+    private static RGB deserializeRGB(final String serializedColor) {
+        final String[] components = serializedColor.split("\\.");
+
+        return new RGB(Integer.parseInt(components[0]), Integer.parseInt(components[1]),
+            Integer.parseInt(components[2]));
+    }
+
+    private static RGB[] getCustomColorsFromPreferences() {
+        final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
+        final String serializedColors = store.getString(PreferenceConstants.P_CUSTOM_COLORS);
+
+        if ((serializedColors != null) && (serializedColors.length() > 0)) {
+            final String[] colors = serializedColors.split(SERIALIZED_COLORS_DELIMITER);
+            final RGB[] returnedColors = new RGB[colors.length];
+
+            for (int i = 0; i < colors.length; i++) {
+                returnedColors[i] = deserializeRGB(colors[i]);
+            }
+
+            return returnedColors;
+        }
+
+        return null;
+    }
+
+    private static void saveCustomColorsToPreferences(final RGB[] colors) {
+        if ((colors != null) && (colors.length > 0)) {
+            final StringBuilder sb = new StringBuilder();
+
+            for (final RGB color : colors) {
+                if (sb.length() > 0) {
+                    sb.append(SERIALIZED_COLORS_DELIMITER);
+                }
+
+                sb.append(serializeRGB(color));
+            }
+
+            final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
+            store.setValue(PreferenceConstants.P_CUSTOM_COLORS, sb.toString());
+        }
+    }
+
     // Frameworks candidate... oh SWT, why are you so insufficient.. seriously - an obvious use case ignored
     static Color createColorFromHexString(final Display display, final String hexString) {
         java.awt.Color c = java.awt.Color.decode(hexString);
@@ -153,6 +206,7 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
 
     private FlatButton m_currentlySelectedButton;
     private Color m_currentlySelectedColor;
+    private RGB[] m_customColors;
 
     private final StyledTextEditor m_styledTextEditor;
 
@@ -228,7 +282,22 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
                 colorDialog.setRGB(currentSelection.getRGB());
             }
 
+            if (IS_OS_WINDOWS) {
+                if (m_customColors == null) {
+                    m_customColors = getCustomColorsFromPreferences();
+                }
+
+                if (m_customColors != null) {
+                    colorDialog.setRGBs(m_customColors);
+                }
+            }
+
             final RGB selectedRGB = colorDialog.open();
+
+            if (IS_OS_WINDOWS) {
+                m_customColors = colorDialog.getRGBs();
+                saveCustomColorsToPreferences(m_customColors);
+            }
 
             if (disposableShell != null) {
                 disposableShell.dispose();

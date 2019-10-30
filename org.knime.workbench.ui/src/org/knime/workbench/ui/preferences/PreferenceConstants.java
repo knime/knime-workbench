@@ -193,4 +193,10 @@ public interface PreferenceConstants {
     public static final String P_EDITOR_ZOOM_MODIFIED_DELTA = "knime.zoom.alternate_delta";
     /** The default value for the delta in modifier zoom change */
     public static final int P_DEFAULT_EDITOR_ZOOM_MODIFIED_DELTA = 5;
+
+    /**
+     * Preference constant for the comma delimited list of custom colors (chosen in the native color picker
+     *  by Windows users from the annotation toolbar.)
+     */
+    public static final String P_CUSTOM_COLORS = "knime.colors.custom";
 }
