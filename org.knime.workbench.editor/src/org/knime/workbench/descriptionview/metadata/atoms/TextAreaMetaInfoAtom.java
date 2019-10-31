@@ -46,85 +46,71 @@
  * History
  *   May 9, 2019 (loki): created
  */
-package org.knime.workbench.descriptionview.workflowmeta.atoms;
+package org.knime.workbench.descriptionview.metadata.atoms;
 
 import javax.xml.transform.sax.TransformerHandler;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.GC;
-import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.knime.workbench.descriptionview.workflowmeta.WorkflowMetaView;
+import org.eclipse.swt.widgets.Label;
+import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 import org.xml.sax.SAXException;
 
 /**
- * The atom representing tags.
+ * Currently this atom is always typed to {@link MetadataItemType#DESCRIPTION} as we have no other text area
+ * reliant types; i'm reluctant to call it something like <code>DescriptionMetaInfoAtom</code> as, like
+ * {@link ComboBoxMetaInfoAtom}, it seems plausible that there may be other text-area-UI dependent metadata in the
+ * future.
  *
  * @author loki der quaeler
  */
-public class TagMetaInfoAtom extends MetaInfoAtom {
+public class TextAreaMetaInfoAtom extends AbstractTextMetaInfoAtom {
     /**
-     * @param label the label displayed with the value of this atom in some UI widget; this is historical and unused.
+     * @param label the label displayed with the value of this atom in some UI widget.
      * @param value the displayed value of this atom.
      * @param readOnly this has never been observed, and we don't currently have a use case in which we allow the user
      *            to mark something as read-only, so consider this future-proofing.
      */
-    public TagMetaInfoAtom(final String label, final String value, final boolean readOnly) {
-        super(MetadataItemType.TAG, label, value, readOnly);
+    public TextAreaMetaInfoAtom(final String label, final String value, final boolean readOnly) {
+        super(MetadataItemType.DESCRIPTION, label, value, readOnly);
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public void storeStateForEdit() { }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void restoreState() { }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void commitEdit() { }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isDirty() {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @SuppressWarnings("unused")
     @Override
     public void populateContainerForDisplay(final Composite parent) {
-        new TagChiclet(parent, false);
-    }
+        parent.setLayout(new FillLayout());
 
-    /**
-     * {@inheritDoc}
-     */
-    @SuppressWarnings("unused")
-    @Override
-    public void populateContainerForEdit(final Composite parent) {
-        new TagChiclet(parent, true);
+        final Label l = new Label(parent, SWT.LEFT | SWT.WRAP);
+        l.setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
+        l.setForeground(WorkflowMetaView.TEXT_COLOR);
+
+        l.setText(m_value);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void focus() { }
+    public void populateContainerForEdit(final Composite parent) {
+        final GridLayout gl = new GridLayout(1, false);
+        gl.marginTop = 5;
+        gl.marginBottom = 0;
+        parent.setLayout(gl);
+
+        final GridData gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+        gd.heightHint = 99;
+
+        createAndPlaceTextWidget(parent, (SWT.MULTI | SWT.V_SCROLL | SWT.WRAP | SWT.BORDER), gd);
+    }
 
     /**
      * {@inheritDoc}
@@ -132,41 +118,7 @@ public class TagMetaInfoAtom extends MetaInfoAtom {
     @Override
     public void save(final TransformerHandler parentElement) throws SAXException {
         if (hasContent()) {
-            save(parentElement, MetadataXML.TEXT);
-        }
-    }
-
-
-    private class TagChiclet extends CloseableLabel {
-        private static final int HORIZONTAL_INSET = 9;
-        private static final int VERTICAL_INSET = 3;
-
-
-        private TagChiclet(final Composite parent, final boolean forEdit) {
-            super(parent, forEdit, HORIZONTAL_INSET, VERTICAL_INSET);
-
-            addPaintListener((paintEvent) -> {
-                final GC gc = paintEvent.gc;
-                final Rectangle r = getClientArea();
-
-                gc.setAdvanced(true);
-                gc.setAntialias(SWT.ON);
-                gc.setBackground(WorkflowMetaView.GENERAL_FILL_COLOR);
-                gc.fillRoundRectangle((r.x + 1), (r.y + 1), (r.width - 2), (r.height - 2), r.height, r.height);
-
-                gc.setTextAntialias(SWT.ON);
-                gc.drawString(m_value, (r.x + HORIZONTAL_INSET), (r.y + VERTICAL_INSET));
-
-                paintNAry(gc);
-            });
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public Point computeSize (final int wHint, final int hHint, final boolean changed) {
-            return m_calculatedSize;
+            save(parentElement, MetadataXML.MULTILINE);
         }
     }
 }

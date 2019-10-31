@@ -46,7 +46,7 @@
  * History
  *   June 4, 2019 (loki): created
  */
-package org.knime.workbench.descriptionview.workflowmeta.atoms;
+package org.knime.workbench.descriptionview.metadata.atoms;
 
 import java.util.Calendar;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -60,7 +60,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.DateTime;
 import org.eclipse.swt.widgets.Label;
-import org.knime.workbench.descriptionview.workflowmeta.WorkflowMetaView;
+import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;

@@ -66,6 +66,7 @@ import org.eclipse.ui.browser.IWebBrowser;
 import org.eclipse.ui.browser.IWorkbenchBrowserSupport;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
+import org.knime.workbench.descriptionview.FallbackBrowser;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.MetaNodeTemplate;

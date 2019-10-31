@@ -46,7 +46,7 @@
  * History
  *   May 9, 2019 (loki): created
  */
-package org.knime.workbench.descriptionview.workflowmeta;
+package org.knime.workbench.descriptionview.metadata.workflow;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -54,13 +54,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -70,14 +67,14 @@ import javax.xml.transform.sax.SAXTransformerFactory;
 import javax.xml.transform.sax.TransformerHandler;
 import javax.xml.transform.stream.StreamResult;
 
-import org.knime.core.node.NodeLogger;
-import org.knime.workbench.descriptionview.workflowmeta.atoms.ComboBoxMetaInfoAtom;
-import org.knime.workbench.descriptionview.workflowmeta.atoms.DateMetaInfoAtom;
-import org.knime.workbench.descriptionview.workflowmeta.atoms.LinkMetaInfoAtom;
-import org.knime.workbench.descriptionview.workflowmeta.atoms.MetaInfoAtom;
-import org.knime.workbench.descriptionview.workflowmeta.atoms.TagMetaInfoAtom;
-import org.knime.workbench.descriptionview.workflowmeta.atoms.TextAreaMetaInfoAtom;
-import org.knime.workbench.descriptionview.workflowmeta.atoms.TextFieldMetaInfoAtom;
+import org.knime.workbench.descriptionview.metadata.AbstractMetadataModelFacilitator;
+import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
+import org.knime.workbench.descriptionview.metadata.atoms.DateMetaInfoAtom;
+import org.knime.workbench.descriptionview.metadata.atoms.LinkMetaInfoAtom;
+import org.knime.workbench.descriptionview.metadata.atoms.MetaInfoAtom;
+import org.knime.workbench.descriptionview.metadata.atoms.TagMetaInfoAtom;
+import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
+import org.knime.workbench.descriptionview.metadata.atoms.TextFieldMetaInfoAtom;
 import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
@@ -93,9 +90,7 @@ import org.xml.sax.helpers.AttributesImpl;
  *
  * @author loki der quaeler
  */
-public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(MetadataModelFacilitator.class);
-
+public class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
     // I've seen both "TAG:" and "TAGS:" - we write out the latter
     private static final String LEGACY_METADATA_TAG_KEYWORD = "TAG";
     private static final String LEGACY_METADATA_TAGS_KEYWORD = "TAGS";
@@ -114,59 +109,15 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         LEGACY_KEYWORDS.add(LEGACY_METADATA_LICENSE_KEYWORD);
     }
 
-    /**
-     * Classes which want to know when the number of atoms have changed, or an edit-time dirty state has changed,
-     *  should implement this.
-     */
-    public interface ModelObserver {
-        /**
-         * Invoked when the number of atoms have changed
-         *
-         * @param increased true if atoms were added, false if removed
-         */
-        void modelCardinalityChanged(final boolean increased);
-
-        /**
-         * Invoked when the dirty state changes; when the implementor is invoked, calling
-         * {@link MetadataModelFacilitator#modelIsDirty()} will return an accurate value.
-         */
-        void modelDirtyStateChanged();
-    }
-
-
-    private TextFieldMetaInfoAtom m_authorAtom;              // 1
-    private DateMetaInfoAtom m_creationDateAtom;             // 1
-    private TextAreaMetaInfoAtom m_descriptionAtom;          // 1
-    private final ArrayList<TagMetaInfoAtom> m_tagAtoms;     // 1-N
-    private final ArrayList<LinkMetaInfoAtom> m_linkAtoms;   // 1-N
-    private ComboBoxMetaInfoAtom m_licenseAtom;              // 1
-    private TextFieldMetaInfoAtom m_titleAtom;               // 1
 
     private int m_metadataVersion;
-
-    private ModelObserver m_modelObserver;
-
-    // for edit state store
-    private final ArrayList<TagMetaInfoAtom> m_savedTagAtoms;
-    private final AtomicBoolean m_tagWasDeletedDuringEdit;
-    private final ArrayList<LinkMetaInfoAtom> m_savedLinkAtoms;
-    private final AtomicBoolean m_linkWasDeletedDuringEdit;
-    private final AtomicBoolean m_editStateIsDirty;
 
     MetadataModelFacilitator() {
         this(null, null, null);
     }
 
     MetadataModelFacilitator(final String author, final String legacyDescription, final Calendar creationDate) {
-        m_tagAtoms = new ArrayList<>();
-        m_linkAtoms = new ArrayList<>();
-
-        m_savedTagAtoms = new ArrayList<>();
-        m_savedLinkAtoms = new ArrayList<>();
-
-        m_tagWasDeletedDuringEdit = new AtomicBoolean(false);
-        m_linkWasDeletedDuringEdit = new AtomicBoolean(false);
-        m_editStateIsDirty = new AtomicBoolean(false);
+        super();
 
         if (author != null) {
             m_authorAtom = new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, MetadataXML.AUTHOR_LABEL, author, false);
@@ -241,7 +192,7 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
                     } catch (final MalformedURLException e) {
                         final String url =
                             ((otherAttributes != null) ? otherAttributes.get(MetadataXML.URL_URL_ATTRIBUTE) : null);
-                        LOGGER.error("Could not parse incoming URL [" + url + "]", e);
+                        m_logger.error("Could not parse incoming URL [" + url + "]", e);
                     }
                     break;
                 case AUTHOR:
@@ -276,39 +227,6 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
             if (mia != null) {
                 mia.addChangeListener(this);
             }
-        }
-    }
-
-    void parsingHasFinishedForWorkflowWithFilename(final String workflowFileName) {
-        if (m_authorAtom == null) {
-            m_authorAtom = new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, MetadataXML.AUTHOR_LABEL,
-                System.getProperty("user.name"), false);
-            m_authorAtom.addChangeListener(this);
-        }
-
-        if (m_titleAtom == null) {
-            m_titleAtom = new TextFieldMetaInfoAtom(MetadataItemType.TITLE, "legacy-title", workflowFileName, false);
-            m_titleAtom.addChangeListener(this);
-        } else if (MetaInfoFile.NO_TITLE_PLACEHOLDER_TEXT.equals(m_titleAtom.getValue())) {
-            m_titleAtom.setValue(null);
-        }
-
-        if (m_descriptionAtom == null) {
-            m_descriptionAtom = new TextAreaMetaInfoAtom(MetadataXML.DESCRIPTION_LABEL, null, false);
-            m_descriptionAtom.addChangeListener(this);
-        } else if (MetaInfoFile.NO_DESCRIPTION_PLACEHOLDER_TEXT.equals(m_descriptionAtom.getValue())) {
-            m_descriptionAtom.setValue(null);
-        }
-
-        if (m_licenseAtom == null) {
-            m_licenseAtom =
-                new ComboBoxMetaInfoAtom("legacy-license", LicenseType.DEFAULT_LICENSE_NAME, false);
-            m_licenseAtom.addChangeListener(this);
-        }
-
-        if (m_creationDateAtom == null) {
-            m_creationDateAtom = new DateMetaInfoAtom(MetadataXML.CREATION_DATE_LABEL, Calendar.getInstance(), false);
-            m_creationDateAtom.addChangeListener(this);
         }
     }
 
@@ -354,267 +272,6 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         writeLegacyStyleMetadataToStream(baos);
         return baos.toString("UTF-8");
-    }
-
-    /**
-     * @param observer an implementor which wishes to know when the model changes
-     */
-    public void setModelObserver(final ModelObserver observer) {
-        m_modelObserver = observer;
-    }
-
-    /**
-     * Invoking this allows this instance to store a copy of its state, and alert all atoms to store theirs.
-     */
-    public void storeStateForEdit() {
-        m_savedTagAtoms.addAll(m_tagAtoms);
-        m_savedLinkAtoms.addAll(m_linkAtoms);
-
-        m_titleAtom.storeStateForEdit();
-        m_descriptionAtom.storeStateForEdit();
-        m_authorAtom.storeStateForEdit();
-        m_licenseAtom.storeStateForEdit();
-        m_tagAtoms.stream().forEach((tag) -> {
-            tag.storeStateForEdit();
-        });
-        m_linkAtoms.stream().forEach((link) -> {
-            link.storeStateForEdit();
-        });
-        m_creationDateAtom.storeStateForEdit();
-
-        m_tagWasDeletedDuringEdit.set(false);
-        m_linkWasDeletedDuringEdit.set(false);
-        m_editStateIsDirty.set(false);
-    }
-
-    /**
-     * Invoking this restores this instance's state to the one stored during the call to {@link #storeStateForEdit()}
-     * and alerts all atoms to do the same - the implementation of this action being subjective to the type of atom.
-     */
-    public void restoreState() {
-        m_tagAtoms.clear();
-        m_linkAtoms.clear();
-        m_tagAtoms.addAll(m_savedTagAtoms);
-        m_linkAtoms.addAll(m_savedLinkAtoms);
-        m_savedTagAtoms.clear();
-        m_savedLinkAtoms.clear();
-
-        m_titleAtom.restoreState();
-        m_descriptionAtom.restoreState();
-        m_authorAtom.restoreState();
-        m_licenseAtom.restoreState();
-        m_tagAtoms.stream().forEach((tag) -> {
-            tag.restoreState();
-        });
-        m_linkAtoms.stream().forEach((link) -> {
-            link.restoreState();
-        });
-        m_creationDateAtom.restoreState();
-    }
-
-    /**
-     * Invoking this releases this instance's copied state to maintain the modified-during-edit changes; it also alerts
-     * all atoms to also commit their edits - the implementation of this action being subjective to the type of atom.
-     */
-    public void commitEdit() {
-        m_savedTagAtoms.clear();
-        m_savedLinkAtoms.clear();
-
-        m_titleAtom.commitEdit();
-        m_descriptionAtom.commitEdit();
-        m_authorAtom.commitEdit();
-        m_licenseAtom.commitEdit();
-        m_tagAtoms.stream().forEach((tag) -> {
-            tag.commitEdit();
-        });
-        m_linkAtoms.stream().forEach((link) -> {
-            link.commitEdit();
-        });
-        m_creationDateAtom.commitEdit();
-    }
-
-    /**
-     * @return true if we're in edit mode and there has been a dirty-ing action.
-     */
-    public boolean modelIsDirty() {
-        return m_editStateIsDirty.get();
-    }
-
-    /**
-     * @return the atom representing the author
-     */
-    public MetaInfoAtom getAuthor() {
-        return m_authorAtom;
-    }
-
-    /**
-     * @return the atom representing the creation date
-     */
-    public MetaInfoAtom getCreationDate() {
-        return m_creationDateAtom;
-    }
-
-    /**
-     * @return the atom representing the description
-     */
-    public MetaInfoAtom getDescription() {
-        return m_descriptionAtom;
-    }
-
-    /**
-     * @return a mutable list of tags
-     */
-    public List<? extends MetaInfoAtom> getTags() {
-        return m_tagAtoms;
-    }
-
-    /**
-     * @param tagText the text of the tag
-     * @return the created instance which was added to the internal store
-     */
-    public MetaInfoAtom addTag(final String tagText) {
-        final TagMetaInfoAtom mia = new TagMetaInfoAtom("legacy", tagText, false);
-
-        mia.addChangeListener(this);
-        m_tagAtoms.add(mia);
-
-        metaInfoAtomBecameDirty(null);
-
-        return mia;
-    }
-
-    /**
-     * @return a mutable list of links
-     */
-    public List<? extends MetaInfoAtom> getLinks() {
-        return m_linkAtoms;
-    }
-
-    /**
-     * @param url the fully formed URL for the link
-     * @param title the display text for the link
-     * @param type the type for the link
-     * @return the created instance which was added to the internal store
-     * @throws MalformedURLException if the URL is null or is invalid
-     */
-    public MetaInfoAtom addLink(final String url, final String title, final String type)
-            throws MalformedURLException {
-        final LinkMetaInfoAtom mia = new LinkMetaInfoAtom("legacy", title, type, url, false);
-
-        mia.addChangeListener(this);
-        m_linkAtoms.add(mia);
-
-        metaInfoAtomBecameDirty(null);
-
-        return mia;
-    }
-
-    /**
-     * @return the atom representing the license type
-     */
-    public MetaInfoAtom getLicense() {
-        return m_licenseAtom;
-    }
-
-    /**
-     * @return the atom representing the title
-     */
-    public MetaInfoAtom getTitle() {
-        return m_titleAtom;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void metaInfoAtomDeleted(final MetaInfoAtom deletedAtom) {
-        boolean itemRemoved = false;
-
-        switch (deletedAtom.getType()) {
-            case TAG:
-                if (m_tagAtoms.remove(deletedAtom)) {
-                    m_editStateIsDirty.set(true);
-                    m_tagWasDeletedDuringEdit.set(true);
-                    itemRemoved = true;
-                } else {
-                    LOGGER.warn("Could not find tag [" + deletedAtom.getValue() + "] for removal.");
-                }
-                break;
-            case LINK:
-                if (m_linkAtoms.remove(deletedAtom)) {
-                    m_editStateIsDirty.set(true);
-                    m_linkWasDeletedDuringEdit.set(true);
-                    itemRemoved = true;
-                } else {
-                    LOGGER.warn("Could not find link [" + deletedAtom.getValue() + "] for removal.");
-                }
-                break;
-            default:
-                LOGGER.error("Info atom of type " + deletedAtom.getType()
-                    + " reports itself as deleted which should not be possible.");
-                break;
-        }
-
-        if (itemRemoved) {
-            metaInfoAtomBecameClean(null);
-
-            if (m_modelObserver != null) {
-                m_modelObserver.modelCardinalityChanged(false);
-                m_modelObserver.modelDirtyStateChanged();
-            }
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void metaInfoAtomBecameClean(final MetaInfoAtom cleanAtom) {
-        if (m_titleAtom.isDirty()) {
-            return;
-        }
-        if (m_creationDateAtom.isDirty()) {
-            return;
-        }
-        if (m_descriptionAtom.isDirty()) {
-            return;
-        }
-        if (m_authorAtom.isDirty()) {
-            return;
-        }
-        if (m_licenseAtom.isDirty()) {
-            return;
-        }
-        // I'm not going to both expending the exact array element matching and instead say if there has been
-        //      any addition or deletion from these sets, then they are technically dirty.
-        if (m_savedTagAtoms.size() != m_tagAtoms.size()) {
-            return;
-        }
-        if (m_savedLinkAtoms.size() != m_linkAtoms.size()) {
-            return;
-        }
-        // The special cheap delete situation we accept is if there was a deletion but we started off with 0
-        //      elements (and, by this point of checking, still have 0 elements)
-        if (m_tagWasDeletedDuringEdit.get() && (m_savedTagAtoms.size() > 0)) {
-            return;
-        }
-        if (m_linkWasDeletedDuringEdit.get() && (m_savedLinkAtoms.size() > 0)) {
-            return;
-        }
-
-        if (m_editStateIsDirty.getAndSet(false) && (m_modelObserver != null)) {
-            m_modelObserver.modelDirtyStateChanged();
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void metaInfoAtomBecameDirty(final MetaInfoAtom dirtyAtom) {
-        if (!m_editStateIsDirty.getAndSet(true) && (m_modelObserver != null)) {
-            m_modelObserver.modelDirtyStateChanged();
-        }
     }
 
     private void writeLegacyStyleMetadataToStream(final OutputStream os) throws IOException {
@@ -732,7 +389,7 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
                             }
 
                             if (urlStart == -1) {
-                                LOGGER.warn("Could not find URL in legacy metadata link citation [" + line
+                                m_logger.warn("Could not find URL in legacy metadata link citation [" + line
                                                     + "]");
                             } else {
                                 final String url = line.substring(urlStart);
@@ -741,7 +398,7 @@ public class MetadataModelFacilitator implements MetaInfoAtom.MutationListener {
                                 try {
                                     addLink(url, title, type);
                                 } catch (final MalformedURLException e) {
-                                    LOGGER.error("Could not parse incoming URL [" + url + "]", e);
+                                    m_logger.error("Could not parse incoming URL [" + url + "]", e);
                                 }
                             }
                         }

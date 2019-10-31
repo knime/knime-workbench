@@ -46,7 +46,7 @@
  * History
  *   May 24, 2019 (loki): created
  */
-package org.knime.workbench.descriptionview.workflowmeta;
+package org.knime.workbench.descriptionview.metadata;
 
 import java.util.ArrayList;
 

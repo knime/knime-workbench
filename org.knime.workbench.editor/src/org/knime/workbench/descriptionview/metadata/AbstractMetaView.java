@@ -44,36 +44,18 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Apr 28, 2019 (loki): created
+ *   Oct 31, 2019 (loki): created
  */
-package org.knime.workbench.descriptionview.workflowmeta;
+package org.knime.workbench.descriptionview.metadata;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-
 import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.resources.WorkspaceJob;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.JFaceResources;
@@ -104,45 +86,31 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.ScrollBar;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
-import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.util.SWTUtilities;
-import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
-import org.knime.workbench.descriptionview.workflowmeta.atoms.LinkMetaInfoAtom;
-import org.knime.workbench.descriptionview.workflowmeta.atoms.MetaInfoAtom;
-import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.descriptionview.metadata.atoms.LinkMetaInfoAtom;
+import org.knime.workbench.descriptionview.metadata.atoms.MetaInfoAtom;
 import org.knime.workbench.editor2.directannotationedit.FlatButton;
-import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo;
-import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileInfo;
-import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.repository.util.NodeUtil;
 
 /**
- * This is the view reponsible for displaying, and potentially allowing the editing of, the meta-information associated
- * with a workflow; for example:
+ * This is the abstract view reponsible for displaying, and potentially allowing the editing of, the meta-information
+ * containing attributes such as:
  *      . description
  *      . tags
  *      . links
  *      . license
  *      . author
  *
- * The genesis for this view is https://knime-com.atlassian.net/browse/AP-11628
- *
- * As part of https://knime-com.atlassian.net/browse/AP-12082 is was decided that the license field would only be shown
- * in cases where the metadata was coming from a KNIME Hub server; i've gated this condition with a static boolean below
- * (search 'AP-12082') so that future generations can turn the license stuff back on when we support it more widely.
+ * The genesis for the concrete subclass workflow view is https://knime-com.atlassian.net/browse/AP-11628
+ * The genesis for the concrete subclass component view, and so therefore the abstraction of this superclass, is
+ *      https://knime-com.atlassian.net/browse/AP-12738
  *
  * @author loki der quaeler
  */
-public class WorkflowMetaView extends ScrolledComposite implements MetadataModelFacilitator.ModelObserver {
+public abstract class AbstractMetaView extends ScrolledComposite implements AbstractMetadataModelFacilitator.ModelObserver {
     /** Display font which the author read-only should use. **/
     public static final Font ITALIC_CONTENT_FONT;
     /** Display font which the read-only versions of metadata should use. **/
@@ -153,6 +121,9 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     public static final Color TEXT_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 62, 58, 57);
     /** The fill color for the header bar and other widgets (like tag chiclets.) **/
     public static final Color GENERAL_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 240, 240, 242);
+
+    /** AP-12082 **/
+    protected static final boolean SHOW_LICENSE_ONLY_FOR_HUB = true;
 
     private static final String NO_TITLE_TEXT = "No title has been set yet.";
     private static final String NO_DESCRIPTION_TEXT = "No description has been set yet.";
@@ -184,8 +155,6 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private static final Image SAVE_IMAGE =
         ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-save.png");
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowMetaView.class);
-
     private static final int MINIMUM_CONTENT_PANE_WIDTH = 300;
 
     private static final int HEADER_VERTICAL_INSET = 10;
@@ -195,9 +164,6 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private static final int TOTAL_HEADER_PADDING
             = HEADER_MARGIN_RIGHT + (2 * LEFT_INDENT_HEADER_SUB_PANES) + (new GridLayout()).horizontalSpacing;
     private static final int CONTENT_VERTICAL_INDENT = 30 + (2 * HEADER_VERTICAL_INSET);
-
-    // AP-12082
-    private static final boolean SHOW_LICENSE_ONLY_FOR_HUB = true;
 
     static {
         final Optional<Object> headerFontSize =
@@ -214,7 +180,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         if (f.isPresent()) {
             BOLD_CONTENT_FONT = f.get();
         } else {
-            NodeLogger.getLogger(WorkflowMetaView.class).warn("Could not load bold font.");
+            NodeLogger.getLogger(AbstractMetaView.class).warn("Could not load bold font.");
             BOLD_CONTENT_FONT = JFaceResources.getFontRegistry().getBold(JFaceResources.DIALOG_FONT);
         }
 
@@ -228,7 +194,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         if (f.isPresent()) {
             VALUE_DISPLAY_FONT = f.get();
         } else {
-            NodeLogger.getLogger(WorkflowMetaView.class).warn("Could not load regular font.");
+            NodeLogger.getLogger(AbstractMetaView.class).warn("Could not load regular font.");
             VALUE_DISPLAY_FONT = JFaceResources.getFont(JFaceResources.DIALOG_FONT);
         }
 
@@ -242,7 +208,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         if (f.isPresent()) {
             ITALIC_CONTENT_FONT = f.get();
         } else {
-            NodeLogger.getLogger(WorkflowMetaView.class).warn("Could not load italic font.");
+            NodeLogger.getLogger(AbstractMetaView.class).warn("Could not load italic font.");
             ITALIC_CONTENT_FONT = JFaceResources.getFontRegistry().getItalic(JFaceResources.DIALOG_FONT);
         }
 
@@ -293,13 +259,36 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     }
 
 
+    /** This is presumed to be set in the subclass` {@link #selectionChanged(IStructuredSelection)} method **/
+    protected String m_currentAssetName;
+
+    /** This is presumed to be set in the subclass` {@link #selectionChanged(IStructuredSelection)} method **/
+    protected AbstractMetadataModelFacilitator m_modelFacilitator;
+
+    /** Dictates whether we allow the user to edit the current metadata being displayed **/
+    protected final AtomicBoolean m_metadataCanBeEdited;
+
+    /** Subclasses should set this to indicate whether we're waiting for an asynchronous delivery of the metadata. **/
+    protected final AtomicBoolean m_waitingForAsynchronousMetadata;
+    /** Subclasses should set this to indicate whether the asynchronous delivery of the metadata has failed. **/
+    protected final AtomicBoolean m_asynchronousMetadataFetchFailed;
+
+    // TODO consider condensing this and the following to a single enum typed variable
+    /** Subclasses should set this to indicate whether the asset is a template. **/
+    protected final AtomicBoolean m_assetRepresentsATemplate;
+    /** Subclasses should set this to indicate whether the asset is a job. **/
+    protected final AtomicBoolean m_assetRepresentsAJob;
+
+    /** Subclasses should set this to indicate whether we should display the license section. **/
+    protected final AtomicBoolean m_shouldDisplayLicenseSection;
+
     private final Composite m_contentPane;
 
     private final Composite m_headerBar;
-    private final Label m_headerLabelPlaceholder;
-    private String m_currentWorkflowName;
-    private final AtomicInteger m_headerDrawX;
     private String m_headerText;
+    private final Label m_headerLabelPlaceholder;
+
+    private final AtomicInteger m_headerDrawX;
     private FlatButton m_editSaveButton;
     private final Composite m_headerButtonPane;
 
@@ -344,20 +333,9 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     private final Composite m_creationDateSection;
     private final Composite m_creationDateContentPane;
 
-    private File m_metadataFile;
-    private MetadataModelFacilitator m_modelFacilitator;
-
-    private final AtomicBoolean m_workflowMetadataNeedBeFetchedFromServer;
-    private final AtomicBoolean m_workflowMetadataServerFetchFailed;
-    private final AtomicBoolean m_workflowIsATemplate;
-    private final AtomicBoolean m_workflowIsAJob;
-
-    private final AtomicBoolean m_shouldDisplayLicenseSection;
-
-    private final AtomicBoolean m_metadataCanBeEdited;
     private final AtomicBoolean m_inEditMode;
 
-    private final AtomicBoolean m_workflowNameHasChanged;
+    private final AtomicBoolean m_assetNameHasChanged;
 
     private final AtomicInteger m_lastRenderedViewportWidth;
     private final AtomicInteger m_lastRenderedViewportOriginX;
@@ -367,20 +345,20 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     /**
      * @param parent
      */
-    public WorkflowMetaView(final Composite parent) {
+    protected AbstractMetaView(final Composite parent) {
         super(parent, SWT.H_SCROLL | SWT.V_SCROLL);
 
 
         m_inEditMode = new AtomicBoolean(false);
         m_metadataCanBeEdited = new AtomicBoolean(false);
 
-        m_workflowMetadataNeedBeFetchedFromServer = new AtomicBoolean(false);
-        m_workflowMetadataServerFetchFailed = new AtomicBoolean(false);
-        m_workflowIsATemplate = new AtomicBoolean(false);
-        m_workflowIsAJob = new AtomicBoolean(false);
+        m_waitingForAsynchronousMetadata = new AtomicBoolean(false);
+        m_asynchronousMetadataFetchFailed = new AtomicBoolean(false);
+        m_assetRepresentsATemplate = new AtomicBoolean(false);
+        m_assetRepresentsAJob = new AtomicBoolean(false);
 
         m_shouldDisplayLicenseSection = new AtomicBoolean(!SHOW_LICENSE_ONLY_FOR_HUB);
-        m_workflowNameHasChanged = new AtomicBoolean(false);
+        m_assetNameHasChanged = new AtomicBoolean(false);
 
         m_lastRenderedViewportWidth = new AtomicInteger(Integer.MIN_VALUE);
         m_lastRenderedViewportOriginX = new AtomicInteger(Integer.MIN_VALUE);
@@ -683,181 +661,25 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     }
 
     /**
-     * Should the description view receive a remotely fetched metadata for a server-side object, it will facilitate its
-     * display by invoking this method. N.B. {@link #selectionChanged(IStructuredSelection)} has already been called for
-     * this item prior to receiving this invocation, and so <code>m_currentWorkflowName</code> has been correctly
-     * populated.
-     *
-     * If the author, description, and creation date are all null, it will be interpretted as a failure to fetch remote
-     * metadata.
-     *
-     * @param author the author, or null
-     * @param legacyDescription the legacy-style description, or null
-     * @param creationDate the creation date, or null
-     * @param shouldShowCCBY40License if true, the CC-BY-4.0 license will be shown in the UI
-     */
-    public void handleAsynchronousRemoteMetadataPopulation(final String author, final String legacyDescription,
-        final Calendar creationDate, final boolean shouldShowCCBY40License) {
-        m_modelFacilitator = new MetadataModelFacilitator(author, legacyDescription, creationDate);
-        m_modelFacilitator.parsingHasFinishedForWorkflowWithFilename(m_currentWorkflowName);
-        m_modelFacilitator.setModelObserver(this);
-
-        if (m_metadataCanBeEdited.get()) {
-            m_metadataCanBeEdited.set(false);
-            configureFloatingHeaderBarButtons();
-        }
-
-        m_metadataFile = null;
-
-        m_workflowMetadataNeedBeFetchedFromServer.set(false);
-        m_workflowMetadataServerFetchFailed
-            .set((author == null) && (legacyDescription == null) && (creationDate == null));
-        m_workflowIsATemplate.set(false);
-        m_workflowIsAJob.set(false);
-        m_shouldDisplayLicenseSection.set(shouldShowCCBY40License);
-        getDisplay().asyncExec(() -> {
-            updateDisplay();
-        });
-    }
-
-    /**
      * @param selection the selection passed along from the ISelectionListener
      */
-    public void selectionChanged(final IStructuredSelection selection) {
-        final Object o = selection.getFirstElement();
-        final boolean knimeExplorerItem = (o instanceof ContentObject);
+    public abstract void selectionChanged(final IStructuredSelection selection);
 
-        final File metadataFile;
-        final boolean canEditMetadata;
+    /**
+     * This can be invoked to refresh the view's contents.
+     */
 
-        m_workflowMetadataNeedBeFetchedFromServer.set(false);
-        m_workflowMetadataServerFetchFailed.set(false);
-        m_workflowIsATemplate.set(false);
-        m_workflowIsAJob.set(false);
-        m_shouldDisplayLicenseSection.set(!SHOW_LICENSE_ONLY_FOR_HUB);
-        if (knimeExplorerItem) {
-            final AbstractExplorerFileStore fs = ((ContentObject) o).getFileStore();
-            final AbstractExplorerFileInfo fileInfo = fs.fetchInfo();
-            if (!(fileInfo instanceof RemoteExplorerFileInfo) && !(fileInfo instanceof LocalWorkspaceFileInfo)) {
-                LOGGER.debug("Received unexpected file info type: " + fileInfo.getClass());
-                return;
-            }
-
-            final boolean isWorkflow = AbstractExplorerFileStore.isWorkflow(fs);
-            final boolean isTemplate = AbstractExplorerFileStore.isWorkflowTemplate(fs);
-            final boolean isRemote = fs.getContentProvider().isRemote();
-            final boolean isJob = isRemote ? ((RemoteExplorerFileInfo)fileInfo).isWorkflowJob() : false;
-            final boolean validFS =
-                (isWorkflow || AbstractExplorerFileStore.isWorkflowGroup(fs) || isTemplate || isJob);
-            if (!validFS) {
-                return;
-            }
-
-            m_currentWorkflowName = fs.getName();
-            if (isRemote || isTemplate || isJob) {
-                m_workflowMetadataNeedBeFetchedFromServer.set(isRemote && !isTemplate && !isJob);
-                m_workflowIsATemplate.set(isTemplate);
-                m_workflowIsAJob.set(isJob);
-
-                metadataFile = null;
-                canEditMetadata = false;
-            } else {
-                final AbstractExplorerFileStore metaInfo = fs.getChild(WorkflowPersistor.METAINFO_FILE);
-                try {
-                    metadataFile = metaInfo.toLocalFile(EFS.NONE, null);
-                } catch (final CoreException ce) {
-                    LOGGER.error("Unable to convert EFS to local file.", ce);
-
-                    return;
-                }
-                canEditMetadata = true;
-            }
-        } else {
-            final WorkflowRootEditPart wrep = (WorkflowRootEditPart)o;
-            final WorkflowManagerUI wmUI = wrep.getWorkflowManager();
-            final Optional<WorkflowManager> wm = Wrapper.unwrapWFMOptional(wmUI);
-            if (wm.isPresent()) {
-                if (wm.get().isComponentProjectWFM()) {
-                    m_workflowIsAJob.set(false);
-                    metadataFile = null;
-                    canEditMetadata = false;
-                } else {
-                    final WorkflowManager projectWM = wm.get().getProjectWFM();
-                    final ReferencedFile rf = projectWM.getWorkingDir();
-
-                    metadataFile = new File(rf.getFile(), WorkflowPersistor.METAINFO_FILE);
-                    m_currentWorkflowName = projectWM.getName();
-
-                    final WorkflowEditor editor = (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow()
-                        .getActivePage().getActiveEditor();
-                    canEditMetadata = (!editor.isTempRemoteWorkflowEditor() && !editor.isTempLocalWorkflowEditor());
-                }
-            } else {
-                m_workflowIsAJob.set(true);
-                metadataFile = null;
-                canEditMetadata = false;
-            }
-        }
-
-        if ((m_metadataFile != null) && m_metadataFile.equals(metadataFile)) {
-            return;
-        }
-
-        m_headerLabelPlaceholder.getDisplay().asyncExec(() -> {
-            m_headerText = m_currentWorkflowName;
-            m_workflowNameHasChanged.set(true);
-            if (!isDisposed()) {
-                updateFloatingHeaderBar();
-            }
-        });
-
-
-        if ((metadataFile != null) && metadataFile.exists()) {
-            final SAXInputHandler handler = new SAXInputHandler();
-            try {
-                final SAXParserFactory parserFactory = SAXParserFactory.newInstance();
-                parserFactory.setNamespaceAware(true);
-
-                final SAXParser parser = parserFactory.newSAXParser();
-                parser.parse(metadataFile, handler);
-            } catch (Exception e) {
-                LOGGER.error("Failed to parse the workflow metadata file.", e);
-
-                return;
-            }
-
-            m_modelFacilitator = handler.getModelFacilitator();
-        } else {
-            m_modelFacilitator = new MetadataModelFacilitator();
-        }
-        m_modelFacilitator.parsingHasFinishedForWorkflowWithFilename(m_currentWorkflowName);
-        m_modelFacilitator.setModelObserver(this);
-
-        if (m_metadataCanBeEdited.get() != canEditMetadata) {
-            m_metadataCanBeEdited.set(canEditMetadata);
-            configureFloatingHeaderBarButtons();
-        }
-
-        m_metadataFile = metadataFile;
-
-        getDisplay().asyncExec(() -> {
-            if (!isDisposed()) {
-                updateDisplay();
-            }
-        });
-    }
-
-    private void updateDisplay() {
+    protected void updateDisplay() {
         boolean focusFirstEditElement = false;
 
-        if (m_workflowMetadataNeedBeFetchedFromServer.get() || m_workflowMetadataServerFetchFailed.get()
-                    || m_workflowIsATemplate.get() || m_workflowIsAJob.get()) {
+        if (m_waitingForAsynchronousMetadata.get() || m_asynchronousMetadataFetchFailed.get()
+                    || m_assetRepresentsATemplate.get() || m_assetRepresentsAJob.get()) {
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane,
-                m_workflowMetadataNeedBeFetchedFromServer.get());
+                m_waitingForAsynchronousMetadata.get());
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerFailureNotificationPane,
-                m_workflowMetadataServerFetchFailed.get());
+                m_asynchronousMetadataFetchFailed.get());
             SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane,
-                m_workflowIsATemplate.get() || m_workflowIsAJob.get());
+                m_assetRepresentsATemplate.get() || m_assetRepresentsAJob.get());
 
             SWTUtilities.spaceReclaimingSetVisible(m_titleSection, false);
             SWTUtilities.spaceReclaimingSetVisible(m_descriptionSection, false);
@@ -1018,6 +840,12 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         setMinHeight(minSize.y);
     }
 
+    /**
+     * This method will be call as the final invocation during the {@link #performSave()} method.
+     */
+    @SuppressWarnings("javadoc")
+    protected abstract void completeSave();
+
     private void performSave() {
         m_inEditMode.set(false);
 
@@ -1027,31 +855,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
         performPostEditModeTransitionActions();
 
-        try {
-            final Path metadata = Paths.get(m_metadataFile.getAbsolutePath());
-            final String metadataXML = m_modelFacilitator.metadataSavedInLegacyFormat();
-            final Job job = new WorkspaceJob("Saving workflow metadata...") {
-                /**
-                 * {@inheritDoc}
-                 */
-                @Override
-                public IStatus runInWorkspace(final IProgressMonitor monitor) throws CoreException {
-                    try {
-                        Files.write(metadata, metadataXML.getBytes("UTF-8"), StandardOpenOption.CREATE,
-                            StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-                    } catch (final IOException e) {
-                        throw new CoreException(new Status(IStatus.ERROR, KNIMEEditorPlugin.PLUGIN_ID, -1,
-                            "Failed to save the metadata to file.", e));
-                    }
-                    return Status.OK_STATUS;
-                }
-            };
-            job.setRule(ResourcesPlugin.getWorkspace().getRoot());
-            job.setUser(true);
-            job.schedule();
-        } catch (final IOException e) {
-            LOGGER.error("Failed to save metadata.", e);
-        }
+        completeSave();
     }
 
     private void performDiscard() {
@@ -1079,7 +883,23 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
         m_linksAddButton = null;
     }
 
-    private void configureFloatingHeaderBarButtons() {
+    /**
+     * Subclasses can invoke this to update the floating head bar's position and content.
+     */
+    protected void currentAssetNameHasChanged() {
+        getDisplay().asyncExec(() -> {
+            m_headerText = m_currentAssetName;
+            m_assetNameHasChanged.set(true);
+            if (!isDisposed()) {
+                updateFloatingHeaderBar();
+            }
+        });
+    }
+
+    /**
+     * This can be invoked by subclasses to update the buttons displayed in the floating header bar.
+     */
+    protected void configureFloatingHeaderBarButtons() {
         SWTUtilities.removeAllChildren(m_headerButtonPane);
 
         if (m_inEditMode.get()) {
@@ -1138,7 +958,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
     }
 
     private void updateFloatingHeaderBar() {
-        if ((m_currentWorkflowName == null) || (m_currentWorkflowName.trim().length() == 0)) {
+        if ((m_currentAssetName == null) || (m_currentAssetName.trim().length() == 0)) {
             return;
         }
 
@@ -1469,7 +1289,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             if ((m_lastRenderedViewportWidth.getAndSet(viewportWidth) == viewportWidth)
                     && (m_lastRenderedViewportOriginX.getAndSet(origin.x) == origin.x)
                     && (m_lastRenderedViewportOriginY.getAndSet(origin.y) == origin.y)
-                    && !m_workflowNameHasChanged.getAndSet(false)) {
+                    && !m_assetNameHasChanged.getAndSet(false)) {
                 return;
             }
 
@@ -1493,20 +1313,20 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             final GC gc = new GC(m_headerBar.getDisplay());
             try {
                 gc.setFont(m_headerLabelPlaceholder.getFont());
-                Point fullStringSize = gc.textExtent(m_currentWorkflowName);
+                Point fullStringSize = gc.textExtent(m_currentAssetName);
                 final int stringWidth = (int)(fullStringSize.x * m_fontMetricsCorrectionFactor);
 
                 if (stringWidth > centerAlignedAvailableWidth) {
                     // this could be made more precise by iterative size checks,
                     //      but let's try this first for performance
                     final double percentage = (centerAlignedAvailableWidth * 0.87) / fullStringSize.x;
-                    final int charCount = (int)(m_currentWorkflowName.length() * percentage);
-                    final String substring = m_currentWorkflowName.substring(0, charCount) + "...";
+                    final int charCount = (int)(m_currentAssetName.length() * percentage);
+                    final String substring = m_currentAssetName.substring(0, charCount) + "...";
 
                     m_headerText = substring;
                     fullStringSize = gc.textExtent(m_headerText);
                 } else {
-                    m_headerText = m_currentWorkflowName;
+                    m_headerText = m_currentAssetName;
                 }
                 m_headerDrawX.set((viewportWidth - (int)(fullStringSize.x * m_fontMetricsCorrectionFactor)) / 2);
             } finally {

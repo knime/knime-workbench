@@ -72,8 +72,8 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
+import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
 import org.knime.workbench.descriptionview.node.HelpView;
-import org.knime.workbench.descriptionview.workflowmeta.WorkflowMetaView;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -187,6 +187,14 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
      */
     @Override
     public void selectionChanged(final IWorkbenchPart part, final ISelection selection) {
+        // TODO AP-12738 if the selection is a worfklow, and we're in a component's workflow, then fetch
+        //              the SubNodeContainer and make a selection of it
+        // TODO AP-12738 if the selection is a worfklow, and we're in a component's workflow, then fetch
+        //              the SubNodeContainer and make a selection of it
+        // TODO AP-12738 if the selection is a worfklow, and we're in a component's workflow, then fetch
+        //              the SubNodeContainer and make a selection of it
+        // TODO AP-12738 if the selection is a worfklow, and we're in a component's workflow, then fetch
+        //              the SubNodeContainer and make a selection of it
         if (selection instanceof IStructuredSelection) {
             final IStructuredSelection structuredSelection = (IStructuredSelection)selection;
             final IStructuredSelection lastSelection = (m_lastSelection == null) ? null : m_lastSelection.get();

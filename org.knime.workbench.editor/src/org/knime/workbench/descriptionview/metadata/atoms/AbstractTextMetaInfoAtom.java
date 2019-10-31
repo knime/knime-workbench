@@ -46,7 +46,7 @@
  * History
  *   May 13, 2019 (loki): created
  */
-package org.knime.workbench.descriptionview.workflowmeta.atoms;
+package org.knime.workbench.descriptionview.metadata.atoms;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 

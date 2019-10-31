@@ -46,7 +46,7 @@
  * History
  *   Apr 30, 2019 (loki): created
  */
-package org.knime.workbench.descriptionview.workflowmeta;
+package org.knime.workbench.descriptionview.metadata.workflow;
 
 import java.util.HashMap;
 import java.util.HashSet;

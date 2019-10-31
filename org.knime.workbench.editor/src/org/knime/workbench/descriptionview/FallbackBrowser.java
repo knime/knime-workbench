@@ -45,7 +45,7 @@
  * History
  *   27.08.2007 (Fabian Dill): created
  */
-package org.knime.workbench.descriptionview.node;
+package org.knime.workbench.descriptionview;
 
 import java.io.InputStream;
 import java.io.StringReader;

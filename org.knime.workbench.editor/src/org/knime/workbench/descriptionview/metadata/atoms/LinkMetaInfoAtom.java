@@ -46,7 +46,7 @@
  * History
  *   May 9, 2019 (loki): created
  */
-package org.knime.workbench.descriptionview.workflowmeta.atoms;
+package org.knime.workbench.descriptionview.metadata.atoms;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -67,8 +67,8 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.PlatformUI;
-import org.knime.workbench.descriptionview.workflowmeta.PlatformSpecificUIisms;
-import org.knime.workbench.descriptionview.workflowmeta.WorkflowMetaView;
+import org.knime.workbench.descriptionview.metadata.PlatformSpecificUIisms;
+import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 import org.xml.sax.SAXException;

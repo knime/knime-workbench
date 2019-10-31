@@ -46,7 +46,7 @@
  * History
  *   May 9, 2019 (loki): created
  */
-package org.knime.workbench.descriptionview.workflowmeta.atoms;
+package org.knime.workbench.descriptionview.metadata.atoms;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -59,7 +59,7 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
-import org.knime.workbench.descriptionview.workflowmeta.LicenseType;
+import org.knime.workbench.descriptionview.metadata.LicenseType;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 import org.xml.sax.SAXException;
