@@ -67,8 +67,8 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.PlatformUI;
+import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.descriptionview.metadata.PlatformSpecificUIisms;
-import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 import org.xml.sax.SAXException;
@@ -221,6 +221,20 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
         updateDisplayText();
     }
 
+    /**
+     * @return the type (e.g 'Blog') for the link
+     */
+    public String getLinkType() {
+        return m_linkType;
+    }
+
+    /**
+     * @return the url for the link
+     */
+    public String getURL() {
+        return m_linkURL;
+    }
+
     private void updateDisplayText() {
         m_displayText = m_value + (((m_linkType != null) && !m_linkType.isEmpty()) ? " (" + m_linkType + ")" : "");
     }
@@ -336,7 +350,7 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
 
         final Label bullet = new Label(container, SWT.LEFT);
         bullet.setText(BLACK_CIRCLE);
-        bullet.setFont(WorkflowMetaView.BOLD_CONTENT_FONT);
+        bullet.setFont(AbstractMetaView.BOLD_CONTENT_FONT);
         bullet.setForeground(BULLET_COLOR);
         gd = new GridData();
         gd.horizontalAlignment = SWT.LEFT;

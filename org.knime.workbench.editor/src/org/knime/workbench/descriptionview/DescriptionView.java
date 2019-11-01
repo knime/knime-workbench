@@ -72,6 +72,11 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
+import org.knime.core.node.workflow.NodeContainerParent;
+import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.workbench.descriptionview.metadata.component.ComponentMetaView;
 import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
 import org.knime.workbench.descriptionview.node.HelpView;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -97,6 +102,7 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
     private Composite m_emptyView;
     private HelpView m_nodeDescriptionView;
     private WorkflowMetaView m_workflowMetaView;
+    private ComponentMetaView m_componentMetaView;
     private Control m_previousNonEmtpyView;
 
     private WeakReference<IStructuredSelection> m_lastSelection;
@@ -127,6 +133,7 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
 
         m_emptyView = new Composite(m_control, SWT.NONE);
         m_workflowMetaView = new WorkflowMetaView(m_control);
+        m_componentMetaView = new ComponentMetaView(m_control);
         m_nodeDescriptionView = new HelpView(m_control);
 
         m_stackLayout.topControl = m_nodeDescriptionView;
@@ -187,14 +194,6 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
      */
     @Override
     public void selectionChanged(final IWorkbenchPart part, final ISelection selection) {
-        // TODO AP-12738 if the selection is a worfklow, and we're in a component's workflow, then fetch
-        //              the SubNodeContainer and make a selection of it
-        // TODO AP-12738 if the selection is a worfklow, and we're in a component's workflow, then fetch
-        //              the SubNodeContainer and make a selection of it
-        // TODO AP-12738 if the selection is a worfklow, and we're in a component's workflow, then fetch
-        //              the SubNodeContainer and make a selection of it
-        // TODO AP-12738 if the selection is a worfklow, and we're in a component's workflow, then fetch
-        //              the SubNodeContainer and make a selection of it
         if (selection instanceof IStructuredSelection) {
             final IStructuredSelection structuredSelection = (IStructuredSelection)selection;
             final IStructuredSelection lastSelection = (m_lastSelection == null) ? null : m_lastSelection.get();
@@ -204,7 +203,6 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
                 return;
             }
 
-            // in some weird world where we have an edit mode for m_metanodeMetaView, that need be checked here too
             if ((lastSelection != null)
                     && ((lastSelection.getFirstElement() instanceof WorkflowRootEditPart)
                             || (lastSelection.getFirstElement() instanceof ContentObject))
@@ -258,6 +256,20 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
 
         final Object o = structuredSelection.getFirstElement();
         if ((o instanceof ContentObject) || (o instanceof WorkflowRootEditPart)) {
+            if (o instanceof WorkflowRootEditPart) {
+                final WorkflowRootEditPart wrep = (WorkflowRootEditPart)o;
+                final WorkflowManager wm = Wrapper.unwrapWFM(wrep.getWorkflowManager());
+                final NodeContainerParent ncp = wm.getDirectNCParent();
+
+                if (ncp instanceof SubNodeContainer) {
+                    final StructuredSelection ss = new StructuredSelection(ncp);
+
+                    moveControlToTop(m_componentMetaView);
+                    m_componentMetaView.selectionChanged(ss);
+
+                    return;
+                }
+            }
             moveControlToTop(m_workflowMetaView);
             m_workflowMetaView.selectionChanged(structuredSelection);
         } else {

@@ -309,6 +309,13 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     private final Composite m_authorSection;
     private final Composite m_authorContentPane;
 
+    // The upper section sits beneath the description section and above the tags section
+    private final Composite m_upperSection;
+    private final boolean m_shouldShowUpperSection;
+    // The lower section sits beneath the author section - it is the last section of the view
+    private final Composite m_lowerSection;
+    private final boolean m_shouldShowLowerSection;
+
     private final Composite m_tagsSection;
     private final Composite m_tagsNoDataLabelPane;
     private final Composite m_tagsContentPane;
@@ -509,6 +516,13 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         m_descriptionContentPane = sectionAndContentPane[2];
 
 
+        m_upperSection = new Composite(m_contentPane, SWT.NONE);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+        m_upperSection.setLayoutData(gd);
+
+
         sectionAndContentPane = createVerticalSection("Tags", NO_TAGS_TEXT);
         m_tagsSection = sectionAndContentPane[0];
         m_tagsNoDataLabelPane = sectionAndContentPane[1];
@@ -581,10 +595,29 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         gd.horizontalAlignment = SWT.FILL;
         gd.verticalAlignment = SWT.TOP;
         gd.grabExcessHorizontalSpace = true;
-        gd.grabExcessVerticalSpace = true;
         m_authorSection.setLayoutData(gd);
         m_authorContentPane = sectionAndContentPane[1];
 
+
+        m_lowerSection = new Composite(m_contentPane, SWT.NONE);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.verticalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+        gd.grabExcessVerticalSpace = true;
+        m_lowerSection.setLayoutData(gd);
+
+
+        m_shouldShowUpperSection = populateUpperSection(m_upperSection);
+        m_shouldShowLowerSection = populateLowerSection(m_lowerSection);
+
+
+        if (!m_shouldShowLowerSection) {
+            gd = (GridData)m_authorSection.getLayoutData();
+            gd.grabExcessVerticalSpace = true;
+            // avoiding future clone design issues and re-set-ing
+            m_authorSection.setLayoutData(gd);
+        }
 
 
         configureFloatingHeaderBarButtons();
@@ -594,9 +627,11 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_titleContentPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_descriptionContentPane, false);
+        SWTUtilities.spaceReclaimingSetVisible(m_upperSection, false);
         SWTUtilities.spaceReclaimingSetVisible(m_tagsContentPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_linksContentPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_licenseSection, m_shouldDisplayLicenseSection.get());
+        SWTUtilities.spaceReclaimingSetVisible(m_lowerSection, false);
 
         setMinWidth(MINIMUM_CONTENT_PANE_WIDTH);
         setMinHeight(625);
@@ -629,6 +664,28 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         pack();
 
         m_floatingHeaderPositioner = new FloatingHeaderBarPositioner();
+    }
+
+    /**
+     * Provides an opportunity to populate the upper section. Anything may be affected on this Composite except for
+     * the instance's own layout data.
+     *
+     * @param upperSection the {@link Composite} into which to populate
+     * @return true if the section has been populated, false otherwise.
+     */
+    protected boolean populateUpperSection(final Composite upperSection) {
+        return false;
+    }
+
+    /**
+     * Provides an opportunity to populate the lower section. Anything may be affected on this Composite except for
+     * the instance's own layout data.
+     *
+     * @param lowerSection the {@link Composite} into which to populate
+     * @return true if the section has been populated, false otherwise.
+     */
+    protected boolean populateLowerSection(final Composite lowerSection) {
+        return false;
     }
 
     /**
@@ -683,11 +740,13 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
 
             SWTUtilities.spaceReclaimingSetVisible(m_titleSection, false);
             SWTUtilities.spaceReclaimingSetVisible(m_descriptionSection, false);
+            SWTUtilities.spaceReclaimingSetVisible(m_upperSection, false);
             SWTUtilities.spaceReclaimingSetVisible(m_authorSection, false);
             SWTUtilities.spaceReclaimingSetVisible(m_tagsSection, false);
             SWTUtilities.spaceReclaimingSetVisible(m_linksSection, false);
             SWTUtilities.spaceReclaimingSetVisible(m_licenseSection, false);
             SWTUtilities.spaceReclaimingSetVisible(m_creationDateSection, false);
+            SWTUtilities.spaceReclaimingSetVisible(m_lowerSection, false);
         } else {
             final boolean editMode = m_inEditMode.get();
 
@@ -699,11 +758,13 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
 
             SWTUtilities.spaceReclaimingSetVisible(m_titleSection, true);
             SWTUtilities.spaceReclaimingSetVisible(m_descriptionSection, true);
+            SWTUtilities.spaceReclaimingSetVisible(m_upperSection, m_shouldShowUpperSection);
             SWTUtilities.spaceReclaimingSetVisible(m_authorSection, true);
             SWTUtilities.spaceReclaimingSetVisible(m_tagsSection, true);
             SWTUtilities.spaceReclaimingSetVisible(m_linksSection, true);
             SWTUtilities.spaceReclaimingSetVisible(m_licenseSection, m_shouldDisplayLicenseSection.get());
             SWTUtilities.spaceReclaimingSetVisible(m_creationDateSection, true);
+            SWTUtilities.spaceReclaimingSetVisible(m_lowerSection, m_shouldShowLowerSection);
 
             SWTUtilities.removeAllChildren(m_titleContentPane);
             MetaInfoAtom mia = m_modelFacilitator.getTitle();

@@ -158,8 +158,7 @@ public class SAXInputHandler extends DefaultHandler {
      *         closing tags consumed; if parsing has finished, the consumer should invoke
      *         {@link MetadataModelFacilitator#parsingHasFinishedForWorkflowWithFilename(String)} appropriately.
      */
-    @SuppressWarnings("javadoc")
-    public MetadataModelFacilitator getModelFacilitator() {
+    MetadataModelFacilitator getModelFacilitator() {
         return m_modelFacilitator;
     }
 

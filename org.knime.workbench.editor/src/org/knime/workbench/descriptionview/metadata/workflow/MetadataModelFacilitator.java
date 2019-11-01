@@ -90,7 +90,7 @@ import org.xml.sax.helpers.AttributesImpl;
  *
  * @author loki der quaeler
  */
-public class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
+class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
     // I've seen both "TAG:" and "TAGS:" - we write out the latter
     private static final String LEGACY_METADATA_TAG_KEYWORD = "TAG";
     private static final String LEGACY_METADATA_TAGS_KEYWORD = "TAGS";

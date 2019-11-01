@@ -48,6 +48,8 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
+import java.util.Objects;
+
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTError;
@@ -57,7 +59,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.workbench.descriptionview.FallbackBrowser;
-import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
+import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 
 /**
  * This is the view that supports component metadata viewing and editing when the component is open in its own
@@ -65,7 +67,7 @@ import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
  *
  * @author loki der quaeler
  */
-public class ComponentMetaView extends WorkflowMetaView {
+public class ComponentMetaView extends AbstractMetaView {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(ComponentMetaView.class);
 
 
@@ -75,6 +77,8 @@ public class ComponentMetaView extends WorkflowMetaView {
 
     private boolean m_isFallback;
 
+    private SubNodeContainer m_currentSubNodeContainer;
+
     /**
      * @param parent
      */
@@ -83,26 +87,19 @@ public class ComponentMetaView extends WorkflowMetaView {
     }
 
     /**
-     * Provides an opportunity to populate the upper composite. Anything may be affected on this composite except for
-     * the instance's own layout data.
-     *
-     * @param upperComposite the {@link Composite} into which to populate
-     * @param forEditMode true if we're populating for edit mode, false for display mode
-     * @return true if the composite was populated, false otherwise
+     * {@inheritDoc}
      */
-    protected boolean populateUpperComposite(final Composite upperComposite, final boolean forEditMode) {
+    @Override
+    protected boolean populateUpperSection(final Composite upperComposite) {
+        // TODO this is AP-12984 - providing color chooser and icon drop
         return false;
     }
 
     /**
-     * Provides an opportunity to populate the lower composite. Anything may be affected on this composite except for
-     * the instance's own layout data.
-     *
-     * @param lowerComposite the {@link Composite} into which to populate
-     * @param forEditMode true if we're populating for edit mode, false for display mode
-     * @return true if the composite was populated, false otherwise
+     * {@inheritDoc}
      */
-    protected boolean populateLowerComposite(final Composite lowerComposite, final boolean forEditMode) {
+    @Override
+    protected boolean populateLowerSection(final Composite lowerComposite) {
         if (m_browser == null) {
             lowerComposite.setLayout(new FillLayout());
 
@@ -123,6 +120,22 @@ public class ComponentMetaView extends WorkflowMetaView {
     }
 
     @Override
+    protected void updateDisplay() {
+        super.updateDisplay();
+
+        /*
+         * TODO
+         *   need to populate the browser, for that we need:
+         *      . add something to SNC to generate XML for just the port descriptions
+         *      . created an HTML document like is done in DynamicNodeDescriptionCreator
+         *      . will NodeFactoryHTMLCreator.instance.readFullDescription do the right thing with the port-only XML?
+         */
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void selectionChanged(final IStructuredSelection selection) {
         final Object o = selection.getFirstElement();
 
@@ -133,7 +146,32 @@ public class ComponentMetaView extends WorkflowMetaView {
         }
 
         final SubNodeContainer subNodeContainer = (SubNodeContainer)o;
+        if (Objects.equals(m_currentSubNodeContainer, subNodeContainer)) {
+            return;
+        }
+
+        m_modelFacilitator = new ComponentMetadataModelFacilitator(subNodeContainer);
+        m_currentSubNodeContainer = subNodeContainer;
 
         // TODO waiting on API to fetch metadata (AP-12986)
+        m_currentAssetName = subNodeContainer.getName();    // TODO getMetadataTitle or similar...
+        currentAssetNameHasChanged();
+
+        // Is there ever a case where it cannot be?
+        m_metadataCanBeEdited.set(true);
+
+        getDisplay().asyncExec(() -> {
+            if (!isDisposed()) {
+                updateDisplay();
+            }
+        });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected void completeSave() {
+        ((ComponentMetadataModelFacilitator)m_modelFacilitator).storeMetadataInComponent();
     }
 }
