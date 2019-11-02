@@ -60,6 +60,9 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.workbench.descriptionview.FallbackBrowser;
 import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
+import org.knime.workbench.repository.util.DynamicNodeDescriptionCreator;
+import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
+import org.w3c.dom.Element;
 
 /**
  * This is the view that supports component metadata viewing and editing when the component is open in its own
@@ -123,13 +126,37 @@ public class ComponentMetaView extends AbstractMetaView {
     protected void updateDisplay() {
         super.updateDisplay();
 
-        /*
-         * TODO
-         *   need to populate the browser, for that we need:
-         *      . add something to SNC to generate XML for just the port descriptions
-         *      . created an HTML document like is done in DynamicNodeDescriptionCreator
-         *      . will NodeFactoryHTMLCreator.instance.readFullDescription do the right thing with the port-only XML?
-         */
+        if (inEditMode()) {
+            if (m_browser != null) {
+                m_browser.setVisible(false);
+            } else if (m_isFallback) {
+                m_text.setVisible(false);
+            }
+        } else {
+            final StringBuilder content = new StringBuilder(DynamicNodeDescriptionCreator.instance().getHeader());
+            final Element portDOM = m_currentSubNodeContainer.getXMLDescriptionForPorts();
+
+            try {
+                content.append(NodeFactoryHTMLCreator.instance.readFullDescription(portDOM));
+                content.append("</body></html>");
+
+                if (m_browser != null) {
+                    m_browser.getDisplay().asyncExec(() -> {
+                        if (!m_browser.isDisposed()) {
+                            m_browser.setText(content.toString());
+                            m_browser.setVisible(true);
+                        }
+                    });
+                } else if (m_isFallback) {
+                    m_text.getDisplay().asyncExec(() -> {
+                        m_text.setText(content.toString());
+                        m_text.setVisible(true);
+                    });
+                }
+            } catch (final Exception e) {
+                LOGGER.error("Exception attempting to generate components port description display.", e);
+            }
+        }
     }
 
     /**
@@ -159,6 +186,7 @@ public class ComponentMetaView extends AbstractMetaView {
 
         // Is there ever a case where it cannot be?
         m_metadataCanBeEdited.set(true);
+        configureFloatingHeaderBarButtons();
 
         getDisplay().asyncExec(() -> {
             if (!isDisposed()) {

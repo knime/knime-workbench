@@ -121,6 +121,15 @@ public class FallbackBrowser {
     }
 
     /**
+     * Sets the visibility of the wrapped text component.
+     *
+     * @param visible true to make the component visible
+     */
+    public void setVisible(final boolean visible) {
+        m_text.setVisible(visible);
+    }
+
+    /**
      * Converts HTML to plain text.
      * @param string if HTML it is converted into plain text
      */
