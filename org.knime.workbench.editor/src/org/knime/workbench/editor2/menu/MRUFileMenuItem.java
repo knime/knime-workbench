@@ -64,6 +64,8 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.commons.collections4.OrderedMapIterator;
+import org.apache.commons.collections4.map.LRUMap;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.action.ContributionItem;
@@ -72,12 +74,16 @@ import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.ui.IEditorInput;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler;
+import org.knime.workbench.explorer.RemoteWorkflowInput;
+import org.knime.workbench.explorer.filesystem.RemoteDownloadStream;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
 import org.w3c.dom.Document;
@@ -92,14 +98,26 @@ import org.xml.sax.SAXException;
  *
  * @author loki der quaeler
  */
-public class MRUFileMenuItem extends ContributionItem {
+public final class MRUFileMenuItem extends ContributionItem {
+    /**
+     * The singleton of this class; it will be set by the time app startup has completed, by the Eclipse frameworks due
+     * to declarations in this plugin's plugin.xml file.
+     */
+    public static MRUFileMenuItem INSTANCE = null;
+
+    private static final int MAXIMUM_WORKFLOWS_TO_DISPLAY = 10;
+
     private static final NodeLogger LOGGER = NodeLogger.getLogger(MRUFileMenuItem.class);
 
+
+    private LRUMap<String, Object> m_recentURIMap;
 
     /**
      * Default constructor.
      */
-    public MRUFileMenuItem() { }
+    public MRUFileMenuItem() {
+        INSTANCE = this;
+    }
 
     /**
      * Constructor taking an item id.
@@ -107,6 +125,41 @@ public class MRUFileMenuItem extends ContributionItem {
      */
     public MRUFileMenuItem(final String id) {
         super(id);
+
+        INSTANCE = this;
+    }
+
+    /**
+     * This is invoked from the {@link WorkflowEditor#setInput(IEditorInput)} method.
+     *
+     * @param input
+     */
+    @SuppressWarnings("javadoc")
+    public void editorHasOpenedWithInput(final IEditorInput input) {
+        if (input instanceof RemoteWorkflowInput) {
+            /*
+             * See the comment discussion in AP-12953 for why remote workflows are currently not supported.
+             *
+             * I'm leaving the below code commented out for future versions in which we will support it.
+             *
+             *  DO NOT COMMENT OUT THE "if" COMPARISON: RemoteWorkflowInput is a subclass of FileStoreEditorInput
+             */
+//            assureMapInitialPopulation();
+//
+//            final String uri = ((RemoteWorkflowInput)input).getRemoteOriginalLocation().toString();
+//            final Object o = m_recentURIMap.get(uri, true);
+//            if (o == null) {
+//                m_recentURIMap.put(uri, new Object());
+//            }
+        } else if (input instanceof FileStoreEditorInput) {
+            assureMapInitialPopulation();
+
+            final String uri = ((FileStoreEditorInput)input).getURI().toString();
+            final Object o = m_recentURIMap.get(uri, true);
+            if (o == null) {
+                m_recentURIMap.put(uri, new Object());
+            }
+        }
     }
 
     @Override
@@ -116,68 +169,96 @@ public class MRUFileMenuItem extends ContributionItem {
 
     @Override
     public void fill(final Menu menu, final int index) {
-        try {
-            final Bundle myself = FrameworkUtil.getBundle(MRUFileMenuItem.class);
-            final IPath statePath = Platform.getStateLocation(myself);
-            final Path parentPath = statePath.toFile().toPath().getParent();
-            if (parentPath == null) {
-                return;
-            }
+        assureMapInitialPopulation();
 
-            final DocumentBuilder parser;
-            Document doc;
+        final OrderedMapIterator<String, Object> iterator = m_recentURIMap.mapIterator();
+        // iterator is returned in oldest to newest, but we want newest to oldest, so we traverse, then iterate backwards
+        while (iterator.hasNext()) {
+            iterator.next();
+        }
+
+        while (iterator.hasPrevious()) {
+            final String uri = iterator.previous();
+            final String[] parts = uri.split("/");
+
             try {
-                final Path workbenchPath = parentPath.resolve("org.eclipse.e4.workbench").resolve("workbench.xmi");
-                parser = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-                doc = parser.parse(workbenchPath.toFile());
-            } catch (final InvalidPathException | SAXException | UnsupportedOperationException
-                    | IOException exception) {
-                LOGGER.info("Could not find the workbench.xmi file - this is expected in new workspaces.", exception);
-                return;
+                final URL u = new URL(uri);
+                final MenuItem mi = new MenuItem(menu, SWT.PUSH);
+                mi.setText(URLDecoder.decode(parts[parts.length - 2], "UTF-8"));
+                mi.setToolTipText(URLDecoder.decode(uri, "UTF-8").replaceAll("/workflow\\.knime$", ""));
+                mi.setEnabled(false);
+                mi.addSelectionListener(new SelectionAdapter() {
+                    @Override
+                    public void widgetSelected(final SelectionEvent se) {
+                        try {
+                            final URI workflowURI = new URI(u.getProtocol(), u.getHost(),
+                                URLDecoder.decode(u.getPath(), "UTF-8"), u.getQuery());
+                            IDE.openEditor(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(),
+                                workflowURI, WorkflowEditor.ID, true);
+                        } catch (final Exception exception) {
+                            LOGGER.error("Exception encountered attempting to open the workflow at "
+                                + u.toExternalForm(), exception);
+                        }
+                    }
+                });
+
+                KNIMEConstants.GLOBAL_THREAD_POOL.enqueue(new AssetExistenceResolver(mi, u));
+            } catch (final Exception e) {
+                LOGGER.error("Exception encountered while updating the Recent Workflows submenu.", e);
             }
+        }
+    }
 
-            final XPath xpath = XPathFactory.newInstance().newXPath();
-            final String mruMemento = (String)xpath.evaluate("persistedState[@key = 'memento']/@value",
-                doc.getDocumentElement(), XPathConstants.STRING);
+    private synchronized void assureMapInitialPopulation() {
+        if (m_recentURIMap == null) {
+            m_recentURIMap = new LRUMap<>(MAXIMUM_WORKFLOWS_TO_DISPLAY);
 
-            doc = parser.parse(new InputSource(new StringReader(mruMemento)));
+            try {
+                final Bundle myself = FrameworkUtil.getBundle(MRUFileMenuItem.class);
+                final IPath statePath = Platform.getStateLocation(myself);
+                final Path parentPath = statePath.toFile().toPath().getParent();
+                if (parentPath == null) {
+                    return;
+                }
 
-            final NodeList workflowList =
-                (NodeList)xpath.evaluate("//mruList/file[@id = '" + WorkflowEditor.ID + "']/persistable",
-                    doc.getDocumentElement(), XPathConstants.NODESET);
-            if (workflowList.getLength() > 0) {
-                for (int i = 0; i < workflowList.getLength(); i++) {
-                    final Element e = (Element)workflowList.item(i);
-                    final String uri = e.getAttribute("uri"); // knime://MP/.../WorkflowName/workflow.knime
-                    final String[] parts = uri.split("/");
-                    if (parts.length > 2) {
-                        final URL u = new URL(uri);
-                        final MenuItem mi = new MenuItem(menu, SWT.PUSH);
-                        mi.setText(URLDecoder.decode(parts[parts.length - 2], "UTF-8"));
-                        mi.setToolTipText(URLDecoder.decode(uri, "UTF-8").replaceAll("/workflow\\.knime$", ""));
-                        mi.setEnabled(false);
-                        mi.addSelectionListener(new SelectionAdapter() {
-                            @Override
-                            public void widgetSelected(final SelectionEvent se) {
-                                try {
-                                    final URI workflowURI = new URI(u.getProtocol(), u.getHost(),
-                                        URLDecoder.decode(u.getPath(), "UTF-8"), u.getQuery());
-                                    IDE.openEditor(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage(),
-                                        workflowURI, WorkflowEditor.ID, true);
-                                } catch (final Exception exception) {
-                                    LOGGER.error("Exception encountered attempting to open the workflow at "
-                                        + u.toExternalForm(), exception);
-                                }
-                            }
-                        });
+                final DocumentBuilder parser;
+                Document doc;
+                try {
+                    final Path workbenchPath = parentPath.resolve("org.eclipse.e4.workbench").resolve("workbench.xmi");
+                    parser = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+                    doc = parser.parse(workbenchPath.toFile());
+                } catch (final InvalidPathException | SAXException | UnsupportedOperationException
+                        | IOException exception) {
+                    LOGGER.info("Could not find the workbench.xmi file - this is expected in new workspaces.", exception);
+                    return;
+                }
 
-                        KNIMEConstants.GLOBAL_THREAD_POOL.enqueue(new AssetExistenceResolver(mi, u));
+                final XPath xpath = XPathFactory.newInstance().newXPath();
+                final String mruMemento = (String)xpath.evaluate("persistedState[@key = 'memento']/@value",
+                    doc.getDocumentElement(), XPathConstants.STRING);
+
+                doc = parser.parse(new InputSource(new StringReader(mruMemento)));
+
+                final NodeList workflowList =
+                    (NodeList)xpath.evaluate("//mruList/file[@id = '" + WorkflowEditor.ID + "']/persistable",
+                        doc.getDocumentElement(), XPathConstants.NODESET);
+                if (workflowList.getLength() > 0) {
+                    final int count = Math.min(workflowList.getLength(), MAXIMUM_WORKFLOWS_TO_DISPLAY);
+                    // add them backwards so that the oldest in the MRU list is the oldest item added to the collection
+                    for (int i = (count - 1); i >= 0; i--) {
+                        final Element e = (Element)workflowList.item(i);
+                        final String uri = e.getAttribute("uri"); // knime://MP/.../WorkflowName/workflow.knime
+                        final String[] parts = uri.split("/");
+                        if (parts.length > 2) {
+                            LOGGER.info("Adding MRU uri [" + uri + "]");
+                            m_recentURIMap.put(uri, new Object());
+                        }
                     }
                 }
             }
-        }
-        catch (final Exception e) {
-            LOGGER.error("Exception encountered while updating the Recent Workflows submenu.", e);
+            catch (final Exception e) {
+                LOGGER.error("Exception encountered while reading recent items from the XMI file.", e);
+            }
         }
     }
 
@@ -198,7 +279,25 @@ public class MRUFileMenuItem extends ContributionItem {
             try {
                 final URLConnection connection = handler.openConnection(m_assetURL);
                 try (final InputStream is = connection.getInputStream()) {
-                    if (connection.getContentLength() > 0) {
+                    boolean connectionHasContent = (connection.getContentLength() > 0);
+                    // This if-block is kept for the future case in which we support remembering
+                    //      remote workflows (it will always evaluate false as we don't
+                    //      keep remote workflow URIs in our LRU map - due to the commented out
+                    //      code in #editorHasOpenedWithInput(IEditorInput))
+                    if ((!connectionHasContent) && (is instanceof RemoteDownloadStream)) {
+                        // these streams will return 0 content length even if it really is valid and will return
+                        //      content - try reading 3 bytes.
+                        int counter = 0;
+                        int read = 0;
+                        while ((counter < 3) && ((read = is.read()) != -1)) {
+                            counter++;
+                        }
+
+                        if (read != -1) {
+                            connectionHasContent = true;
+                        }
+                    }
+                    if (connectionHasContent) {
                         PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
                             m_menuItem.setEnabled(true);
                         });

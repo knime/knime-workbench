@@ -261,6 +261,7 @@ import org.knime.workbench.editor2.editparts.NodeAnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.editor2.figures.WorkflowFigure;
+import org.knime.workbench.editor2.menu.MRUFileMenuItem;
 import org.knime.workbench.editor2.svgexport.WorkflowSVGExport;
 import org.knime.workbench.editor2.viewport.MessageAppearance;
 import org.knime.workbench.editor2.viewport.ViewportPinningGraphicalViewer;
@@ -1365,6 +1366,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 addAfterOpenRunnable(workflowSelectionForMetadataDisplay);
             }
 
+            MRUFileMenuItem.INSTANCE.editorHasOpenedWithInput(input);
 
             // update Actions, as now there's everything available
             updateActions();
