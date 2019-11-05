@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.editor2.directannotationedit;
 
+import java.awt.MouseInfo;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -57,6 +58,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.events.ShellListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
@@ -212,15 +214,21 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
 
     private final AtomicLong m_lastCustomChooserInteraction;
 
+    private final ShellListener m_colorPickerShellListener;
+
     /**
      * Constructs a color drop down picker
      *
      * @param parent the owning composite of this widget
      * @param editor the editor while is hosting the stylized annotation
      * @param dropShadow if the panel should render a drop shadow, this should be set to true
+     * @param shellListener a shell listener which should be added to the custom color picker dialog
      */
-    public ColorDropDown(final Composite parent, final StyledTextEditor editor, final boolean dropShadow) {
+    public ColorDropDown(final Composite parent, final StyledTextEditor editor, final boolean dropShadow,
+                         final ShellListener shellListener) {
         super(parent, SWT.NONE);
+
+        m_colorPickerShellListener = shellListener;
 
         final GridData gd = new GridData();
         gd.exclude = true;
@@ -262,19 +270,12 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
 
             m_lastCustomChooserInteraction.set(System.currentTimeMillis());
 
-            final Shell disposableShell;
-            final ColorDialog colorDialog;
-            // the ColorDialog on Windows locates its window at the location of the parent shell
-            if (StyledTextEditor.PLATFORM_IS_WINDOWS) {
-                disposableShell = new Shell(getShell(), SWT.NO_TRIM);
-                disposableShell.setSize(0, 0);
-                disposableShell.setLocation(getParent().toDisplay(getLocation()));
+            final Shell disposableShell = new Shell(getShell(), SWT.NO_TRIM);
+            disposableShell.setSize(0, 0);
+            final java.awt.Point screenPoint = MouseInfo.getPointerInfo().getLocation();
+            disposableShell.setLocation(screenPoint.x, (screenPoint.y + 25));
 
-                colorDialog = new ColorDialog(disposableShell);
-            } else {
-                colorDialog = new ColorDialog(getShell());
-                disposableShell = null;
-            }
+            final ColorDialog colorDialog = new ColorDialog(disposableShell, SWT.APPLICATION_MODAL | SWT.ON_TOP);
 
             colorDialog.setText("Choose Color");
 
@@ -292,16 +293,20 @@ public class ColorDropDown extends Canvas implements TransientEditAssetGroup.Ass
                 }
             }
 
+            // We would have liked to have added to the shell parent of the color dialog our vended shell
+            //      listener gotten in the constructor, but the individual native implementations don't
+            //      uniformly actually use the shell in a fashion that sends notifications to the listener
+            //      so we do notifications by hand here.
+            m_colorPickerShellListener.shellActivated(null);
             final RGB selectedRGB = colorDialog.open();
+            m_colorPickerShellListener.shellClosed(null);
 
             if (IS_OS_WINDOWS) {
                 m_customColors = colorDialog.getRGBs();
                 saveCustomColorsToPreferences(m_customColors);
             }
 
-            if (disposableShell != null) {
-                disposableShell.dispose();
-            }
+            disposableShell.dispose();
 
             m_lastCustomChooserInteraction.set(System.currentTimeMillis());
 

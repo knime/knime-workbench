@@ -328,7 +328,8 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
         m_toolbarWindow = new FloatingStyleToolbar(this);
         m_toolbar = m_toolbarWindow.getToolbar();
 
-        m_colorDropDown = new ColorDropDown(m_toolbarWindow.getShell(), this, false);
+        m_colorDropDown =
+            new ColorDropDown(m_toolbarWindow.getShell(), this, false, m_toolbarWindow.vendShellListener());
 
         m_toolbarWindow.registerListenersWithColorDropDown(m_colorDropDown);
         m_toolbar.getEditAssetGroup().addAssetProvider(m_colorDropDown);

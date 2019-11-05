@@ -88,12 +88,16 @@ public class FloatingStyleToolbar {
 
     private final MainWindowListener m_shellListener;
 
+    private final ArrayList<VendedShellListener> m_vendedShellListeners;
+
     /**
      * @param editor the editor which owns this toolbar
      */
     public FloatingStyleToolbar(final StyledTextEditor editor) {
         final Display display = PlatformUI.getWorkbench().getDisplay();
         m_mainApplicationWindow = display.getActiveShell();
+
+        m_vendedShellListeners = new ArrayList<>();
 
         m_shellListener = new MainWindowListener();
         m_mainApplicationWindow.addShellListener(m_shellListener);
@@ -128,6 +132,18 @@ public class FloatingStyleToolbar {
 
         m_regionsToDispose = new ArrayList<>();
         recomputeRegion();
+    }
+
+    ShellListener vendShellListener() {
+        final VendedShellListener shellListener = new VendedShellListener();
+
+        m_vendedShellListeners.add(shellListener);
+
+        return shellListener;
+    }
+
+    Shell getParentShell() {
+        return m_toolbarWindow;
     }
 
     void registerListenersWithColorDropDown(final ColorDropDown dropDown) {
@@ -295,6 +311,11 @@ public class FloatingStyleToolbar {
                 Thread.sleep(80);
             } catch (final Exception e) { }
 
+            for (final VendedShellListener listener : m_vendedShellListeners) {
+                if (listener.getActiveState()) {
+                    return;
+                }
+            }
             if (!m_toolbarActiveState.get() && !m_mainWindowActiveState.get() && !m_toolbarWindow.isDisposed()) {
                 m_toolbarWindow.getDisplay().asyncExec(() -> {
                     if (!m_toolbarWindow.isDisposed()) {
@@ -302,6 +323,59 @@ public class FloatingStyleToolbar {
                     }
                 });
             }
+        }
+    }
+
+
+    private static class VendedShellListener implements ShellListener {
+        private AtomicBoolean m_activeState;
+
+        VendedShellListener() {
+            m_activeState = new AtomicBoolean(false);
+        }
+
+        private boolean getActiveState() {
+            return m_activeState.get();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellActivated(final ShellEvent se) {
+            m_activeState.set(true);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellClosed(final ShellEvent se) {
+            m_activeState.set(false);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellDeactivated(final ShellEvent se) {
+            m_activeState.set(false);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellDeiconified(final ShellEvent se) {
+            m_activeState.set(true);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void shellIconified(final ShellEvent se) {
+            m_activeState.set(false);
         }
     }
 }
