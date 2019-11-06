@@ -250,7 +250,6 @@ public final class MRUFileMenuItem extends ContributionItem {
                         final String uri = e.getAttribute("uri"); // knime://MP/.../WorkflowName/workflow.knime
                         final String[] parts = uri.split("/");
                         if (parts.length > 2) {
-                            LOGGER.info("Adding MRU uri [" + uri + "]");
                             m_recentURIMap.put(uri, new Object());
                         }
                     }
