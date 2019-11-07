@@ -122,6 +122,9 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     /** The fill color for the header bar and other widgets (like tag chiclets.) **/
     public static final Color GENERAL_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 240, 240, 242);
 
+    /** Available for subclasses **/
+    protected static final Color SECTION_LABEL_TEXT_COLOR = TEXT_COLOR;
+
     /** AP-12082 **/
     protected static final boolean SHOW_LICENSE_ONLY_FOR_HUB = true;
 
@@ -144,7 +147,6 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     private static final Font HEADER_FONT;
     private static final Color HEADER_BORDER_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 229, 229, 229);
     private static final Color HEADER_TEXT_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 87, 87, 87);
-    private static final Color SECTION_LABEL_TEXT_COLOR = TEXT_COLOR;
 
     private static final Image CANCEL_IMAGE =
         ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-cancel.png");

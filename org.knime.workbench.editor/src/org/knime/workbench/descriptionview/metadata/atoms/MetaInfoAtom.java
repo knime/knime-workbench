@@ -69,8 +69,8 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.PlatformUI;
+import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.descriptionview.metadata.PlatformSpecificUIisms;
-import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 import org.xml.sax.SAXException;
@@ -145,12 +145,12 @@ public abstract class MetaInfoAtom {
         final GC gc = new GC(widget);
 
         try {
-            gc.setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
+            gc.setFont(AbstractMetaView.VALUE_DISPLAY_FONT);
             final Point tagTextSize = gc.textExtent(text);
 
             final Point nArySize;
             if (renderNAry) {
-                gc.setFont(WorkflowMetaView.BOLD_CONTENT_FONT);
+                gc.setFont(AbstractMetaView.BOLD_CONTENT_FONT);
                 nArySize = gc.textExtent(N_ARY_TIMES);
                 if (PlatformSpecificUIisms.OS_IS_MAC) {
                     nArySize.y = nArySize.x;    // it's an equi-sided X, but some platform fonts give it a bottom inset
@@ -476,8 +476,8 @@ public abstract class MetaInfoAtom {
 
             m_renderEdit = forEdit;
 
-            setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
-            setForeground(WorkflowMetaView.TEXT_COLOR);
+            setFont(AbstractMetaView.VALUE_DISPLAY_FONT);
+            setForeground(AbstractMetaView.TEXT_COLOR);
 
             m_horizontalInset = horizontalInset;
             m_verticalInset = verticalInset;
@@ -551,16 +551,16 @@ public abstract class MetaInfoAtom {
         protected void paintNAry(final GC gc) {
             if (m_renderEdit) {
                 if (m_mouseDownOnNAry) {
-                    gc.setBackground(WorkflowMetaView.TEXT_COLOR);
+                    gc.setBackground(AbstractMetaView.TEXT_COLOR);
                     // y-1 is on purpose
                     gc.fillOval((m_nAryBounds.x - 2), (m_nAryBounds.y - 1), (m_nAryBounds.width + 4),
                         (m_nAryBounds.height + 4));
-                    gc.setForeground(WorkflowMetaView.GENERAL_FILL_COLOR);
+                    gc.setForeground(AbstractMetaView.GENERAL_FILL_COLOR);
                 } else {
-                    gc.setForeground(WorkflowMetaView.TEXT_COLOR);
+                    gc.setForeground(AbstractMetaView.TEXT_COLOR);
                 }
 
-                gc.setFont(WorkflowMetaView.BOLD_CONTENT_FONT);
+                gc.setFont(AbstractMetaView.BOLD_CONTENT_FONT);
                 gc.drawString(N_ARY_TIMES, m_nAryBounds.x, m_nAryBounds.y, true);
             }
         }
@@ -635,7 +635,7 @@ public abstract class MetaInfoAtom {
                 gc.setAdvanced(true);
                 gc.setAntialias(SWT.ON);
                 gc.setTextAntialias(SWT.ON);
-                gc.setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
+                gc.setFont(AbstractMetaView.VALUE_DISPLAY_FONT);
 
                 gc.drawString(m_displayText, (r.x + HORIZONTAL_INSET), (r.y + VERTICAL_INSET));
 
