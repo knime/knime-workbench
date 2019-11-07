@@ -48,10 +48,29 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
+import java.awt.image.BufferedImage;
+import java.awt.image.ComponentColorModel;
+import java.awt.image.DirectColorModel;
+import java.awt.image.IndexColorModel;
+import java.awt.image.WritableRaster;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 
+import org.apache.batik.dom.svg.SVGDOMImplementation;
+import org.apache.batik.transcoder.SVGAbstractTranscoder;
+import org.apache.batik.transcoder.TranscoderInput;
+import org.apache.batik.transcoder.TranscoderOutput;
+import org.apache.batik.transcoder.TranscodingHints;
+import org.apache.batik.transcoder.XMLAbstractTranscoder;
+import org.apache.batik.transcoder.image.PNGTranscoder;
+import org.apache.batik.util.SVGConstants;
+import org.apache.commons.io.FileUtils;
+import org.eclipse.gmf.runtime.draw2d.ui.render.RenderInfo;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.ComboViewer;
@@ -70,6 +89,8 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
@@ -134,10 +155,9 @@ public class ComponentMetaView extends AbstractMetaView {
      */
     @Override
     protected boolean populateUpperSection(final Composite upperComposite) {
-        // TODO this is AP-12984 - providing color chooser and icon drop
         GridLayout gl = new GridLayout(1, false);
         gl.horizontalSpacing = 0;
-        gl.verticalSpacing = 0;
+        gl.verticalSpacing = 4;
         gl.marginWidth = 0;
         gl.marginHeight = 0;
         upperComposite.setLayout(gl);
@@ -176,10 +196,11 @@ public class ComponentMetaView extends AbstractMetaView {
         c.setLayout(gl);
 
         m_editImageSwatch = new ImageSwatch(c, (e) -> {
-            m_editImageSwatch.setImage(null);
+            m_editImageSwatch.setImage((Image)null, true);
             upperComposite.getParent().layout(true, true);
             // TODO communicate state to meta model facilitator
         });
+        m_editImageSwatch.setEditMode(true);
 
         m_iconDropZone = new Canvas(c, SWT.NONE);
         // SWT.BORDER_DASH does nothing... SWT!
@@ -196,7 +217,6 @@ public class ComponentMetaView extends AbstractMetaView {
         gd.grabExcessHorizontalSpace = true;
         gd.horizontalAlignment = SWT.FILL;
         gd.heightHint = 48;
-        gd.verticalIndent = 6;
         m_iconDropZone.setLayoutData(gd);
         gl = new GridLayout(1, false);
         gl.marginLeft = 6;
@@ -239,7 +259,9 @@ public class ComponentMetaView extends AbstractMetaView {
         m_editColorSwatch = new ColorSwatch(c, (e) -> {
             m_editColorSwatch.setColor(null);
             upperComposite.getParent().layout(true, true);
-            // TODO reset to include NO_SELECTION_COLOR_COMBO_TEXT in the comboViewer and select it
+            m_colorComboViewer.setInput(Arrays.asList(NO_SELECTION_COLOR_COMBO_TEXT, "Blue", "Green", "Red")/**TODO**/);
+            m_colorComboViewer.setSelection(new StructuredSelection(m_colorComboViewer.getElementAt(0)), true);
+            m_colorComboViewer.getCombo().getParent().layout(true, true);
             // TODO communicate state to meta model facilitator
         });
 
@@ -327,25 +349,10 @@ public class ComponentMetaView extends AbstractMetaView {
                 if (files.length == 1) {
                     final String lcFilename = files[0].toLowerCase();
 
-                    if (lcFilename.endsWith("png") || lcFilename.endsWith("svg")) {
-                        final String urlString = "file:" + files[0];
-
-                        try {
-                            final URL url = new URL(urlString);
-                            final ImageDescriptor id = ImageDescriptor.createFromURL(url);
-
-                            m_displayImageSwatch.setImage(id);
-                            m_editImageSwatch.setImage(id);
-
-                            if (inEditMode()) {
-                                m_editImageSwatch.getParent().getParent().layout(true, true);
-                            } else {
-                                m_displayImageSwatch.getParent().getParent().layout(true, true);
-                            }
-                            // TODO update metadate when sorted out
-                        } catch (final Exception e) {
-                            LOGGER.error("Unable to create and load from url [" + urlString + "].", e);
-                        }
+                    if (lcFilename.endsWith("png")) {
+                        pngFileWasDropped(files[0]);
+                    } else if (lcFilename.endsWith("svg")) {
+                        svgFileWasDropped(files[0]);
                     }
                 }
             }
@@ -355,6 +362,181 @@ public class ComponentMetaView extends AbstractMetaView {
         });
 
         return true;
+    }
+
+    private void pngFileWasDropped(final String filename) {
+        final String urlString = "file:" + filename;
+
+        try {
+            final URL url = new URL(urlString);
+            final ImageDescriptor id = ImageDescriptor.createFromURL(url);
+
+            m_displayImageSwatch.setImage(id);
+            m_editImageSwatch.setImage(id);
+
+            if (inEditMode()) {
+                m_editImageSwatch.getParent().getParent().layout(true, true);
+            } else {
+                m_displayImageSwatch.getParent().getParent().layout(true, true);
+            }
+            // TODO update metadate when sorted out
+        } catch (final Exception e) {
+            LOGGER.error("Unable to create and load from url [" + urlString + "].", e);
+        }
+    }
+
+//    @SuppressWarnings("restriction")        // GMF internal transcoder usage
+    private void svgFileWasDropped(final String filename) {
+        try {
+            // doesn't produce an exception, but produces an 8x8 BI of nothing-ness, no matter what
+//            try {
+//                FileInputStream fis = new FileInputStream(filename);
+//                final byte[] bytes = IOUtils.toByteArray(fis);
+//                final SVGImage svgImage = new SVGImage(bytes, new RenderedImageKey(new SVGRenderInfo()));
+//                final BufferedImage bi = svgImage.getBufferedImage();
+//
+//                final ImageData id = convertToSWT(bi);
+//                final Image i = new Image(getDisplay(), id);
+//
+//                m_displayImageSwatch.setImage(i, false);
+//                m_editImageSwatch.setImage(i, true);
+//                fis.close();
+//                return;
+//
+//            } catch (Exception bad) {
+//                LOGGER.error("bad ", bad);
+//            }
+            String css = "svg {" +
+                    "shape-rendering: geometricPrecision;" +
+                    "text-rendering:  geometricPrecision;" +
+                    "color-rendering: optimizeQuality;" +
+                    "image-rendering: optimizeQuality;" +
+                    "}";
+            File cssFile = File.createTempFile("batik-default-override-", ".css");
+            FileUtils.writeStringToFile(cssFile, css);
+
+            final TranscodingHints transcoderHints = new TranscodingHints();
+            transcoderHints.put(XMLAbstractTranscoder.KEY_XML_PARSER_VALIDATING, Boolean.FALSE);
+            transcoderHints.put(XMLAbstractTranscoder.KEY_DOM_IMPLEMENTATION, SVGDOMImplementation.getDOMImplementation());
+            transcoderHints.put(XMLAbstractTranscoder.KEY_DOCUMENT_ELEMENT_NAMESPACE_URI, SVGConstants.SVG_NAMESPACE_URI);
+            transcoderHints.put(XMLAbstractTranscoder.KEY_DOCUMENT_ELEMENT, "svg");
+            transcoderHints.put(SVGAbstractTranscoder.KEY_USER_STYLESHEET_URI, cssFile.toURI().toString());
+
+            try (final FileInputStream fis = new FileInputStream(filename)) {
+//                final SWTImageTranscoder imageTranscoder = new SWTImageTranscoder();
+                final TranscoderInput input = new TranscoderInput(fis);
+                final ArrayList<BufferedImage> renderedImages = new ArrayList<>();
+                final PNGTranscoder imageTranscoder = new PNGTranscoder() {
+//                    @Override
+//                    public BufferedImage createImage(final int w, final int h) {
+//                        return new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+//                    }
+//                    @Override
+//                    public void writeImage(final BufferedImage image, final TranscoderOutput out)
+//                            throws TranscoderException {
+//                        renderedImages.add(image);
+//                    }
+                };
+                final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                final TranscoderOutput output = new TranscoderOutput(baos);
+
+                imageTranscoder.setTranscodingHints(transcoderHints);
+// This line ends up throwing a class cast exception from the bowels of Batik - in BridgeContext.dispose()
+//      which claims:
+// java.lang.ClassCastException: org.apache.batik.dom.svg.SVGOMDocument cannot be cast to org.w3c.dom.events.EventTarget
+//      which is nonsense as the API doc show:
+//              https://xmlgraphics.apache.org/batik/javadoc/org/apache/batik/anim/dom/SVGOMDocument.html
+                imageTranscoder.transcode(input, output);
+
+                final ImageData id = convertToSWT(renderedImages.get(0));
+                final Image i = new Image(getDisplay(), id);
+
+              m_displayImageSwatch.setImage(i, false);
+              m_editImageSwatch.setImage(i, true);
+
+//                m_displayImageSwatch.setImage(imageTranscoder.getSWTImage());
+//                m_editImageSwatch.setImage(imageTranscoder.getSWTImage());
+
+                if (inEditMode()) {
+                    m_editImageSwatch.getParent().getParent().layout(true, true);
+                } else {
+                    m_displayImageSwatch.getParent().getParent().layout(true, true);
+                }
+                // TODO update metadate when sorted out
+            }
+        } catch (final Exception e) {
+            LOGGER.error("Caught exception attempting to read in SVG file.", e);
+        }
+    }
+
+    private static ImageData convertToSWT(final BufferedImage bufferedImage) {
+        if (bufferedImage.getColorModel() instanceof DirectColorModel) {
+            DirectColorModel colorModel = (DirectColorModel)bufferedImage.getColorModel();
+            PaletteData palette = new PaletteData(
+                    colorModel.getRedMask(),
+                    colorModel.getGreenMask(),
+                    colorModel.getBlueMask());
+            ImageData data = new ImageData(bufferedImage.getWidth(), bufferedImage.getHeight(),
+                    colorModel.getPixelSize(), palette);
+            for (int y = 0; y < data.height; y++) {
+                for (int x = 0; x < data.width; x++) {
+                    int rgb = bufferedImage.getRGB(x, y);
+                    int pixel = palette.getPixel(new RGB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF));
+                    data.setPixel(x, y, pixel);
+                    if (colorModel.hasAlpha()) {
+                        data.setAlpha(x, y, (rgb >> 24) & 0xFF);
+                    }
+                }
+            }
+            return data;
+        }
+        else if (bufferedImage.getColorModel() instanceof IndexColorModel) {
+            IndexColorModel colorModel = (IndexColorModel)bufferedImage.getColorModel();
+            int size = colorModel.getMapSize();
+            byte[] reds = new byte[size];
+            byte[] greens = new byte[size];
+            byte[] blues = new byte[size];
+            colorModel.getReds(reds);
+            colorModel.getGreens(greens);
+            colorModel.getBlues(blues);
+            RGB[] rgbs = new RGB[size];
+            for (int i = 0; i < rgbs.length; i++) {
+                rgbs[i] = new RGB(reds[i] & 0xFF, greens[i] & 0xFF, blues[i] & 0xFF);
+            }
+            PaletteData palette = new PaletteData(rgbs);
+            ImageData data = new ImageData(bufferedImage.getWidth(), bufferedImage.getHeight(),
+                    colorModel.getPixelSize(), palette);
+            data.transparentPixel = colorModel.getTransparentPixel();
+            WritableRaster raster = bufferedImage.getRaster();
+            int[] pixelArray = new int[1];
+            for (int y = 0; y < data.height; y++) {
+                for (int x = 0; x < data.width; x++) {
+                    raster.getPixel(x, y, pixelArray);
+                    data.setPixel(x, y, pixelArray[0]);
+                }
+            }
+            return data;
+        }
+        else if (bufferedImage.getColorModel() instanceof ComponentColorModel) {
+            ComponentColorModel colorModel = (ComponentColorModel)bufferedImage.getColorModel();
+            //ASSUMES: 3 BYTE BGR IMAGE TYPE
+            PaletteData palette = new PaletteData(0x0000FF, 0x00FF00,0xFF0000);
+            ImageData data = new ImageData(bufferedImage.getWidth(), bufferedImage.getHeight(),
+                    colorModel.getPixelSize(), palette);
+            //This is valid because we are using a 3-byte Data model with no transparent pixels
+            data.transparentPixel = -1;
+            WritableRaster raster = bufferedImage.getRaster();
+            int[] pixelArray = new int[3];
+            for (int y = 0; y < data.height; y++) {
+                for (int x = 0; x < data.width; x++) {
+                    raster.getPixel(x, y, pixelArray);
+                    int pixel = palette.getPixel(new RGB(pixelArray[0], pixelArray[1], pixelArray[2]));
+                    data.setPixel(x, y, pixel);
+                }
+            }
+            return data;
+        }
+        return null;
     }
 
     /**
@@ -464,5 +646,67 @@ public class ComponentMetaView extends AbstractMetaView {
     @Override
     protected void completeSave() {
         ((ComponentMetadataModelFacilitator)m_modelFacilitator).storeMetadataInComponent();
+    }
+
+
+    private class SVGRenderInfo implements RenderInfo {
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public int getWidth() {
+            return 48;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public int getHeight() {
+            return 48;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public RGB getBackgroundColor() {
+            return null;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public RGB getForegroundColor() {
+            return null;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean shouldMaintainAspectRatio() {
+            return true;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public boolean shouldAntiAlias() {
+            return true;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void setValues(final int width, final int height, final boolean maintainAspectRatio, final boolean antialias, final RGB background,
+            final RGB foreground) {
+            // NOOP
+        }
+
     }
 }

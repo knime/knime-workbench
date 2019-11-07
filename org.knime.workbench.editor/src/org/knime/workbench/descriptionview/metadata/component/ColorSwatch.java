@@ -48,123 +48,40 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.events.MouseListener;
-import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Cursor;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
-import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.ui.PlatformUI;
-import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
-import org.knime.workbench.descriptionview.metadata.PlatformSpecificUIisms;
 
 /**
  * A widget to display a color swatch, potentially with a 'delete' icon and listener functionality for that delete
  * click.
  *
- *  TODO abstract swatch commonality to abstract super class
- *
  * @author loki der quaeler
  */
-class ColorSwatch extends Canvas {
-    private static final String N_ARY_TIMES = "\u2A09";
-
+class ColorSwatch extends AbstractSwatch {
     private static final int ROUNDED_CORNER = 15;
 
-    private static final Cursor HAND_CURSOR = new Cursor(PlatformUI.getWorkbench().getDisplay(), SWT.CURSOR_HAND);
-    private static final Cursor DEFAULT_CURSOR = new Cursor(PlatformUI.getWorkbench().getDisplay(), SWT.CURSOR_ARROW);
 
-
-    private final AtomicBoolean m_editMode;
     private Color m_currentColor;
-    private Rectangle m_nAryBounds;
 
     ColorSwatch(final Composite parent, final Listener deleteListener) {
-        super(parent, SWT.NONE);
+        super(parent, deleteListener);
+    }
 
-        m_editMode = new AtomicBoolean(false);
+    @Override
+    void drawContent(final GC gc) {
+        gc.setBackground(m_currentColor);
+        final Point size = ColorSwatch.this.getSize();
+        gc.fillRoundRectangle(0, 0, size.x, size.y, ROUNDED_CORNER, ROUNDED_CORNER);
+    }
 
-        final GridData gd = new GridData();
-        gd.horizontalAlignment = SWT.LEFT;
-        gd.verticalAlignment = SWT.CENTER;
-        gd.heightHint = 36;
-        gd.widthHint = 36;
-        gd.exclude = true;
-        setLayoutData(gd);
-
-        addMouseMoveListener(new MouseMoveListener() {
-            @Override
-            public void mouseMove(final MouseEvent me) {
-                if ((m_nAryBounds != null) && m_editMode.get() && m_nAryBounds.contains(me.x, me.y)) {
-                    setCursor(HAND_CURSOR);
-                } else {
-                    setCursor(DEFAULT_CURSOR);
-                }
-            }
-        });
-        addMouseListener(new MouseListener() {
-            @Override
-            public void mouseDoubleClick(final MouseEvent me) { }
-
-            @Override
-            public void mouseDown(final MouseEvent me) { }
-
-            @Override
-            public void mouseUp(final MouseEvent me) {
-                if ((m_nAryBounds != null) && (deleteListener != null) && m_editMode.get()
-                    && m_nAryBounds.contains(me.x, me.y)) {
-                    final Event e = new Event();
-                    e.widget = ColorSwatch.this;
-                    deleteListener.handleEvent(e);
-                }
-            }
-        });
-        addPaintListener((e) -> {
-            if (m_currentColor == null) {
-                return;
-            }
-
-            final GC gc = e.gc;
-
-            gc.setAntialias(SWT.ON);
-
-            gc.setBackground(m_currentColor);
-            final Point size = ColorSwatch.this.getSize();
-            gc.fillRoundRectangle(0, 0, size.x, size.y, ROUNDED_CORNER, ROUNDED_CORNER);
-
-            if (m_editMode.get()) {
-                gc.setTextAntialias(SWT.ON);
-                gc.setFont(AbstractMetaView.BOLD_CONTENT_FONT);
-
-                if (m_nAryBounds == null) {
-                    final Point nArySize = gc.textExtent(N_ARY_TIMES);
-                    if (PlatformSpecificUIisms.OS_IS_MAC) {
-                        nArySize.y = nArySize.x;    // it's an equi-sided X, but some platform fonts give it a bottom inset
-                    }
-
-                    m_nAryBounds =
-                        new Rectangle((size.x - 4 - nArySize.x), ((size.y - nArySize.y) / 2), nArySize.x, nArySize.y);
-                }
-
-                // TODO we should really do a color set that is based on the background color's attributes to
-                //              ensure visibility
-                gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_BLACK));
-                gc.drawString(N_ARY_TIMES, m_nAryBounds.x, m_nAryBounds.y, true);
-            }
-        });
-
-        setVisible(false);
+    @Override
+    boolean hasContent() {
+        return (m_currentColor != null);
     }
 
     /**
@@ -191,12 +108,6 @@ class ColorSwatch extends Canvas {
         setLayoutData(gd);
 
         redraw();
-    }
-
-    void setEditMode(final boolean editMode) {
-        if (m_editMode.getAndSet(editMode) != editMode) {
-            redraw();
-        }
     }
 
     private void disposeOfColorIfPresent() {
