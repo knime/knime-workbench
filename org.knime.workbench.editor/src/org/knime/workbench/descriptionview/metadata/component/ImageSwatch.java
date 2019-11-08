@@ -48,14 +48,10 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
-import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Listener;
 
 /**
@@ -87,10 +83,8 @@ class ImageSwatch extends AbstractSwatch {
     @Override
     public void dispose() {
         disposeOfImageIfPresent();
-    }
 
-    void setImage(final ImageDescriptor newImage) {
-        setImage(((newImage != null) ? newImage.createImage(getDisplay()) : null), true);;
+        super.dispose();
     }
 
     void setImage(final Image newImage, final boolean disposeOfImage) {
@@ -98,7 +92,7 @@ class ImageSwatch extends AbstractSwatch {
 
         final GridData gd = (GridData)getLayoutData();
         if (newImage != null) {
-            m_image = resizeToSwatchSize(newImage);
+            m_image = NodeDisplayPreview.resizeToSwatchSize(newImage, getDisplay(), SWATCH_SIZE);
             if (disposeOfImage) {
                 newImage.dispose();
             }
@@ -119,22 +113,5 @@ class ImageSwatch extends AbstractSwatch {
             m_image.dispose();
             m_image = null;
         }
-    }
-
-    private Image resizeToSwatchSize(final Image image) {
-        final Image scaled = new Image(getDisplay(), SWATCH_SIZE, SWATCH_SIZE);
-        final GC gc = new GC(scaled);
-        gc.setAntialias(SWT.ON);
-        gc.setInterpolation(SWT.HIGH);
-        gc.drawImage(image, 0, 0, image.getBounds().width, image.getBounds().height, 0, 0, SWATCH_SIZE, SWATCH_SIZE);
-        gc.dispose();
-
-        final ImageData imageData = scaled.getImageData();
-        imageData.transparentPixel = image.getImageData().transparentPixel;
-
-        final Image scaledTransparencySetImage = new Image(Display.getDefault(), imageData);
-        scaled.dispose();
-
-        return scaledTransparencySetImage;
     }
 }

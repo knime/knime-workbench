@@ -48,8 +48,6 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
@@ -68,7 +66,7 @@ import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.descriptionview.metadata.PlatformSpecificUIisms;
 
 /**
- * Common functionality for our swatches.
+ * Common functionality for our edit-mode swatches.
  *
  * @author loki der quaeler
  */
@@ -82,13 +80,10 @@ abstract class AbstractSwatch extends Canvas {
     private static final Cursor DEFAULT_CURSOR = new Cursor(PlatformUI.getWorkbench().getDisplay(), SWT.CURSOR_ARROW);
 
 
-    private final AtomicBoolean m_editMode;
     private Rectangle m_nAryBounds;
 
     AbstractSwatch(final Composite parent, final Listener deleteListener) {
         super(parent, SWT.TRANSPARENT);
-
-        m_editMode = new AtomicBoolean(false);
 
         final GridData gd = new GridData();
         gd.horizontalAlignment = SWT.LEFT;
@@ -101,7 +96,7 @@ abstract class AbstractSwatch extends Canvas {
         addMouseMoveListener(new MouseMoveListener() {
             @Override
             public void mouseMove(final MouseEvent me) {
-                if ((m_nAryBounds != null) && m_editMode.get() && m_nAryBounds.contains(me.x, me.y)) {
+                if ((m_nAryBounds != null) && m_nAryBounds.contains(me.x, me.y)) {
                     setCursor(HAND_CURSOR);
                 } else {
                     setCursor(DEFAULT_CURSOR);
@@ -117,8 +112,7 @@ abstract class AbstractSwatch extends Canvas {
 
             @Override
             public void mouseUp(final MouseEvent me) {
-                if ((m_nAryBounds != null) && (deleteListener != null) && m_editMode.get()
-                                           && m_nAryBounds.contains(me.x, me.y)) {
+                if ((m_nAryBounds != null) && (deleteListener != null) && m_nAryBounds.contains(me.x, me.y)) {
                     final Event e = new Event();
                     e.widget = AbstractSwatch.this;
                     deleteListener.handleEvent(e);
@@ -136,37 +130,27 @@ abstract class AbstractSwatch extends Canvas {
 
             drawContent(gc);
 
-            if (m_editMode.get()) {
-                gc.setTextAntialias(SWT.ON);
-                gc.setFont(AbstractMetaView.BOLD_CONTENT_FONT);
+            gc.setTextAntialias(SWT.ON);
+            gc.setFont(AbstractMetaView.BOLD_CONTENT_FONT);
 
-                if (m_nAryBounds == null) {
-                    final Point nArySize = gc.textExtent(N_ARY_TIMES);
-                    if (PlatformSpecificUIisms.OS_IS_MAC) {
-                        nArySize.y = nArySize.x;    // it's an equi-sided X, but some platform fonts give it a bottom inset
-                    }
-
-                    final Point size = AbstractSwatch.this.getSize();
-                    m_nAryBounds =
-                        new Rectangle((size.x - 4 - nArySize.x), ((size.y - nArySize.y) / 2), nArySize.x, nArySize.y);
+            if (m_nAryBounds == null) {
+                final Point nArySize = gc.textExtent(N_ARY_TIMES);
+                if (PlatformSpecificUIisms.OS_IS_MAC) {
+                    nArySize.y = nArySize.x;    // it's an equi-sided X, but some platform fonts give it a bottom inset
                 }
 
-                gc.setBackground(getDisplay().getSystemColor(SWT.COLOR_WHITE));
-                gc.fillOval((m_nAryBounds.x - 2), (m_nAryBounds.y - 1), (m_nAryBounds.width + 4),
-                    (m_nAryBounds.height + 4));
-
-                gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_BLACK));
-                gc.drawString(N_ARY_TIMES, m_nAryBounds.x, m_nAryBounds.y, true);
+                final Point size = AbstractSwatch.this.getSize();
+                m_nAryBounds =
+                    new Rectangle((size.x - 4 - nArySize.x), ((size.y - nArySize.y) / 2), nArySize.x, nArySize.y);
             }
+
+            gc.setBackground(getDisplay().getSystemColor(SWT.COLOR_WHITE));
+            gc.fillOval((m_nAryBounds.x - 2), (m_nAryBounds.y - 1), (m_nAryBounds.width + 4),
+                (m_nAryBounds.height + 4));
+
+            gc.setForeground(getDisplay().getSystemColor(SWT.COLOR_BLACK));
+            gc.drawString(N_ARY_TIMES, m_nAryBounds.x, m_nAryBounds.y, true);
         });
-
-        setVisible(true);
-    }
-
-    void setEditMode(final boolean editMode) {
-        if (m_editMode.getAndSet(editMode) != editMode) {
-            redraw();
-        }
     }
 
     abstract void drawContent(final GC gc);

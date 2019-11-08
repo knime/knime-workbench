@@ -120,8 +120,7 @@ public class ComponentMetaView extends AbstractMetaView {
     private ComboViewer m_colorComboViewer;
 
     private Composite m_displayUpperComposite;
-    private ImageSwatch m_displayImageSwatch;
-    private ColorSwatch m_displayColorSwatch;
+    private NodeDisplayPreview m_nodeDisplayPreview;
 
     /**
      * @param parent
@@ -176,11 +175,11 @@ public class ComponentMetaView extends AbstractMetaView {
         c.setLayout(gl);
 
         m_editImageSwatch = new ImageSwatch(c, (e) -> {
-            m_editImageSwatch.setImage((Image)null, true);
+            m_editImageSwatch.setImage(null, true);
+            m_nodeDisplayPreview.setImage(null, true);
             upperComposite.getParent().layout(true, true);
             // TODO communicate state to meta model facilitator
         });
-        m_editImageSwatch.setEditMode(true);
 
         m_iconDropZone = new Canvas(c, SWT.NONE);
         // SWT.BORDER_DASH does nothing... SWT!
@@ -238,6 +237,7 @@ public class ComponentMetaView extends AbstractMetaView {
 
         m_editColorSwatch = new ColorSwatch(c, (e) -> {
             m_editColorSwatch.setColor(null);
+            m_nodeDisplayPreview.setColor(null);
             upperComposite.getParent().layout(true, true);
             m_colorComboViewer.setInput(Arrays.asList(NO_SELECTION_COLOR_COMBO_TEXT, "Blue", "Green", "Red")/**TODO**/);
             m_colorComboViewer.setSelection(new StructuredSelection(m_colorComboViewer.getElementAt(0)), true);
@@ -275,9 +275,11 @@ public class ComponentMetaView extends AbstractMetaView {
                 final int r = (int)(Math.random() * 255.0);
                 final int g = (int)(Math.random() * 255.0);
                 final int b = (int)(Math.random() * 255.0);
+                final RGB newColor = new RGB(r, g, b);
                 m_editColorSwatch.setColor(new RGB(r, g, b));
+                m_nodeDisplayPreview.setColor(newColor);
 
-                m_editColorSwatch.setEditMode(m_colorComboViewer.getCombo().getSelectionIndex() == 0);
+                // TODO communicate state to meta model facilitator
 
                 upperComposite.getParent().layout(true, true);
             }
@@ -296,12 +298,10 @@ public class ComponentMetaView extends AbstractMetaView {
         gd.horizontalAlignment = SWT.FILL;
         m_displayUpperComposite.setLayoutData(gd);
 
-        m_displayImageSwatch = new ImageSwatch(m_displayUpperComposite, null);
-        m_displayColorSwatch = new ColorSwatch(m_displayUpperComposite, null);
+        m_nodeDisplayPreview = new NodeDisplayPreview(m_displayUpperComposite);
 
 
-        // TODO m_edit is the one hidden
-        SWTUtilities.spaceReclaimingSetVisible(m_displayUpperComposite, false);
+        SWTUtilities.spaceReclaimingSetVisible(m_editUpperComposite, false);
 
 
         final DropTarget dropTarget = new DropTarget(m_iconDropZone, DND.DROP_MOVE | DND.DROP_COPY | DND.DROP_DEFAULT);
@@ -325,7 +325,6 @@ public class ComponentMetaView extends AbstractMetaView {
             public void drop(final DropTargetEvent event) {
                 final String[] files = (String[])event.data;
 
-                // only allow single file drop
                 if (files.length == 1) {
                     final String lcFilename = files[0].toLowerCase();
 
@@ -350,16 +349,15 @@ public class ComponentMetaView extends AbstractMetaView {
         try {
             final URL url = new URL(urlString);
             final ImageDescriptor id = ImageDescriptor.createFromURL(url);
+            final Image i = id.createImage();
 
-            m_displayImageSwatch.setImage(id);
-            m_editImageSwatch.setImage(id);
+            m_nodeDisplayPreview.setImage(i, false);
+            m_editImageSwatch.setImage(i, true);
 
             if (inEditMode()) {
                 m_editImageSwatch.getParent().getParent().layout(true, true);
-            } else {
-                m_displayImageSwatch.getParent().getParent().layout(true, true);
             }
-            // TODO update metadate when sorted out
+            // TODO communicate state to meta model facilitator
         } catch (final Exception e) {
             LOGGER.error("Unable to create and load from url [" + urlString + "].", e);
         }
@@ -370,14 +368,12 @@ public class ComponentMetaView extends AbstractMetaView {
             final ImageData id = SVGRasterizer.rasterizeImageFromSVGFile(filename);
             final Image i = new Image(getDisplay(), id);
 
-            m_displayImageSwatch.setImage(i, false);
+            m_nodeDisplayPreview.setImage(i, false);
             m_editImageSwatch.setImage(i, true);
             if (inEditMode()) {
                 m_editImageSwatch.getParent().getParent().layout(true, true);
-            } else {
-                m_displayImageSwatch.getParent().getParent().layout(true, true);
             }
-            // TODO update metadate when sorted out
+            // TODO communicate state to meta model facilitator
         } catch (final Exception e) {
             LOGGER.error("Caught exception attempting to read in SVG file.", e);
         }
@@ -408,11 +404,10 @@ public class ComponentMetaView extends AbstractMetaView {
     }
 
     @Override
-    protected void updateDisplay() {
-        super.updateDisplay();
-
+    protected void updateLocalDisplay() {
         if (inEditMode()) {
-            // TODO m_edit visible, m_display hide
+            SWTUtilities.spaceReclaimingSetVisible(m_displayUpperComposite, false);
+            SWTUtilities.spaceReclaimingSetVisible(m_editUpperComposite, true);
 
             if (m_browser != null) {
                 m_browser.setVisible(false);
@@ -420,7 +415,8 @@ public class ComponentMetaView extends AbstractMetaView {
                 m_text.setVisible(false);
             }
         } else {
-            // TODO m_edit hide, m_display visible
+            SWTUtilities.spaceReclaimingSetVisible(m_editUpperComposite, false);
+            SWTUtilities.spaceReclaimingSetVisible(m_displayUpperComposite, true);
 
             final StringBuilder content = new StringBuilder(DynamicNodeDescriptionCreator.instance().getHeader());
             final Element portDOM = m_currentSubNodeContainer.getXMLDescriptionForPorts();

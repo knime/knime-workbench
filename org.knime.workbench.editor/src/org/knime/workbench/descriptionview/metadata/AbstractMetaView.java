@@ -725,10 +725,18 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     public abstract void selectionChanged(final IStructuredSelection selection);
 
     /**
+     * This can be overridden by sublasses, as its implementation here does nothing. This method is invoked from inside
+     * updateDisplay() once there exists metadata to populate with, after sections have been made visible and after the
+     * default sections have been populated from the metadata, but before layout is invoked.
+     */
+    protected void updateLocalDisplay() {
+
+    }
+
+    /**
      * This can be invoked to refresh the view's contents.
      */
-
-    protected void updateDisplay() {
+    protected final void updateDisplay() {
         boolean focusFirstEditElement = false;
 
         if (m_waitingForAsynchronousMetadata.get() || m_asynchronousMetadataFetchFailed.get()
@@ -882,6 +890,8 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
             } else {
                 mia.populateContainerForDisplay(m_authorContentPane);
             }
+
+            updateLocalDisplay();
         }
 
         layout(true, true);

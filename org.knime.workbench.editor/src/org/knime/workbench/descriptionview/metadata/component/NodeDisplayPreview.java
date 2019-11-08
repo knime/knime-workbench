@@ -44,44 +44,83 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Nov 6, 2019 (loki): created
+ *   Nov 8, 2019 (loki): created
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.PlatformUI;
 
 /**
- * A widget to display a color swatch, potentially with a 'delete' icon and listener functionality for that delete
- * click.
+ * This class is used in the display mode of the component metadata view to render a preview of the display of the
+ * component node, given the potentially user specified icon and color.
  *
  * @author loki der quaeler
  */
-class ColorSwatch extends AbstractSwatch {
+class NodeDisplayPreview extends Canvas {
+    private static final int SWATCH_SIZE = 50;
+    private static final int ICON_INSET = 9;
+    private static final int ICON_DIMENSION = 32;
     private static final int ROUNDED_CORNER = 15;
 
+    private static final Color DEFAULT_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 189, 189, 189);
 
+    // TODO another "should be in a core framework somewhere" method
+    static Image resizeToSwatchSize(final Image image, final Display display, final int dimension) {
+        final Image scaled = new Image(display, dimension, dimension);
+        final GC gc = new GC(scaled);
+        gc.setAntialias(SWT.ON);
+        gc.setInterpolation(SWT.HIGH);
+        gc.drawImage(image, 0, 0, image.getBounds().width, image.getBounds().height, 0, 0, dimension, dimension);
+        gc.dispose();
+
+        final ImageData imageData = scaled.getImageData();
+        imageData.transparentPixel = image.getImageData().transparentPixel;
+
+        final Image scaledTransparencySetImage = new Image(Display.getDefault(), imageData);
+        scaled.dispose();
+
+        return scaledTransparencySetImage;
+    }
+
+
+    private Image m_image;
     private Color m_currentColor;
 
-    ColorSwatch(final Composite parent, final Listener deleteListener) {
-        super(parent, deleteListener);
-    }
+    NodeDisplayPreview(final Composite parent) {
+        super(parent, SWT.TRANSPARENT);
 
-    @Override
-    void drawContent(final GC gc) {
-        gc.setBackground(m_currentColor);
-        final Point size = ColorSwatch.this.getSize();
-        gc.fillRoundRectangle(0, 0, size.x, size.y, ROUNDED_CORNER, ROUNDED_CORNER);
-    }
+        final GridData gd = new GridData();
+        gd.horizontalAlignment = SWT.LEFT;
+        gd.verticalAlignment = SWT.CENTER;
+        gd.heightHint = SWATCH_SIZE;
+        gd.widthHint = SWATCH_SIZE;
+        setLayoutData(gd);
 
-    @Override
-    boolean hasContent() {
-        return (m_currentColor != null);
+        addPaintListener((e) -> {
+            final GC gc = e.gc;
+
+            gc.setAntialias(SWT.ON);
+
+            final Color fillColor = (m_currentColor == null) ? DEFAULT_FILL_COLOR : m_currentColor;
+            gc.setBackground(fillColor);
+            final Point size = NodeDisplayPreview.this.getSize();
+            gc.fillRoundRectangle(0, 0, size.x, size.y, ROUNDED_CORNER, ROUNDED_CORNER);
+
+            if (m_image != null) {
+                gc.drawImage(m_image, ICON_INSET, ICON_INSET);
+            }
+        });
     }
 
     /**
@@ -90,24 +129,31 @@ class ColorSwatch extends AbstractSwatch {
     @Override
     public void dispose() {
         disposeOfColorIfPresent();
+        disposeOfImageIfPresent();
 
         super.dispose();
+    }
+
+    void setImage(final Image newImage, final boolean disposeOfImage) {
+        disposeOfImageIfPresent();
+
+        if (newImage != null) {
+            m_image = NodeDisplayPreview.resizeToSwatchSize(newImage, getDisplay(), ICON_DIMENSION);
+            if (disposeOfImage) {
+                newImage.dispose();
+            }
+        }
+
+        redraw();
     }
 
     void setColor(final RGB newColor) {
         // we _could_ check for a setting of the same color, but it's not clear that saves us much
         disposeOfColorIfPresent();
 
-        final GridData gd = (GridData)getLayoutData();
         if (newColor != null) {
             m_currentColor = new Color(getDisplay(), newColor);
-            gd.exclude = false;
-            setVisible(true);
-        } else {
-            gd.exclude = true;
-            setVisible(false);
         }
-        setLayoutData(gd);
 
         redraw();
     }
@@ -116,6 +162,13 @@ class ColorSwatch extends AbstractSwatch {
         if (m_currentColor != null) {
             m_currentColor.dispose();
             m_currentColor = null;
+        }
+    }
+
+    private void disposeOfImageIfPresent() {
+        if (m_image != null) {
+            m_image.dispose();
+            m_image = null;
         }
     }
 }
