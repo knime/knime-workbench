@@ -224,8 +224,8 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
 
     private void moveControlToTop(final Control c) {
         if (m_stackLayout.topControl != c) {
-            if (m_emptyView == c) {
-                m_previousNonEmtpyView = m_stackLayout.topControl;
+            if (m_emptyView != c) {
+                m_previousNonEmtpyView = c;
             }
 
             m_stackLayout.topControl = c;

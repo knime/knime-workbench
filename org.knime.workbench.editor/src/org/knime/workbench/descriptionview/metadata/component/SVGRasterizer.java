@@ -67,7 +67,7 @@ import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.TranscodingHints;
 import org.apache.batik.transcoder.XMLAbstractTranscoder;
-import org.apache.batik.transcoder.image.ImageTranscoder;
+import org.apache.batik.transcoder.image.PNGTranscoder;
 import org.apache.batik.util.SVGConstants;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.swt.graphics.ImageData;
@@ -112,12 +112,7 @@ class SVGRasterizer {
         try (final FileInputStream fis = new FileInputStream(filename)) {
             final TranscoderInput input = new TranscoderInput(fis);
             final ArrayList<BufferedImage> renderedImages = new ArrayList<>();
-            final ImageTranscoder imageTranscoder = new ImageTranscoder() {
-                @Override
-                public BufferedImage createImage(final int w, final int h) {
-                    return new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-                }
-
+            final PNGTranscoder imageTranscoder = new PNGTranscoder() {
                 @Override
                 public void writeImage(final BufferedImage image, final TranscoderOutput out)
                     throws TranscoderException {

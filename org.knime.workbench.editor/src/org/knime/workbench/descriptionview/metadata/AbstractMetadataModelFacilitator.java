@@ -111,7 +111,6 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
     /** a NodeLogger available for subclasses **/
     protected final NodeLogger m_logger;
 
-
     private ModelObserver m_modelObserver;
 
                     // for edit state store
@@ -257,7 +256,7 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
      * @return true if we're in edit mode and there has been a dirty-ing action.
      */
     public boolean modelIsDirty() {
-        return m_editStateIsDirty.get();
+        return m_editStateIsDirty.get() || containedMetadataIsDirty();
     }
 
     /**
@@ -344,6 +343,16 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
     }
 
     /**
+     * Subclasses can override this to affect dirty state decisions.
+     *
+     * @return true if the metadata specific to the subclass is dirty - not the metadata represented in this
+     *              class.
+     */
+    protected boolean containedMetadataIsDirty() {
+        return false;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -419,6 +428,10 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
             return;
         }
         if (m_linkWasDeletedDuringEdit.get() && (m_savedLinkAtoms.size() > 0)) {
+            return;
+        }
+
+        if (containedMetadataIsDirty()) {
             return;
         }
 

@@ -55,10 +55,10 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 
 /**
@@ -75,26 +75,9 @@ class NodeDisplayPreview extends Canvas {
 
     private static final Color DEFAULT_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 189, 189, 189);
 
-    // TODO another "should be in a core framework somewhere" method
-    static Image resizeToSwatchSize(final Image image, final Display display, final int dimension) {
-        final Image scaled = new Image(display, dimension, dimension);
-        final GC gc = new GC(scaled);
-        gc.setAntialias(SWT.ON);
-        gc.setInterpolation(SWT.HIGH);
-        gc.drawImage(image, 0, 0, image.getBounds().width, image.getBounds().height, 0, 0, dimension, dimension);
-        gc.dispose();
-
-        final ImageData imageData = scaled.getImageData();
-        imageData.transparentPixel = image.getImageData().transparentPixel;
-
-        final Image scaledTransparencySetImage = new Image(Display.getDefault(), imageData);
-        scaled.dispose();
-
-        return scaledTransparencySetImage;
-    }
-
 
     private Image m_image;
+    private Rectangle m_imageBounds;
     private Color m_currentColor;
 
     NodeDisplayPreview(final Composite parent) {
@@ -118,7 +101,9 @@ class NodeDisplayPreview extends Canvas {
             gc.fillRoundRectangle(0, 0, size.x, size.y, ROUNDED_CORNER, ROUNDED_CORNER);
 
             if (m_image != null) {
-                gc.drawImage(m_image, ICON_INSET, ICON_INSET);
+                gc.setInterpolation(SWT.HIGH);
+                gc.drawImage(m_image, 0, 0, m_imageBounds.width, m_imageBounds.height, ICON_INSET, ICON_INSET,
+                    ICON_DIMENSION, ICON_DIMENSION);
             }
         });
     }
@@ -134,14 +119,12 @@ class NodeDisplayPreview extends Canvas {
         super.dispose();
     }
 
-    void setImage(final Image newImage, final boolean disposeOfImage) {
+    void setImage(final ImageData newImage) {
         disposeOfImageIfPresent();
 
         if (newImage != null) {
-            m_image = NodeDisplayPreview.resizeToSwatchSize(newImage, getDisplay(), ICON_DIMENSION);
-            if (disposeOfImage) {
-                newImage.dispose();
-            }
+            m_image = new Image(getDisplay(), newImage);
+            m_imageBounds = m_image.getBounds();
         }
 
         redraw();

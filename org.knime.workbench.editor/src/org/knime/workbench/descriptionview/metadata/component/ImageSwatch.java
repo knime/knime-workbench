@@ -48,8 +48,11 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Listener;
@@ -62,6 +65,7 @@ import org.eclipse.swt.widgets.Listener;
  */
 class ImageSwatch extends AbstractSwatch {
     private Image m_image;
+    private Rectangle m_imageBounds;
 
     ImageSwatch(final Composite parent, final Listener deleteListener) {
         super(parent, deleteListener);
@@ -69,7 +73,8 @@ class ImageSwatch extends AbstractSwatch {
 
     @Override
     void drawContent(final GC gc) {
-        gc.drawImage(m_image, 0, 0);
+        gc.setInterpolation(SWT.HIGH);
+        gc.drawImage(m_image, 0, 0, m_imageBounds.width, m_imageBounds.height, 0, 0, SWATCH_SIZE, SWATCH_SIZE);
     }
 
     @Override
@@ -87,15 +92,13 @@ class ImageSwatch extends AbstractSwatch {
         super.dispose();
     }
 
-    void setImage(final Image newImage, final boolean disposeOfImage) {
+    void setImage(final ImageData newImage) {
         disposeOfImageIfPresent();
 
         final GridData gd = (GridData)getLayoutData();
         if (newImage != null) {
-            m_image = NodeDisplayPreview.resizeToSwatchSize(newImage, getDisplay(), SWATCH_SIZE);
-            if (disposeOfImage) {
-                newImage.dispose();
-            }
+            m_image = new Image(getDisplay(), newImage);
+            m_imageBounds = m_image.getBounds();
 
             gd.exclude = false;
             setVisible(true);

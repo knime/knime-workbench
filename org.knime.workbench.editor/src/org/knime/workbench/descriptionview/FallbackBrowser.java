@@ -121,6 +121,13 @@ public class FallbackBrowser {
     }
 
     /**
+     * @return the {@code StyledText} instance which this instance wraps
+     */
+    public StyledText getStyledText() {
+        return m_text;
+    }
+
+    /**
      * Sets the visibility of the wrapped text component.
      *
      * @param visible true to make the component visible

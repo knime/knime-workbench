@@ -123,7 +123,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     public static final Color GENERAL_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 240, 240, 242);
 
     /** Available for subclasses **/
-    protected static final Color SECTION_LABEL_TEXT_COLOR = TEXT_COLOR;
+    public static final Color SECTION_LABEL_TEXT_COLOR = TEXT_COLOR;
 
     /** AP-12082 **/
     protected static final boolean SHOW_LICENSE_ONLY_FOR_HUB = true;
