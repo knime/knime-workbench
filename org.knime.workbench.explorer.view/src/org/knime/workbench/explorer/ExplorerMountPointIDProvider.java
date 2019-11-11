@@ -48,6 +48,8 @@
  */
 package org.knime.workbench.explorer;
 
+import java.io.IOException;
+import java.net.URL;
 import java.util.List;
 
 import org.knime.filehandling.core.util.MountPointIDProvider;
@@ -66,6 +68,15 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
     @Override
     public List<String> getMountedIDs() {
         return ExplorerMountTable.getAllMountedIDs();
+    }
+
+    /**
+     * {@inheritDoc}
+     * @throws IOException
+     */
+    @Override
+    public URL resolveKNIMEURL(final URL url) throws IOException {
+        return ExplorerURLStreamHandler.resolveKNIMEURL(url);
     }
 
 }
