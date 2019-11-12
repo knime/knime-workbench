@@ -137,6 +137,16 @@
       tables to disk then happens synchronously. The default is <tt>LRU</tt>.
     </dd>
     
+    <dt>
+      knime.discourage.gc=<em>(true|false)</em>
+    </dt>
+    <dd>
+      If set to true, discourages KNIME from triggering a full stop-the-world garbage collection.
+      Note that
+        (a) individual nodes are allowed to disregard this setting and
+        (b) the garbage collector may independently decide that a full stop-the-world garbage collection is warranted.
+    </dd>
+    
     <dt>org.knime.container.minspace.temp=<em>&lt;number&gt;</em></dt>
     <dd>Java property to specify the minimum free disc space in MB that needs to be available. If less is
      available, no further table files & blobs will be created (resulting in an exception).</dd>
