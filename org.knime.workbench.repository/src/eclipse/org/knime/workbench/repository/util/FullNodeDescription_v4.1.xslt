@@ -2,8 +2,8 @@
 <!DOCTYPE stylesheet [
 <!ENTITY css SYSTEM "style.css">
 ]>
-<!-- Stylesheet for node descriptions prior between KNIME 2.0 and 2.7 -->
-<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:t="http://knime.org/node2012"
+<!-- Stylesheet for node descriptions introduced with KNIME 4.1 -->
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:t="http://knime.org/node/v4.1"
                 xmlns="http://www.w3.org/1999/xhtml">
     <xsl:param name="css" />
     <xsl:template match="t:knimeNode">
@@ -40,7 +40,20 @@
                     <xsl:apply-templates select="t:fullDescription/t:tab" />
                 </xsl:if>
 
+                <xsl:if test="t:fullDescription/t:link">
+                    <h2>More Information</h2>
+                    <dl>
+                        Find more information here:
+                    </dl>
 
+                    <dd>
+                        <ul>
+                            <xsl:apply-templates select="t:fullDescription/t:link" />
+                        </ul>
+                    </dd>
+                </xsl:if>
+
+                <xsl:apply-templates select="t:interactiveView" />
                 <xsl:apply-templates select="t:ports" />
                 <xsl:apply-templates select="t:views" />
 
@@ -59,9 +72,16 @@
             <div class="groupname">
                 <xsl:value-of select="@name" />
             </div>
+            <xsl:apply-templates select="t:description" />
             <dl>
-                <xsl:apply-templates />
+                <xsl:apply-templates select="t:option"/>
             </dl>
+        </div>
+    </xsl:template>
+
+    <xsl:template match="t:description">
+        <div class="group-description">
+            <xsl:apply-templates />
         </div>
     </xsl:template>
 
@@ -75,6 +95,19 @@
         <dd>
             <xsl:apply-templates select="node()" />
         </dd>
+    </xsl:template>
+
+    <xsl:template match="t:link">
+        <li>
+            <a href="{@href}"><xsl:apply-templates select="node()" /></a>
+        </li>
+    </xsl:template>
+
+    <xsl:template match="t:interactiveView">
+        <h2>Interactive View: <xsl:value-of select="@name" /></h2>
+        <div>
+            <xsl:apply-templates />
+        </div>
     </xsl:template>
 
     <xsl:template match="t:views[t:view]">
@@ -101,16 +134,15 @@
                     <div class="groupname">Input Ports</div>
                     <table>
                         <xsl:for-each select="t:inPort">
-                            <xsl:sort select="@index" data-type="number" />
-                            <tr>
-                                <td class="dt">
-                                    <xsl:value-of select="@index" />
-                                </td>
-                                <td>
-                                    <xsl:apply-templates />
-                                    <xsl:if test="@optional = 'true'"> (optional)</xsl:if>
-                                </td>
-                            </tr>
+                            <xsl:sort select="@index" data-type="number"/>
+		                            <tr>
+		                                <td class="dt">
+		                                    <xsl:value-of select="@index" />
+		                                </td>
+		                                <td>
+		                                    <xsl:apply-templates />
+		                                </td>
+		                            </tr>
                         </xsl:for-each>
                     </table>
                 </div>
@@ -120,7 +152,7 @@
                     <div class="groupname">Output Ports</div>
                     <table>
                         <xsl:for-each select="t:outPort">
-                            <xsl:sort select="@index" data-type="number" />
+                            <xsl:sort select="@index" data-type="number"/>
                             <tr>
                                 <td class="dt">
                                     <xsl:value-of select="@index" />

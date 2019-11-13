@@ -2,7 +2,7 @@
 <!DOCTYPE stylesheet [
 <!ENTITY css SYSTEM "style.css">
 ]>
-<!-- Stylesheet for node descriptions introduced with KNIME 2.12 -->
+<!-- Stylesheet for node descriptions introduced with KNIME 3.1 -->
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:t="http://knime.org/node/v3.1"
                 xmlns="http://www.w3.org/1999/xhtml">
     <xsl:param name="css" />
