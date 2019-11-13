@@ -48,6 +48,8 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -73,6 +75,7 @@ import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
@@ -82,12 +85,14 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.ComponentMetadata;
+import org.knime.core.node.workflow.ComponentMetadata.ComponentMetadataBuilder;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.workbench.descriptionview.FallbackBrowser;
 import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.descriptionview.metadata.AbstractMetadataModelFacilitator;
-import org.knime.workbench.descriptionview.metadata.LicenseType;
 import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.DateMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
@@ -126,18 +131,6 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
      *  atoms, and is also not requiring of all the existing functionality in the MetaInfoAtom parent class.
      */
 
-    // TODO waiting on API to fetch metadata (AP-12986) - see comments below on MetadataMockProvider inner class
-    // TODO waiting on API to fetch metadata (AP-12986) - see comments below on MetadataMockProvider inner class
-    // TODO waiting on API to fetch metadata (AP-12986) - see comments below on MetadataMockProvider inner class
-    // TODO waiting on API to fetch metadata (AP-12986) - see comments below on MetadataMockProvider inner class
-    // TODO waiting on API to fetch metadata (AP-12986) - see comments below on MetadataMockProvider inner class
-    // TODO waiting on API to fetch metadata (AP-12986) - see comments below on MetadataMockProvider inner class
-    // TODO waiting on API to fetch metadata (AP-12986) - see comments below on MetadataMockProvider inner class
-
-    // for development only
-    private final MetadataMockProvider m_mockProvider;
-
-    // TODO node color will become an enum which contains either an Image or a pointer to a PNG resource
     private RGB m_nodeColor;
     private RGB m_savedNodeColor;
     private ImageData m_nodeIcon;
@@ -170,16 +163,19 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         super();
 
         m_subNodeContainer = snc;
+        ComponentMetadata metadata = snc.getMetadata();
 
-        m_mockProvider = new MetadataMockProvider(m_subNodeContainer);
+        if (metadata.getDescription().isPresent()) {
+            m_descriptionAtom = new TextAreaMetaInfoAtom("legacy-description", metadata.getDescription().get(), false);
+            m_descriptionAtom.addChangeListener(this);
+        }
 
-        m_descriptionAtom = new TextAreaMetaInfoAtom("legacy-description", m_mockProvider.getDescription(), false);
-        m_descriptionAtom.addChangeListener(this);
-
-        // TODO color and icon - AP-12986
+        //TODO
         m_nodeColor = null;
-        m_nodeIcon = null;
 
+        if (metadata.getIcon().isPresent()) {
+            m_nodeIcon = new ImageData(new ByteArrayInputStream(metadata.getIcon().get()));
+        }
 
         // These are not presently used in component views, so we populate them with dummy values as their
         //      existence and (not-)dirty state is tracked by our parent class.
@@ -212,11 +208,12 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         m_savedNodeColor = m_nodeColor;
         m_savedNodeIcon = m_nodeIcon;
 
-        m_savedInPortNames = m_mockProvider.getInPortNames();
-        m_savedInPortDescriptions = m_mockProvider.getInPortDescriptions();
-        m_savedOutPortNames = m_mockProvider.getOutPortNames();
-        m_savedOutPortDescriptions = m_mockProvider.getOutPortDescriptions();
+        ComponentMetadata meta = m_subNodeContainer.getMetadata();
 
+        m_savedInPortNames = meta.getInPortNames().get();
+        m_savedInPortDescriptions = meta.getInPortDescriptions().get();
+        m_savedOutPortNames = meta.getOutPortNames().get();
+        m_savedOutPortDescriptions = meta.getOutPortDescriptions().get();
 
         m_imageSwatch.setImage(m_nodeIcon);
         m_colorSwatch.setColor(m_nodeColor);
@@ -259,26 +256,18 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     public void commitEdit() {
         super.commitEdit();
 
-        m_mockProvider.setDescription(m_descriptionAtom.getValue());
-        m_mockProvider.setComponentColor(m_nodeColor);
-        m_mockProvider.setComponentIcon(m_nodeIcon);
-
         m_nodeDisplayPreview.setImage(m_nodeIcon);
         m_nodeDisplayPreview.setColor(m_nodeColor);
 
         m_savedNodeColor = null;
         m_savedNodeIcon = null;
 
-        m_mockProvider.setInPortNames(getStringArrayFromTextArray(m_inportNameTextFields));
-        m_mockProvider.setInPortDescriptions(getStringArrayFromTextArray(m_inportDescriptionTextFields));
-        m_mockProvider.setOutPortNames(getStringArrayFromTextArray(m_outportNameTextFields));
-        m_mockProvider.setOutPortDescriptions(getStringArrayFromTextArray(m_outportDescriptionTextFields));
-
         m_savedInPortNames = null;
         m_savedInPortDescriptions = null;
         m_savedOutPortNames = null;
         m_savedOutPortDescriptions = null;
 
+        storeMetadataInComponent();
         populatePortDisplay();
     }
 
@@ -302,6 +291,38 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         }
 
         return !Objects.equals(m_savedOutPortDescriptions, getStringArrayFromTextArray(m_outportDescriptionTextFields));
+    }
+
+    void storeMetadataInComponent() {
+        byte[] icon;
+        if (m_nodeIcon != null) {
+            ImageLoader imageLoader = new ImageLoader();
+            imageLoader.data = new ImageData[]{m_nodeIcon};
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            imageLoader.save(stream, 5); //write to byte[] as png
+            icon = stream.toByteArray();
+        } else {
+            icon = null;
+        }
+
+        ComponentMetadataBuilder builder = ComponentMetadata.builder().description(m_descriptionAtom.getValue())
+            //TODO set node type
+            .type(NodeType.Manipulator).icon(icon);
+
+        String[] names = getStringArrayFromTextArray(m_inportNameTextFields);
+        String[] descriptions = getStringArrayFromTextArray(m_inportDescriptionTextFields);
+        for (int i = 0; i < names.length; i++) {
+            builder.addInPortNameAndDescription(names[i], descriptions[i]);
+        }
+
+        names = getStringArrayFromTextArray(m_outportNameTextFields);
+        descriptions = getStringArrayFromTextArray(m_outportDescriptionTextFields);
+        for (int i = 0; i < names.length; i++) {
+            builder.addOutPortNameAndDescription(names[i], descriptions[i]);
+        }
+
+        m_subNodeContainer.setMetadata(builder.build());
+        m_subNodeContainer.setDirty();
     }
 
     void createUIAtomsForEdit(final Composite componentIconParent, final Composite portsParent) {
@@ -456,9 +477,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             public void dropAccept(final DropTargetEvent event) { }
         });
 
-
-
-        final int inportCount = m_mockProvider.getInPortNames().length;
+        final int inportCount = m_subNodeContainer.getNrInPorts();
         m_inportNameTextFields = new Text[inportCount];
         m_inportDescriptionTextFields = new Text[inportCount];
         for (int i = 0; i < inportCount; i++) {
@@ -467,7 +486,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             m_inportDescriptionTextFields[i] = pair[1];
         }
 
-        final int outportCount = m_mockProvider.getOutPortNames().length;
+        final int outportCount = m_subNodeContainer.getNrOutPorts();
         m_outportNameTextFields = new Text[outportCount];
         m_outportDescriptionTextFields = new Text[outportCount];
         for (int i = 0; i < outportCount; i++) {
@@ -557,6 +576,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
     void createUIAtomsForDisplay(final Composite componentIconParent, final Composite portsParent) {
         m_nodeDisplayPreview = new NodeDisplayPreview(componentIconParent);
+        m_nodeDisplayPreview.setImage(m_nodeIcon);
 
         Composite compositeToLayout;
         try {
@@ -679,136 +699,8 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     }
 
     private static void populateTextArray(final Text[] textArray, final String[] content) {
-        for (int i = 0; i < textArray.length; i++) {
+        for (int i = 0; i < content.length; i++) {
             textArray[i].setText(content[i]);
-        }
-    }
-
-
-    /*
-     * Just for development... prior to AP-12986, this will return made up data; after AP-12986, during development
-     *  this will be a proxy to SubNodeContainer and prior to final PR this class will go away.
-     */
-    @SuppressWarnings("static-method")
-    private static class MetadataMockProvider {
-        private final SubNodeContainer m_subNodeContainer;
-
-        private MetadataMockProvider(final SubNodeContainer snc) {
-            m_subNodeContainer = snc;
-        }
-
-        @SuppressWarnings("unused")
-        private String[] getTags() {
-            return new String[] {"cool component", "db", "complex", "deep learning"};
-        }
-        @SuppressWarnings("unused")
-        private void setTags(final String[] tags) {
-            // TODO
-        }
-
-        // unclear what, if any object, SNC will hand over for a "link object".. this will be mocked up to
-        //      return a triplet {link text, link type, url}
-        @SuppressWarnings("unused")
-        private String[][] getLinkObjects() {
-            return new String[][] {
-              { "KNIME Homepage", "Website", "http://www.knime.org" },
-              { "Moe Flanders", "Video", "https://www.youtube.com/watch?v=AWbElkaeqVA" }
-            };
-        }
-        @SuppressWarnings("unused")
-        private void setLinkObjects(final String[][] linkObjects) {
-            // TODO
-        }
-
-        @SuppressWarnings("unused")
-        private String getAuthor() {
-            return "acamus";
-        }
-        @SuppressWarnings("unused")
-        private void setAuthor(final String author) {
-            // TODO
-        }
-
-        // this assumes the format will be the long standing metadata precedent for time-dates..
-        //      see MetaInfoFile#calendarFromDateString(String)
-        @SuppressWarnings("unused")
-        private String getDate() {
-            return "13/5/2018/10:28:12 +02:00";
-        }
-        @SuppressWarnings("unused")
-        private void setDate(final String date) {
-            // TODO
-        }
-
-        @SuppressWarnings("unused")
-        private String getTitle() {
-            return "Tomorrow's Component, Today";
-        }
-        @SuppressWarnings("unused")
-        private void setTitle(final String title) {
-            // TODO
-        }
-
-        private String getDescription() {
-            return "This component does some stuff, and then emits further operations on that stuff.\n\n"
-                        + "That being said, at the moment, this is just mocked up metadata.";
-        }
-        private void setDescription(final String description) {
-            // TODO
-        }
-
-        @SuppressWarnings("unused")
-        private String getLicense() {
-            return LicenseType.DEFAULT_LICENSE_NAME;
-        }
-        @SuppressWarnings("unused")
-        private void setLicense(final String license) {
-            // TODO
-        }
-
-        @SuppressWarnings("unused")
-        private RGB getComponentColor() {
-            // TODO
-            return null;
-        }
-        @SuppressWarnings("unused")
-        private void setComponentColor(final RGB color) {
-            // TODO
-        }
-
-        @SuppressWarnings("unused")
-        private ImageData getComponentIcon() {
-            // TODO
-            return null;
-        }
-        @SuppressWarnings("unused")
-        private void setComponentIcon(final ImageData icon) {
-            // TODO
-        }
-
-        private String[] getInPortNames() {
-            return m_subNodeContainer.getVirtualInPortNames();
-        }
-        private void setInPortNames(final String[] names) {
-            m_subNodeContainer.setVirtualInPortNames(names);
-        }
-        private String[] getInPortDescriptions() {
-            return m_subNodeContainer.getVirtualInPortDescriptions();
-        }
-        private void setInPortDescriptions(final String[] descriptions) {
-            m_subNodeContainer.setVirtualInPortDescriptions(descriptions);
-        }
-        private String[] getOutPortNames() {
-            return m_subNodeContainer.getVirtualOutPortNames();
-        }
-        private void setOutPortNames(final String[] names) {
-            m_subNodeContainer.setVirtualOutPortNames(names);
-        }
-        private String[] getOutPortDescriptions() {
-            return m_subNodeContainer.getVirtualOutPortDescriptions();
-        }
-        private void setOutPortDescriptions(final String[] descriptions) {
-            m_subNodeContainer.setVirtualOutPortDescriptions(descriptions);
         }
     }
 }

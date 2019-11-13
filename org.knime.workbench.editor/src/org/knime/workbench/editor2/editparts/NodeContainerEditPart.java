@@ -101,6 +101,7 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
@@ -631,21 +632,36 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
     private void initFigure() {
         NodeContainerFigure f = (NodeContainerFigure)getFigure();
         NodeType type = getNodeContainer().getType();
-        String name = getNodeContainer().getName();
         String description = getNodeContainer().getCustomDescription();
 
+        updateIcon();
+        f.setType(type);
+        updateLabelText();
+        f.setCustomDescription(description);
+    }
+
+    private void updateIcon() {
+        NodeContainerFigure f = (NodeContainerFigure)getFigure();
         // get the icon
         Image icon = org.knime.workbench.core.util.ImageRepository.getUnscaledIconImage(getNodeContainer().getIcon());
-        // get default image if null
-        if (icon == null) {
+        if (icon == null && getNodeContainer().getIconAsStream().isPresent()) {
+            ImageData imageData = new ImageData(getNodeContainer().getIconAsStream().get());
+            icon = new Image(Display.getDefault(), scaleImageTo(16, imageData));
+        } else if (icon == null) { // get default image if null
             icon = org.knime.workbench.core.util.ImageRepository.getUnscaledIconImage(NodeFactory.getDefaultIcon());
         }
         if (icon != null) {
             f.setIcon(icon);
         }
-        f.setType(type);
-        updateLabelText();
-        f.setCustomDescription(description);
+    }
+
+    private static ImageData scaleImageTo(final int size, final ImageData img) {
+        int max = Math.max(img.width, img.height);
+        if (max == size) {
+            return img;
+        }
+        double f = size / (double)max;
+        return img.scaledTo((int)(img.width * f), (int)(img.height * f));
     }
 
     /**
@@ -980,6 +996,8 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
                             relayoutPorts(); // in case an index has changed
                             refreshBounds(); // different port number could mean different bounds
                             break;
+                        case ComponentMetadata:
+                            updateIcon();
                         default:
                             // unknown, ignore
                     }
