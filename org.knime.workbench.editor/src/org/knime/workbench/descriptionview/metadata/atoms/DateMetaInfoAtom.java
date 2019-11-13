@@ -60,7 +60,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.DateTime;
 import org.eclipse.swt.widgets.Label;
-import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
+import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
@@ -166,10 +166,12 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     public void commitEdit() {
-        m_date = Calendar.getInstance();
-        m_date.set(m_datePicker.getYear(), m_datePicker.getMonth(), m_datePicker.getDay());
+        if (m_datePicker != null) {
+            m_date = Calendar.getInstance();
+            m_date.set(m_datePicker.getYear(), m_datePicker.getMonth(), m_datePicker.getDay());
 
-        m_value = MetaInfoFile.dateToStorageString(m_date) + TIME_OF_DAY_SUFFIX;
+            m_value = MetaInfoFile.dateToStorageString(m_date) + TIME_OF_DAY_SUFFIX;
+        }
 
         m_datePicker = null;
     }
@@ -188,8 +190,8 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
     @Override
     public void populateContainerForDisplay(final Composite parent) {
         final Label l = new Label(parent, SWT.RIGHT);
-        l.setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
-        l.setForeground(WorkflowMetaView.TEXT_COLOR);
+        l.setFont(AbstractMetaView.VALUE_DISPLAY_FONT);
+        l.setForeground(AbstractMetaView.TEXT_COLOR);
         l.setText(displayFormatForCalendar());
 
         GridData gd = new GridData();

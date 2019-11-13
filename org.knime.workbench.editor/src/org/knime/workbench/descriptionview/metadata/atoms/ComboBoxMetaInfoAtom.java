@@ -124,9 +124,11 @@ public class ComboBoxMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     public void commitEdit() {
-        m_licenseType = getCurrentSelection();
+        if (m_editComboViewer != null) {
+            m_licenseType = getCurrentSelection();
 
-        m_value = m_licenseType.getDisplayName();
+            m_value = m_licenseType.getDisplayName();
+        }
 
         m_editComboViewer = null;
         m_editState = null;

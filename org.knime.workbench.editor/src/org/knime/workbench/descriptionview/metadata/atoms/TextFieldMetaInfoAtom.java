@@ -57,7 +57,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.PlatformUI;
-import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
+import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 import org.xml.sax.SAXException;
@@ -108,12 +108,12 @@ public class TextFieldMetaInfoAtom extends AbstractTextMetaInfoAtom {
         final int[] charAndLineCount = calculateLongestLineAndLineCount();
         final Font f;
         if ((charAndLineCount[1] > 1) || (charAndLineCount[0] > CHARACTER_COUNT_THRESHOLD_AT_WHICH_TO_SHRINK_FONT)) {
-            f = getShrunkenFontBasedOnNormalFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
+            f = getShrunkenFontBasedOnNormalFont(AbstractMetaView.VALUE_DISPLAY_FONT);
         } else {
-            f = WorkflowMetaView.VALUE_DISPLAY_FONT;
+            f = AbstractMetaView.VALUE_DISPLAY_FONT;
         }
         l.setFont(f);
-        l.setForeground(WorkflowMetaView.TEXT_COLOR);
+        l.setForeground(AbstractMetaView.TEXT_COLOR);
         l.setText((m_value != null) ? m_value : "");
         final GridData gd = new GridData();
         gd.horizontalAlignment = SWT.LEFT;

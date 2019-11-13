@@ -48,10 +48,12 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ArrayContentProvider;
@@ -59,6 +61,8 @@ import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.SWTError;
+import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DropTarget;
 import org.eclipse.swt.dnd.DropTargetEvent;
@@ -76,19 +80,22 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.workbench.descriptionview.FallbackBrowser;
 import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.descriptionview.metadata.AbstractMetadataModelFacilitator;
 import org.knime.workbench.descriptionview.metadata.LicenseType;
 import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.DateMetaInfoAtom;
-import org.knime.workbench.descriptionview.metadata.atoms.LinkMetaInfoAtom;
-import org.knime.workbench.descriptionview.metadata.atoms.TagMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextFieldMetaInfoAtom;
+import org.knime.workbench.repository.util.DynamicNodeDescriptionCreator;
+import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
+import org.w3c.dom.Element;
 
 /**
  * This is the concrete subclass of {@code AbstractMetadataModelFacilitator} which knows how to consume metadata
@@ -130,6 +137,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     // for development only
     private final MetadataMockProvider m_mockProvider;
 
+    // TODO node color will become an enum which contains either an Image or a pointer to a PNG resource
     private RGB m_nodeColor;
     private RGB m_savedNodeColor;
     private ImageData m_nodeIcon;
@@ -142,6 +150,22 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
     private NodeDisplayPreview m_nodeDisplayPreview;
 
+
+    private String[] m_savedInPortNames;
+    private String[] m_savedInPortDescriptions;
+    private String[] m_savedOutPortNames;
+    private String[] m_savedOutPortDescriptions;
+
+    private Text[] m_inportNameTextFields;
+    private Text[] m_inportDescriptionTextFields;
+    private Text[] m_outportNameTextFields;
+    private Text[] m_outportDescriptionTextFields;
+
+    private Browser m_browser;
+    private FallbackBrowser m_text;
+    private boolean m_isFallback;
+
+
     ComponentMetadataModelFacilitator(final SubNodeContainer snc) {
         super();
 
@@ -149,38 +173,33 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
         m_mockProvider = new MetadataMockProvider(m_subNodeContainer);
 
-        for (final String tag : m_mockProvider.getTags()) {
-            addTag(tag);
-        }
-
-        for (final String[] link : m_mockProvider.getLinkObjects()) {
-            try {
-                addLink(link[2], link[0], link[1]);
-            } catch (final MalformedURLException e) {
-                m_logger.error("Could not parse incoming URL [" + link[2] + "]", e);
-            }
-        }
-
-        m_titleAtom =
-            new TextFieldMetaInfoAtom(MetadataItemType.TITLE, "legacy-title", m_mockProvider.getTitle(), false);
-        m_titleAtom.addChangeListener(this);
-
-        m_authorAtom =
-            new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, "legacy-author", m_mockProvider.getAuthor(), false);
-        m_authorAtom.addChangeListener(this);
-
         m_descriptionAtom = new TextAreaMetaInfoAtom("legacy-description", m_mockProvider.getDescription(), false);
         m_descriptionAtom.addChangeListener(this);
-
-        m_creationDateAtom = new DateMetaInfoAtom("legacy-creation-date", m_mockProvider.getDate(), false);
-        m_creationDateAtom.addChangeListener(this);
-
-        m_licenseAtom = new ComboBoxMetaInfoAtom("legacy-license", m_mockProvider.getLicense(), false);
-        m_licenseAtom.addChangeListener(this);
 
         // TODO color and icon - AP-12986
         m_nodeColor = null;
         m_nodeIcon = null;
+
+
+        // These are not presently used in component views, so we populate them with dummy values as their
+        //      existence and (not-)dirty state is tracked by our parent class.
+        m_titleAtom =
+            new TextFieldMetaInfoAtom(MetadataItemType.TITLE, "legacy-title", "unused in components", false);
+        m_authorAtom =
+            new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, "legacy-author", "unused in components", false);
+        m_creationDateAtom = new DateMetaInfoAtom("legacy-creation-date", Calendar.getInstance(), false);
+        m_licenseAtom = new ComboBoxMetaInfoAtom("legacy-license", "unused in components", false);
+        // Left here, but commented out, for future versions of component metadata
+//        for (final String tag : m_mockProvider.getTags()) {
+//            addTag(tag);
+//        }
+//        for (final String[] link : m_mockProvider.getLinkObjects()) {
+//            try {
+//                addLink(link[2], link[0], link[1]);
+//            } catch (final MalformedURLException e) {
+//                m_logger.error("Could not parse incoming URL [" + link[2] + "]", e);
+//            }
+//        }
     }
 
     /**
@@ -193,6 +212,12 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         m_savedNodeColor = m_nodeColor;
         m_savedNodeIcon = m_nodeIcon;
 
+        m_savedInPortNames = m_mockProvider.getInPortNames();
+        m_savedInPortDescriptions = m_mockProvider.getInPortDescriptions();
+        m_savedOutPortNames = m_mockProvider.getOutPortNames();
+        m_savedOutPortDescriptions = m_mockProvider.getOutPortDescriptions();
+
+
         m_imageSwatch.setImage(m_nodeIcon);
         m_colorSwatch.setColor(m_nodeColor);
         if (m_nodeColor == null) {
@@ -200,6 +225,12 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         } else {
             // TODO select color in combo list
         }
+
+
+        populateTextArray(m_inportNameTextFields, m_savedInPortNames);
+        populateTextArray(m_inportDescriptionTextFields, m_savedInPortDescriptions);
+        populateTextArray(m_outportNameTextFields, m_savedOutPortNames);
+        populateTextArray(m_outportDescriptionTextFields, m_savedOutPortDescriptions);
     }
 
     /**
@@ -214,6 +245,11 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
         m_savedNodeColor = null;
         m_savedNodeIcon = null;
+
+        m_savedInPortNames = null;
+        m_savedInPortDescriptions = null;
+        m_savedOutPortNames = null;
+        m_savedOutPortDescriptions = null;
     }
 
     /**
@@ -223,11 +259,27 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     public void commitEdit() {
         super.commitEdit();
 
+        m_mockProvider.setDescription(m_descriptionAtom.getValue());
+        m_mockProvider.setComponentColor(m_nodeColor);
+        m_mockProvider.setComponentIcon(m_nodeIcon);
+
         m_nodeDisplayPreview.setImage(m_nodeIcon);
         m_nodeDisplayPreview.setColor(m_nodeColor);
 
         m_savedNodeColor = null;
         m_savedNodeIcon = null;
+
+        m_mockProvider.setInPortNames(getStringArrayFromTextArray(m_inportNameTextFields));
+        m_mockProvider.setInPortDescriptions(getStringArrayFromTextArray(m_inportDescriptionTextFields));
+        m_mockProvider.setOutPortNames(getStringArrayFromTextArray(m_outportNameTextFields));
+        m_mockProvider.setOutPortDescriptions(getStringArrayFromTextArray(m_outportDescriptionTextFields));
+
+        m_savedInPortNames = null;
+        m_savedInPortDescriptions = null;
+        m_savedOutPortNames = null;
+        m_savedOutPortDescriptions = null;
+
+        populatePortDisplay();
     }
 
     /**
@@ -235,39 +287,25 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
      */
     @Override
     protected boolean containedMetadataIsDirty() {
-        return (!Objects.equals(m_nodeColor, m_savedNodeColor) || !Objects.equals(m_nodeIcon, m_savedNodeIcon));
+        if (!Objects.equals(m_nodeColor, m_savedNodeColor) || !Objects.equals(m_nodeIcon, m_savedNodeIcon)) {
+            return true;
+        }
+
+        if (!Objects.equals(m_savedInPortNames, getStringArrayFromTextArray(m_inportNameTextFields))) {
+            return true;
+        }
+        if (!Objects.equals(m_savedOutPortNames, getStringArrayFromTextArray(m_outportNameTextFields))) {
+            return true;
+        }
+        if (!Objects.equals(m_savedInPortDescriptions, getStringArrayFromTextArray(m_inportDescriptionTextFields))) {
+            return true;
+        }
+
+        return !Objects.equals(m_savedOutPortDescriptions, getStringArrayFromTextArray(m_outportDescriptionTextFields));
     }
 
-    // TODO waiting on API to set metadata (AP-12986)
-    void storeMetadataInComponent() {
-        final String[] tags = new String[m_tagAtoms.size()];
-        int index = 0;
-        for (final TagMetaInfoAtom tag : m_tagAtoms) {
-            tags[index++] = tag.getValue();
-        }
-        m_mockProvider.setTags(tags);
-
-        index = 0;
-        final String[][] links = new String[m_linkAtoms.size()][];
-        for (final LinkMetaInfoAtom link : m_linkAtoms) {
-            links[index] = new String[3];
-            links[index][0] = link.getValue();
-            links[index][1] = link.getLinkType();
-            links[index++][2] = link.getURL();
-        }
-        m_mockProvider.setLinkObjects(links);
-
-        m_mockProvider.setTitle(m_titleAtom.getValue());
-        m_mockProvider.setAuthor(m_authorAtom.getValue());
-        m_mockProvider.setDescription(m_descriptionAtom.getValue());
-        m_mockProvider.setDate(m_creationDateAtom.getValue());
-        m_mockProvider.setLicense(m_licenseAtom.getValue());
-        m_mockProvider.setComponentColor(m_nodeColor);
-        m_mockProvider.setComponentIcon(m_nodeIcon);
-    }
-
-    void createUIAtomsForEdit(final Composite parent) {
-        Composite c = new Composite(parent, SWT.NONE);
+    void createUIAtomsForEdit(final Composite componentIconParent, final Composite portsParent) {
+        Composite c = new Composite(componentIconParent, SWT.NONE);
         GridData gd = new GridData();
         gd.horizontalAlignment = SWT.FILL;
         gd.grabExcessHorizontalSpace = true;
@@ -327,7 +365,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         gd.horizontalAlignment = SWT.LEFT;
         l.setLayoutData(gd);
 
-        c = new Composite(parent, SWT.NONE);
+        c = new Composite(componentIconParent, SWT.NONE);
         gd = new GridData();
         gd.horizontalAlignment = SWT.FILL;
         gd.grabExcessHorizontalSpace = true;
@@ -417,10 +455,131 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             @Override
             public void dropAccept(final DropTargetEvent event) { }
         });
+
+
+
+        final int inportCount = m_mockProvider.getInPortNames().length;
+        m_inportNameTextFields = new Text[inportCount];
+        m_inportDescriptionTextFields = new Text[inportCount];
+        for (int i = 0; i < inportCount; i++) {
+            final Text[] pair = createPortPair(portsParent, (i + 1), true);
+            m_inportNameTextFields[i] = pair[0];
+            m_inportDescriptionTextFields[i] = pair[1];
+        }
+
+        final int outportCount = m_mockProvider.getOutPortNames().length;
+        m_outportNameTextFields = new Text[outportCount];
+        m_outportDescriptionTextFields = new Text[outportCount];
+        for (int i = 0; i < outportCount; i++) {
+            final Text[] pair = createPortPair(portsParent, (i + 1), false);
+            m_outportNameTextFields[i] = pair[0];
+            m_outportDescriptionTextFields[i] = pair[1];
+        }
     }
 
-    void createUIAtomsForDisplay(final Composite parent) {
-        m_nodeDisplayPreview = new NodeDisplayPreview(parent);
+    private static Text[] createPortPair(final Composite parent, final int portNumber, final boolean inport) {
+        final Text[] textPair = new Text[2];
+        final String labelText = (inport ? "In Port #" : "Out Port #") + portNumber;
+        Label l = new Label(parent, SWT.NONE);
+        l.setText(labelText);
+        l.setFont(AbstractMetaView.BOLD_CONTENT_FONT);
+        l.setForeground(AbstractMetaView.SECTION_LABEL_TEXT_COLOR);
+        GridData gd = new GridData();
+        gd.horizontalAlignment = SWT.LEFT;
+        gd.horizontalIndent = 6;
+        l.setLayoutData(gd);
+
+        final Composite c = new Composite(parent, SWT.NONE);
+        GridLayout gl = new GridLayout(2, false);
+        gl.horizontalSpacing = 15;
+        gl.marginHeight = 0;
+        gl.marginBottom = 6;
+        gl.marginWidth = 0;
+        gl.marginLeft = 12;
+        c.setLayout(gl);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.verticalAlignment = SWT.TOP;
+        gd.grabExcessHorizontalSpace = true;
+        c.setLayoutData(gd);
+
+        final Composite nameComposite = new Composite(c, SWT.NONE);
+        gl = new GridLayout(2, false);
+        gl.horizontalSpacing = 6;
+        gl.marginHeight = 0;
+        gl.marginWidth = 0;
+        nameComposite.setLayout(gl);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.LEFT;
+        gd.verticalAlignment = SWT.TOP;
+        nameComposite.setLayoutData(gd);
+        l = new Label(nameComposite, SWT.NONE);
+        l.setText("Name:");
+        l.setForeground(AbstractMetaView.SECTION_LABEL_TEXT_COLOR);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.LEFT;
+        gd.verticalAlignment = SWT.TOP;
+        l.setLayoutData(gd);
+        textPair[0] = new Text(nameComposite, SWT.BORDER);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.verticalAlignment = SWT.TOP;
+        gd.widthHint = 72;
+        textPair[0].setLayoutData(gd);
+
+        final Composite descriptionComposite = new Composite(c, SWT.NONE);
+        gl = new GridLayout(2, false);
+        gl.horizontalSpacing = 6;
+        gl.marginHeight = 0;
+        gl.marginWidth = 0;
+        descriptionComposite.setLayout(gl);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.verticalAlignment = SWT.TOP;
+        gd.grabExcessHorizontalSpace = true;
+        descriptionComposite.setLayoutData(gd);
+        l = new Label(descriptionComposite, SWT.NONE);
+        l.setText("Description:");
+        l.setForeground(AbstractMetaView.SECTION_LABEL_TEXT_COLOR);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.LEFT;
+        gd.verticalAlignment = SWT.TOP;
+        l.setLayoutData(gd);
+        textPair[1] = new Text(descriptionComposite, (SWT.MULTI | SWT.V_SCROLL | SWT.WRAP | SWT.BORDER));
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+        gd.heightHint = 48;
+        textPair[1].setLayoutData(gd);
+
+        return textPair;
+    }
+
+    void createUIAtomsForDisplay(final Composite componentIconParent, final Composite portsParent) {
+        m_nodeDisplayPreview = new NodeDisplayPreview(componentIconParent);
+
+        Composite compositeToLayout;
+        try {
+            m_text = null;
+            m_browser = new Browser(portsParent, SWT.NONE);
+            m_browser.setText("");
+            m_isFallback = false;
+            compositeToLayout = m_browser;
+        } catch (final SWTError e) {
+            LOGGER.warn("No html browser for node description available.", e);
+            m_browser = null;
+            m_text = new FallbackBrowser(portsParent, SWT.READ_ONLY | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
+            m_isFallback = true;
+            compositeToLayout = m_text.getStyledText();
+        }
+        final GridData gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+        gd.verticalAlignment = SWT.FILL;
+        gd.heightHint = 296;
+        compositeToLayout.setLayoutData(gd);
+
+        populatePortDisplay();
     }
 
     void setComponentColor(final RGB rgb) {
@@ -486,6 +645,45 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         m_colorComboViewer.setSelection(new StructuredSelection(m_colorComboViewer.getElementAt(0)), true);
     }
 
+    void populatePortDisplay() {
+        final StringBuilder content = new StringBuilder(DynamicNodeDescriptionCreator.instance().getHeader());
+        final Element portDOM = m_subNodeContainer.getXMLDescriptionForPorts();
+
+        try {
+            content.append(NodeFactoryHTMLCreator.instance.readFullDescription(portDOM));
+            content.append("</body></html>");
+
+            if (m_browser != null) {
+                m_browser.getDisplay().asyncExec(() -> {
+                    if (!m_browser.isDisposed()) {
+                        m_browser.setText(content.toString());
+                        m_browser.setVisible(true);
+                    }
+                });
+            } else if (m_isFallback) {
+                m_text.getDisplay().asyncExec(() -> {
+                    m_text.setText(content.toString());
+                    m_text.setVisible(true);
+                });
+            }
+        } catch (final Exception e) {
+            LOGGER.error("Exception attempting to generate components port description display.", e);
+        }
+    }
+
+    private static String[] getStringArrayFromTextArray(final Text[] textArray) {
+        final List<String> collected =
+            Arrays.stream(textArray).map(text -> text.getText()).collect(Collectors.toList());
+
+        return collected.toArray(new String[collected.size()]);
+    }
+
+    private static void populateTextArray(final Text[] textArray, final String[] content) {
+        for (int i = 0; i < textArray.length; i++) {
+            textArray[i].setText(content[i]);
+        }
+    }
+
 
     /*
      * Just for development... prior to AP-12986, this will return made up data; after AP-12986, during development
@@ -493,51 +691,60 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
      */
     @SuppressWarnings("static-method")
     private static class MetadataMockProvider {
-        @SuppressWarnings("unused")
         private final SubNodeContainer m_subNodeContainer;
 
         private MetadataMockProvider(final SubNodeContainer snc) {
             m_subNodeContainer = snc;
         }
 
+        @SuppressWarnings("unused")
         private String[] getTags() {
             return new String[] {"cool component", "db", "complex", "deep learning"};
         }
+        @SuppressWarnings("unused")
         private void setTags(final String[] tags) {
             // TODO
         }
 
         // unclear what, if any object, SNC will hand over for a "link object".. this will be mocked up to
         //      return a triplet {link text, link type, url}
+        @SuppressWarnings("unused")
         private String[][] getLinkObjects() {
             return new String[][] {
               { "KNIME Homepage", "Website", "http://www.knime.org" },
               { "Moe Flanders", "Video", "https://www.youtube.com/watch?v=AWbElkaeqVA" }
             };
         }
+        @SuppressWarnings("unused")
         private void setLinkObjects(final String[][] linkObjects) {
             // TODO
         }
 
+        @SuppressWarnings("unused")
         private String getAuthor() {
             return "acamus";
         }
+        @SuppressWarnings("unused")
         private void setAuthor(final String author) {
             // TODO
         }
 
         // this assumes the format will be the long standing metadata precedent for time-dates..
         //      see MetaInfoFile#calendarFromDateString(String)
+        @SuppressWarnings("unused")
         private String getDate() {
             return "13/5/2018/10:28:12 +02:00";
         }
+        @SuppressWarnings("unused")
         private void setDate(final String date) {
             // TODO
         }
 
+        @SuppressWarnings("unused")
         private String getTitle() {
             return "Tomorrow's Component, Today";
         }
+        @SuppressWarnings("unused")
         private void setTitle(final String title) {
             // TODO
         }
@@ -550,9 +757,11 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             // TODO
         }
 
+        @SuppressWarnings("unused")
         private String getLicense() {
             return LicenseType.DEFAULT_LICENSE_NAME;
         }
+        @SuppressWarnings("unused")
         private void setLicense(final String license) {
             // TODO
         }
@@ -575,6 +784,31 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         @SuppressWarnings("unused")
         private void setComponentIcon(final ImageData icon) {
             // TODO
+        }
+
+        private String[] getInPortNames() {
+            return m_subNodeContainer.getVirtualInPortNames();
+        }
+        private void setInPortNames(final String[] names) {
+            m_subNodeContainer.setVirtualInPortNames(names);
+        }
+        private String[] getInPortDescriptions() {
+            return m_subNodeContainer.getVirtualInPortDescriptions();
+        }
+        private void setInPortDescriptions(final String[] descriptions) {
+            m_subNodeContainer.setVirtualInPortDescriptions(descriptions);
+        }
+        private String[] getOutPortNames() {
+            return m_subNodeContainer.getVirtualOutPortNames();
+        }
+        private void setOutPortNames(final String[] names) {
+            m_subNodeContainer.setVirtualOutPortNames(names);
+        }
+        private String[] getOutPortDescriptions() {
+            return m_subNodeContainer.getVirtualOutPortDescriptions();
+        }
+        private void setOutPortDescriptions(final String[] descriptions) {
+            m_subNodeContainer.setVirtualOutPortDescriptions(descriptions);
         }
     }
 }

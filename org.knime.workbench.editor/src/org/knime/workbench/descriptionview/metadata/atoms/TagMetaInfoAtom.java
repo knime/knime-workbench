@@ -55,7 +55,7 @@ import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Composite;
-import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
+import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 import org.xml.sax.SAXException;
@@ -151,7 +151,7 @@ public class TagMetaInfoAtom extends MetaInfoAtom {
 
                 gc.setAdvanced(true);
                 gc.setAntialias(SWT.ON);
-                gc.setBackground(WorkflowMetaView.GENERAL_FILL_COLOR);
+                gc.setBackground(AbstractMetaView.GENERAL_FILL_COLOR);
                 gc.fillRoundRectangle((r.x + 1), (r.y + 1), (r.width - 2), (r.height - 2), r.height, r.height);
 
                 gc.setTextAntialias(SWT.ON);

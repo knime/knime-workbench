@@ -55,6 +55,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Calendar;
+import java.util.EnumSet;
 import java.util.Optional;
 
 import javax.xml.parsers.SAXParser;
@@ -114,7 +115,7 @@ public class WorkflowMetaView extends AbstractMetaView {
      * @param parent
      */
     public WorkflowMetaView(final Composite parent) {
-        super(parent);
+        super(parent, EnumSet.of(HiddenSection.UPPER, HiddenSection.LOWER));
     }
 
     /**

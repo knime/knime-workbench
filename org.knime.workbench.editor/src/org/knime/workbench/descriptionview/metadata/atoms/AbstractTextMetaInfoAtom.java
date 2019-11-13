@@ -115,7 +115,9 @@ public abstract class AbstractTextMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     public void commitEdit() {
-        m_value = m_editTextWidget.getText();
+        if (m_editTextWidget != null) {
+            m_value = m_editTextWidget.getText();
+        }
         m_editTextWidget = null;
         m_editState = null;
     }

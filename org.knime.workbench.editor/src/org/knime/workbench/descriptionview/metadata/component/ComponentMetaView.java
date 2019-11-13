@@ -48,12 +48,11 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
+import java.util.EnumSet;
 import java.util.Objects;
 
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.SWTError;
-import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
@@ -61,11 +60,7 @@ import org.eclipse.swt.widgets.Label;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.util.SWTUtilities;
-import org.knime.workbench.descriptionview.FallbackBrowser;
 import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
-import org.knime.workbench.repository.util.DynamicNodeDescriptionCreator;
-import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
-import org.w3c.dom.Element;
 
 /**
  * This is the view that supports component metadata viewing and editing when the component is open in its own
@@ -77,34 +72,33 @@ public class ComponentMetaView extends AbstractMetaView {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(ComponentMetaView.class);
 
 
-    private Browser m_browser;
-
-    private FallbackBrowser m_text;
-
-    private boolean m_isFallback;
-
     private SubNodeContainer m_currentSubNodeContainer;
 
     private Composite m_editUpperComposite;
     private Composite m_displayUpperComposite;
 
+    private Composite m_editLowerComposite;
+    private Composite m_displayLowerComposite;
+
     /**
      * @param parent
      */
     public ComponentMetaView(final Composite parent) {
-        super(parent);
+        super(parent, EnumSet.of(HiddenSection.TITLE, HiddenSection.TAGS, HiddenSection.LINKS, HiddenSection.LICENSE,
+            HiddenSection.CREATION_DATE, HiddenSection.AUTHOR));
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected boolean populateUpperSection(final Composite upperComposite) {
+    protected void populateUpperSection(final Composite upperComposite) {
         GridLayout gl = new GridLayout(1, false);
         gl.horizontalSpacing = 0;
         gl.verticalSpacing = 4;
+        gl.marginTop = 5;
+        gl.marginBottom = 8;
         gl.marginWidth = 0;
-        gl.marginHeight = 0;
         upperComposite.setLayout(gl);
 
 
@@ -144,44 +138,52 @@ public class ComponentMetaView extends AbstractMetaView {
 
 
         SWTUtilities.spaceReclaimingSetVisible(m_editUpperComposite, false);
-
-        return true;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected boolean populateLowerSection(final Composite lowerComposite) {
-        if (m_browser == null) {
-            final GridLayout gl = new GridLayout(1, false);
-            gl.marginHeight = 0;
-            gl.marginWidth = 0;
-            lowerComposite.setLayout(gl);
+    protected void populateLowerSection(final Composite lowerComposite) {
+        GridLayout gl = new GridLayout(1, false);
+        gl.marginTop = 5;
+        gl.marginBottom = 8;
+        gl.marginWidth = 0;
+        lowerComposite.setLayout(gl);
 
-            Composite compositeToLayout;
-            try {
-                m_text = null;
-                m_browser = new Browser(lowerComposite, SWT.NONE);
-                m_browser.setText("");
-                m_isFallback = false;
-                compositeToLayout = m_browser;
-            } catch (final SWTError e) {
-                LOGGER.warn("No html browser for node description available.", e);
-                m_browser = null;
-                m_text = new FallbackBrowser(lowerComposite, SWT.READ_ONLY | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
-                m_isFallback = true;
-                compositeToLayout = m_text.getStyledText();
-            }
-            final GridData gd = new GridData();
-            gd.horizontalAlignment = SWT.FILL;
-            gd.grabExcessHorizontalSpace = true;
-            gd.verticalAlignment = SWT.FILL;
-            gd.heightHint = 96;
-            compositeToLayout.setLayoutData(gd);
-        }
+        final Label l = new Label(lowerComposite, SWT.NONE);
+        l.setText("Ports");
+        l.setFont(BOLD_CONTENT_FONT);
+        l.setForeground(SECTION_LABEL_TEXT_COLOR);
+        GridData gd = new GridData();
+        gd.horizontalAlignment = SWT.LEFT;
+        l.setLayoutData(gd);
 
-        return true;
+
+        m_editLowerComposite = new Composite(lowerComposite, SWT.NONE);
+        gl = new GridLayout(1, false);
+        gl.horizontalSpacing = 0;
+        gl.verticalSpacing = 3;
+        gl.marginWidth = 0;
+        gl.marginHeight = 0;
+        m_editLowerComposite.setLayout(gl);
+        gd = new GridData();
+        gd.grabExcessHorizontalSpace = true;
+        gd.horizontalAlignment = SWT.FILL;
+        m_editLowerComposite.setLayoutData(gd);
+
+
+        m_displayLowerComposite = new Composite(lowerComposite, SWT.NONE);
+        gl = new GridLayout(1, false);
+        gl.horizontalSpacing = 0;
+        gl.verticalSpacing = 3;
+        gl.marginWidth = 0;
+        gl.marginHeight = 0;
+        m_displayLowerComposite.setLayout(gl);
+        gd = new GridData();
+        gd.grabExcessHorizontalSpace = true;
+        gd.horizontalAlignment = SWT.FILL;
+        m_displayLowerComposite.setLayoutData(gd);
     }
 
     @Override
@@ -190,38 +192,14 @@ public class ComponentMetaView extends AbstractMetaView {
             SWTUtilities.spaceReclaimingSetVisible(m_displayUpperComposite, false);
             SWTUtilities.spaceReclaimingSetVisible(m_editUpperComposite, true);
 
-            if (m_browser != null) {
-                m_browser.setVisible(false);
-            } else if (m_isFallback) {
-                m_text.setVisible(false);
-            }
+            SWTUtilities.spaceReclaimingSetVisible(m_displayLowerComposite, false);
+            SWTUtilities.spaceReclaimingSetVisible(m_editLowerComposite, true);
         } else {
             SWTUtilities.spaceReclaimingSetVisible(m_editUpperComposite, false);
             SWTUtilities.spaceReclaimingSetVisible(m_displayUpperComposite, true);
 
-            final StringBuilder content = new StringBuilder(DynamicNodeDescriptionCreator.instance().getHeader());
-            final Element portDOM = m_currentSubNodeContainer.getXMLDescriptionForPorts();
-
-            try {
-                content.append(NodeFactoryHTMLCreator.instance.readFullDescription(portDOM));
-                content.append("</body></html>");
-
-                if (m_browser != null) {
-                    m_browser.getDisplay().asyncExec(() -> {
-                        if (!m_browser.isDisposed()) {
-                            m_browser.setText(content.toString());
-                            m_browser.setVisible(true);
-                        }
-                    });
-                } else if (m_isFallback) {
-                    m_text.getDisplay().asyncExec(() -> {
-                        m_text.setText(content.toString());
-                        m_text.setVisible(true);
-                    });
-                }
-            } catch (final Exception e) {
-                LOGGER.error("Exception attempting to generate components port description display.", e);
-            }
+            SWTUtilities.spaceReclaimingSetVisible(m_editLowerComposite, false);
+            SWTUtilities.spaceReclaimingSetVisible(m_displayLowerComposite, true);
         }
     }
 
@@ -240,6 +218,9 @@ public class ComponentMetaView extends AbstractMetaView {
 
         final SubNodeContainer subNodeContainer = (SubNodeContainer)o;
         if (Objects.equals(m_currentSubNodeContainer, subNodeContainer)) {
+            // We should still regenerate the port display since the name and description may have changed behind
+            //  our backs by the user editing the virtual in and output nodes' configurations directly.
+            ((ComponentMetadataModelFacilitator)m_modelFacilitator).populatePortDisplay();
             return;
         }
 
@@ -247,8 +228,11 @@ public class ComponentMetaView extends AbstractMetaView {
 
         SWTUtilities.removeAllChildren(m_editUpperComposite);
         SWTUtilities.removeAllChildren(m_displayUpperComposite);
-        ((ComponentMetadataModelFacilitator)m_modelFacilitator).createUIAtomsForEdit(m_editUpperComposite);
-        ((ComponentMetadataModelFacilitator)m_modelFacilitator).createUIAtomsForDisplay(m_displayUpperComposite);
+        SWTUtilities.removeAllChildren(m_editLowerComposite);
+        SWTUtilities.removeAllChildren(m_displayLowerComposite);
+        final ComponentMetadataModelFacilitator cmmf = (ComponentMetadataModelFacilitator)m_modelFacilitator;
+        cmmf.createUIAtomsForEdit(m_editUpperComposite, m_editLowerComposite);
+        cmmf.createUIAtomsForDisplay(m_displayUpperComposite, m_displayLowerComposite);
 
         m_currentSubNodeContainer = subNodeContainer;
 
@@ -259,8 +243,7 @@ public class ComponentMetaView extends AbstractMetaView {
         m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName);
         m_modelFacilitator.setModelObserver(this);
 
-        // Is there ever a case where it cannot be?
-        m_metadataCanBeEdited.set(true);
+        m_metadataCanBeEdited.set(!m_currentSubNodeContainer.isWriteProtected());
         configureFloatingHeaderBarButtons();
 
         getDisplay().asyncExec(() -> {
@@ -274,7 +257,5 @@ public class ComponentMetaView extends AbstractMetaView {
      * {@inheritDoc}
      */
     @Override
-    protected void completeSave() {
-        ((ComponentMetadataModelFacilitator)m_modelFacilitator).storeMetadataInComponent();
-    }
+    protected void completeSave() { }
 }

@@ -56,7 +56,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
-import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
+import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 import org.xml.sax.SAXException;
@@ -88,8 +88,8 @@ public class TextAreaMetaInfoAtom extends AbstractTextMetaInfoAtom {
         parent.setLayout(new FillLayout());
 
         final Label l = new Label(parent, SWT.LEFT | SWT.WRAP);
-        l.setFont(WorkflowMetaView.VALUE_DISPLAY_FONT);
-        l.setForeground(WorkflowMetaView.TEXT_COLOR);
+        l.setFont(AbstractMetaView.VALUE_DISPLAY_FONT);
+        l.setForeground(AbstractMetaView.TEXT_COLOR);
 
         l.setText(m_value);
     }
