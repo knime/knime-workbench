@@ -790,7 +790,7 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
 
                     final WorkflowEditor editor = (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow()
                         .getActivePage().getActiveEditor();
-                    canEditMetadata = !editor.isTempRemoteWorkflowEditor();
+                    canEditMetadata = (!editor.isTempRemoteWorkflowEditor() && !editor.isTempLocalWorkflowEditor());
                 }
             } else {
                 m_workflowIsAJob.set(true);

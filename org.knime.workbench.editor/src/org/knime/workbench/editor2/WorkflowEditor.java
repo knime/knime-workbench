@@ -624,7 +624,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             // disposed is also called when workflow load fails or is canceled
             ProjectWorkflowMap.unregisterClientFrom(m_fileResource, this);
             ProjectWorkflowMap.remove(m_fileResource); // removes the workflow from memory
-            if (isTempRemoteWorkflowEditor()) {
+            if (isTempRemoteWorkflowEditor() || isTempLocalWorkflowEditor()) {
                 // after the workflow is deleted we can delete the temp location
                 final AbstractExplorerFileStore flowLoc = getFileStore(m_fileResource);
                 if (flowLoc != null) {
@@ -1946,6 +1946,13 @@ public class WorkflowEditor extends GraphicalEditor implements
     /** {@inheritDoc} */
     @Override
     public void doSave(final IProgressMonitor monitor) {
+        if (isTempLocalWorkflowEditor()) {
+            MessageDialog.openError(getSite().getShell(), "Workflow not writable",
+                "You cannot save a workflow opened from an archive. Use \"Save As...\" in order to save it to "
+                + "a different location.");
+            return;
+        }
+
         if (isTempRemoteWorkflowEditor()) {
             saveBackToServer();
             updateWorkflowMessages();
@@ -2470,7 +2477,17 @@ public class WorkflowEditor extends GraphicalEditor implements
         if (m_fileResource == null && m_parentEditor != null) { // metanode editor
             return m_parentEditor.isTempRemoteWorkflowEditor();
         }
-        return m_origRemoteLocation != null;
+        return (m_origRemoteLocation != null) && m_origRemoteLocation.getScheme().equals(ExplorerFileSystem.SCHEME);
+    }
+
+    /**
+     * @return true if this is an editor for a workflow opened from a local archive file (e.g a ".knwf")
+     */
+    public boolean isTempLocalWorkflowEditor() {
+        if (m_fileResource == null && m_parentEditor != null) { // metanode editor
+            return m_parentEditor.isTempLocalWorkflowEditor();
+        }
+        return (m_origRemoteLocation != null) && m_origRemoteLocation.getScheme().equals("file");
     }
 
     /**
@@ -2484,7 +2501,7 @@ public class WorkflowEditor extends GraphicalEditor implements
 
         final ViewportPinningGraphicalViewer viewer = (ViewportPinningGraphicalViewer)getGraphicalViewer();
         final StringBuilder sb = new StringBuilder();
-        if (isTempRemoteWorkflowEditor()) {
+        if (isTempRemoteWorkflowEditor() || isTempLocalWorkflowEditor()) {
             URI origRemoteLocation = m_origRemoteLocation;
             WorkflowEditor parentEditor = m_parentEditor;
             while ((origRemoteLocation == null) && (parentEditor != null)) {
