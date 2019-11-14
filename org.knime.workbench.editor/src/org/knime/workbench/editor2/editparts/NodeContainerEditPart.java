@@ -131,6 +131,7 @@ import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.NodeUIInformationEvent;
 import org.knime.core.node.workflow.NodeUIInformationListener;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowCipherPrompt;
 import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
@@ -139,6 +140,7 @@ import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.lazy.LazyWorkflowManagerUI;
 import org.knime.core.ui.util.SWTUtilities;
+import org.knime.core.ui.wrapper.SubNodeContainerWrapper;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
@@ -641,17 +643,33 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
     }
 
     private void updateIcon() {
-        NodeContainerFigure f = (NodeContainerFigure)getFigure();
+        final NodeContainerFigure f = (NodeContainerFigure)getFigure();
         // get the icon
-        Image icon = org.knime.workbench.core.util.ImageRepository.getUnscaledIconImage(getNodeContainer().getIcon());
+        Image icon = ImageRepository.getUnscaledIconImage(getNodeContainer().getIcon());
         if (icon == null && getNodeContainer().getIconAsStream().isPresent()) {
-            ImageData imageData = new ImageData(getNodeContainer().getIconAsStream().get());
+            final ImageData imageData = new ImageData(getNodeContainer().getIconAsStream().get());
             icon = new Image(Display.getDefault(), scaleImageTo(16, imageData));
         } else if (icon == null) { // get default image if null
-            icon = org.knime.workbench.core.util.ImageRepository.getUnscaledIconImage(NodeFactory.getDefaultIcon());
+            icon = ImageRepository.getUnscaledIconImage(NodeFactory.getDefaultIcon());
         }
         if (icon != null) {
             f.setIcon(icon);
+        }
+    }
+
+    private void updateDisplayType() {
+        final NodeContainerUI ncUI = getNodeContainer();
+        if (ncUI instanceof SubNodeContainerWrapper) {
+            final SubNodeContainer snc = ((SubNodeContainerWrapper)ncUI).unwrap();
+            final Optional<NodeFactory.NodeType> customNodeType = snc.getCustomNodeType();
+            final NodeContainerFigure f = (NodeContainerFigure)getFigure();
+            if (customNodeType.isPresent()) {
+                f.setType(customNodeType.get());
+            } else {
+                // This covers the situation in which the user sets the type to be something other than the
+                //  default, then again edits the metadata and deletes the custom type.
+                f.setType(NodeFactory.NodeType.Subnode);
+            }
         }
     }
 
@@ -998,6 +1016,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
                             break;
                         case ComponentMetadata:
                             updateIcon();
+                            updateDisplayType();
                         default:
                             // unknown, ignore
                     }

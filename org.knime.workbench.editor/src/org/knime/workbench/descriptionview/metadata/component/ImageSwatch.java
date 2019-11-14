@@ -58,13 +58,13 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Listener;
 
 /**
- * A widget to display an image swatch, potentially with a 'delete' icon and listener functionality for that delete
- * click.
+ * A widget to display an image swatch, with a 'delete' icon and listener functionality for that delete click.
  *
  * @author loki der quaeler
  */
 class ImageSwatch extends AbstractSwatch {
     private Image m_image;
+    private boolean m_imageWasConstructedByUs;
     private Rectangle m_imageBounds;
 
     ImageSwatch(final Composite parent, final Listener deleteListener) {
@@ -93,11 +93,20 @@ class ImageSwatch extends AbstractSwatch {
     }
 
     void setImage(final ImageData newImage) {
+        setImage(((newImage != null) ? new Image(getDisplay(), newImage) : null), true);
+    }
+
+    void setImage(final Image newImage) {
+        setImage(newImage, false);
+    }
+
+    private void setImage(final Image newImage, final boolean selfConstructedImage) {
         disposeOfImageIfPresent();
 
+        m_imageWasConstructedByUs = selfConstructedImage;
         final GridData gd = (GridData)getLayoutData();
         if (newImage != null) {
-            m_image = new Image(getDisplay(), newImage);
+            m_image = newImage;
             m_imageBounds = m_image.getBounds();
 
             gd.exclude = false;
@@ -112,7 +121,7 @@ class ImageSwatch extends AbstractSwatch {
     }
 
     private void disposeOfImageIfPresent() {
-        if (m_image != null) {
+        if ((m_image != null) && m_imageWasConstructedByUs) {
             m_image.dispose();
             m_image = null;
         }

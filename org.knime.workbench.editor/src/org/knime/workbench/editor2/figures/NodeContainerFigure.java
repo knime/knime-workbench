@@ -118,6 +118,7 @@ import org.knime.workbench.editor2.figures.ProgressFigure.ProgressMode;
  * @author Christoph Sieb, University of Konstanz
  */
 public class NodeContainerFigure extends RectangleFigure implements EditorModeParticipant {
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(NodeContainerFigure.class);
 
     // default plugin ID to get icons/images from
     private static final String EDITOR_PLUGIN_ID = KNIMEEditorPlugin.PLUGIN_ID;
@@ -910,42 +911,6 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
 
         private static final int SYMBOL_FIG_WIDTH = 32;
 
-        private static final String BACKGROUND_OTHER = "icons/node/" + "background_other.png";
-
-        private static final String BACKGROUND_MISSING = "icons/node/" + "background_missing.png";
-
-        private static final String BACKGROUND_SOURCE = "icons/node/" + "background_source.png";
-
-        private static final String BACKGROUND_SINK = "icons/node/" + "background_sink.png";
-
-        private static final String BACKGROUND_LEARNER = "icons/node/" + "background_learner.png";
-
-        private static final String BACKGROUND_PREDICTOR = "icons/node/" + "background_predictor.png";
-
-        private static final String BACKGROUND_MANIPULATOR = "icons/node/" + "background_manipulator.png";
-
-        private static final String BACKGROUND_META = "icons/node/" + "background_meta.png";
-
-        private static final String BACKGROUND_VIEWER = "icons/node/" + "background_viewer.png";
-
-        private static final String BACKGROUND_UNKNOWN = "icons/node/" + "background_unknown.png";
-
-        private static final String BACKGROUND_LOOPER_START = "icons/node/background_looper_start.png";
-
-        private static final String BACKGROUND_LOOPER_END = "icons/node/background_looper_end.png";
-
-        private static final String BACKGROUND_SCOPE_START = "icons/node/background_scope_start.png";
-
-        private static final String BACKGROUND_SCOPE_END = "icons/node/background_scope_end.png";
-
-        private static final String BACKGROUND_QUICKFORM = "icons/node/background_quickform.png";
-
-        private static final String BACKGROUND_SUBNODE = "icons/node/background_subnode.png";
-
-        private static final String BACKGROUND_VIRTUAL_IN = "icons/node/background_virtual_in.png";
-
-        private static final String BACKGROUND_VIRTUAL_OUT = "icons/node/background_virtual_out.png";
-
         private final Label m_deleteIcon;
         private final Label m_replaceIcon;
 
@@ -1186,49 +1151,17 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
          * @return Image that should be uses as background for this node
          */
         private Image getBackgroundImage() {
-            String str = null;
             if (m_nodeType == null) {
-                str = BACKGROUND_UNKNOWN;
-            } else if (m_nodeType.equals(NodeType.Source)) {
-                str = BACKGROUND_SOURCE;
-            } else if (m_nodeType.equals(NodeType.Sink)) {
-                str = BACKGROUND_SINK;
-            } else if (m_nodeType.equals(NodeType.Manipulator)) {
-                str = BACKGROUND_MANIPULATOR;
-            } else if (m_nodeType.equals(NodeType.Learner)) {
-                str = BACKGROUND_LEARNER;
-            } else if (m_nodeType.equals(NodeType.Predictor)) {
-                str = BACKGROUND_PREDICTOR;
-            } else if (m_nodeType.equals(NodeType.Meta)) {
-                str = BACKGROUND_META;
-            } else if (m_nodeType.equals(NodeType.Other)) {
-                str = BACKGROUND_OTHER;
-            } else if (m_nodeType.equals(NodeType.Missing)) {
-                str = BACKGROUND_MISSING;
-            } else if (m_nodeType.equals(NodeType.Visualizer)) {
-                str = BACKGROUND_VIEWER;
-            } else if (m_nodeType.equals(NodeType.LoopStart)) {
-                str = BACKGROUND_LOOPER_START;
-            } else if (m_nodeType.equals(NodeType.LoopEnd)) {
-                str = BACKGROUND_LOOPER_END;
-            } else if (m_nodeType.equals(NodeType.ScopeStart)) {
-                str = BACKGROUND_SCOPE_START;
-            } else if (m_nodeType.equals(NodeType.ScopeEnd)) {
-                str = BACKGROUND_SCOPE_END;
-            } else if (m_nodeType.equals(NodeType.QuickForm)) {
-                str = BACKGROUND_QUICKFORM;
-            } else if (m_nodeType.equals(NodeType.Subnode)) {
-                str = BACKGROUND_SUBNODE;
-            } else if (m_nodeType.equals(NodeType.VirtualIn)) {
-                str = BACKGROUND_VIRTUAL_IN;
-            } else if (m_nodeType.equals(NodeType.VirtualOut)) {
-                str = BACKGROUND_VIRTUAL_OUT;
-            } else {
-                str = BACKGROUND_UNKNOWN;
+                return DisplayableNodeType.UNKNOWN.getImage();
             }
-            final Image img = ImageRepository.getUnscaledImage(EDITOR_PLUGIN_ID, str);
 
-            return img == null ? ImageRepository.getUnscaledImage(EDITOR_PLUGIN_ID, BACKGROUND_OTHER) : img;
+            final DisplayableNodeType dnt = DisplayableNodeType.getTypeForNodeType(m_nodeType);
+            if (dnt == null) {
+                LOGGER.warn("A DisplayableNodeType has not been mapped for the node type " + m_nodeType);
+
+                return DisplayableNodeType.UNKNOWN.getImage();
+            }
+            return dnt.getImage();
         }
 
         /**
@@ -1240,9 +1173,6 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
         void setType(final NodeType type) {
             m_nodeType = type;
 
-            if (m_originalBackgroundIcon != null) {
-                m_originalBackgroundIcon.dispose();
-            }
             if (m_ghostlyBackgroundIcon != null) {
                 m_ghostlyBackgroundIcon.dispose();
             }

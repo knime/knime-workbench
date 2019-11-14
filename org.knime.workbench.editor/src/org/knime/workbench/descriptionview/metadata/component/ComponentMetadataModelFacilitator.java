@@ -51,8 +51,10 @@ package org.knime.workbench.descriptionview.metadata.component;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -77,7 +79,6 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Canvas;
@@ -85,7 +86,6 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
-import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.ComponentMetadata;
 import org.knime.core.node.workflow.ComponentMetadata.ComponentMetadataBuilder;
@@ -97,6 +97,7 @@ import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.DateMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextFieldMetaInfoAtom;
+import org.knime.workbench.editor2.figures.DisplayableNodeType;
 import org.knime.workbench.repository.util.DynamicNodeDescriptionCreator;
 import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
@@ -113,7 +114,29 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
     private static final int[] DROP_ZONE_DASH = { 5, 4 };
 
-    private static final String NO_SELECTION_COLOR_COMBO_TEXT = "Select color";
+    private static final String NO_SELECTION_NODE_TYPE = "Select node type";
+
+    private static final EnumSet<DisplayableNodeType> NODE_TYPES_TO_HIDE
+                                = EnumSet.of(
+                                    DisplayableNodeType.META,
+                                    DisplayableNodeType.MISSING,
+                                    DisplayableNodeType.SUBNODE,
+                                    DisplayableNodeType.UNKNOWN,
+                                    DisplayableNodeType.VIRTUAL_IN,
+                                    DisplayableNodeType.VIRTUAL_OUT);
+
+    private static final List<Object> NODE_TYPES_TO_DISPLAY;
+
+    static {
+        NODE_TYPES_TO_DISPLAY = new ArrayList<>();
+        NODE_TYPES_TO_DISPLAY.add(NO_SELECTION_NODE_TYPE);
+        for (final DisplayableNodeType dnt : DisplayableNodeType.values()) {
+            if (!NODE_TYPES_TO_HIDE.contains(dnt)) {
+                NODE_TYPES_TO_DISPLAY.add(dnt);
+            }
+        }
+    }
+
 
 
     private final SubNodeContainer m_subNodeContainer;
@@ -131,15 +154,15 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
      *  atoms, and is also not requiring of all the existing functionality in the MetaInfoAtom parent class.
      */
 
-    private RGB m_nodeColor;
-    private RGB m_savedNodeColor;
+    private DisplayableNodeType m_nodeType;
+    private DisplayableNodeType m_savedNodeType;
     private ImageData m_nodeIcon;
     private ImageData m_savedNodeIcon;
 
     private ImageSwatch m_imageSwatch;
     private Canvas m_iconDropZone;
-    private ColorSwatch m_colorSwatch;
-    private ComboViewer m_colorComboViewer;
+    private ImageSwatch m_nodeTypeImageSwatch;
+    private ComboViewer m_nodeTypeComboViewer;
 
     private NodeDisplayPreview m_nodeDisplayPreview;
 
@@ -171,7 +194,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         }
 
         //TODO
-        m_nodeColor = null;
+        m_nodeType = null;
 
         if (metadata.getIcon().isPresent()) {
             m_nodeIcon = new ImageData(new ByteArrayInputStream(metadata.getIcon().get()));
@@ -205,7 +228,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     public void storeStateForEdit() {
         super.storeStateForEdit();
 
-        m_savedNodeColor = m_nodeColor;
+        m_savedNodeType = m_nodeType;
         m_savedNodeIcon = m_nodeIcon;
 
         ComponentMetadata meta = m_subNodeContainer.getMetadata();
@@ -216,11 +239,11 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         m_savedOutPortDescriptions = meta.getOutPortDescriptions().get();
 
         m_imageSwatch.setImage(m_nodeIcon);
-        m_colorSwatch.setColor(m_nodeColor);
-        if (m_nodeColor == null) {
-            resetColorComboBox();
+        m_nodeTypeImageSwatch.setImage((m_nodeType == null) ? null : m_nodeType.getImage());
+        if (m_nodeType == null) {
+            resetNodeTypeCombobox();
         } else {
-            // TODO select color in combo list
+            m_nodeTypeComboViewer.setSelection(new StructuredSelection(m_nodeType), true);
         }
 
 
@@ -237,10 +260,10 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     public void restoreState() {
         super.restoreState();
 
-        m_nodeColor = m_savedNodeColor;
+        m_nodeType = m_savedNodeType;
         m_nodeIcon = m_savedNodeIcon;
 
-        m_savedNodeColor = null;
+        m_savedNodeType = null;
         m_savedNodeIcon = null;
 
         m_savedInPortNames = null;
@@ -257,9 +280,9 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         super.commitEdit();
 
         m_nodeDisplayPreview.setImage(m_nodeIcon);
-        m_nodeDisplayPreview.setColor(m_nodeColor);
+        m_nodeDisplayPreview.setNodeTypeBackground((m_nodeType != null) ? m_nodeType.getImage() : null);
 
-        m_savedNodeColor = null;
+        m_savedNodeType = null;
         m_savedNodeIcon = null;
 
         m_savedInPortNames = null;
@@ -276,7 +299,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
      */
     @Override
     protected boolean containedMetadataIsDirty() {
-        if (!Objects.equals(m_nodeColor, m_savedNodeColor) || !Objects.equals(m_nodeIcon, m_savedNodeIcon)) {
+        if (!Objects.equals(m_nodeType, m_savedNodeType) || !Objects.equals(m_nodeIcon, m_savedNodeIcon)) {
             return true;
         }
 
@@ -294,20 +317,19 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     }
 
     void storeMetadataInComponent() {
-        byte[] icon;
+        final byte[] icon;
         if (m_nodeIcon != null) {
-            ImageLoader imageLoader = new ImageLoader();
+            final ImageLoader imageLoader = new ImageLoader();
             imageLoader.data = new ImageData[]{m_nodeIcon};
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            final ByteArrayOutputStream stream = new ByteArrayOutputStream();
             imageLoader.save(stream, 5); //write to byte[] as png
             icon = stream.toByteArray();
         } else {
             icon = null;
         }
 
-        ComponentMetadataBuilder builder = ComponentMetadata.builder().description(m_descriptionAtom.getValue())
-            //TODO set node type
-            .type(NodeType.Manipulator).icon(icon);
+        final ComponentMetadataBuilder builder = ComponentMetadata.builder().description(m_descriptionAtom.getValue())
+            .type((m_nodeType != null) ? m_nodeType.getNodeType() : null).icon(icon);
 
         String[] names = getStringArrayFromTextArray(m_inportNameTextFields);
         String[] descriptions = getStringArrayFromTextArray(m_inportDescriptionTextFields);
@@ -338,7 +360,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         c.setLayout(gl);
 
         m_imageSwatch = new ImageSwatch(c, (e) -> {
-            m_imageSwatch.setImage(null);
+            m_imageSwatch.setImage((Image)null);
             setComponentIcon(null);
             triggerReLayout();
         });
@@ -397,45 +419,49 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         gl.horizontalSpacing = 9;
         c.setLayout(gl);
 
-        m_colorSwatch = new ColorSwatch(c, (e) -> {
-            m_colorSwatch.setColor(null);
-            setComponentColor(null);
-            resetColorComboBox();
+        m_nodeTypeImageSwatch = new ImageSwatch(c, (e) -> {
+            m_nodeTypeImageSwatch.setImage((Image)null);
+            setNodeType(null);
+            resetNodeTypeCombobox();
             triggerReLayout();
         });
 
-        m_colorComboViewer = new ComboViewer(c, SWT.READ_ONLY);
-        m_colorComboViewer.setContentProvider(ArrayContentProvider.getInstance());
-        m_colorComboViewer.setLabelProvider(new LabelProvider() {
+        m_nodeTypeComboViewer = new ComboViewer(c, SWT.READ_ONLY);
+        m_nodeTypeComboViewer.setContentProvider(ArrayContentProvider.getInstance());
+        m_nodeTypeComboViewer.setLabelProvider(new LabelProvider() {
             @Override
-            public Image getImage(final Object element) {
-                // TODO maybe generate a color swatch?
+            public Image getImage(final Object o) {
+                if (o instanceof DisplayableNodeType) {
+                    return ((DisplayableNodeType)o).getImage();
+                }
+
                 return null;
             }
 
             @Override
             public String getText(final Object o) {
-                // TODO if we use some sort of object containing swatch color and text
+                if (o instanceof DisplayableNodeType) {
+                    return ((DisplayableNodeType)o).getDisplayText();
+                }
+
                 return (String)o;
             }
         });
-        resetColorComboBox();
+        resetNodeTypeCombobox();
 
         gd = new GridData();
         gd.horizontalAlignment = SWT.LEFT;
         gd.grabExcessHorizontalSpace = true;
         gd.verticalAlignment = SWT.CENTER;
-        m_colorComboViewer.getCombo().setLayoutData(gd);
-        m_colorComboViewer.addPostSelectionChangedListener((event) -> {
-            if (!m_colorComboViewer.getStructuredSelection().getFirstElement().equals(NO_SELECTION_COLOR_COMBO_TEXT)) {
-                // TODO update swatch color component once we have the object sorted out - for the time being, randomize
-                m_colorComboViewer.remove(NO_SELECTION_COLOR_COMBO_TEXT);
-                final int r = (int)(Math.random() * 255.0);
-                final int g = (int)(Math.random() * 255.0);
-                final int b = (int)(Math.random() * 255.0);
-                final RGB newColor = new RGB(r, g, b);
-                m_colorSwatch.setColor(newColor);
-                setComponentColor(newColor);
+        m_nodeTypeComboViewer.getCombo().setLayoutData(gd);
+        m_nodeTypeComboViewer.addPostSelectionChangedListener((event) -> {
+            final Object o = m_nodeTypeComboViewer.getStructuredSelection().getFirstElement();
+            if (!o.equals(NO_SELECTION_NODE_TYPE)) {
+                m_nodeTypeComboViewer.remove(NO_SELECTION_NODE_TYPE);
+
+                final DisplayableNodeType dnt = (DisplayableNodeType)o;
+                m_nodeTypeImageSwatch.setImage(dnt.getImage());
+                setNodeType(dnt);
                 triggerReLayout();
             }
         });
@@ -602,17 +628,17 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         populatePortDisplay();
     }
 
-    void setComponentColor(final RGB rgb) {
-        m_nodeColor = rgb;
+    private void setNodeType(final DisplayableNodeType displayableNodeType) {
+        m_nodeType = displayableNodeType;
 
-        if (Objects.equals(m_nodeColor, m_savedNodeColor)) {
+        if (Objects.equals(m_nodeType, m_savedNodeType)) {
             metaInfoAtomBecameClean(null);
         } else {
             metaInfoAtomBecameDirty(null);
         }
     }
 
-    void setComponentIcon(final ImageData id) {
+    private void setComponentIcon(final ImageData id) {
         m_nodeIcon = id;
 
         if (Objects.equals(m_nodeIcon, m_savedNodeIcon)) {
@@ -660,9 +686,9 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         m_imageSwatch.getParent().getParent().getParent().getParent().layout(true, true);
     }
 
-    private void resetColorComboBox() {
-        m_colorComboViewer.setInput(Arrays.asList(NO_SELECTION_COLOR_COMBO_TEXT, "Blue", "Green", "Red")/**TODO**/);
-        m_colorComboViewer.setSelection(new StructuredSelection(m_colorComboViewer.getElementAt(0)), true);
+    private void resetNodeTypeCombobox() {
+        m_nodeTypeComboViewer.setInput(NODE_TYPES_TO_DISPLAY);
+        m_nodeTypeComboViewer.setSelection(new StructuredSelection(m_nodeTypeComboViewer.getElementAt(0)), true);
     }
 
     void populatePortDisplay() {

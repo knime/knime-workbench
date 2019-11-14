@@ -66,7 +66,8 @@ import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.descriptionview.metadata.PlatformSpecificUIisms;
 
 /**
- * Common functionality for our edit-mode swatches.
+ * Common functionality for our edit-mode swatches; at this moment in time we now have only one edit mode swatch,
+ *  but i am hopeful that custom color nodes are in the future of KAP somewhere (as opposed to image backgrounds.)
  *
  * @author loki der quaeler
  */

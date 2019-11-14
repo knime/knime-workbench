@@ -49,21 +49,18 @@
 package org.knime.workbench.descriptionview.metadata.component;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.ui.PlatformUI;
+import org.knime.workbench.editor2.figures.DisplayableNodeType;
 
 /**
  * This class is used in the display mode of the component metadata view to render a preview of the display of the
- * component node, given the potentially user specified icon and color.
+ * component node, given the potentially user specified icon and type.
  *
  * @author loki der quaeler
  */
@@ -71,14 +68,12 @@ class NodeDisplayPreview extends Canvas {
     private static final int SWATCH_SIZE = 50;
     private static final int ICON_INSET = 9;
     private static final int ICON_DIMENSION = 32;
-    private static final int ROUNDED_CORNER = 15;
-
-    private static final Color DEFAULT_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 189, 189, 189);
+    private static final Rectangle BACKGROUND_BOUNDS = DisplayableNodeType.SUBNODE.getImage().getBounds();
 
 
     private Image m_image;
     private Rectangle m_imageBounds;
-    private Color m_currentColor;
+    private Image m_nodeTypeImage;
 
     NodeDisplayPreview(final Composite parent) {
         super(parent, SWT.TRANSPARENT);
@@ -94,14 +89,17 @@ class NodeDisplayPreview extends Canvas {
             final GC gc = e.gc;
 
             gc.setAntialias(SWT.ON);
-
-            final Color fillColor = (m_currentColor == null) ? DEFAULT_FILL_COLOR : m_currentColor;
-            gc.setBackground(fillColor);
-            final Point size = NodeDisplayPreview.this.getSize();
-            gc.fillRoundRectangle(0, 0, size.x, size.y, ROUNDED_CORNER, ROUNDED_CORNER);
+            gc.setInterpolation(SWT.HIGH);
+            final Image background;
+            if (m_nodeTypeImage == null) {
+                background = DisplayableNodeType.SUBNODE.getImage();
+            } else {
+                background = m_nodeTypeImage;
+            }
+            gc.drawImage(background, 0, 0, BACKGROUND_BOUNDS.width, BACKGROUND_BOUNDS.height, 0, 0, SWATCH_SIZE,
+                SWATCH_SIZE);
 
             if (m_image != null) {
-                gc.setInterpolation(SWT.HIGH);
                 gc.drawImage(m_image, 0, 0, m_imageBounds.width, m_imageBounds.height, ICON_INSET, ICON_INSET,
                     ICON_DIMENSION, ICON_DIMENSION);
             }
@@ -113,14 +111,13 @@ class NodeDisplayPreview extends Canvas {
      */
     @Override
     public void dispose() {
-        disposeOfColorIfPresent();
-        disposeOfImageIfPresent();
+        disposeOfIconImageIfPresent();
 
         super.dispose();
     }
 
     void setImage(final ImageData newImage) {
-        disposeOfImageIfPresent();
+        disposeOfIconImageIfPresent();
 
         if (newImage != null) {
             m_image = new Image(getDisplay(), newImage);
@@ -130,25 +127,13 @@ class NodeDisplayPreview extends Canvas {
         redraw();
     }
 
-    void setColor(final RGB newColor) {
-        // we _could_ check for a setting of the same color, but it's not clear that saves us much
-        disposeOfColorIfPresent();
-
-        if (newColor != null) {
-            m_currentColor = new Color(getDisplay(), newColor);
-        }
+    void setNodeTypeBackground(final Image image) {
+        m_nodeTypeImage = image;
 
         redraw();
     }
 
-    private void disposeOfColorIfPresent() {
-        if (m_currentColor != null) {
-            m_currentColor.dispose();
-            m_currentColor = null;
-        }
-    }
-
-    private void disposeOfImageIfPresent() {
+    private void disposeOfIconImageIfPresent() {
         if (m_image != null) {
             m_image.dispose();
             m_image = null;
