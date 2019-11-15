@@ -99,6 +99,7 @@ import org.knime.workbench.descriptionview.metadata.atoms.DateMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextFieldMetaInfoAtom;
 import org.knime.workbench.editor2.figures.DisplayableNodeType;
+import org.knime.workbench.editor2.figures.NodeContainerFigure;
 import org.knime.workbench.repository.util.DynamicNodeDescriptionCreator;
 import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
@@ -311,6 +312,10 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     void storeMetadataInComponent() {
         final byte[] icon;
         if (m_nodeIcon != null) {
+            if (Math.max(m_nodeIcon.width, m_nodeIcon.height) > 64) {
+                //limit size of the image stored
+                m_nodeIcon = NodeContainerFigure.scaleImageTo(64, m_nodeIcon);
+            }
             final ImageLoader imageLoader = new ImageLoader();
             imageLoader.data = new ImageData[]{m_nodeIcon};
             final ByteArrayOutputStream stream = new ByteArrayOutputStream();

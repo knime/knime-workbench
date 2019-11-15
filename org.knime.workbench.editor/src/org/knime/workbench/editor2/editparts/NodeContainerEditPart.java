@@ -47,6 +47,8 @@
  */
 package org.knime.workbench.editor2.editparts;
 
+import static org.knime.workbench.editor2.figures.NodeContainerFigure.scaleImageTo;
+
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -664,15 +666,6 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
             final NodeContainerFigure f = (NodeContainerFigure)getFigure();
             f.setType(snc.getType());
         }
-    }
-
-    private static ImageData scaleImageTo(final int size, final ImageData img) {
-        int max = Math.max(img.width, img.height);
-        if (max == size) {
-            return img;
-        }
-        double f = size / (double)max;
-        return img.scaledTo((int)(img.width * f), (int)(img.height * f));
     }
 
     /**

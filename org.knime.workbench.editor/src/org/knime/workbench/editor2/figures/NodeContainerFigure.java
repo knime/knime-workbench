@@ -378,6 +378,22 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
     }
 
     /**
+     * Utility method to scale an image to the given size
+     *
+     * @param size target size in px
+     * @param img the image data to scale
+     * @return the scaled image data
+     */
+    public static ImageData scaleImageTo(final int size, final ImageData img) {
+        int max = Math.max(img.width, img.height);
+        if (max == size) {
+            return img;
+        }
+        double f = size / (double)max;
+        return img.scaledTo((int)(img.width * f), (int)(img.height * f));
+    }
+
+    /**
      * Sets the type.
      *
      * @param type the type
