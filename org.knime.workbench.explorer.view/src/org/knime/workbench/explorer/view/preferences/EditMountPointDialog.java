@@ -218,6 +218,12 @@ public class EditMountPointDialog extends ListDialog {
     private ValidationRequiredListener createValidationListener() {
         return new ValidationRequiredListener() {
 
+            /** Used to check if the restore mount id dialog is already open.
+             * This is the case if we edit the dialog and it's already checking the connection
+             * and the set mount id is not equal to the default mount id. In that case the dialog
+             * would pop up twice (probably a race condition). */
+            private boolean m_isDialogShowing;
+
             @Override
             public void validationRequired() {
                 validate();
@@ -231,7 +237,8 @@ public class EditMountPointDialog extends ListDialog {
                     m_mountID.setText(id);
                 }
                 if (defaultMountID != null && !defaultMountID.isEmpty()
-                        && !m_mountID.getText().equals(defaultMountID)) {
+                        && !m_mountID.getText().equals(defaultMountID) && !m_isDialogShowing) {
+                    m_isDialogShowing = true;
                     String confirmTitle = "Overwrite Mount ID";
                     String confirmMsg = "The default Mount ID is " + defaultMountID
                             + ". Do you want to overwrite your current Mount ID?";
@@ -241,6 +248,7 @@ public class EditMountPointDialog extends ListDialog {
                     // When the defaultMountID changes we know the real default mountID so it can be set as
                     // as the old Mount ID.
                     m_oldMountID = id;
+                    m_isDialogShowing = false;
                 }
                 validate();
             }
