@@ -62,6 +62,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.workflow.NodeID;
+import org.knime.core.node.workflow.NodePropertyChangedEvent.NodeProperty;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.TemplateNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -198,7 +199,8 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                     message = "Errors during load";
             }
             if (isComponentProject() && m_result.getLoadedInstance() instanceof SubNodeContainer) {
-                WorkflowManager wm = ((SubNodeContainer)m_result.getLoadedInstance()).getWorkflowManager();
+                SubNodeContainer snc = (SubNodeContainer)m_result.getLoadedInstance();
+                WorkflowManager wm = snc.getWorkflowManager();
                 m_editor.setWorkflowManager(wm);
                 if (!status.isOK()) {
                     LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);
@@ -213,6 +215,11 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                         }
                     });
                 }
+                snc.addNodePropertyChangedListener(l -> {
+                    if (l.getProperty() == NodeProperty.ComponentMetadata) {
+                        m_editor.markDirty();
+                    }
+                });
             } else {
                 if (!status.isOK()) {
                     LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);

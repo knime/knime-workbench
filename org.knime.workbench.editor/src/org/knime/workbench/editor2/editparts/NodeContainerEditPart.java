@@ -661,15 +661,8 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
         final NodeContainerUI ncUI = getNodeContainer();
         if (ncUI instanceof SubNodeContainerWrapper) {
             final SubNodeContainer snc = ((SubNodeContainerWrapper)ncUI).unwrap();
-            final Optional<NodeFactory.NodeType> customNodeType = snc.getCustomNodeType();
             final NodeContainerFigure f = (NodeContainerFigure)getFigure();
-            if (customNodeType.isPresent()) {
-                f.setType(customNodeType.get());
-            } else {
-                // This covers the situation in which the user sets the type to be something other than the
-                //  default, then again edits the metadata and deletes the custom type.
-                f.setType(NodeFactory.NodeType.Subnode);
-            }
+            f.setType(snc.getType());
         }
     }
 

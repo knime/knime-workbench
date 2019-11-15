@@ -90,6 +90,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.ComponentMetadata;
 import org.knime.core.node.workflow.ComponentMetadata.ComponentMetadataBuilder;
 import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.ui.util.SWTUtilities;
 import org.knime.workbench.descriptionview.FallbackBrowser;
 import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.descriptionview.metadata.AbstractMetadataModelFacilitator;
@@ -170,6 +171,8 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     private FallbackBrowser m_text;
     private boolean m_isFallback;
 
+    private Composite m_portsParent;
+
 
     ComponentMetadataModelFacilitator(final SubNodeContainer snc) {
         super();
@@ -182,8 +185,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             m_descriptionAtom.addChangeListener(this);
         }
 
-        //TODO
-        m_nodeType = null;
+        m_nodeType = metadata.getType().orElse(null);
 
         if (metadata.getIcon().isPresent()) {
             m_nodeIcon = new ImageData(new ByteArrayInputStream(metadata.getIcon().get()));
@@ -235,6 +237,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             m_nodeTypeComboViewer.setSelection(new StructuredSelection(m_nodeType), true);
         }
 
+        reinitPortTextFields();
 
         populateTextArray(m_inportNameTextFields, m_savedInPortNames);
         populateTextArray(m_inportDescriptionTextFields, m_savedInPortDescriptions);
@@ -318,7 +321,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         }
 
         final ComponentMetadataBuilder builder = ComponentMetadata.builder().description(m_descriptionAtom.getValue())
-            .type((m_nodeType != null) ? m_nodeType.getNodeType() : null).icon(icon);
+            .type((m_nodeType != null) ? m_nodeType : null).icon(icon);
 
         String[] names = getStringArrayFromTextArray(m_inportNameTextFields);
         String[] descriptions = getStringArrayFromTextArray(m_inportDescriptionTextFields);
@@ -333,10 +336,11 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         }
 
         m_subNodeContainer.setMetadata(builder.build());
-        m_subNodeContainer.setDirty();
+
     }
 
     void createUIAtomsForEdit(final Composite componentIconParent, final Composite portsParent) {
+        m_portsParent = portsParent;
         Composite c = new Composite(componentIconParent, SWT.NONE);
         GridData gd = new GridData();
         gd.horizontalAlignment = SWT.FILL;
@@ -492,22 +496,42 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             public void dropAccept(final DropTargetEvent event) { }
         });
 
+
+
+        reinitPortTextFields();
+    }
+
+    private void reinitPortTextFields() {
+
         final int inportCount = m_subNodeContainer.getNrInPorts() - 1; //minus flow variable port
-        m_inportNameTextFields = new Text[inportCount];
-        m_inportDescriptionTextFields = new Text[inportCount];
-        for (int i = 0; i < inportCount; i++) {
-            final Text[] pair = createPortPair(portsParent, (i + 1), true);
-            m_inportNameTextFields[i] = pair[0];
-            m_inportDescriptionTextFields[i] = pair[1];
+        final int outportCount = m_subNodeContainer.getNrOutPorts() - 1; //minus flow variable port
+        if ((m_inportNameTextFields != null && m_inportNameTextFields.length != inportCount)
+            || (m_outportNameTextFields != null && m_outportNameTextFields.length != outportCount)) {
+            SWTUtilities.removeAllChildren(m_portsParent);
+            m_inportNameTextFields = null;
+            m_inportDescriptionTextFields = null;
+            m_outportNameTextFields = null;
+            m_outportDescriptionTextFields = null;
         }
 
-        final int outportCount = m_subNodeContainer.getNrOutPorts() - 1; //minus flow variable port
-        m_outportNameTextFields = new Text[outportCount];
-        m_outportDescriptionTextFields = new Text[outportCount];
-        for (int i = 0; i < outportCount; i++) {
-            final Text[] pair = createPortPair(portsParent, (i + 1), false);
-            m_outportNameTextFields[i] = pair[0];
-            m_outportDescriptionTextFields[i] = pair[1];
+        if (m_inportNameTextFields == null) {
+            m_inportNameTextFields = new Text[inportCount];
+            m_inportDescriptionTextFields = new Text[inportCount];
+            for (int i = 0; i < inportCount; i++) {
+                final Text[] pair = createPortPair(m_portsParent, (i + 1), true);
+                m_inportNameTextFields[i] = pair[0];
+                m_inportDescriptionTextFields[i] = pair[1];
+            }
+        }
+
+        if (m_outportNameTextFields == null) {
+            m_outportNameTextFields = new Text[outportCount];
+            m_outportDescriptionTextFields = new Text[outportCount];
+            for (int i = 0; i < outportCount; i++) {
+                final Text[] pair = createPortPair(m_portsParent, (i + 1), false);
+                m_outportNameTextFields[i] = pair[0];
+                m_outportDescriptionTextFields[i] = pair[1];
+            }
         }
     }
 
@@ -592,6 +616,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     void createUIAtomsForDisplay(final Composite componentIconParent, final Composite portsParent) {
         m_nodeDisplayPreview = new NodeDisplayPreview(componentIconParent);
         m_nodeDisplayPreview.setImage(m_nodeIcon);
+        m_nodeDisplayPreview.setNodeTypeBackground(getImageForComponentType(m_nodeType));
 
         Composite compositeToLayout;
         try {
