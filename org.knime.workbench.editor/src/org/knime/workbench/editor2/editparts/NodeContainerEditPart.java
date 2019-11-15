@@ -142,7 +142,6 @@ import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.lazy.LazyWorkflowManagerUI;
 import org.knime.core.ui.util.SWTUtilities;
-import org.knime.core.ui.wrapper.SubNodeContainerWrapper;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
@@ -639,7 +638,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
         String description = getNodeContainer().getCustomDescription();
 
         updateIcon();
-        f.setType(type);
+        f.setType(type, getNodeContainer() instanceof SubNodeContainerUI);
         updateLabelText();
         f.setCustomDescription(description);
     }
@@ -661,10 +660,10 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
 
     private void updateDisplayType() {
         final NodeContainerUI ncUI = getNodeContainer();
-        if (ncUI instanceof SubNodeContainerWrapper) {
-            final SubNodeContainer snc = ((SubNodeContainerWrapper)ncUI).unwrap();
+        final Optional<SubNodeContainer> snc = Wrapper.unwrapOptional(ncUI, SubNodeContainer.class);
+        if (snc.isPresent()) {
             final NodeContainerFigure f = (NodeContainerFigure)getFigure();
-            f.setType(snc.getType());
+            f.setType(snc.get().getType(), true);
         }
     }
 

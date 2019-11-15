@@ -56,6 +56,7 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
+import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.workbench.editor2.figures.DisplayableNodeType;
 
 /**
@@ -65,11 +66,10 @@ import org.knime.workbench.editor2.figures.DisplayableNodeType;
  * @author loki der quaeler
  */
 class NodeDisplayPreview extends Canvas {
-    private static final int SWATCH_SIZE = 50;
-    private static final int ICON_INSET = 17;
+    private static final int SWATCH_SIZE = 32;
+    private static final int ICON_INSET = 8;
     private static final int ICON_DIMENSION = 16;
-    private static final Rectangle BACKGROUND_BOUNDS = DisplayableNodeType.SUBNODE.getImage().getBounds();
-
+    private static final Rectangle BACKGROUND_BOUNDS = new Rectangle(0, 0, 32, 32);
 
     private Image m_image;
     private Rectangle m_imageBounds;
@@ -92,7 +92,7 @@ class NodeDisplayPreview extends Canvas {
             gc.setInterpolation(SWT.HIGH);
             final Image background;
             if (m_nodeTypeImage == null) {
-                background = DisplayableNodeType.SUBNODE.getImage();
+                background = DisplayableNodeType.getTypeForNodeType(NodeType.Subnode, true).getImage();
             } else {
                 background = m_nodeTypeImage;
             }

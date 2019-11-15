@@ -79,7 +79,7 @@ public class SubworkflowFigure extends NodeContainerFigure {
     public SubworkflowFigure(final ProgressFigure progress) {
         super(progress);
         remove(getStatusFigure());
-        ((NodeContainerFigure.SymbolFigure)getSymbolFigure()).setType(NodeType.Meta);
+        ((NodeContainerFigure.SymbolFigure)getSymbolFigure()).setType(NodeType.Meta, false);
     }
 
     /**
@@ -106,5 +106,5 @@ public class SubworkflowFigure extends NodeContainerFigure {
      * Ignores it - since the type is fixed.
      */
     @Override
-    public void setType(final NodeType type) { }
+    public void setType(final NodeType type, final boolean isComponent) { }
 }

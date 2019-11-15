@@ -53,89 +53,72 @@ import java.util.Map;
 
 import org.eclipse.swt.graphics.Image;
 import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeFactory.NodeType;
+import org.knime.core.util.Pair;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 
 /**
- * An enum which wraps the {@code NodeFactory.NodeType} enum, adding in display text and background {@code Image}
- * instances for rendering.
+ * A class which wraps the {@code NodeFactory.NodeType} enum, adding (and caching) background {@code Image} instances
+ * for rendering.
  *
  * @author loki der quaeler
+ * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-public enum DisplayableNodeType {
-    /** A learning node. */
-    LEARNER("Learner", NodeFactory.NodeType.Learner, "icons/node/background_learner.png"),
-    /** End node of a loop. */
-    LOOP_END("Loop End", NodeFactory.NodeType.LoopEnd, "icons/node/background_looper_end.png"),
-    /** Start node of a loop. */
-    LOOP_START("Loop Start", NodeFactory.NodeType.LoopStart, "icons/node/background_looper_start.png"),
-    /** A data manipulating node. */
-    MANIPULATOR("Manipulator", NodeFactory.NodeType.Manipulator, "icons/node/background_manipulator.png"),
-    /** A metanode. */
-    META("Metanode", NodeFactory.NodeType.Meta, "icons/node/background_meta.png"),
-    /**
-     * A missing node (framework use only).
-     * @since 2.7
-     */
-    MISSING("Missing Type", NodeFactory.NodeType.Missing, "icons/node/background_missing.png"),
-    /** All other nodes. */
-    OTHER("Other", NodeFactory.NodeType.Other, "icons/node/background_other.png"),
-    /** A predicting node. */
-    PREDICTOR("Predictor", NodeFactory.NodeType.Predictor, "icons/node/background_predictor.png"),
-    /** A node contributing to quick/web form. */
-    QUICK_FORM("Quick Form", NodeFactory.NodeType.QuickForm, "icons/node/background_quickform.png"),
-    /**
-     * End node of a scope.
-     * @since 2.8
-     */
-    SCOPE_END("Scope End", NodeFactory.NodeType.ScopeEnd, "icons/node/background_scope_end.png"),
-    /**
-     * Start node of a scope.
-     * @since 2.8
-     */
-    SCOPE_START("Scope Start", NodeFactory.NodeType.ScopeStart, "icons/node/background_scope_start.png"),
-    /** A data consuming node. */
-    SINK("Sink", NodeFactory.NodeType.Sink, "icons/node/background_sink.png"),
-    /** A data producing node. */
-    SOURCE("Source", NodeFactory.NodeType.Source, "icons/node/background_source.png"),
-    /** @since 2.10 */
-    SUBNODE("Component", NodeFactory.NodeType.Subnode, "icons/node/background_subnode.png"),
-    /** If not specified. */
-    UNKNOWN("Unknown", NodeFactory.NodeType.Unknown, "icons/node/background_unknown.png"),
-    /** @since 2.10 */
-    VIRTUAL_IN("Virtual In Port", NodeFactory.NodeType.VirtualIn, "icons/node/background_virtual_in.png"),
-    /** @since 2.10 */
-    VIRTUAL_OUT("Virtual Out Port", NodeFactory.NodeType.VirtualOut, "icons/node/background_virtual_out.png"),
-    /** A visualizing node. */
-    VISUALIZER("Visualizer", NodeFactory.NodeType.Visualizer, "icons/node/background_viewer.png");
+public final class DisplayableNodeType {
+    private static final Map<NodeType, String> NODE_IMAGE_MAP = initMap();
 
+    private static Map<NodeType, String> initMap() {
+        Map<NodeType, String> m = new HashMap<>();
+        m.put(NodeType.Learner, "learner");
+        m.put(NodeType.LoopEnd, "looper_end");
+        m.put(NodeType.LoopStart, "looper_start");
+        m.put(NodeType.Manipulator, "manipulator");
+        m.put(NodeType.Meta, "meta");
+        m.put(NodeType.Missing, "missing");
+        m.put(NodeType.Other, "other");
+        m.put(NodeType.Predictor, "predictor");
+        m.put(NodeType.QuickForm, "quickform");
+        m.put(NodeType.ScopeEnd, "scope_end");
+        m.put(NodeType.ScopeStart, "scope_start");
+        m.put(NodeType.QuickForm, "quickform");
+        m.put(NodeType.Source, "source");
+        m.put(NodeType.Sink, "sink");
+        m.put(NodeType.Subnode, "subnode");
+        m.put(NodeType.Unknown, "unknown");
+        m.put(NodeType.VirtualIn, "virtual_in");
+        m.put(NodeType.VirtualOut, "virtual_out");
+        m.put(NodeType.Visualizer, "viewer");
+        return m;
+    }
 
-    private static final Map<NodeFactory.NodeType, DisplayableNodeType> NODE_TYPE_DISPLAYABLE_MAP = new HashMap<>();
+    private static final Map<Pair<NodeFactory.NodeType, Boolean>, DisplayableNodeType> CACHE = new HashMap<>();
 
     /**
      * Given the {@code NodeFactory.NodeType}, return the mapped instance of this enum.
      *
      * @param nodeType
+     * @param isComponent if the node type is requested for a component
      * @return the instance of this enum which wraps the parameter value enum
      */
-    public synchronized static DisplayableNodeType getTypeForNodeType(final NodeFactory.NodeType nodeType) {
-        if (NODE_TYPE_DISPLAYABLE_MAP.size() == 0) {
-            for (final DisplayableNodeType dnt : DisplayableNodeType.values()) {
-                NODE_TYPE_DISPLAYABLE_MAP.put(dnt.getNodeType(), dnt);
-            }
-        }
-        return NODE_TYPE_DISPLAYABLE_MAP.get(nodeType);
+    public synchronized static DisplayableNodeType getTypeForNodeType(final NodeFactory.NodeType nodeType,
+        final boolean isComponent) {
+        return CACHE.computeIfAbsent(Pair.create(nodeType, isComponent), k -> {
+            Image image = ImageRepository.getUnscaledImage(KNIMEEditorPlugin.PLUGIN_ID,
+                "icons/node/background_" + NODE_IMAGE_MAP.get(nodeType) + (isComponent ? "_component" : "") + ".png");
+            return new DisplayableNodeType(nodeType.name(), nodeType, image);
+        });
     }
-
 
     private final String m_displayText;
     private final NodeFactory.NodeType m_nodeType;
     private final Image m_nodeBackgroundImage;
 
-    private DisplayableNodeType(final String name, final NodeFactory.NodeType nodeType, final String imagePath) {
-        m_displayText = name;
+    private DisplayableNodeType(final String displayText, final NodeFactory.NodeType nodeType,
+        final Image backgroundImage) {
+        m_displayText = displayText;
         m_nodeType = nodeType;
-        m_nodeBackgroundImage = ImageRepository.getUnscaledImage(KNIMEEditorPlugin.PLUGIN_ID, imagePath);
+        m_nodeBackgroundImage = backgroundImage;
     }
 
     /**

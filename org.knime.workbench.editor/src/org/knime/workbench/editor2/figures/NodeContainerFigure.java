@@ -397,9 +397,10 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
      * Sets the type.
      *
      * @param type the type
+     * @param isComponent
      */
-    public void setType(final NodeType type) {
-        m_symbolFigure.setType(type);
+    public void setType(final NodeType type, final boolean isComponent) {
+        m_symbolFigure.setType(type, isComponent);
     }
 
     /**
@@ -946,6 +947,8 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
 
         private NodeType m_nodeType;
 
+        private boolean m_isComponent = false;
+
         /**
          * Creates a new figure containing the symbol. That is the background
          * icon (depending on the type of the node) and the node's icon. Also
@@ -1168,14 +1171,14 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
          */
         private Image getBackgroundImage() {
             if (m_nodeType == null) {
-                return DisplayableNodeType.UNKNOWN.getImage();
+                return DisplayableNodeType.getTypeForNodeType(NodeType.Unknown, m_isComponent).getImage();
             }
 
-            final DisplayableNodeType dnt = DisplayableNodeType.getTypeForNodeType(m_nodeType);
+            final DisplayableNodeType dnt = DisplayableNodeType.getTypeForNodeType(m_nodeType, m_isComponent);
             if (dnt == null) {
                 LOGGER.warn("A DisplayableNodeType has not been mapped for the node type " + m_nodeType);
 
-                return DisplayableNodeType.UNKNOWN.getImage();
+                return DisplayableNodeType.getTypeForNodeType(NodeType.Unknown, m_isComponent).getImage();
             }
             return dnt.getImage();
         }
@@ -1184,10 +1187,12 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
          * Sets a type specific background image.
          *
          * @param type The node type, results in a different background
+         * @param isComponent whether to render a figure for a component
          * @see org.knime.workbench.repository.model.NodeTemplate
          */
-        void setType(final NodeType type) {
+        void setType(final NodeType type, final boolean isComponent) {
             m_nodeType = type;
+            m_isComponent = isComponent;
 
             if (m_ghostlyBackgroundIcon != null) {
                 m_ghostlyBackgroundIcon.dispose();

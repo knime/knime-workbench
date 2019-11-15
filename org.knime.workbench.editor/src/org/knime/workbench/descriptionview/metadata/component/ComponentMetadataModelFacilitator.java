@@ -123,7 +123,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     static {
         NODE_TYPES_TO_DISPLAY = new ArrayList<>();
         NODE_TYPES_TO_DISPLAY.add(NO_SELECTION_NODE_TYPE);
-        for (final ComponentMetadata.ComponentType ct : ComponentMetadata.ComponentType.values()) {
+        for (final ComponentMetadata.ComponentNodeType ct : ComponentMetadata.ComponentNodeType.values()) {
             NODE_TYPES_TO_DISPLAY.add(ct);
         }
     }
@@ -145,8 +145,8 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
      *  atoms, and is also not requiring of all the existing functionality in the MetaInfoAtom parent class.
      */
 
-    private ComponentMetadata.ComponentType m_nodeType;
-    private ComponentMetadata.ComponentType m_savedNodeType;
+    private ComponentMetadata.ComponentNodeType m_nodeType;
+    private ComponentMetadata.ComponentNodeType m_savedNodeType;
     private ImageData m_nodeIcon;
     private ImageData m_savedNodeIcon;
 
@@ -186,7 +186,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             m_descriptionAtom.addChangeListener(this);
         }
 
-        m_nodeType = metadata.getType().orElse(null);
+        m_nodeType = metadata.getNodeType().orElse(null);
 
         if (metadata.getIcon().isPresent()) {
             m_nodeIcon = new ImageData(new ByteArrayInputStream(metadata.getIcon().get()));
@@ -429,8 +429,8 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         m_nodeTypeComboViewer.setLabelProvider(new LabelProvider() {
             @Override
             public Image getImage(final Object o) {
-                if (o instanceof ComponentMetadata.ComponentType) {
-                    return getImageForComponentType((ComponentMetadata.ComponentType)o);
+                if (o instanceof ComponentMetadata.ComponentNodeType) {
+                    return getImageForComponentType((ComponentMetadata.ComponentNodeType)o);
                 }
 
                 return null;
@@ -438,8 +438,8 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
             @Override
             public String getText(final Object o) {
-                if (o instanceof ComponentMetadata.ComponentType) {
-                    return ((ComponentMetadata.ComponentType)o).getDisplayText();
+                if (o instanceof ComponentMetadata.ComponentNodeType) {
+                    return ((ComponentMetadata.ComponentNodeType)o).getDisplayText();
                 }
 
                 return (String)o;
@@ -457,7 +457,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             if (!o.equals(NO_SELECTION_NODE_TYPE)) {
                 m_nodeTypeComboViewer.remove(NO_SELECTION_NODE_TYPE);
 
-                final ComponentMetadata.ComponentType ct = (ComponentMetadata.ComponentType)o;
+                final ComponentMetadata.ComponentNodeType ct = (ComponentMetadata.ComponentNodeType)o;
                 m_nodeTypeImageSwatch.setImage(getImageForComponentType(ct));
                 setNodeType(ct);
                 triggerReLayout();
@@ -647,7 +647,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         populatePortDisplay();
     }
 
-    private void setNodeType(final ComponentMetadata.ComponentType componentType) {
+    private void setNodeType(final ComponentMetadata.ComponentNodeType componentType) {
         m_nodeType = componentType;
 
         if (Objects.equals(m_nodeType, m_savedNodeType)) {
@@ -736,13 +736,13 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         }
     }
 
-    private static Image getImageForComponentType(final ComponentMetadata.ComponentType ct) {
+    private static Image getImageForComponentType(final ComponentMetadata.ComponentNodeType ct) {
         if (ct == null) {
             return null;
         }
 
-        NodeFactory.NodeType nt = ct.getNodeType();
-        final DisplayableNodeType dnt = DisplayableNodeType.getTypeForNodeType(nt);
+        NodeFactory.NodeType nt = ct.getType();
+        final DisplayableNodeType dnt = DisplayableNodeType.getTypeForNodeType(nt, true);
         if (dnt == null) {
             LOGGER.warn("Could find no node type image for type: " + nt);
             return null;
