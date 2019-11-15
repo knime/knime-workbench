@@ -222,10 +222,10 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
         ComponentMetadata meta = m_subNodeContainer.getMetadata();
 
-        m_savedInPortNames = meta.getInPortNames().get();
-        m_savedInPortDescriptions = meta.getInPortDescriptions().get();
-        m_savedOutPortNames = meta.getOutPortNames().get();
-        m_savedOutPortDescriptions = meta.getOutPortDescriptions().get();
+        m_savedInPortNames = meta.getInPortNames().orElse(new String[0]);
+        m_savedInPortDescriptions = meta.getInPortDescriptions().orElse(new String[0]);
+        m_savedOutPortNames = meta.getOutPortNames().orElse(new String[0]);
+        m_savedOutPortDescriptions = meta.getOutPortDescriptions().orElse(new String[0]);
 
         m_imageSwatch.setImage(m_nodeIcon);
         m_nodeTypeImageSwatch.setImage(getImageForComponentType(m_nodeType));
@@ -492,7 +492,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             public void dropAccept(final DropTargetEvent event) { }
         });
 
-        final int inportCount = m_subNodeContainer.getNrInPorts();
+        final int inportCount = m_subNodeContainer.getNrInPorts() - 1; //minus flow variable port
         m_inportNameTextFields = new Text[inportCount];
         m_inportDescriptionTextFields = new Text[inportCount];
         for (int i = 0; i < inportCount; i++) {
@@ -501,7 +501,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             m_inportDescriptionTextFields[i] = pair[1];
         }
 
-        final int outportCount = m_subNodeContainer.getNrOutPorts();
+        final int outportCount = m_subNodeContainer.getNrOutPorts() - 1; //minus flow variable port
         m_outportNameTextFields = new Text[outportCount];
         m_outportDescriptionTextFields = new Text[outportCount];
         for (int i = 0; i < outportCount; i++) {
