@@ -66,8 +66,8 @@ import org.knime.workbench.editor2.figures.DisplayableNodeType;
  */
 class NodeDisplayPreview extends Canvas {
     private static final int SWATCH_SIZE = 50;
-    private static final int ICON_INSET = 9;
-    private static final int ICON_DIMENSION = 32;
+    private static final int ICON_INSET = 17;
+    private static final int ICON_DIMENSION = 16;
     private static final Rectangle BACKGROUND_BOUNDS = DisplayableNodeType.SUBNODE.getImage().getBounds();
 
 
