@@ -1474,6 +1474,12 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             }
 
             final Point neededButtonPaneSize = m_headerButtonPane.computeSize(SWT.DEFAULT, SWT.DEFAULT);
+            final int centerAlignedAvailableWidth
+                = viewportWidth - (2 * (LEFT_INDENT_HEADER_SUB_PANES + HEADER_MARGIN_RIGHT + neededButtonPaneSize.x));
+            if (centerAlignedAvailableWidth <= 0) {
+                return;
+            }
+
             final Point labelSize = m_headerLabelPlaceholder.getSize();
             final int barHeight = Math.max(neededButtonPaneSize.y, labelSize.y) + 4 + (2 * HEADER_VERTICAL_INSET);
             m_headerBar.setBounds(origin.x, origin.y, viewportWidth, barHeight);
@@ -1484,8 +1490,6 @@ public class WorkflowMetaView extends ScrolledComposite implements MetadataModel
             gd.widthHint = placeholderWidth;
             m_headerLabelPlaceholder.setLayoutData(gd);
 
-            final int centerAlignedAvailableWidth
-                = viewportWidth - (2 * (LEFT_INDENT_HEADER_SUB_PANES + HEADER_MARGIN_RIGHT + neededButtonPaneSize.x));
             final GC gc = new GC(m_headerBar.getDisplay());
             try {
                 gc.setFont(m_headerLabelPlaceholder.getFont());
