@@ -49,10 +49,19 @@
 package org.knime.workbench.explorer;
 
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
+import java.nio.file.attribute.FileTime;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.runtime.CoreException;
+import org.knime.core.node.NodeLogger;
+import org.knime.filehandling.core.connections.attributes.FSBasicAttributes;
+import org.knime.filehandling.core.connections.attributes.FSFileAttributes;
 import org.knime.filehandling.core.util.MountPointIDProvider;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
+import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 
 /**
  * Implementation Of {@link MountPointIDProvider} backed by {@link ExplorerMountTable}.
@@ -61,6 +70,8 @@ import org.knime.filehandling.core.util.MountPointIDProvider;
  * @since 8.5
  */
 public class ExplorerMountPointIDProvider implements MountPointIDProvider {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(ExplorerMountPointIDProvider.class);
 
     /**
      * {@inheritDoc}
@@ -72,11 +83,136 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
+     *
      * @throws IOException
      */
     @Override
     public URL resolveKNIMEURL(final URL url) throws IOException {
         return ExplorerURLStreamHandler.resolveKNIMEURL(url);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<URI> listFiles(final URI uri) throws CoreException {
+        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+        final List<URI> children = new ArrayList<>();
+        for (final String childName : store.childNames(0, null)) {
+            children.add(store.getChild(childName).toURI());
+        }
+        return children;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public FSFileAttributes getFileAttributes(final URI uri) throws IOException {
+
+        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+        AbstractExplorerFileInfo info;
+        try {
+            info = store.fetchInfo(0, null);
+        } catch (CoreException e) {
+            throw new IOException(e);
+        }
+
+        if (!info.exists()) {
+            throw new IOException("File at URI does not exist '" + uri.toString() + "'");
+        }
+
+        final FileTime lastMod = FileTime.fromMillis(info.getLastModified());
+
+        return new FSFileAttributes(!info.isDirectory() || AbstractExplorerFileStore.isWorkflow(store), null,
+            p -> new FSBasicAttributes(lastMod, lastMod, lastMod, info.getLength(), false, false));
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean copyFile(final URI source, final URI target) throws IOException {
+
+        final AbstractExplorerFileStore sourceStore = ExplorerMountTable.getFileSystem().getStore(source);
+        final AbstractExplorerFileStore targetStore = ExplorerMountTable.getFileSystem().getStore(target);
+        try {
+            sourceStore.copy(targetStore, 0, null);
+        } catch (final CoreException e) {
+            throw new IOException(e);
+        }
+
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean moveFile(final URI source, final URI target) throws IOException {
+
+        final AbstractExplorerFileStore sourceStore = ExplorerMountTable.getFileSystem().getStore(source);
+        final AbstractExplorerFileStore targetStore = ExplorerMountTable.getFileSystem().getStore(target);
+        try {
+            sourceStore.move(targetStore, 0, null);
+        } catch (final CoreException e) {
+            throw new IOException(e);
+        }
+        sourceStore.getContentProvider().refresh();
+        targetStore.getContentProvider().refresh();
+
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean deleteFile(final URI uri) throws IOException {
+
+        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+
+        try {
+            store.delete(0, null);
+        } catch (final CoreException e) {
+            throw new IOException(e);
+        }
+
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws CoreException
+     */
+    @Override
+    public void createDirectory(final URI uri) throws CoreException {
+
+        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+        store.mkdir(0, null);
+        store.getParent().refresh();
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws CoreException
+     */
+    @Override
+    public boolean isReadable(final URI uri) throws CoreException {
+        //FIXME hacky way to see if we are connected
+        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+        return store.getContentProvider().getRootStore().childNames(0, null).length != 0;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isWorkflow(final URI uri) {
+        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+        return AbstractExplorerFileStore.isWorkflow(store);
     }
 
 }
