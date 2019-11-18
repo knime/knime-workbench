@@ -49,6 +49,8 @@ package org.knime.workbench.editor2.editparts;
 
 import static org.knime.workbench.editor2.figures.NodeContainerFigure.scaleImageTo;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -646,11 +648,20 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
     private void updateIcon() {
         final NodeContainerFigure f = (NodeContainerFigure)getFigure();
         // get the icon
-        Image icon = ImageRepository.getUnscaledIconImage(getNodeContainer().getIcon());
-        if (icon == null && getNodeContainer().getIconAsStream().isPresent()) {
-            final ImageData imageData = new ImageData(getNodeContainer().getIconAsStream().get());
-            icon = new Image(Display.getDefault(), scaleImageTo(16, imageData));
-        } else if (icon == null) { // get default image if null
+        Image icon = null;
+        try (InputStream iconStream = getNodeContainer().getIconAsStream()) {
+            if (iconStream != null) {
+                final ImageData imageData = new ImageData(iconStream);
+                icon = new Image(Display.getDefault(), scaleImageTo(16, imageData));
+            }
+        } catch (IOException e) {
+            //should never happen
+            LOGGER.error("Problem while closing icon input stream", e);
+        }
+        if (icon == null) {
+            icon = ImageRepository.getUnscaledIconImage(getNodeContainer().getIcon());
+        }
+        if (icon == null) { // get default image if null
             icon = ImageRepository.getUnscaledIconImage(NodeFactory.getDefaultIcon());
         }
         if (icon != null) {

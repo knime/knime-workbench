@@ -396,7 +396,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         l.setLayoutData(gd);
         // -----
         l = new Label(m_iconDropZone, SWT.NONE);
-        l.setText("Can be a SVG, or a PNG 32x32 or larger");
+        l.setText("PNG image of size 16x16 or larger");
         baseFD = AbstractMetaView.VALUE_DISPLAY_FONT.getFontData();
         smallerFD = new FontData(baseFD[0].getName(), (baseFD[0].getHeight() - 3), baseFD[0].getStyle());
         smallerFont = new Font(PlatformUI.getWorkbench().getDisplay(), smallerFD);
@@ -491,8 +491,6 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
                     if (lcFilename.endsWith("png")) {
                         pngFileWasDropped(files[0]);
-                    } else if (lcFilename.endsWith("svg")) {
-                        svgFileWasDropped(files[0]);
                     }
                 }
             }
@@ -683,21 +681,6 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             triggerReLayout();
         } catch (final Exception e) {
             LOGGER.error("Unable to create and load from url [" + urlString + "].", e);
-        }
-    }
-
-    private void svgFileWasDropped(final String filename) {
-        try {
-            final ImageData id = SVGRasterizer.rasterizeImageFromSVGFile(filename);
-
-            // We want to hand over the 'original' size image data for storage
-            setComponentIcon(id);
-
-            m_imageSwatch.setImage(id);
-
-            triggerReLayout();
-        } catch (final Exception e) {
-            LOGGER.error("Caught exception attempting to read in SVG file.", e);
         }
     }
 
