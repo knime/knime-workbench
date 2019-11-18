@@ -258,16 +258,18 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
         if ((o instanceof ContentObject) || (o instanceof WorkflowRootEditPart)) {
             if (o instanceof WorkflowRootEditPart) {
                 final WorkflowRootEditPart wrep = (WorkflowRootEditPart)o;
-                final WorkflowManager wm = Wrapper.unwrapWFM(wrep.getWorkflowManager());
-                final NodeContainerParent ncp = wm.getDirectNCParent();
+                if (Wrapper.wraps(wrep.getWorkflowManager(), WorkflowManager.class)) {
+                    final WorkflowManager wm = Wrapper.unwrapWFM(wrep.getWorkflowManager());
+                    final NodeContainerParent ncp = wm.getDirectNCParent();
 
-                if (ncp instanceof SubNodeContainer) {
-                    final StructuredSelection ss = new StructuredSelection(ncp);
+                    if (ncp instanceof SubNodeContainer) {
+                        final StructuredSelection ss = new StructuredSelection(ncp);
 
-                    moveControlToTop(m_componentMetaView);
-                    m_componentMetaView.selectionChanged(ss);
+                        moveControlToTop(m_componentMetaView);
+                        m_componentMetaView.selectionChanged(ss);
 
-                    return;
+                        return;
+                    }
                 }
             }
             moveControlToTop(m_workflowMetaView);
