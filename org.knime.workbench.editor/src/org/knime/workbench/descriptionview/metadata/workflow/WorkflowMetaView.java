@@ -227,7 +227,7 @@ public class WorkflowMetaView extends AbstractMetaView {
 
                     final WorkflowEditor editor = (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow()
                         .getActivePage().getActiveEditor();
-                    canEditMetadata = !editor.isTempRemoteWorkflowEditor();
+                    canEditMetadata = (!editor.isTempRemoteWorkflowEditor() && !editor.isTempLocalWorkflowEditor());
                 }
             } else {
                 m_assetRepresentsAJob.set(true);
