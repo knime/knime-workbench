@@ -75,7 +75,6 @@ import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
@@ -1103,9 +1102,9 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                 m_modifiablePortLabel = new Label();
                 m_modifiablePortLabel.setOpaque(false);
                 m_backgroundIcon.add(m_modifiablePortLabel);
-                m_backgroundIcon.setConstraint(m_modifiablePortLabel, new RelativeLocator(m_backgroundIcon, 0.19, .83));
+                m_backgroundIcon.setConstraint(m_modifiablePortLabel, new RelativeLocator(m_backgroundIcon, 0.18, .82));
                 m_modifiablePortLabel.setIcon(
-                    ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/node/add_plus_quadrant.png"));
+                    ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/node/add_port_dots.png"));
                 m_modifiablePortLabel.setToolTip(new NewToolTipFigure("Click to modify ports"));
 
                 // add an hidden button and display to allow changing ports
@@ -1116,19 +1115,20 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                 gl.marginWidth = 0;
                 gl.verticalSpacing = 0;
                 popupShell.setLayout(gl);
-                final Button hiddenUselessButton = new Button(popupShell, SWT.NONE);
-                final Menu popUpMenu = new Menu(hiddenUselessButton);
+                final Menu popUpMenu = new Menu(popupShell);
                 // fill the popupMenu
                 fillMenu(nodeContainerEditPart, popUpMenu);
 
                 m_modifiablePortLabel.addMouseListener(new MouseListener() {
                     @Override
                     public void mousePressed(final MouseEvent me) {
-                        me.consume();
-                        // we could try to convert the mouse event location to the display, but this is easier:
-                        final java.awt.Point screenPoint = MouseInfo.getPointerInfo().getLocation();
-                        popUpMenu.setLocation(screenPoint.x, (screenPoint.y + (popUpMenu.getItemCount() * 21)));
-                        popUpMenu.setVisible(true);
+                        // only if the left mouse button is clicked
+                        if (me.button == 1) {
+                            // we could try to convert the mouse event location to the display, but this is easier:
+                            final java.awt.Point screenPoint = MouseInfo.getPointerInfo().getLocation();
+                            popUpMenu.setLocation(screenPoint.x, screenPoint.y);
+                            popUpMenu.setVisible(true);
+                        }
                     }
 
                     @Override
