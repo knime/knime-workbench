@@ -45,7 +45,6 @@
  */
 package org.knime.workbench.editor2.figures;
 
-import java.awt.MouseInfo;
 import java.util.List;
 import java.util.Objects;
 
@@ -74,12 +73,9 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
-import org.eclipse.swt.widgets.Shell;
-import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NativeNodeContainer;
@@ -89,6 +85,7 @@ import org.knime.core.node.workflow.NodeMessage;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.SingleNodeContainerUI;
+import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
@@ -1086,32 +1083,18 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                 m_modifiablePortLabel = new Label();
                 m_modifiablePortLabel.setOpaque(false);
                 m_backgroundIcon.add(m_modifiablePortLabel);
-                m_backgroundIcon.setConstraint(m_modifiablePortLabel, new RelativeLocator(m_backgroundIcon, 0.18, .82));
-                m_modifiablePortLabel.setIcon(
-                    ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/node/add_port_dots.png"));
+                m_backgroundIcon.setConstraint(m_modifiablePortLabel, new RelativeLocator(m_backgroundIcon, 0.25, .75));
+                m_modifiablePortLabel
+                    .setIcon(ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/node/add_port_dots.png"));
                 m_modifiablePortLabel.setToolTip(new NewToolTipFigure("Click to modify ports"));
-
-                // add an hidden button and display to allow changing ports
-                final Display display = PlatformUI.getWorkbench().getDisplay();
-                final Shell popupShell = new Shell(display, SWT.NO_TRIM | SWT.ON_TOP);
-                final GridLayout gl = new GridLayout(1, false);
-                gl.marginHeight = 0;
-                gl.marginWidth = 0;
-                gl.verticalSpacing = 0;
-                popupShell.setLayout(gl);
-                final Menu popUpMenu = new Menu(popupShell);
-                // fill the popupMenu
-                fillMenu(nodeContainerEditPart, popUpMenu);
-
                 m_modifiablePortLabel.addMouseListener(new MouseListener() {
                     @Override
                     public void mousePressed(final MouseEvent me) {
                         // only if the left mouse button is clicked
                         if (me.button == 1) {
-                            // we could try to convert the mouse event location to the display, but this is easier:
-                            final java.awt.Point screenPoint = MouseInfo.getPointerInfo().getLocation();
-                            popUpMenu.setLocation(screenPoint.x, screenPoint.y);
-                            popUpMenu.setVisible(true);
+                            final Menu m = new Menu(SWTUtilities.getKNIMEWorkbenchShell());
+                            fillMenu(nodeContainerEditPart, m);
+                            m.setVisible(true);
                         }
                     }
 
