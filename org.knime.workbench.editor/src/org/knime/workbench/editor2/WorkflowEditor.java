@@ -1496,12 +1496,11 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     private void setWorkflowManagerInput(final WorkflowManagerInput input) {
-
-        URI oldFileResource = m_fileResource;
+        final URI oldFileResource = m_fileResource;
         m_parentEditor = input.getParentEditor();
         m_fileResource = input.getWorkflowLocation();
 
-        WorkflowManagerUI wfm = input.getWorkflowManager();
+        final WorkflowManagerUI wfm = input.getWorkflowManager();
         setWorkflowManagerUI(wfm);
         setPartName(input.getName());
         if (getGraphicalViewer() != null) {
@@ -1533,6 +1532,26 @@ public class WorkflowEditor extends GraphicalEditor implements
                 });
             });
             m_refresher.setup();
+        } else {
+            // Per AP-13066, we want the metadata to be displayed in the Description View when a workflow is opened
+            KNIMEConstants.GLOBAL_THREAD_POOL.enqueue(() -> {
+                PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
+                    final GraphicalViewer viewer = getGraphicalViewer();
+                    final EditPart editorPart = (EditPart)viewer.getRootEditPart().getChildren().get(0);
+                    final List<?> workflowAssets = editorPart.getChildren();
+
+                    viewer.deselectAll();
+                    if (workflowAssets.size() > 0) {
+                        viewer.select((EditPart)workflowAssets.get(0));
+                    }
+                    PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
+                        viewer.deselectAll();
+                        viewer.select(viewer.getRootEditPart().getContents());
+
+                        setFocus();
+                    });
+                });
+            });
         }
     }
 
