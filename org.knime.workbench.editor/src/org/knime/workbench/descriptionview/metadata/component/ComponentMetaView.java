@@ -49,7 +49,6 @@
 package org.knime.workbench.descriptionview.metadata.component;
 
 import java.util.EnumSet;
-import java.util.Objects;
 
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.SWT;
@@ -73,6 +72,7 @@ public class ComponentMetaView extends AbstractMetaView {
 
 
     private SubNodeContainer m_currentSubNodeContainer;
+    private boolean m_currentWriteProtectionState;
 
     private Composite m_editUpperComposite;
     private Composite m_displayUpperComposite;
@@ -217,7 +217,7 @@ public class ComponentMetaView extends AbstractMetaView {
         }
 
         final SubNodeContainer subNodeContainer = (SubNodeContainer)o;
-        if (Objects.equals(m_currentSubNodeContainer, subNodeContainer)) {
+        if (!hasComponentChanged(subNodeContainer)) {
             // We should still regenerate the port display since the name and description may have changed behind
             //  our backs by the user editing the virtual in and output nodes' configurations directly.
             ((ComponentMetadataModelFacilitator)m_modelFacilitator).populatePortDisplay();
@@ -243,7 +243,8 @@ public class ComponentMetaView extends AbstractMetaView {
         m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName);
         m_modelFacilitator.setModelObserver(this);
 
-        m_metadataCanBeEdited.set(!m_currentSubNodeContainer.isWriteProtected());
+        m_currentWriteProtectionState = m_currentSubNodeContainer.isWriteProtected();
+        m_metadataCanBeEdited.set(!m_currentWriteProtectionState);
         configureFloatingHeaderBarButtons();
 
         getDisplay().asyncExec(() -> {
@@ -251,6 +252,18 @@ public class ComponentMetaView extends AbstractMetaView {
                 updateDisplay();
             }
         });
+    }
+
+    private boolean hasComponentChanged(final SubNodeContainer newSnc) {
+        if (m_currentSubNodeContainer != newSnc) {
+            return true;
+        } else if (m_currentWriteProtectionState != newSnc.isWriteProtected()) {
+            return true;
+        } else if (!m_currentAssetName.equals(newSnc.getName())) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
