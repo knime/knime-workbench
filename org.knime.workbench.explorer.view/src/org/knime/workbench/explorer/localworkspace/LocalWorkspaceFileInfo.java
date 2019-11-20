@@ -50,6 +50,7 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.FileSingleNodeContainerPersistor;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.WorkflowPersistor;
@@ -60,6 +61,8 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 
 
 public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalWorkspaceFileInfo.class);
+
     private final IFileStore m_file;
 
     //caches the isComponent flag
@@ -243,6 +246,7 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
                 m_isComponent = templateMetadata.getTemplateInformation().getType()
                     .equals(MetaNodeTemplateInformation.TemplateType.SubNode.toString());
             } catch (Exception e) {
+                LOGGER.error("Problem reading template type", e);
                 throw new IllegalStateException("Problem reading template type", e);
             }
         }
