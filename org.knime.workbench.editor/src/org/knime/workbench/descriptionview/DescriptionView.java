@@ -76,6 +76,7 @@ import org.knime.core.node.workflow.NodeContainerParent;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.descriptionview.metadata.component.ComponentMetaView;
 import org.knime.workbench.descriptionview.metadata.workflow.WorkflowMetaView;
 import org.knime.workbench.descriptionview.node.HelpView;
@@ -93,7 +94,7 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
     public static final String ID = "org.knime.workbench.helpview";
 
     private static final String MIDST_EDIT_WARNING_TEXT =
-        "You are still editing your workflow's metadata; do you want to save the metadata or discard any changes?";
+        "You are still editing metadata; do you want to save the metadata or discard any changes?";
     private static final String[] DIALOG_BUTTON_LABELS = {"Save", "Discard"};
 
 
@@ -206,14 +207,16 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
             if ((lastSelection != null)
                     && ((lastSelection.getFirstElement() instanceof WorkflowRootEditPart)
                             || (lastSelection.getFirstElement() instanceof ContentObject))
-                && m_workflowMetaView.inEditMode()) {
+                && (m_workflowMetaView.inEditMode() || m_componentMetaView.inEditMode())) {
+                final AbstractMetaView editModeView = m_componentMetaView.inEditMode() ? m_componentMetaView
+                                                                                       : m_workflowMetaView;
 
-                if (m_workflowMetaView.modelIsDirty()) {
+                if (editModeView.modelIsDirty()) {
                     displayDirtyWarning(() -> {
                         finishSelectionChange(structuredSelection);
-                    });
+                    }, editModeView);
                 } else {
-                    m_workflowMetaView.endEditMode(false);
+                    editModeView.endEditMode(false);
                     finishSelectionChange(structuredSelection);
                 }
             } else {
@@ -234,7 +237,7 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
         }
     }
 
-    private void displayDirtyWarning(final Runnable postDisplayAction) {
+    private static void displayDirtyWarning(final Runnable postDisplayAction, final AbstractMetaView dirtyView) {
         final Display d = PlatformUI.getWorkbench().getDisplay();
 
         d.syncExec(() -> {
@@ -243,7 +246,7 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
                 MIDST_EDIT_WARNING_TEXT, SWT.NONE, DIALOG_BUTTON_LABELS);
             final boolean save = (response == 0);
 
-            m_workflowMetaView.endEditMode(save);
+            dirtyView.endEditMode(save);
 
             if (postDisplayAction != null) {
                 postDisplayAction.run();

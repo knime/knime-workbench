@@ -56,6 +56,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -71,6 +72,8 @@ import org.eclipse.swt.dnd.DropTarget;
 import org.eclipse.swt.dnd.DropTargetEvent;
 import org.eclipse.swt.dnd.DropTargetListener;
 import org.eclipse.swt.dnd.FileTransfer;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.GC;
@@ -168,6 +171,8 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     private Text[] m_outportNameTextFields;
     private Text[] m_outportDescriptionTextFields;
 
+    private ArrayList<PortAttributeDirtyTracker> m_portDirtyTrackers;
+
     private Browser m_browser;
     private FallbackBrowser m_text;
     private boolean m_isFallback;
@@ -225,10 +230,14 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
         ComponentMetadata meta = m_subNodeContainer.getMetadata();
 
-        m_savedInPortNames = meta.getInPortNames().orElse(new String[0]);
-        m_savedInPortDescriptions = meta.getInPortDescriptions().orElse(new String[0]);
-        m_savedOutPortNames = meta.getOutPortNames().orElse(new String[0]);
-        m_savedOutPortDescriptions = meta.getOutPortDescriptions().orElse(new String[0]);
+        m_savedInPortNames = meta.getInPortNames().orElse(new String[m_subNodeContainer.getNrInPorts() - 1]);
+        correctSavedPortValues(m_savedInPortNames);
+        m_savedInPortDescriptions = meta.getInPortDescriptions().orElse(new String[m_subNodeContainer.getNrInPorts() - 1]);
+        correctSavedPortValues(m_savedInPortDescriptions);
+        m_savedOutPortNames = meta.getOutPortNames().orElse(new String[m_subNodeContainer.getNrOutPorts() - 1]);
+        correctSavedPortValues(m_savedOutPortNames);
+        m_savedOutPortDescriptions = meta.getOutPortDescriptions().orElse(new String[m_subNodeContainer.getNrOutPorts() - 1]);
+        correctSavedPortValues(m_savedOutPortDescriptions);
 
         m_imageSwatch.setImage(m_nodeIcon);
         m_nodeTypeImageSwatch.setImage(getImageForComponentType(m_nodeType));
@@ -244,6 +253,16 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         populateTextArray(m_inportDescriptionTextFields, m_savedInPortDescriptions);
         populateTextArray(m_outportNameTextFields, m_savedOutPortNames);
         populateTextArray(m_outportDescriptionTextFields, m_savedOutPortDescriptions);
+    }
+
+    // If we don't do this, the Objects.equals comparisons in containedMetadataIsDirty() will fail for empty
+    //      content
+    private static void correctSavedPortValues (final String[] array) {
+        for (int i = 0; i < array.length; i++) {
+            if (array[i] == null) {
+                array[i] = "";
+            }
+        }
     }
 
     /**
@@ -296,17 +315,17 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             return true;
         }
 
-        if (!Objects.equals(m_savedInPortNames, getStringArrayFromTextArray(m_inportNameTextFields))) {
+        if (!Arrays.equals(m_savedInPortNames, getStringArrayFromTextArray(m_inportNameTextFields))) {
             return true;
         }
-        if (!Objects.equals(m_savedOutPortNames, getStringArrayFromTextArray(m_outportNameTextFields))) {
+        if (!Arrays.equals(m_savedOutPortNames, getStringArrayFromTextArray(m_outportNameTextFields))) {
             return true;
         }
-        if (!Objects.equals(m_savedInPortDescriptions, getStringArrayFromTextArray(m_inportDescriptionTextFields))) {
+        if (!Arrays.equals(m_savedInPortDescriptions, getStringArrayFromTextArray(m_inportDescriptionTextFields))) {
             return true;
         }
 
-        return !Objects.equals(m_savedOutPortDescriptions, getStringArrayFromTextArray(m_outportDescriptionTextFields));
+        return !Arrays.equals(m_savedOutPortDescriptions, getStringArrayFromTextArray(m_outportDescriptionTextFields));
     }
 
     void storeMetadataInComponent() {
@@ -345,6 +364,8 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     }
 
     void createUIAtomsForEdit(final Composite componentIconParent, final Composite portsParent) {
+        m_portDirtyTrackers = new ArrayList<>();
+
         m_portsParent = portsParent;
         Composite c = new Composite(componentIconParent, SWT.NONE);
         GridData gd = new GridData();
@@ -505,18 +526,19 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     }
 
     private void reinitPortTextFields() {
-
         final int inportCount = m_subNodeContainer.getNrInPorts() - 1; //minus flow variable port
         final int outportCount = m_subNodeContainer.getNrOutPorts() - 1; //minus flow variable port
-        if ((m_inportNameTextFields != null && m_inportNameTextFields.length != inportCount)
-            || (m_outportNameTextFields != null && m_outportNameTextFields.length != outportCount)) {
+        if (((m_inportNameTextFields != null) && (m_inportNameTextFields.length != inportCount))
+            || ((m_outportNameTextFields != null) && (m_outportNameTextFields.length != outportCount))) {
             SWTUtilities.removeAllChildren(m_portsParent);
+            m_portDirtyTrackers.clear();
             m_inportNameTextFields = null;
             m_inportDescriptionTextFields = null;
             m_outportNameTextFields = null;
             m_outportDescriptionTextFields = null;
         }
 
+        boolean trackersNeedReset = false;
         if (m_inportNameTextFields == null) {
             m_inportNameTextFields = new Text[inportCount];
             m_inportDescriptionTextFields = new Text[inportCount];
@@ -525,6 +547,8 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
                 m_inportNameTextFields[i] = pair[0];
                 m_inportDescriptionTextFields[i] = pair[1];
             }
+        } else {
+            trackersNeedReset = true;
         }
 
         if (m_outportNameTextFields == null) {
@@ -535,10 +559,16 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
                 m_outportNameTextFields[i] = pair[0];
                 m_outportDescriptionTextFields[i] = pair[1];
             }
+        } else {
+            trackersNeedReset = true;
+        }
+
+        if (trackersNeedReset) {
+            m_portDirtyTrackers.stream().forEach(tracker -> tracker.resetTracker());
         }
     }
 
-    private static Text[] createPortPair(final Composite parent, final int portNumber, final boolean inport) {
+    private Text[] createPortPair(final Composite parent, final int portNumber, final boolean inport) {
         final Text[] textPair = new Text[2];
         final String labelText = (inport ? "In Port #" : "Out Port #") + portNumber;
         Label l = new Label(parent, SWT.NONE);
@@ -612,6 +642,14 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         gd.grabExcessHorizontalSpace = true;
         gd.heightHint = 48;
         textPair[1].setLayoutData(gd);
+
+        PortAttributeDirtyTracker tracker = new PortAttributeDirtyTracker(textPair[0], inport, true, (portNumber - 1));
+        textPair[0].addKeyListener(tracker);
+        m_portDirtyTrackers.add(tracker);
+
+        tracker = new PortAttributeDirtyTracker(textPair[1], inport, false, (portNumber - 1));
+        textPair[1].addKeyListener(tracker);
+        m_portDirtyTrackers.add(tracker);
 
         return textPair;
     }
@@ -742,7 +780,68 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
     private static void populateTextArray(final Text[] textArray, final String[] content) {
         for (int i = 0; i < content.length; i++) {
-            textArray[i].setText(content[i]);
+            if (content[i] != null) {
+                textArray[i].setText(content[i]);
+            }
+        }
+    }
+
+
+    private class PortAttributeDirtyTracker extends KeyAdapter {
+        private final Text m_textWidget;
+        private final boolean m_isInport;
+        private final boolean m_isPortName;
+        private final int m_saveArrayIndex;
+        private final AtomicBoolean m_isDirty;
+
+        // We won't have saved values at the construction time of these instances, so cache at keydown and then
+        //      reset potentially in subsequent edits when a different component has not been selected since.
+        private String m_originalValue;
+
+        private PortAttributeDirtyTracker(final Text widget, final boolean inport, final boolean isName, final int index) {
+            m_textWidget = widget;
+            m_isInport = inport;
+            m_isPortName = isName;
+            m_saveArrayIndex = index;
+
+            m_isDirty = new AtomicBoolean(false);
+        }
+
+        private void resetTracker() {
+            m_originalValue = null;
+            m_isDirty.set(false);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void keyReleased(final KeyEvent ke) {
+            boolean dirty = false;
+
+            if (m_originalValue == null) {
+                if (m_isPortName) {
+                    m_originalValue = m_isInport ? m_savedInPortNames[m_saveArrayIndex]
+                                                 : m_savedOutPortNames[m_saveArrayIndex];
+                } else {
+                    m_originalValue = m_isInport ? m_savedInPortDescriptions[m_saveArrayIndex]
+                                                 : m_savedOutPortDescriptions[m_saveArrayIndex];
+                }
+            }
+
+            if (m_originalValue.length() != m_textWidget.getCharCount()) {
+                dirty = true;
+            } else if (!m_originalValue.equals(m_textWidget.getText())) {
+                dirty = true;
+            }
+
+            if (dirty != m_isDirty.getAndSet(dirty)) {
+                if (dirty) {
+                    metaInfoAtomBecameDirty(null);
+                } else {
+                    metaInfoAtomBecameClean(null);
+                }
+            }
         }
     }
 }
