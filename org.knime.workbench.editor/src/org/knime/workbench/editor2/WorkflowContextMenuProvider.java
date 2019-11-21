@@ -159,6 +159,8 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
 
     private static final String GROUP_NATIVENODE_PORTS = "group.knime.nativenode.ports";
 
+    private static final String GROUP_PORT_ACTIONS = "group.knime.ports.actions";
+
     private final ActionRegistry m_actionRegistry;
 
     private final GraphicalViewer m_viewer;
@@ -198,11 +200,9 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
             return;
         }
 
-        final String FLOW_VAR_PORT_GRP = "Flow Variable Ports";
-
         // add the groups (grouped by separators) in their order first
         manager.add(new Separator(IWorkbenchActionConstants.GROUP_APP));
-        manager.add(new Separator(FLOW_VAR_PORT_GRP));
+        manager.add(new Separator(GROUP_PORT_ACTIONS));
         GEFActionConstants.addStandardActionGroups(manager);
 
         IAction action;
@@ -397,7 +397,7 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
 
                 if (!(container instanceof WorkflowManagerUI)) {
                     action = m_actionRegistry.getAction(ToggleFlowVarPortsAction.ID);
-                    manager.appendToGroup(FLOW_VAR_PORT_GRP, action);
+                    manager.appendToGroup(GROUP_PORT_ACTIONS, action);
                     ((AbstractNodeAction)action).update();
                 }
 
@@ -613,21 +613,21 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
         final PortActionCreator portCreator = new PortActionCreator(editPart);
         if (portCreator.hasActions()) {
             manager.add(new Separator(GROUP_NATIVENODE_PORTS));
-            addActions(manager, portCreator.getAddPortActions(), "Add ports");
-            addActions(manager, portCreator.getRemovePortActions(), "Remove ports");
-            addActions(manager, portCreator.getExchangePortActions(), "Exchange ports");
+            addPortActions(manager, portCreator.getAddPortActions(), "Add ports");
+            addPortActions(manager, portCreator.getRemovePortActions(), "Remove ports");
+            addPortActions(manager, portCreator.getExchangePortActions(), "Exchange ports");
         }
     }
 
-    private static void addActions(final IMenuManager parentManager, final List<? extends Action> actions,
+    private static void addPortActions(final IMenuManager parentManager, final List<? extends Action> actions,
         final String menuEntryName) {
         if (!actions.isEmpty()) {
             if (actions.size() == 1) {
-                parentManager.appendToGroup(GROUP_NATIVENODE_PORTS, actions.get(0));
+                parentManager.appendToGroup(GROUP_PORT_ACTIONS, actions.get(0));
             } else {
                 MenuManager subMenuManager = new MenuManager(menuEntryName);
                 actions.stream().forEach(action -> subMenuManager.add(action));
-                parentManager.appendToGroup(GROUP_NATIVENODE_PORTS, subMenuManager);
+                parentManager.appendToGroup(GROUP_PORT_ACTIONS, subMenuManager);
             }
         }
     }
