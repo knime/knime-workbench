@@ -121,6 +121,11 @@
             name="Show Node IDs"/>
       <command
             categoryId="knime.command.category"
+            description="Finds a Node in the workflow."
+            id="knime.commands.findnode"
+            name="Find Node..."/>
+      <command
+            categoryId="knime.command.category"
             description="Open first view for selected nodes"
             id="knime.commands.openView"
             name="Open First View"/>
@@ -299,6 +304,15 @@
                menubarPath="org.knime.workbench.editor.menu/group1"
                style="push"
                tooltip="Check and update metanode links"/>
+         <action
+               class="org.knime.workbench.editor2.actions.delegates.FindNodeEditorAction"
+               definitionId="knime.commands.findnode"
+               icon="icons/findNode.png"
+               id="org.knime.workbench.editor.actions.findnode"
+               label="Find Node..."
+               menubarPath="org.knime.workbench.editor.menu/group1"
+               style="push"
+               tooltip="Find a node in the workflow."/>
          <action
                class="org.knime.workbench.editor2.actions.delegates.DefaultOpenViewEditorAction"
                definitionId="knime.commands.openView"
@@ -541,6 +555,11 @@
             contextId="org.eclipse.ui.contexts.window"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+ALT+U"/>
+      <key
+            commandId="knime.commands.findnode"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+F"/>
       <key
             commandId="knime.commands.setNameAndDescription"
             contextId="org.eclipse.ui.contexts.window"

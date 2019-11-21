@@ -127,6 +127,7 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.window.Window;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
@@ -167,6 +168,7 @@ import org.knime.core.node.NodeModel;
 import org.knime.core.node.util.StringFormat;
 import org.knime.core.node.workflow.AbstractNodeExecutionJobManager;
 import org.knime.core.node.workflow.EditorUIInformation;
+import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerState;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeExecutionJobManager;
@@ -2757,6 +2759,44 @@ public class WorkflowEditor extends GraphicalEditor implements
         });
 
         return true;
+    }
+
+    /**
+     * Empty out the current selection and then select the specified nodes.
+     *
+     * @param containers 1 or more {@code NodeContainer} instances which should have {@link NodeContainerEditPart}
+     *            corresponding instances in this editor
+     */
+    public void setNodeSelection(final NodeContainer ... containers) {
+        final ArrayList<NodeContainerEditPart> selection = new ArrayList<>();
+        final GraphicalViewer viewer = getGraphicalViewer();
+
+        final HashSet<NodeContainer> candidates = new HashSet<>(Arrays.asList(containers));
+        final EditPart rootChild = (EditPart)viewer.getRootEditPart().getChildren().get(0);
+        for (final Object child : rootChild.getChildren()) {
+            if (child instanceof NodeContainerEditPart) {
+                final NodeContainerEditPart ncep = (NodeContainerEditPart)child;
+                final NodeContainerUI ncUI = ncep.getNodeContainer();
+
+                if (candidates.contains(Wrapper.unwrapNC(ncUI))) {
+                    selection.add(ncep);
+                }
+            }
+        }
+
+        PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
+            final ISelectionProvider isp = getSite().getSelectionProvider();
+
+            isp.setSelection(new StructuredSelection(selection));
+            if (selection.size() == 1) {
+                final NodeContainerEditPart ncep = selection.get(0);
+                final NodeUIInformation uiInfo = ncep.getNodeContainer().getUIInformation();
+                final int[] bounds = uiInfo.getBounds();
+                final Rectangle r = new Rectangle(bounds[0], bounds[1], bounds[2], bounds[3]);
+
+                ((ViewportPinningGraphicalViewer)getGraphicalViewer()).ensureBoundsAreInView(r);
+            }
+        });
     }
 
     private boolean isEditorActive() {

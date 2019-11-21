@@ -209,6 +209,36 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
         ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/meta/metanode_lock_decorator.png");
 
     /**
+     * Given the node container, return the icon displayed in the workflow canvas node.
+     * @param nodeContainer
+     * @return the icon displayed in the workflow canvas node
+     */
+    public static Image getIconImageForNodeContainer(final NodeContainerUI nodeContainer) {
+        Image icon = null;
+
+        try (InputStream iconStream = nodeContainer.getIconAsStream()) {
+            if (iconStream != null) {
+                final ImageData imageData = new ImageData(iconStream);
+                icon = new Image(Display.getDefault(), scaleImageTo(16, imageData));
+                // TODO this is a source of a potential SWT handle leak (this is not new code though) - Nov.2019
+            }
+        } catch (IOException e) {
+            //should never happen
+            LOGGER.error("Problem while closing icon input stream", e);
+        }
+
+        if (icon == null) {
+            icon = ImageRepository.getUnscaledIconImage(nodeContainer.getIcon());
+        }
+        if (icon == null) { // get default image if null
+            icon = ImageRepository.getUnscaledIconImage(NodeFactory.getDefaultIcon());
+        }
+
+        return icon;
+    }
+
+
+    /**
      * true, if the figure was initialized from the node extra info object.
      */
     private boolean m_uiListenerActive = true;
@@ -646,26 +676,9 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
     }
 
     private void updateIcon() {
-        final NodeContainerFigure f = (NodeContainerFigure)getFigure();
-        // get the icon
-        Image icon = null;
-        try (InputStream iconStream = getNodeContainer().getIconAsStream()) {
-            if (iconStream != null) {
-                final ImageData imageData = new ImageData(iconStream);
-                icon = new Image(Display.getDefault(), scaleImageTo(16, imageData));
-            }
-        } catch (IOException e) {
-            //should never happen
-            LOGGER.error("Problem while closing icon input stream", e);
-        }
-        if (icon == null) {
-            icon = ImageRepository.getUnscaledIconImage(getNodeContainer().getIcon());
-        }
-        if (icon == null) { // get default image if null
-            icon = ImageRepository.getUnscaledIconImage(NodeFactory.getDefaultIcon());
-        }
+        final Image icon = getIconImageForNodeContainer(getNodeContainer());
         if (icon != null) {
-            f.setIcon(icon);
+            ((NodeContainerFigure)getFigure()).setIcon(icon);
         }
     }
 

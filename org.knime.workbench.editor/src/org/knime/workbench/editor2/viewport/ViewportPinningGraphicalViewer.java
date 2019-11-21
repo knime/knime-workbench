@@ -61,6 +61,7 @@ import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.gef.ui.parts.ScrollingGraphicalViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
@@ -355,6 +356,45 @@ public class ViewportPinningGraphicalViewer extends ScrollingGraphicalViewer {
      */
     public WorkflowFigure getWorkflowFigure() {
         return ((WorkflowRootEditPart)getRootEditPart().getContents()).getFigure();
+    }
+
+    /**
+     * @param size the width and height, as size.x and size.y, of a rectangle to be centered in the viewport
+     * @return a {@code Point} representing a location within the display (i.e absolute) which should be the location of
+     *         the item in order to have it centered in the viewport
+     */
+    public Point locationForSizeCenteredInViewport(final Point size) {
+        final Viewport v = getViewport();
+        final Rectangle viewportBounds = v.getBounds();
+        final int relativeX = (viewportBounds.width - size.x) / 2;
+        final int relativeY = (viewportBounds.height - size.y) / 2;
+
+        return getControl().getParent().toDisplay(relativeX, relativeY);
+    }
+
+    /**
+     * @param bounds the rectangular region which is desired to be in the viewport
+     */
+    public void ensureBoundsAreInView(final Rectangle bounds) {
+        final Viewport v = getViewport();
+        final Rectangle viewportBounds = v.getClientArea();
+        if (!viewportBounds.contains(bounds)) {
+            // this math is assuming that the viewport bounds are wider and taller than the parameter bounds
+
+            final int deltaX = midPointRectangle(bounds, true) - midPointRectangle(viewportBounds, true);
+            final int deltaY = midPointRectangle(bounds, false) - midPointRectangle(viewportBounds, false);
+            final int newX = viewportBounds.x + deltaX;
+            final int newY = viewportBounds.y + deltaY;
+            ((FigureCanvas)getControl()).scrollTo(newX, newY);
+        }
+    }
+
+    private static int midPointRectangle(final Rectangle r, final boolean width) {
+        if (width) {
+            return r.x + (r.width / 2);
+        }
+
+        return r.y + (r.height / 2);
     }
 
     /**
