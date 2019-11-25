@@ -126,7 +126,7 @@ public class GlobalDeleteAction extends ExplorerAction {
         // find workflows included in selection
         List<AbstractExplorerFileStore> toDelWorkflows =
                 getAllContainedWorkflows(allFiles);
-        toDelWorkflows.addAll(getAllContainedComponents(allFiles));
+        List<AbstractExplorerFileStore> toDelComponents = getAllContainedComponents(allFiles);
         List<LocalExplorerFileStore> toDelLocalFlows =
                 getContainedLocalWorkflows(allFiles);
         List<AbstractExplorerFileStore> toDelJobs =
@@ -177,6 +177,7 @@ public class GlobalDeleteAction extends ExplorerAction {
         }
 
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelJobs);
+        ExplorerFileSystemUtils.closeOpenWorkflows(toDelComponents);
         ExplorerFileSystemUtils.closeOpenWorkflows(toDelWorkflows);
         ExplorerFileSystemUtils.closeOpenReports(toDelWorkflows);
 
