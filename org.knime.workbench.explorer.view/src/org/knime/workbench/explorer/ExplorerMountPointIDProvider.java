@@ -56,7 +56,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
-import org.knime.core.node.NodeLogger;
 import org.knime.filehandling.core.connections.attributes.FSBasicAttributes;
 import org.knime.filehandling.core.connections.attributes.FSFileAttributes;
 import org.knime.filehandling.core.util.MountPointIDProvider;
@@ -71,8 +70,6 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
  */
 public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(ExplorerMountPointIDProvider.class);
-
     /**
      * {@inheritDoc}
      */
@@ -83,8 +80,6 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
-     *
-     * @throws IOException
      */
     @Override
     public URL resolveKNIMEURL(final URL url) throws IOException {
@@ -95,13 +90,18 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
      * {@inheritDoc}
      */
     @Override
-    public List<URI> listFiles(final URI uri) throws CoreException {
-        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
-        final List<URI> children = new ArrayList<>();
-        for (final String childName : store.childNames(0, null)) {
-            children.add(store.getChild(childName).toURI());
+    public List<URI> listFiles(final URI uri) throws IOException {
+        try {
+            final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+            final List<URI> children = new ArrayList<>();
+            for (final String childName : store.childNames(0, null)) {
+                children.add(store.getChild(childName).toURI());
+            }
+            return children;
+        } catch (final CoreException e) {
+            throw new IOException(e);
         }
-        return children;
+
     }
 
     /**
@@ -114,7 +114,7 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
         AbstractExplorerFileInfo info;
         try {
             info = store.fetchInfo(0, null);
-        } catch (CoreException e) {
+        } catch (final CoreException e) {
             throw new IOException(e);
         }
 
@@ -183,27 +183,35 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
-     *
-     * @throws CoreException
      */
     @Override
-    public void createDirectory(final URI uri) throws CoreException {
+    public void createDirectory(final URI uri) throws IOException {
+        try {
+            final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+            store.mkdir(0, null);
+            store.getParent().refresh();
+        } catch (final CoreException e) {
+            throw new IOException(e);
+        }
 
-        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
-        store.mkdir(0, null);
-        store.getParent().refresh();
     }
 
     /**
      * {@inheritDoc}
-     *
-     * @throws CoreException
      */
     @Override
-    public boolean isReadable(final URI uri) throws CoreException {
+    public boolean isReadable(final URI uri) throws IOException {
         //FIXME hacky way to see if we are connected
+
         final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
-        return store.getContentProvider().getRootStore().childNames(0, null).length != 0;
+        if (store == null) {
+            throw new IOException(String.format("Mountpoint %s does not exist.", uri.getHost()));
+        }
+        try {
+            return store.getContentProvider().getRootStore().childNames(0, null).length != 0;
+        } catch (final CoreException e) {
+            throw new IOException(e);
+        }
     }
 
     /**
