@@ -165,6 +165,42 @@
                     </table>
                 </div>
             </xsl:if>
+			<xsl:if test="t:dynInPort">
+                <div class="group">
+                    <div class="groupname">Dynamic Input Ports</div>
+                    <table>
+                        <xsl:for-each select="t:dynInPort">
+                            <xsl:sort select="@insert-before" data-type="number"/>
+                            <tr>
+                                <td class="dt">
+                                    <xsl:value-of select="@group-identifier" />
+                                </td>
+                                <td>
+                                    <xsl:apply-templates />
+                                </td>
+                            </tr>
+                        </xsl:for-each>
+                    </table>
+                </div>
+            </xsl:if>
+            <xsl:if test="t:dynOutPort">
+                <div class="group">
+                    <div class="groupname">Dynamic Output Ports</div>
+                    <table>
+                        <xsl:for-each select="t:dynOutPort">
+                            <xsl:sort select="@insert-before" data-type="number"/>
+                            <tr>
+                                <td class="dt">
+                                    <xsl:value-of select="@group-identifier" />
+                                </td>
+                                <td>
+						            <xsl:apply-templates />
+                                </td>
+                            </tr>
+                        </xsl:for-each>
+                    </table>
+                </div>
+            </xsl:if>
         </dl>
     </xsl:template>
 
