@@ -68,7 +68,7 @@ import org.knime.core.node.workflow.NodeUIInformationListener;
 import org.knime.core.node.workflow.WorkflowAnnotation;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.workbench.editor2.AnnotationEditExitEnabler;
+import org.knime.workbench.editor2.WorkflowCanvasClickListener;
 import org.knime.workbench.editor2.EditorModeParticipant;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.WorkflowEditorMode;
@@ -280,7 +280,7 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart
         if (request instanceof LocationRequest) {
             Point location = ((LocationRequest)request).getLocation();
 
-            if (AnnotationEditExitEnabler.annotationDragTrackerShouldVeto(location)) {
+            if (WorkflowCanvasClickListener.annotationDragTrackerShouldVeto(location)) {
                 return null;
             }
         }

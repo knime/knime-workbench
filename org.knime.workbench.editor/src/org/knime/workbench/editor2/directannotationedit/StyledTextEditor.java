@@ -94,7 +94,7 @@ import org.knime.core.node.workflow.NodeAnnotation;
 import org.knime.core.util.ColorUtilities;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
-import org.knime.workbench.editor2.AnnotationEditExitEnabler;
+import org.knime.workbench.editor2.WorkflowCanvasClickListener;
 import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.FontStore;
@@ -102,7 +102,7 @@ import org.knime.workbench.editor2.editparts.FontStore;
 /**
  * @author ohl, KNIME AG, Zurich, Switzerland
  */
-public class StyledTextEditor extends CellEditor implements AnnotationEditExitEnabler.ExitListener {
+public class StyledTextEditor extends CellEditor implements WorkflowCanvasClickListener.AnnotationModeExitListener {
     static final boolean PLATFORM_IS_MAC = Platform.OS_MACOSX.equals(Platform.getOS());
     static final boolean PLATFORM_IS_LINUX = Platform.OS_LINUX.equals(Platform.getOS());
     static final boolean PLATFORM_IS_WINDOWS = Platform.OS_WIN32.equals(Platform.getOS());
@@ -363,7 +363,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
 
         final WorkflowEditor we =
                 (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
-        we.getAnnotationEditExitEnabler().addListener(this);
+        we.getCanvasClickListener().addExitListener(this);
 
         CURRENT_INSTANCE_IN_VIEW = this;
 
@@ -558,14 +558,14 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
 
         final WorkflowEditor we =
                 (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
-        we.getAnnotationEditExitEnabler().removeListener(this);
+        we.getCanvasClickListener().removeExitListener(this);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void annotationModeWillExit(final AnnotationEditExitEnabler enabler) {
+    public void annotationModeWillExit(final WorkflowCanvasClickListener enabler) {
         if (m_toolbar.isDisposed()) {
             return;
         }
@@ -585,7 +585,7 @@ public class StyledTextEditor extends CellEditor implements AnnotationEditExitEn
         //      could happen midst iteration involved in messaging the listeners - resulting in a
         //      <code>ConcurrentModificationException</code> being thrown.
         (new Thread(() -> {
-            enabler.removeListener(this);
+            enabler.removeExitListener(this);
         })).start();
     }
 

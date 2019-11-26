@@ -353,7 +353,7 @@ public class WorkflowEditor extends GraphicalEditor implements
     private ZoomInAlternateIncrementAction m_alternateZoomInAction;
     private ZoomOutAlternateIncrementAction m_alternateZoomOutAction;
 
-    private AnnotationEditExitEnabler m_annotationEditExitEnabler;
+    private WorkflowCanvasClickListener m_canvasClickListener;
     private NodeSupplantDragListener m_nodeSupplantDragListener;
 
     private WorkflowEditorMode m_editorMode;
@@ -617,8 +617,8 @@ public class WorkflowEditor extends GraphicalEditor implements
         if (m_nodeSupplantDragListener != null) {
             m_nodeSupplantDragListener.dispose();
         }
-        if (m_annotationEditExitEnabler != null) {
-            m_annotationEditExitEnabler.dispose();
+        if (m_canvasClickListener != null) {
+            m_canvasClickListener.dispose();
         }
         if (m_fileResource != null && m_manager != null) {
             // disposed is also called when workflow load fails or is canceled
@@ -1036,7 +1036,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             m_manager.addListener(workflowFigure);
         }
 
-        m_annotationEditExitEnabler = new AnnotationEditExitEnabler(this);
+        m_canvasClickListener = new WorkflowCanvasClickListener(this);
 
         updateZoomLevelSettings();
     }
@@ -1061,14 +1061,14 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     /**
-     * This is public exposure of the AE mode exit enabler which allows for interested consumers to register themselves
+     * This is public exposure of the canvas click listener which allows for interested consumers to register themselves
      * for notification of mode exit. This will return null until the graphical viewer has been created.
      *
-     * @return the {@link AnnotationEditExitEnabler} instance created and held by this instance
+     * @return the {@link WorkflowCanvasClickListener} instance created and held by this instance
      * @see #createGraphicalViewer(Composite)
      */
-    public AnnotationEditExitEnabler getAnnotationEditExitEnabler() {
-        return m_annotationEditExitEnabler;
+    public WorkflowCanvasClickListener getCanvasClickListener() {
+        return m_canvasClickListener;
     }
 
     /**

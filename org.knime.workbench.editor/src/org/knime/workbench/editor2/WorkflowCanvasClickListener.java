@@ -70,15 +70,17 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  * Per AP-8593, if we're presently in Annotation Edit mode, the user clicking anywhere which is not an annotation should
  * exit that mode.
  *
+ * Per AP-13191, if the user is right clicking on empty canvas space, the current selection should be deselected.
+ *
  * @author loki der quaeler
  */
-public class AnnotationEditExitEnabler implements MouseListener {
+public class WorkflowCanvasClickListener implements MouseListener {
     /**
      * Classes interested in being notified when annotation mode is exiting due to canvas click-away should implement
      * this interface and register themselves with the instance of this attached to the workflow's
      * <code>WorkflowEditor</code>.
      */
-    public interface ExitListener {
+    public interface AnnotationModeExitListener {
         /**
          * Implementors will have this method invoked prior to the exit mode action being triggered <b>and also</b>
          * prior to the timestamp being set on the exit action. If the exit mode action would result in the listener
@@ -86,7 +88,7 @@ public class AnnotationEditExitEnabler implements MouseListener {
          *
          * @param enabler the instance of this class which is notifying the listener
          */
-        void annotationModeWillExit(AnnotationEditExitEnabler enabler);
+        void annotationModeWillExit(WorkflowCanvasClickListener enabler);
     }
 
 
@@ -141,12 +143,12 @@ public class AnnotationEditExitEnabler implements MouseListener {
 
     private final WorkflowEditor m_workflowEditor;
 
-    private final HashSet<ExitListener> m_listeners;
+    private final HashSet<AnnotationModeExitListener> m_listeners;
 
     /**
      * @param editor The editor containing the graphical viewer from which we'll track mouse events.
      */
-    public AnnotationEditExitEnabler(final WorkflowEditor editor) {
+    public WorkflowCanvasClickListener(final WorkflowEditor editor) {
         final GraphicalViewer viewer = editor.getGraphicalViewer();
 
         m_workflowEditor = editor;
@@ -162,7 +164,7 @@ public class AnnotationEditExitEnabler implements MouseListener {
     /**
      * @param listener an implementor of the ExitListener inner-interface
      */
-    public void addListener(final ExitListener listener) {
+    public void addExitListener(final AnnotationModeExitListener listener) {
         synchronized(m_listeners) {
             m_listeners.add(listener);
         }
@@ -171,7 +173,7 @@ public class AnnotationEditExitEnabler implements MouseListener {
     /**
      * @param listener an implementor of the ExitListener inner-interface
      */
-    public void removeListener(final ExitListener listener) {
+    public void removeExitListener(final AnnotationModeExitListener listener) {
         synchronized(m_listeners) {
             m_listeners.remove(listener);
         }
@@ -192,7 +194,7 @@ public class AnnotationEditExitEnabler implements MouseListener {
 
     private void messageListeners() {
         synchronized(m_listeners) {
-            for (final ExitListener listener : m_listeners) {
+            for (final AnnotationModeExitListener listener : m_listeners) {
                 listener.annotationModeWillExit(this);
             }
         }
@@ -217,54 +219,64 @@ public class AnnotationEditExitEnabler implements MouseListener {
      */
     @Override
     public void mouseDown(final MouseEvent me) {
-        if (WorkflowEditorMode.ANNOTATION_EDIT.equals(m_workflowEditor.getEditorMode())) {
+        final boolean aeMode = WorkflowEditorMode.ANNOTATION_EDIT.equals(m_workflowEditor.getEditorMode());
+        if (aeMode || (me.button == 3)) {
             final SelectionManager sm = m_workflowEditor.getGraphicalViewer().getSelectionManager();
             final StructuredSelection ss = (StructuredSelection)sm.getSelection();
 
             m_dragPositionProcessor.processDragEventAtPoint(me.display.getCursorLocation(), false, ss);
 
-            final AnnotationEditPart aep = m_dragPositionProcessor.getAnnotation();
-            if (aep == null) {
-                final ToggleEditorModeAction action = new ToggleEditorModeAction(m_workflowEditor, false);
-                final NodeContainerEditPart node = m_dragPositionProcessor.getNode();
-                final ConnectionContainerEditPart connection = m_dragPositionProcessor.getEdge();
+            if (aeMode) {
+                final AnnotationEditPart aep = m_dragPositionProcessor.getAnnotation();
+                if (aep == null) {
+                    final ToggleEditorModeAction action = new ToggleEditorModeAction(m_workflowEditor, false);
+                    final NodeContainerEditPart node = m_dragPositionProcessor.getNode();
+                    final ConnectionContainerEditPart connection = m_dragPositionProcessor.getEdge();
 
-                messageListeners();
+                    messageListeners();
 
-                modeExitIsOccurring(m_dragPositionProcessor.getLastPosition());
+                    modeExitIsOccurring(m_dragPositionProcessor.getLastPosition());
 
-                action.runInSWT();
+                    action.runInSWT();
 
-                // The ol' give-it-a-pause-to-catch-up strategy
-                Display.getDefault().asyncExec(() -> {
-                    sm.deselectAll();
-
-                    if (node != null) {
-                        sm.appendSelection(node);
-                    } else if (connection != null) {
-                        sm.appendSelection(connection);
-                    }
-                });
-            } else {
-                final Iterator<?> it = ss.iterator();
-                boolean maintainSelection = false;
-                while (it.hasNext()) {
-                    final Object o = it.next();
-
-                    if (o instanceof AnnotationEditPart) {
-                        maintainSelection = true;
-                        break;
-                    }
-                }
-
-                if (!maintainSelection) {
-                    StyledTextEditor.relinquishFocusOfCurrentEditorIfInView();
-
+                    // The ol' give-it-a-pause-to-catch-up strategy
                     Display.getDefault().asyncExec(() -> {
                         sm.deselectAll();
 
-                        sm.appendSelection(aep);
+                        if (node != null) {
+                            sm.appendSelection(node);
+                        } else if (connection != null) {
+                            sm.appendSelection(connection);
+                        }
                     });
+                } else {
+                    final Iterator<?> it = ss.iterator();
+                    boolean maintainSelection = false;
+                    while (it.hasNext()) {
+                        final Object o = it.next();
+
+                        if (o instanceof AnnotationEditPart) {
+                            maintainSelection = true;
+                            break;
+                        }
+                    }
+
+                    if (!maintainSelection) {
+                        StyledTextEditor.relinquishFocusOfCurrentEditorIfInView();
+
+                        Display.getDefault().asyncExec(() -> {
+                            sm.deselectAll();
+
+                            sm.appendSelection(aep);
+                        });
+                    }
+                }
+            } else {
+                if ((m_dragPositionProcessor.getAnnotation() == null)
+                                && (m_dragPositionProcessor.getNode() == null)
+                                && (m_dragPositionProcessor.getEdge() == null)) {
+                    // AP-13191 - right click on canvas
+                    sm.deselectAll();
                 }
             }
 
