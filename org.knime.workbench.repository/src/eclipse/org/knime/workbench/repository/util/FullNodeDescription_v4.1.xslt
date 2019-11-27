@@ -169,6 +169,14 @@
                 <div class="group">
                     <div class="groupname">Dynamic Input Ports</div>
                     <table>
+                        <tr>
+                            <td>
+                                Click on the three dots in the bottom left corner of the node or use the context 
+                                menu entry to add additional input ports.
+                            </td>
+                        </tr>
+                    </table>
+                    <table>
                         <xsl:for-each select="t:dynInPort">
                             <xsl:sort select="@insert-before" data-type="number"/>
                             <tr>
@@ -187,6 +195,14 @@
                 <div class="group">
                     <div class="groupname">Dynamic Output Ports</div>
                     <table>
+                        <tr>
+                            <td>
+                                Click on the three dots in the bottom left corner of the node or use the context 
+                                menu entry to add additional output ports.
+                            </td>
+                        </tr>
+                    </table>
+                    <table>
                         <xsl:for-each select="t:dynOutPort">
                             <xsl:sort select="@insert-before" data-type="number"/>
                             <tr>
@@ -194,7 +210,7 @@
                                     <xsl:value-of select="@group-identifier" />
                                 </td>
                                 <td>
-						            <xsl:apply-templates />
+                                    <xsl:apply-templates />
                                 </td>
                             </tr>
                         </xsl:for-each>
