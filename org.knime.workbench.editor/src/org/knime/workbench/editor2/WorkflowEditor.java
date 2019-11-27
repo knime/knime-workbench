@@ -1537,19 +1537,11 @@ public class WorkflowEditor extends GraphicalEditor implements
             KNIMEConstants.GLOBAL_THREAD_POOL.enqueue(() -> {
                 PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
                     final GraphicalViewer viewer = getGraphicalViewer();
-                    final EditPart editorPart = (EditPart)viewer.getRootEditPart().getChildren().get(0);
-                    final List<?> workflowAssets = editorPart.getChildren();
 
                     viewer.deselectAll();
-                    if (workflowAssets.size() > 0) {
-                        viewer.select((EditPart)workflowAssets.get(0));
-                    }
-                    PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
-                        viewer.deselectAll();
-                        viewer.select(viewer.getRootEditPart().getContents());
+                    viewer.select(viewer.getRootEditPart().getContents());
 
-                        setFocus();
-                    });
+                    setFocus();
                 });
             });
         }
