@@ -50,9 +50,11 @@ package org.knime.workbench.repository.util;
 
 import java.lang.reflect.Method;
 
+import org.knime.core.node.Node;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.port.PortObjectSpec;
+import org.knime.core.node.streamable.InputPortRole;
 import org.knime.core.node.streamable.PartitionInfo;
 import org.knime.workbench.repository.model.NodeTemplate;
 
@@ -81,10 +83,36 @@ public final class NodeUtil {
      * @return {@code true} if the given node is streamable, {@code false} otherwise
      * @throws Exception thrown if the node cannot be instantiated
      */
+    @SuppressWarnings("unchecked")
     public static boolean isStreamable(final NodeFactory<? extends NodeModel> nodeFactory) throws Exception {
-        NodeModel nm = nodeFactory.createNodeModel();
-        //check whether the current node model overrides the #createStreamableOperator-method
-        Method m = nm.getClass().getMethod("createStreamableOperator", PartitionInfo.class, PortObjectSpec[].class);
-        return m.getDeclaringClass() != NodeModel.class;
+        return isStreamable(new Node((NodeFactory<NodeModel>)nodeFactory));
+    }
+
+    /**
+     * Checks if the given {@link Node} is streamable.
+     *
+     * @param node the {@code Node} to check if it is streamable
+     * @return {@code true} if the given node is streamable, {@code false} otherwise
+     * @throws Exception if the node cannot be instantiated
+     */
+    public static boolean isStreamable(final Node node) throws Exception {
+        final NodeModel model = node.getNodeModel();
+        try {
+            for (final InputPortRole role : model.getInputPortRoles()) {
+                if (role.isStreamable()) {
+                    return true;
+                }
+            }
+        } catch (final Exception e) {
+            // Some nodes throw an exception when calling #getInputPortRoles(),
+            // because the input port roles are dependent on the node
+            // configuration
+
+            //check whether the current node model overrides the #createStreamableOperator-method
+            final Method m =
+                model.getClass().getMethod("createStreamableOperator", PartitionInfo.class, PortObjectSpec[].class);
+            return m.getDeclaringClass() != NodeModel.class;
+        }
+        return false;
     }
 }

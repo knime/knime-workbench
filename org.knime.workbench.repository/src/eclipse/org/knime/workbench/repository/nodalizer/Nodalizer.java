@@ -205,7 +205,7 @@ public class Nodalizer implements IApplication {
                     final Path o = Paths.get(params[i + 1]);
                     if (Files.exists(o) && !Files.isDirectory(o)) {
                         owners = new HashMap<>();
-                        for(final String line : Files.readAllLines(o)) {
+                        for (final String line : Files.readAllLines(o)) {
                             final String[] pieces = line.split(":");
                             if (pieces.length == 2) {
                                 final String id = pieces[0].trim();
@@ -227,7 +227,7 @@ public class Nodalizer implements IApplication {
                     defaultOwner = params[i + 1];
                 }
                 if (params[i].equalsIgnoreCase(FEATURES) && (params.length > (i + 1))) {
-                    features = Arrays.asList(params[i+1].split(","));
+                    features = Arrays.asList(params[i + 1].split(","));
                 }
                 if (params[i].equalsIgnoreCase(BLACKLIST) && (params.length > (i + 1))) {
                     blacklistFile = Paths.get(params[i + 1]);
@@ -378,7 +378,7 @@ public class Nodalizer implements IApplication {
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
                     nodeAndBundleInfo, fac.isDeprecated(), directory, extensions, bundles);
             } catch (final Throwable e) {
-                    LOGGER.error("Failed to read node: " + object.getName() + ".", e);
+                LOGGER.error("Failed to read node: " + object.getName() + ".", e);
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
@@ -464,8 +464,7 @@ public class Nodalizer implements IApplication {
         NodeAndBundleInformation nabi = nodeAndBundleInfo;
         if (extensions != null && bundles != null) {
             // TODO: Check symbolic name and version once we support reading multiple extension versions
-            final String cleanedSymbolicName =
-                cleanSymbolicName(nabi.getFeatureSymbolicName().orElse(null));
+            final String cleanedSymbolicName = cleanSymbolicName(nabi.getFeatureSymbolicName().orElse(null));
             if (extensions.containsKey(cleanedSymbolicName)) {
                 final ExtensionInfo e = extensions.get(cleanedSymbolicName);
                 e.setHasNodes(true);
@@ -506,7 +505,7 @@ public class Nodalizer implements IApplication {
         nInfo.setNodeType(kcn.getType().toString());
         nInfo.setPath(path);
         nInfo.setDeprecated(isDeprecated);
-        nInfo.setStreamable(NodeUtil.isStreamable(fac));
+        nInfo.setStreamable(NodeUtil.isStreamable(kcn));
 
         // Read icon
         URL imageURL = fac.getIcon();
