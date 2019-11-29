@@ -57,6 +57,7 @@ import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.Label;
 import org.eclipse.draw2d.MouseEvent;
 import org.eclipse.draw2d.MouseListener;
+import org.eclipse.draw2d.MouseMotionListener;
 import org.eclipse.draw2d.OrderedLayout;
 import org.eclipse.draw2d.RectangleFigure;
 import org.eclipse.draw2d.RelativeLocator;
@@ -66,6 +67,8 @@ import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.jface.action.Action;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MenuEvent;
+import org.eclipse.swt.events.MenuListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Color;
@@ -76,6 +79,9 @@ import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NativeNodeContainer;
@@ -1083,68 +1089,19 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                 m_modifiablePortLabel = new Label();
                 m_modifiablePortLabel.setOpaque(false);
                 m_backgroundIcon.add(m_modifiablePortLabel);
-                m_backgroundIcon.setConstraint(m_modifiablePortLabel, new RelativeLocator(m_backgroundIcon, 0.25, .75));
-                m_modifiablePortLabel
-                    .setIcon(ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/node/add_port_dots.png"));
+                m_backgroundIcon.setConstraint(m_modifiablePortLabel, new RelativeLocator(m_backgroundIcon, 0.28, .9));
+                m_modifiablePortLabel.setIcon(ModifiablePortMouseTracker.TRANSPARENT_ICON);
                 m_modifiablePortLabel.setToolTip(new NewToolTipFigure("Click to modify ports"));
-                m_modifiablePortLabel.addMouseListener(new MouseListener() {
-                    @Override
-                    public void mousePressed(final MouseEvent me) {
-                        // only if the left mouse button is clicked
-                        if (me.button == 1) {
-                            final Menu m = new Menu(SWTUtilities.getKNIMEWorkbenchShell());
-                            fillMenu(nodeContainerEditPart, m);
-                            m.setVisible(true);
-                        }
-                    }
-
-                    @Override
-                    public void mouseReleased(final MouseEvent me) {
-                    }
-
-                    @Override
-                    public void mouseDoubleClicked(final MouseEvent me) {
-                    }
-                });
+                final ModifiablePortMouseTracker mouseTracker =
+                    new ModifiablePortMouseTracker(nodeContainerEditPart, this);
+                m_modifiablePortLabel.addMouseListener(mouseTracker);
+                m_modifiablePortLabel.addMouseMotionListener(mouseTracker);
                 repaint();
             }
         }
 
-        private void fillMenu(final NodeContainerEditPart nodeContainerEditPart, final Menu popUpMenu) {
-            final PortActionCreator portCreator = new PortActionCreator(nodeContainerEditPart);
-            if (portCreator.hasActions()) {
-                addActions(popUpMenu, portCreator.getAddPortActions(), "Add ports");
-                addActions(popUpMenu, portCreator.getRemovePortActions(), "Remove ports");
-                addActions(popUpMenu, portCreator.getExchangePortActions(), "Exchange ports");
-            }
-        }
-
-        private void addActions(final Menu popupMenu, final List<? extends Action> actions,
-            final String menuEntryName) {
-            if (!actions.isEmpty()) {
-                if (actions.size() == 1) {
-                    createMenuItem(popupMenu, actions.get(0));
-                } else {
-                    final MenuItem mi = new MenuItem(popupMenu, SWT.CASCADE);
-                    mi.setText(menuEntryName);
-                    Menu subMenuManager = new Menu(popupMenu);
-                    mi.setMenu(subMenuManager);
-                    actions.stream().forEach(action -> createMenuItem(subMenuManager, action));
-                }
-            }
-        }
-
-        private void createMenuItem(final Menu popupMenu, final Action action) {
-            final MenuItem mi = new MenuItem(popupMenu, SWT.PUSH);
-            mi.setText(action.getText());
-            mi.setEnabled(action.isEnabled());
-            mi.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(final SelectionEvent se) {
-                    popupMenu.setVisible(false);
-                    action.run();
-                }
-            });
+        Label getModifiablePortLabel() {
+            return m_modifiablePortLabel;
         }
 
         /**
@@ -1410,6 +1367,7 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
         }
     }
 
+
     /**
      * Subfigure, contains the warning error signs.
      */
@@ -1456,6 +1414,132 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                     .getPreferredSize().height);
         }
     }
+
+
+    private static class ModifiablePortMouseTracker implements MouseListener, MouseMotionListener {
+        private static final Image PORT_ICON =
+            ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/node/add_port_flat.png");
+        private static final Image TRANSPARENT_ICON =
+                ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/node/add_port_flat_transparent.png");
+
+        private static void fillMenu(final NodeContainerEditPart nodeContainerEditPart, final Menu popUpMenu) {
+            final PortActionCreator portCreator = new PortActionCreator(nodeContainerEditPart);
+            if (portCreator.hasActions()) {
+                addActions(popUpMenu, portCreator.getAddPortActions(), "Add ports");
+                addActions(popUpMenu, portCreator.getRemovePortActions(), "Remove ports");
+                addActions(popUpMenu, portCreator.getExchangePortActions(), "Exchange ports");
+            }
+        }
+
+        private static void addActions(final Menu popupMenu, final List<? extends Action> actions,
+            final String menuEntryName) {
+            if (!actions.isEmpty()) {
+                if (actions.size() == 1) {
+                    createMenuItem(popupMenu, actions.get(0));
+                } else {
+                    final MenuItem mi = new MenuItem(popupMenu, SWT.CASCADE);
+                    mi.setText(menuEntryName);
+                    final Menu subMenuManager = new Menu(popupMenu);
+                    mi.setMenu(subMenuManager);
+                    actions.stream().forEach(action -> createMenuItem(subMenuManager, action));
+                }
+            }
+        }
+
+        private static void createMenuItem(final Menu popupMenu, final Action action) {
+            final MenuItem mi = new MenuItem(popupMenu, SWT.PUSH);
+            mi.setText(action.getText());
+            mi.setEnabled(action.isEnabled());
+            mi.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(final SelectionEvent se) {
+                    popupMenu.setVisible(false);
+                    action.run();
+                }
+            });
+        }
+
+        // force the platform shell to become active again (even though it appears to be visually
+        //      already) so that it can continue getting mouse events correctly
+        private static void reactivatePlatformShell() {
+            final Runnable r = () -> {
+                try {
+                    Thread.sleep(50);
+                } catch (Exception e) { }
+
+                PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
+                    final Shell s = SWTUtilities.getKNIMEWorkbenchShell();
+                    s.forceActive();
+                    s.forceFocus();
+                });
+            };
+
+            KNIMEConstants.GLOBAL_THREAD_POOL.enqueue(r);
+        }
+
+
+        private final NodeContainerEditPart m_nodeContainerEditPart;
+        private final SymbolFigure m_symbolFigure;
+
+        private ModifiablePortMouseTracker(final NodeContainerEditPart ncep, final SymbolFigure figure) {
+            m_nodeContainerEditPart = ncep;
+            m_symbolFigure = figure;
+        }
+
+        private void updateIcon(final boolean transparent) {
+            final Label l = m_symbolFigure.getModifiablePortLabel();
+
+            l.setIcon(transparent ? TRANSPARENT_ICON : PORT_ICON);
+            l.repaint();
+        }
+
+        @Override
+        public void mousePressed(final MouseEvent me) {
+            // only if the left mouse button is clicked
+            if (me.button == 1) {
+                final Menu m = new Menu(SWTUtilities.getKNIMEWorkbenchShell());
+                fillMenu(m_nodeContainerEditPart, m);
+                m.addMenuListener(new MenuListener() {
+                    @Override
+                    public void menuHidden(final MenuEvent e) {
+                        reactivatePlatformShell();
+
+                        updateIcon(true);
+                    }
+
+                    @Override
+                    public void menuShown(final MenuEvent e) { }
+                });
+                m.setVisible(true);
+            }
+        }
+
+        @Override
+        public void mouseReleased(final MouseEvent me) { }
+
+        @Override
+        public void mouseDoubleClicked(final MouseEvent me) { }
+
+        @Override
+        public void mouseDragged(final MouseEvent me) { }
+
+        @Override
+        public void mouseEntered(final MouseEvent me) {
+            updateIcon(false);
+        }
+
+        @Override
+        public void mouseExited(final MouseEvent me) {
+            updateIcon(true);
+        }
+
+        @Override
+        public void mouseHover(final MouseEvent me) { }
+
+        @Override
+        public void mouseMoved(final MouseEvent me) { }
+    }
+
 
     /**
      * Marks this node parts figure as slated for delete. Used to hilite it from the rest of the parts.
