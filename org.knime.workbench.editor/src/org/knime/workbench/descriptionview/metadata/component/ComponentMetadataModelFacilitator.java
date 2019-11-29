@@ -737,7 +737,6 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
         try {
             content.append(NodeFactoryHTMLCreator.instance.readFullDescription(portDOM));
-            content.append("</body></html>");
 
             if (m_browser != null) {
                 m_browser.getDisplay().asyncExec(() -> {

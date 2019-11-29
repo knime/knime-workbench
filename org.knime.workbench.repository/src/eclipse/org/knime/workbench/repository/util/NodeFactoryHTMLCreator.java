@@ -159,6 +159,9 @@ public final class NodeFactoryHTMLCreator {
             StreamSource stylesheet = new StreamSource(is);
             transformer = TransformerFactory.newInstance().newTemplates(stylesheet).newTransformer();
             transformer.setParameter("css", m_css);
+            if ("2.7".equals(version)) {
+                transformer.setParameter("ports_only", "true");
+            }
             transformer.setOutputProperty(OutputKeys.METHOD, "xml");
             transformer.setOutputProperty(OutputKeys.INDENT, "yes");
             m_transformers.put(namespaceUri, transformer);

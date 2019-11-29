@@ -236,8 +236,7 @@ public class ComponentMetaView extends AbstractMetaView {
 
         m_currentSubNodeContainer = subNodeContainer;
 
-        // TODO waiting on API to fetch metadata (AP-12986)
-        m_currentAssetName = subNodeContainer.getName();    // TODO getMetadataTitle or similar...
+        m_currentAssetName = subNodeContainer.getName();
         currentAssetNameHasChanged();
 
         m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName);

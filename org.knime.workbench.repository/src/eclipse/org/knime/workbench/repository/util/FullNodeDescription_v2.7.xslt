@@ -6,6 +6,7 @@
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:t="http://knime.org/node2012"
                 xmlns="http://www.w3.org/1999/xhtml">
     <xsl:param name="css" />
+    <xsl:param name="ports_only" />
     <xsl:template match="t:knimeNode">
         <html>
             <head>
@@ -16,40 +17,45 @@
                 <style type="text/css"><xsl:value-of select="$css" /></style>
             </head>
             <body>
-                <div class="fix-header" id="fix-header"><h1>
-                    <xsl:value-of select="t:name" />
-                </h1>
-                </div>
-                
-                <xsl:if test="@deprecated = 'true'">
-                    <h4 class="deprecated">Deprecated</h4>
-                </xsl:if>
-                <p>
-                    <xsl:apply-templates select="t:fullDescription/t:intro/node()" />
-                </p>
-
-                <xsl:if test="t:fullDescription/t:option">
-                    <h2>Dialog Options</h2>
-                    <dl>
-                        <xsl:apply-templates select="t:fullDescription/t:option" />
-                    </dl>
-                </xsl:if>
-
-                <xsl:if test="t:fullDescription/t:tab">
-                    <h2>Dialog Options</h2>
-                    <xsl:apply-templates select="t:fullDescription/t:tab" />
-                </xsl:if>
-
-
+			    <xsl:if test="$ports_only=''">
+	                <div class="fix-header" id="fix-header"><h1>
+	                    <xsl:value-of select="t:name" />
+	                </h1>
+	                </div>
+	                
+	                <xsl:if test="@deprecated = 'true'">
+	                    <h4 class="deprecated">Deprecated</h4>
+	                </xsl:if>
+	                <p>
+	                    <xsl:apply-templates select="t:fullDescription/t:intro/node()" />
+	                </p>
+	
+	                <xsl:if test="t:fullDescription/t:option">
+	                    <h2>Dialog Options</h2>
+	                    <dl>
+	                        <xsl:apply-templates select="t:fullDescription/t:option" />
+	                    </dl>
+	                </xsl:if>
+	
+	                <xsl:if test="t:fullDescription/t:tab">
+	                    <h2>Dialog Options</h2>
+	                    <xsl:apply-templates select="t:fullDescription/t:tab" />
+	                </xsl:if>
+	            </xsl:if>
+		
                 <xsl:apply-templates select="t:ports" />
-                <xsl:apply-templates select="t:views" />
+                <xsl:if test="$ports_only=''">
+                	<xsl:apply-templates select="t:views" />
+              	</xsl:if>
 
-                <xsl:if test="osgi-info">
-                <div id="origin-bundle">
-                    This node is contained in <em><xsl:value-of select="osgi-info/@bundle-name" /></em>
-                    provided by <em><xsl:value-of select="osgi-info/@bundle-vendor" /></em>.
-                </div>
-                </xsl:if>
+				<xsl:if test="$ports_only=''">
+	                <xsl:if test="osgi-info">
+	                <div id="origin-bundle">
+	                    This node is contained in <em><xsl:value-of select="osgi-info/@bundle-name" /></em>
+	                    provided by <em><xsl:value-of select="osgi-info/@bundle-vendor" /></em>.
+	                </div>
+	                </xsl:if>
+	           	</xsl:if>
             </body>
         </html>
     </xsl:template>
@@ -94,7 +100,9 @@
 
 
     <xsl:template match="t:ports">
-        <h2>Ports</h2>
+    	<xsl:if test="$ports_only=''">
+        	<h2>Ports</h2>
+       	</xsl:if>
         <dl>
             <xsl:if test="t:inPort">
                 <div class="group dlGroup">
