@@ -65,6 +65,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -87,6 +88,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
+import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.DynamicNodeFactory;
 import org.knime.core.node.NodeAndBundleInformationPersistor;
 import org.knime.core.node.NodeFactory;
@@ -94,6 +96,10 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
+import org.knime.core.node.context.ports.ConfigurablePortGroup;
+import org.knime.core.node.context.ports.ModifiablePortsConfiguration;
+import org.knime.core.node.context.ports.PortGroupConfiguration;
+import org.knime.core.node.port.PortType;
 import org.knime.core.util.ConfigUtils;
 import org.knime.core.util.Version;
 import org.knime.core.util.workflowalizer.NodeAndBundleInformation;
@@ -102,6 +108,7 @@ import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.IRepositoryObject;
 import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.repository.model.Root;
+import org.knime.workbench.repository.nodalizer.DynamicPortGroup.DynamicPortType;
 import org.knime.workbench.repository.nodalizer.ExtensionInfo.LicenseInfo;
 import org.knime.workbench.repository.nodalizer.NodeInfo.LinkInformation;
 import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
@@ -603,8 +610,59 @@ public class Nodalizer implements IApplication {
         nInfo.setInPorts(inports);
         nInfo.setOutPorts(outports);
 
+        if (kcn.getCopyOfCreationConfig().isPresent() && kcn.getCopyOfCreationConfig().get().getPortConfig().isPresent()
+            && fac instanceof ConfigurableNodeFactory) {
+            final ModifiablePortsConfiguration portConfigs = kcn.getCopyOfCreationConfig().get().getPortConfig().get();
+            final List<DynamicPortGroup> dynInports = parseDynamicPorts(nodeXML, "dynInPort", nodeHTML,
+                "Dynamic Input Ports", portConfigs, fac.getClass().getCanonicalName());
+            final List<DynamicPortGroup> dynOutports = parseDynamicPorts(nodeXML, "dynOutPort", nodeHTML,
+                "Dynamic Output Ports", portConfigs, fac.getClass().getCanonicalName());
+            nInfo.setDynInPorts(dynInports);
+            nInfo.setDynOutPorts(dynOutports);
+        }
+
         // Write to file
         writeFile(directory, categoryPath + "/" + name, nInfo);
+    }
+
+    private static List<DynamicPortGroup> parseDynamicPorts(final Element nodeXML, final String xmlTag,
+        final Document nodeHTML, final String sectionName, final ModifiablePortsConfiguration portConfigs,
+        final String nodeFactoryName) {
+        final int dynamicPortCount = nodeXML.getElementsByTagName(xmlTag).getLength();
+        final org.jsoup.nodes.Element dynamicPortSection = nodeHTML.getElementsMatchingOwnText(sectionName).first();
+        if (dynamicPortCount > 0 && dynamicPortSection != null) {
+            final List<DynamicPortGroup> dynamicPorts = new ArrayList<>(dynamicPortCount);
+            for (final org.jsoup.nodes.Element sibling : dynamicPortSection.siblingElements()) {
+                for (final org.jsoup.nodes.Element group : sibling.getElementsByClass("dt")) {
+                    final org.jsoup.nodes.Element description = group.nextElementSibling();
+                    final String groupName = group.ownText();
+                    try {
+                        final PortGroupConfiguration groupConfig = portConfigs.getGroup(groupName);
+                        if (description != null && groupConfig instanceof ConfigurablePortGroup) {
+                            final ConfigurablePortGroup configurableGroupConfig = (ConfigurablePortGroup)groupConfig;
+                            final PortType[] supportedTypes = configurableGroupConfig.getSupportedPortTypes();
+                            final DynamicPortType[] types = new DynamicPortType[supportedTypes.length];
+                            for (int i = 0; i < types.length; i++) {
+                                final PortType t = supportedTypes[i];
+                                types[i] = new DynamicPortType(t.getPortObjectClass().getCanonicalName(), t.getName(),
+                                    getColorAsHex(t.getColor()));
+                            }
+                            final DynamicPortGroup port =
+                                new DynamicPortGroup(groupName, cleanHTML(description), types);
+                            dynamicPorts.add(port);
+                        }
+                    } catch (final NoSuchElementException exception) {
+                        LOGGER.warn("No dynamic port group, " + groupName + ", for " + nodeFactoryName);
+                    }
+                }
+            }
+            if (dynamicPortCount != dynamicPorts.size()) {
+                LOGGER.warn("The number of dynamic ports parsed does not match the number listed in the XML, "
+                    + dynamicPorts.size() + " and " + dynamicPortCount + " respectively, for " + nodeFactoryName);
+            }
+            return dynamicPorts;
+        }
+        return Collections.emptyList();
     }
 
     private static void parseHTML(final Document nodeHTML, final NodeInfo nodeInfo, final String interactiveViewName) {
