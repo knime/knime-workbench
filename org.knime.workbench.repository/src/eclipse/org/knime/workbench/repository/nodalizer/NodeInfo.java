@@ -88,6 +88,8 @@ public class NodeInfo {
     private PortInfo[] m_inPorts;
     private PortInfo[] m_outPorts;
     private String m_owner;
+    private List<DynamicPortGroup> m_dynInPorts;
+    private List<DynamicPortGroup> m_dynOutPorts;
 
     /**
      * Returns the title of this node.
@@ -258,6 +260,24 @@ public class NodeInfo {
      */
     public String getOwner() {
         return StringUtils.isEmpty(m_owner) ? null : m_owner;
+    }
+
+    /**
+     * Returns the dynamic inports for this node.
+     *
+     * @return the dynamic inports
+     */
+    public List<DynamicPortGroup> getDynInPorts() {
+        return m_dynInPorts == null ? Collections.emptyList() : m_dynInPorts;
+    }
+
+    /**
+     * Returns the dynamic outports for this node.
+     *
+     * @return the dynamic outports
+     */
+    public List<DynamicPortGroup> getDynOutPorts() {
+        return m_dynOutPorts == null ? Collections.emptyList() : m_dynOutPorts;
     }
 
     /**
@@ -438,6 +458,24 @@ public class NodeInfo {
      */
     public void setOwner(final String owner) {
         m_owner = owner;
+    }
+
+    /**
+     * Sets the dynamic inport metadata for this node.
+     *
+     * @param dynInPorts a list of {@link DynamicPortGroup}s representing this node's dynamic inports
+     */
+    public void setDynInPorts(final List<DynamicPortGroup> dynInPorts) {
+        m_dynInPorts = dynInPorts;
+    }
+
+    /**
+     * Sets the dynamic outport metadata for this node.
+     *
+     * @param dynOutPorts a list of {@link DynamicPortGroup}s representing this node's dynamic outports
+     */
+    public void setDynOutPorts(final List<DynamicPortGroup> dynOutPorts) {
+        m_dynOutPorts = dynOutPorts;
     }
 
     // -- Helper Classes --
