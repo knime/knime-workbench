@@ -66,6 +66,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
@@ -142,25 +143,27 @@ class DragPositionProcessor {
     //
 
     /**
-     * This invokes <code>processDragEventAtPoint(p, true)</code>
+     * This invokes {@code processDragEventAtPoint(p, true)}
      *
      * @param p This is expected to be in untranslated (untranslated from the source SWT event) coordinates.
      */
     void processDragEventAtPoint(final Point p) {
-        processDragEventAtPoint(p, true, null);
+        processDragEventAtPoint(p, true);
     }
 
     /**
      * Consumers of this processor should call this method (when appropriate) as their drag event processor; after
      * execution returns from this block, the package-access getters of this class can be consulted concerning the
      * results of the processing.
+     *
+     * This invokes {@code processDragEventAtPoint(p, shouldAffectMark, false, null)}
      *
      * @param p This is expected to be in untranslated (untranslated from the source SWT event) coordinates.
      * @param shouldAffectMark If this is true, the UI is updated concerning hit detected objects, as well as keeping
      *            markedNode or markedEdge populated appropriately.
      */
     void processDragEventAtPoint(final Point p, final boolean shouldAffectMark) {
-        processDragEventAtPoint(p, shouldAffectMark, null);
+        processDragEventAtPoint(p, shouldAffectMark, false, null);
     }
 
     /**
@@ -170,15 +173,20 @@ class DragPositionProcessor {
      *
      * @param p This is expected to be in untranslated (untranslated from the source SWT event) coordinates.
      * @param shouldAffectMark If this is true, the UI is updated concerning hit detected objects, as well as keeping
-     *            <code>m_markedNode</code> or <code>m_markedEdge</code> populated appropriately.
+     *            {@code m_markedNode} or {@code m_markedEdge} populated appropriately.
+     * @param allowProxyObjectSelection if true, edit parts whose model implements {@link NodeContainerUI} but do not
+     *            wrap {@link NodeContainer} - for example {@code EntityProxyNativeNodeContainer} - will be a valid hit;
+     *            as of Nov2019, we do not allow this when invoking this method in the usage of DnD replace as that does
+     *            not work somewhere further up the chain.
      * @param encouragedReselects if non-null, for any of the selection which are instances of subclasses of
-     *            <code>AbstractGraphicalEditPart</code>, if the processing point is within the bounds of the edit
-     *            part's figure, then this edit part will be the chosen one for hit detection. The bounds are actually
-     *            expanded by USER_DRAG_SLOP_FOR_BOUNDS pixels to account for user slop at the resize handle boundaries.
-     *            Selections that are instances of <code>WorkflowRootEditPart</code> will be ignored.
+     *            {@link AbstractGraphicalEditPart}, if the processing point is within the bounds of the edit part's
+     *            figure, then this edit part will be the chosen one for hit detection. The bounds are actually expanded
+     *            by USER_DRAG_SLOP_FOR_BOUNDS pixels to account for user slop at the resize handle boundaries.
+     *            Selections that are instances of {@link WorkflowRootEditPart} will be ignored.
      */
     void processDragEventAtPoint(final Point p, final boolean shouldAffectMark,
-        final StructuredSelection encouragedReselects) {
+                                 final boolean allowProxyObjectSelection,
+                                 final StructuredSelection encouragedReselects) {
         setDropLocation(p);
 
         EditPart ep = null;
@@ -221,19 +229,37 @@ class DragPositionProcessor {
 
         if (ep instanceof NodeContainerEditPart) {
             final NodeContainerEditPart hit = (NodeContainerEditPart)ep;
+            final Object model = hit.getModel();
+            final boolean meetsWrappingOrImplementingRequirement;
 
-            //doesn't work for NodeContainerUI, yet
-            if (wraps(hit.getModel(), NodeContainer.class) && (!hit.equals(m_avoidMarkingNode))
-                && (hit.equals(priorNodeSelection) || (!consultVetoers(hit, null)))) {
+            if (allowProxyObjectSelection) {
+                meetsWrappingOrImplementingRequirement =
+                    ((model instanceof NodeContainerUI) || wraps(model, NodeContainer.class));
+            } else {
+                meetsWrappingOrImplementingRequirement = wraps(model, NodeContainer.class);
+            }
+
+            if (meetsWrappingOrImplementingRequirement
+                    && (!hit.equals(m_avoidMarkingNode))
+                    && (hit.equals(priorNodeSelection) || (!consultVetoers(hit, null)))) {
                 m_node = hit;
                 m_nodeCount++;
             }
         } else if (ep instanceof ConnectionContainerEditPart) {
             final ConnectionContainerEditPart hit = (ConnectionContainerEditPart)ep;
+            final boolean meetsWrappingOrImplementingRequirement;
 
-            //doesn't work for ConnectionContainerUI, yet
-            if (wraps(hit.getModel(), ConnectionContainer.class) && (!hit.equals(m_avoidMarkingEdge))
-                && (hit.equals(priorEdgeSelection) || (!consultVetoers(null, hit)))) {
+            if (allowProxyObjectSelection) {
+                // CCEP.getModel() is overridden to ensure the return of implementors of ConnectionContainerUI
+                //      which is good enough for us here.
+                meetsWrappingOrImplementingRequirement = true;
+            } else {
+                meetsWrappingOrImplementingRequirement = wraps(hit.getModel(), ConnectionContainer.class);
+            }
+
+            if (meetsWrappingOrImplementingRequirement
+                    && (!hit.equals(m_avoidMarkingEdge))
+                    && (hit.equals(priorEdgeSelection) || (!consultVetoers(null, hit)))) {
                 m_edge = hit;
                 m_edgeCount++;
             }
