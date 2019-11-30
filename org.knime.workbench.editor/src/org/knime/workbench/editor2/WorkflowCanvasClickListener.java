@@ -224,7 +224,7 @@ public class WorkflowCanvasClickListener implements MouseListener {
             final SelectionManager sm = m_workflowEditor.getGraphicalViewer().getSelectionManager();
             final StructuredSelection ss = (StructuredSelection)sm.getSelection();
 
-            m_dragPositionProcessor.processDragEventAtPoint(me.display.getCursorLocation(), false, true, ss);
+            m_dragPositionProcessor.processDragEventAtPoint(me.display.getCursorLocation(), false, false, ss);
 
             if (aeMode) {
                 final AnnotationEditPart aep = m_dragPositionProcessor.getAnnotation();

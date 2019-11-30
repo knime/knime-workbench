@@ -66,6 +66,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.ui.node.workflow.ConnectionContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
@@ -156,14 +157,14 @@ class DragPositionProcessor {
      * execution returns from this block, the package-access getters of this class can be consulted concerning the
      * results of the processing.
      *
-     * This invokes {@code processDragEventAtPoint(p, shouldAffectMark, false, null)}
+     * This invokes {@code processDragEventAtPoint(p, shouldAffectMark, true, null)}
      *
      * @param p This is expected to be in untranslated (untranslated from the source SWT event) coordinates.
      * @param shouldAffectMark If this is true, the UI is updated concerning hit detected objects, as well as keeping
      *            markedNode or markedEdge populated appropriately.
      */
     void processDragEventAtPoint(final Point p, final boolean shouldAffectMark) {
-        processDragEventAtPoint(p, shouldAffectMark, false, null);
+        processDragEventAtPoint(p, shouldAffectMark, true, null);
     }
 
     /**
@@ -174,10 +175,10 @@ class DragPositionProcessor {
      * @param p This is expected to be in untranslated (untranslated from the source SWT event) coordinates.
      * @param shouldAffectMark If this is true, the UI is updated concerning hit detected objects, as well as keeping
      *            {@code m_markedNode} or {@code m_markedEdge} populated appropriately.
-     * @param allowProxyObjectSelection if true, edit parts whose model implements {@link NodeContainerUI} but do not
-     *            wrap {@link NodeContainer} - for example {@code EntityProxyNativeNodeContainer} - will be a valid hit;
-     *            as of Nov2019, we do not allow this when invoking this method in the usage of DnD replace as that does
-     *            not work somewhere further up the chain.
+     * @param legacyObjectSelectionOnly if true, only edit parts whose model {@code UI} implementor wraps the legacy
+     *            {@code Container} class -- specifically a {@link NodeContainerUI} wrapping an instance of
+     *            {@link NodeContainer}, or a {@link ConnectionContainerUI} wrapping an instance of
+     *            {@link ConnectionContainer} -- will be eligible for hit detection.
      * @param encouragedReselects if non-null, for any of the selection which are instances of subclasses of
      *            {@link AbstractGraphicalEditPart}, if the processing point is within the bounds of the edit part's
      *            figure, then this edit part will be the chosen one for hit detection. The bounds are actually expanded
@@ -185,7 +186,7 @@ class DragPositionProcessor {
      *            Selections that are instances of {@link WorkflowRootEditPart} will be ignored.
      */
     void processDragEventAtPoint(final Point p, final boolean shouldAffectMark,
-                                 final boolean allowProxyObjectSelection,
+                                 final boolean legacyObjectSelectionOnly,
                                  final StructuredSelection encouragedReselects) {
         setDropLocation(p);
 
@@ -232,11 +233,11 @@ class DragPositionProcessor {
             final Object model = hit.getModel();
             final boolean meetsWrappingOrImplementingRequirement;
 
-            if (allowProxyObjectSelection) {
-                meetsWrappingOrImplementingRequirement =
-                    ((model instanceof NodeContainerUI) || wraps(model, NodeContainer.class));
-            } else {
+            if (legacyObjectSelectionOnly) {
                 meetsWrappingOrImplementingRequirement = wraps(model, NodeContainer.class);
+            } else {
+                meetsWrappingOrImplementingRequirement =
+                        ((model instanceof NodeContainerUI) || wraps(model, NodeContainer.class));
             }
 
             if (meetsWrappingOrImplementingRequirement
@@ -249,12 +250,12 @@ class DragPositionProcessor {
             final ConnectionContainerEditPart hit = (ConnectionContainerEditPart)ep;
             final boolean meetsWrappingOrImplementingRequirement;
 
-            if (allowProxyObjectSelection) {
+            if (legacyObjectSelectionOnly) {
+                meetsWrappingOrImplementingRequirement = wraps(hit.getModel(), ConnectionContainer.class);
+            } else {
                 // CCEP.getModel() is overridden to ensure the return of implementors of ConnectionContainerUI
                 //      which is good enough for us here.
                 meetsWrappingOrImplementingRequirement = true;
-            } else {
-                meetsWrappingOrImplementingRequirement = wraps(hit.getModel(), ConnectionContainer.class);
             }
 
             if (meetsWrappingOrImplementingRequirement
