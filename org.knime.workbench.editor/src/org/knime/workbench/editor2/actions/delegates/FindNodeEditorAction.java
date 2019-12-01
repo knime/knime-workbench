@@ -48,6 +48,17 @@
  */
 package org.knime.workbench.editor2.actions.delegates;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.eclipse.e4.ui.model.application.ui.menu.MMenu;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MenuEvent;
+import org.eclipse.swt.events.MenuListener;
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.internal.WorkbenchWindow;
+import org.knime.core.node.NodeLogger;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.actions.AbstractNodeAction;
 import org.knime.workbench.editor2.actions.FindNodeAction;
@@ -58,11 +69,74 @@ import org.knime.workbench.editor2.actions.FindNodeAction;
  * @author loki der quaeler
  */
 public class FindNodeEditorAction extends AbstractEditorAction {
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(FindNodeEditorAction.class);
+    private static final AtomicBoolean FIND_MENU_ITEM_IS_FIXED = new AtomicBoolean(false);
+    private static Menu NODE_MENU = null;
+
+    // We'd prefer to do this once, catching it in the application workbench advisor's postStartup() - but
+    //      the Node menu is unpopulated at that point (presumably as the perspective has not yet been set.)
+    // This is hacky and brittle, but what we need resort to as Eclipse fails to set the accelerator for the menu
+    //      item because of the binding conflict on M1+F.
+    // This will also be called many many times during the applications lifecycle; the first half-dozen or so
+    //      before the user can interact with the app, and the Node menu won't actually have menu items until
+    //      the user does their first click on it, so there's a bit of a dance going on here.
+    @SuppressWarnings("restriction")
+    private synchronized static void fixFindMenuItemIfNotYetDone() {
+        if (NODE_MENU != null) {
+            return;
+        }
+
+        final WorkbenchWindow ww = (WorkbenchWindow)PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        if (ww != null) {
+            final MMenu mm = ww.getModel().getMainMenu();
+            final Menu m = (Menu)mm.getWidget();
+            MenuItem nodeMenuItem = null;
+            for (final MenuItem mi : m.getItems()) {
+                if (mi.getText().equals("Node")) {
+                    nodeMenuItem = mi;
+                    break;
+                }
+            }
+
+            if (nodeMenuItem != null) {
+                NODE_MENU = nodeMenuItem.getMenu();
+                NODE_MENU.addMenuListener(new MenuListener() {
+                    @Override
+                    public void menuHidden(final MenuEvent e) { }
+
+                    @Override
+                    public void menuShown(final MenuEvent e) {
+                        if (FIND_MENU_ITEM_IS_FIXED.get()) {
+                            return;
+                        }
+
+                        MenuItem findMenuItem = null;
+                        for (final MenuItem mi : NODE_MENU.getItems()) {
+                            if (mi.getText().equals("Find Node...")) {
+                                findMenuItem = mi;
+                                break;
+                            }
+                        }
+
+                        if (findMenuItem != null) {
+                            findMenuItem.setAccelerator(SWT.MOD1 | 'F');
+
+                            FIND_MENU_ITEM_IS_FIXED.set(true);
+
+                            LOGGER.debug("Corrected accelerator on the menu item " + findMenuItem);
+                        }
+                    }
+                });
+            }
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
     protected AbstractNodeAction createAction(final WorkflowEditor editor) {
+        fixFindMenuItemIfNotYetDone();
         return new FindNodeAction(editor);
     }
 }
