@@ -50,6 +50,7 @@ package org.knime.workbench.editor2.actions.delegates;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.e4.ui.model.application.ui.menu.MMenu;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MenuEvent;
@@ -68,6 +69,7 @@ import org.knime.workbench.editor2.actions.FindNodeAction;
  *
  * @author loki der quaeler
  */
+@SuppressWarnings("restriction")    // WorkbenchWindow is discouraged API
 public class FindNodeEditorAction extends AbstractEditorAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(FindNodeEditorAction.class);
     private static final AtomicBoolean FIND_MENU_ITEM_IS_FIXED = new AtomicBoolean(false);
@@ -80,7 +82,6 @@ public class FindNodeEditorAction extends AbstractEditorAction {
     // This will also be called many many times during the applications lifecycle; the first half-dozen or so
     //      before the user can interact with the app, and the Node menu won't actually have menu items until
     //      the user does their first click on it, so there's a bit of a dance going on here.
-    @SuppressWarnings("restriction")
     private synchronized static void fixFindMenuItemIfNotYetDone() {
         if (NODE_MENU != null) {
             return;
@@ -120,6 +121,9 @@ public class FindNodeEditorAction extends AbstractEditorAction {
 
                         if (findMenuItem != null) {
                             findMenuItem.setAccelerator(SWT.MOD1 | 'F');
+                            if (!Platform.getOS().equals(Platform.OS_MACOSX)) {
+                                findMenuItem.setText("Find Node...\tCtrl+F");
+                            }
 
                             FIND_MENU_ITEM_IS_FIXED.set(true);
 
