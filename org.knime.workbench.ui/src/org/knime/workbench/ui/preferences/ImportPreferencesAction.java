@@ -50,7 +50,6 @@ package org.knime.workbench.ui.preferences;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
@@ -158,12 +157,9 @@ public class ImportPreferencesAction extends Action {
             return;
         }
 
-        InputStream in = null;
-        try {
-            in = new BufferedInputStream(new FileInputStream(inFile));
+        try (InputStream in = new BufferedInputStream(new FileInputStream(inFile))) {
             IPreferencesService prefService = Platform.getPreferencesService();
-           LOGGER.info("Importing preferences from file "
-                            + inFile.getAbsolutePath() + " now ...");
+            LOGGER.info("Importing preferences from file " + inFile.getAbsolutePath() + " now ...");
             IExportedPreferences prefs = prefService.readPreferences(in);
             IPreferenceFilter filter = new IPreferenceFilter() {
                 @Override
@@ -184,6 +180,8 @@ public class ImportPreferencesAction extends Action {
              * merge the preferences but deletes all default values. */
             prefService.applyPreferences(prefs,
                     new IPreferenceFilter[] {filter});
+            MessageDialog.openInformation(workbenchWindow.getShell(), "Import Preferences",
+                "Preferences have been imported successfully.");
             LOGGER.info("Import of preferences successfully finished.");
         } catch (Throwable t) {
             String msg = "Unable to read preferences from selected file";
@@ -193,15 +191,6 @@ public class ImportPreferencesAction extends Action {
             MessageDialog.openError(workbenchWindow.getShell(),
                     "Error Importing Preferences", msg);
             return;
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
         }
-
     }
 }
