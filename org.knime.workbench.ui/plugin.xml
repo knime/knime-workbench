@@ -74,24 +74,26 @@
                relationship="top"
                relative="org.knime.workbench.repository.view.RepositoryView"
                visible="true">
+         <view
+               closeable="true"
+               id="org.knime.workbench.nodemonitorview.nodemonitorview"
+               moveable="true"
+               relationship="stack"
+               relative="org.eclipse.ui.console.ConsoleView"/>
          </view>
       </perspectiveExtension>
       <perspectiveExtension
             targetID="org.knime.workbench.ui.ModellerPerspective">
-         <viewShortcut
-               id="org.eclipse.ui.views.ContentOutline">
-         </viewShortcut>
-         <viewShortcut
-               id="org.knime.workbench.explorer.view">
-         </viewShortcut>
+         <viewShortcut id="org.eclipse.ui.views.ContentOutline"/>
+         <viewShortcut id="org.knime.workbench.explorer.view"/>
          <viewShortcut id="org.eclipse.ui.console.ConsoleView"/>
          <!--viewShortcut id="org.eclipse.ui.views.ProgressView"/-->
          <viewShortcut id="org.knime.workbench.helpview"/>
          <viewShortcut id="org.knime.workbench.searchhubview"/>
          <viewShortcut id="org.eclipse.pde.runtime.LogView"/>
+         <viewShortcut id="org.knime.workbench.nodemonitorview.nodemonitorview"/>
          <viewShortcut id="org.knime.workbench.repository.view.RepositoryView"/>
-         <viewShortcut id="org.knime.workbench.workflowcoach.view">
-         </viewShortcut>
+         <viewShortcut id="org.knime.workbench.workflowcoach.view"/>
       </perspectiveExtension>
       <perspectiveExtension
             targetID="org.knime.workbench.ui.ModellerPerspective">
