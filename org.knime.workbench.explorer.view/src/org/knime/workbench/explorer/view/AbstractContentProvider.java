@@ -1043,7 +1043,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
     private static boolean isAnyEditorToWorkflowOpen(final AbstractExplorerFileStore fileStore) {
         try {
-            return SaveAsValidator.isAnyEditorToWorkflowOpen(fileStore.toLocalFile().toURI());
+            final File file = fileStore.toLocalFile();
+            return file != null && SaveAsValidator.isAnyEditorToWorkflowOpen(file.toURI());
         } catch (CoreException e) {
             return false;
         }
