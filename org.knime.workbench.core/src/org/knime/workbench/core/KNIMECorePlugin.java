@@ -242,17 +242,20 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             String logLevelConsole =
                 pStore.getString(P_LOGLEVEL_CONSOLE);
             if (!Boolean.getBoolean("java.awt.headless") && PlatformUI.isWorkbenchRunning()) {
-                try {
-                    ConsoleViewAppender.FORCED_APPENDER.write(
-                            KNIMEConstants.WELCOME_MESSAGE);
-                    ConsoleViewAppender.INFO_APPENDER.write(
-                    "Log file is located at: "
-                    + KNIMEConstants.getKNIMEHomeDir() + File.separator
-                    + NodeLogger.LOG_FILE + "\n");
-                } catch (IOException ioe) {
-                    LOGGER.error("Could not print welcome message: ", ioe);
-                }
-                setLogLevel(logLevelConsole);
+                //async exec should fix AP-13234 (deadlock):
+                Display.getDefault().asyncExec(() -> {
+                    try {
+                        ConsoleViewAppender.FORCED_APPENDER.write(
+                                KNIMEConstants.WELCOME_MESSAGE);
+                        ConsoleViewAppender.INFO_APPENDER.write(
+                        "Log file is located at: "
+                        + KNIMEConstants.getKNIMEHomeDir() + File.separator
+                        + NodeLogger.LOG_FILE + "\n");
+                    } catch (IOException ioe) {
+                        LOGGER.error("Could not print welcome message: ", ioe);
+                    }
+                    setLogLevel(logLevelConsole);
+                });
             }
             // encryption key supplier registered with the eclipse framework
             // and serves as a master key provider
