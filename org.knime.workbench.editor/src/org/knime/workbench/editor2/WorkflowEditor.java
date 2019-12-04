@@ -3551,7 +3551,10 @@ public class WorkflowEditor extends GraphicalEditor implements
                 if (m_parentEditor != null) {
                     m_parentEditor.markDirty();
                 }
-                updateWorkflowMessages();
+                //mark dirty not always called from UI-thread
+                Display.getDefault().asyncExec(() -> {
+                    updateWorkflowMessages();
+                });
             }
         }
     }
