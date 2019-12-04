@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.draw2d.FigureCanvas;
 import org.eclipse.draw2d.geometry.Point;
+import org.eclipse.gef.EditPart;
 import org.eclipse.gef.GraphicalViewer;
 import org.eclipse.gef.SelectionManager;
 import org.eclipse.jface.viewers.StructuredSelection;
@@ -65,6 +66,8 @@ import org.knime.workbench.editor2.directannotationedit.StyledTextEditor;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.editor2.editparts.WorkflowInPortEditPart;
+import org.knime.workbench.editor2.editparts.WorkflowOutPortEditPart;
 
 /**
  * Per AP-8593, if we're presently in Annotation Edit mode, the user clicking anywhere which is not an annotation should
@@ -275,6 +278,18 @@ public class WorkflowCanvasClickListener implements MouseListener {
                 if ((m_dragPositionProcessor.getAnnotation() == null)
                                 && (m_dragPositionProcessor.getNode() == null)
                                 && (m_dragPositionProcessor.getEdge() == null)) {
+                    /*
+                     * As pointed out by AP-13275, we also need to be mindful of hits on:
+                     *  . metanode in port
+                     *  . metanode out port
+                     */
+                    org.eclipse.draw2d.geometry.Point canvasPoint = m_dragPositionProcessor.getLastPosition();
+                    final EditPart ep = m_workflowEditor.getGraphicalViewer().findObjectAt(canvasPoint);
+                    if ((ep instanceof WorkflowInPortEditPart)
+                            || (ep instanceof WorkflowOutPortEditPart)) {
+                        return;
+                    }
+
                     // AP-13191 - right click on canvas
                     sm.deselectAll();
                 }
