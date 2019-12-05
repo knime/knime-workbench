@@ -2533,8 +2533,9 @@ public class WorkflowEditor extends GraphicalEditor implements
                         "\n  Use \"Save As...\" to store it to your local workspace or a server you are currently logged in.");
                 }
             } else {
-                sb.append(
-                    "\n  Use \"Save As...\" to save a permanent copy of the workflow to your local workspace, or a mounted KNIME Server.");
+                sb.append("\n  Use \"Save As...\" to save a permanent copy of the "
+                    + (isComponentProjectWFM() ? "component" : "workflow")
+                    + " to your local workspace, or a mounted KNIME Server.");
             }
             viewer.removeMessage(m_lastDisplayedWarningMessageId);
             m_lastDisplayedWarningMessageId =
