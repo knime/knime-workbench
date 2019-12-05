@@ -158,7 +158,7 @@ public class MainPreferencePage extends FieldEditorPreferencePage
 
         final ComboFieldEditor updateMetaNodeLinkOnLoadEditor = new ComboFieldEditor(
                 PreferenceConstants.P_META_NODE_LINK_UPDATE_ON_LOAD,
-                "Update metanode links when workflow loads",
+                "Update linked component when workflow loads",
                 new String[][] {
                         {"Always", MessageDialogWithToggle.ALWAYS},
                         {"Never", MessageDialogWithToggle.NEVER},
