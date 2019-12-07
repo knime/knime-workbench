@@ -65,8 +65,6 @@ import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.SWTError;
-import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DropTarget;
 import org.eclipse.swt.dnd.DropTargetEvent;
@@ -94,7 +92,7 @@ import org.knime.core.node.workflow.ComponentMetadata;
 import org.knime.core.node.workflow.ComponentMetadata.ComponentMetadataBuilder;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.util.SWTUtilities;
-import org.knime.workbench.descriptionview.FallbackBrowser;
+import org.knime.workbench.descriptionview.BrowserProvider;
 import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.descriptionview.metadata.AbstractMetadataModelFacilitator;
 import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
@@ -103,7 +101,6 @@ import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextFieldMetaInfoAtom;
 import org.knime.workbench.editor2.figures.DisplayableNodeType;
 import org.knime.workbench.editor2.figures.NodeContainerFigure;
-import org.knime.workbench.repository.util.DynamicNodeDescriptionCreator;
 import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.w3c.dom.Element;
@@ -173,9 +170,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
     private ArrayList<PortAttributeDirtyTracker> m_portDirtyTrackers;
 
-    private Browser m_browser;
-    private FallbackBrowser m_text;
-    private boolean m_isFallback;
+    private BrowserProvider m_browserProvider;
 
     private Composite m_portsParent;
 
@@ -659,26 +654,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         m_nodeDisplayPreview.setImage(m_nodeIcon);
         m_nodeDisplayPreview.setNodeTypeBackground(getImageForComponentType(m_nodeType));
 
-        Composite compositeToLayout;
-        try {
-            m_text = null;
-            m_browser = new Browser(portsParent, SWT.NONE);
-            m_browser.setText("");
-            m_isFallback = false;
-            compositeToLayout = m_browser;
-        } catch (final SWTError e) {
-            LOGGER.warn("No html browser for node description available.", e);
-            m_browser = null;
-            m_text = new FallbackBrowser(portsParent, SWT.READ_ONLY | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
-            m_isFallback = true;
-            compositeToLayout = m_text.getStyledText();
-        }
-        final GridData gd = new GridData();
-        gd.horizontalAlignment = SWT.FILL;
-        gd.grabExcessHorizontalSpace = true;
-        gd.verticalAlignment = SWT.FILL;
-        gd.heightHint = 296;
-        compositeToLayout.setLayoutData(gd);
+        m_browserProvider = new BrowserProvider(portsParent, true);
 
         populatePortDisplay();
     }
@@ -732,26 +708,13 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     }
 
     void populatePortDisplay() {
-        final StringBuilder content = new StringBuilder(DynamicNodeDescriptionCreator.instance().getHeader());
+        final StringBuilder content = new StringBuilder();
         final Element portDOM = m_subNodeContainer.getXMLDescriptionForPorts();
 
         try {
             content.append(NodeFactoryHTMLCreator.instance.readFullDescription(portDOM));
-            content.append("</body></html>");
 
-            if (m_browser != null) {
-                m_browser.getDisplay().asyncExec(() -> {
-                    if (!m_browser.isDisposed()) {
-                        m_browser.setText(content.toString());
-                        m_browser.setVisible(true);
-                    }
-                });
-            } else if (m_isFallback) {
-                m_text.getDisplay().asyncExec(() -> {
-                    m_text.setText(content.toString());
-                    m_text.setVisible(true);
-                });
-            }
+            m_browserProvider.updateBrowserContent(content.toString());
         } catch (final Exception e) {
             LOGGER.error("Exception attempting to generate components port description display.", e);
         }

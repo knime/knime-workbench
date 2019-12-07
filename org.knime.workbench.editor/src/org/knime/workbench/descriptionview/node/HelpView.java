@@ -47,26 +47,15 @@
  */
 package org.knime.workbench.descriptionview.node;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.HashSet;
 import java.util.Iterator;
 
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.SWTError;
-import org.eclipse.swt.browser.Browser;
-import org.eclipse.swt.browser.LocationEvent;
-import org.eclipse.swt.browser.LocationListener;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.browser.IWebBrowser;
-import org.eclipse.ui.browser.IWorkbenchBrowserSupport;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
-import org.knime.workbench.descriptionview.FallbackBrowser;
+import org.knime.workbench.descriptionview.BrowserProvider;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.repository.model.Category;
 import org.knime.workbench.repository.model.MetaNodeTemplate;
@@ -79,15 +68,8 @@ import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
  *
  * @author ohl, University of Konstanz
  */
-public class HelpView extends Composite implements LocationListener {
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(HelpView.class);
-
-
-    private Browser m_browser;
-
-    private FallbackBrowser m_text;
-
-    private boolean m_isFallback;
+public class HelpView extends Composite {
+    private final BrowserProvider m_browserProvider;
 
     /**
      * @param parent
@@ -97,19 +79,7 @@ public class HelpView extends Composite implements LocationListener {
 
         setLayout(new FillLayout());
 
-        try {
-            m_text = null;
-            m_browser = new Browser(this, SWT.NONE);
-            m_browser.addLocationListener(this);
-            // add us as listeners of the page selection
-            m_browser.setText("");
-            m_isFallback = false;
-        } catch (SWTError e) {
-            LOGGER.warn("No html browser for node description available.", e);
-            m_browser = null;
-            m_text = new FallbackBrowser(this, SWT.READ_ONLY | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
-            m_isFallback = true;
-        }
+        m_browserProvider = new BrowserProvider(this, false);
 
         pack();
     }
@@ -119,11 +89,7 @@ public class HelpView extends Composite implements LocationListener {
      */
     @Override
     public boolean setFocus() {
-        if (m_browser != null) {
-            return m_browser.setFocus();
-        } else {
-            return m_text.setFocus();
-        }
+        return m_browserProvider.setFocus();
     }
 
     /**
@@ -195,45 +161,6 @@ public class HelpView extends Composite implements LocationListener {
             content.append("</dl></body></html>");
         }
 
-        if (m_browser != null) {
-            // FG: must always be invoked in SWT UI thread
-            m_browser.getDisplay().asyncExec(() -> {
-                if (!m_browser.isDisposed()) {
-                    m_browser.setText(content.toString());
-                }
-            });
-        } else if (m_isFallback) {
-            m_text.getDisplay().asyncExec(() -> {
-                m_text.setText(content.toString());
-            });
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void changed(final LocationEvent event) {
-        // nothing to do here
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void changing(final LocationEvent event) {
-        if (!event.location.startsWith("about:")) {
-            final IWorkbenchBrowserSupport browserSupport = PlatformUI.getWorkbench().getBrowserSupport();
-            try {
-                final IWebBrowser browser = browserSupport.getExternalBrowser();
-                browser.openURL(new URL(event.location));
-                event.doit = false;
-            } catch (PartInitException ex) {
-                LOGGER.error(ex.getMessage(), ex);
-            } catch (MalformedURLException ex) {
-                LOGGER.warn("Cannot open URL '" + event.location + "'", ex);
-                // just ignore it and let the default handle this case
-            }
-        }
+        m_browserProvider.updateBrowserContent(content.toString());
     }
 }

@@ -76,37 +76,50 @@ import org.knime.core.node.NodeLogger;
 public class FallbackBrowser {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(FallbackBrowser.class);
     private static final String XSLT = "HTML2Text.xslt";
-    private static final String WARNING = "The operating systems web browser could not be found!\n"
+    private static final String WARNING = "The operating system's web browser could not be found!\n"
         + "Using fall back (text-only) browser";
+    private static final String XML_OPENING_TAG = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 
 
-    private Transformer m_transformer;
+    private final Transformer m_transformer;
 
     private final StyledText m_text;
 
     private final StyleRange m_styleRange;
 
+    private final boolean m_shouldDisplayFallbackWarning;
+
     /**
      * @param parent parent
+     * @param displayFallbackWarning if true, then the displayed content will always be prefaced with a bold-red text
+     *            stating that we're using the fallback browser because we weren't able to find the 'operating system's'
+     *            web browser.
      * @param style SWT constants
      */
-    public FallbackBrowser(final Composite parent, final int style) {
+    public FallbackBrowser(final Composite parent, final boolean displayFallbackWarning, final int style) {
         m_text = new StyledText(parent, style);
-        m_styleRange = new StyleRange();
-        m_styleRange.start = 0;
-        m_styleRange.length = WARNING.length();
-        m_styleRange.fontStyle = SWT.BOLD;
 
-        final Color red = new Color(m_text.getDisplay(), 255, 0, 0);
-        m_styleRange.foreground = red;
+        m_shouldDisplayFallbackWarning = displayFallbackWarning;
+        if (displayFallbackWarning) {
+            m_styleRange = new StyleRange();
+            m_styleRange.start = 0;
+            m_styleRange.length = WARNING.length();
+            m_styleRange.fontStyle = SWT.BOLD;
+
+            final Color red = new Color(m_text.getDisplay(), 255, 0, 0);
+            m_styleRange.foreground = red;
+        } else {
+            m_styleRange = null;
+        }
 
         @SuppressWarnings("resource")
         InputStream is = null;
+        Transformer transformer = null;
         try {
             is = getClass().getResourceAsStream(XSLT);
-            StreamSource stylesheet = new StreamSource(is);
-            m_transformer = TransformerFactory.newInstance().newTemplates(stylesheet).newTransformer();
-            m_transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            final StreamSource stylesheet = new StreamSource(is);
+            transformer = TransformerFactory.newInstance().newTemplates(stylesheet).newTransformer();
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
         } catch (TransformerConfigurationException e) {
             LOGGER.error(e.getMessage(), e);
         } catch (TransformerFactoryConfigurationError e) {
@@ -118,6 +131,8 @@ public class FallbackBrowser {
                 } catch (Exception e) { }  // NOPMD
             }
         }
+
+        m_transformer = transformer;
     }
 
     /**
@@ -141,15 +156,24 @@ public class FallbackBrowser {
      * @param string if HTML it is converted into plain text
      */
     public void setText(final String string) {
-        m_text.setText("");
-        StringBuilder result = new StringBuilder(WARNING + "\n");
-        if (string.startsWith("<")) {
-            result.append(convertHTML(string));
-        } else {
-            result.append(string);
+        if (!m_text.isDisposed()) {
+            m_text.setText("");
+
+            final StringBuilder result = new StringBuilder();
+            if (m_shouldDisplayFallbackWarning) {
+                result.append(WARNING).append('\n');
+            }
+            if (string.startsWith("<")) {
+                result.append(convertHTML(string));
+            } else {
+                result.append(string);
+            }
+            m_text.setText(result.toString());
+
+            if (m_shouldDisplayFallbackWarning) {
+                m_text.setStyleRange(m_styleRange);
+            }
         }
-        m_text.setText(result.toString());
-        m_text.setStyleRange(m_styleRange);
     }
 
     /**
@@ -189,6 +213,13 @@ public class FallbackBrowser {
             return "Unable to process fullDescription in " + "xml: "
                 + ex.getMessage();
         }
-        return result.getWriter().toString();
+
+        String converted = result.getWriter().toString();
+        if (converted.startsWith(XML_OPENING_TAG)) {
+            converted = converted.substring(XML_OPENING_TAG.length());
+        }
+        converted = converted.trim().replaceAll("\\&lt;", "<").replaceAll("\\&gt;", ">").replaceAll("\\&amp;", "&");
+
+        return converted;
     }
 }
