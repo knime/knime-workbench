@@ -175,6 +175,9 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
             "The metadata failed to be fetched from the server. If you would like to view its metadata, you may "
                 + "download it and then view it locally by double-clicking on the workflow in the KNIME Explorer.";
 
+    private static final String NOT_READABLE_TEXT =
+        "The metadata cannot be accessed due to missing permissions.";
+
     private static final String NO_METADATA_TEXT =
         "Metadata cannot be shown nor edited for the type of item you have selected.";
 
@@ -314,6 +317,8 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     protected final AtomicBoolean m_assetRepresentsATemplate;
     /** Subclasses should set this to indicate whether the asset is a job. **/
     protected final AtomicBoolean m_assetRepresentsAJob;
+    /** Subclasses should set this to indicate whether the asset is readable. */
+    protected final AtomicBoolean m_assetIsReadable;
 
     /**
      * Subclasses should set this during selection change to indicate whether we should display the license section.
@@ -335,6 +340,8 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     private final Composite m_remoteServerNotificationPane;
 
     private final Composite m_remoteServerFailureNotificationPane;
+
+    private final Composite m_notReadableNotificationPane;
 
     private final Composite m_noUsableMetadataNotificationPane;
 
@@ -407,6 +414,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         m_asynchronousMetadataFetchFailed = new AtomicBoolean(false);
         m_assetRepresentsATemplate = new AtomicBoolean(false);
         m_assetRepresentsAJob = new AtomicBoolean(false);
+        m_assetIsReadable = new AtomicBoolean(true);
 
         m_shouldDisplayLicenseSection = new AtomicBoolean(!SHOW_LICENSE_ONLY_FOR_HUB);
         m_assetNameHasChanged = new AtomicBoolean(false);
@@ -525,6 +533,21 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         m_remoteServerFailureNotificationPane.setLayout(new GridLayout(1, false));
         l = new Label(m_remoteServerFailureNotificationPane, SWT.CENTER | SWT.WRAP);
         l.setText(SERVER_WORKFLOW_FETCH_FAILED_TEXT);
+        l.setForeground(TEXT_COLOR);
+        l.setFont(ITALIC_CONTENT_FONT);
+        gd.horizontalAlignment = SWT.LEFT;
+        gd.verticalAlignment = SWT.BOTTOM;
+        gd.grabExcessHorizontalSpace = true;
+        l.setLayoutData(gd);
+
+        m_notReadableNotificationPane = new Composite(m_contentPane, SWT.NONE);
+        gd = new GridData();
+        gd.horizontalAlignment = SWT.FILL;
+        gd.grabExcessHorizontalSpace = true;
+        m_notReadableNotificationPane.setLayoutData(gd);
+        m_notReadableNotificationPane.setLayout(new GridLayout(1, false));
+        l = new Label(m_notReadableNotificationPane, SWT.CENTER | SWT.WRAP);
+        l.setText(NOT_READABLE_TEXT);
         l.setForeground(TEXT_COLOR);
         l.setFont(ITALIC_CONTENT_FONT);
         gd.horizontalAlignment = SWT.LEFT;
@@ -678,6 +701,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
 
         SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_remoteServerFailureNotificationPane, false);
+        SWTUtilities.spaceReclaimingSetVisible(m_notReadableNotificationPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_titleContentPane, false);
         SWTUtilities.spaceReclaimingSetVisible(m_descriptionContentPane, false);
@@ -786,13 +810,15 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
      */
     protected final void updateDisplay() {
         boolean focusFirstEditElement = false;
+        final boolean isReadable = m_assetIsReadable.get();
 
         if (m_waitingForAsynchronousMetadata.get() || m_asynchronousMetadataFetchFailed.get()
-                    || m_assetRepresentsATemplate.get() || m_assetRepresentsAJob.get()) {
+            || m_assetRepresentsATemplate.get() || m_assetRepresentsAJob.get() || !isReadable) {
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane,
-                m_waitingForAsynchronousMetadata.get());
+                m_waitingForAsynchronousMetadata.get() && isReadable);
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerFailureNotificationPane,
                 m_asynchronousMetadataFetchFailed.get());
+            SWTUtilities.spaceReclaimingSetVisible(m_notReadableNotificationPane, !isReadable);
             SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane,
                 m_assetRepresentsATemplate.get() || m_assetRepresentsAJob.get());
 
@@ -812,6 +838,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
 
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerNotificationPane, false);
             SWTUtilities.spaceReclaimingSetVisible(m_remoteServerFailureNotificationPane, false);
+            SWTUtilities.spaceReclaimingSetVisible(m_notReadableNotificationPane, false);
             SWTUtilities.spaceReclaimingSetVisible(m_noUsableMetadataNotificationPane, false);
 
             SWTUtilities.spaceReclaimingSetVisible(m_upperSection, !m_hiddenSections.contains(HiddenSection.UPPER));

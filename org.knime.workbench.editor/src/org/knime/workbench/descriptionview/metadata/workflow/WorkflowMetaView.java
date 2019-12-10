@@ -172,6 +172,7 @@ public class WorkflowMetaView extends AbstractMetaView {
         m_assetRepresentsATemplate.set(false);
         m_assetRepresentsAJob.set(false);
         m_shouldDisplayLicenseSection.set(!SHOW_LICENSE_ONLY_FOR_HUB);
+        m_assetIsReadable.set(true);
         if (knimeExplorerItem) {
             final AbstractExplorerFileStore fs = ((ContentObject) o).getFileStore();
             final AbstractExplorerFileInfo fileInfo = fs.fetchInfo();
@@ -184,6 +185,7 @@ public class WorkflowMetaView extends AbstractMetaView {
             final boolean isTemplate = AbstractExplorerFileStore.isWorkflowTemplate(fs);
             final boolean isRemote = fs.getContentProvider().isRemote();
             final boolean isJob = isRemote ? ((RemoteExplorerFileInfo)fileInfo).isWorkflowJob() : false;
+            final boolean isReadable = fs.fetchInfo().isReadable();
             final boolean validFS =
                 (isWorkflow || AbstractExplorerFileStore.isWorkflowGroup(fs) || isTemplate || isJob);
             if (!validFS) {
@@ -195,6 +197,7 @@ public class WorkflowMetaView extends AbstractMetaView {
                 m_waitingForAsynchronousMetadata.set(isRemote && !isTemplate && !isJob);
                 m_assetRepresentsATemplate.set(isTemplate);
                 m_assetRepresentsAJob.set(isJob);
+                m_assetIsReadable.set(isReadable);
 
                 metadataFile = null;
                 canEditMetadata = false;
