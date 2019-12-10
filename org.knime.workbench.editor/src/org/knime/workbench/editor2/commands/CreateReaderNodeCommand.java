@@ -123,7 +123,7 @@ public class CreateReaderNodeCommand extends AbstractKNIMECommand {
         try {
             final ModifiableNodeCreationConfiguration config = m_factory.createNodeCreationConfig();
             config.setURLConfiguration(m_dropContext.getUrl());
-            final NodeID id = hostWFM.addNodeAndApplyContext(m_factory, config);
+            final NodeID id = hostWFM.addNodeAndApplyContext(m_factory, config, null);
             m_container = hostWFM.getNodeContainer(id);
             // create extra info and set it
             NodeUIInformation info = NodeUIInformation.builder()
