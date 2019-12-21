@@ -63,11 +63,11 @@ import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.widgets.Display;
 import org.knime.workbench.editor2.actions.ToggleEditorModeAction;
 import org.knime.workbench.editor2.directannotationedit.StyledTextEditor;
+import org.knime.workbench.editor2.editparts.AbstractPortEditPart;
+import org.knime.workbench.editor2.editparts.AbstractWorkflowPortBarEditPart;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
-import org.knime.workbench.editor2.editparts.WorkflowInPortEditPart;
-import org.knime.workbench.editor2.editparts.WorkflowOutPortEditPart;
 
 /**
  * Per AP-8593, if we're presently in Annotation Edit mode, the user clicking anywhere which is not an annotation should
@@ -278,15 +278,17 @@ public class WorkflowCanvasClickListener implements MouseListener {
                 if ((m_dragPositionProcessor.getAnnotation() == null)
                                 && (m_dragPositionProcessor.getNode() == null)
                                 && (m_dragPositionProcessor.getEdge() == null)) {
+                    org.eclipse.draw2d.geometry.Point canvasPoint = m_dragPositionProcessor.getLastPosition();
+                    final EditPart ep = m_workflowEditor.getGraphicalViewer().findObjectAt(canvasPoint);
                     /*
                      * As pointed out by AP-13275, we also need to be mindful of hits on:
                      *  . metanode in port
                      *  . metanode out port
+                     * As pointed out by AP-13279, we also need to be mindful of hits on:
+                     *  . metanode in port bar
+                     *  . metanode out port bar
                      */
-                    org.eclipse.draw2d.geometry.Point canvasPoint = m_dragPositionProcessor.getLastPosition();
-                    final EditPart ep = m_workflowEditor.getGraphicalViewer().findObjectAt(canvasPoint);
-                    if ((ep instanceof WorkflowInPortEditPart)
-                            || (ep instanceof WorkflowOutPortEditPart)) {
+                    if ((ep instanceof AbstractPortEditPart) || (ep instanceof AbstractWorkflowPortBarEditPart)) {
                         return;
                     }
 
