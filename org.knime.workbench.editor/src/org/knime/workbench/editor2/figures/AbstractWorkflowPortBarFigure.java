@@ -59,18 +59,16 @@ import org.knime.workbench.editor2.editparts.WorkflowInPortBarEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowOutPortBarEditPart;
 
 /**
- *
  * @author Fabian Dill, University of Konstanz
  */
 public abstract class AbstractWorkflowPortBarFigure extends RectangleFigure {
-
     /** This is the default background color **/
     public static Color DEFAULT_BACKGROUND_COLOR = Display.getCurrent().getSystemColor(SWT.COLOR_GRAY);
 
     /** Default width for the port bar. */
     protected static final int WIDTH = 30;
-    /** Default offset from the workflow borders. */
-    protected static final int OFFSET = 10;
+    /** Default margin surrounding a port bar. */
+    protected static final int MARGIN = 10;
 
     private boolean m_isInitialized = false;
 

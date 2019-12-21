@@ -49,6 +49,7 @@ package org.knime.workbench.editor2.figures;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.draw2d.Figure;
 import org.eclipse.draw2d.FigureListener;
@@ -136,6 +137,18 @@ public class WorkflowFigure extends FreeformLayeredPane implements ControlListen
         m_viewport = viewport;
 
         ensureExpandedCanvas();
+    }
+
+    /**
+     * @return an {@link Optional} which will be empty if {@link #setViewport(Viewport)} has not yet been called (or
+     *         been called with {@code null}), otherwise the value of {@link Viewport#getSize()}
+     */
+    public Optional<Dimension> getViewportSize() {
+        if (m_viewport == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(m_viewport.getSize());
     }
 
     /**

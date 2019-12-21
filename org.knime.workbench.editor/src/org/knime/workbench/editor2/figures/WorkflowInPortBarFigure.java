@@ -51,21 +51,10 @@ import org.eclipse.draw2d.Graphics;
 import org.eclipse.draw2d.geometry.Rectangle;
 
 /**
- *
  * @author Fabian Dill, University of Konstanz
  */
 public class WorkflowInPortBarFigure extends AbstractWorkflowPortBarFigure {
-
     private final int m_maxXcord;
-
-    /**
-     * If no UI info is available. Bar places itself left of all components
-     * @param maxXcoord the most left coordinate used by the workflow components
-     */
-    public WorkflowInPortBarFigure(final int maxXcoord) {
-        m_maxXcord = maxXcoord;
-        setInitialized(false);
-    }
 
     /**
      * @param uiInfo from the UI info
@@ -77,25 +66,34 @@ public class WorkflowInPortBarFigure extends AbstractWorkflowPortBarFigure {
     }
 
     /**
+     * If no UI info is available. Bar places itself left of all components
+     * @param maxXcoord the most left coordinate used by the workflow components
+     */
+    public WorkflowInPortBarFigure(final int maxXcoord) {
+        m_maxXcord = maxXcoord;
+        setInitialized(false);
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public void paint(final Graphics graphics) {
-        Rectangle parent = getParent().getBounds().getCopy();
         if (!isInitialized()) {
-            int WfPortSize = AbstractPortFigure.getPortSizeWorkflow();
-            int barWidth = WIDTH + WfPortSize + OFFSET;
-            int xLoc;
-            if (barWidth + 10 >= m_maxXcord) {
-                xLoc = m_maxXcord - 50 - WIDTH - WfPortSize;
+            final Rectangle parent = getParent().getBounds().getCopy();
+            final int barWidth = WIDTH + AbstractPortFigure.getPortSizeWorkflow();
+            final int xLoc;
+            // max-x is the min-x value calculated by AbstractWorkflowPortBarEditPart#getMinMaxXcoordInWorkflow()
+            if ((barWidth + MARGIN) >= m_maxXcord) {
+                xLoc = m_maxXcord - 50 - barWidth;
             } else {
-                xLoc = OFFSET;
+                xLoc = MARGIN;
             }
-            Rectangle newBounds =
-                    new Rectangle(xLoc, OFFSET, WIDTH + WfPortSize, parent.height - (2 * OFFSET));
+            final Rectangle newBounds = new Rectangle(xLoc, MARGIN, barWidth, (parent.height - (2 * MARGIN)));
             setInitialized(true);
             setBounds(newBounds);
         }
+
         super.paint(graphics);
     }
 
@@ -109,12 +107,15 @@ public class WorkflowInPortBarFigure extends AbstractWorkflowPortBarFigure {
 
     @Override
     protected void outlineShape(final Graphics graphics) {
-        Rectangle r = getBounds().getCopy();
+        final Rectangle r = getBounds().getCopy();
         r.width -= AbstractPortFigure.getPortSizeWorkflow();
-        int x = r.x + lineWidth / 2;
-        int y = r.y + lineWidth / 2;
-        int w = r.width - Math.max(1, lineWidth);
-        int h = r.height - Math.max(1, lineWidth);
+
+        final int ourLineWidth = getLineWidth();
+        final int x = r.x + (ourLineWidth / 2);
+        final int y = r.y + (ourLineWidth / 2);
+        final int w = r.width - Math.max(1, ourLineWidth);
+        final int h = r.height - Math.max(1, ourLineWidth);
+
         graphics.drawRectangle(x, y, w, h);
     }
 }
