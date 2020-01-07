@@ -49,12 +49,14 @@
 package org.knime.workbench.repository.util;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.function.Supplier;
 
 import org.knime.core.node.Node;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.port.PortObjectSpec;
-import org.knime.core.node.streamable.InputPortRole;
 import org.knime.core.node.streamable.PartitionInfo;
 import org.knime.workbench.repository.model.NodeTemplate;
 
@@ -73,7 +75,13 @@ public final class NodeUtil {
      * @throws Exception thrown if the node cannot be instantiated
      */
     public static boolean isStreamable(final NodeTemplate nodeTemplate) throws Exception {
-        return isStreamable(nodeTemplate.createFactoryInstance());
+        return isStreamable(nodeTemplate.getFactory(), () -> {
+            try {
+                return nodeTemplate.createFactoryInstance();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     /**
@@ -85,7 +93,8 @@ public final class NodeUtil {
      */
     @SuppressWarnings("unchecked")
     public static boolean isStreamable(final NodeFactory<? extends NodeModel> nodeFactory) throws Exception {
-        return isStreamable(new Node((NodeFactory<NodeModel>)nodeFactory));
+        return isStreamable((Class<? extends NodeFactory<? extends NodeModel>>)nodeFactory.getClass(),
+            () -> nodeFactory);
     }
 
     /**
@@ -96,23 +105,44 @@ public final class NodeUtil {
      * @throws Exception if the node cannot be instantiated
      */
     public static boolean isStreamable(final Node node) throws Exception {
-        final NodeModel model = node.getNodeModel();
-        try {
-            for (final InputPortRole role : model.getInputPortRoles()) {
-                if (role.isStreamable()) {
-                    return true;
-                }
-            }
-        } catch (final Exception e) {
-            // Some nodes throw an exception when calling #getInputPortRoles(),
-            // because the input port roles are dependent on the node
-            // configuration
-
-            //check whether the current node model overrides the #createStreamableOperator-method
-            final Method m =
-                model.getClass().getMethod("createStreamableOperator", PartitionInfo.class, PortObjectSpec[].class);
-            return m.getDeclaringClass() != NodeModel.class;
-        }
-        return false;
+        return isStreamable(node.getNodeModel().getClass());
     }
+
+    private static boolean isStreamable(final Class<? extends NodeFactory<? extends NodeModel>> nodeFactoryClass,
+        final Supplier<NodeFactory<? extends NodeModel>> nodeFactoryCreator)
+        throws NoSuchMethodException, SecurityException {
+        Type genericSuperclass = nodeFactoryClass.getGenericSuperclass();
+        Class<?> nodeModelClass = null;
+
+        // try inferring node model class from the node factory's generic parameter (exclusively by reflection)
+        if (genericSuperclass instanceof ParameterizedType) {
+            Type type = ((ParameterizedType)nodeFactoryClass.getGenericSuperclass()).getActualTypeArguments()[0];
+            if (type instanceof ParameterizedType) {
+                nodeModelClass = (Class<?>)((ParameterizedType)type).getRawType();
+            } else {
+                nodeModelClass = (Class<?>)type;
+            }
+
+            //some node factory implementations are parameterized, but not with a node model
+            if (!NodeModel.class.isAssignableFrom(nodeModelClass)) {
+                nodeModelClass = null;
+            }
+        }
+
+        //fall back if node model class couldn't be determined via reflection
+        //-> create a node model instance
+        if (nodeModelClass == null) {
+            Node n = new Node((NodeFactory<NodeModel>)nodeFactoryCreator.get());
+            nodeModelClass = n.getNodeModel().getClass();
+            n.cleanup();
+        }
+        return isStreamable(nodeModelClass);
+    }
+
+    private static boolean isStreamable(final Class<?> nodeModelClass)
+        throws NoSuchMethodException, SecurityException {
+        Method m = nodeModelClass.getMethod("createStreamableOperator", PartitionInfo.class, PortObjectSpec[].class);
+        return m.getDeclaringClass() != NodeModel.class;
+    }
+
 }
