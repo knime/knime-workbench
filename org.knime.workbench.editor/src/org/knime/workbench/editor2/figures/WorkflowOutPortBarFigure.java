@@ -87,20 +87,19 @@ public class WorkflowOutPortBarFigure extends AbstractWorkflowPortBarFigure {
             final Rectangle parent = getParent().getBounds().getCopy();
             final int barWidth = WIDTH + AbstractPortFigure.getPortSizeWorkflow();
             final int xLoc;
-            // min-x is the max-x value calculated by AbstractWorkflowPortBarEditPart#getMinMaxXcoordInWorkflow()
-            if (m_minXCoord != Integer.MIN_VALUE) {
-                // place the bar right of the last workflow part
-                xLoc = m_minXCoord + 50;
-            } else {
-                // there are no nodes / connections as of yet so place it at the right side of the viewport
-                //  NOTE that the viewport is *always* smaller than the size of the parent bounds due to AP-9722
-                final WorkflowFigure wf = (WorkflowFigure)getParent();
-                final Optional<Dimension> size = wf.getViewportSize();
-                if (size.isPresent()) {
-                    xLoc = size.get().width - barWidth - MARGIN;
+            //  NOTE that the viewport is *always* smaller than the size of the parent bounds due to AP-9722
+            final WorkflowFigure wf = (WorkflowFigure)getParent();
+            final Optional<Dimension> size = wf.getViewportSize();
+            if (size.isPresent()) {
+                // min-x is the max-x value calculated by AbstractWorkflowPortBarEditPart#getMinMaxXcoordInWorkflow()
+                if ((m_minXCoord != Integer.MIN_VALUE) && (m_minXCoord > size.get().width)) {
+                    // place the bar right of the last workflow part
+                    xLoc = m_minXCoord + 50;
                 } else {
-                    return;
+                    xLoc = size.get().width - barWidth - MARGIN;
                 }
+            } else {
+                return;
             }
             final Rectangle newBounds = new Rectangle(xLoc, MARGIN, barWidth, (parent.height - (2 * MARGIN)));
             setInitialized(true);
