@@ -88,11 +88,13 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException if mountpoint does not exist
      */
     @Override
     public List<URI> listFiles(final URI uri) throws IOException {
         try {
-            final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+            final AbstractExplorerFileStore store = getStore(uri);
             final List<URI> children = new ArrayList<>();
             for (final String childName : store.childNames(0, null)) {
                 children.add(store.getChild(childName).toURI());
@@ -106,11 +108,13 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException if mountpoint does not exist
      */
     @Override
     public FSFileAttributes getFileAttributes(final URI uri) throws IOException {
 
-        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+        final AbstractExplorerFileStore store = getStore(uri);
         AbstractExplorerFileInfo info;
         try {
             info = store.fetchInfo(0, null);
@@ -130,12 +134,14 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException if mountpoint does not exist
      */
     @Override
     public boolean copyFile(final URI source, final URI target) throws IOException {
 
-        final AbstractExplorerFileStore sourceStore = ExplorerMountTable.getFileSystem().getStore(source);
-        final AbstractExplorerFileStore targetStore = ExplorerMountTable.getFileSystem().getStore(target);
+        final AbstractExplorerFileStore sourceStore = getStore(source);
+        final AbstractExplorerFileStore targetStore = getStore(target);
         try {
             sourceStore.copy(targetStore, 0, null);
         } catch (final CoreException e) {
@@ -147,12 +153,14 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException if mountpoint does not exist
      */
     @Override
     public boolean moveFile(final URI source, final URI target) throws IOException {
 
-        final AbstractExplorerFileStore sourceStore = ExplorerMountTable.getFileSystem().getStore(source);
-        final AbstractExplorerFileStore targetStore = ExplorerMountTable.getFileSystem().getStore(target);
+        final AbstractExplorerFileStore sourceStore = getStore(source);
+        final AbstractExplorerFileStore targetStore = getStore(target);
         try {
             sourceStore.move(targetStore, 0, null);
         } catch (final CoreException e) {
@@ -166,14 +174,13 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException if mountpoint does not exist
      */
     @Override
     public boolean deleteFile(final URI uri) throws IOException {
-
-        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
-
         try {
-            store.delete(0, null);
+            getStore(uri).delete(0, null);
         } catch (final CoreException e) {
             throw new IOException(e);
         }
@@ -183,11 +190,13 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException if mountpoint does not exist
      */
     @Override
     public void createDirectory(final URI uri) throws IOException {
         try {
-            final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
+            final AbstractExplorerFileStore store = getStore(uri);
             store.mkdir(0, null);
             store.getParent().refresh();
         } catch (final CoreException e) {
@@ -198,17 +207,14 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException if mountpoint does not exist
      */
     @Override
     public boolean isReadable(final URI uri) throws IOException {
         //FIXME hacky way to see if we are connected
-
-        final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
-        if (store == null) {
-            throw new IOException(String.format("Mountpoint %s does not exist.", uri.getHost()));
-        }
         try {
-            return store.getContentProvider().getRootStore().childNames(0, null).length != 0;
+            return getStore(uri).getContentProvider().getRootStore().childNames(0, null).length != 0;
         } catch (final CoreException e) {
             throw new IOException(e);
         }
@@ -216,11 +222,21 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
 
     /**
      * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException if mountpoint does not exist
      */
     @Override
     public boolean isWorkflow(final URI uri) {
+        return AbstractExplorerFileStore.isWorkflow(getStore(uri));
+    }
+
+    private static AbstractExplorerFileStore getStore(final URI uri) {
         final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
-        return AbstractExplorerFileStore.isWorkflow(store);
+        if (store == null) {
+            throw new IllegalArgumentException(String.format("Mountpoint %s does not exist.", uri.getHost()));
+        } else {
+            return store;
+        }
     }
 
 }
