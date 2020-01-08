@@ -84,7 +84,6 @@ public class WorkflowOutPortBarFigure extends AbstractWorkflowPortBarFigure {
     @Override
     public void paint(final Graphics graphics) {
         if (!isInitialized()) {
-            final Rectangle parent = getParent().getBounds().getCopy();
             final int barWidth = WIDTH + AbstractPortFigure.getPortSizeWorkflow();
             final int xLoc;
             //  NOTE that the viewport is *always* smaller than the size of the parent bounds due to AP-9722
@@ -101,7 +100,7 @@ public class WorkflowOutPortBarFigure extends AbstractWorkflowPortBarFigure {
             } else {
                 return;
             }
-            final Rectangle newBounds = new Rectangle(xLoc, MARGIN, barWidth, (parent.height - (2 * MARGIN)));
+            final Rectangle newBounds = new Rectangle(xLoc, MARGIN, barWidth, (size.get().height - (2 * MARGIN)));
             setInitialized(true);
             setBounds(newBounds);
         }

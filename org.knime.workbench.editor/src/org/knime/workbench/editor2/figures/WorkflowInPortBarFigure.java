@@ -47,7 +47,10 @@
  */
 package org.knime.workbench.editor2.figures;
 
+import java.util.Optional;
+
 import org.eclipse.draw2d.Graphics;
+import org.eclipse.draw2d.geometry.Dimension;
 import org.eclipse.draw2d.geometry.Rectangle;
 
 /**
@@ -80,16 +83,22 @@ public class WorkflowInPortBarFigure extends AbstractWorkflowPortBarFigure {
     @Override
     public void paint(final Graphics graphics) {
         if (!isInitialized()) {
-            final Rectangle parent = getParent().getBounds().getCopy();
             final int barWidth = WIDTH + AbstractPortFigure.getPortSizeWorkflow();
             final int xLoc;
-            // max-x is the min-x value calculated by AbstractWorkflowPortBarEditPart#getMinMaxXcoordInWorkflow()
-            if ((barWidth + MARGIN) >= m_maxXcord) {
-                xLoc = m_maxXcord - 50 - barWidth;
+            //  NOTE that the viewport is *always* smaller than the size of the parent bounds due to AP-9722
+            final WorkflowFigure wf = (WorkflowFigure)getParent();
+            final Optional<Dimension> size = wf.getViewportSize();
+            if (size.isPresent()) {
+                // max-x is the min-x value calculated by AbstractWorkflowPortBarEditPart#getMinMaxXcoordInWorkflow()
+                if ((barWidth + MARGIN) >= m_maxXcord) {
+                    xLoc = m_maxXcord - 50 - barWidth;
+                } else {
+                    xLoc = MARGIN;
+                }
             } else {
-                xLoc = MARGIN;
+                return;
             }
-            final Rectangle newBounds = new Rectangle(xLoc, MARGIN, barWidth, (parent.height - (2 * MARGIN)));
+            final Rectangle newBounds = new Rectangle(xLoc, MARGIN, barWidth, (size.get().height - (2 * MARGIN)));
             setInitialized(true);
             setBounds(newBounds);
         }
