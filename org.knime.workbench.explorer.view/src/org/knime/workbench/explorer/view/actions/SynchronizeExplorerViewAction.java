@@ -155,7 +155,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         Set<String> mountedIds = m_delegator.getMountedIds();
         for (String id : mountedIds) {
             MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
-            AbstractExplorerFileStore root = mountPoint.getProvider().getFileStore("/");
+            AbstractExplorerFileStore root = mountPoint.getProvider().getRootStore();
             try {
                 File localRoot = root.toLocalFile();
                 if (localRoot != null) {

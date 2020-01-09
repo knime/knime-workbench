@@ -144,9 +144,9 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                     // can't create workflow on the selected item (it is remote)
                     if (ExplorerMountTable.getMountPoint(defaultLocalID) != null) {
                         m_initialSelection =
-                                ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getFileStore("/");
+                                ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getRootStore();
                     } else if (localCP != null) {
-                        m_initialSelection = localCP.getFileStore("/");
+                        m_initialSelection = localCP.getRootStore();
                     } else {
                         m_initialSelection = null;
                     }
@@ -156,7 +156,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                     m_initialSelection = firstSelectedItem.getParent();
                 }
             } else {
-                m_initialSelection = ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getFileStore("/");
+                m_initialSelection = ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getRootStore();
             }
         }
     }

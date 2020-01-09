@@ -227,7 +227,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * The refresh goes up and tells the view to refresh our content.
      */
     public final void refresh() {
-        refresh(getFileStore("/"));
+        refresh(getRootStore());
     }
 
     public final void refresh(final AbstractExplorerFileStore changedChild) {
@@ -577,7 +577,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         if (linkType.equals(LinkType.Absolute)) {
             return originalUri;
         } else {
-            File templateMountpointRoot = templateLocation.getContentProvider().getFileStore("/").toLocalFile();
+            File templateMountpointRoot = templateLocation.getContentProvider().getRootStore().toLocalFile();
             if (templateMountpointRoot == null) {
                 LOGGER.warn("Cannot determine mountpoint for template, using absolute link instead of relative link");
                 return originalUri;

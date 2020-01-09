@@ -573,7 +573,7 @@ public final class ExplorerMountTable {
             throw new CoreException(new Status(IStatus.ERROR, PLUGIN_ID,
                 "No temporary space mounted. Temp dir can't be created."));
         }
-        AbstractExplorerFileStore tmpRoot = tempProvider.getFileStore("/");
+        AbstractExplorerFileStore tmpRoot = tempProvider.getRootStore();
         File localTmp;
         try {
             localTmp = tmpRoot.toLocalFile();

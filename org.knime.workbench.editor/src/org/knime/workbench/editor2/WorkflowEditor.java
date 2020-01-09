@@ -1122,7 +1122,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                             + ", looks like it is a linked resource");
                     } else {
                         wfFileFileStore = fs;
-                        mountPointRoot = fs.getContentProvider().getFileStore("/").toLocalFile();
+                        mountPointRoot = fs.getContentProvider().getRootStore().toLocalFile();
                     }
                 } catch (CoreException ex) {
                     LOGGER.warn(
@@ -1150,7 +1150,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 }
 
                 try {
-                    mountPointRoot = filestore.getContentProvider().getFileStore("/").toLocalFile();
+                    mountPointRoot = filestore.getContentProvider().getRootStore().toLocalFile();
                 } catch (CoreException ex) {
                     LOGGER.warn(
                         "Could not determine mount point root for " + wfFile.getParent() + ": " + ex.getMessage(), ex);
@@ -2078,7 +2078,7 @@ public class WorkflowEditor extends GraphicalEditor implements
 
             File mountPointRoot = null;
             try {
-                mountPointRoot = newWorkflowDir.getContentProvider().getFileStore("/").toLocalFile();
+                mountPointRoot = newWorkflowDir.getContentProvider().getRootStore().toLocalFile();
             } catch (CoreException ex) {
                 LOGGER.warn("Could not determine mount point root for " + newWorkflowDir + ": " + ex.getMessage(), ex);
             }

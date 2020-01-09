@@ -103,7 +103,7 @@ public final class DragAndDropUtils {
             }else if (nextObject instanceof AbstractContentProvider) {
                 AbstractContentProvider provider =
                         (AbstractContentProvider)nextObject;
-                AbstractExplorerFileStore fs = provider.getFileStore("/");
+                AbstractExplorerFileStore fs = provider.getRootStore();
                 if (!providers.containsKey(provider)) {
                     providers.put(provider,
                             new ArrayList<AbstractExplorerFileStore>());
@@ -137,7 +137,7 @@ public final class DragAndDropUtils {
                 fileStores.add(((ContentObject)nextObject).getObject());
             } else if (nextObject instanceof AbstractContentProvider) {
                 fileStores.add(((AbstractContentProvider)nextObject)
-                        .getFileStore("/"));
+                        .getRootStore());
             } else {
                 return null;
             }
@@ -154,7 +154,7 @@ public final class DragAndDropUtils {
         if (selection instanceof ContentObject) {
             return ((ContentObject)selection).getObject();
         } else if (selection instanceof AbstractContentProvider) {
-            return ((AbstractContentProvider)selection).getFileStore("/");
+            return ((AbstractContentProvider)selection).getRootStore();
         } else if (selection instanceof AbstractExplorerFileStore) {
             return (AbstractExplorerFileStore)selection;
         } else {

@@ -81,7 +81,7 @@ public class AbstractContentProviderTest {
     public void testCanHostWorkflowTemplate() throws CoreException, IOException {
         LocalWorkspaceContentProvider localWorkspace = (LocalWorkspaceContentProvider)ExplorerMountTable.mount("LOCAL",
             LocalWorkspaceContentProviderFactory.ID, null);
-        LocalExplorerFileStore localExplorerRoot = (LocalExplorerFileStore)localWorkspace.getFileStore("/");
+        LocalExplorerFileStore localExplorerRoot = (LocalExplorerFileStore)localWorkspace.getRootStore();
 
         LocalExplorerFileStore component = createTemplate(localExplorerRoot, "component", true);
         LocalExplorerFileStore metanode = createTemplate(localExplorerRoot, "metanode", false);
