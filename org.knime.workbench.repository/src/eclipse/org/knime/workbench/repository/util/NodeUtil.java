@@ -55,6 +55,7 @@ import java.util.function.Supplier;
 
 import org.knime.core.node.Node;
 import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.port.PortObjectSpec;
 import org.knime.core.node.streamable.PartitionInfo;
@@ -118,13 +119,15 @@ public final class NodeUtil {
         if (genericSuperclass instanceof ParameterizedType) {
             Type type = ((ParameterizedType)nodeFactoryClass.getGenericSuperclass()).getActualTypeArguments()[0];
             if (type instanceof ParameterizedType) {
-                nodeModelClass = (Class<?>)((ParameterizedType)type).getRawType();
-            } else {
+                type = ((ParameterizedType)type).getRawType();
+            }
+
+            if (type instanceof Class) {
                 nodeModelClass = (Class<?>)type;
             }
 
             //some node factory implementations are parameterized, but not with a node model
-            if (!NodeModel.class.isAssignableFrom(nodeModelClass)) {
+            if (nodeModelClass != null && !NodeModel.class.isAssignableFrom(nodeModelClass)) {
                 nodeModelClass = null;
             }
         }
@@ -134,7 +137,16 @@ public final class NodeUtil {
         if (nodeModelClass == null) {
             Node n = new Node((NodeFactory<NodeModel>)nodeFactoryCreator.get());
             nodeModelClass = n.getNodeModel().getClass();
-            n.cleanup();
+            try {
+                n.cleanup();
+            } catch (Exception e) {
+                //we want to catch all errors here because the cleanup-method (and the subsequent NodeModel#onDispose)
+                //assumes a NodeContext to be available, but we don't have a NodeContext here because node is not part of a NodeContainer
+                //-> some cleanup-calls might fail for that reason
+                //(which I consider unlikely since, afaik, there is no node context available on node model instantiation, only on configure and execute)
+                NodeLogger.getLogger(NodeUtil.class)
+                    .warn("Checking for node's streamability: problem while trying to dispose node model instance", e);
+            }
         }
         return isStreamable(nodeModelClass);
     }

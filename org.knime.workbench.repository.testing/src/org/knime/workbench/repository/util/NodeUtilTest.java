@@ -117,4 +117,55 @@ public class NodeUtilTest {
             assertFalse("node not expected to be streamable", isStreamable);
         }
     }
+
+    /**
+     * Prints all node (factory and model) that need to be instantiated in order to determine whether they are
+     * streamable or not.
+     *
+     * Might be useful in the future to investigate problems while trying to determine streamable-state of a node.
+     */
+    /*
+    @Test
+    public void testPrintFallbackNodeModels() {
+        Root root = RepositoryManager.INSTANCE.getRoot();
+        iterateNodes(root, nt -> {
+            try {
+                NodeUtil.isStreamable(nt.getFactory(), () -> {
+                    try {
+                        NodeFactory<? extends NodeModel> factory = nt.createFactoryInstance();
+
+
+                        Class<? extends NodeModel> nodeModelClass =
+                            new Node((NodeFactory<NodeModel>)factory).getNodeModel().getClass();
+
+                        boolean implementsOnDispose = Arrays.stream(nodeModelClass.getDeclaredMethods())
+                            .anyMatch(m -> m.getName().equals("onDispose"));
+
+                        System.out.println("factory: " + factory.getClass().getCanonicalName() + "; model: "
+                            + nodeModelClass.getCanonicalName() + "; implOnDispose: " + implementsOnDispose);
+
+                        return factory;
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+            } catch (NoSuchMethodException | SecurityException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void iterateNodes(final IRepositoryObject parent, final Consumer<NodeTemplate> callback) {
+        if (parent instanceof IContainerObject) {
+            IRepositoryObject[] children = ((IContainerObject)parent).getChildren();
+            for (IRepositoryObject child : children) {
+                iterateNodes(child, callback);
+            }
+            return;
+        } else if (parent instanceof NodeTemplate) {
+            NodeTemplate nodeTemplate = (NodeTemplate)parent;
+            callback.accept(nodeTemplate);
+        }
+    }
+    */
 }
