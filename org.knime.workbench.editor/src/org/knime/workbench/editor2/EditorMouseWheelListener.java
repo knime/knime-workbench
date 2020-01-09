@@ -57,6 +57,8 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseWheelListener;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
 import org.knime.core.node.NodeLogger;
 
 /**
@@ -67,7 +69,7 @@ import org.knime.core.node.NodeLogger;
  * There will be one of these listeners per WorkflowEditor instance (since there is a 1-1 between an instance of such
  * and a ZoomManager instance.)
  */
-final class EditorMouseWheelListener implements MouseWheelListener {
+final class EditorMouseWheelListener implements Listener, MouseWheelListener {
     private static final boolean IS_WINDOWS = Platform.OS_WIN32.equals(Platform.getOS());
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(EditorMouseWheelListener.class);
@@ -90,6 +92,9 @@ final class EditorMouseWheelListener implements MouseWheelListener {
 
         m_figureCanvas = fc;
         m_figureCanvas.addMouseWheelListener(this);
+        if (IS_WINDOWS) {
+            m_figureCanvas.addListener(SWT.MouseHorizontalWheel, this);
+        }
 
         m_alternateZoomDelta = 0;
     }
@@ -113,6 +118,9 @@ final class EditorMouseWheelListener implements MouseWheelListener {
                     return;
                 }
                 outer.m_figureCanvas.removeMouseWheelListener(outer);
+                if (IS_WINDOWS) {
+                    outer.m_figureCanvas.removeListener(SWT.MouseHorizontalWheel, this);
+                }
             } catch (Exception e) {
                 // canvas has likely already gone.
                 LOGGER.debug("We encountered an exception disposing of the zoom wheel listener.", e);
@@ -142,11 +150,23 @@ final class EditorMouseWheelListener implements MouseWheelListener {
 
             m_zoomManager.setZoom(newZoom);
         } else if (IS_WINDOWS && ((me.stateMask & SWT.SHIFT) == SWT.SHIFT)) {
-            final Viewport v = m_figureCanvas.getViewport();
-            final RangeModel horizontal = v.getHorizontalRangeModel();
-            final int delta = (int)(me.count * 4.5 * m_zoomManager.getZoom());
-
-            horizontal.setValue(horizontal.getValue() - delta);
+            performHorizontalScrolling(me.count);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void handleEvent(final Event e) {
+        performHorizontalScrolling(e.count);
+    }
+
+    private void performHorizontalScrolling(final int moveCount) {
+        final Viewport v = m_figureCanvas.getViewport();
+        final RangeModel horizontal = v.getHorizontalRangeModel();
+        final int delta = (int)(moveCount * 4.5 * m_zoomManager.getZoom());
+
+        horizontal.setValue(horizontal.getValue() - delta);
     }
 }
