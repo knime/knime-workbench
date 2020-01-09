@@ -91,7 +91,7 @@ public class LocalWorkspaceFileStoreTest {
     public void setup() throws IOException {
         LocalWorkspaceContentProvider localWorkspace = (LocalWorkspaceContentProvider)ExplorerMountTable.mount("LOCAL",
             LocalWorkspaceContentProviderFactory.ID, null);
-        m_localExplorerRoot = (LocalExplorerFileStore)localWorkspace.getFileStore("/");
+        m_localExplorerRoot = (LocalExplorerFileStore)localWorkspace.getRootStore();
     }
 
     @SuppressWarnings("javadoc")
@@ -154,7 +154,7 @@ public class LocalWorkspaceFileStoreTest {
                 currentLocation = parent.toLocalFile();
             }
             WorkflowContext.Factory workflowContextFactory = new WorkflowContext.Factory(currentLocation);
-            workflowContextFactory.setMountpointRoot(parent.getContentProvider().getFileStore("/").toLocalFile());
+            workflowContextFactory.setMountpointRoot(parent.getContentProvider().getRootStore().toLocalFile());
             workflowCreation.setWorkflowContext(workflowContextFactory.createContext());
             return workflowCreation;
         } catch (CoreException e) {

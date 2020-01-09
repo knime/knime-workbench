@@ -119,14 +119,14 @@ public class WorkflowImportWizard extends Wizard {
                         firstlocal = prov;
                     }
                     if (prov.getMountID().equals("LOCAL")) {
-                        m_initialDestination = prov.getFileStore("/");
+                        m_initialDestination = prov.getRootStore();
                         return;
                     }
                 }
             }
             // didn't find the LOCAL (they renamed the workspace mount point), use the first non-remote we got.
             if (firstlocal != null) {
-                m_initialDestination = firstlocal.getFileStore("/");
+                m_initialDestination = firstlocal.getRootStore();
             }
             return;
         } else {

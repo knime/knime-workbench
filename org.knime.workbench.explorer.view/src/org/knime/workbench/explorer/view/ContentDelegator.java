@@ -245,7 +245,7 @@ public class ContentDelegator extends LabelProvider
             AbstractContentProvider prov =
                     (AbstractContentProvider)parentElement;
             // get the children of the provider's root.
-            return wrapObjects(prov, prov.getChildren(prov.getFileStore("/")));
+            return wrapObjects(prov, prov.getChildren(prov.getRootStore()));
 
         }
         if (!(parentElement instanceof ContentObject)) {
@@ -308,7 +308,7 @@ public class ContentDelegator extends LabelProvider
         // we must ask the corresponding content provider
         AbstractContentProvider provider = c.getProvider();
         AbstractExplorerFileStore parent = provider.getParent(c.getObject());
-        if (parent == null || provider.getFileStore("/").equals(parent)) {
+        if (parent == null || provider.getRootStore().equals(parent)) {
             // the root of each subtree is the provider itself
             return provider;
         } else {
@@ -328,7 +328,7 @@ public class ContentDelegator extends LabelProvider
         if (element instanceof AbstractContentProvider) {
             // content providers are the first level children
             AbstractContentProvider prov = (AbstractContentProvider)element;
-            return prov.hasChildren(prov.getFileStore("/"));
+            return prov.hasChildren(prov.getRootStore());
         }
         if (!(element instanceof ContentObject)) {
             // all children should be of that type!
@@ -413,7 +413,7 @@ public class ContentDelegator extends LabelProvider
             return ((ContentObject)treeObject).getObject();
         } else if (treeObject instanceof AbstractContentProvider) {
             // content provider represent the root object of their content
-            return ((AbstractContentProvider)treeObject).getFileStore("/");
+            return ((AbstractContentProvider)treeObject).getRootStore();
         } else {
             return null;
         }

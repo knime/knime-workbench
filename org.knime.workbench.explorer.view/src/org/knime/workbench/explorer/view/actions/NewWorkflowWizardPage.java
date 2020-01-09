@@ -133,7 +133,7 @@ public class NewWorkflowWizardPage extends WizardPage {
         } else {
             // set the parent to the root of the first selected content provider
             m_parent = ExplorerMountTable.getMountPoint(mountIDs[0])
-                    .getProvider().getFileStore("/");
+                    .getProvider().getRootStore();
         }
         m_mountIDs = mountIDs;
     }
