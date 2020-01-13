@@ -230,6 +230,16 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
         return AbstractExplorerFileStore.isWorkflow(getStore(uri));
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @throws IllegalArgumentException if mountpoint does not exist
+     */
+    @Override
+    public URI getDefaultDirectory(final URI uri) {
+        return getStore(uri).getContentProvider().getRootStore().toURI();
+    }
+
     private static AbstractExplorerFileStore getStore(final URI uri) {
         final AbstractExplorerFileStore store = ExplorerMountTable.getFileSystem().getStore(uri);
         if (store == null) {
