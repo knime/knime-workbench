@@ -23,22 +23,6 @@
             </message_arguments>
         </filter>
     </resource>
-    <resource path="src/org/knime/workbench/explorer/filesystem/AbstractExplorerFileStore.java" type="org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore">
-        <filter comment="method recently introduced and removed again" id="338792546">
-            <message_arguments>
-                <message_argument value="org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore"/>
-                <message_argument value="fetchMetaInfo()"/>
-            </message_arguments>
-        </filter>
-    </resource>
-    <resource path="src/org/knime/workbench/explorer/localworkspace/LocalWorkspaceFileStore.java" type="org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore">
-        <filter comment="method recently introduced and removed again" id="338792546">
-            <message_arguments>
-                <message_argument value="org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore"/>
-                <message_argument value="fetchMetaInfo()"/>
-            </message_arguments>
-        </filter>
-    </resource>
     <resource path="src/org/knime/workbench/explorer/pathresolve/URIToFileResolveImpl.java" type="org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl">
         <filter id="574619656">
             <message_arguments>
