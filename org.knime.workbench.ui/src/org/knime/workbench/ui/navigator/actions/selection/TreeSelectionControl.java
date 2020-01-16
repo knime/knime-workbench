@@ -57,6 +57,7 @@ import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.ViewerComparator;
+import org.eclipse.jface.viewers.ViewerFilter;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -64,6 +65,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Tree;
 import org.eclipse.ui.dialogs.ISelectionValidator;
 
 /**
@@ -91,6 +93,8 @@ public class TreeSelectionControl {
     private Label m_errMsg;
 
     private ViewerComparator m_comparator;
+
+    private ViewerFilter m_filter;
 
     /**
      * Sets the message displayed above the selection tree. Has no effect, after
@@ -120,6 +124,9 @@ public class TreeSelectionControl {
 
     public void setComparator(final ViewerComparator comp) {
         m_comparator = comp;
+    }
+    public void addFilter(final ViewerFilter filter) {
+        m_filter = filter;
     }
     /**
      * Notified when a new object in the tree is selected. Notified after the
@@ -157,7 +164,10 @@ public class TreeSelectionControl {
                         | SWT.V_SCROLL | SWT.SINGLE | SWT.FILL);
         m_treeViewer.getTree().setLayoutData(fillBoth);
         createErrorPanel(overall);
-
+        if (m_filter != null) {
+            m_treeViewer.setExpandPreCheckFilters(true);
+            m_treeViewer.addFilter(m_filter);
+        }
         if (m_contentProvider != null) {
             m_treeViewer.setContentProvider(m_contentProvider);
         }
@@ -317,6 +327,15 @@ public class TreeSelectionControl {
         if (!m_treeViewer.getTree().isDisposed()) {
             m_treeViewer.refresh();
         }
+    }
+
+    /**
+     * Returns the underlying tree.
+     *
+     * @return the tree
+     */
+    public Tree getTree() {
+        return m_treeViewer.getTree();
     }
 
     public interface TreeSelectionChangeListener {

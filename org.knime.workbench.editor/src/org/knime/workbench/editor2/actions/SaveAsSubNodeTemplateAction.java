@@ -84,6 +84,7 @@ import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.DisconnectSubNodeLinkCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.dialogs.MessageJobFilter;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
@@ -280,6 +281,7 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
                     return "Only workflow groups can be selected as target.";
                 }
             });
+            setFilter(new MessageJobFilter());
         }
 
         @Override

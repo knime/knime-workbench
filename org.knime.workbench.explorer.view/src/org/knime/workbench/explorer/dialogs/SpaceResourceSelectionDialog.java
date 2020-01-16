@@ -50,6 +50,7 @@ package org.knime.workbench.explorer.dialogs;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.viewers.ViewerFilter;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
@@ -57,6 +58,7 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -119,6 +121,10 @@ public class SpaceResourceSelectionDialog extends Dialog {
     private String m_nameFieldValue = null;
 
     private Label m_error;
+
+    private ViewerFilter m_filter = null;
+
+    private static final Color RED = Display.getCurrent().getSystemColor(SWT.COLOR_RED);
 
     /**
      * Creates a new dialog showing the passed mount ids.
@@ -224,7 +230,6 @@ public class SpaceResourceSelectionDialog extends Dialog {
         createHeader(overall);
         createTreeControl(overall);
         createResultPanel(overall);
-        createErrorPanel(overall);
         createNameField(overall);
         createCustomFooterField(overall);
         return overall;
@@ -242,7 +247,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
         header.setBackground(white);
         GridData gridData = new GridData(GridData.FILL_HORIZONTAL);
         header.setLayoutData(gridData);
-        header.setLayout(new GridLayout(2, false));
+        header.setLayout(new GridLayout(1, false));
         Label exec = new Label(header, SWT.NONE);
         exec.setBackground(white);
         exec.setText(m_header);
@@ -253,12 +258,11 @@ public class SpaceResourceSelectionDialog extends Dialog {
         }
         exec.setFont(new Font(parent.getDisplay(), fd));
         exec.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
-        Label mkdirIcon = new Label(header, SWT.NONE);
-        mkdirIcon.setBackground(white);
         Label txt = new Label(header, SWT.NONE);
         txt.setBackground(white);
         txt.setText(m_description);
         txt.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
+        createErrorPanel(header);
     }
 
     /**
@@ -276,6 +280,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
         }
 
         m_tree = new ExplorerFileStoreSelectionControl();
+        m_tree.addFilter(m_filter);
         m_tree.setContentProvider(m_treeInput);
         m_tree.setLabelProvider(m_treeInput);
         m_tree.setComparator(new ExplorerViewComparator());
@@ -294,6 +299,17 @@ public class SpaceResourceSelectionDialog extends Dialog {
         });
         m_tree.createTreeControl(parent);
         m_treeInput.addPropertyChangeListener(e -> Display.getDefault().asyncExec(() -> m_tree.refresh()));
+        m_tree.getTree().addListener(SWT.EraseItem, event -> {
+            if (!m_valid) {
+                if ((event.detail & SWT.SELECTED) == 0) {
+                    return; /* item not selected */
+                }
+                GC gc = event.gc;
+                gc.getForeground();
+                gc.setForeground(RED);
+                event.detail &= ~SWT.SELECTED;
+            }
+        });
     }
 
     private void handleTreeSelectionChanged(final Object newSelection, final boolean valid) {
@@ -395,9 +411,12 @@ public class SpaceResourceSelectionDialog extends Dialog {
      */
     protected void createErrorPanel(final Composite parent) {
         Composite panel = new Composite(parent, SWT.FILL);
+        Color white = Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
+        panel.setBackground(white);
         panel.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
         panel.setLayout(new GridLayout(1, true));
         m_error = new Label(parent, SWT.NONE);
+        m_error.setBackground(white);
         m_error.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false));
         m_error.setForeground(getParentShell().getDisplay().getSystemColor(SWT.COLOR_RED));
         m_error.setText("");
@@ -460,6 +479,16 @@ public class SpaceResourceSelectionDialog extends Dialog {
      */
     public void setValidator(final Validator validator) {
         m_validator = validator;
+    }
+
+    /**
+     * Sets the viewer filter.
+     *
+     * @param filter the filter that is used to filter out data that should not be shown
+     * @since 8.5
+     */
+    public void setFilter(final ViewerFilter filter) {
+        m_filter = filter;
     }
 
     /**
