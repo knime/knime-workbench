@@ -74,6 +74,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.dialogs.MessageJobFilter;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
@@ -261,6 +262,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
                     return null;
                 }
             });
+            setFilter(new MessageJobFilter());
             setTitle("Destination");
             setHeader("Deploy to...");
             setDescription("Select the destination workflow group.");
