@@ -60,7 +60,7 @@ import org.knime.workbench.explorer.view.ContentDelegator;
  * messages from the selection view.
  *
  * @author Kevin Kress, KNIME GmbH, Konstanz, Germany
- * @since 8.5
+ * @since 8.6
  */
 public class MessageJobFilter extends ViewerFilter {
 

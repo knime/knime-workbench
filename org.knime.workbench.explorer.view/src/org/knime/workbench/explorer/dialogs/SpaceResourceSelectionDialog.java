@@ -485,7 +485,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * Sets the viewer filter.
      *
      * @param filter the filter that is used to filter out data that should not be shown
-     * @since 8.5
+     * @since 8.6
      */
     public void setFilter(final ViewerFilter filter) {
         m_filter = filter;
