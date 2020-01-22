@@ -56,8 +56,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
-import org.knime.filehandling.core.connections.attributes.FSBasicAttributes;
-import org.knime.filehandling.core.connections.attributes.FSFileAttributes;
+import org.knime.filehandling.core.connections.base.attributes.FSBasicAttributes;
+import org.knime.filehandling.core.connections.base.attributes.FSFileAttributes;
 import org.knime.filehandling.core.util.MountPointIDProvider;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
