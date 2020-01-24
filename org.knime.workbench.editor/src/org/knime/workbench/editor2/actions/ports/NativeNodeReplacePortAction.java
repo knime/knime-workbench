@@ -76,11 +76,6 @@ final class NativeNodeReplacePortAction extends AbstractNativeNodePortAction {
     }
 
     @Override
-    public boolean isEnabled() {
-        return true;
-    }
-
-    @Override
     protected boolean modifyPorts() {
         final ExchangeablePortGroup excPortGrp = getPortGroup(ExchangeablePortGroup.class);
         // reduce the supported port types to those that match not the currently selected type

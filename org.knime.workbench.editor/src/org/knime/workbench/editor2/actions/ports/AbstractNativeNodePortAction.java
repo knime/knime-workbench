@@ -103,6 +103,11 @@ abstract class AbstractNativeNodePortAction extends Action {
         }
     }
 
+    @Override
+    public boolean isEnabled() {
+        return !m_editPart.getNodeContainer().getNodeContainerState().isExecutionInProgress();
+    }
+
     /**
      * Returns the port group for the given group name.
      *

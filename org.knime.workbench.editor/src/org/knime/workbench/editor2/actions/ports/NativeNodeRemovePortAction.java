@@ -74,7 +74,7 @@ final class NativeNodeRemovePortAction extends AbstractNativeNodePortAction {
 
     @Override
     public boolean isEnabled() {
-        return getPortGroup(ExtendablePortGroup.class).hasConfiguredPorts();
+        return super.isEnabled() && getPortGroup(ExtendablePortGroup.class).hasConfiguredPorts();
     }
 
     @Override

@@ -75,7 +75,7 @@ final class NativeNodeAddPortAction extends AbstractNativeNodePortAction {
 
     @Override
     public boolean isEnabled() {
-        return getPortGroup(ExtendablePortGroup.class).canAddPort();
+        return super.isEnabled() && getPortGroup(ExtendablePortGroup.class).canAddPort();
     }
 
     @Override
