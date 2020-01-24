@@ -314,6 +314,9 @@ public final class WorkflowExporter {
             throw new CoreException(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
                 "Unable to read folder content from " + dir.getAbsolutePath() + ". Can't export it.", null));
         }
+        if (content.length == 0) { // see AP-13538 (empty dirs are ignored -- so we add them)
+            resources.add(dir);
+        }
         for (File child : content) {
             if (!KnimeFileUtil.isMetaNode(child) && excludeData && excludeResource(child)) {
                 continue;

@@ -58,6 +58,7 @@ import java.util.Collection;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -74,10 +75,10 @@ final class Zipper {
     private static final int COMPR_LEVEL = 9;
 
     /**
-     * Compresses multiple files into one archive. Pass only files in the list! Allows for removing leading path
-     * segments of each file's path.
+     * Compresses multiple files into one archive. Allows for removing leading path segments of each file's path.
      *
-     * @param files files (no dirs) to add to the archive
+     * @param files files to add to the archive. Directories containing the files don't need to be part of this list
+     *            unless the directories are empty and empty dirs shoul be part of the archive.
      * @param outputFile the compressed output archive
      * @param stripOff number of segments in the path of each file that are stripped off before storing (if zero or
      *            negative nothing is stripped off). The device is always removed.
@@ -107,21 +108,19 @@ final class Zipper {
             if (mon != null) {
                 // set the overall progress to the overall megabyte
                 int wrk = 0;
+                int nrFiles = 0;
                 for (File f : files) {
-                    int megaBytes = (int)(f.length() >>> 20);
-                    wrk += megaBytes + 1;
+                    if (!f.isDirectory()) {
+                        int megaBytes = (int)(f.length() >>> 20);
+                        wrk += megaBytes + 1;
+                        nrFiles += 1;
+                    }
                 }
-                monitor.beginTask("Compressing " + files.size() + " files...", wrk);
+                monitor.beginTask("Compressing " + nrFiles + " files...", wrk);
             }
             for (File f : files) {
                 if (f == null) {
                     ioException = new IOException("Illegal file in archive list: <null>!");
-                    // cleanup done in the finally block
-                    return;
-                }
-                if (f.isDirectory()) {
-                    ioException =
-                        new IOException("Illegal file in archive list: directory (" + f.getAbsolutePath() + ").");
                     // cleanup done in the finally block
                     return;
                 }
@@ -136,7 +135,11 @@ final class Zipper {
                     path = path.removeFirstSegments(stripOff);
                 }
                 String entryName = path.makeRelative().toString();
-                if (f.length() == 0) {
+                if (f.isDirectory()) {
+                    // mostly for empty directories (but non-empty dirs are accepted also)
+                    zout.putNextEntry(new ZipEntry(StringUtils.appendIfMissing(entryName, "/")));
+                    zout.closeEntry();
+                } else if (f.length() == 0) {
                     // this is mainly for the .knimeLock file of open workflows; the file is locked and windows forbids
                     // mmap-ing locked files but FileInputStream seems to mmap files which leads to exceptions while
                     // reading the (non-existing) contents of the file
