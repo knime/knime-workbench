@@ -157,7 +157,7 @@ public class ConnectionManifest {
      * This method is not thread-safe.
      *
      * @param cm an instance of ConnectionManifest for comparison
-     * @return <code>true</code> if this instance is a port-compatible super set of the argument instance
+     * @return {@code true} if this instance is a port-compatible super set of the argument instance
      */
     public boolean isCompatibleSuperSetOf(final ConnectionManifest cm) {
         for (Map.Entry<PortType, TreeSet<Integer>> me : cm.getCountEntries()) {
@@ -172,12 +172,31 @@ public class ConnectionManifest {
     }
 
     /**
+     * Used to ascertain whether the specified port is of the specified {@code PortType}; <b>Note:<b> this does
+     *  not handle cases in which the specified {@code portType} value is a subtype of a type which is handled
+     *  by the specified port.
+     *
+     * @param port the port in question
+     * @param portType the {@code PortType} instance for which we're querying
+     * @return {@code true} if the specified port is of the the specified {@code PortType}
+     */
+    public boolean portSupportsPortType(final int port, final PortType portType) {
+        final TreeSet<Integer> portSet = m_portTypeCountMap.get(portType);
+
+        if (portSet != null) {
+            return portSet.contains(new Integer(port));
+        }
+
+        return false;
+    }
+
+    /**
      * Used to inquire as to whether this instance has support for the specified port type.
      *
      * This method is not thread-safe.
      *
-     * @param portType the <code>PortType</code> instance for which we're querying
-     * @return <code>true</code> if this manifest ever supported the port type
+     * @param portType the {@code PortType} instance for which we're querying
+     * @return {@code true} if this manifest ever supported the port type
      */
     public boolean describesSupportForPortType(final PortType portType) {
         return m_portTypeCountMap.containsKey(portType);
@@ -189,7 +208,7 @@ public class ConnectionManifest {
      * This method is not thread-safe.
      *
      * @param portType the type of port desired
-     * @param makeUnavailable if this is <code>true</code>, then the port being returned will not be vended again
+     * @param makeUnavailable if this is {@code true}, then the port being returned will not be vended again
      * @return the lowest available port for the given portType or -1 if none exists
      */
     public int consumePortForPortType(final PortType portType, final boolean makeUnavailable) {
