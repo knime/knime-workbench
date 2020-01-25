@@ -264,10 +264,7 @@ public class SupplantationCommand extends AbstractKNIMECommand {
             m_originalEdges = new HashSet<>();
             try {
                 final ConnectionManifest inportManifest = m_supplantingNodeInportManifest.clone();
-                final ConnectionManifest outportManifest = m_supplantingNodeOutportManifest.clone();
-                final HashMap<Integer, Integer> outportMap;
-
-                for (ConnectionContainer cc : wm.getIncomingConnectionsFor(removeIds[0])) {
+                for (final ConnectionContainer cc : wm.getIncomingConnectionsFor(removeIds[0])) {
                     try {
                         pendingConnections
                             .add(new ScheduledConnection(toRemoveNode, cc, true, inportManifest, null));
@@ -276,8 +273,9 @@ public class SupplantationCommand extends AbstractKNIMECommand {
                     m_originalEdges.add(cc);
                 }
 
-                outportMap = new HashMap<>();
-                for (ConnectionContainer cc : wm.getOutgoingConnectionsFor(removeIds[0])) {
+                final HashMap<Integer, Integer> outportMap = new HashMap<>();
+                final ConnectionManifest outportManifest = m_supplantingNodeOutportManifest.clone();
+                for (final ConnectionContainer cc : wm.getOutgoingConnectionsFor(removeIds[0])) {
                     try {
                         pendingConnections
                             .add(new ScheduledConnection(toRemoveNode, cc, false, outportManifest, outportMap));
@@ -293,7 +291,7 @@ public class SupplantationCommand extends AbstractKNIMECommand {
             }
 
             final NodeID dragNodeId = m_supplantingNode.getNodeContainer().getID();
-            for (ConnectionContainer cc : wm.getIncomingConnectionsFor(dragNodeId)) {
+            for (final ConnectionContainer cc : wm.getIncomingConnectionsFor(dragNodeId)) {
                 wm.removeConnection(cc);
                 m_originalEdges.add(cc);
             }
@@ -437,7 +435,7 @@ public class SupplantationCommand extends AbstractKNIMECommand {
                 : node.getOutPort(nodePort.intValue()).getPortType();
             final int port;
 
-            if (portType.equals(FlowVariablePortObject.TYPE)) {
+            if (portType.equals(FlowVariablePortObject.TYPE) || input) {
                 port = nodePort.intValue();
             } else if (outportMap != null) {
                 // The purpose of this whole thing is to address the scenario in which the targetted node has
@@ -446,7 +444,11 @@ public class SupplantationCommand extends AbstractKNIMECommand {
                 final Integer portI = outportMap.get(nodePort);
 
                 if (portI == null) {
-                    port = nidConnectionManifest.consumePortForPortType(portType, false);
+                    if (nidConnectionManifest.portSupportsPortType(nodePort.intValue(), portType)) {
+                        port = nodePort.intValue();
+                    } else {
+                        port = nidConnectionManifest.consumePortForPortType(portType, false);
+                    }
 
                     if (port != -1) {
                         outportMap.put(nodePort, new Integer(port));
