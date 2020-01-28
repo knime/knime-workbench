@@ -168,7 +168,7 @@ public class GlobalRenameAction extends ExplorerAction {
             cp = affectedFlows.get(0).getContentProvider();
         }
         if (cp != null) {
-            AtomicBoolean confirmed = cp.confirmMove(getParentShell(), affectedFlows);
+            AtomicBoolean confirmed = cp.confirmMove(getParentShell(), getAllContainedWorkflows(stores));
             if (confirmed != null && !confirmed.get()) {
                 ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
                 return;
