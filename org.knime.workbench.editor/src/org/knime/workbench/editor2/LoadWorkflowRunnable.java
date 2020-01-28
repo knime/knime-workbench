@@ -54,7 +54,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import javax.swing.UIManager;
 
@@ -75,6 +77,7 @@ import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowCreationHelper;
@@ -356,15 +359,35 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
 
     static void postLoadCheckForMetaNodeUpdates(final WorkflowEditor editor, final WorkflowManager parent,
         final List<NodeID> links) {
-        StringBuilder m = new StringBuilder("The workflow contains ");
-        if (links.size() == 1) {
-            m.append("one metanode link (\"");
-            m.append(parent.findNodeContainer(links.get(0)).getNameWithID());
-            m.append("\").");
-        } else {
-            m.append(links.size()).append(" metanode links.");
+
+        final Map<Boolean, List<NodeID>> partitionedLinks = links.stream()
+            .collect(Collectors.partitioningBy(i -> parent.findNodeContainer(i) instanceof SubNodeContainer));
+        final List<NodeID> componentLinks = partitionedLinks.get(Boolean.TRUE);
+        final List<NodeID> metanodeLinks = partitionedLinks.get(Boolean.FALSE);
+
+        final StringBuilder m = new StringBuilder("The workflow contains ");
+        if (componentLinks.size() > 0) {
+            if (componentLinks.size() == 1) {
+                m.append("one component link (\"");
+                m.append(parent.findNodeContainer(componentLinks.get(0)).getNameWithID());
+                m.append("\")");
+            } else {
+                m.append(componentLinks.size()).append(" component links");
+            }
+            if (metanodeLinks.size() > 0) {
+                m.append(" and ");
+            } else {
+                m.append(".");
+            }
         }
-        m.append("\n\n").append("Do you want to check for updates now?");
+        if (metanodeLinks.size() == 1) {
+            m.append("one metanode link (\"");
+            m.append(parent.findNodeContainer(metanodeLinks.get(0)).getNameWithID());
+            m.append("\").");
+        } else if (metanodeLinks.size() > 1) {
+            m.append(metanodeLinks.size()).append(" metanode links.");
+        }
+        m.append("\n\nDo you want to check for updates now?");
 
         final String message = m.toString();
         final AtomicBoolean result = new AtomicBoolean(false);
