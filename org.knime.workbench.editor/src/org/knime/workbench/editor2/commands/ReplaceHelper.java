@@ -86,7 +86,8 @@ public class ReplaceHelper {
     public static boolean executedStateAllowsReplace(final WorkflowManager wm, final NodeContainer node,
         final ConnectionContainer... connections) {
         boolean aWarnableStateExists =
-            (node != null) ? (node.getNodeContainerState().isExecuted() || (!wm.canRemoveNode(node.getID()))) : false;
+                (node != null) ? (((connections != null) && (connections.length > 0))
+                    && (node.getNodeContainerState().isExecuted() || (!wm.canRemoveNode(node.getID())))) : false;
 
         if ((!aWarnableStateExists) && (connections != null)) {
             for (final ConnectionContainer connectionContainer : connections) {
