@@ -109,7 +109,7 @@ public class ReplaceHelper {
                 || store.getBoolean(PreferenceConstants.P_CONFIRM_RESET)) {
                 final MessageDialogWithToggle dialog =
                     MessageDialogWithToggle.openOkCancelConfirm(SWTUtilities.getActiveShell(), "Confirm reset...",
-                        "Do you really want to reset all downstream node(s) ?", "Do not ask again", false, null, null);
+                        "This operation requires to reset all downstream node(s). Do you want to proceed?", "Do not ask again", false, null, null);
                 if (dialog.getReturnCode() != IDialogConstants.OK_ID) {
                     return false;
                 }
