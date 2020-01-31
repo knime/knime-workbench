@@ -1,0 +1,7 @@
+File only exists so that this file (and the folder) be be checked in into git. 
+
+Further details? See here:
+https://git.wiki.kernel.org/index.php/GitFaq#Can_I_add_empty_directories.3F
+
+The whole dir structure gets copied as part of the test case and this file will
+be deleted prior running the test. Don't rename the file.

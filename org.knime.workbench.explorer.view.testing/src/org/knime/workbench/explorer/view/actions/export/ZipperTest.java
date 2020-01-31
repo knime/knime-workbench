@@ -48,6 +48,8 @@
  */
 package org.knime.workbench.explorer.view.actions.export;
 
+import static org.apache.commons.io.filefilter.FileFilterUtils.nameFileFilter;
+import static org.apache.commons.io.filefilter.FileFilterUtils.notFileFilter;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -65,6 +67,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.commons.io.FileUtils;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Platform;
@@ -86,6 +89,8 @@ public class ZipperTest {
 
     @Rule
     public TemporaryFolder m_tempParentFolder= new TemporaryFolder();
+
+    // folder from plug-in needs to be copied to /tmp first so that we can prepare it before the test run
     private File m_filesFolder;
 
     @Before
@@ -94,7 +99,11 @@ public class ZipperTest {
         URL testFolderURL = FileLocator.toFileURL(Platform.getBundle(ExplorerActivator.PLUGIN_ID).getResource(name));
         assertTrue("unable to locate folder containing \"" + name + "\"", testFolderURL != null);
         assertThat("protocol of test folder URL", testFolderURL.getProtocol(), is("file"));
-        m_filesFolder = new File(testFolderURL.getFile()); // not toURI() etc due to spaces in path
+        m_filesFolder = m_tempParentFolder.newFolder(name);
+        File filesInPlugin = new File(testFolderURL.getFile()); // not toURI() etc due to spaces in path
+        FileUtils.copyDirectory(filesInPlugin, m_filesFolder,
+            notFileFilter(nameFileFilter("delete_me_before_test_run.txt")));
+
         Map<Object, List<File>> fileAndFolders= indexFilesAndFoldersIn(new File(m_filesFolder, ROOT_FOLDER_NAME).toPath());
         assertThat("File count in source folder", fileAndFolders.get(Boolean.FALSE).size(), is(4));
         assertThat("Folder count in source folder", fileAndFolders.get(Boolean.TRUE).size(), is(5));
