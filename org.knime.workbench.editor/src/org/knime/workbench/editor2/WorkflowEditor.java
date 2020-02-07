@@ -1773,8 +1773,10 @@ public class WorkflowEditor extends GraphicalEditor implements
             m_isClosing = true;
             return ISaveablePart2.YES;
         case 1: // NO
+            m_isClosing = false;
             return ISaveablePart2.NO;
         default: // CANCEL button or window 'x'
+            m_isClosing = false;
             return ISaveablePart2.CANCEL;
         }
     }
@@ -1967,7 +1969,10 @@ public class WorkflowEditor extends GraphicalEditor implements
         }
 
         if (isTempRemoteWorkflowEditor()) {
-            saveBackToServer();
+            if (!saveBackToServer()) {
+                monitor.setCanceled(true);
+                return;
+            }
             updateWorkflowMessages();
         } else {
             saveTo(m_fileResource, monitor, !isComponentProjectWFM(), null);
@@ -3776,11 +3781,12 @@ public class WorkflowEditor extends GraphicalEditor implements
         });
     }
 
-
-    private void saveBackToServer() {
+    /**
+     * @return false if the save to the server failed for some reason, otherwise true
+     */
+    private boolean saveBackToServer() {
         if (m_parentEditor != null) { // parent does it if this is a metanode editor
-            m_parentEditor.saveBackToServer();
-            return;
+            return m_parentEditor.saveBackToServer();
         }
 
         assert m_origRemoteLocation != null : "No remote workflow";
@@ -3792,7 +3798,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 MessageDialog.openError(getSite().getShell(), "Workflow not writable",
                     "You don't have permissions to overwrite the workflow. Use \"Save As...\" in order to save it to "
                     + "a different location.");
-                return;
+                return false;
             }
 
             boolean snapshotSupported = remoteStore.getContentProvider().supportsSnapshots();
@@ -3817,7 +3823,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             };
             int dlgResult = dlg.open();
             if (dlgResult != 1) {
-                return;
+                return false;
             }
 
             if ((snapshotPanel.get() != null) && (snapshotPanel.get().createSnapshot())) {
@@ -3831,14 +3837,14 @@ public class WorkflowEditor extends GraphicalEditor implements
                         "Unable to create snapshot before overwriting the workflow: " + e.getMessage()
                         + " Upload was canceled.", e);
                     MessageDialog.openError(getSite().getShell(), "Server Error", msg);
-                    return;
+                    return false;
                 }
             }
         } else if (!remoteStore.getParent().fetchInfo().isModifiable()) {
             MessageDialog.openError(getSite().getShell(), "Workflow not writable",
                 "You don't have permissions to write into the workflow's parent folder. Use \"Save As...\" in order to"
                     + " save it to a different location.");
-            return;
+            return false;
         }
 
         // selected a remote location: save + upload
@@ -3848,17 +3854,80 @@ public class WorkflowEditor extends GraphicalEditor implements
         AbstractExplorerFileStore localFS = getFileStore(m_fileResource);
         if ((localFS == null) || !(localFS instanceof LocalExplorerFileStore)) {
             LOGGER.error("Unable to resolve current workflow location. Workflow not uploaded!");
-            return;
+            return false;
         }
         try {
             m_workflowCanBeDeleted.acquire();
-            remoteStore.getContentProvider().performUploadAsync((LocalExplorerFileStore)localFS,
-                (RemoteExplorerFileStore)remoteStore, /*deleteSource=*/false, false, t -> m_workflowCanBeDeleted.release());
+
+            /**
+             * If the thread we're on at this point weren't the SWT / main thread, then we'd just make an object
+             *  to lock on, notifyAll in the callback, and then wait on it after invoking the perform
+             *  upload async method.
+             *
+             * Instead, if this is part of an editor close operation, we need return false (to, ultimately,
+             *  veto the close, then put up our "save dialog" blocking user action until we get the results
+             *  of the upload attempt. If the upload is successful, then we hand-close the workbench editor.
+             */
+
+            if (m_isClosing) {
+                final Display d = PlatformUI.getWorkbench().getDisplay();
+                final IEditorPart ep
+                        = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+                final MessageDialog pleaseWait
+                                        = new MessageDialog(d.getActiveShell(), "Please wait", null,
+                                                            "Your workflow is being uploaded to the server...",
+                                                            MessageDialog.INFORMATION, new String[] {}, 0);
+                final AbstractContentProvider.AfterRunCallback callback = (throwable) -> {
+                    m_workflowCanBeDeleted.release();
+
+                    pleaseWait.close();
+
+                    if (throwable == null) {
+                        updateWorkflowMessages();
+                        notifySaveEventListeners();
+
+                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().closeEditor(ep,
+                                                                                                         false);
+                    } else {
+                        // I have seen us still be marked clean at this point for some still-unknown reason -
+                        //      so i'm reasserting the dirty state just in case (since we are at this point
+                        //      only if we have exceptioned-out of the remote save.)
+                        markDirty();
+                        m_isClosing = false;
+                    }
+                };
+
+                d.asyncExec(() -> {
+                    try {
+                        remoteStore.getContentProvider()
+                                   .performUploadAsync((LocalExplorerFileStore)localFS,
+                                                       (RemoteExplorerFileStore)remoteStore,
+                                                       /*deleteSource=*/false, false, callback);
+
+                        pleaseWait.open();
+                    } catch (final Exception e) {
+                        String msg = "Failed to upload the workflow to its remote location\n(" + e.getMessage() + ")";
+                        LOGGER.error(msg, e);
+                        callback.afterCompletion(e);
+
+                        MessageDialog.openError(SWTUtilities.getActiveShell(), "Upload has failed", msg);
+                    }
+                });
+
+                return false;
+            } else {
+                remoteStore.getContentProvider()
+                           .performUploadAsync((LocalExplorerFileStore)localFS, (RemoteExplorerFileStore)remoteStore,
+                                               /*deleteSource=*/false, false,
+                                               (throwable) -> m_workflowCanBeDeleted.release());
+            }
         } catch (CoreException | InterruptedException e) {
             String msg = "Failed to upload the workflow to its remote location\n(" + e.getMessage() + ")";
             LOGGER.error(msg, e);
-            MessageDialog.openError(SWTUtilities.getActiveShell(), "Upload failed.", msg);
+            MessageDialog.openError(SWTUtilities.getActiveShell(), "Upload has failed", msg);
+            return false;
         }
+        return true;
     }
 
     private void notifyCloseEventListeners() {
