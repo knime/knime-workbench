@@ -74,6 +74,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -345,7 +346,7 @@ public class EditMountPointDialog extends ListDialog {
 
         createHeader(parent);
 
-        final Composite additionalPanel = new Composite(parent, SWT.NONE);
+        final Composite additionalPanel = new Composite(parent, SWT.FILL);
         Composite mountHdr = new Composite(parent, SWT.FILL);
         Composite mountInput = new Composite(mountHdr, SWT.FILL | SWT.BORDER);
         m_mountID = new Text(mountInput, SWT.BORDER);
@@ -412,7 +413,9 @@ public class EditMountPointDialog extends ListDialog {
         gl.verticalSpacing = convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_SPACING);
         gl.horizontalSpacing = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_SPACING);
         additionalPanel.setLayout(gl);
-        additionalPanel.setLayoutData(new GridData(GridData.FILL_BOTH));
+        GridData gridData = new GridData(SWT.FILL, SWT.FILL, false, false);
+        gridData.widthHint = 100;
+        additionalPanel.setLayoutData(gridData);
 
         mountHdr.moveBelow(additionalPanel);
         gl = new GridLayout(1, true);
@@ -421,7 +424,7 @@ public class EditMountPointDialog extends ListDialog {
         gl.verticalSpacing = convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_SPACING);
         gl.horizontalSpacing = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_SPACING);
         mountHdr.setLayout(gl);
-        mountHdr.setLayoutData(new GridData(GridData.FILL_BOTH));
+        mountHdr.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false));
 
         m_mountIDHeader = new CLabel(mountHdr, SWT.NONE);
         m_mountIDHeader.setText(m_mountIDHeaderText);
@@ -434,8 +437,9 @@ public class EditMountPointDialog extends ListDialog {
         // convertVerticalDLUsToPixels(IDialogConstants.VERTICAL_SPACING);
         gl.horizontalSpacing = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_SPACING);
         mountInput.setLayout(gl);
-        GridData gd = new GridData(SWT.FILL, SWT.FILL, true, true);
-        mountInput.setLayoutData(gd);
+        gridData = new GridData(SWT.FILL, SWT.FILL, true, true);
+        gridData.widthHint = 100;
+        mountInput.setLayoutData(gridData);
 
         Label l = new Label(mountInput, SWT.NONE);
         l.setText("Mount ID:");
@@ -443,7 +447,7 @@ public class EditMountPointDialog extends ListDialog {
         if (m_mountIDval != null) {
             m_mountID.setText(m_mountIDval);
         }
-        GridData gridData = new GridData(GridData.FILL_BOTH);
+        gridData = new GridData(GridData.FILL_HORIZONTAL);
         m_mountID.setLayoutData(gridData);
 
         GridData resetGridData = new GridData(GridData.BEGINNING);
@@ -468,7 +472,6 @@ public class EditMountPointDialog extends ListDialog {
         if (!m_isNew) {
             tableViewer.getTable().setEnabled(false);
         }
-
         return c;
     }
 
@@ -489,6 +492,8 @@ public class EditMountPointDialog extends ListDialog {
      * @return true, if the selection/input is okay.
      */
     protected boolean validate() {
+        final Point offset = getShell() != null ? new Point(getShell().getSize().x - getShell().getMinimumSize().x,
+            getShell().getSize().y - getShell().getMinimumSize().y) : new Point(0, 0);
         boolean valid = true;
         boolean loading = false;
         String errMsg = "";
@@ -562,7 +567,7 @@ public class EditMountPointDialog extends ListDialog {
 
         if (m_ok != null) {
             m_ok.setEnabled(valid);
-            layoutDialog();
+            layoutDialog(offset);
         }
 
         return valid;
@@ -613,12 +618,13 @@ public class EditMountPointDialog extends ListDialog {
         m_errIcon = new Label(header, SWT.NONE);
         m_errIcon.setVisible(true);
         m_errIcon.setImage(ImageRepository.getIconImage(SharedImages.Error));
-        m_errIcon.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
+        m_errIcon.setLayoutData(new GridData(GridData.CENTER, GridData.BEGINNING, false , true));
         m_errIcon.setBackground(white);
         m_errText = new Label(header, SWT.WRAP);
         m_errText.setText("Please enter a mount id.");
-        m_errText.setSize(SWT.DEFAULT, 100);
-        m_errText.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        GridData gd = new GridData(GridData.FILL_BOTH);
+        gd.minimumHeight = 75;
+        m_errText.setLayoutData(gd);
         m_errText.setBackground(white);
         m_errText.addControlListener(new ControlListener() {
 
@@ -730,8 +736,18 @@ public class EditMountPointDialog extends ListDialog {
         }
     }
 
-    private void layoutDialog() {
-        getShell().pack(true);
+    private void layoutDialog(final Point offset) {
         getShell().layout(true, true);
+        final Point newSize = getShell().computeSize(SWT.DEFAULT, SWT.DEFAULT, true);
+        getShell().setMinimumSize(newSize);
+        getShell().setSize(new Point(newSize.x + offset.x, newSize.y + offset.y));
+    }
+
+    @Override
+    protected void initializeBounds() {
+        super.initializeBounds();
+        if (getShell() != null) {
+            getShell().setMinimumSize(getInitialSize());
+        }
     }
 }
