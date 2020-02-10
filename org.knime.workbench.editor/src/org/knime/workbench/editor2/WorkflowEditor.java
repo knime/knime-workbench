@@ -3889,9 +3889,31 @@ public class WorkflowEditor extends GraphicalEditor implements
                         PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().closeEditor(ep,
                                                                                                          false);
                     } else {
-                        // I have seen us still be marked clean at this point for some still-unknown reason -
-                        //      so i'm reasserting the dirty state just in case (since we are at this point
-                        //      only if we have exceptioned-out of the remote save.)
+                        /*
+                         * Eclipse will eventually mark us clean, even though the save hasn't yet finished -
+                         *  correctly or incorrectly. We need make sure to mark ourselves dirty again since
+                         *  the remote save failed.
+                         *
+                         * As Mortiz has seen happen, we can apparently get here *too* quickly and Eclipse
+                         *  ends up marking us clean after we do the below dirty set. This is the reason for
+                         *  the following hacky thread sleep (the thread is of a scheduled action operating
+                         *  asynchronously from vital threads.)
+                         */
+                        int waitCount = 0;
+                        // we should no long be dirty if Eclipse has finished its save cycle
+                        while (isDirty()) {
+                            if (waitCount > 30) {
+                                LOGGER.warn("Eclipse never (im)properly set the dirty state.");
+                                m_isClosing = false;
+                                return;
+                            }
+                            try {
+                                Thread.sleep(100);
+                            } catch (final Exception e) { }  // NOPMD
+
+                            waitCount++;
+                        }
+
                         markDirty();
                         m_isClosing = false;
                     }
