@@ -177,6 +177,7 @@ public class WorkflowVariablesDialog extends Dialog {
         tableComp.setLayout(new FillLayout());
         tableComp.setLayoutData(gridData);
         m_table = new WorkflowVariableTable(tableComp);
+        m_table.getViewer().getTable().pack();
         for (FlowVariable var : m_workflow.getWorkflowVariables()) {
             m_table.add(var);
         }
