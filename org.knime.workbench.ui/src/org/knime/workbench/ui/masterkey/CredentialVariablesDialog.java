@@ -53,6 +53,7 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
@@ -192,6 +193,7 @@ public class CredentialVariablesDialog extends Dialog {
         tableComp.setLayout(new FillLayout());
         tableComp.setLayoutData(gridData);
         m_table = new CredentialVariableTable(tableComp);
+        m_table.getViewer().getTable().pack();
         for (Credentials cred : m_credentials) {
             m_table.add(cred);
         }
@@ -291,7 +293,7 @@ public class CredentialVariablesDialog extends Dialog {
     private void addCredential() {
         CredentialVariablesEditDialog dialog =
             new CredentialVariablesEditDialog();
-        if (dialog.open() == Dialog.CANCEL) {
+        if (dialog.open() == Window.CANCEL) {
             // if the user has canceled the dialog there is nothing left to do
             return;
         }
@@ -316,7 +318,7 @@ public class CredentialVariablesDialog extends Dialog {
         CredentialVariablesEditDialog dlg = new CredentialVariablesEditDialog();
         dlg.create();
         dlg.loadFrom(cred);
-        if (dlg.open() == Dialog.OK) {
+        if (dlg.open() == Window.OK) {
             Credentials var = dlg.getCredential();
             if (var != null) {
                 m_table.replace(selectionIdx, var);
