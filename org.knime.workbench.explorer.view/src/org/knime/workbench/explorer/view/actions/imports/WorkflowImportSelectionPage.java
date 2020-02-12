@@ -51,6 +51,7 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -181,6 +182,11 @@ public class WorkflowImportSelectionPage extends WizardPage {
         new ArrayList<IWorkflowImportElement>();
 
     private final Collection<IWorkflowImportElement> m_validAndCheckedImports = new ArrayList<IWorkflowImportElement>();
+
+    private final Collection<IWorkflowImportElement> m_uncheckedImports = new ArrayList<IWorkflowImportElement>();
+
+    /** Set containing all the items displayed to the user (some files are filtered out). */
+    private final Collection<IWorkflowImportElement> m_displayImports = new HashSet<IWorkflowImportElement>();
 
     /*
      * We keep the next page (the rename page here), because it is not possible
@@ -416,6 +422,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
                             display.add(ch);
                         }
                     }
+                    m_displayImports.addAll(display);
                     return display.toArray(new IWorkflowImportElement[display.size()]);
                 }
                 return new Object[0];
@@ -561,6 +568,16 @@ public class WorkflowImportSelectionPage extends WizardPage {
      */
     public Collection<IWorkflowImportElement> getWorkflowsToImport() {
         return m_validAndCheckedImports;
+    }
+
+    /**
+     * Returns the unchecked workflows, i.e. the ones that shouldn't be imported.
+     *
+     * @return the unchecked workflows
+     * @since 8.5
+     */
+    public Collection<IWorkflowImportElement> getUncheckedWorkflows() {
+        return m_uncheckedImports;
     }
 
     /**
@@ -934,10 +951,11 @@ public class WorkflowImportSelectionPage extends WizardPage {
     protected void collectInvalidAndCheckedImports() {
         m_invalidAndCheckedImports.clear();
         m_validAndCheckedImports.clear();
+        m_uncheckedImports.clear();
         if (m_importRoot == null) {
             return;
         }
-        collectInvalids(m_validAndCheckedImports, m_invalidAndCheckedImports, m_importRoot);
+        collectInvalids(m_validAndCheckedImports, m_invalidAndCheckedImports, m_uncheckedImports, m_importRoot);
     }
 
     /**
@@ -948,15 +966,33 @@ public class WorkflowImportSelectionPage extends WizardPage {
      */
     protected void collectInvalids(final Collection<IWorkflowImportElement> valids,
         final Collection<IWorkflowImportElement> invalids, final IWorkflowImportElement node) {
+        collectInvalids(valids, invalids, null, node);
+    }
+
+    /**
+     *
+     * @param valids list of valid workflows
+     * @param invalids list of invalid (already existing) workflows
+     * @param unchecked list of unchecked workflows
+     * @param node current tree node
+     * @since 8.5
+     */
+    protected void collectInvalids(final Collection<IWorkflowImportElement> valids,
+        final Collection<IWorkflowImportElement> invalids, final Collection<IWorkflowImportElement> unchecked,
+        final IWorkflowImportElement node) {
         if (m_workflowListUI.getChecked(node)) {
             if (node.isInvalid()) {
                 invalids.add(node);
             } else {
                 valids.add(node);
             }
+        } else if (unchecked != null && m_displayImports.contains(node)) {
+            /* Only add the files that have been actually unchecked by the user,
+             * i.e. don't exclude meta files. */
+            unchecked.add(node);
         }
         for (IWorkflowImportElement child : node.getChildren()) {
-            collectInvalids(valids, invalids, child);
+            collectInvalids(valids, invalids, unchecked, child);
         }
     }
 
@@ -1147,6 +1183,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
         m_renamePage = null;
         m_invalidAndCheckedImports.clear();
         m_validAndCheckedImports.clear();
+        m_uncheckedImports.clear();
+        m_displayImports.clear();
         m_importRoot = null;
         m_workflowListUI.setInput(null);
         m_workflowListUI.refresh();

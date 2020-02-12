@@ -87,9 +87,10 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
     private final Collection<IWorkflowImportElement> m_workflows;
 
-    private final AbstractExplorerFileStore m_targetPath;
+    /** Collection containing all unchecked workflows and workflows group. */
+    private final Collection<IWorkflowImportElement> m_uncheckedWorkflows = new HashSet<>();
 
-    private final boolean m_recursive;
+    private final AbstractExplorerFileStore m_targetPath;
 
     private final Shell m_shell;
 
@@ -107,13 +108,16 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      * @param workflows the import elements (file or archive entries) to import
      * @param targetPath the destination path within the workspace
      * @param shell the shell
+     * @param unchecked the unchecked workflows, i.e. the ones that shouldn't be imported
+     * @since 8.5
      */
     public WorkflowImportOperation(final Collection<IWorkflowImportElement> workflows,
-        final AbstractExplorerFileStore targetPath, final Shell shell) {
+        final AbstractExplorerFileStore targetPath, final Shell shell,
+        final Collection<IWorkflowImportElement> unchecked) {
         m_workflows = workflows;
         m_targetPath = targetPath;
         m_shell = shell;
-        m_recursive = false;
+        m_uncheckedWorkflows.addAll(unchecked);
     }
 
     /**
@@ -129,7 +133,6 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
         m_workflows = Collections.singleton(rootElement);
         m_targetPath = targetPath;
         m_shell = null;
-        m_recursive = true;
     }
 
     /**
@@ -282,8 +285,15 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             // import all sub elements
             for (Object child : importProvider.getChildren(entry)) {
                 String path = importProvider.getFullPath(child);
-                AbstractExplorerFileStore childDest = destination.getChild(new Path(path).lastSegment());
-                importArchiveEntry(importProvider, child, childDest, monitor);
+
+                /* Check if it is an unchecked item (AP-13299). */
+                final boolean isUnchecked = m_uncheckedWorkflows.stream()
+                    .anyMatch(e -> ((WorkflowImportElementFromArchive)e).getEntry().equals(child));
+
+                if (!isUnchecked) {
+                    AbstractExplorerFileStore childDest = destination.getChild(new Path(path).lastSegment());
+                    importArchiveEntry(importProvider, child, childDest, monitor);
+                }
             }
         } else {
             try (InputStream inStream = importProvider.getContents(entry);
@@ -324,25 +334,44 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
         if (fileElement.isFile()) {
             FileUtil.copy(fileElement.getFile(), dest);
-        } else {
-            File dir = fileElement.getFile();
+            addImportedFiles(fileElement, false);
+        } else if (fileElement.isWorkflow()) {
+            final File dir = fileElement.getFile();
             FileUtil.copyDir(dir, dest);
-        }
+            addImportedFiles(fileElement, true);
+        } else {
+            if (!dest.exists()) {
+                if (!dest.mkdir()) {
+                    throw new IOException("Cannot create target directory \"" + dest.getAbsolutePath() + "\"");
+                }
+                addImportedFiles(fileElement, false);
+            }
 
-        addImportedFiles(fileElement);
+            for (final IWorkflowImportElement child : fileElement.getChildren()) {
+                if (!m_uncheckedWorkflows.contains(child)) {
+                    importFromFile((WorkflowImportElementFromFile)child, destination.getChild(child.getName()),
+                        monitor);
+                }
+            }
+        }
     }
 
     /**
      * Adds the provided file element and all its descendants to the set containing the imported files.
      *
      * @param fileElement The file element to add.
+     * @param recursive if the descendants shall be added.
      */
-    private void addImportedFiles(final IWorkflowImportElement fileElement) {
+    private void addImportedFiles(final IWorkflowImportElement fileElement, final boolean recursive) {
         final String path = fileElement.getRenamedPath().toString();
         m_importedFiles.add(path);
 
-        for (IWorkflowImportElement child : fileElement.getChildren()) {
-            addImportedFiles(child);
+        if (recursive) {
+            for (IWorkflowImportElement child : fileElement.getChildren()) {
+                if (!m_uncheckedWorkflows.contains(child)) {
+                    addImportedFiles(child, recursive);
+                }
+            }
         }
     }
 
