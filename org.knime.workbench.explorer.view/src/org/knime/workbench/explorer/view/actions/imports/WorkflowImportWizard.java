@@ -64,7 +64,6 @@ import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -204,10 +203,10 @@ public class WorkflowImportWizard extends Wizard {
     public boolean createWorkflows() {
        final AbstractExplorerFileStore target = m_importPage.getDestination();
        final Collection<IWorkflowImportElement> workflows = m_importPage
-           .getWorkflowsToImport();
-       // validate target path
-       WorkspaceModifyOperation op = new WorkflowImportOperation(
-               workflows, target, getShell());
+            .getWorkflowsToImport();
+        final Collection<IWorkflowImportElement> uncheckedWorkflows = m_importPage.getUncheckedWorkflows();
+        // validate target path
+        WorkflowImportOperation op = new WorkflowImportOperation(workflows, target, getShell(), uncheckedWorkflows);
         // run the new project creation operation
         try {
             getContainer().run(true, false, op);

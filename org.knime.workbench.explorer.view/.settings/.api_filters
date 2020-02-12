@@ -64,4 +64,12 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="src/org/knime/workbench/explorer/view/actions/imports/WorkflowImportOperation.java" type="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation">
+        <filter id="338722907">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation"/>
+                <message_argument value="WorkflowImportOperation(Collection&lt;IWorkflowImportElement&gt;, AbstractExplorerFileStore, Shell)"/>
+            </message_arguments>
+        </filter>
+    </resource>
 </component>
