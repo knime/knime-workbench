@@ -790,7 +790,7 @@ public class Nodalizer implements IApplication {
             final SiteInfo siteInfo = parseUpdateSite(mr);
             // TODO: Mapping symbolic name to extension may not be sufficient once we support reading multiple versions
             for (final IInstallableUnit iu : ius) {
-                if (features != null && !features.contains(iu.getId() + "/" + iu.getVersion().toString())) {
+                if (features != null && !features.stream().anyMatch(f -> f.startsWith(iu.getId() + "/"))) {
                     continue;
                 }
 
