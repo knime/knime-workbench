@@ -471,9 +471,16 @@ public class Nodalizer implements IApplication {
         NodeAndBundleInformation nabi = nodeAndBundleInfo;
         if (extensions != null && bundles != null) {
             // TODO: Check symbolic name and version once we support reading multiple extension versions
-            final String cleanedSymbolicName = cleanSymbolicName(nabi.getFeatureSymbolicName().orElse(null));
+            String cleanedSymbolicName = cleanSymbolicName(nabi.getFeatureSymbolicName().orElse(null));
             if (extensions.containsKey(cleanedSymbolicName)) {
-                final ExtensionInfo e = extensions.get(cleanedSymbolicName);
+                // HACK: See https://knime-com.atlassian.net/browse/AP-13547 for details
+                ExtensionInfo e;
+                if (cleanedSymbolicName.equals("org.knime.features.testing.core")
+                    && extensions.containsKey("org.knime.features.testing.application")) {
+                    e = extensions.get("org.knime.features.testing.application");
+                } else {
+                    e = extensions.get(cleanedSymbolicName);
+                }
                 e.setHasNodes(true);
                 updateSite = e.getUpdateSite();
                 extensionId = e.getId();
@@ -481,9 +488,9 @@ public class Nodalizer implements IApplication {
                 nabi = new NodeAndBundleInformation(nodeAndBundleInfo.getFactoryClass(),
                     nodeAndBundleInfo.getBundleSymbolicName(), nodeAndBundleInfo.getBundleName(),
                     nodeAndBundleInfo.getBundleVendor(), nodeAndBundleInfo.getNodeName(),
-                    nodeAndBundleInfo.getBundleVersion(), Optional.of(cleanedSymbolicName),
-                    nodeAndBundleInfo.getFeatureName(), nodeAndBundleInfo.getFeatureVendor(),
-                    nodeAndBundleInfo.getFeatureVersion());
+                    nodeAndBundleInfo.getBundleVersion(), Optional.of(e.getSymbolicName()),
+                    Optional.ofNullable(e.getName()), Optional.ofNullable(e.getVendor()),
+                    Optional.ofNullable(e.getVersion()));
             } else if (!nabi.getFeatureSymbolicName().isPresent()
                 && bundles.contains(nabi.getBundleSymbolicName().orElse(null))) {
                 LOGGER.warn(fac.getClass() + " does not contain extension information, skipping ...");
