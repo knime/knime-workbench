@@ -53,7 +53,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.eclipse.core.filesystem.provider.FileSystem;
 import org.eclipse.core.runtime.Path;
@@ -61,6 +60,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.util.FileUtil;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler;
 import org.knime.workbench.explorer.MountPoint;
@@ -82,23 +82,6 @@ public class ExplorerFileSystem extends FileSystem {
      * "org.eclipse.core.filesystem.filesystems").
      */
     public static final String SCHEME = "knime";
-
-    /**
-     * Characters that are unfortunate to use in most file systems and in URIs.
-     * Slashes are disallowed in the name, but are separators though. It is not
-     * guaranteed that these characters are not used but usage should be
-     * avoided.
-     */
-    private static final String ILLEGAL_FILENAME_CHARS;
-    private static final Pattern ILLEGAL_FILENAME_CHARS_PATTERN;
-
-    static {
-        ILLEGAL_FILENAME_CHARS = "*?#:\"<>%~|/\\";
-        // double escape backslashes for regular expression
-        ILLEGAL_FILENAME_CHARS_PATTERN =
-            Pattern.compile("[" + ILLEGAL_FILENAME_CHARS.replace(
-                    "\\", "\\\\") + "]+");
-    }
 
     /**
      * Please consider using the singleton instance {@link #INSTANCE} instead.
@@ -293,7 +276,7 @@ public class ExplorerFileSystem extends FileSystem {
         if (name.endsWith(".")) {
             return "Name cannot end with dot.";
         }
-        Matcher matcher = ILLEGAL_FILENAME_CHARS_PATTERN.matcher(name);
+        Matcher matcher = FileUtil.ILLEGAL_FILENAME_CHARS_PATTERN.matcher(name);
         if (matcher.find()) {
             return "Name contains invalid characters ("
                     + ExplorerFileSystem.getIllegalFilenameChars() + ").";
@@ -305,7 +288,7 @@ public class ExplorerFileSystem extends FileSystem {
      * @return the characters that are invalid for file names
      */
     public static String getIllegalFilenameChars() {
-        return ILLEGAL_FILENAME_CHARS;
+        return FileUtil.ILLEGAL_FILENAME_CHARS;
     }
 
 }
