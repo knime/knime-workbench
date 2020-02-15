@@ -1797,15 +1797,13 @@ public class WorkflowEditor extends GraphicalEditor implements
 
         // Exception messages from the inner thread
         final StringBuilder exceptionMessage = new StringBuilder();
+        final Display d = PlatformUI.getWorkbench().getDisplay();
 
         if (fileResource == null && m_parentEditor != null) {
             m_parentEditor.doSave(monitor);
             m_isDirty = false;
-            Display.getDefault().asyncExec(new Runnable() {
-                @Override
-                public void run() {
-                    firePropertyChange(IEditorPart.PROP_DIRTY);
-                }
+            d.asyncExec(() -> {
+                firePropertyChange(IEditorPart.PROP_DIRTY);
             });
             return;
         }
@@ -1820,6 +1818,29 @@ public class WorkflowEditor extends GraphicalEditor implements
          *   ((WorkflowEditor)subEditor).saveEditorSettingsToWorkflowManager();
          * }
          */
+
+        // The genesis of this block is https://knime-com.atlassian.net/browse/AP-13689
+        if (WorkflowEditorMode.ANNOTATION_EDIT.equals(getEditorMode())) {
+            final ToggleEditorModeAction action = new ToggleEditorModeAction(this);
+
+            d.syncExec(() -> {
+                action.runInSWT();
+            });
+
+            // now wait on the OOB deselection to finish before allowing the
+            //      canvas 'picture' capture to SVG
+            final ISelectionProvider isp = getSite().getSelectionProvider();
+            ISelection is = null;
+            int waitCount = 0;
+            while ((waitCount < 30) && ((is == null) || !is.isEmpty())) {
+                try {
+                    Thread.sleep(32);
+                } catch (final Exception e) { }
+
+                is = isp.getSelection();
+                waitCount++;
+            }
+        }
 
         // to be sure to mark dirty and inform the user about running nodes
         // we ask for the state BEFORE saving
@@ -1857,14 +1878,11 @@ public class WorkflowEditor extends GraphicalEditor implements
             // (SVG export always in UI thread)
             final File svgFile = new File(workflowDir, WorkflowPersistor.SVG_WORKFLOW_FILE);
             svgFile.delete();
-            Display.getDefault().syncExec(new Runnable() {
-                @Override
-                public void run() {
-                    if (m_manager.isProject()) {
-                        saveSVGImage(svgFile);
-                    }
-                }
-            });
+            if (m_manager.isProject()) {
+                d.syncExec(() -> {
+                    saveSVGImage(svgFile);
+                });
+            }
             // mark command stack (no undo beyond this point)
             getCommandStack().markSaveLocation();
 
@@ -1882,16 +1900,13 @@ public class WorkflowEditor extends GraphicalEditor implements
                 (isWfm ? "Workflow" : "Component") + " was not saved: " + exceptionMessage.toString());
         }
 
-        Display.getDefault().asyncExec(new Runnable() {
-            @Override
-            public void run() {
-                if (!Display.getDefault().isDisposed() && (m_manager != null)) {
-                    // mark all sub editors as saved
-                    for (IEditorPart subEditor : getSubEditors()) {
-                        final WorkflowEditor editor = (WorkflowEditor)subEditor;
-                        ((WorkflowEditor)subEditor).setIsDirty(false);
-                        editor.firePropertyChange(IEditorPart.PROP_DIRTY);
-                    }
+        d.asyncExec(() -> {
+            if (!d.isDisposed() && (m_manager != null)) {
+                // mark all sub editors as saved
+                for (final IEditorPart subEditor : getSubEditors()) {
+                    final WorkflowEditor editor = (WorkflowEditor)subEditor;
+                    editor.setIsDirty(false);
+                    editor.firePropertyChange(IEditorPart.PROP_DIRTY);
                 }
             }
         });
@@ -1906,41 +1921,33 @@ public class WorkflowEditor extends GraphicalEditor implements
             markDirty();
             final Pointer<Boolean> abortPointer = new Pointer<Boolean>();
             abortPointer.set(Boolean.FALSE);
-            Display.getDefault().syncExec(new Runnable() {
-                @Override
-                public void run() {
-                    boolean abort = false;
-                    Shell sh = SWTUtilities.getActiveShell();
-                    String title = "Workflow in execution";
-                    String message = "Executing nodes are not saved!";
-                    if (m_isClosing) {
-                        abort =
-                                !MessageDialog.openQuestion(sh, title, message
-                                        + " Exit anyway?");
-                        m_isClosing = !abort; // user canceled close
-                    } else {
-                        IPreferenceStore prefStore =
-                                KNIMEUIPlugin.getDefault().getPreferenceStore();
-                        String toogleMessage = "Don't warn me again";
-                        if (prefStore.getBoolean(
-                                PreferenceConstants.P_CONFIRM_EXEC_NODES_NOT_SAVED)) {
-                            MessageDialogWithToggle
-                                    .openInformation(
-                                            sh,
-                                            title,
-                                            message,
-                                            toogleMessage,
-                                            false,
-                                            prefStore,
-                                            PreferenceConstants.P_CONFIRM_EXEC_NODES_NOT_SAVED);
-                        }
+            d.syncExec(() -> {
+                boolean abort = false;
+                final Shell sh = SWTUtilities.getActiveShell();
+                final String title = "Workflow in execution";
+                final String message = "Executing nodes are not saved!";
+                if (m_isClosing) {
+                    abort = !MessageDialog.openQuestion(sh, title, message + " Exit anyway?");
+                    m_isClosing = !abort; // user canceled close
+                } else {
+                    final IPreferenceStore prefStore = KNIMEUIPlugin.getDefault().getPreferenceStore();
+                    final String toogleMessage = "Don't warn me again";
+                    if (prefStore.getBoolean(PreferenceConstants.P_CONFIRM_EXEC_NODES_NOT_SAVED)) {
+                        MessageDialogWithToggle
+                                .openInformation(
+                                        sh,
+                                        title,
+                                        message,
+                                        toogleMessage,
+                                        false,
+                                        prefStore,
+                                        PreferenceConstants.P_CONFIRM_EXEC_NODES_NOT_SAVED);
                     }
-                    abortPointer.set(Boolean.valueOf(abort));
                 }
+                abortPointer.set(Boolean.valueOf(abort));
             });
-            if (abortPointer.get()) {
-                throw new OperationCanceledException(
-                        "Closing workflow canceled on user request.");
+            if (abortPointer.get().booleanValue()) {
+                throw new OperationCanceledException("Closing workflow canceled on user request.");
             }
         }
     }
