@@ -33,10 +33,10 @@
 		<module>org.knime.workbench.editor</module>
 		<module>org.knime.workbench.explorer.view</module>
 		<module>org.knime.workbench.editor.svgexport</module>
-		<module>org.knime.workbench.explorer.view.testing</module>
+		<module>org.knime.workbench.explorer.view.tests</module>
 		<module>org.knime.workbench.help</module>
 		<module>org.knime.workbench.repository</module>
-		<module>org.knime.workbench.repository.testing</module>
+		<module>org.knime.workbench.repository.tests</module>
 		<module>org.knime.workbench.ui</module>
 		<module>org.knime.workbench.ui.browser</module>
 		<module>org.knime.workbench.ui.layout</module>
