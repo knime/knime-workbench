@@ -13,7 +13,7 @@
 
 	<groupId>org.knime</groupId>
 	<artifactId>knime-workbench</artifactId>
-    <version>${revision}${changelist}</version>
+	<version>${revision}${changelist}</version>
 	<packaging>pom</packaging>
 
 	<properties>
@@ -100,6 +100,29 @@
 						<plugin id="org.apache.batik.dom.clfix" />
 						<plugin id="org.knime.workbench" />
 					</excludes>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>target-platform-configuration</artifactId>
+				<configuration>
+					<dependency-resolution>
+						<extraRequirements>
+							<requirement>
+							    <!--  Required by org.knime.workbench.repository.util.NodeUtilTest -->
+								<type>eclipse-plugin</type>
+								<id>org.knime.base</id>
+								<versionRange>0.0.0</versionRange>
+							</requirement>
+							<requirement>
+                                <!--  Required by tests using zt-zip -->
+                                <type>eclipse-plugin</type>
+                                <id>org.slf4j.api</id>
+                                <versionRange>0.0.0</versionRange>							
+							</requirement>
+						</extraRequirements>
+					</dependency-resolution>
 				</configuration>
 			</plugin>
 		</plugins>

@@ -50,20 +50,40 @@ package org.knime.workbench.explorer;
 
 import static org.junit.Assert.assertThat;
 
+import java.net.URL;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.Path;
 import org.hamcrest.Matchers;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.knime.core.node.workflow.BatchExecutor;
 import org.knime.core.util.CoreConstants;
 import org.knime.workbench.explorer.view.preferences.MountSettings;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.FrameworkUtil;
 
 /**
  *
  * @author Ole Ostergaard, KNIME GmbH, Konstanz, Germany
  */
 public class MountPointPreferencesTest {
+    /**
+     * Loads mount point preferences before the tests.
+     *
+     * @throws Exception if an error occurs
+     */
+    @BeforeClass
+    public static void loadPreferences() throws Exception {
+        Bundle myself = FrameworkUtil.getBundle(MountPointPreferencesTest.class);
+        URL url = FileLocator.find(myself, new Path("/files/testing.epf"), null);
+        URL fileUrl = FileLocator.toFileURL(url);
+        BatchExecutor.setPreferences(Paths.get(fileUrl.toURI()).toFile());
+    }
 
     /**
      * Testcase for AP-8989
