@@ -110,19 +110,29 @@
 					<dependency-resolution>
 						<extraRequirements>
 							<requirement>
-							    <!--  Required by org.knime.workbench.repository.util.NodeUtilTest -->
+								<!-- Required by org.knime.workbench.repository.util.NodeUtilTest -->
 								<type>eclipse-plugin</type>
 								<id>org.knime.base</id>
 								<versionRange>0.0.0</versionRange>
 							</requirement>
 							<requirement>
-                                <!--  Required by tests using zt-zip -->
-                                <type>eclipse-plugin</type>
-                                <id>org.slf4j.api</id>
-                                <versionRange>0.0.0</versionRange>							
+								<!-- Required by tests using zt-zip -->
+								<type>eclipse-plugin</type>
+								<id>org.slf4j.api</id>
+								<versionRange>0.0.0</versionRange>
 							</requirement>
 						</extraRequirements>
 					</dependency-resolution>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-surefire-plugin</artifactId>
+				<configuration>
+					<systemProperties>
+						<java.awt.headless>true</java.awt.headless>
+					</systemProperties>
 				</configuration>
 			</plugin>
 		</plugins>
