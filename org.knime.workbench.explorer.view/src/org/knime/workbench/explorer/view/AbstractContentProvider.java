@@ -413,10 +413,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         final String originalName = metaNode.getName();
 
         String mountIDWithFullPath = target.getMountIDWithFullPath();
-        Shell shell = Display.getDefault().getActiveShell();
         String uniqueName = originalName;
         if (new FileStoreNameValidator().isValid(uniqueName) != null) {
-            InputDialog dialog = new InputDialog(shell, "Metanode rename",
+            InputDialog dialog = new InputDialog(Display.getDefault().getActiveShell(), "Metanode rename",
                     "The name \"" + uniqueName + "\" is not a valid "
                     + "shared metanode name.\n\nChoose a new name under which "
                     + "it will be saved.", uniqueName,
@@ -440,7 +439,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             DestinationChecker<AbstractExplorerFileStore,
                 AbstractExplorerFileStore> dc = new DestinationChecker
                     <AbstractExplorerFileStore, AbstractExplorerFileStore>(
-                            shell, "create template", false, false);
+                            Display.getDefault().getActiveShell(), "create template", false, false);
             dc.setIsOverwriteEnabled(overwriteOK);
             dc.setIsOverwriteDefault(overwriteOK);
 
@@ -492,7 +491,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     return false;
                 }
                 if (!directory.canWrite()) {
-                    MessageDialog.openWarning(shell, "No write permission",
+                    MessageDialog.openWarning(Display.getDefault().getActiveShell(), "No write permission",
                             "You don't have sufficient privileges to write "
                                     + "to the target directory \""
                                     + mountIDWithFullPath + "\"");
@@ -526,7 +525,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             } catch (Exception e) {
                 String error = "Unable to save shared metanode: " + e.getMessage();
                 LOGGER.warn(error, e);
-                MessageDialog.openError(shell, "Error while writing shared metanode",
+                MessageDialog.openError(Display.getDefault().getActiveShell(), "Error while writing shared metanode",
                         error);
             }
 
@@ -895,10 +894,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         final String originalName = subNode.getName();
 
         String mountIDWithFullPath = target.getMountIDWithFullPath();
-        Shell shell = Display.getDefault().getActiveShell();
         String uniqueName = originalName;
         if (new FileStoreNameValidator().isValid(uniqueName) != null) {
-            InputDialog dialog = new InputDialog(shell, "Component rename",
+            InputDialog dialog = new InputDialog(Display.getDefault().getActiveShell(), "Component rename",
                     "The name \"" + uniqueName + "\" is not a valid "
                     + "shared component name.\n\nChoose a new name under which "
                     + "it will be saved.", uniqueName,
@@ -927,7 +925,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             DestinationChecker<AbstractExplorerFileStore,
                 AbstractExplorerFileStore> dc = new DestinationChecker
                     <AbstractExplorerFileStore, AbstractExplorerFileStore>(
-                            shell, "create template", false, false);
+                            Display.getDefault().getActiveShell(), "create template", false, false);
             dc.setIsOverwriteEnabled(overwriteOK);
             dc.setIsOverwriteDefault(overwriteOK);
 
@@ -979,7 +977,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                     return false;
                 }
                 if (!directory.canWrite()) {
-                    MessageDialog.openWarning(shell, "No write permission",
+                    MessageDialog.openWarning(Display.getDefault().getActiveShell(), "No write permission",
                             "You don't have sufficient privileges to write "
                                     + "to the target directory \""
                                     + mountIDWithFullPath + "\"");
@@ -1030,7 +1028,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         } catch (InvocationTargetException e) {
             String error = "Unable to save shared component: " + e.getTargetException().getMessage();
             LOGGER.warn(error, e.getTargetException());
-            MessageDialog.openError(shell, "Error while writing shared component", error);
+            MessageDialog.openError(Display.getDefault().getActiveShell(), "Error while writing shared component",
+                error);
         } catch (InterruptedException e) {
             //can't actually happen
             throw new RuntimeException(e);

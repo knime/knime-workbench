@@ -53,12 +53,10 @@ import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.
 
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
-import org.eclipse.swt.widgets.Display;
 import org.junit.Before;
 import org.junit.Test;
 import org.knime.core.node.workflow.SubNodeContainer;
@@ -126,18 +124,12 @@ public class LocalWorkspaceFileStoreTest {
         WorkflowManager metaNode = METANODE_ROOT.createAndAddProject(name, createWorkflowCreationHelper(parent, name));
         if (wrap) {
             metaNode.getParent().convertMetaNodeToSubNode(metaNode.getID());
-
-            final AtomicBoolean success = new AtomicBoolean(false);
-            Display.getDefault().syncExec(() -> success.set(parent.getContentProvider().saveSubNodeTemplate(
-                (SubNodeContainer)metaNode.getParent().getNodeContainer(metaNode.getID()), parent)));
-
-            assert success.get();
+            boolean success = parent.getContentProvider()
+                .saveSubNodeTemplate((SubNodeContainer)metaNode.getParent().getNodeContainer(metaNode.getID()), parent);
+            assert success;
         } else {
-            final AtomicBoolean success = new AtomicBoolean(false);
-            Display.getDefault()
-                .syncExec(() -> success.set(parent.getContentProvider().saveMetaNodeTemplate(metaNode, parent)));
-
-            assert success.get();
+            boolean success = parent.getContentProvider().saveMetaNodeTemplate(metaNode, parent);
+            assert success;
         }
 
         return (T)parent.getChild(name);
