@@ -5,8 +5,6 @@ library "knime-pipeline@$BN"
 
 properties([
     pipelineTriggers([
-        upstream('knime-base/' + env.BRANCH_NAME.replaceAll('/', '%2F')),
-        upstream('knime-svg/' + env.BRANCH_NAME.replaceAll('/', '%2F')),
         upstream('knime-js-core/' + env.BRANCH_NAME.replaceAll('/', '%2F'))
     ]),
     buildDiscarder(logRotator(numToKeepStr: '5')),
