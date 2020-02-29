@@ -53,81 +53,19 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 
-import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.jface.dialogs.MessageDialogWithToggle;
-import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.core.node.port.flowvariable.FlowVariablePortObject;
 import org.knime.core.node.workflow.ConnectionContainer;
-import org.knime.core.node.workflow.ConnectionContainer.ConnectionType;
 import org.knime.core.node.workflow.ConnectionUIInformation;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.node.workflow.ConnectionContainerUI;
-import org.knime.core.ui.util.SWTUtilities;
-import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
  * @author Tim-Oliver Buchholz, KNIME AG, Zurich, Switzerland
  */
 public class ReplaceHelper {
-    /**
-     * This checks for an executed state of downstream nodes and, if the user's preference is such, dialog's the user to
-     * determine whether they really want to perform the action which will move those nodes out of that state.
-     *
-     * @param wm the <code>WorkflowManager</code> instance containining the connection(s) in question
-     * @param node if non-null, <code>wm</code> will have its <code>canRemoveNode(NodeID)</node> consulted and if false
-     *            is returned, this will trigger a potential dialog
-     * @param connections one or more connections whose destinations will be checked for an executed state
-     * @return true if the replacement can occur
-     */
-    public static boolean executedStateAllowsReplace(final WorkflowManager wm, final NodeContainer node,
-        final ConnectionContainer... connections) {
-        boolean aWarnableStateExists =
-                (node != null) ? (((connections != null) && (connections.length > 0))
-                    && (node.getNodeContainerState().isExecuted() || (!wm.canRemoveNode(node.getID())))) : false;
-
-        if ((!aWarnableStateExists) && (connections != null)) {
-            for (final ConnectionContainer connectionContainer : connections) {
-                WorkflowManager wmToFindDestNode = wm;
-                if (doesConnectionLeaveWorkflow(connectionContainer)) {
-                    wmToFindDestNode = wm.getParent();
-                }
-                if (wmToFindDestNode.findNodeContainer(connectionContainer.getDest()).getNodeContainerState()
-                    .isExecuted()) {
-                    aWarnableStateExists = true;
-
-                    break;
-                }
-            }
-        }
-
-        if (aWarnableStateExists) {
-            final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
-            if (!store.contains(PreferenceConstants.P_CONFIRM_RESET)
-                || store.getBoolean(PreferenceConstants.P_CONFIRM_RESET)) {
-                final MessageDialogWithToggle dialog =
-                    MessageDialogWithToggle.openOkCancelConfirm(SWTUtilities.getActiveShell(), "Confirm reset...",
-                        "This operation requires to reset all downstream node(s). Do you want to proceed?", "Do not ask again", false, null, null);
-                if (dialog.getReturnCode() != IDialogConstants.OK_ID) {
-                    return false;
-                }
-                if (dialog.getToggleState()) {
-                    store.setValue(PreferenceConstants.P_CONFIRM_RESET, false);
-                    KNIMEUIPlugin.getDefault().savePluginPreferences();
-                }
-            }
-        }
-
-        return true;
-    }
-
-    private static final boolean doesConnectionLeaveWorkflow(final ConnectionContainer connection) {
-        return connection.getType() == ConnectionType.WFMOUT;
-    }
-
     private static final Comparator<ConnectionContainer> DEST_PORT_SORTER = (o1, o2) -> {
         return Integer.compare(o1.getDestPort(), o2.getDestPort());
     };
@@ -168,15 +106,10 @@ public class ReplaceHelper {
     }
 
     /**
-     * Checks execution status of downstream nodes and pops up reset warning if enabled.
-     *
-     * @return if new node can be replaced
+     * @return the instance of {@code NodeContainer} with which this instance was created
      */
-    public boolean replaceNode() {
-        final ConnectionContainer[] connections =
-            m_outgoingConnections.toArray(new ConnectionContainer[m_outgoingConnections.size()]);
-
-        return executedStateAllowsReplace(m_wfm, m_oldNode, connections);
+    public NodeContainer getOldNode() {
+        return m_oldNode;
     }
 
     /**

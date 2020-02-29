@@ -61,6 +61,7 @@ import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.workbench.editor2.BisectAndReplaceAssistant;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
@@ -100,7 +101,12 @@ public class ReplaceNodePortCommand extends CreateNodeCommand {
 
     @Override
     public boolean canExecute() {
-        return super.canExecute() && m_delete.canExecute() && m_replaceHelper.replaceNode();
+        // TODO as discussed with Mark, this design of consulting replaceability in the canExecute() phase
+        //          of a command is not great. The BisectAndReplaceAssistant check below replaces a previous
+        //          call to m_replaceHelper.replaceNode() due to the changes made for AP-11772
+        final BisectAndReplaceAssistant.Result canAlterNode
+                = BisectAndReplaceAssistant.canAffectNode(getHostWFM(), m_replaceHelper.getOldNode(), false);
+        return BisectAndReplaceAssistant.Result.OK.equals(canAlterNode) && super.canExecute() && m_delete.canExecute();
     }
 
     @Override

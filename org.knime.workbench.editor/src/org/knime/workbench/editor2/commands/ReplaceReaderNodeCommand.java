@@ -106,14 +106,12 @@ public class ReplaceReaderNodeCommand extends CreateReaderNodeCommand {
      */
     @Override
     public void execute() {
-        if (m_replaceHelper.replaceNode()) {
-            m_delete.execute();
-            super.execute();
-            m_replaceHelper.setConnectionUIInfoMap(m_delete.getConnectionUIInfo());
-            m_replaceHelper.reconnect(m_container);
-            // the connections are not always properly re-drawn after "unmark". (Eclipse bug.) Repaint here.
-            m_root.refresh();
-        }
+        m_delete.execute();
+        super.execute();
+        m_replaceHelper.setConnectionUIInfoMap(m_delete.getConnectionUIInfo());
+        m_replaceHelper.reconnect(m_container);
+        // the connections are not always properly re-drawn after "unmark". (Eclipse bug.) Repaint here.
+        m_root.refresh();
     }
 
     /**

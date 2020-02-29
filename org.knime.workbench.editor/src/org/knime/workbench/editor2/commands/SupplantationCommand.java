@@ -48,7 +48,6 @@
  */
 package org.knime.workbench.editor2.commands;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -67,35 +66,20 @@ import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.workbench.editor2.BisectAndReplaceAssistant;
 import org.knime.workbench.editor2.ConnectionManifest;
+import org.knime.workbench.editor2.NodeSupplantDragListener;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
- * This is the Command functionality invoked by the <code>NodeSupplantDragListener</code> under the appropriate mouse-up
+ * This is the Command functionality invoked by the {@link NodeSupplantDragListener} under the appropriate mouse-up
  * conditions.
  *
  * @author loki der quaeler
  */
 public class SupplantationCommand extends AbstractKNIMECommand {
-    /**
-     * A convenience method which places a node into a location; i would have imagined this would exist elsewhere in the
-     * code base but searching on "setUIInformation" reveals a number of usages, but not something this minimal.
-     *
-     * @param node the <code>NodeContainerEditPart</code> representing the node to move
-     * @param destinationBounds location information in the format returned by
-     *            <code>NodeUIInformation.getBounds()</code>
-     */
-    public static void moveNodeToLocation(final NodeContainerEditPart node, final int[] destinationBounds) {
-        final NodeContainerUI container = node.getNodeContainer();
-        final NodeUIInformation.Builder builder = NodeUIInformation.builder(container.getUIInformation());
-
-        builder.setNodeLocation(destinationBounds[0], destinationBounds[1], destinationBounds[2], destinationBounds[3]);
-        container.setUIInformation(builder.build());
-    }
-
     private static final NodeLogger LOGGER = NodeLogger.getLogger(SupplantationCommand.class);
 
 
@@ -181,13 +165,6 @@ public class SupplantationCommand extends AbstractKNIMECommand {
         final WorkflowManager wm = getHostWFM();
         if (m_edgeTargetId != null) {
             final ConnectionContainer targetCC = wm.getConnection(m_edgeTargetId);
-
-            if (!ReplaceHelper.executedStateAllowsReplace(wm, null, targetCC)) {
-                returnNodeToOriginalLocation();
-
-                return;
-            }
-
             final NodeID sourceNodeId = targetCC.getSource();
             final NodeContainer sourceNode =
                 sourceNodeId.equals(wm.getID()) ? wm : wm.getNodeContainer(sourceNodeId);
@@ -245,17 +222,6 @@ public class SupplantationCommand extends AbstractKNIMECommand {
             NodeTimer.GLOBAL_TIMER.addConnectionCreation(dragNode, destinationNode);
         } else {
             final NodeContainer toRemoveNode = Wrapper.unwrapNC(m_nodeTarget.getNodeContainer());
-            final NodeID toRemoveNodeId = toRemoveNode.getID();
-            final ArrayList<ConnectionContainer> ccs =
-                new ArrayList<>(wm.getOutgoingConnectionsFor(toRemoveNodeId));
-            final ConnectionContainer[] connections = ccs.toArray(new ConnectionContainer[ccs.size()]);
-
-            if (!ReplaceHelper.executedStateAllowsReplace(wm, wm.getNodeContainer(toRemoveNodeId), connections)) {
-                returnNodeToOriginalLocation();
-
-                return;
-            }
-
             final NodeID[] removeIds = new NodeID[1];
             final Set<ScheduledConnection> pendingConnections = new HashSet<>();
 
@@ -393,7 +359,7 @@ public class SupplantationCommand extends AbstractKNIMECommand {
     }
 
     private void returnNodeToOriginalLocation() {
-        moveNodeToLocation(m_supplantingNode, m_originalSupplantingNodeBounds);
+        BisectAndReplaceAssistant.moveNodeToLocation(m_supplantingNode, m_originalSupplantingNodeBounds);
     }
 
 

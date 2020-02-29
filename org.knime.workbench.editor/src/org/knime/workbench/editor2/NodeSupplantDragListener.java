@@ -54,9 +54,6 @@ import java.util.Set;
 import org.eclipse.draw2d.FigureCanvas;
 import org.eclipse.gef.GraphicalViewer;
 import org.eclipse.gef.commands.CommandStack;
-import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.jface.dialogs.MessageDialogWithToggle;
-import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
@@ -72,12 +69,10 @@ import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
-import org.knime.core.ui.util.SWTUtilities;
+import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.editor2.commands.SupplantationCommand;
 import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
-import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
  * This exists to support AP-5238; we implement our own "drag listener" as we are warned away from using drag listeners
@@ -90,39 +85,6 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  * @author loki der quaeler
  */
 public class NodeSupplantDragListener implements KeyListener, MouseListener, MouseMoveListener, WorkflowListener {
-    private static final String CONNECTION_DROP_WARNING =
-        "You are altering the existing connection between two nodes; are you sure you want to do this?";
-
-    private static final String NODE_DROP_WARNING =
-        "You are replacing an existing node; are you sure you want to do this?";
-
-    /**
-     * @param forConnection true if the action is bisecting a connection, false if it is replacing a node
-     * @return true if the user's preferences do not require an intervention or if they do but the user ok'd, false
-     *         otherwise
-     */
-    public static boolean replacingNodeOrConnectionBisectionIsAllowed(final boolean forConnection) {
-        final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
-        if (!store.contains(PreferenceConstants.P_CONFIRM_REPLACE)
-            || store.getBoolean(PreferenceConstants.P_CONFIRM_REPLACE)) {
-            final String msg = forConnection ? CONNECTION_DROP_WARNING : NODE_DROP_WARNING;
-            final MessageDialogWithToggle dialog =
-                MessageDialogWithToggle.openOkCancelConfirm(SWTUtilities.getActiveShell(), "Confirm ...",
-                    msg, "Do not ask again", false, null, null);
-
-            if (dialog.getReturnCode() != IDialogConstants.OK_ID) {
-                return false;
-            }
-            if (dialog.getToggleState()) {
-                store.setValue(PreferenceConstants.P_CONFIRM_REPLACE, false);
-                KNIMEUIPlugin.getDefault().savePluginPreferences();
-            }
-        }
-
-        return true;
-    }
-
-
     // These will only be consulted from the SWT thread
     private NodeContainerEditPart m_nodeInDrag;
     private int[] m_mouseDownNodeBounds;
@@ -314,27 +276,45 @@ public class NodeSupplantDragListener implements KeyListener, MouseListener, Mou
             // The third condition checked happens in the case of mouse down and mouse up with out mouse move
             //      (otherwise called "selecting a node" :- ) )
             if ((m_nodeInDrag != null) && m_dragPositionProcessor.hasATarget()
-                && (!m_nodeInDrag.equals(m_dragPositionProcessor.getNode()))) {
+                                       && !m_nodeInDrag.equals(m_dragPositionProcessor.getNode())) {
+                final ConnectionContainerEditPart ccep = m_dragPositionProcessor.getEdge();
+                final NodeContainerEditPart ncep = m_dragPositionProcessor.getNode();
+                final WorkflowManager wm = getManager();
+                final BisectAndReplaceAssistant.Result allowResult;
+                if (ccep != null) {
+                    final ConnectionID cid = ccep.getModel().getID();
+                    allowResult = BisectAndReplaceAssistant.canBisectConnection(wm, wm.getConnection(cid));
+                } else if (ncep != null) {
+                    final NodeContainerUI ncui = ncep.getNodeContainer();
+                    allowResult = BisectAndReplaceAssistant.canAffectNode(wm, Wrapper.unwrapNC(ncui), true);
+                } else {
+                    // "allow" in this case means "just don't move the node back to where the drag started,"
+                    //      since null ccep and ncep will fall through the below command construction blocks.
+                    allowResult = BisectAndReplaceAssistant.Result.OK;
+                }
 
-                if (!NodeSupplantDragListener
-                    .replacingNodeOrConnectionBisectionIsAllowed(m_dragPositionProcessor.getEdge() != null)) {
-                    SupplantationCommand.moveNodeToLocation(m_nodeInDrag, m_mouseDownNodeBounds);
+                if (!BisectAndReplaceAssistant.Result.OK.equals(allowResult)) {
+                    BisectAndReplaceAssistant.displayUnableToDropDialogIfAppropriate(allowResult);
+
+                    BisectAndReplaceAssistant.moveNodeToLocation(m_nodeInDrag, m_mouseDownNodeBounds);
 
                     return;
                 }
 
-                if (m_dragPositionProcessor.getEdge() != null) {
+                if (ccep != null) {
                     final CommandStack cs = (CommandStack)m_workflowEditor.getAdapter(CommandStack.class);
                     final SupplantationCommand command =
-                        new SupplantationCommand(m_nodeInDrag, m_mouseDownNodeBounds, m_dragPositionProcessor.getEdge(),
-                            m_nodeInDragInportManifest, m_nodeInDragOutportManifest, getManager());
+                        new SupplantationCommand(m_nodeInDrag, m_mouseDownNodeBounds, ccep,
+                                                 m_nodeInDragInportManifest, m_nodeInDragOutportManifest,
+                                                 getManager());
 
                     cs.execute(command);
-                } else if (m_dragPositionProcessor.getNode() != null) { // will always be true as of this writing
+                } else if (ncep != null) { // will always be true as of this writing
                     final CommandStack cs = (CommandStack)m_workflowEditor.getAdapter(CommandStack.class);
                     final SupplantationCommand command =
-                        new SupplantationCommand(m_nodeInDrag, m_mouseDownNodeBounds, m_dragPositionProcessor.getNode(),
-                            m_nodeInDragInportManifest, m_nodeInDragOutportManifest, getManager());
+                        new SupplantationCommand(m_nodeInDrag, m_mouseDownNodeBounds, ncep,
+                                                 m_nodeInDragInportManifest, m_nodeInDragOutportManifest,
+                                                 getManager());
 
                     cs.execute(command);
                 }

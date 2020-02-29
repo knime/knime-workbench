@@ -59,10 +59,30 @@ import org.knime.workbench.repository.model.NodeTemplate;
 
 /**
  * A drop target listener for normal node drops from the node repository to the workbench.
- * 
+ *
  * @author Tim-Oliver Buchholz, KNIME AG, Zurich, Switzerland
  */
 public class NodeDropTargetListener extends WorkflowEditorDropTargetListener<NodeCreationFactory> {
+    private static NodeTemplate getSelectionNodeTemplate() {
+        if (LocalSelectionTransfer.getTransfer().getSelection() == null) {
+            return null;
+        }
+        if (((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).size() > 1) {
+            // allow dropping a single node only
+            return null;
+        }
+
+        Object template = ((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).getFirstElement();
+        if (template instanceof NodeTemplate) {
+            return (NodeTemplate)template;
+        }
+        // Last change: Ask adaptables for an adapter object
+        if (template instanceof IAdaptable) {
+            return ((IAdaptable)template).getAdapter(NodeTemplate.class);
+        }
+        return null;
+    }
+
 
     /**
      * @param viewer the viewer
@@ -94,26 +114,6 @@ public class NodeDropTargetListener extends WorkflowEditorDropTargetListener<Nod
         NodeTemplate template = getSelectionNodeTemplate();
         getFactory().setNodeTemplate(template);
         super.handleDrop();
-    }
-
-    private NodeTemplate getSelectionNodeTemplate() {
-        if (LocalSelectionTransfer.getTransfer().getSelection() == null) {
-            return null;
-        }
-        if (((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).size() > 1) {
-            // allow dropping a single node only
-            return null;
-        }
-
-        Object template = ((IStructuredSelection)LocalSelectionTransfer.getTransfer().getSelection()).getFirstElement();
-        if (template instanceof NodeTemplate) {
-            return (NodeTemplate)template;
-        }
-        // Last change: Ask adaptables for an adapter object
-        if (template instanceof IAdaptable) {
-            return (NodeTemplate)((IAdaptable)template).getAdapter(NodeTemplate.class);
-        }
-        return null;
     }
 
     /**

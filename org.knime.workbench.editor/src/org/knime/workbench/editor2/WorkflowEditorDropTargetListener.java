@@ -73,7 +73,11 @@ import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.workflow.ConnectionID;
+import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
+import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.editor2.CreateDropRequest.RequestType;
 import org.knime.workbench.editor2.actions.CreateSpaceAction.CreateSpaceDirection;
 import org.knime.workbench.editor2.actions.ToggleEditorModeAction;
@@ -447,17 +451,31 @@ public abstract class WorkflowEditorDropTargetListener<T extends CreationFactory
         updateTargetEditPart();
 
         if (getTargetEditPart() != null) {
-            final Request r = getTargetRequest();
-            if (r instanceof CreateDropRequest) {
-                final EditPart ep = ((CreateDropRequest)r).getEditPart();
+            final WorkflowManagerUI wmUI = getWorkflowManager();
+            final WorkflowManager wm;
+            if ((wmUI != null) && ((wm = Wrapper.unwrapWFMOptional(wmUI).orElse(null)) != null)) {
+                final Request r = getTargetRequest();
+                if (r instanceof CreateDropRequest) {
+                    final EditPart ep = ((CreateDropRequest)r).getEditPart();
 
-                if (ep != null) {
-                    final boolean connection = (ep instanceof ConnectionContainerEditPart);
+                    if (ep != null) {
+                        final boolean connection = (ep instanceof ConnectionContainerEditPart);
+                        final BisectAndReplaceAssistant.Result allowResult;
+                        if (connection) {
+                            final ConnectionID cid = ((ConnectionContainerEditPart)ep).getModel().getID();
+                            allowResult = BisectAndReplaceAssistant.canBisectConnection(wm, wm.getConnection(cid));
+                        } else {
+                            final NodeContainerUI ncui = ((NodeContainerEditPart)ep).getNodeContainer();
+                            allowResult = BisectAndReplaceAssistant.canAffectNode(wm, Wrapper.unwrapNC(ncui), true);
+                        }
 
-                    if (!NodeSupplantDragListener.replacingNodeOrConnectionBisectionIsAllowed(connection)) {
-                        clearTransferSelection();
+                        if (!BisectAndReplaceAssistant.Result.OK.equals(allowResult)) {
+                            BisectAndReplaceAssistant.displayUnableToDropDialogIfAppropriate(allowResult);
 
-                        return;
+                            clearTransferSelection();
+
+                            return;
+                        }
                     }
                 }
             }
