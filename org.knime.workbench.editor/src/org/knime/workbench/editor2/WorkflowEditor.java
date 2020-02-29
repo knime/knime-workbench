@@ -306,10 +306,17 @@ public class WorkflowEditor extends GraphicalEditor implements
     /** The editor mode which a newly opened worklow is in **/
     public static final WorkflowEditorMode INITIAL_EDITOR_MODE = WorkflowEditorMode.NODE_EDIT;
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowEditor.class);
-
     /** The root clipboard name **/
     public static final String CLIPBOARD_ROOT_NAME = "clipboard";
+
+    /**
+     * The genesis of this flag is AP-5741.
+     *
+     * This should only be affected by KNIMEApplicationWorkbenchAdvisor during pre-shutdown.
+     */
+    public static final AtomicBoolean APP_IS_UNDERGOING_EXIT = new AtomicBoolean(false);
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowEditor.class);
 
     /**
      * The static clipboard for copy/cut/paste.
@@ -321,6 +328,7 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     private static final Color BG_COLOR_DEFAULT =
         Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
+
 
     /** root model object (=editor input) that is handled by the editor. * */
     private WorkflowManagerUI m_manager;
@@ -384,6 +392,8 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     /** Indicates if this editor has been closed. */
     private boolean m_closed;
+    /** Indicates that this instance aborted its init(...) because the app is exiting */
+    private boolean m_initAbortedDueToAppExit;
 
     private String m_manuallySetToolTip;
 
@@ -429,6 +439,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         LOGGER.debug("Creating WorkflowEditor...");
 
         m_closed = false;
+        m_initAbortedDueToAppExit = false;
 
         // create an edit domain for this editor (handles the command stack)
         m_editDomain = new DefaultEditDomain(this);
@@ -491,6 +502,10 @@ public class WorkflowEditor extends GraphicalEditor implements
     @Override
     public void init(final IEditorSite site, final IEditorInput input)
             throws PartInitException {
+        if (APP_IS_UNDERGOING_EXIT.get()) {
+            m_initAbortedDueToAppExit = true;
+            return;
+        }
 
         LOGGER.debug("Initializing editor UI...");
 
@@ -612,6 +627,10 @@ public class WorkflowEditor extends GraphicalEditor implements
      */
     @Override
     public void dispose() {
+        if (m_initAbortedDueToAppExit) {
+            return;
+        }
+
         NodeLogger.getLogger(WorkflowEditor.class).debug("Disposing editor...");
         if (m_mouseWheelListener != null) {
             m_mouseWheelListener.dispose();

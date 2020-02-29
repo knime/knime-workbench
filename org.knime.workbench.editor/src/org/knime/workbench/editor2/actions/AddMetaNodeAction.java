@@ -58,7 +58,6 @@ import org.knime.workbench.editor2.meta.AddMetaNodeWizard;
 import org.knime.workbench.editor2.meta.MetaNodeWizardDialog;
 
 /**
- *
  * @author Fabian Dill, University of Konstanz
  */
 public class AddMetaNodeAction implements IEditorActionDelegate {
@@ -75,13 +74,18 @@ public class AddMetaNodeAction implements IEditorActionDelegate {
     @Override
     public void setActiveEditor(final IAction action,
             final IEditorPart targetEditor) {
-        m_editor = (WorkflowEditor)targetEditor;
-        boolean enabled = false;
-        if (m_editor != null) {
-            WorkflowManagerUI wm = m_editor.getWorkflowManagerUI();
-            enabled = wm != null && !wm.isWriteProtected() && Wrapper.wraps(wm, WorkflowManager.class);
+        // This check was added as part of AP-5741; our aborting of the Eclipse desire to open a
+        //  new WorkflowEditor on app-exit under certain conditions means that what arrives here
+        //  in that circumstance, now, is an Eclipse error editor pane, not a WorkflowEditor.
+        if (targetEditor instanceof WorkflowEditor) {
+            m_editor = (WorkflowEditor)targetEditor;
+            boolean enabled = false;
+            if (m_editor != null) {
+                WorkflowManagerUI wm = m_editor.getWorkflowManagerUI();
+                enabled = wm != null && !wm.isWriteProtected() && Wrapper.wraps(wm, WorkflowManager.class);
+            }
+            action.setEnabled(enabled);
         }
-        action.setEnabled(enabled);
     }
 
     /**
