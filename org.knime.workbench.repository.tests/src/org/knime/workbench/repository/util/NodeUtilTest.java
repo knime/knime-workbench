@@ -58,7 +58,7 @@ import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.config.base.JSONConfig;
 import org.knime.workbench.repository.RepositoryManager;
-import org.knime.workbench.repository.model.NodeTemplate;
+import org.knime.workbench.repository.model.DefaultNodeTemplate;
 
 /**
  * Tests {@link NodeUtil}.
@@ -99,7 +99,7 @@ public class NodeUtilTest {
 
     private static void checkIsStreamable(final String nodeFactoryClassname, final String nodeFactorySettings,
         final boolean isExpectedToBeStreamable) throws Exception {
-        NodeFactory<NodeModel> nodeFactory = RepositoryManager.INSTANCE.loadNodeFactory(nodeFactoryClassname);
+        NodeFactory<NodeModel> nodeFactory = RepositoryManager.loadNodeFactory(nodeFactoryClassname);
         if (nodeFactorySettings != null) {
             NodeSettings settings =
                 JSONConfig.readJSON(new NodeSettings("settings"), new StringReader(nodeFactorySettings));
@@ -108,8 +108,9 @@ public class NodeUtilTest {
 
         boolean isStreamable = NodeUtil.isStreamable(nodeFactory);
         isStreamable &= NodeUtil.isStreamable(new Node(nodeFactory));
-        isStreamable &= NodeUtil.isStreamable(
-            new NodeTemplate((Class<NodeFactory<? extends NodeModel>>)nodeFactory.getClass(), "TEST", "TEST"));
+        isStreamable &= NodeUtil
+            .isStreamable(new DefaultNodeTemplate((Class<NodeFactory<? extends NodeModel>>)nodeFactory.getClass(),
+                "TEST", "TEST", "/", nodeFactory.getType()));
 
         if (isExpectedToBeStreamable) {
             assertTrue("node expected to be stremable", isStreamable);

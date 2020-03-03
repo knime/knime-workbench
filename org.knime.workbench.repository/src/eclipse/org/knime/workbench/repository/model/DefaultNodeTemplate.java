@@ -47,103 +47,104 @@
  */
 package org.knime.workbench.repository.model;
 
-import org.eclipse.swt.graphics.Image;
+import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeFactory.NodeType;
+import org.knime.core.node.NodeModel;
 
 /**
- * Abstract base class of "leaf" objects (that is, objects without children).
+ * Class that realizes a (contributed) node in the repository tree. This is used
+ * as a "template" for actual instances of a node in the workflow editor.
+ *
+ * Note: The type constants *must* match those defined in the "nodes"- extension
+ * point (Node.exsd).
+ *
+ * TODO introduce new fields: provider, url, license-tag (free/commercial) ...
+ * ???
  *
  * @author Florian Georg, University of Konstanz
  */
-public abstract class AbstractNodeTemplate extends AbstractRepositoryObject {
+public class DefaultNodeTemplate extends NodeTemplate {
 
-    private final String m_categoryPath;
-
-    private Image m_icon;
+    private final Class<? extends NodeFactory<? extends NodeModel>> m_factory;
 
     /**
-     * Creates a new abstract node template.
-     *
-     * @param id the (unique) id of the node template
-     * @param name the name
-     * @param contributingPlugin the contributing plug-in's ID
-     * @param categoryPath category path as per ext point.
-     */
-    protected AbstractNodeTemplate(final String id, final String name, final String contributingPlugin,
-        final String categoryPath) {
-        super(id, name, contributingPlugin);
-        m_categoryPath = categoryPath;
-    }
-
-    /**
-     * Creates a copy of the given object.
+     * Creates a copy of the given node template.
      *
      * @param copy the object to copy
      */
-    protected AbstractNodeTemplate(final AbstractNodeTemplate copy) {
+    protected DefaultNodeTemplate(final DefaultNodeTemplate copy) {
         super(copy);
-        this.m_icon = copy.m_icon;
-        this.m_categoryPath = copy.m_categoryPath;
-    }
-
-
-    /**
-     * @return Returns the icon.
-     */
-    public Image getIcon() {
-        return m_icon;
+        this.m_factory = copy.m_factory;
     }
 
     /**
-     * @param icon The icon to set.
+     * Constructs a new node template.
+     *
+     * @param factoryClass the factory class
+     * @param name a human-readable name for this node
+     * @param contributingPlugin the contributing plug-in's ID
+     * @param categoryPath TODO
+     * @param nodeType Node's type.
      */
-    public void setIcon(final Image icon) {
-        m_icon = icon;
+    public DefaultNodeTemplate(final Class<NodeFactory<? extends NodeModel>> factoryClass, final String name,
+        final String contributingPlugin, final String categoryPath, final NodeType nodeType) {
+        super(factoryClass.getName(), name, contributingPlugin, categoryPath, nodeType);
+        m_factory = factoryClass;
+    }
+
+    @Override
+    public Class<? extends NodeFactory<? extends NodeModel>> getFactory() {
+        return m_factory;
     }
 
     /**
-     * @return Returns the categoryPath.
+     * @return an instance of the factory.
+     * @throws Exception if the creation of the factory instance fails
      */
-    public String getCategoryPath() {
-        return m_categoryPath;
+    @Override
+    public NodeFactory<? extends NodeModel> createFactoryInstance()
+            throws Exception {
+        return m_factory.newInstance();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = super.hashCode();
-        result =
-                prime
-                        * result
-                        + ((m_categoryPath == null) ? 0 : m_categoryPath
-                                .hashCode());
-        return result;
+        // see equals method for comment on this
+        return m_factory.getCanonicalName().hashCode();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean equals(final Object obj) {
-        if (this == obj) {
+        if (obj == this) {
             return true;
         }
         if (!super.equals(obj)) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
+        if (!(obj instanceof DefaultNodeTemplate)) {
             return false;
         }
-        AbstractNodeTemplate other = (AbstractNodeTemplate)obj;
-        if (m_categoryPath == null) {
-            if (other.m_categoryPath != null) {
-                return false;
-            }
-        } else if (!m_categoryPath.equals(other.m_categoryPath)) {
-            return false;
-        }
-        return true;
+        // avoid duplicate nodes in favorite nodes view
+        // to be sure only check for the full class name
+        // seems that different built versions of the class have led to
+        // duplicates
+        return m_factory.getCanonicalName().equals(((NodeTemplate)obj).getFactory().getCanonicalName());
+    }
+
+    /**
+     *
+     * {@inheritDoc}
+     */
+    @Override
+    public String toString() {
+        return getID();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public NodeTemplate deepCopy() {
+        return new DefaultNodeTemplate(this);
     }
 }

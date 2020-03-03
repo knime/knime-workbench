@@ -52,6 +52,8 @@ import static org.hamcrest.core.IsSame.sameInstance;
 import static org.junit.Assert.assertThat;
 
 import org.junit.Test;
+import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeModel;
 
 /**
  * Testcases for {@link CategorySorter}.
@@ -186,17 +188,18 @@ public class CategorySorterTest {
 
         Category c1 = new Category("c1", "C1", "com.external");
         root.addChild(c1);
-        NodeTemplate n1 = new NodeTemplate("n1", "N1", "org.knime.base");
+
+        NodeTemplate n1 = new TestNodeTemplate("n1", "N1", "org.knime.base", "/");
         root.addChild(n1);
 
         Category c2 = new Category("c2", "C2", "org.knime.bla");
         root.addChild(c2);
-        NodeTemplate n2 = new NodeTemplate("n2", "N2", "com.external");
+        NodeTemplate n2 = new TestNodeTemplate("n2", "N2", "com.external", "/");
         root.addChild(n2);
 
         Category c3 = new Category("c3", "C3", "org.knime.bla");
         root.addChild(c3);
-        NodeTemplate n3 = new NodeTemplate("n3", "N3", "org.knime.base");
+        NodeTemplate n3 = new TestNodeTemplate("n3", "N3", "org.knime.base", "/");
         root.addChild(n3);
 
         c2.setAfterID("c3");
@@ -209,6 +212,36 @@ public class CategorySorterTest {
         assertThat("Unexpected item in fourth place", children[3], is(sameInstance((IRepositoryObject) n3)));
         assertThat("Unexpected item in fifth place", children[4], is(sameInstance((IRepositoryObject) n1)));
         assertThat("Unexpected item in sixth place", children[5], is(sameInstance((IRepositoryObject) n2)));
+    }
+
+    private final static class TestNodeTemplate extends NodeTemplate {
+
+        /**
+         * @param id
+         * @param name
+         * @param contributingPlugin
+         * @param categoryPath
+         * @param nodeType
+         */
+        TestNodeTemplate(final String id, final String name, final String contributingPlugin, final String categoryPath) {
+            super(id, name, contributingPlugin, categoryPath, null);
+        }
+
+        @Override
+        public IRepositoryObject deepCopy() {
+            throw new RuntimeException("Not to be called");
+        }
+
+        @Override
+        public Class<? extends NodeFactory<? extends NodeModel>> getFactory() {
+            throw new RuntimeException("Not to be called");
+        }
+
+        @Override
+        public NodeFactory<? extends NodeModel> createFactoryInstance() throws Exception {
+            throw new RuntimeException("Not to be called");
+        }
+
     }
 
 }

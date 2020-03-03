@@ -48,11 +48,11 @@
 
 package org.knime.workbench.repository.model;
 
-import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSetFactory;
-import org.osgi.framework.FrameworkUtil;
+import org.knime.core.node.extension.NodeSetFactoryExtension;
 
 /**
  * A node template for dynamic nodes. Additional to the node factory class, a
@@ -70,25 +70,31 @@ public class DynamicNodeTemplate extends NodeTemplate {
      */
     private static final String NODE_NAME_SEP = "#";
 
-    private NodeSetFactory m_nodeSetFactory;
+    private final NodeSetFactoryExtension m_nodeSetFactoryExtension;
+
+    private final Class<? extends NodeFactory<? extends NodeModel>> m_factoryClass;
 
     private final String m_factoryId;
 
     /**
      * Constructs a new DynamicNodeTemplate.
      *
-     * @param factoryClass the factory class
+     * @param nodeSetFactoryExtension the factory class
+     * @param factoryClass the NodeFactory class (instantiation of it done via
+     *            {@link NodeSetFactoryExtension#createNodeFactory(String)}.
      * @param factoryId The id of the NodeFactory, must not be <code>null</code>
-     * @param nodeSetFactory the NodeSetFactory that created this DynamicNodeTemplate, must not be <code>null</code>
      * @param name the name of this repository entry, must not be <code>null</code>
+     * @param categoryPath category path as per {@link NodeSetFactory#getCategoryPath(String)}
+     * @param nodeType type as per node's (runtime generated) factory xml descriptin.
      */
-    public DynamicNodeTemplate(final Class<NodeFactory<? extends NodeModel>> factoryClass, final String factoryId,
-        final NodeSetFactory nodeSetFactory, final String name) {
-        super(factoryClass.getName() + NODE_NAME_SEP + name, name,
-            FrameworkUtil.getBundle(nodeSetFactory.getClass()).getSymbolicName());
-        setFactory(factoryClass);
+    public DynamicNodeTemplate(final NodeSetFactoryExtension nodeSetFactoryExtension,
+        final Class<? extends NodeFactory<? extends NodeModel>> factoryClass,
+        final String factoryId, final String name, final String categoryPath, final NodeType nodeType) {
+        super(factoryClass.getCanonicalName() + NODE_NAME_SEP + name, name,
+            nodeSetFactoryExtension.getPlugInSymbolicName(), categoryPath, nodeType);
+        m_factoryClass = factoryClass;
         m_factoryId = factoryId;
-        m_nodeSetFactory = nodeSetFactory;
+        m_nodeSetFactoryExtension = nodeSetFactoryExtension;
     }
 
     /**
@@ -98,34 +104,24 @@ public class DynamicNodeTemplate extends NodeTemplate {
      */
     protected DynamicNodeTemplate(final DynamicNodeTemplate copy) {
         super(copy);
-        this.m_nodeSetFactory = copy.m_nodeSetFactory;
-        this.m_factoryId = copy.m_factoryId;
+        m_nodeSetFactoryExtension = copy.m_nodeSetFactoryExtension;
+        m_factoryClass = copy.m_factoryClass;
+        m_factoryId = copy.m_factoryId;
     }
 
-    /**
-     * @param factory the nodeSetFactory needed to restore a instance of
-     *            underlying node
-     */
-    public void setNodeSetFactory(final NodeSetFactory factory) {
-        m_nodeSetFactory = factory;
-    }
-
-    /**
-     * @return the class of the NodeSetFactory that created this
-     *         DynamicNodeTemplate
-     */
-    public Class<? extends NodeSetFactory> getNodeSetFactoryClass() {
-        return m_nodeSetFactory.getClass();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public NodeFactory<? extends NodeModel> createFactoryInstance()
-            throws Exception {
-        return createFactoryInstance(getFactory(), m_nodeSetFactory,
-                m_factoryId);
+    public Class<? extends NodeFactory<? extends NodeModel>> getFactory() {
+        return m_factoryClass;
+    }
+
+    @Override
+    public NodeFactory<? extends NodeModel> createFactoryInstance() throws Exception {
+        // exception is unexpected here as the constructor was called with a concrete instance already
+        // (which for some reason we never re-use but create a new factory instead)
+        return m_nodeSetFactoryExtension.createNodeFactory(m_factoryId).orElseThrow(//
+            () -> new RuntimeException(
+                String.format("Can't create node for id \"%s\" from node set factory extension %s", m_factoryId,
+                    m_nodeSetFactoryExtension)));
     }
 
     /**
@@ -151,17 +147,6 @@ public class DynamicNodeTemplate extends NodeTemplate {
     @Override
     public int hashCode() {
         return getID().hashCode();
-    }
-
-    public static NodeFactory<? extends NodeModel> createFactoryInstance(
-            final Class<? extends NodeFactory<? extends NodeModel>> factoryClass,
-            final NodeSetFactory nodeSetFactory, final String factoryId)
-            throws InstantiationException, IllegalAccessException,
-            InvalidSettingsException {
-        NodeFactory<? extends NodeModel> instance = factoryClass.newInstance();
-        instance.loadAdditionalFactorySettings(nodeSetFactory
-                .getAdditionalSettings(factoryId));
-        return instance;
     }
 
     /**

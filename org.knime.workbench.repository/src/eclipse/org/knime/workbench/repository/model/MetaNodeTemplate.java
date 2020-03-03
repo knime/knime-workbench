@@ -67,10 +67,9 @@ public class MetaNodeTemplate extends AbstractNodeTemplate {
      */
     public MetaNodeTemplate(final String id, final String name,
             final String categoryPath, final String contributingPlugin, final WorkflowManagerUI manager) {
-        super(id, name, contributingPlugin);
+        super(id, name, contributingPlugin, categoryPath);
         m_manager = manager;
         setAfterID("");
-        setCategoryPath(categoryPath);
     }
 
     /**

@@ -47,7 +47,8 @@
  */
 package org.knime.workbench.repository.model;
 
-import org.knime.core.node.DynamicNodeFactory;
+import java.util.Objects;
+
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeModel;
@@ -64,8 +65,7 @@ import org.knime.core.node.NodeModel;
  *
  * @author Florian Georg, University of Konstanz
  */
-public class NodeTemplate extends AbstractNodeTemplate {
-    private Class<? extends NodeFactory<? extends NodeModel>> m_factory;
+public abstract class NodeTemplate extends AbstractNodeTemplate {
 
     private NodeType m_type;
 
@@ -76,87 +76,48 @@ public class NodeTemplate extends AbstractNodeTemplate {
      */
     protected NodeTemplate(final NodeTemplate copy) {
         super(copy);
-        this.m_factory = copy.m_factory;
         this.m_type = copy.m_type;
     }
 
     /**
      * Constructs a new node template.
      *
-     * @param factoryClass the factory class
+     * @param id the (unique) id of the node template (fully qualified class name (fqcn) or "fqcn#Some Name" for dynamic
+     *            nodes)
      * @param name a human-readable name for this node
      * @param contributingPlugin the contributing plug-in's ID
+     * @param categoryPath category path as per ext point.
+     * @param nodeType node type as per XYZNodeFactory.xml
      */
-    public NodeTemplate(final Class<NodeFactory<? extends NodeModel>> factoryClass, final String name,
-        final String contributingPlugin) {
-        super(factoryClass.getName(), name, contributingPlugin);
-        setFactory(factoryClass);
-    }
-
-    /**
-     * Constructs a new node template. Used by sub-classes if the node id should not made up like
-     * <code>&#60;node-factory class name&#62;#&#60;node name&#62;</code> (see, e.g., {@link DynamicNodeFactory}).
-     *
-     * @param id the id to be used
-     * @param name the nodes name
-     * @param contributingPlugin the contributing plug-in's ID
-     */
-    protected NodeTemplate(final String id, final String name, final String contributingPlugin) {
-        super(id, name, contributingPlugin);
+    NodeTemplate(final String id, final String name, final String contributingPlugin,
+        final String categoryPath, final NodeType nodeType) {
+        super(id, name, contributingPlugin, categoryPath);
+        m_type = nodeType;
     }
 
     /**
      * @return Returns the factory.
      */
-    public Class<? extends NodeFactory<? extends NodeModel>> getFactory() {
-        return m_factory;
-    }
+    public abstract Class<? extends NodeFactory<? extends NodeModel>> getFactory();
 
     /**
      * @return an instance of the factory.
      * @throws Exception if the creation of the factory instance fails
      */
-    public NodeFactory<? extends NodeModel> createFactoryInstance()
-            throws Exception {
-        return m_factory.newInstance();
-    }
-
-    /**
-     * @param factory The factory to set.
-     */
-    public void setFactory(final Class<? extends
-            NodeFactory<? extends NodeModel>> factory) {
-        m_factory = factory;
-    }
+    public abstract NodeFactory<? extends NodeModel> createFactoryInstance() throws Exception;
 
     /**
      * @return Returns the type.
      */
-    public NodeType getType() {
+    public final NodeType getType() {
         return m_type;
     }
 
-    /**
-     * @param type The type to set.
-     */
-    public void setType(final NodeType type) {
-        m_type = type;
-    }
-
-    /**
-     *
-     * {@inheritDoc}
-     */
     @Override
     public int hashCode() {
-        // see equals method for comment on this
-        return m_factory.getCanonicalName().hashCode();
+        return Objects.hashCode(m_type);
     }
 
-    /**
-     *
-     * {@inheritDoc}
-     */
     @Override
     public boolean equals(final Object obj) {
         if (obj == this) {
@@ -168,28 +129,11 @@ public class NodeTemplate extends AbstractNodeTemplate {
         if (!(obj instanceof NodeTemplate)) {
             return false;
         }
-        // avoid duplicate nodes in favorite nodes view
-        // to be sure only check for the full class name
-        // seems that different built versions of the class have led to
-        // duplicates
-        return m_factory.getCanonicalName().equals(
-                ((NodeTemplate)obj).getFactory().getCanonicalName());
+        return Objects.equals(m_type, ((NodeTemplate)obj).m_type);
     }
 
-    /**
-     *
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         return getID();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public IRepositoryObject deepCopy() {
-        return new NodeTemplate(this);
     }
 }

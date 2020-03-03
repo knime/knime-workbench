@@ -51,20 +51,24 @@ import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Optional;
 
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.swt.graphics.Image;
-import org.knime.core.eclipseUtil.GlobalClassCreator;
 import org.knime.core.node.CanceledExecutionException;
-import org.knime.core.node.DynamicNodeFactory;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSetFactory;
+import org.knime.core.node.extension.InvalidNodeFactoryExtensionException;
+import org.knime.core.node.extension.NodeFactoryExtension;
+import org.knime.core.node.extension.NodeFactoryExtensionManager;
+import org.knime.core.node.extension.NodeSetFactoryExtension;
 import org.knime.core.node.workflow.FileWorkflowPersistor;
 import org.knime.core.node.workflow.WorkflowLoadHelper;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -74,11 +78,11 @@ import org.knime.core.ui.wrapper.WorkflowManagerWrapper;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.repository.model.Category;
+import org.knime.workbench.repository.model.DefaultNodeTemplate;
 import org.knime.workbench.repository.model.DynamicNodeTemplate;
 import org.knime.workbench.repository.model.IContainerObject;
 import org.knime.workbench.repository.model.IRepositoryObject;
 import org.knime.workbench.repository.model.MetaNodeTemplate;
-import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.repository.model.Root;
 import org.osgi.framework.Bundle;
 
@@ -99,50 +103,28 @@ public final class RepositoryFactory {
     /**
      * Creates a new node repository object. Throws an exception, if this fails
      *
-     * @param element Configuration element from the contributing plugin
+     * @param nodeFactoryExtension from {@link NodeFactoryExtensionManager}.
      * @return NodeTemplate object to be used within the repository.
-     * @throws IllegalArgumentException If the element is not compatible (e.g.
+     * @throws InvalidNodeFactoryExtensionException if the element is not compatible (e.g.
      *             wrong attributes, or factory class not found)
      */
     @SuppressWarnings("unchecked")
-    public static NodeTemplate createNode(final IConfigurationElement element) {
-
+    public static DefaultNodeTemplate createNode(final NodeFactoryExtension nodeFactoryExtension)
+        throws InvalidNodeFactoryExtensionException {
         // Try to load the node factory class...
-        NodeFactory<? extends NodeModel> factory;
-        // this ensures that the class is loaded by the correct eclipse
-        // classloaders
-        GlobalClassCreator.lock.lock();
-        try {
-            factory =
-                    (NodeFactory<? extends NodeModel>)element
-                            .createExecutableExtension("factory-class");
+        NodeFactory<? extends NodeModel> factory = nodeFactoryExtension.createFactory();
 
-        } catch (Throwable e) {
-            throw new IllegalArgumentException(
-                    "Can't load factory class for node: "
-                            + element.getAttribute("factory-class"), e);
-        } finally {
-            GlobalClassCreator.lock.unlock();
-        }
-        if (factory instanceof DynamicNodeFactory) {
-            throw new IllegalArgumentException("Dynamic node factory '" + element.getAttribute("factory-class") + "'"
-                    + " registered as normal node factory.");
-        }
+        String pluginID = nodeFactoryExtension.getPlugInSymbolicName();
+        String categoryPath = nodeFactoryExtension.getCategoryPath();
+        DefaultNodeTemplate node = new DefaultNodeTemplate((Class<NodeFactory<? extends NodeModel>>)factory.getClass(),
+            factory.getNodeName(), pluginID, categoryPath, factory.getType());
+        node.setAfterID(nodeFactoryExtension.getAfterID());
 
-        String pluginID = element.getDeclaringExtension().getNamespaceIdentifier();
-        NodeTemplate node = new NodeTemplate((Class<NodeFactory<? extends NodeModel>>)factory.getClass(),
-            factory.getNodeName(), pluginID);
-        node.setAfterID(str(element.getAttribute("after"), ""));
-
-        node.setType(factory.getType());
-
-        if (!Boolean.valueOf(System.getProperty("java.awt.headless", "false"))) {
+        if (!Boolean.getBoolean("java.awt.headless")) {
             // Load images from declaring plugin
             Image icon = ImageRepository.getIconImage(factory);
             node.setIcon(icon);
         }
-
-        node.setCategoryPath(str(element.getAttribute("category-path"), "/"));
 
         return node;
     }
@@ -326,65 +308,42 @@ public final class RepositoryFactory {
 
     /**
      * Creates the set of dynamic node templates.
-     *
+     * @param set TODO
      * @param root the root to add the missing categories in
-     * @param element from the extension points
+     * @param isIncludeDeprecated TODO
      * @return the created dynamic node templates
      */
     public static Collection<DynamicNodeTemplate> createNodeSet(
-            final Root root, final IConfigurationElement element) {
-        String iconPath = element.getAttribute("default-category-icon");
+            final NodeSetFactoryExtension set, final Root root, final boolean isIncludeDeprecated) {
+        String iconPath = set.getDefaultCategoryIconPath().orElse(null);
 
         // Try to load the node set factory class...
-        NodeSetFactory nodeSet;
-        // this ensures that the class is loaded by the correct eclipse
-        // classloaders
-        GlobalClassCreator.lock.lock();
-        try {
-            nodeSet =
-                    (NodeSetFactory)element
-                            .createExecutableExtension("factory-class");
+        NodeSetFactory nodeSet = set.getNodeSetFactory();
 
-        } catch (Throwable e) {
-            throw new IllegalArgumentException(
-                    "Can't load factory class for node: "
-                            + element.getAttribute("factory-class"), e);
-        } finally {
-            GlobalClassCreator.lock.unlock();
-        }
-
-        Collection<DynamicNodeTemplate> dynamicNodeTemplates =
-                new ArrayList<DynamicNodeTemplate>();
+        Collection<DynamicNodeTemplate> dynamicNodeTemplates = new ArrayList<>();
 
         // for all nodes in the node set
-        for (String factoryId : nodeSet.getNodeFactoryIds()) {
-            @SuppressWarnings("unchecked")
-            Class<NodeFactory<? extends NodeModel>> factoryClass =
-                (Class<NodeFactory<? extends NodeModel>>)nodeSet.getNodeFactory(factoryId);
-
+        for (String factoryId : set.getNodeFactoryIds()) {
             // Try to load the node factory class...
-            NodeFactory<? extends NodeModel> factory;
-            // this ensures that the class is loaded by the correct eclipse
-            // classloaders
-            GlobalClassCreator.lock.lock();
-            try {
-                factory =
-                        DynamicNodeTemplate.createFactoryInstance(factoryClass,
-                                nodeSet, factoryId);
-            } catch (Throwable e) {
-                throw new IllegalArgumentException(
-                        "Can't load factory class for node: "
-                                + factoryClass.getName() + "-" + factoryId, e);
-            } finally {
-                GlobalClassCreator.lock.unlock();
+            Optional<NodeFactory<? extends NodeModel>> factoryOptional = set.createNodeFactory(factoryId);
+            if (!factoryOptional.isPresent()) {
+                continue; // error handling done elsewhere
             }
 
+            NodeFactory<? extends NodeModel> factory = factoryOptional.get();
+
             // DynamicNodeFactory implementations can set deprecation independently from extension
-            if (factory.isDeprecated()) {
+            if ((set.isDeprecated() || factory.isDeprecated()) && !isIncludeDeprecated ) {
                 continue;
             }
 
-            DynamicNodeTemplate node = new DynamicNodeTemplate(factoryClass, factoryId, nodeSet, factory.getNodeName());
+            String categoryPath = nodeSet.getCategoryPath(factoryId);
+            NodeType nodeType = factory.getType();
+
+            @SuppressWarnings("unchecked")
+            DynamicNodeTemplate node = new DynamicNodeTemplate(set,
+                (Class<? extends NodeFactory<? extends NodeModel>>)factory.getClass(), factoryId,
+                factory.getNodeName(), categoryPath, nodeType);
 
             node.setAfterID(nodeSet.getAfterID(factoryId));
 
@@ -393,12 +352,10 @@ public final class RepositoryFactory {
                 node.setIcon(icon);
             }
 
-            node.setCategoryPath(nodeSet.getCategoryPath(factoryId));
-
             dynamicNodeTemplates.add(node);
 
-            String pluginID =
-                    element.getDeclaringExtension().getNamespaceIdentifier();
+            String pluginID = set.getPlugInSymbolicName();
+
             //
             // Insert in proper location, create all categories on
             // the path

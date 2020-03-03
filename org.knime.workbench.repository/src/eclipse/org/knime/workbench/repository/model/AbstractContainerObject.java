@@ -225,8 +225,7 @@ public abstract class AbstractContainerObject extends AbstractRepositoryObject
      *
      * @return the sorted list
      */
-    private List<AbstractRepositoryObject> sortChildren(
-            final List<AbstractRepositoryObject> children) {
+    private static List<AbstractRepositoryObject> sortChildren(final List<AbstractRepositoryObject> children) {
         CategorySorter sorter = new CategorySorter();
         return sorter.sortCategory(children);
     }
@@ -293,32 +292,6 @@ public abstract class AbstractContainerObject extends AbstractRepositoryObject
                 }
             }
 
-        }
-        return null;
-    }
-
-    /**
-     * Looks up a <code>NodeTemplate</code> for a given factory.
-     *
-     * @param factory The factory name for which the template should be found
-     * @return The template or <code>null</code>
-     */
-    public NodeTemplate findTemplateByFactory(final String factory) {
-        IRepositoryObject[] c = getChildren();
-        for (int i = 0; i < c.length; i++) {
-            if (c[i] instanceof NodeTemplate) {
-                NodeTemplate t = (NodeTemplate)c[i];
-                if (t.getFactory().getName().equals(factory)) {
-                    return t;
-                }
-            } else if (c[i] instanceof AbstractContainerObject) {
-                NodeTemplate t =
-                        ((AbstractContainerObject)c[i])
-                                .findTemplateByFactory(factory);
-                if (t != null) {
-                    return t;
-                }
-            }
         }
         return null;
     }

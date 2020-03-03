@@ -53,11 +53,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Stream;
 
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtension;
@@ -70,6 +68,10 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.extension.InvalidNodeFactoryExtensionException;
+import org.knime.core.node.extension.NodeFactoryExtension;
+import org.knime.core.node.extension.NodeFactoryExtensionManager;
+import org.knime.core.node.extension.NodeSetFactoryExtension;
 import org.knime.core.node.workflow.FileNativeNodeContainerPersistor;
 import org.knime.workbench.repository.model.AbstractContainerObject;
 import org.knime.workbench.repository.model.Category;
@@ -130,19 +132,12 @@ public final class RepositoryManager {
     /** The singleton instance. */
     public static final RepositoryManager INSTANCE = new RepositoryManager();
 
-    // ID of "node" extension point
-    private static final String ID_NODE = "org.knime.workbench.repository"
-            + ".nodes";
-
     // ID of "category" extension point
     private static final String ID_CATEGORY
             = "org.knime.workbench.repository.categories";
 
     private static final String ID_META_NODE
             = "org.knime.workbench.repository.metanode";
-
-    private static final String ID_NODE_SET
-            = "org.knime.workbench.repository.nodesets";
 
     private final List<Listener> m_loadListeners =
             new CopyOnWriteArrayList<Listener>();
@@ -168,11 +163,11 @@ public final class RepositoryManager {
         if (monitor.isCanceled()) {
             return;
         }
-        readNodes(monitor);
+        readNodes(monitor, m_root, false);
         if (monitor.isCanceled()) {
             return;
         }
-        readNodeSets(monitor);
+        readNodeSets(monitor, m_root, false);
         if (monitor.isCanceled()) {
             return;
         }
@@ -190,11 +185,11 @@ public final class RepositoryManager {
         if (monitor.isCanceled()) {
             return;
         }
-        readCompleteNodes(monitor);
+        readNodes(monitor, m_completeRoot, true);
         if (monitor.isCanceled()) {
             return;
         }
-        readCompleteNodeSets(monitor);
+        readNodeSets(monitor, m_completeRoot, true);
         if (monitor.isCanceled()) {
             return;
         }
@@ -347,54 +342,35 @@ public final class RepositoryManager {
         }
     }
 
-    private void readNodes(final IProgressMonitor monitor) {
-        Iterator<IConfigurationElement> it = Stream.of(RepositoryManager.getExtensions(ID_NODE))
-                .flatMap(ext -> Stream.of(ext.getConfigurationElements()))
-                .filter(elem -> !"true".equalsIgnoreCase(elem.getAttribute("deprecated")))
-                .iterator();
-        readNodes(monitor, m_root, it);
-    }
 
-    private void readCompleteNodes(final IProgressMonitor monitor) {
-        final Iterator<IConfigurationElement> it = Stream.of(RepositoryManager.getExtensions(ID_NODE))
-                .flatMap(ext -> Stream.of(ext.getConfigurationElements()))
-                .iterator();
-        readNodes(monitor, m_completeRoot, it);
-    }
-
-    /**
-     * @param isInExpertMode
-     */
-    private void readNodes(final IProgressMonitor monitor, final Root root, final Iterator<IConfigurationElement> it) {
-        //
-        // Second, process the contributed nodes
-        //
-
+    private void readNodes(final IProgressMonitor monitor, final Root root, final boolean isIncludeDeprecated) {
         IContainerObject uncategorized = root.findContainer("/uncategorized");
         if (uncategorized == null) {
             // this should never happen, but who knows...
             uncategorized = root;
         }
 
-        while (it.hasNext()) {
-            IConfigurationElement elem = it.next();
+        for (NodeFactoryExtension nodeFactoryExtension : NodeFactoryExtensionManager.getInstance()
+            .getNodeFactoryExtensions()) {
             if (monitor.isCanceled()) {
                 return;
             }
 
             try {
-                NodeTemplate node = RepositoryFactory.createNode(elem);
+                if (nodeFactoryExtension.isDeprecated() && !isIncludeDeprecated) { // deprecate nodes are hidden
+                    continue;
+                }
 
-                LOGGER.debug("Found node extension '" + node.getID()
-                        + "': " + node.getName());
+                NodeTemplate node = RepositoryFactory.createNode(nodeFactoryExtension);
+
+                LOGGER.debugWithFormat("Found node extension '%s': %s", node.getID(), node.getName());
                 for (Listener l : m_loadListeners) {
                     l.newNode(root, node);
                 }
 
                 m_nodesById.put(node.getID(), node);
                 String nodeName = node.getID();
-                nodeName =
-                        nodeName.substring(nodeName.lastIndexOf('.') + 1);
+                nodeName = nodeName.substring(nodeName.lastIndexOf('.') + 1);
 
                 // Ask the root to lookup the category-container located at
                 // the given path
@@ -409,7 +385,7 @@ public final class RepositoryManager {
                             + ". Node will be added to 'Uncategorized' instead");
                     uncategorized.addChild(node);
                 } else {
-                    String nodePluginId = elem.getNamespaceIdentifier();
+                    String nodePluginId = nodeFactoryExtension.getPlugInSymbolicName();
                     String categoryPluginId = parentContainer.getContributingPlugin();
                     if (categoryPluginId == null) {
                         categoryPluginId = "";
@@ -434,114 +410,45 @@ public final class RepositoryManager {
                     }
                 }
 
-            } catch (Throwable t) {
-                String message =
-                        "Node " + elem.getAttribute("factory-class") + "' from plugin '"
-                                + elem.getNamespaceIdentifier()
-                                + "' could not be created: "
-                                + t.getMessage();
-                Bundle bundle =
-                        Platform.getBundle(elem.getNamespaceIdentifier());
-
-                if ((bundle == null)
-                        || (bundle.getState() != Bundle.ACTIVE)) {
-                    // if the plugin is null, the plugin could not
-                    // be activated maybe due to a not
-                    // activateable plugin (plugin class cannot be found)
-                    message +=
-                            " The corresponding plugin "
-                                    + "bundle could not be activated!";
-                }
-                LOGGER.error(message, t);
+            } catch (InvalidNodeFactoryExtensionException t) {
+                LOGGER.error(t.getMessage(), t);
             }
 
         } // for configuration elements
     }
 
-    private void readNodeSets(final IProgressMonitor monitor) {
-        //
-        // Process the contributed node sets
-        //
-        Iterator<IConfigurationElement> it = Stream.of(RepositoryManager.getExtensions(ID_NODE_SET))
-            .flatMap(ext -> Stream.of(ext.getConfigurationElements()))
-            .filter(elem -> !"true".equalsIgnoreCase(elem.getAttribute("deprecated")))
-            .iterator();
-        readNodeSets(monitor, m_root, it);
-    }
 
-    private void readCompleteNodeSets(final IProgressMonitor monitor) {
-        Iterator<IConfigurationElement> it = Stream.of(RepositoryManager.getExtensions(ID_NODE_SET))
-            .flatMap(ext -> Stream.of(ext.getConfigurationElements()))
-            .iterator();
-        readNodeSets(monitor, m_completeRoot, it);
-    }
+    private void readNodeSets(final IProgressMonitor monitor, final Root root, final boolean isIncludeDeprecated) {
+        for (NodeSetFactoryExtension set : NodeFactoryExtensionManager.getInstance().getNodeSetFactoryExtensions()) {
+            Collection<DynamicNodeTemplate> dynamicNodeTemplates =
+                    RepositoryFactory.createNodeSet(set, root, isIncludeDeprecated);
 
-    /**
-     * @param isInExpertMode
-     */
-    private void readNodeSets(final IProgressMonitor monitor, final Root root, final Iterator<IConfigurationElement> it) {
-        //
-        // Process the contributed node sets
-        //
-
-        while (it.hasNext()) {
-            IConfigurationElement elem = it.next();
-            try {
-                Collection<DynamicNodeTemplate> dynamicNodeTemplates =
-                        RepositoryFactory.createNodeSet(root, elem);
-
-                for (DynamicNodeTemplate node : dynamicNodeTemplates) {
-                    if (monitor.isCanceled()) {
-                        return;
-                    }
-                    for (Listener l : m_loadListeners) {
-                        l.newNode(root, node);
-                    }
-
-                    m_nodesById.put(node.getID(), node);
-                    String nodeName = node.getID();
-                    nodeName = nodeName
-                            .substring(nodeName.lastIndexOf('.') + 1);
-
-                    // Ask the root to lookup the category-container located
-                    // at
-                    // the given path
-                    IContainerObject parentContainer = root
-                            .findContainer(node.getCategoryPath());
-
-                    // If parent category is illegal, log an error and
-                    // append
-                    // the node to the repository root.
-                    if (parentContainer == null) {
-                        LOGGER.warn("Invalid category-path for node "
-                                + "contribution: '"
-                                + node.getCategoryPath()
-                                + "' - adding to root instead");
-                        root.addChild(node);
-                    } else {
-                        // everything is fine, add the node to its parent
-                        // category
-                        parentContainer.addChild(node);
-                    }
-
+            for (DynamicNodeTemplate node : dynamicNodeTemplates) {
+                if (monitor.isCanceled()) {
+                    return;
+                }
+                for (Listener l : m_loadListeners) {
+                    l.newNode(root, node);
                 }
 
-            } catch (Throwable t) {
-                String message = "Node " + elem.getAttribute("factory-class")
-                        + "' from plugin '" + elem.getNamespaceIdentifier()
-                        + "' could not be created.";
-                Bundle bundle = Platform.getBundle(elem
-                        .getNamespaceIdentifier());
+                m_nodesById.put(node.getID(), node);
+                String nodeName = node.getID();
+                nodeName = nodeName.substring(nodeName.lastIndexOf('.') + 1);
 
-                if ((bundle == null)
-                        || (bundle.getState() != Bundle.ACTIVE)) {
-                    // if the plugin is null, the plugin could not
-                    // be activated maybe due to a not
-                    // activateable plugin (plugin class cannot be found)
-                    message += " The corresponding plugin "
-                            + "bundle could not be activated!";
+                // Ask the root to lookup the category-container located at the given path
+                IContainerObject parentContainer = root.findContainer(node.getCategoryPath());
+
+                // If parent category is illegal, log an error and append the node to the repository root.
+                if (parentContainer == null) {
+                    LOGGER.warnWithFormat("Invalid category-path for node contribution: '%s' - adding to root instead",
+                        node.getCategoryPath());
+                    root.addChild(node);
+                } else {
+                    // everything is fine, add the node to its parent
+                    // category
+                    parentContainer.addChild(node);
                 }
-                LOGGER.error(message, t);
+
             }
         }
     }
@@ -727,13 +634,13 @@ public final class RepositoryManager {
      * @throws InvalidSettingsException
      * @throws InstantiationException
      * @throws IllegalAccessException
-     * @throws ClassNotFoundException
+     * @throws InvalidNodeFactoryExtensionException
      *
      * @since 3.5
      */
-    @SuppressWarnings("unchecked")
-    public synchronized final NodeFactory<NodeModel> loadNodeFactory(final String factoryClassName) throws InvalidSettingsException,
-        InstantiationException, IllegalAccessException, ClassNotFoundException {
+    public synchronized final static NodeFactory<NodeModel> loadNodeFactory(final String factoryClassName)
+        throws InvalidSettingsException, InstantiationException, IllegalAccessException,
+        InvalidNodeFactoryExtensionException {
         return FileNativeNodeContainerPersistor.loadNodeFactory(factoryClassName);
     }
 }
