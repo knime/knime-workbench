@@ -2077,11 +2077,15 @@ public class WorkflowEditor extends GraphicalEditor implements
                 return;
             }
             try {
-                m_workflowCanBeDeleted.acquire();
+                if (!m_workflowCanBeDeleted.tryAcquire()) {
+                    throw new CoreException(new Status(IStatus.WARNING, ID,
+                        "Cannot acquire lock since another save operation takes place."));
+                }
+
                 newWorkflowDir.getContentProvider().performUploadAsync((LocalExplorerFileStore)localFS,
-                    (RemoteExplorerFileStore)newWorkflowDir, /*deleteSource=*/false,
-                    false, t -> m_workflowCanBeDeleted.release());
-            } catch (CoreException | InterruptedException e) {
+                    (RemoteExplorerFileStore)newWorkflowDir, /*deleteSource=*/false, false,
+                    t -> m_workflowCanBeDeleted.release());
+            } catch (CoreException e) {
                 String msg =
                     "\"Save As...\" failed to upload the workflow to the selected remote location\n(" + e.getMessage()
                         + ")";
@@ -3883,7 +3887,10 @@ public class WorkflowEditor extends GraphicalEditor implements
             return false;
         }
         try {
-            m_workflowCanBeDeleted.acquire();
+            if (!m_workflowCanBeDeleted.tryAcquire()) {
+                throw new CoreException(new Status(IStatus.WARNING, ID,
+                    "Cannot acquire lock since another save operation takes place."));
+            }
 
             /**
              * If the thread we're on at this point weren't the SWT / main thread, then we'd just make an object
@@ -3969,7 +3976,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                                                /*deleteSource=*/false, false,
                                                (throwable) -> m_workflowCanBeDeleted.release());
             }
-        } catch (CoreException | InterruptedException e) {
+        } catch (CoreException e) {
             String msg = "Failed to upload the workflow to its remote location\n(" + e.getMessage() + ")";
             LOGGER.error(msg, e);
             MessageDialog.openError(SWTUtilities.getActiveShell(), "Upload has failed", msg);
