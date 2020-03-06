@@ -59,9 +59,9 @@ import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
+import org.knime.core.xml.MetadataXML;
 import org.knime.workbench.descriptionview.metadata.LicenseType;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
-import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 import org.xml.sax.SAXException;
 
 /**

@@ -53,8 +53,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.knime.core.xml.MetadataXML;
 import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
-import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;

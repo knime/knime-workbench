@@ -60,6 +60,7 @@ import javax.xml.transform.stream.StreamResult;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.FileUtil;
+import org.knime.core.xml.MetadataXML;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;

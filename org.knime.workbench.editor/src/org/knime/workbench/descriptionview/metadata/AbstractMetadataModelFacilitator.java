@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.knime.core.node.NodeLogger;
+import org.knime.core.xml.MetadataXML;
 import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.DateMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.LinkMetaInfoAtom;
@@ -64,7 +65,6 @@ import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextFieldMetaInfoAtom;
 import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
-import org.knime.workbench.ui.workflow.metadata.MetadataXML;
 
 /**
  * This is the abstract superclass of metadata model facilitators; there is a concrete subclass which supports an origin
