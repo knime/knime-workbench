@@ -50,8 +50,8 @@ package org.knime.workbench.explorer;
 
 import static org.junit.Assert.assertThat;
 
+import java.io.File;
 import java.net.URL;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -82,7 +82,7 @@ public class MountPointPreferencesTest {
         Bundle myself = FrameworkUtil.getBundle(MountPointPreferencesTest.class);
         URL url = FileLocator.find(myself, new Path("/files/testing.epf"), null);
         URL fileUrl = FileLocator.toFileURL(url);
-        BatchExecutor.setPreferences(Paths.get(fileUrl.toURI()).toFile());
+        BatchExecutor.setPreferences(new File(fileUrl.getFile()));
     }
 
     /**
