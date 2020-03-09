@@ -47,6 +47,7 @@ package org.knime.workbench.ui.preferences;
 
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.preference.BooleanFieldEditor;
+import org.eclipse.jface.preference.ColorFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IntegerFieldEditor;
@@ -96,7 +97,7 @@ public class WorkflowEditorPreferencePage extends FieldEditorPreferencePage impl
         addField(m_emptyNodeLabel);
         addField(m_nodeLabelPrefix);
         final IntegerFieldEditor fontSizeEditor = new IntegerFieldEditor(PreferenceConstants.P_NODE_LABEL_FONT_SIZE,
-            "Change node name and label font size", parent);
+            "Font size of node name and label:", parent);
         addField(fontSizeEditor);
 
         addField(new HorizontalLineField(parent));
@@ -104,29 +105,29 @@ public class WorkflowEditorPreferencePage extends FieldEditorPreferencePage impl
         addField(new BooleanFieldEditor(PreferenceConstants.P_GRID_SHOW, "Show grid", parent));
         addField(new BooleanFieldEditor(PreferenceConstants.P_GRID_SNAP_TO, "Snap to grid", parent));
         final IntegerFieldEditor gridSizeXEditor =
-            new IntegerFieldEditor(PreferenceConstants.P_GRID_SIZE_X, "Horiz. grid size (in px)", parent);
+            new IntegerFieldEditor(PreferenceConstants.P_GRID_SIZE_X, "Horizontal grid size (in px):", parent);
         gridSizeXEditor.setValidRange(3, 500);
         gridSizeXEditor.setTextLimit(3);
         gridSizeXEditor.load();
         addField(gridSizeXEditor);
         final IntegerFieldEditor gridSizeYEditor =
-            new IntegerFieldEditor(PreferenceConstants.P_GRID_SIZE_Y, "Vertic. grid size (in px)", parent);
+            new IntegerFieldEditor(PreferenceConstants.P_GRID_SIZE_Y, "Vertical grid size (in px):", parent);
         gridSizeYEditor.setValidRange(3, 500);
         gridSizeYEditor.setTextLimit(3);
         gridSizeYEditor.load();
         addField(gridSizeYEditor);
         addField(new LabelField(parent,
-            "To change the grid settings of a workflow,\nuse the 'Workflow Editor Settings' " + "toolbar button."));
+            "To change the grid settings of a workflow, use the\n'Workflow Editor Settings' toolbar button."));
 
         addField(new HorizontalLineField(parent));
         addField(new LabelField(parent, "These node connection settings apply to new workflows only."));
         addField(new BooleanFieldEditor(PreferenceConstants.P_CURVED_CONNECTIONS, "Curved connections", parent));
         final ComboFieldEditor lineWidthEditor = new ComboFieldEditor(PreferenceConstants.P_CONNECTIONS_LINE_WIDTH,
-            "Node connections line width", new String[][]{{"1", "1"}, {"2", "2"}, {"3", "3"}}, parent);
+            "Node connections line width:", new String[][]{{"1", "1"}, {"2", "2"}, {"3", "3"}}, parent);
         lineWidthEditor.load();
         addField(lineWidthEditor);
         addField(new LabelField(parent,
-            "To change the node connection settings of a workflow,\nuse the 'Workflow Editor Settings' "
+            "To change the node connection settings of a workflow, use the\n 'Workflow Editor Settings' "
                 + "toolbar button."));
 
         addField(new HorizontalLineField(parent));
@@ -143,6 +144,18 @@ public class WorkflowEditorPreferencePage extends FieldEditorPreferencePage impl
             new IntegerFieldEditor(PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA, labelText, parent);
         zoomDelta.setValidRange(1, 100);
         addField(zoomDelta);
+
+        addField(new HorizontalLineField(parent));
+        addField(new BooleanFieldEditor(PreferenceConstants.P_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS,
+            "Highlight the inport and outport connection lines of a selected node.", parent));
+        addField(new ColorFieldEditor(PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR,
+            "The color to use in highlighting connection lines:", parent));
+        final IntegerFieldEditor highlightConnectionWidthChange
+                = new IntegerFieldEditor(PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_DELTA,
+                    "The change in width when highlighting connection lines:", parent);
+        highlightConnectionWidthChange.setValidRange(-5, 10);
+        highlightConnectionWidthChange.setTextLimit(2);
+        addField(highlightConnectionWidthChange);
     }
 
     /** {@inheritDoc} */

@@ -59,7 +59,9 @@ import org.eclipse.draw2d.PolylineConnection;
 import org.eclipse.draw2d.PositionConstants;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.workflow.ConnectionProgress;
 
 /**
@@ -67,6 +69,32 @@ import org.knime.core.node.workflow.ConnectionProgress;
  * produce a flowing effect.
  */
 public class ProgressPolylineConnection extends PolylineConnection {
+    /**
+     * Defines whether highlighting (set via {@link #setHighlighted(boolean, boolean)}) is able to be displayed.
+     */
+    public static boolean PREFERENCE_DISPLAY_HIGHLIGHTING = false;
+    /**
+     * Defines how the usual width of a connection stroke is augmented when in highlight-mode.
+     */
+    public static int PREFERENCE_HIGHLIGHTED_WIDTH_DELTA = 0;
+
+    private static Color PREFERENCE_HIGHLIGHTED_COLOR = null;
+
+    /**
+     * Sets the color to be used by all instances of this class for stroke color when the connection is in
+     *  highlighted mode.
+     *
+     * @param rgb
+     * @see #setHighlighted(boolean, boolean)
+     */
+    public static void setHighlightColor(final RGB rgb) {
+        if (PREFERENCE_HIGHLIGHTED_COLOR != null) {
+            PREFERENCE_HIGHLIGHTED_COLOR.dispose();
+        }
+
+        PREFERENCE_HIGHLIGHTED_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), rgb);
+    }
+
 
     /** Service to make the marching ants go slow ... not updating with each event. */
     private static ScheduledExecutorService UI_PROGESS_UPDATE_SERVICE = Executors.newSingleThreadScheduledExecutor(
@@ -78,14 +106,6 @@ public class ProgressPolylineConnection extends PolylineConnection {
             }
         });
 
-    /** display label for showing connection statistics. */
-    private final Label m_label;
-
-    /** current state of animation--a value of -1 means we should go solid,
-     *  otherwise; otherwise range is 0-2,
-     * in which case the value is the offset in the dashes array. */
-    protected int m_state = -1;
-
     /** line dash style that we cycle through to create a flow animation--need 3
      * patterns to create a smooth animation. */
     protected static final int[][] DASHES = {
@@ -95,6 +115,19 @@ public class ProgressPolylineConnection extends PolylineConnection {
     };
 
     private static final Color DEFAULT_COLOR = new Color(Display.getCurrent(), 150, 150, 150);
+
+
+    /** display label for showing connection statistics. */
+    private final Label m_label;
+
+    /**
+     * current state of animation--a value of -1 means we should go solid, otherwise; otherwise range is 0-2,
+     * in which case the value is the offset in the dashes array.
+     */
+    protected int m_state = -1;
+
+    private int m_currentLineWidth;
+    private boolean m_inHighlightMode;
 
     /**
      * Creates a new connection.
@@ -107,21 +140,53 @@ public class ProgressPolylineConnection extends PolylineConnection {
         add(m_label, locator);
         setForegroundColor(DEFAULT_COLOR);
         setLineWidth(1);
+        m_inHighlightMode = false;
     }
 
     /** {@inheritDoc} */
     @Override
     protected void outlineShape(final Graphics g) {
-        if (m_state < 0) {
-            setLineStyle(SWT.LINE_SOLID);
-        } else {
-            g.setLineDash(DASHES[m_state]);
+        if (!m_inHighlightMode) {
+            if (m_state < 0) {
+                setLineStyle(SWT.LINE_SOLID);
+            } else {
+                g.setLineDash(DASHES[m_state]);
+            }
         }
 
         // set node connection color
         g.setForegroundColor(getForegroundColor());
 
         super.outlineShape(g);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setLineWidth(final int w) {
+        super.setLineWidth(w);
+
+        m_currentLineWidth = w;
+    }
+
+    /**
+     * Sets whether this connection should render as highlighted or regular default color; this will be ultimately
+     *  ignored if the user has disabled connection highlighting via Preferences.
+     *
+     * @param flag if true, then render the line in the highlight color.
+     * @param renderAsInport if true, this connection should be rendered as an inport connection (a dotted line),
+     *                          solid, as an outport line, otherwise.
+     */
+    public void setHighlighted(final boolean flag, final boolean renderAsInport) {
+        if (PREFERENCE_DISPLAY_HIGHLIGHTING || !flag) {
+            setForegroundColor(flag ? PREFERENCE_HIGHLIGHTED_COLOR : DEFAULT_COLOR);
+            setLineStyle((flag & renderAsInport) ? SWT.LINE_CUSTOM : SWT.LINE_SOLID);
+            setLineDash((flag & renderAsInport) ? new float[]{1, 2} : null);
+            super.setLineWidth(flag ? (m_currentLineWidth + PREFERENCE_HIGHLIGHTED_WIDTH_DELTA)
+                                    : m_currentLineWidth);
+            m_inHighlightMode = flag;
+        }
     }
 
     /** Next to process update event or null ... used to avoid intermediate updates. */
@@ -179,5 +244,4 @@ public class ProgressPolylineConnection extends PolylineConnection {
         m_state = -1;
         setLineStyle(SWT.LINE_SOLID);
     }
-
 }

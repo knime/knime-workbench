@@ -122,6 +122,7 @@ import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.preference.PreferenceConverter;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.ISelection;
@@ -133,6 +134,7 @@ import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
@@ -143,6 +145,7 @@ import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IEditorReference;
 import org.eclipse.ui.IEditorSite;
 import org.eclipse.ui.ISaveablePart2;
+import org.eclipse.ui.ISelectionService;
 import org.eclipse.ui.IURIEditorInput;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPage;
@@ -262,6 +265,7 @@ import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeAnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
+import org.knime.workbench.editor2.figures.ProgressPolylineConnection;
 import org.knime.workbench.editor2.figures.WorkflowFigure;
 import org.knime.workbench.editor2.menu.MRUFileMenuItem;
 import org.knime.workbench.editor2.svgexport.WorkflowSVGExport;
@@ -365,6 +369,8 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     private WorkflowCanvasClickListener m_canvasClickListener;
     private NodeSupplantDragListener m_nodeSupplantDragListener;
+
+    private ConnectionHighlighter m_connectionHighlighter;
 
     private WorkflowEditorMode m_editorMode;
 
@@ -520,12 +526,13 @@ public class WorkflowEditor extends GraphicalEditor implements
         // add this as a CommandStackListener
         getCommandStack().addCommandStackListener(this);
 
-        // add this as a selection change listener
-        getSite().getWorkbenchWindow().getSelectionService()
-                .addSelectionListener(this);
+        m_connectionHighlighter = new ConnectionHighlighter(this);
 
-        IPreferenceStore prefStore =
-            KNIMEUIPlugin.getDefault().getPreferenceStore();
+        final ISelectionService iss = getSite().getWorkbenchWindow().getSelectionService();
+        iss.addSelectionListener(this);
+        iss.addSelectionListener(m_connectionHighlighter);
+
+        final IPreferenceStore prefStore = KNIMEUIPlugin.getDefault().getPreferenceStore();
         prefStore.addPropertyChangeListener(this);
 
         queueAfterOpen();
@@ -625,6 +632,7 @@ public class WorkflowEditor extends GraphicalEditor implements
      *
      * @see org.eclipse.ui.IWorkbenchPart#dispose()
      */
+    @SuppressWarnings("restriction")
     @Override
     public void dispose() {
         if (m_initAbortedDueToAppExit) {
@@ -675,8 +683,10 @@ public class WorkflowEditor extends GraphicalEditor implements
             child.getEditorSite().getPage().closeEditor(child, false);
         }
         NodeProvider.INSTANCE.removeListener(this);
-        getSite().getWorkbenchWindow().getSelectionService().removeSelectionListener(this);
-        if (m_parentEditor != null && m_manager != null) {
+        final ISelectionService iss = getSite().getWorkbenchWindow().getSelectionService();
+        iss.removeSelectionListener(this);
+        iss.removeSelectionListener(m_connectionHighlighter);
+        if ((m_parentEditor != null) && (m_manager != null)) {
             // Store the editor settings with the metanode
             if (getWorkflowManagerUI().isDirty()) {
                 saveEditorSettingsToWorkflowManager(); // doesn't persist settings to disk
@@ -1059,6 +1069,7 @@ public class WorkflowEditor extends GraphicalEditor implements
 
         m_canvasClickListener = new WorkflowCanvasClickListener(this);
 
+        updateConnectionHighlighting();
         updateZoomLevelSettings();
     }
 
@@ -1734,7 +1745,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         }
     }
 
-    private void updateZoomLevelSettings () {
+    private void updateZoomLevelSettings() {
         final ZoomManager zm = getZoomManager();
         final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
         final int alternateDelta = store.getInt(PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA);
@@ -1756,6 +1767,20 @@ public class WorkflowEditor extends GraphicalEditor implements
             m_zoomComboBox.setZoomManager(null);
             m_zoomComboBox.setZoomManager(zm);
         }
+    }
+
+    private void updateConnectionHighlighting() {
+        final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
+        final boolean showHighlights = store.getBoolean(PreferenceConstants.P_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS);
+        final int widthDelta = store.getInt(PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_DELTA);
+        final RGB highlightColor =
+                PreferenceConverter.getColor(store, PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR);
+
+        ProgressPolylineConnection.setHighlightColor(highlightColor);
+        ProgressPolylineConnection.PREFERENCE_DISPLAY_HIGHLIGHTING = showHighlights;
+        ProgressPolylineConnection.PREFERENCE_HIGHLIGHTED_WIDTH_DELTA = widthDelta;
+
+        m_connectionHighlighter.selectionChanged(WorkflowEditor.this, getSite().getSelectionProvider().getSelection());
     }
 
     /**
@@ -3472,14 +3497,12 @@ public class WorkflowEditor extends GraphicalEditor implements
     @Override
     public void workflowChanged(final WorkflowEvent event) {
         LOGGER.debug("Workflow event triggered: " + event.toString());
-        SyncExecQueueDispatcher.asyncExec(new Runnable() {
-            @Override
-            public void run() {
-                if (WorkflowEditor.this.isClosed()) {
-                    return;
-                }
+        SyncExecQueueDispatcher.asyncExec(() -> {
+            if (WorkflowEditor.this.isClosed()) {
+                return;
+            }
 
-                switch (event.getType()) {
+            switch (event.getType()) {
                 case NODE_REMOVED:
                     Object oldValue = event.getOldValue();
                     // close sub-editors if a child metanode is deleted
@@ -3495,18 +3518,27 @@ public class WorkflowEditor extends GraphicalEditor implements
                         // since the equals method of the WorkflowManagerInput
                         // only looks for the WorkflowManager, we can pass
                         // null as the editor argument
-                        WorkflowManagerInput in =
-                            new WorkflowManagerInput(wm, (WorkflowEditor) null);
-                        IEditorPart editor =
-                            getEditorSite().getPage().findEditor(in);
+                        WorkflowManagerInput in = new WorkflowManagerInput(wm, (WorkflowEditor)null);
+                        IEditorPart editor = getEditorSite().getPage().findEditor(in);
                         if (editor != null) {
-                            editor.getEditorSite().getPage().closeEditor(editor,
-                                    false);
+                            editor.getEditorSite().getPage().closeEditor(editor, false);
                         }
                     }
                     break;
-                case CONNECTION_REMOVED:
                 case CONNECTION_ADDED:
+                    SyncExecQueueDispatcher.asyncExec(() -> {
+                        // We need an additional cycle delay for the situation in which this connection add
+                        //  was achieved by dragging on the port of a not-currently-selected-node; in that case
+                        //  we need the seletion process of that node to complete before telling the connection
+                        //  highlighter to highlight connections based on the current workflow selection.
+                        if (WorkflowEditor.this.isClosed()) {
+                            return;
+                        }
+
+                        m_connectionHighlighter.selectionChanged(WorkflowEditor.this,
+                                                                 getSite().getSelectionProvider().getSelection());
+                    });
+                case CONNECTION_REMOVED:
                     getViewer().getContents().refresh();
                     break;
                 case WORKFLOW_DIRTY:
@@ -3523,11 +3555,9 @@ public class WorkflowEditor extends GraphicalEditor implements
                     break;
                 default:
                     // all other event types are handled somewhere else, e.g. in edit policies etc
-                }
-                updateActions();
             }
+            updateActions();
         });
-
     }
 
     /** {@inheritDoc} */
@@ -3782,6 +3812,11 @@ public class WorkflowEditor extends GraphicalEditor implements
             case PreferenceConstants.P_EDITOR_ZOOM_LEVELS:
             case PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA:
                 updateZoomLevelSettings();
+                break;
+            case PreferenceConstants.P_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS:
+            case PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR:
+            case PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_DELTA:
+                updateConnectionHighlighting();
                 break;
             default:
         }

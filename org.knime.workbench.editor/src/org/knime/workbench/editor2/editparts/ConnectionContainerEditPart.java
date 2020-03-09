@@ -176,6 +176,18 @@ public class ConnectionContainerEditPart extends AbstractConnectionEditPart
     }
 
     /**
+     * Sets whether this connection should render as highlighted or regular default color; this will be ultimately
+     *  ignored if the user has disabled connection highlighting via Preferences.
+     *
+     * @param flag if true, then render the line in the highlight color.
+     * @param renderAsInport if true, this connection should be rendered as an inport connection (a dotted line),
+     *                          solid, as an outport line, otherwise.
+     */
+    public void setHighlighted(final boolean flag, final boolean renderAsInport) {
+        ((CurvedPolylineConnection)getFigure()).setHighlighted(flag, renderAsInport);
+    }
+
+    /**
      * Creates a GEF command to shift the connections bendpoints.
      *
      * @param request the underlying request holding information about the shift
@@ -294,7 +306,7 @@ public class ConnectionContainerEditPart extends AbstractConnectionEditPart
         LOGGER.debug("modelling info: " + ei);
 
         // make flow variable port connections look red.
-        CurvedPolylineConnection fig = (CurvedPolylineConnection)getFigure();
+        final CurvedPolylineConnection fig = (CurvedPolylineConnection)getFigure();
         if (getModel().isFlowVariablePortConnection()) {
             fig.setForegroundColor(AbstractPortFigure.getFlowVarPortColor());
         }

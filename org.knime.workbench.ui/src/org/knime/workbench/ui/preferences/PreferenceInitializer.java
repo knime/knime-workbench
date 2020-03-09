@@ -48,6 +48,7 @@ package org.knime.workbench.ui.preferences;
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.preference.PreferenceConverter;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.widgets.Display;
@@ -135,6 +136,13 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
         store.setDefault(PreferenceConstants.P_EDITOR_ZOOM_LEVELS, PreferenceConstants.P_DEFAULT_EDITOR_ZOOM_LEVELS);
         store.setDefault(PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA,
             PreferenceConstants.P_DEFAULT_EDITOR_ZOOM_MODIFIED_DELTA);
+
+        store.setDefault(PreferenceConstants.P_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS,
+            PreferenceConstants.P_DEFAULT_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS);
+        PreferenceConverter.setDefault(store, PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR,
+            PreferenceConstants.P_DEFAULT_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR);
+        store.setDefault(PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_DELTA,
+            PreferenceConstants.P_DEFAULT_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_CHANGE);
 
         // TODO retrieve the utility factories from the data type extension point once we have it
         // this loads all registered renderers and initializes the default value
