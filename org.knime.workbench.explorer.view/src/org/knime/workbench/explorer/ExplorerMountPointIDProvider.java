@@ -214,11 +214,12 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
      * @since 8.6
      */
     @Override
-    public void deployWorkflow(final File source, final URI target, final boolean attemptOpen) throws IOException {
+    public void deployWorkflow(final File source, final URI target, final boolean overwrite, final boolean attemptOpen)
+        throws IOException {
         final LocalExplorerFileStore sourceStore = new TmpLocalExplorerFile(source, true);
         final AbstractExplorerFileStore targetStore = getStore(target);
         try {
-            targetStore.importAsWorkflow(sourceStore, attemptOpen, null);
+            targetStore.importAsWorkflow(sourceStore, overwrite, attemptOpen, null);
         } catch (CoreException e) {
             throw new IOException(e);
         }

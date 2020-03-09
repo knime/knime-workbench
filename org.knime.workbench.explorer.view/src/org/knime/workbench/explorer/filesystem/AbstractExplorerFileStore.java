@@ -195,6 +195,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * attempting to open the workflow once it has been imported.
      *
      * @param workflowSource the local store representing the to-be-imported workflow
+     * @param overwrite overwrite workflow if it already exists
      * @param attemptOpen if true, attempt to open the workflow after import
      * @param monitor a progress monitor, or <code>null</code> if progress reporting and cancellation are not desired
      *
@@ -202,9 +203,9 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      *
      * @since 8.6
      */
-    public void importAsWorkflow(final LocalExplorerFileStore workflowSource, final boolean attemptOpen,
-        final IProgressMonitor monitor) throws CoreException {
-        workflowSource.copy(this, EFS.NONE, monitor);
+    public void importAsWorkflow(final LocalExplorerFileStore workflowSource, final boolean overwrite,
+        final boolean attemptOpen, final IProgressMonitor monitor) throws CoreException {
+        workflowSource.copy(this, overwrite ? EFS.OVERWRITE : EFS.NONE, monitor);
     }
 
     /**

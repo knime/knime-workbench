@@ -277,9 +277,9 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      * @since 8.6
      */
     @Override
-    public void importAsWorkflow(final LocalExplorerFileStore workflowSource, final boolean attemptOpen,
-        final IProgressMonitor monitor) throws CoreException {
-        super.importAsWorkflow(workflowSource, attemptOpen, monitor);
+    public void importAsWorkflow(final LocalExplorerFileStore workflowSource, final boolean overwrite,
+        final boolean attemptOpen, final IProgressMonitor monitor) throws CoreException {
+        super.importAsWorkflow(workflowSource, overwrite, attemptOpen, monitor);
 
         if (PlatformUI.isWorkbenchRunning() && attemptOpen) {
             Display.getDefault().asyncExec(() -> {
