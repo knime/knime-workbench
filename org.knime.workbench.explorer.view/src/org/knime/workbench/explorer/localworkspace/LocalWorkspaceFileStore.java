@@ -65,6 +65,15 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IEditorDescriptor;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.FileStoreEditorInput;
+import org.eclipse.ui.ide.IDE;
+import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeTimer;
+import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.PathUtils;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -80,6 +89,8 @@ import org.osgi.framework.FrameworkUtil;
  * @author ohl, University of Konstanz
  */
 public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalExplorerFileStore.class);
+
     private final IFileStore m_file;
 
     /**
@@ -258,6 +269,32 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
             throw new CoreException(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID, message, e));
         }
         refreshResource(getParent());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @since 8.6
+     */
+    @Override
+    public void importAsWorkflow(final LocalExplorerFileStore workflowSource, final boolean attemptOpen,
+        final IProgressMonitor monitor) throws CoreException {
+        super.importAsWorkflow(workflowSource, attemptOpen, monitor);
+
+        if (PlatformUI.isWorkbenchRunning() && attemptOpen) {
+            Display.getDefault().asyncExec(() -> {
+                final LocalExplorerFileStore workflow = getChild(WorkflowPersistor.WORKFLOW_FILE);
+                try {
+                    final IEditorDescriptor editorDescriptor = IDE.getEditorDescriptor(workflow.getName(), true, true);
+                    PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()
+                        .openEditor(new FileStoreEditorInput(workflow), editorDescriptor.getId());
+                    NodeTimer.GLOBAL_TIMER.incWorkflowOpening();
+                } catch (PartInitException ex) {
+                    LOGGER.info(String.format("Could not open editor for imported workflow %s: %s.",
+                        workflowSource.getName(), ex.getMessage()));
+                }
+            });
+        }
     }
 
     /**
