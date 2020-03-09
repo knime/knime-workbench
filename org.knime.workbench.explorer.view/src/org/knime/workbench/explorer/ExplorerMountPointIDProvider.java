@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.explorer;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
@@ -61,6 +62,8 @@ import org.knime.filehandling.core.connections.base.attributes.FSFileAttributes;
 import org.knime.filehandling.core.util.MountPointIDProvider;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.TmpLocalExplorerFile;
 
 /**
  * Implementation Of {@link MountPointIDProvider} backed by {@link ExplorerMountTable}.
@@ -203,6 +206,23 @@ public class ExplorerMountPointIDProvider implements MountPointIDProvider {
             throw new IOException(e);
         }
 
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @since 8.6
+     */
+    @Override
+    public void deployWorkflow(final File source, final URI target, final boolean attemptOpen) throws IOException {
+        final LocalExplorerFileStore sourceStore = new TmpLocalExplorerFile(source, true);
+        final AbstractExplorerFileStore targetStore = getStore(target);
+        try {
+            targetStore.importAsWorkflow(sourceStore, attemptOpen, null);
+        } catch (CoreException e) {
+            throw new IOException(e);
+        }
+        targetStore.getParent().refresh();
     }
 
     /**
