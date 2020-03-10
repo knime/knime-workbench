@@ -646,7 +646,7 @@ public final class ImageRepository {
      * @param resourceURL to the icon image
      * @return a potentially scaled image
      */
-     public static Image getIconImage(final URL resourceURL) {
+     public static synchronized Image getIconImage(final URL resourceURL) {
          if (resourceURL == null) {
              return null;
          }
