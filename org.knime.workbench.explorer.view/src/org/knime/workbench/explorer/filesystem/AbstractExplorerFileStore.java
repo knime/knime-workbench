@@ -200,12 +200,13 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * @param monitor a progress monitor, or <code>null</code> if progress reporting and cancellation are not desired
      *
      * @throws CoreException if this method fails for any reason
+     * @throws UnsupportedOperationException if this store does not support the importing workflows
      *
      * @since 8.6
      */
     public void importAsWorkflow(final LocalExplorerFileStore workflowSource, final boolean overwrite,
         final boolean attemptOpen, final IProgressMonitor monitor) throws CoreException {
-        workflowSource.copy(this, overwrite ? EFS.OVERWRITE : EFS.NONE, monitor);
+        throw new UnsupportedOperationException("This file store does not support importing workflows.");
     }
 
     /**
