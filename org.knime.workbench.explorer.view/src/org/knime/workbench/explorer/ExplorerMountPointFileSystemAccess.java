@@ -59,19 +59,19 @@ import java.util.List;
 import org.eclipse.core.runtime.CoreException;
 import org.knime.filehandling.core.connections.base.attributes.FSBasicAttributes;
 import org.knime.filehandling.core.connections.base.attributes.FSFileAttributes;
-import org.knime.filehandling.core.util.MountPointIDProvider;
+import org.knime.filehandling.core.util.MountPointFileSystemAccess;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.TmpLocalExplorerFile;
 
 /**
- * Implementation Of {@link MountPointIDProvider} backed by {@link ExplorerMountTable}.
+ * Implementation Of {@link MountPointFileSystemAccess} backed by {@link ExplorerMountTable}.
  *
  * @author Gabriel Einsdorf
- * @since 8.5
+ * @since 8.6
  */
-public class ExplorerMountPointIDProvider implements MountPointIDProvider {
+public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemAccess {
 
     /**
      * {@inheritDoc}

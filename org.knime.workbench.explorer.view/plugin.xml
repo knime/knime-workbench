@@ -131,9 +131,9 @@
      </urlStreamHandlerService>
   </extension>
   <extension
-        point="org.knime.filehandling.core.MountPointIDProvider">
-     <MountPointIDProvider
-           MountPointIDProvider="org.knime.workbench.explorer.ExplorerMountPointIDProvider">
-     </MountPointIDProvider>
+        point="org.knime.filehandling.core.MountPointFileSystemAccess">
+     <MountPointFileSystemAccess
+           MountPointFileSystemAccess="org.knime.workbench.explorer.ExplorerMountPointFileSystemAccess">
+     </MountPointFileSystemAccess>
   </extension>   
 </plugin>
