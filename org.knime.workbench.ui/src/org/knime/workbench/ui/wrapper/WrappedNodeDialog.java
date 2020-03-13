@@ -57,6 +57,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import javax.swing.JPanel;
@@ -124,6 +125,10 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
 
     private Button m_applyButton;
 
+    private Consumer<NodeDialogPane> m_preOpenDialogAction;
+
+    private Consumer<NodeDialogPane> m_postApplyDialogAction;
+
     /**
      * Creates the (application modal) dialog for a given node.
      *
@@ -132,12 +137,18 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
      *
      * @param parentShell The parent shell
      * @param nodeContainer The node
+     * @param preOpenDialogAction action to be executed shortly before the dialog is opened (can be <code>null</code>)
+     * @param postApplyDialogAction action to be executed shortly after dialog is applied (can be <code>null</code>)
      * @throws NotConfigurableException if the dialog cannot be opened because of real invalid settings or if any
      *             pre-conditions are not fulfilled, e.g. no predecessor node, no nominal column in input table, etc.
      */
-    public WrappedNodeDialog(final Shell parentShell, final NodeContainerUI nodeContainer) throws NotConfigurableException {
+    public WrappedNodeDialog(final Shell parentShell, final NodeContainerUI nodeContainer,
+        final Consumer<NodeDialogPane> preOpenDialogAction, final Consumer<NodeDialogPane> postApplyDialogAction)
+        throws NotConfigurableException {
         super(parentShell);
         m_nodeContainer = nodeContainer;
+        m_preOpenDialogAction = preOpenDialogAction;
+        m_postApplyDialogAction = postApplyDialogAction;
         m_dialogPane =
             ncAsyncSwitchRethrow(nc -> nc.getDialogPaneWithSettings(), nc -> nc.getDialogPaneWithSettingsAsync(),
                 nodeContainer, "Waiting for the dialog to open");
@@ -177,6 +188,9 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
             });
             pushNodeContext();
             try {
+                if (m_preOpenDialogAction != null) {
+                    m_preOpenDialogAction.accept(m_dialogPane);
+                }
                 m_dialogPane.onOpen();
                 return super.open();
             } finally {
@@ -621,6 +635,10 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
                 // not executed
                 getShell().setCursor(Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
                 m_nodeContainer.applySettingsFromDialog();
+
+                if (m_postApplyDialogAction != null) {
+                    m_postApplyDialogAction.accept(m_dialogPane);
+                }
                 return true;
             }
         } catch (InvalidSettingsException ise) {

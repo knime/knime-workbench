@@ -47,6 +47,7 @@
  */
 package org.knime.workbench.editor2.editparts;
 
+import static org.knime.core.ui.wrapper.Wrapper.wraps;
 import static org.knime.workbench.editor2.figures.NodeContainerFigure.scaleImageTo;
 
 import java.io.IOException;
@@ -112,10 +113,13 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.views.properties.IPropertySource;
+import org.knime.core.node.ConfigurableNodeFactory.ConfigurableNodeDialog;
+import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NotConfigurableException;
+import org.knime.core.node.context.ModifiableNodeCreationConfiguration;
 import org.knime.core.node.workflow.AbstractNodeExecutionJobManager;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.NativeNodeContainer;
@@ -153,6 +157,7 @@ import org.knime.workbench.editor2.WorkflowEditorMode;
 import org.knime.workbench.editor2.WorkflowManagerInput;
 import org.knime.workbench.editor2.WorkflowSelectionDragEditPartsTracker;
 import org.knime.workbench.editor2.commands.CreateConnectionCommand;
+import org.knime.workbench.editor2.commands.ReplaceNodePortCommand;
 import org.knime.workbench.editor2.commands.ShiftConnectionCommand;
 import org.knime.workbench.editor2.editparts.policy.PortGraphicalRoleEditPolicy;
 import org.knime.workbench.editor2.editparts.snap.SnapIconToGrid;
@@ -914,7 +919,8 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
             // This is embedded in a special JFace wrapper dialog
             //
             try {
-                WrappedNodeDialog dlg = new WrappedNodeDialog(shell, container);
+                WrappedNodeDialog dlg = new WrappedNodeDialog(shell, container,
+                    dp -> preOpenDialogAction(dp, container), dp -> postApplyDialogAction(dp, container, this));
                 dlg.open();
             } catch (NotConfigurableException ex) {
                 MessageBox mb = new MessageBox(shell, SWT.ICON_WARNING | SWT.OK);
@@ -927,6 +933,29 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
             }
         } finally {
             shell.setEnabled(true);
+        }
+    }
+
+    private static void preOpenDialogAction(final NodeDialogPane dialogPane, final NodeContainerUI nc) {
+        if (dialogPane instanceof ConfigurableNodeDialog && wraps(nc, NativeNodeContainer.class)) {
+            NativeNodeContainer nnc = Wrapper.unwrap(nc, NativeNodeContainer.class);
+            ((ConfigurableNodeDialog)dialogPane)
+                .setCurrentNodeCreationConfiguration(nnc.getNode().getCopyOfCreationConfig().orElse(null));
+        }
+    }
+
+    private static void postApplyDialogAction(final NodeDialogPane dialogPane, final NodeContainerUI nc,
+        final NodeContainerEditPart editPart) {
+        if (dialogPane instanceof ConfigurableNodeDialog && wraps(nc, NativeNodeContainer.class)) {
+            Optional<ModifiableNodeCreationConfiguration> newNodeCreationConfiguration =
+                ((ConfigurableNodeDialog)dialogPane).getNewNodeCreationConfiguration();
+            if (newNodeCreationConfiguration.isPresent()) {
+                editPart.getViewer().getEditDomain().getCommandStack()
+                    .execute(new ReplaceNodePortCommand(editPart, newNodeCreationConfiguration.get()));
+            }
+
+            //the connections are not always properly re-drawn after "unmark". (Eclipse bug.) Repaint here.
+            editPart.getRoot().refresh();
         }
     }
 

@@ -98,6 +98,10 @@ public class NodeAnnotationEditPart extends AnnotationEditPart {
             int h = anno.getHeight();
             boolean update = false; // update only if anno has no ui info
             boolean isDirty = false; // check if the workflow is already dirty
+            //there seem to be occasions where the node container doesn't exist anymore
+            if (!parent.getWorkflowManager().containsNodeContainer(nodeID)) {
+                return;
+            }
             final NodeUIInformation nodeUI = parent.getWorkflowManager().getNodeContainer(nodeID).getUIInformation();
             if ((w <= 0) || (h <= 0)) {
                 /* this code can be removed (but not for a bug fix release) as this

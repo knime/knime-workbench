@@ -126,9 +126,8 @@ public class GlobalConfigureWorkflowAction extends ExplorerAction {
             @Override
             public void run() {
                 try {
-                    WrappedNodeDialog dialog =
-                            new WrappedNodeDialog(Display.getDefault()
-                                    .getActiveShell(), WorkflowManagerWrapper.wrap(wfm));
+                    WrappedNodeDialog dialog = new WrappedNodeDialog(Display.getDefault().getActiveShell(),
+                        WorkflowManagerWrapper.wrap(wfm), null, null);
                     dialog.setBlockOnOpen(true);
                     dialog.open();
                 } catch (final NotConfigurableException nce) {

@@ -54,6 +54,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import org.eclipse.draw2d.ConnectionLayer;
 import org.eclipse.draw2d.LayoutManager;
@@ -87,6 +88,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.async.AsyncWorkflowManagerUI;
+import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditorMode;
@@ -227,13 +229,19 @@ public class WorkflowRootEditPart extends AbstractWorkflowEditPart implements
         for (Annotation anno : wfm.getWorkflowAnnotations()) {
             modelChildren.add(anno);
         }
+
+        Collection<NodeContainerUI> nodeContainers = wfm.getNodeContainers();
+        Set<NodeID> hiddenNodes = getHiddenNodes(nodeContainers);
+
         // Add the annotations associated with nodes (add them after the
         // workflow annotations so they appear above them)
         for (NodeAnnotation nodeAnno : wfm.getNodeAnnotations()) {
-            modelChildren.add(nodeAnno);
+            if (!hiddenNodes.contains(nodeAnno.getNodeID())) {
+                modelChildren.add(nodeAnno);
+            }
         }
 
-        modelChildren.addAll(wfm.getNodeContainers());
+        nodeContainers.stream().filter(nc -> !hiddenNodes.contains(nc.getID())).forEach(modelChildren::add);
         if (wfm.getNrWorkflowIncomingPorts() > 0) {
             if (m_inBar == null) {
                 m_inBar = new WorkflowPortBar(wfm, true);
@@ -258,6 +266,11 @@ public class WorkflowRootEditPart extends AbstractWorkflowEditPart implements
             modelChildren.add(m_outBar);
         }
         return modelChildren;
+    }
+
+    private static Set<NodeID> getHiddenNodes(final Collection<NodeContainerUI> ncs) {
+        return ncs.stream().filter(nc -> Wrapper.wraps(nc, WorkflowManager.class) && Wrapper.unwrapWFM(nc).isHiddenInUI())
+            .map(NodeContainerUI::getID).collect(Collectors.toSet());
     }
 
     /**

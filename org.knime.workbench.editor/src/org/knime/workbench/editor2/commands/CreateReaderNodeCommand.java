@@ -147,7 +147,7 @@ public class CreateReaderNodeCommand extends AbstractKNIMECommand {
                     public void run() {
                         try {
                             final WrappedNodeDialog dlg = new WrappedNodeDialog(SWTUtilities.getActiveShell(),
-                                NodeContainerWrapper.wrap(m_container));
+                                NodeContainerWrapper.wrap(m_container), null, null);
                             dlg.open();
                         } catch (Exception e) {
                             // they need to open it manually then
