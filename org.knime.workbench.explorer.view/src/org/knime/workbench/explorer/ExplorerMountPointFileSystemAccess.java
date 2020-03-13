@@ -57,8 +57,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.runtime.CoreException;
-import org.knime.filehandling.core.connections.base.attributes.FSBasicAttributes;
-import org.knime.filehandling.core.connections.base.attributes.FSFileAttributes;
+import org.knime.filehandling.core.connections.base.attributes.BaseFileAttributes;
 import org.knime.filehandling.core.util.MountPointFileSystemAccess;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -115,7 +114,7 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
      * @throws IllegalArgumentException if mountpoint does not exist
      */
     @Override
-    public FSFileAttributes getFileAttributes(final URI uri) throws IOException {
+    public BaseFileAttributes getFileAttributes(final URI uri) throws IOException {
 
         final AbstractExplorerFileStore store = getStore(uri);
         AbstractExplorerFileInfo info;
@@ -131,8 +130,9 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
 
         final FileTime lastMod = FileTime.fromMillis(info.getLastModified());
 
-        return new FSFileAttributes(!info.isDirectory() || AbstractExplorerFileStore.isWorkflow(store), null,
-            p -> new FSBasicAttributes(lastMod, lastMod, lastMod, info.getLength(), false, false));
+        //FIXME AP-13837 Implement POSIX Attributes for Mountpoint File System
+        return new BaseFileAttributes(!info.isDirectory() || AbstractExplorerFileStore.isWorkflow(store), null,
+           lastMod, lastMod, lastMod, info.getLength(), false, false, null);
     }
 
     /**
