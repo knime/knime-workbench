@@ -127,7 +127,9 @@ public class ProgressPolylineConnection extends PolylineConnection {
     protected int m_state = -1;
 
     private int m_currentLineWidth;
-    private boolean m_inHighlightMode;
+
+    /** Whether we are in highlight mode or not. */
+    protected boolean m_inHighlightMode;
 
     /**
      * Creates a new connection.
