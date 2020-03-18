@@ -81,8 +81,6 @@ public final class MetaInfoFile {
 
     /** Metadata version constant to represent no specified version. **/
     public static final int METADATA_NO_VERSION = -1;
-    /** Metadata version starting with the 3.8 release. **/
-    public static final int METADATA_VERSION_20190530 = 20190530;
     /** Metadata version starting with a future release in which we start supporting the new XML format. **/
     public static final int METADATA_VERSION_NG_STORAGE = Integer.MAX_VALUE;
 
