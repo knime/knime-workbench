@@ -59,8 +59,8 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.node.workflow.metadata.MetadataXML;
 import org.knime.core.util.FileUtil;
-import org.knime.core.xml.MetadataXML;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
@@ -70,6 +70,7 @@ import org.xml.sax.helpers.AttributesImpl;
  * workflows, such as author, date, comments.
  *
  * Fabian Dill wrote the original version off which this class is based.
+ *
  */
 public final class MetaInfoFile {
     /** Preference key for a workflow template. */
@@ -96,8 +97,6 @@ public final class MetaInfoFile {
         "There has been no description set for this workflow's metadata.";
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(MetaInfoFile.class);
-
-    private static final String DATE_SEPARATOR = "/";
 
     /**
      * If there is a template for workflow metadata, it is attempted to be used to create the metadata for parent
@@ -165,65 +164,6 @@ public final class MetaInfoFile {
         handler.endDocument();
     }
 
-    /**
-     * Given the date, return the string representation that we use to store the date within XML.
-     *
-     * @param calendar an instance of {@link Calendar} containing the date to represent.
-     * @return string representation
-     */
-    public static String dateToStorageString(final Calendar calendar) {
-        return dateToStorageString(calendar.get(Calendar.DAY_OF_MONTH), calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.YEAR));
-    }
-
-    /**
-     * Given the date, return the string representation that we use to store the date within XML.
-     *
-     * @param day 1-31
-     * @param month 0-11
-     * @param year 2008 - 2015 (for now)
-     * @return string representation
-     */
-    public static String dateToStorageString(final int day, final int month, final int year) {
-        return day + DATE_SEPARATOR + month + DATE_SEPARATOR + year;
-    }
-
-    /**
-     * Given a string value created in the correct format, return a correctly populated {@link Calendar} instance; if it's not in the correct format, null is returned.
-     *
-     * @param value a correctly formatted date string
-     * @return a correctly populated calendar or null if the date string is in a wrong format
-     */
-    public static Calendar calendarFromDateString(final String value) {
-        if (value != null) {
-            final String[] elements = value.trim().split(DATE_SEPARATOR);
-
-            // Greater than because date strings made elsewhere (server?) can look like:
-            //      13/5/2018/10:28:12 +02:00
-            if (elements.length >= 3) {
-                try {
-                    Integer i = Integer.parseInt(elements[0]);
-                    final int day = i.intValue();
-
-                    i = Integer.parseInt(elements[1]);
-                    final int month = i.intValue();
-
-                    i = Integer.parseInt(elements[2]);
-                    final int year = i.intValue();
-
-                    final Calendar calendar = Calendar.getInstance();
-                    calendar.set(year, month, day);
-
-                    return calendar;
-                } catch (final NumberFormatException nfe) {
-                    LOGGER.error("Unable to parse date string [" + value + "]", nfe);
-                }
-            }
-        }
-
-        return null;
-    }
-
     private static void writeFileFromPreferences(final File meta, final File f) {
         try {
             FileUtil.copy(f, meta);
@@ -289,7 +229,8 @@ public final class MetaInfoFile {
                 // TODO including a type breaks server parsing of the metadata - 4.0.0
 //                atts.addAttribute(null, null, MetadataXML.TYPE, "CDATA", MetadataItemType.CREATION_DATE.getType());
                 handler.startElement(null, null, MetadataXML.ATOM_WRITE_ELEMENT, atts);
-                final String date = dateToStorageString(Calendar.getInstance());
+                final String date =
+                    org.knime.core.node.workflow.metadata.MetaInfoFile.dateToStorageString(Calendar.getInstance());
                 final char[] dateChars = date.toCharArray();
                 handler.characters(dateChars, 0, dateChars.length);
                 handler.endElement(null, null, MetadataXML.ATOM_WRITE_ELEMENT);

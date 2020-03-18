@@ -60,9 +60,9 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.DateTime;
 import org.eclipse.swt.widgets.Label;
-import org.knime.core.xml.MetadataXML;
+import org.knime.core.node.workflow.metadata.MetaInfoFile;
+import org.knime.core.node.workflow.metadata.MetadataXML;
 import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
-import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.xml.sax.SAXException;
 

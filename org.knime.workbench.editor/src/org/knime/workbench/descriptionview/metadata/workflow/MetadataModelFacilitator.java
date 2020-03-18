@@ -67,7 +67,7 @@ import javax.xml.transform.sax.SAXTransformerFactory;
 import javax.xml.transform.sax.TransformerHandler;
 import javax.xml.transform.stream.StreamResult;
 
-import org.knime.core.xml.MetadataXML;
+import org.knime.core.node.workflow.metadata.MetadataXML;
 import org.knime.workbench.descriptionview.metadata.AbstractMetadataModelFacilitator;
 import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.DateMetaInfoAtom;

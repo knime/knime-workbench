@@ -55,7 +55,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.knime.core.node.NodeLogger;
-import org.knime.core.xml.MetadataXML;
+import org.knime.core.node.workflow.metadata.MetadataXML;
 import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.DateMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.LinkMetaInfoAtom;
