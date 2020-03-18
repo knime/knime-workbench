@@ -269,7 +269,8 @@ public class WorkflowRootEditPart extends AbstractWorkflowEditPart implements
     }
 
     private static Set<NodeID> getHiddenNodes(final Collection<NodeContainerUI> ncs) {
-        return ncs.stream().filter(nc -> Wrapper.wraps(nc, WorkflowManager.class) && Wrapper.unwrapWFM(nc).isHiddenInUI())
+        return ncs.stream()
+            .filter(nc -> Wrapper.wraps(nc, WorkflowManager.class) && Wrapper.unwrapWFM(nc).isHiddenInUI())
             .map(NodeContainerUI::getID).collect(Collectors.toSet());
     }
 

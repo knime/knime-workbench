@@ -190,6 +190,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
             try {
                 if (m_preOpenDialogAction != null) {
                     m_preOpenDialogAction.accept(m_dialogPane);
+                    m_preOpenDialogAction = null;
                 }
                 m_dialogPane.onOpen();
                 return super.open();
@@ -638,6 +639,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
 
                 if (m_postApplyDialogAction != null) {
                     m_postApplyDialogAction.accept(m_dialogPane);
+                    m_postApplyDialogAction = null; //to call the action only once
                 }
                 return true;
             }
