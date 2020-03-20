@@ -86,7 +86,7 @@ class ConnectionHighlighter implements ISelectionListener {
             final HashSet<ConnectionContainerEditPart> connections = new HashSet<>();
 
             m_currentlyHighlightedConnections.stream().forEach(connection -> {
-                connection.setHighlighted(false, false);
+                connection.setHighlighted(false);
             });
             m_currentlyHighlightedConnections.clear();
 
@@ -98,12 +98,12 @@ class ConnectionHighlighter implements ISelectionListener {
                         final NodeContainerEditPart ncep = (NodeContainerEditPart)o;
                         final ConnectionContainerEditPart[] outbounds = ncep.getOutgoingConnections();
                         Arrays.stream(outbounds).forEach(outbound -> {
-                            outbound.setHighlighted(true, false);
+                            outbound.setHighlighted(true);
                             connections.add(outbound);
                         });
                         final ConnectionContainerEditPart[] inbounds = ncep.getIncomingConnections();
                         Arrays.stream(inbounds).forEach(inbound -> {
-                            inbound.setHighlighted(true, true);
+                            inbound.setHighlighted(true);
                             connections.add(inbound);
                         });
                     } else if (o instanceof WorkflowInPortBarEditPart) {
@@ -115,7 +115,7 @@ class ConnectionHighlighter implements ISelectionListener {
                                     if (portConnection instanceof ConnectionContainerEditPart) {
                                         final ConnectionContainerEditPart ccep
                                                 = (ConnectionContainerEditPart)portConnection;
-                                        ccep.setHighlighted(true, false);
+                                        ccep.setHighlighted(true);
                                         connections.add(ccep);
                                     }
                                 }
@@ -130,7 +130,7 @@ class ConnectionHighlighter implements ISelectionListener {
                                     if (portConnection instanceof ConnectionContainerEditPart) {
                                         final ConnectionContainerEditPart ccep
                                                                 = (ConnectionContainerEditPart)portConnection;
-                                        ccep.setHighlighted(true, true);
+                                        ccep.setHighlighted(true);
                                         connections.add(ccep);
                                     }
                                 }
@@ -149,15 +149,17 @@ class ConnectionHighlighter implements ISelectionListener {
     private static boolean vetoSelection(final ISelection selection) {
         if (selection instanceof IStructuredSelection) {
             final IStructuredSelection iss = (IStructuredSelection)selection;
-            int ncepCount = 0;
+            int connnectionPossessorCount = 0;
             final Iterator<?> it = iss.iterator();
             while (it.hasNext()) {
                 final Object o = it.next();
-                if (o instanceof NodeContainerEditPart) {
-                    if (ncepCount > 0) {
+                if ((o instanceof NodeContainerEditPart)
+                        || (o instanceof WorkflowInPortBarEditPart)
+                        || (o instanceof WorkflowOutPortBarEditPart)) {
+                    if (connnectionPossessorCount > 0) {
                         return true;
                     }
-                    ncepCount++;
+                    connnectionPossessorCount++;
                 }
             }
 

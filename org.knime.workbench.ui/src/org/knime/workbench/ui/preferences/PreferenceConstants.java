@@ -211,10 +211,15 @@ public interface PreferenceConstants {
     public static final String P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR
                                                 = "knime.colors.selected_node_connection_highlight";
     /** The default value for the selected node input & output connection lines highlight color */
-    public static final RGB P_DEFAULT_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR = new RGB(255, 216, 0);
+    public static final RGB P_DEFAULT_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR = new RGB(75, 75, 75);
+    /** Preference constant for the selected node flow variable connection lines highlight color */
+    public static final String P_EDITOR_SELECTED_NODE_FLOW_CONNECTION_HIGHLIGHT_COLOR
+                                            = "knime.colors.selected_node_flow_connection_highlight";
+    /** The default value for the selected node flow variable connection lines highlight color */
+    public static final RGB P_DEFAULT_EDITOR_SELECTED_NODE_FLOW_CONNECTION_HIGHLIGHT_COLOR = new RGB(212, 60, 52);
     /** Preference constant for the selected node input & output connection lines highlight width change stored as int */
     public static final String P_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_DELTA
                                                 = "knime.colors.selected_node_connection_width_delta";
     /** The default value for the selected node input & output connection lines highlight width change */
-    public static final int P_DEFAULT_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_CHANGE = 3;
+    public static final int P_DEFAULT_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_CHANGE = 1;
 }

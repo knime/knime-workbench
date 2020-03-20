@@ -180,11 +180,9 @@ public class ConnectionContainerEditPart extends AbstractConnectionEditPart
      *  ignored if the user has disabled connection highlighting via Preferences.
      *
      * @param flag if true, then render the line in the highlight color.
-     * @param renderAsInport if true, this connection should be rendered as an inport connection (a dotted line),
-     *                          solid, as an outport line, otherwise.
      */
-    public void setHighlighted(final boolean flag, final boolean renderAsInport) {
-        ((CurvedPolylineConnection)getFigure()).setHighlighted(flag, renderAsInport);
+    public void setHighlighted(final boolean flag) {
+        ((CurvedPolylineConnection)getFigure()).setHighlighted(flag, getModel().isFlowVariablePortConnection());
     }
 
     /**

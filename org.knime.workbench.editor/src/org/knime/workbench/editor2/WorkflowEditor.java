@@ -1773,10 +1773,13 @@ public class WorkflowEditor extends GraphicalEditor implements
         final IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
         final boolean showHighlights = store.getBoolean(PreferenceConstants.P_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS);
         final int widthDelta = store.getInt(PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_DELTA);
-        final RGB highlightColor =
-                PreferenceConverter.getColor(store, PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR);
+        final RGB highlightColor
+            = PreferenceConverter.getColor(store, PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR);
+        final RGB flowHighlightColor
+            = PreferenceConverter.getColor(store, PreferenceConstants.P_EDITOR_SELECTED_NODE_FLOW_CONNECTION_HIGHLIGHT_COLOR);
 
         ProgressPolylineConnection.setHighlightColor(highlightColor);
+        ProgressPolylineConnection.setFlowVariableHighlightColor(flowHighlightColor);
         ProgressPolylineConnection.PREFERENCE_DISPLAY_HIGHLIGHTING = showHighlights;
         ProgressPolylineConnection.PREFERENCE_HIGHLIGHTED_WIDTH_DELTA = widthDelta;
 
@@ -3815,6 +3818,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 break;
             case PreferenceConstants.P_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS:
             case PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR:
+            case PreferenceConstants.P_EDITOR_SELECTED_NODE_FLOW_CONNECTION_HIGHLIGHT_COLOR:
             case PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_DELTA:
                 updateConnectionHighlighting();
                 break;

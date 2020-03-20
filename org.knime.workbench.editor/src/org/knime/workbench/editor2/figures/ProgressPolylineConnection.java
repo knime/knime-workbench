@@ -79,10 +79,12 @@ public class ProgressPolylineConnection extends PolylineConnection {
     public static int PREFERENCE_HIGHLIGHTED_WIDTH_DELTA = 0;
 
     private static Color PREFERENCE_HIGHLIGHTED_COLOR = null;
+    private static Color PREFERENCE_FLOW_HIGHLIGHTED_COLOR = null;
 
     /**
      * Sets the color to be used by all instances of this class for stroke color when the connection is in
-     *  highlighted mode.
+     *  highlighted mode; if this represents a flow variable, that color is set via
+     *  {@link #setFlowVariableHighlightColor(RGB)}
      *
      * @param rgb
      * @see #setHighlighted(boolean, boolean)
@@ -93,6 +95,21 @@ public class ProgressPolylineConnection extends PolylineConnection {
         }
 
         PREFERENCE_HIGHLIGHTED_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), rgb);
+    }
+
+    /**
+     * Sets the color to be used by all instances of this class for stroke color when the connection is in
+     *  highlighted mode and this instance represents a flow variable.
+     *
+     * @param rgb
+     * @see #setHighlighted(boolean, boolean)
+     */
+    public static void setFlowVariableHighlightColor(final RGB rgb) {
+        if (PREFERENCE_FLOW_HIGHLIGHTED_COLOR != null) {
+            PREFERENCE_FLOW_HIGHLIGHTED_COLOR.dispose();
+        }
+
+        PREFERENCE_FLOW_HIGHLIGHTED_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), rgb);
     }
 
 
@@ -117,19 +134,22 @@ public class ProgressPolylineConnection extends PolylineConnection {
     private static final Color DEFAULT_COLOR = new Color(Display.getCurrent(), 150, 150, 150);
 
 
-    /** display label for showing connection statistics. */
-    private final Label m_label;
-
     /**
      * current state of animation--a value of -1 means we should go solid, otherwise; otherwise range is 0-2,
      * in which case the value is the offset in the dashes array.
      */
     protected int m_state = -1;
 
-    private int m_currentLineWidth;
-
     /** Whether we are in highlight mode or not. */
     protected boolean m_inHighlightMode;
+
+    private int m_currentLineWidth;
+
+    /** display label for showing connection statistics. */
+    private final Label m_label;
+
+    /** Next to process update event or null ... used to avoid intermediate updates. */
+    private final AtomicReference<ConnectionProgress> m_atomicConnectionProgressReference = new AtomicReference<>();
 
     /**
      * Creates a new connection.
@@ -148,12 +168,10 @@ public class ProgressPolylineConnection extends PolylineConnection {
     /** {@inheritDoc} */
     @Override
     protected void outlineShape(final Graphics g) {
-        if (!m_inHighlightMode) {
-            if (m_state < 0) {
-                setLineStyle(SWT.LINE_SOLID);
-            } else {
-                g.setLineDash(DASHES[m_state]);
-            }
+        if (m_state < 0) {
+            setLineStyle(SWT.LINE_SOLID);
+        } else {
+            g.setLineDash(DASHES[m_state]);
         }
 
         // set node connection color
@@ -177,22 +195,19 @@ public class ProgressPolylineConnection extends PolylineConnection {
      *  ignored if the user has disabled connection highlighting via Preferences.
      *
      * @param flag if true, then render the line in the highlight color.
-     * @param renderAsInport if true, this connection should be rendered as an inport connection (a dotted line),
-     *                          solid, as an outport line, otherwise.
+     * @param representsFlowVariable this should be true if this instance represents a flow variable connection
      */
-    public void setHighlighted(final boolean flag, final boolean renderAsInport) {
+    public void setHighlighted(final boolean flag, final boolean representsFlowVariable) {
         if (PREFERENCE_DISPLAY_HIGHLIGHTING || !flag) {
-            setForegroundColor(flag ? PREFERENCE_HIGHLIGHTED_COLOR : DEFAULT_COLOR);
-            setLineStyle((flag & renderAsInport) ? SWT.LINE_CUSTOM : SWT.LINE_SOLID);
-            setLineDash((flag & renderAsInport) ? new float[]{1, 2} : null);
+            setForegroundColor(flag ? (representsFlowVariable ? PREFERENCE_FLOW_HIGHLIGHTED_COLOR
+                                                              : PREFERENCE_HIGHLIGHTED_COLOR)
+                                    : (representsFlowVariable ? AbstractPortFigure.getFlowVarPortColor()
+                                                              : DEFAULT_COLOR));
             super.setLineWidth(flag ? (m_currentLineWidth + PREFERENCE_HIGHLIGHTED_WIDTH_DELTA)
                                     : m_currentLineWidth);
             m_inHighlightMode = flag;
         }
     }
-
-    /** Next to process update event or null ... used to avoid intermediate updates. */
-    private final AtomicReference<ConnectionProgress> m_atomicConnectionProgressReference = new AtomicReference<>();
 
     /**
      * Update the progress. Calling this method serves two purposes. First, it

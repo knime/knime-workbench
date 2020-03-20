@@ -124,12 +124,10 @@ public class CurvedPolylineConnection extends ProgressPolylineConnection {
     @Override
     protected void outlineShape(final Graphics g) {
         if (m_approxCurve != null) {
-            if (!m_inHighlightMode) {
-                if (m_state < 0) {
-                    setLineStyle(SWT.LINE_SOLID);
-                } else {
-                    g.setLineDash(DASHES[m_state]);
-                }
+            if (m_state < 0) {
+                setLineStyle(SWT.LINE_SOLID);
+            } else {
+                g.setLineDash(DASHES[m_state]);
             }
             // set node connection color
             g.setForegroundColor(getForegroundColor());

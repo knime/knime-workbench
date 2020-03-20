@@ -150,6 +150,8 @@ public class WorkflowEditorPreferencePage extends FieldEditorPreferencePage impl
             "Highlight the inport and outport connection lines of a selected node.", parent));
         addField(new ColorFieldEditor(PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR,
             "The color to use in highlighting connection lines:", parent));
+        addField(new ColorFieldEditor(PreferenceConstants.P_EDITOR_SELECTED_NODE_FLOW_CONNECTION_HIGHLIGHT_COLOR,
+            "The color to use in highlighting the flow variable connection lines:", parent));
         final IntegerFieldEditor highlightConnectionWidthChange
                 = new IntegerFieldEditor(PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_DELTA,
                     "The change in width when highlighting connection lines:", parent);

@@ -141,6 +141,8 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
             PreferenceConstants.P_DEFAULT_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS);
         PreferenceConverter.setDefault(store, PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR,
             PreferenceConstants.P_DEFAULT_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR);
+        PreferenceConverter.setDefault(store, PreferenceConstants.P_EDITOR_SELECTED_NODE_FLOW_CONNECTION_HIGHLIGHT_COLOR,
+            PreferenceConstants.P_DEFAULT_EDITOR_SELECTED_NODE_FLOW_CONNECTION_HIGHLIGHT_COLOR);
         store.setDefault(PreferenceConstants.P_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_DELTA,
             PreferenceConstants.P_DEFAULT_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_CHANGE);
 
