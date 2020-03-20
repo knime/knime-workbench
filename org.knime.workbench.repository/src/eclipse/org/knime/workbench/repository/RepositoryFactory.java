@@ -51,6 +51,7 @@ import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 
 import org.eclipse.core.runtime.FileLocator;
@@ -308,9 +309,10 @@ public final class RepositoryFactory {
 
     /**
      * Creates the set of dynamic node templates.
-     * @param set TODO
+     *
+     * @param set the node set factory extension to load the nodes from
      * @param root the root to add the missing categories in
-     * @param isIncludeDeprecated TODO
+     * @param isIncludeDeprecated if deprecated nodes are to be included in the result collection
      * @return the created dynamic node templates
      */
     public static Collection<DynamicNodeTemplate> createNodeSet(
@@ -319,6 +321,9 @@ public final class RepositoryFactory {
 
         // Try to load the node set factory class...
         NodeSetFactory nodeSet = set.getNodeSetFactory();
+        if (nodeSet.isHidden()) {
+            return Collections.emptyList();
+        }
 
         Collection<DynamicNodeTemplate> dynamicNodeTemplates = new ArrayList<>();
 

@@ -86,6 +86,16 @@ If this flag is set in the extension point, there is not need to specify it also
                </documentation>
             </annotation>
          </attribute>
+         <attribute name="hidden" type="boolean" use="default" value="false">
+            <annotation>
+               <documentation>
+                  Indicates whether a node is hidden. Similar to deprecated nodes, hidden nodes are not shown in the node repository any more but still loaded in existing workflows. However, hidden nodes don&apos;t receive the &apos;deprecation&apos; label (in the node name, node description, ...).
+This is, e.g., useful when writing nodes that are only used for testing but should not be made available to the user in general.
+
+Note: either the deprecated-flag is set to true or the hidden flag. But never both at the same time.
+               </documentation>
+            </annotation>
+         </attribute>
          <attribute name="id" type="string">
             <annotation>
                <documentation>

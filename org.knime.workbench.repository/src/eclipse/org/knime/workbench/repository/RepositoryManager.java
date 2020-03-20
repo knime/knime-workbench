@@ -360,6 +360,9 @@ public final class RepositoryManager {
                 if (nodeFactoryExtension.isDeprecated() && !isIncludeDeprecated) { // deprecate nodes are hidden
                     continue;
                 }
+                if (nodeFactoryExtension.isHidden()) {
+                    continue;
+                }
 
                 NodeTemplate node = RepositoryFactory.createNode(nodeFactoryExtension);
 
