@@ -73,6 +73,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.BufferedDataTable;
+import org.knime.core.node.port.PortObject;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.PortTypeRegistry;
 import org.knime.core.node.port.database.DatabaseConnectionPortObject;
@@ -119,6 +120,10 @@ public class MetaPortDialog extends Dialog {
             } else if (o1.equals(DatabasePortObject.TYPE)) {
                 return -1;
             } else if (o2.equals(DatabasePortObject.TYPE)) {
+                return 1;
+            } else if (o1.equals(PortObject.TYPE)) {
+                return -1;
+            } else if (o2.equals(PortObject.TYPE)) {
                 return 1;
             } else {
                 return o1.getName().compareTo(o2.getName());
