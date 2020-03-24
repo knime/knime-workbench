@@ -2361,10 +2361,10 @@ public class WorkflowEditor extends GraphicalEditor implements
                     if (snapshotPanel.get() != null) {
                         SnapshotPanel snapPanel = snapshotPanel.get();
                         result = new OverwriteAndMergeInfo(newLocation.toURI().toASCIIString(), false, true,
-                            snapPanel.createSnapshot(), snapPanel.getComment());
+                            snapPanel.createSnapshot(), snapPanel.getComment(), false);
                     } else {
-                        result =
-                            new OverwriteAndMergeInfo(newLocation.toURI().toASCIIString(), false, true, false, "");
+                        result = new OverwriteAndMergeInfo(newLocation.toURI().toASCIIString(), false, true, false, "",
+                            false);
                     }
 
                 } else {
@@ -2373,7 +2373,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                     currentName = newLocation.getName();
                 }
             } else {
-                result = new OverwriteAndMergeInfo(newLocation.toURI().toASCIIString(), false, false, false, "");
+                result = new OverwriteAndMergeInfo(newLocation.toURI().toASCIIString(), false, false, false, "", false);
             }
         } /* end of while (result != null) keep the target selection dialog open */
         return result;

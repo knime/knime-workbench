@@ -98,13 +98,19 @@ public class MergeRenameDialog extends Dialog {
 
     private final boolean m_canWriteDestination;
 
+    private Button m_keepHistoryGUI;
+
+    protected boolean m_keepHistory;
+
+    private boolean m_showKeepHistoryCheckbox;
+
     /**
      *
      * @param parentShell parent for the dialog
      * @param destination
      */
     public MergeRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination) {
-        this(parentShell, destination, true);
+        this(parentShell, destination, true, false);
     }
 
     /**
@@ -112,12 +118,15 @@ public class MergeRenameDialog extends Dialog {
      * @param parentShell parent for the dialog
      * @param destination the destination to merge to
      * @param canWriteDest true if the caller can write to the destination
+     * @param showKeepHistoryCheckbox {@code true} if the option to keep the snapshot history of the destination should
+     *            be shown, false otherwise
      */
     public MergeRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
-        final boolean canWriteDest) {
+        final boolean canWriteDest, final boolean showKeepHistoryCheckbox) {
         super(parentShell);
         m_destination = destination;
         m_canWriteDestination = canWriteDest;
+        m_showKeepHistoryCheckbox = showKeepHistoryCheckbox;
     }
 
     /**
@@ -204,13 +213,16 @@ public class MergeRenameDialog extends Dialog {
         mergeOptionsPanel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false));
         mergeOptionsPanel.setLayout(new GridLayout(1, false));
         m_overwriteGUI = new Button(mergeOptionsPanel, SWT.CHECK);
-        m_overwriteGUI.setText("overwrite existing workflows");
+        m_overwriteGUI.setText("Overwrite existing workflows");
         m_overwriteGUI.setToolTipText("If workflows already exist, copy " + "doesn't start without this option.");
         m_overwriteGUI.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         m_overwriteGUI.addListener(SWT.Selection, new Listener() {
             @Override
             public void handleEvent(final Event event) {
                 m_overwrite = m_overwriteGUI.getSelection();
+                if (m_keepHistoryGUI != null) {
+                    m_keepHistoryGUI.setEnabled(m_overwrite);
+                }
             }
         });
         m_overwriteGUI.setEnabled(false);
@@ -219,6 +231,22 @@ public class MergeRenameDialog extends Dialog {
         if (!m_canWriteDestination) {
             m_mergeGUI.setEnabled(false);
             m_mergeGUI.setToolTipText("You don't have the permissions " + "to write to the destination");
+        } else if (m_showKeepHistoryCheckbox) {
+            final Composite keepHistoryOptionsPanel = new Composite(mergeOptionsPanel, SWT.NONE);
+            keepHistoryOptionsPanel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false));
+            keepHistoryOptionsPanel.setLayout(new GridLayout(1, false));
+            m_keepHistoryGUI = new Button(keepHistoryOptionsPanel, SWT.CHECK);
+            m_keepHistoryGUI.setText("Keep the snapshot history of the existing item");
+            m_keepHistoryGUI.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+            m_keepHistoryGUI.addListener(SWT.Selection, new Listener() {
+                @Override
+                public void handleEvent(final Event event) {
+                    m_keepHistory = m_keepHistoryGUI.getSelection();
+                }
+            });
+            m_keepHistoryGUI.setEnabled(false);
+            m_keepHistoryGUI.setSelection(false);
+            m_keepHistory = false;
         }
 
         Composite renamePanel = new Composite(border, SWT.NONE);
@@ -285,6 +313,9 @@ public class MergeRenameDialog extends Dialog {
             m_mergeGUI.setSelection(choice == m_mergeGUI);
             //            m_skipGUI.setEnabled(m_mergeGUI.getSelection());
             m_overwriteGUI.setEnabled(m_mergeGUI.getSelection());
+            if (m_keepHistoryGUI != null) {
+                m_keepHistoryGUI.setEnabled(m_overwriteGUI.isEnabled() && m_overwriteGUI.getSelection());
+            }
         }
         m_merge = m_mergeGUI != null && m_mergeGUI.getSelection();
         m_rename = m_renameGUI.getSelection();
@@ -357,6 +388,6 @@ public class MergeRenameDialog extends Dialog {
     public OverwriteAndMergeInfo getInfo() {
         return new OverwriteAndMergeInfo(m_rename ? m_newName : null, m_merge, m_merge && m_overwrite,
             m_snapshotPanel != null ? m_snapshotPanel.createSnapshot() : false, m_snapshotPanel != null
-                ? m_snapshotPanel.getComment() : null);
+                ? m_snapshotPanel.getComment() : null, m_keepHistory);
     }
 }

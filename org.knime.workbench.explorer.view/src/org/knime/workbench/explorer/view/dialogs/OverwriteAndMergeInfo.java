@@ -64,6 +64,8 @@ public class OverwriteAndMergeInfo {
 
     private final String m_snapshotComment;
 
+    private boolean m_keepHistory;
+
     /**
      * Creates a new merge-and-overwrite info object
      *
@@ -72,14 +74,16 @@ public class OverwriteAndMergeInfo {
      * @param overwrite <code>true</code> if existing destination items should be overwritten
      * @param createSnapshot <code>true</code> if a snapshot for each overwritten item should be created
      * @param snapshotComment the optional snapshot comment
+     * @param keepHistory {@code true} if the snapshot history of the target should be kept, {@code false} otherwise
      */
-    public OverwriteAndMergeInfo(final String newName, final boolean merge, final boolean overwrite, final boolean createSnapshot,
-        final String snapshotComment) {
+    public OverwriteAndMergeInfo(final String newName, final boolean merge, final boolean overwrite,
+        final boolean createSnapshot, final String snapshotComment, final boolean keepHistory) {
         m_newName = newName;
         m_merge = merge;
         m_overwrite = overwrite;
         m_createSnapshot = createSnapshot;
         m_snapshotComment = snapshotComment;
+        m_keepHistory = keepHistory;
     }
 
     /**
@@ -125,5 +129,14 @@ public class OverwriteAndMergeInfo {
      */
     public String getComment() {
         return m_snapshotComment;
+    }
+
+    /**
+     * Returns wether the snapshot history of the destination should be kept or overwritten.
+     *
+     * @return the {@code true} if the history should be kept, {@code false} otherwise
+     */
+    public boolean keepHistory() {
+        return m_keepHistory;
     }
 }

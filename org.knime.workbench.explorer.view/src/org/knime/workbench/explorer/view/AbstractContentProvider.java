@@ -1599,4 +1599,16 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public long getUploadLimit() {
         return Long.MAX_VALUE;
     }
+
+    /**
+     * Checks wether the content provider uses the rest service or not. Can only be true if
+     * {@link AbstractContentProvider#isRemote()} is true.
+     *
+     * @return {@code true} if the rest service is used {@code false} otherwise.
+     *
+     * @since 8.6
+     */
+    public boolean isUseRest() {
+        return false;
+    }
 }

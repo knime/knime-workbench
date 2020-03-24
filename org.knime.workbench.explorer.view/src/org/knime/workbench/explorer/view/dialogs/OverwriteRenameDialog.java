@@ -93,6 +93,8 @@ public class OverwriteRenameDialog extends Dialog {
 
     private boolean m_rename;
 
+    private boolean m_keepHistory;
+
     private final boolean m_canWriteDestination;
 
     private final boolean m_multiple;
@@ -104,6 +106,10 @@ public class OverwriteRenameDialog extends Dialog {
     private SnapshotPanel m_snapshotPanel;
 
     private final Set<AbstractExplorerFileStore> m_forbiddenStores;
+
+    private Button m_keepHistoryGUI;
+
+    private boolean m_showKeepHistoryCheckbox;
 
     /**
      *
@@ -154,7 +160,7 @@ public class OverwriteRenameDialog extends Dialog {
     */
     public OverwriteRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
         final boolean canWriteDest, final boolean multiple, final Set<AbstractExplorerFileStore> forbiddenStores) {
-        this(parentShell, destination, canWriteDest, multiple, forbiddenStores, true);
+        this(parentShell, destination, canWriteDest, multiple, forbiddenStores, true, false);
     }
 
     /**
@@ -168,17 +174,20 @@ public class OverwriteRenameDialog extends Dialog {
      * @param forbiddenStores stores that cannot be chosen as destination
      * @param showSnapshotPanel <code>true</code> if the create snapshot panel should be shown, <code>false</code>
      *            otherwise.
+     * @param showKeepHistoryCheckbox {@code true} if the option to keep the snapshot history of the destination should
+     *            be shown, false otherwise.
      * @since 8.5
      */
     public OverwriteRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
         final boolean canWriteDest, final boolean multiple, final Set<AbstractExplorerFileStore> forbiddenStores,
-        final boolean showSnapshotPanel) {
+        final boolean showSnapshotPanel, final boolean showKeepHistoryCheckbox) {
         super(parentShell);
         m_destination = destination;
         m_canWriteDestination = canWriteDest;
         m_multiple = multiple;
         m_forbiddenStores = forbiddenStores;
         m_showSnapshotPanel = showSnapshotPanel;
+        m_showKeepHistoryCheckbox = showKeepHistoryCheckbox;
     }
 
     /** Can be called right after construction to programmatically set the
@@ -288,6 +297,20 @@ public class OverwriteRenameDialog extends Dialog {
             m_overwriteGUI.setEnabled(false);
             m_overwriteGUI.setToolTipText("You have no permissions "
                     + "to overwrite the destination");
+        } else if (m_showKeepHistoryCheckbox) {
+            final Composite keepHistoryOptionsPanel = new Composite(overwritePanel, SWT.NONE);
+            keepHistoryOptionsPanel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false));
+            keepHistoryOptionsPanel.setLayout(new GridLayout(1, false));
+            m_keepHistoryGUI = new Button(keepHistoryOptionsPanel, SWT.CHECK);
+            m_keepHistoryGUI.setText("Keep the snapshot history of the existing item");
+            GridData gd = new GridData(GridData.FILL_HORIZONTAL);
+            m_keepHistoryGUI.setLayoutData(gd);
+            m_keepHistoryGUI.addListener(SWT.Selection, new Listener() {
+                @Override
+                public void handleEvent(final Event event) {
+                    m_keepHistory = m_keepHistoryGUI.getSelection();
+                }
+            });
         }
 
         Composite renamePanel = new Composite(border, SWT.NONE);
@@ -384,6 +407,9 @@ public class OverwriteRenameDialog extends Dialog {
         m_newNameGUI.setEnabled(m_renameGUI.getSelection());
         if (m_overwriteGUI != null && m_overwriteGUI.isEnabled()) {
             m_overwriteGUI.setSelection(choice == m_overwriteGUI);
+            if (m_showKeepHistoryCheckbox) {
+                m_keepHistoryGUI.setEnabled(m_overwriteGUI.getSelection());
+            }
         }
         m_overwrite = m_overwriteGUI != null && m_overwriteGUI.getSelection();
         if (m_snapshotPanel != null) {
@@ -494,7 +520,8 @@ public class OverwriteRenameDialog extends Dialog {
      * @since 6.0
      */
     public OverwriteAndMergeInfo getInfo() {
-        return new OverwriteAndMergeInfo(m_rename ? m_newName : null, false, m_overwrite, m_snapshotPanel != null
-            ? m_snapshotPanel.createSnapshot() : false, m_snapshotPanel != null ? m_snapshotPanel.getComment() : null);
+        return new OverwriteAndMergeInfo(m_rename ? m_newName : null, false, m_overwrite,
+            m_snapshotPanel != null ? m_snapshotPanel.createSnapshot() : false,
+            m_snapshotPanel != null ? m_snapshotPanel.getComment() : null, m_keepHistory);
     }
 }

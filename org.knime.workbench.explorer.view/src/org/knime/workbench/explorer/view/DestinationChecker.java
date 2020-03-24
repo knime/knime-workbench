@@ -75,7 +75,7 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
             DestinationChecker.class);
 
     private static final OverwriteAndMergeInfo OVERWRITE_ALL_INFO =
-        new OverwriteAndMergeInfo(null, false, true, false, null);
+        new OverwriteAndMergeInfo(null, false, true, false, null, false);
 
     private final Shell m_shell;
     private boolean m_overwriteAll;
@@ -229,9 +229,10 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
     }
 
     private T openMergeDialog(final S source, final T dest) {
+        final boolean showKeepHistoryCheckbox = dest != null && source != null && dest.getContentProvider().isUseRest()
+            && dest.getContentProvider().equals(source.getContentProvider());
         MergeRenameDialog dlg =
-                new MergeRenameDialog(m_shell, dest,
-                        dest.fetchInfo().isModifiable());
+            new MergeRenameDialog(m_shell, dest, dest.fetchInfo().isModifiable(), showKeepHistoryCheckbox);
         if (dlg.open() != IDialogConstants.OK_ID) {
             return null;
         }
@@ -314,9 +315,11 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
         final Set<AbstractExplorerFileStore> forbiddenStores) {
         final boolean showSnapshotPanel =
             source == null || !dest.getContentProvider().equals(source.getContentProvider());
+        final boolean showKeepHistoryCheckbox = dest != null && source != null && dest.getContentProvider().isUseRest()
+            && dest.getContentProvider().equals(source.getContentProvider());
 
-        final OverwriteRenameDialog dlg =
-            new OverwriteRenameDialog(m_shell, dest, canOverwrite, m_isMultiple, forbiddenStores, showSnapshotPanel);
+        final OverwriteRenameDialog dlg = new OverwriteRenameDialog(m_shell, dest, canOverwrite, m_isMultiple,
+            forbiddenStores, showSnapshotPanel, showKeepHistoryCheckbox);
         if (canOverwrite && m_isOverwriteDefault) {
             dlg.setOverwriteAsDefault(true);
         }

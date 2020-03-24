@@ -218,10 +218,13 @@ public final class CopyMove {
                         (LocalExplorerFileStore)destFS, m_performMove, callback);
                 } else { // regular copy
                     CheckUtils.checkState(!m_excludeDataInWorkflows, "Copy/Move 'without data' not implement");
+                    final boolean keepHistory = m_destChecker.getOverwriteAndMergeInfos().get(destFS) != null
+                        ? m_destChecker.getOverwriteAndMergeInfos().get(destFS).keepHistory() : false;
                     if (m_performMove) {
-                        moveJobs.add(scheduleLocalCopyOrMove(srcFS, destFS, callback, m_performMove, options));
+                        moveJobs
+                            .add(scheduleLocalCopyOrMove(srcFS, destFS, callback, m_performMove, options, keepHistory));
                     } else {
-                        scheduleLocalCopyOrMove(srcFS, destFS, callback, m_performMove, options);
+                        scheduleLocalCopyOrMove(srcFS, destFS, callback, m_performMove, options, keepHistory);
                     }
                 }
             } catch (CoreException e) {
@@ -323,7 +326,7 @@ public final class CopyMove {
 
     private ExplorerJob scheduleLocalCopyOrMove(final AbstractExplorerFileStore source,
         final AbstractExplorerFileStore destination, final AfterRunCallback callback, final boolean move,
-        final int options) {
+        final int options, final boolean keepHistory) {
         ExplorerJob job = new ExplorerJob(
             cmdAsTextual() + " of " + source.getMountIDWithFullPath() + " to " + destination.getMountIDWithFullPath()) {
 
@@ -331,9 +334,9 @@ public final class CopyMove {
             protected IStatus run(final IProgressMonitor monitor) {
                 try {
                     if (move) {
-                        source.move(destination, options, monitor);
+                        source.move(destination, options, monitor, keepHistory);
                     } else {
-                        source.copy(destination, options, monitor);
+                        source.copy(destination, options, monitor, keepHistory);
                     }
                     AfterRunCallback.callCallbackInDisplayThread(callback, null);
                     return Status.OK_STATUS;
