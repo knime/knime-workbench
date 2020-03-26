@@ -1887,6 +1887,21 @@ public class WorkflowEditor extends GraphicalEditor implements
                 is = isp.getSelection();
                 waitCount++;
             }
+        } else {
+            // The genesis of this block is the desire not to have an SVG saved with potentially highlighted
+            //      connections which now may exist due to https://knime-com.atlassian.net/browse/AP-13833
+            //  At first i was going to implement this as "if highlighting is enabled and there is only one connector
+            //      possessor selected, then deselect everything," but then i though - we probably, ideally, do not
+            //      want to generate the worfklow SVG with anything selected, really. So we have clear the
+            //      selection regardless prior to a save now.
+            // Update Martin: to preserve old behavior I decided that the de-selection is only done when highlighting
+            //      is enabled
+            if (ProgressPolylineConnection.PREFERENCE_DISPLAY_HIGHLIGHTING) {
+                final ISelectionProvider isp = getSite().getSelectionProvider();
+                if (!isp.getSelection().isEmpty()) {
+                    isp.setSelection(new StructuredSelection());
+                }
+            }
         }
 
         // to be sure to mark dirty and inform the user about running nodes

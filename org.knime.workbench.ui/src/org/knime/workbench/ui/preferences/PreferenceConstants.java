@@ -206,7 +206,7 @@ public interface PreferenceConstants {
     public static final String P_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS
                                                 = "knime.node.highlight_connections_on_selection";
     /** Default value for whether a selected node highlights its immediate connections  */
-    public static final boolean P_DEFAULT_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS = false;
+    public static final boolean P_DEFAULT_EDITOR_SELECTED_NODE_HIGHLIGHT_CONNECTIONS = true;
     /** Preference constant for the selected node input & output connection lines highlight color */
     public static final String P_EDITOR_SELECTED_NODE_CONNECTIONS_HIGHLIGHT_COLOR
                                                 = "knime.colors.selected_node_connection_highlight";
