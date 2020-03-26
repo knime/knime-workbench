@@ -45,6 +45,9 @@
 package org.knime.workbench.explorer.localworkspace;
 
 import java.io.File;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileInfo;
@@ -54,9 +57,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.FileSingleNodeContainerPersistor;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.core.util.workflowalizer.TemplateMetadata;
-import org.knime.core.util.workflowalizer.Workflowalizer;
-import org.knime.core.util.workflowalizer.WorkflowalizerConfiguration;
+import org.knime.core.util.workflowalizer.MetadataConfig;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 
 
@@ -240,11 +241,13 @@ public class LocalWorkspaceFileInfo extends AbstractExplorerFileInfo {
         if (m_isComponent == null) {
             IFileStore templateFile = file.getChild(WorkflowPersistor.TEMPLATE_FILE);
             try {
-                TemplateMetadata templateMetadata =
-                    Workflowalizer.readTemplate(templateFile.getParent().toLocalFile(EFS.NONE, null).toPath(),
-                        WorkflowalizerConfiguration.builder().readWorkflowMeta().build());
-                m_isComponent = templateMetadata.getTemplateInformation().getType()
-                    .equals(MetaNodeTemplateInformation.TemplateType.SubNode.toString());
+                Path p = templateFile.toLocalFile(EFS.NONE, null).toPath();
+                try (final InputStream s = Files.newInputStream(p)) {
+                    final MetadataConfig c = new MetadataConfig("ignored");
+                    c.load(s);
+                    m_isComponent = c.getConfigBase("workflow_template_information").getString("templateType")
+                        .equals(MetaNodeTemplateInformation.TemplateType.SubNode.toString());
+                }
             } catch (Exception e) {
                 LOGGER.error("Problem reading template type", e);
                 throw new IllegalStateException("Problem reading template type", e);

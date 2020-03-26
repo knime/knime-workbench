@@ -49,11 +49,14 @@
 package org.knime.workbench.explorer;
 
 import static org.junit.Assert.assertTrue;
+import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isComponentTemplate;
 import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isMetaNodeTemplate;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
@@ -61,6 +64,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.swt.widgets.Display;
 import org.junit.Before;
 import org.junit.Test;
+import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowCreationHelper;
@@ -101,7 +105,67 @@ public class LocalWorkspaceFileStoreTest {
         assertTrue("wrong template type", isMetaNodeTemplate(wt));
 
         wt = createTemplate(m_localExplorerRoot, "wt2", true);
-        assertTrue("wrong template type", AbstractExplorerFileStore.isComponentTemplate(wt));
+        assertTrue("wrong template type", isComponentTemplate(wt));
+    }
+
+    @SuppressWarnings("javadoc")
+    @Test
+    public void testEncryptedSharedComponent() {
+        LocalExplorerFileStore wt = createTemplate(m_localExplorerRoot, "encrypted_wt", true, wfm -> {
+            try {
+                wfm.setWorkflowPassword("1234", "dunno");
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        assertTrue("wrong template type", isComponentTemplate(wt));
+    }
+
+    /**
+     * Creates a 'real' template (with no input and output ports) where the respective files
+     * (<tt>workflow.knime, template.knime</tt> etc.) have actual content.
+     *
+     * @param parent the location in which the template should be created
+     * @param name the tempate's name
+     * @param wrap whether to create a 'wrapped' metanode-template to a metanode-template
+     * @param wfmManipulation function for optional workflow manager manipulations after its creation (can be
+     *            <code>null</code>)
+     * @return the file store that represents the new template
+     */
+    @SuppressWarnings("unchecked")
+    private static <T extends LocalExplorerFileStore> T createTemplate(final T parent, final String name,
+        final boolean wrap, final Consumer<WorkflowManager> wfmManipulation) {
+        if (METANODE_ROOT == null) {
+            METANODE_ROOT = WorkflowManager.ROOT.createAndAddProject("KNIME Tmp MetaNode Repository",
+                createWorkflowCreationHelper(parent, null));
+        }
+        //deactivate prompt for linking type
+        IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
+        prefStore.setValue(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE, MessageDialogWithToggle.NEVER);
+
+        NodeID nodeId = METANODE_ROOT.createAndAddProject(name, createWorkflowCreationHelper(parent, name)).getID();
+        if (wrap) {
+            METANODE_ROOT.convertMetaNodeToSubNode(nodeId);
+            SubNodeContainer snc = (SubNodeContainer)METANODE_ROOT.getNodeContainer(nodeId);
+            if (wfmManipulation != null) {
+                wfmManipulation.accept(snc.getWorkflowManager());
+            }
+            final AtomicBoolean success = new AtomicBoolean(false);
+            Display.getDefault()
+                .syncExec(() -> success.set(parent.getContentProvider().saveSubNodeTemplate(snc, parent)));
+            assert success.get();
+        } else {
+            WorkflowManager wfm = (WorkflowManager)METANODE_ROOT.getNodeContainer(nodeId);
+            if (wfmManipulation != null) {
+                wfmManipulation.accept(wfm);
+            }
+            final AtomicBoolean success = new AtomicBoolean(false);
+            Display.getDefault()
+                .syncExec(() -> success.set(parent.getContentProvider().saveMetaNodeTemplate(wfm, parent)));
+            assert success.get();
+        }
+
+        return (T)parent.getChild(name);
     }
 
     /**
@@ -113,34 +177,8 @@ public class LocalWorkspaceFileStoreTest {
      * @param wrap whether to create a 'wrapped' metanode-template to a metanode-template
      * @return the file store that represents the new template
      */
-    @SuppressWarnings("unchecked")
     static <T extends LocalExplorerFileStore> T createTemplate(final T parent, final String name, final boolean wrap) {
-        if (METANODE_ROOT== null) {
-            METANODE_ROOT = WorkflowManager.ROOT.createAndAddProject("KNIME Tmp MetaNode Repository",
-                createWorkflowCreationHelper(parent, null));
-        }
-        //deactivate prompt for linking type
-        IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        prefStore.setValue(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE, MessageDialogWithToggle.NEVER);
-
-        WorkflowManager metaNode = METANODE_ROOT.createAndAddProject(name, createWorkflowCreationHelper(parent, name));
-        if (wrap) {
-            metaNode.getParent().convertMetaNodeToSubNode(metaNode.getID());
-
-            final AtomicBoolean success = new AtomicBoolean(false);
-            Display.getDefault().syncExec(() -> success.set(parent.getContentProvider().saveSubNodeTemplate(
-                (SubNodeContainer)metaNode.getParent().getNodeContainer(metaNode.getID()), parent)));
-
-            assert success.get();
-        } else {
-            final AtomicBoolean success = new AtomicBoolean(false);
-            Display.getDefault()
-                .syncExec(() -> success.set(parent.getContentProvider().saveMetaNodeTemplate(metaNode, parent)));
-
-            assert success.get();
-        }
-
-        return (T)parent.getChild(name);
+        return createTemplate(parent, name, wrap, null);
     }
 
     private static WorkflowCreationHelper createWorkflowCreationHelper(final AbstractExplorerFileStore parent,
