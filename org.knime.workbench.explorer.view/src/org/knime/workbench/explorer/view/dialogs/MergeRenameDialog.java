@@ -100,7 +100,7 @@ public class MergeRenameDialog extends Dialog {
 
     private Button m_keepHistoryGUI;
 
-    protected boolean m_keepHistory;
+    private boolean m_keepHistory;
 
     private boolean m_showKeepHistoryCheckbox;
 
@@ -118,8 +118,20 @@ public class MergeRenameDialog extends Dialog {
      * @param parentShell parent for the dialog
      * @param destination the destination to merge to
      * @param canWriteDest true if the caller can write to the destination
+     */
+    public MergeRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
+        final boolean canWriteDest) {
+        this(parentShell, destination, canWriteDest, false);
+    }
+
+    /**
+     *
+     * @param parentShell parent for the dialog
+     * @param destination the destination to merge to
+     * @param canWriteDest true if the caller can write to the destination
      * @param showKeepHistoryCheckbox {@code true} if the option to keep the snapshot history of the destination should
      *            be shown, false otherwise
+     * @since 8.6
      */
     public MergeRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
         final boolean canWriteDest, final boolean showKeepHistoryCheckbox) {

@@ -174,9 +174,28 @@ public class OverwriteRenameDialog extends Dialog {
      * @param forbiddenStores stores that cannot be chosen as destination
      * @param showSnapshotPanel <code>true</code> if the create snapshot panel should be shown, <code>false</code>
      *            otherwise.
+     * @since 8.5
+     */
+    public OverwriteRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
+        final boolean canWriteDest, final boolean multiple, final Set<AbstractExplorerFileStore> forbiddenStores,
+        final boolean showSnapshotPanel) {
+        this(parentShell, destination, canWriteDest, multiple, forbiddenStores, showSnapshotPanel, false);
+    }
+
+    /**
+     * Creates a new dialog.
+     *
+     * @param parentShell parent for the dialog
+     * @param destination the destination to select
+     * @param canWriteDest true, if the destination is writable
+     * @param multiple true, if the dialog is potentially show for multiple files. For this case the cancel button is
+     *            named cancel all and an additional skip option is added.
+     * @param forbiddenStores stores that cannot be chosen as destination
+     * @param showSnapshotPanel <code>true</code> if the create snapshot panel should be shown, <code>false</code>
+     *            otherwise.
      * @param showKeepHistoryCheckbox {@code true} if the option to keep the snapshot history of the destination should
      *            be shown, false otherwise.
-     * @since 8.5
+     * @since 8.6
      */
     public OverwriteRenameDialog(final Shell parentShell, final AbstractExplorerFileStore destination,
         final boolean canWriteDest, final boolean multiple, final Set<AbstractExplorerFileStore> forbiddenStores,

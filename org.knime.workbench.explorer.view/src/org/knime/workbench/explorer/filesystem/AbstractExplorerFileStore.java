@@ -165,16 +165,15 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * Subclasses may override this method if they want to use the keepHistory parameter.
      *
      * @param destination The destination of the copy.
-     * @param options bit-wise or of option flag constants (
-     * {@link EFS#OVERWRITE} or {@link EFS#SHALLOW}).
-     * @param monitor a progress monitor, or <code>null</code> if progress
-     *    reporting and cancellation are not desired
+     * @param options bit-wise or of option flag constants ( {@link EFS#OVERWRITE} or {@link EFS#SHALLOW}).
+     * @param monitor a progress monitor, or <code>null</code> if progress reporting and cancellation are not desired
      * @param keepHistory {@code true} if the snaposhot history of the existing target should be kept, {@code false} if
-     * the target history should be overwritten by the snapshot history of the source.
+     *            the target history should be overwritten by the snapshot history of the source.
      * @exception CoreException if this method fails.
+     * @since 8.6
      */
-    public void copy(final IFileStore destination, final int options,
-        final IProgressMonitor monitor, final boolean keepHistory) throws CoreException {
+    public void copy(final IFileStore destination, final int options, final IProgressMonitor monitor,
+        final boolean keepHistory) throws CoreException {
         copy(destination, options, monitor);
     }
 
@@ -190,16 +189,15 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * Subclasses may override this method if they want to use the keepHistory parameter.
      *
      * @param destination The destination of the copy.
-     * @param options bit-wise or of option flag constants (
-     * {@link EFS#OVERWRITE} or {@link EFS#SHALLOW}).
-     * @param monitor a progress monitor, or <code>null</code> if progress
-     *    reporting and cancellation are not desired
+     * @param options bit-wise or of option flag constants ( {@link EFS#OVERWRITE} or {@link EFS#SHALLOW}).
+     * @param monitor a progress monitor, or <code>null</code> if progress reporting and cancellation are not desired
      * @param keepHistory {@code true} if the snaposhot history of the existing target should be kept, {@code false} if
-     * the target history should be overwritten by the snapshot history of the source.
+     *            the target history should be overwritten by the snapshot history of the source.
      * @exception CoreException if this method fails.
+     * @since 8.6
      */
-    public void move(final IFileStore destination, final int options,
-            final IProgressMonitor monitor, final boolean keepHistory) throws CoreException {
+    public void move(final IFileStore destination, final int options, final IProgressMonitor monitor,
+        final boolean keepHistory) throws CoreException {
         move(destination, options, monitor);
     }
 

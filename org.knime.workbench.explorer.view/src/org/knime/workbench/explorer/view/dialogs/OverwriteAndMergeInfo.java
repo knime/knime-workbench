@@ -74,7 +74,22 @@ public class OverwriteAndMergeInfo {
      * @param overwrite <code>true</code> if existing destination items should be overwritten
      * @param createSnapshot <code>true</code> if a snapshot for each overwritten item should be created
      * @param snapshotComment the optional snapshot comment
+     */
+    public OverwriteAndMergeInfo(final String newName, final boolean merge, final boolean overwrite,
+        final boolean createSnapshot, final String snapshotComment) {
+        this(newName, merge, overwrite, createSnapshot, snapshotComment, false);
+    }
+
+    /**
+     * Creates a new merge-and-overwrite info object
+     *
+     * @param newName the new name in case an existing destination should <b>not</b> be overwritten
+     * @param merge <code>true</code> if the source group should be merged into the destination group
+     * @param overwrite <code>true</code> if existing destination items should be overwritten
+     * @param createSnapshot <code>true</code> if a snapshot for each overwritten item should be created
+     * @param snapshotComment the optional snapshot comment
      * @param keepHistory {@code true} if the snapshot history of the target should be kept, {@code false} otherwise
+     * @since 8.6
      */
     public OverwriteAndMergeInfo(final String newName, final boolean merge, final boolean overwrite,
         final boolean createSnapshot, final String snapshotComment, final boolean keepHistory) {
@@ -135,6 +150,7 @@ public class OverwriteAndMergeInfo {
      * Returns wether the snapshot history of the destination should be kept or overwritten.
      *
      * @return the {@code true} if the history should be kept, {@code false} otherwise
+     * @since 8.6
      */
     public boolean keepHistory() {
         return m_keepHistory;
