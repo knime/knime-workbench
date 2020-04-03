@@ -81,7 +81,7 @@ public final class DisplayableNodeType {
         m.put(NodeType.QuickForm, "quickform");
         m.put(NodeType.ScopeEnd, "scope_end");
         m.put(NodeType.ScopeStart, "scope_start");
-        m.put(NodeType.QuickForm, "quickform");
+        m.put(NodeType.Configuration, "quickform");
         m.put(NodeType.Source, "source");
         m.put(NodeType.Sink, "sink");
         m.put(NodeType.Subnode, "subnode");
