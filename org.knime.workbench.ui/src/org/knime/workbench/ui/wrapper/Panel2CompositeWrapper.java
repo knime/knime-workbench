@@ -51,6 +51,7 @@ import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Panel;
 import java.awt.event.FocusListener;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.swing.BoxLayout;
 import javax.swing.JComponent;
@@ -117,10 +118,14 @@ public class Panel2CompositeWrapper extends Composite {
         }
 
         // the size of the composite is 0x0 at this point. The above SWT_AWT.newFrame() determines the client
-        // size BEFORE this constructor completes (via ViewUtils#invokeAndWaitInEDT - see below);
+        // size BEFORE this constructor completes.
         // setting a dimension here in order to have reasonable defaults.
         // see bug 4431 (and the original bug 4418)
-        Dimension size = panel.getPreferredSize();
+        // In order to prevent a deadlock when using flow variables, we should get the component's preferred size
+        // from the EDT thread. See AP-13176 and AP-13048 for details.
+        final AtomicReference<Dimension> sizeReference = new AtomicReference<>();
+        ViewUtils.invokeAndWaitInEDT(() -> sizeReference.set(panel.getPreferredSize()));
+        final Dimension size = sizeReference.get();
         setSize(size.width, size.height);
 
         addFocusListener(new FocusAdapter() {
