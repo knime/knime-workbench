@@ -89,6 +89,7 @@ public final class DisplayableNodeType {
         m.put(NodeType.VirtualIn, "virtual_in");
         m.put(NodeType.VirtualOut, "virtual_out");
         m.put(NodeType.Visualizer, "viewer");
+        m.put(NodeType.Widget, "viewer");
         return m;
     }
 
