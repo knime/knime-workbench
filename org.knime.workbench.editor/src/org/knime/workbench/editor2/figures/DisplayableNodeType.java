@@ -90,6 +90,7 @@ public final class DisplayableNodeType {
         m.put(NodeType.VirtualOut, "virtual_out");
         m.put(NodeType.Visualizer, "viewer");
         m.put(NodeType.Widget, "viewer");
+        m.put(NodeType.Container, "quickform");
         return m;
     }
 
