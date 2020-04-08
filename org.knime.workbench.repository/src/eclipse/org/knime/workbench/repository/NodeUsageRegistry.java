@@ -82,51 +82,56 @@ public final class NodeUsageRegistry {
     private static final Map<NodeTemplateFrequency, NodeTemplateFrequency> FREQUENCIES =
             new HashMap<NodeTemplateFrequency, NodeTemplateFrequency>();
 
-    private static final LinkedList<NodeTemplate> LAST_USED =
-            new LinkedList<NodeTemplate>();
+    private static final LinkedList<NodeTemplate> LAST_USED = new LinkedList<NodeTemplate>();
 
     private static final Set<NodeUsageListener> LISTENERS = new LinkedHashSet<>();
 
     private static List<NodeTemplate> cachedFrequent;
 
-    private NodeUsageRegistry() {
-    }
+    private NodeUsageRegistry() { }
 
     /**
-     *
-     * @param listener adds the listener (if not already registered), which gets
-     *            informed if a node was added to thew last used or most
-     *            frequent nodes
+     * @param listener adds the listener (if not already registered), which gets informed if a node was added to thew
+     *            last used or most frequent nodes
      */
     public static void addNodeUsageListener(final NodeUsageListener listener) {
-        if (!LISTENERS.contains(listener)) {
-            LISTENERS.add(listener);
+        synchronized (LISTENERS) {
+            if (!LISTENERS.contains(listener)) {
+                LISTENERS.add(listener);
+            }
         }
     }
 
     /**
-     *
      * @param listener deregisters this listener
      */
     public static void removeNodeUsageListener(final NodeUsageListener listener) {
-        LISTENERS.remove(listener);
+        synchronized (LISTENERS) {
+            LISTENERS.remove(listener);
+        }
     }
 
     private static void notifyListener() {
-        for (NodeUsageListener listener : LISTENERS) {
-            listener.nodeAdded();
+        synchronized (LISTENERS) {
+            for (final NodeUsageListener listener : LISTENERS) {
+                listener.nodeAdded();
+            }
         }
     }
 
     private static void notifyLastHistoryListener() {
-        for (NodeUsageListener listener : LISTENERS) {
-            listener.usedHistoryChanged();
+        synchronized (LISTENERS) {
+            for (final NodeUsageListener listener : LISTENERS) {
+                listener.usedHistoryChanged();
+            }
         }
     }
 
     private static void notifyFrequencyHistoryListener() {
-        for (NodeUsageListener listener : LISTENERS) {
-            listener.frequentHistoryChanged();
+        synchronized (LISTENERS) {
+            for (final NodeUsageListener listener : LISTENERS) {
+                listener.frequentHistoryChanged();
+            }
         }
     }
 
