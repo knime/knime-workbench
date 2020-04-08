@@ -145,7 +145,7 @@ public class ConvertMetaNodeToSubNodeAction extends AbstractNodeAction {
         try {
             WorkflowManager manager = getManager();
             WorkflowManager metaNode = Wrapper.unwrapWFM(nodeParts[0].getNodeContainer());
-            if (!metaNode.unlock(new GUIWorkflowCipherPrompt())) {
+            if (!metaNode.unlock(new GUIWorkflowCipherPrompt(false))) {
                 return;
             }
             // before we do anything, let's see if the convert will reset the metanode

@@ -152,7 +152,7 @@ public class ExpandMetaNodeAction extends AbstractNodeAction {
             WorkflowManager manager = getManager();
             WorkflowManagerUI metaNode =
                 (WorkflowManagerUI)nodeParts[0].getNodeContainer();
-            if (!Wrapper.unwrapWFM(metaNode).unlock(new GUIWorkflowCipherPrompt())) {
+            if (!Wrapper.unwrapWFM(metaNode).unlock(new GUIWorkflowCipherPrompt(false))) {
                 return;
             }
             // before we do anything, let's see if an expand will

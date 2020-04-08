@@ -136,7 +136,8 @@ public class SubNodeReconfigureAction extends AbstractNodeAction {
         }
         final NodeContainerEditPart ep = nodeParts[0];
         final SubNodeContainerUI subnodeNC = (SubNodeContainerUI)ep.getModel();
-        if (!Wrapper.unwrap(subnodeNC, SubNodeContainer.class).getWorkflowManager().unlock(new GUIWorkflowCipherPrompt())) {
+        if (!Wrapper.unwrap(subnodeNC, SubNodeContainer.class).getWorkflowManager()
+            .unlock(new GUIWorkflowCipherPrompt(true))) {
             return;
         }
 

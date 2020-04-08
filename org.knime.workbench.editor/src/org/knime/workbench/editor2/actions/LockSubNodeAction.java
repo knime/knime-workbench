@@ -157,7 +157,7 @@ public class LockSubNodeAction extends AbstractNodeAction {
         }
         WorkflowManager metaNodeWFM = Wrapper.unwrap((UI)model, SubNodeContainer.class).getWorkflowManager();
         final Shell shell = SWTUtilities.getActiveShell();
-        if (!metaNodeWFM.unlock(new GUIWorkflowCipherPrompt())) {
+        if (!metaNodeWFM.unlock(new GUIWorkflowCipherPrompt(true))) {
             return;
         }
         LockMetaNodeDialog lockDialog =

@@ -137,7 +137,7 @@ public class MetaNodeReconfigureAction extends AbstractNodeAction {
         }
         final NodeContainerEditPart ep = nodeParts[0];
         final WorkflowManager metanode = Wrapper.unwrapWFM(ep.getNodeContainer());
-        if (!metanode.unlock(new GUIWorkflowCipherPrompt())) {
+        if (!metanode.unlock(new GUIWorkflowCipherPrompt(false))) {
             return;
         }
 
