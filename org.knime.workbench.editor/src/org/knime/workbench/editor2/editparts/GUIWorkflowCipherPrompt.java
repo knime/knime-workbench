@@ -59,6 +59,16 @@ import org.knime.core.ui.util.SWTUtilities;
  */
 public final class GUIWorkflowCipherPrompt extends WorkflowCipherPrompt {
 
+    private boolean m_isPromptForComponent;
+
+    /**
+     * @param isPromptForComponent whether the prompt is for a component (<code>true</code>) or a metanode
+     *            (<code>false</code>)
+     */
+    public GUIWorkflowCipherPrompt(final boolean isPromptForComponent) {
+        m_isPromptForComponent = isPromptForComponent;
+    }
+
     /** {@inheritDoc} */
     @Override
     public String prompt(final String message,
@@ -68,12 +78,20 @@ public final class GUIWorkflowCipherPrompt extends WorkflowCipherPrompt {
         if (errorFromPrevious != null) {
             msg = msg.concat("\n\n").concat(errorFromPrevious);
         }
-        InputDialog inputDialog = new InputDialog(shell,
-                "Metanode lock", msg, null, null);
+        InputDialog inputDialog =
+            new InputDialog(shell, m_isPromptForComponent ? "Component lock " : "Metanode lock", msg, null, null);
         if (inputDialog.open() == Window.OK) {
             return inputDialog.getValue();
         } else {
             throw new PromptCancelled();
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isPromptForComponent() {
+        return m_isPromptForComponent;
     }
 }

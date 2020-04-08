@@ -180,6 +180,7 @@ import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.NodeUIInformationEvent;
 import org.knime.core.node.workflow.NodeUIInformationListener;
+import org.knime.core.node.workflow.WorkflowCipherPrompt;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowEvent;
 import org.knime.core.node.workflow.WorkflowListener;
@@ -259,6 +260,7 @@ import org.knime.workbench.editor2.commands.CreateNewConnectedMetaNodeCommand;
 import org.knime.workbench.editor2.commands.CreateNewConnectedNodeCommand;
 import org.knime.workbench.editor2.commands.CreateNodeCommand;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
+import org.knime.workbench.editor2.editparts.GUIWorkflowCipherPrompt;
 import org.knime.workbench.editor2.editparts.NodeAnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
@@ -1298,6 +1300,16 @@ public class WorkflowEditor extends GraphicalEditor implements
                         LoadMetaNodeTemplateRunnable loadTemplateRunnable = new LoadMetaNodeTemplateRunnable(this,
                             m_origRemoteLocation != null ? m_origRemoteLocation : uri);
                         ps.busyCursorWhile(loadTemplateRunnable);
+                        if (m_manager != null && Wrapper.wraps(m_manager, WorkflowManager.class)
+                            && m_manager.isEncrypted()) {
+                            WorkflowCipherPrompt prompt = new GUIWorkflowCipherPrompt(true);
+                            if (!Wrapper.unwrapWFM(m_manager).unlock(prompt)) {
+                                m_manager = null;
+                                String accessDeniedMessage = "Component could not be opened: Access denied";
+                                openErrorDialogAndCloseEditor(accessDeniedMessage);
+                                throw new OperationCanceledException(accessDeniedMessage);
+                            }
+                        }
                     }
 
                     // check if the editor should be disposed
@@ -3516,6 +3528,9 @@ public class WorkflowEditor extends GraphicalEditor implements
         case MetaNodePorts:
             // for metanode editors in case the port bar needs to dis/appear
             getViewer().getContents().refresh();
+            break;
+        case LockStatus:
+            // nothing to do
             break;
         default:
             throw new AssertionError("Unhandeled switch case: " + e.getProperty());

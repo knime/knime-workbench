@@ -931,7 +931,6 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
     }
 
     public void openSubWorkflowEditor() {
-        WorkflowCipherPrompt prompt = new GUIWorkflowCipherPrompt();
         Object obj = getModel();
         WorkflowManagerUI wm;
         if (obj instanceof WorkflowManagerUI) {
@@ -944,6 +943,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
 
         //if workflow manager is encrypted, try unlocking it
         if (wm.isEncrypted()) {
+            WorkflowCipherPrompt prompt = new GUIWorkflowCipherPrompt(obj instanceof SubNodeContainerUI);
             if (!Wrapper.unwrapWFM(wm).unlock(prompt)) {
                 return;
             }
