@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension point="org.eclipse.ui.views">
+         <view
+            category="org.knime.workbench.ui.category"
+            class="org.knime.chromium.swt.HubView"
+            icon="icons/knime.png"
+            id="org.knime.chromium.swt.test"
+            name="KNIME Chromium SWT Widget"/>
+   </extension>   
+</plugin>

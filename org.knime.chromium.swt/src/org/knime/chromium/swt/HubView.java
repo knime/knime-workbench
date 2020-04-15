@@ -46,7 +46,7 @@
  * History
  *   Apr 14, 2020 (loki): created
  */
-package org.knime.workbench.searchhubview;
+package org.knime.chromium.swt;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.chromium.Browser;

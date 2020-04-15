@@ -27,7 +27,9 @@
 	<modules>
 		<module>org.knime.features.workbench</module>
 		<module>org.knime.features.explorer.view</module>
+		<module>org.knime.features.chromium.swt</module>
 		<module>org.knime.update.workbench</module>
+		<module>org.knime.chromium.swt</module>
 		<module>org.knime.workbench</module>
 		<module>org.knime.workbench.core</module>
 		<module>org.knime.workbench.editor</module>
