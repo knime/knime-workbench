@@ -1123,8 +1123,9 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
 
     private void checkMetaNodeLockIcon() {
         NodeContainerUI nc = getNodeContainer();
-        if (nc instanceof WorkflowManagerUI) {
-            WorkflowManagerUI wm = (WorkflowManagerUI)nc;
+        if (nc instanceof WorkflowManagerUI || nc instanceof SubNodeContainerUI) {
+            WorkflowManagerUI wm =
+                nc instanceof WorkflowManagerUI ? (WorkflowManagerUI)nc : ((SubNodeContainerUI)nc).getWorkflowManager();
             Image i;
             if (wm.isEncrypted()) {
                 if (wm.isUnlocked()) {
