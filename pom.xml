@@ -79,6 +79,21 @@
 			<layout>p2</layout>
 			<url>${knime.svg.p2}</url>
 		</repository>
+		<repository>
+			<id>p2-chromium-swt-78.beta</id>
+			<layout>p2</layout>
+			<url>http://dl.maketechnology.io/chromium-swt/78.beta/repository</url>
+		</repository>
+		<repository>
+			<id>p2-chromium-cef-78.64b</id>
+			<layout>p2</layout>
+			<url>http://dl.maketechnology.io/chromium-cef/78-64b.beta/repository</url>
+		</repository>
+		<repository>
+			<id>p2-chromium-cef-78.dev</id>
+			<layout>p2</layout>
+			<url>http://dl.maketechnology.io/chromium-cef/78-dev.beta/repository</url>
+		</repository>
 	</repositories>
 	<build>
 		<plugins>
