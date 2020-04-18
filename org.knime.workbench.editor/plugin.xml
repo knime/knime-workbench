@@ -126,6 +126,11 @@
             name="Find Node..."/>
       <command
             categoryId="knime.command.category"
+            description="Finds the next node in the workflow from the previous search results."
+            id="knime.commands.findnextnode"
+            name="Find Next Node..."/>
+      <command
+            categoryId="knime.command.category"
             description="Open first view for selected nodes"
             id="knime.commands.openView"
             name="Open First View"/>
@@ -304,6 +309,15 @@
                menubarPath="org.knime.workbench.editor.menu/group1"
                style="push"
                tooltip="Check and update metanode links"/>
+         <action
+               class="org.knime.workbench.editor2.actions.delegates.FindNextNodeEditorAction"
+               definitionId="knime.commands.findnextnode"
+               icon="icons/findNode.png"
+               id="org.knime.workbench.editor.actions.findnextnode"
+               label="Find Next Node..."
+               menubarPath="org.knime.workbench.editor.menu/group1"
+               style="push"
+               tooltip="Find the next node in the workflow from the previous search results."/>
          <action
                class="org.knime.workbench.editor2.actions.delegates.FindNodeEditorAction"
                definitionId="knime.commands.findnode"
@@ -560,6 +574,11 @@
             contextId="org.eclipse.ui.contexts.window"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+F"/>
+      <key
+            commandId="knime.commands.findnextnode"
+            contextId="org.eclipse.ui.contexts.window"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+G"/>
       <key
             commandId="knime.commands.setNameAndDescription"
             contextId="org.eclipse.ui.contexts.window"

@@ -259,6 +259,7 @@ import org.knime.workbench.editor2.actions.UnlinkNodesAction;
 import org.knime.workbench.editor2.actions.ZoomInAlternateIncrementAction;
 import org.knime.workbench.editor2.actions.ZoomOutAlternateIncrementAction;
 import org.knime.workbench.editor2.actions.ZoomResetAction;
+import org.knime.workbench.editor2.actions.search.FindResults;
 import org.knime.workbench.editor2.commands.CreateNewConnectedMetaNodeCommand;
 import org.knime.workbench.editor2.commands.CreateNewConnectedNodeCommand;
 import org.knime.workbench.editor2.commands.CreateNodeCommand;
@@ -373,6 +374,8 @@ public class WorkflowEditor extends GraphicalEditor implements
     private NodeSupplantDragListener m_nodeSupplantDragListener;
 
     private ConnectionHighlighter m_connectionHighlighter;
+
+    private FindResults m_lastSearchResults;
 
     private WorkflowEditorMode m_editorMode;
 
@@ -650,6 +653,9 @@ public class WorkflowEditor extends GraphicalEditor implements
         }
         if (m_canvasClickListener != null) {
             m_canvasClickListener.dispose();
+        }
+        if (m_lastSearchResults != null) {
+            m_lastSearchResults.dispose();
         }
         if (m_fileResource != null && m_manager != null) {
             // disposed is also called when workflow load fails or is canceled
@@ -2888,6 +2894,37 @@ public class WorkflowEditor extends GraphicalEditor implements
                 ((ViewportPinningGraphicalViewer)getGraphicalViewer()).ensureBoundsAreInView(r);
             }
         });
+    }
+
+    /**
+     * Store the last find-node search results.
+     *
+     * @param results can be null
+     */
+    public void setSearchResults(final FindResults results) {
+        if (m_lastSearchResults != null) {
+            m_lastSearchResults.dispose();
+        }
+        m_lastSearchResults = results;
+        if (m_lastSearchResults != null) {
+            m_lastSearchResults.setWorkflowEditor(this);
+        }
+    }
+
+    /**
+     * @return true if there are search results
+     */
+    public boolean hasSearchResults() {
+        return (m_lastSearchResults != null);
+    }
+
+    /**
+     * Grabs the 'next' search result and sets our selection to that node.
+     */
+    public void selectNextSearchResult() {
+        if (m_lastSearchResults != null) {
+            setNodeSelection(m_lastSearchResults.getNextResult());
+        }
     }
 
     private boolean isEditorActive() {

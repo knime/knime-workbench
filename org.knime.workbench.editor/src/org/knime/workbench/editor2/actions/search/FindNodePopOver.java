@@ -46,11 +46,12 @@
  * History
  *   Nov 26, 2019 (loki): created
  */
-package org.knime.workbench.editor2.actions;
+package org.knime.workbench.editor2.actions.search;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -117,10 +118,11 @@ import org.knime.workbench.editor2.figures.DisplayableNodeType;
  * @author loki der quaeler
  */
 public class FindNodePopOver extends PopupDialog {
+    static final Pattern NODE_ID_PATTERN = Pattern.compile("^[\\d]{1,2}:?");
+
     private static final int MAX_CHARACTER_LENGTH_FOR_NODE_ANNOTATION_IN_LABEL = 33;
     private static final Point POP_OVER_SIZE = new Point(500, 375);
 
-    private static final Pattern NODE_ID_PATTERN = Pattern.compile("^[\\d]{1,2}:?");
     private static final Pattern EASTER_EGG_NODE_ID_PATTERN = Pattern.compile("^[\\d]{1,2}:[\\d]{1,8}");
 
     private static final Color TREE_CELL_BACKGROUND = new Color(PlatformUI.getWorkbench().getDisplay(), 246, 250, 252);
@@ -136,6 +138,9 @@ public class FindNodePopOver extends PopupDialog {
 
     private final ArrayList<NodeContainerDisplayWrapper> m_fullContainerList;
 
+    private ArrayList<NodeContainerDisplayWrapper> m_lastSearchResults;
+    private int m_selectedIndex;
+
     /**
      * @param workflowEditor
      */
@@ -150,15 +155,24 @@ public class FindNodePopOver extends PopupDialog {
         m_workflowManager = workflowManager.get();
 
         m_fullContainerList = produceSortedNodeList();
+        m_selectedIndex = -1;
     }
 
     @Override
     public boolean close() {
-        final boolean result = super.close();
+        if (m_selectedIndex >= 0) {
+            final List<NodeContainer> results = new ArrayList<>();
+            m_lastSearchResults.stream().forEach(wrapper -> results.add(wrapper.getNodeContainer()));
 
+            m_workflowEditor.setSearchResults(new FindResults(results, m_selectedIndex, m_searchField.getText()));
+        } else {
+            m_workflowEditor.setSearchResults(null);
+        }
+
+        m_lastSearchResults = null;
         m_fullContainerList.stream().forEach(wrapper -> wrapper.getDisplayImage().dispose());
 
-        return result;
+        return super.close();
     }
 
     /**
@@ -242,11 +256,10 @@ public class FindNodePopOver extends PopupDialog {
 
                 final String text = m_searchField.getText();
 
-                final ArrayList<NodeContainerDisplayWrapper> searchResults;
                 if (text.trim().length() == 0) {
-                    searchResults = m_fullContainerList;
+                    m_lastSearchResults = m_fullContainerList;
                 } else {
-                    searchResults = new ArrayList<>();
+                    m_lastSearchResults = new ArrayList<>();
 
                     // see class javadoc to-do notes concerning Tries
                     final Matcher m = NODE_ID_PATTERN.matcher(text);
@@ -254,21 +267,21 @@ public class FindNodePopOver extends PopupDialog {
                     if (searchNodeIds) {
                         for (final NodeContainerDisplayWrapper displayWrapper : m_fullContainerList) {
                             if (displayWrapper.getNodeContainer().getID().toString().contains(text)) {
-                                searchResults.add(displayWrapper);
+                                m_lastSearchResults.add(displayWrapper);
                             }
                         }
                     } else {
                         final String lcText = text.toLowerCase();
                         for (final NodeContainerDisplayWrapper displayWrapper : m_fullContainerList) {
                             if (displayWrapper.getSearchableText().contains(lcText)) {
-                                searchResults.add(displayWrapper);
+                                m_lastSearchResults.add(displayWrapper);
                             }
                         }
                     }
                 }
 
-                m_nodeTreeViewer.setInput(searchResults);
-                if (searchResults.size() > 0) {
+                m_nodeTreeViewer.setInput(m_lastSearchResults);
+                if (m_lastSearchResults.size() > 0) {
                     m_nodeTreeViewer.getTree().select(m_nodeTreeViewer.getTree().getItem(0));
                 }
             }
@@ -340,6 +353,11 @@ public class FindNodePopOver extends PopupDialog {
     //      robust search scenarios.
     private void handleNodeSelection(final NodeContainerDisplayWrapper displayWrapper) {
         m_workflowEditor.setNodeSelection(displayWrapper.getNodeContainer());
+
+        // it would be more performant to grab the selection index from the tree, but i am keeping this open
+        //      ended for future cases in which this method is invoked in response to something other than
+        //      tree selection
+        m_selectedIndex = m_lastSearchResults.indexOf(displayWrapper);
 
         close();
     }
@@ -413,6 +431,61 @@ public class FindNodePopOver extends PopupDialog {
 
                 KNIMEConstants.GLOBAL_THREAD_POOL.enqueue(r);
             }
+        }
+    }
+
+
+    // This processing is needed by both the display wrapper and for doing subsequent searches when
+    // FindResults hears about new node additions.
+    static class ProcessedNodeAttributes {
+        private final String m_displayText;
+        private final String m_searchText;
+
+        private final boolean m_renderLowerText;
+
+        private final int m_styleRangeDelimiterForAnnotationText;
+
+        ProcessedNodeAttributes(final NodeContainer nodeContainer) {
+            final NodeAnnotation na = nodeContainer.getNodeAnnotation();
+            final String name = nodeContainer.getName();
+            final String nid = nodeContainer.getID().toString();
+            final String fullAnnotationText
+                = na.getText().trim().replace("\n\r", " ").replace("\r\n", " ").replace('\n', ' ').replace('\r', ' ');
+
+            m_renderLowerText = (fullAnnotationText.length() != 0);
+            if (!m_renderLowerText) {
+                m_displayText = name + " (" + nid + ")";
+                m_searchText = m_displayText.toLowerCase();
+                m_styleRangeDelimiterForAnnotationText = -1;
+            } else {
+                final String displayAnnotationText;
+                if (fullAnnotationText.length() > MAX_CHARACTER_LENGTH_FOR_NODE_ANNOTATION_IN_LABEL) {
+                    displayAnnotationText =
+                        fullAnnotationText.substring(0, MAX_CHARACTER_LENGTH_FOR_NODE_ANNOTATION_IN_LABEL) + "...";
+                } else {
+                    displayAnnotationText = fullAnnotationText;
+                }
+                m_displayText = name + " " + displayAnnotationText + " (" + nid + ")";
+                final String searchText = name + " " + fullAnnotationText + " (" + nid + ")";
+                m_searchText = searchText.toLowerCase();
+                m_styleRangeDelimiterForAnnotationText = displayAnnotationText.length() + 1;
+            }
+        }
+
+        String getDisplayText() {
+            return m_displayText;
+        }
+
+        String getSearchText() {
+            return m_searchText;
+        }
+
+        boolean shouldRenderLowerText() {
+            return m_renderLowerText;
+        }
+
+        int getStyleRangeDelimiterForAnnotationText() {
+            return m_styleRangeDelimiterForAnnotationText;
         }
     }
 
@@ -527,32 +600,16 @@ public class FindNodePopOver extends PopupDialog {
         private NodeContainerDisplayWrapper(final NodeContainerUI ncUI, final Display display) {
             m_nodeContainer = Wrapper.unwrapNC(ncUI);
 
-            final NodeAnnotation na = m_nodeContainer.getNodeAnnotation();
-            final String name = m_nodeContainer.getName();
-            final String nid = m_nodeContainer.getID().toString();
-            final String fullAnnotationText
-                = na.getText().trim().replace("\n\r", " ").replace("\r\n", " ").replace('\n', ' ').replace('\r', ' ');
+            final ProcessedNodeAttributes processed = new ProcessedNodeAttributes(m_nodeContainer);
 
-
-            m_renderLowerText = (fullAnnotationText.length() != 0);
+            m_renderLowerText = processed.shouldRenderLowerText();
             m_rangeIndices = new int[m_renderLowerText ? 3 : 2];
-            m_rangeIndices[0] = name.length();
-            m_rangeIndices[m_renderLowerText ? 2 : 1] = nid.length() + 3;
-            if (!m_renderLowerText) {
-                m_displayText = name + " (" + nid + ")";
-                m_searchText = m_displayText.toLowerCase();
-            } else {
-                final String displayAnnotationText;
-                if (fullAnnotationText.length() > MAX_CHARACTER_LENGTH_FOR_NODE_ANNOTATION_IN_LABEL) {
-                    displayAnnotationText =
-                        fullAnnotationText.substring(0, MAX_CHARACTER_LENGTH_FOR_NODE_ANNOTATION_IN_LABEL) + "...";
-                } else {
-                    displayAnnotationText = fullAnnotationText;
-                }
-                m_displayText = name + " " + displayAnnotationText + " (" + nid + ")";
-                final String searchText = name + " " + fullAnnotationText + " (" + nid + ")";
-                m_searchText = searchText.toLowerCase();
-                m_rangeIndices[1] = displayAnnotationText.length() + 1;
+            m_rangeIndices[0] = m_nodeContainer.getName().length();
+            m_rangeIndices[m_renderLowerText ? 2 : 1] = m_nodeContainer.getID().toString().length() + 3;
+            m_displayText = processed.getDisplayText();
+            m_searchText = processed.getSearchText();
+            if (m_renderLowerText) {
+                m_rangeIndices[1] = processed.getStyleRangeDelimiterForAnnotationText();
             }
 
             final DisplayableNodeType dnt =

@@ -44,28 +44,27 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Nov 21, 2019 (loki): created
+ *   Apr 18, 2020 (loki): created
  */
 package org.knime.workbench.editor2.actions;
 
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.actions.search.FindNodePopOver;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
- * The genesis for this dialog is https://knime-com.atlassian.net/browse/AP-6904
+ * The genesis for this dialog is https://knime-com.atlassian.net/browse/AP-13990
  *
  * @author loki der quaeler
  */
-public class FindNodeAction extends AbstractNodeAction {
+public class FindNextNodeAction extends AbstractNodeAction {
     /** our unique ID **/
-    public static final String ID = "knime.action.findnode";
+    public static final String ID = "knime.action.findnextnode";
 
 
     /**
      * @param editor
      */
-    public FindNodeAction(final WorkflowEditor editor) {
+    public FindNextNodeAction(final WorkflowEditor editor) {
         super(editor);
     }
 
@@ -82,8 +81,7 @@ public class FindNodeAction extends AbstractNodeAction {
      */
     @Override
     public void runInSWT() {
-        final FindNodePopOver searchPopOver = new FindNodePopOver(getEditor());
-        searchPopOver.open();
+        getEditor().selectNextSearchResult();
     }
 
     /**
@@ -99,6 +97,6 @@ public class FindNodeAction extends AbstractNodeAction {
      */
     @Override
     protected boolean internalCalculateEnabled() {
-        return true;
+        return getEditor().hasSearchResults();
     }
 }
