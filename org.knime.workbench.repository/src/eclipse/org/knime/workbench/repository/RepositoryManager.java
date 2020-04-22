@@ -73,8 +73,10 @@ import org.knime.core.node.extension.NodeFactoryExtension;
 import org.knime.core.node.extension.NodeFactoryExtensionManager;
 import org.knime.core.node.extension.NodeSetFactoryExtension;
 import org.knime.core.node.workflow.FileNativeNodeContainerPersistor;
+import org.knime.core.util.Pair;
 import org.knime.workbench.repository.model.AbstractContainerObject;
 import org.knime.workbench.repository.model.Category;
+import org.knime.workbench.repository.model.DefaultNodeTemplate;
 import org.knime.workbench.repository.model.DynamicNodeTemplate;
 import org.knime.workbench.repository.model.IContainerObject;
 import org.knime.workbench.repository.model.IRepositoryObject;
@@ -364,7 +366,24 @@ public final class RepositoryManager {
                     continue;
                 }
 
-                NodeTemplate node = RepositoryFactory.createNode(nodeFactoryExtension);
+                Pair<DefaultNodeTemplate, Boolean> nodePair = RepositoryFactory.createNode(nodeFactoryExtension);
+                DefaultNodeTemplate node = nodePair.getFirst();
+                Boolean isDeprecatedInNode = nodePair.getSecond();
+
+                // nodeFactoryExtension.isDeprecated() - reads the flag from the plugin.xml
+                // isDeprecatedInNode -- reads FooNodeFactory.xml header _AND_ plugin.xml
+                //                                                             (injected via NodeFactoryExtension)
+                // if they are different then the node is deprecated via the FooFactory.xml but not in the plugin.xml...
+                if (nodeFactoryExtension.isDeprecated() != isDeprecatedInNode) {
+                    LOGGER.codingWithFormat(
+                        "%s \"%s\" is declared 'deprecated' in its node description but not in "
+                            + "the extension point contribution (plug-in \"%s\")",
+                        NodeFactory.class.getSimpleName(), nodeFactoryExtension.getFactoryClassName(),
+                        nodeFactoryExtension.getPlugInSymbolicName());
+                    if (!isIncludeDeprecated) {
+                        continue;
+                    }
+                }
 
                 LOGGER.debugWithFormat("Found node extension '%s': %s", node.getID(), node.getName());
                 for (Listener l : m_loadListeners) {

@@ -76,6 +76,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.WorkflowManagerWrapper;
+import org.knime.core.util.Pair;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.repository.model.Category;
@@ -110,10 +111,11 @@ public final class RepositoryFactory {
      *             wrong attributes, or factory class not found)
      */
     @SuppressWarnings("unchecked")
-    public static DefaultNodeTemplate createNode(final NodeFactoryExtension nodeFactoryExtension)
+    static Pair<DefaultNodeTemplate, Boolean> createNode(final NodeFactoryExtension nodeFactoryExtension)
         throws InvalidNodeFactoryExtensionException {
         // Try to load the node factory class...
         NodeFactory<? extends NodeModel> factory = nodeFactoryExtension.createFactory();
+        boolean isDeprecated = factory.isDeprecated();
 
         String pluginID = nodeFactoryExtension.getPlugInSymbolicName();
         String categoryPath = nodeFactoryExtension.getCategoryPath();
@@ -127,7 +129,7 @@ public final class RepositoryFactory {
             node.setIcon(icon);
         }
 
-        return node;
+        return Pair.create(node, Boolean.valueOf(isDeprecated));
     }
 
     /**
