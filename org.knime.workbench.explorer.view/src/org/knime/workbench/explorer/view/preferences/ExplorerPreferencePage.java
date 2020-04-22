@@ -48,6 +48,7 @@ import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
+import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.ui.IWorkbench;
@@ -63,6 +64,7 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
             = "org.knime.workbench.explorer.view.explorer";
     private MountPointTableEditor m_mountEditor;
     private ComboFieldEditor m_linkTemplateEditor;
+    private BooleanFieldEditor m_showEJBWarningEditor;
 
     /**
     *
@@ -97,6 +99,10 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
                 }, getFieldEditorParent());
         addField(m_linkTemplateEditor);
 
+        m_showEJBWarningEditor = new BooleanFieldEditor(PreferenceConstants.P_SHOW_EJB_WARNING_DIALOG,
+            "Show a warning dialog when connecting to a server via EJB", getFieldEditorParent());
+        addField(m_showEJBWarningEditor);
+
         DefaultScope.INSTANCE.getNode(FrameworkUtil.getBundle(ExplorerActivator.class).getSymbolicName())
             .addPreferenceChangeListener(this);
     }
@@ -116,6 +122,8 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
             m_mountEditor.load();
         } else if (PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE.equals(event.getKey())) {
             m_linkTemplateEditor.load();
+        } else if (PreferenceConstants.P_SHOW_EJB_WARNING_DIALOG.equals(event.getKey())) {
+            m_showEJBWarningEditor.load();
         }
     }
 

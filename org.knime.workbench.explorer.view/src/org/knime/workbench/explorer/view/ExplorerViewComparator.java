@@ -77,7 +77,11 @@ public class ExplorerViewComparator extends ViewerComparator {
     }
 
     private int rank(final AbstractExplorerFileStore f) {
-        // we want to see workflow groups at the top
+        // we want to see message at the top
+        if (AbstractExplorerFileStore.isMessage(f)) {
+            return 6;
+        }
+        // then workflow groups
         if (AbstractExplorerFileStore.isWorkflowGroup(f)) {
             return 5;
         }

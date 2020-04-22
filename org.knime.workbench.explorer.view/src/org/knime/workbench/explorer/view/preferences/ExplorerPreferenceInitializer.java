@@ -87,6 +87,10 @@ public class ExplorerPreferenceInitializer extends
         prefStore.setDefault(
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
                 MessageDialogWithToggle.PROMPT);
+
+        // Set the default behavior of "Should a warning dialog appear when you connect to a server via EJB".
+        prefStore.setDefault(PreferenceConstants.P_SHOW_EJB_WARNING_DIALOG,
+            PreferenceConstants.P_DEFAULT_SHOW_EJB_WARNING_DIALOG);
     }
 
     /**

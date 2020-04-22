@@ -475,6 +475,17 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     }
 
     /**
+     * Checks whether a file represents a message.
+     *
+     * @param file the file to check if it represents a message
+     * @return true if the file is a message, false otherwise
+     * @since 8.6
+     */
+    public static boolean isMessage(final AbstractExplorerFileStore file) {
+        return file instanceof MessageFileStore;
+    }
+
+    /**
      * Checks whether a file represents a metanode.
      *
      * @param file the file to check if it represents a metanode

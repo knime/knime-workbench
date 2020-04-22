@@ -222,4 +222,10 @@ public interface PreferenceConstants {
                                                 = "knime.colors.selected_node_connection_width_delta";
     /** The default value for the selected node input & output connection lines highlight width change */
     public static final int P_DEFAULT_EDITOR_SELECTED_NODE_CONNECTIONS_WIDTH_CHANGE = 1;
+
+
+    /** Preference constant for showing a warning dialog when connecting to a server via EJB */
+    public static final String P_SHOW_EJB_WARNING_DIALOG = "knime.explorer.show_EJB_warning";
+    /** The default value for whether a warning dialog should appear when connecting to a server via EJB or not */
+    public static final boolean P_DEFAULT_SHOW_EJB_WARNING_DIALOG = true;
 }
