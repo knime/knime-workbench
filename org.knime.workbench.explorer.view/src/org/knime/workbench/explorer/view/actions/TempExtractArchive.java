@@ -213,7 +213,9 @@ public class TempExtractArchive {
         importStructureProvider.setStrip(1);
 
         ZipEntry rootEntry = (ZipEntry)importStructureProvider.getRoot();
-        List<ZipEntry> rootChild = importStructureProvider.getChildren(rootEntry);
+        // method return type changed from "List<ZipEntry>" (org.eclipse.ui.ide_3.13.1)
+        // to "List<?>" (org.eclipse.ui.ide_3.17.0), though the implementation itself is still type to the former
+        List<ZipEntry> rootChild = (List<ZipEntry>)importStructureProvider.getChildren(rootEntry);
         if (rootChild.size() == 1) {
             // the zipped workflow normally contains only one dir
             rootEntry = rootChild.get(0);
