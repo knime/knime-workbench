@@ -5,10 +5,10 @@
 /instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint1/factoryID=com.knime.explorer.server
 /instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint1/mountpointNumber=0
 /instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint1/mountID=test-mountpoint1
-
 /instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint2/active=true
-/instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint2/address=${origin:KNIME-EJB-Address}
+/instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint2/address=https\://testing.knime.org/tomee/ejb
 /instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint2/user=knuser2
 /instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint2/factoryID=com.knime.explorer.server
 /instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint2/mountpointNumber=1
-/instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint2/mountID=${origin:KNIME-Default-Mountpoint-ID}
+/instance/org.knime.workbench.explorer.view/mountpointNode/test-mountpoint2/mountID=test-mountpoint2
+file_export_version=3.0

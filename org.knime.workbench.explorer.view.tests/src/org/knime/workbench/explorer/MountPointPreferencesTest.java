@@ -62,7 +62,6 @@ import org.hamcrest.Matchers;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.knime.core.node.workflow.BatchExecutor;
-import org.knime.core.util.CoreConstants;
 import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
@@ -94,14 +93,13 @@ public class MountPointPreferencesTest {
      */
     @Test
     public void testMountPointLoading() throws Exception {
-        ExplorerMountTable.unmount(CoreConstants.KNIME_HUB_MOUNT_ID);
         List<MountSettings> initialSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
         int numberOfSettings = initialSettings.size();
 
         List<String> initialMountIDs = initialSettings.stream().map(ms -> ms.getMountID()).collect(Collectors.toList());
 
         assertThat(initialMountIDs,
-            Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2", CoreConstants.KNIME_HUB_MOUNT_ID));
+            Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2"));
 
 
 
@@ -125,8 +123,8 @@ public class MountPointPreferencesTest {
         List<String> newMountIDs= modifiedSettings.stream().map(ms -> ms.getMountID()).collect(Collectors.toList());
 
         assertThat(modifiedSettings.size(), Matchers.is(numberOfSettings + 1));
-        assertThat(newMountIDs, Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2",
-            CoreConstants.KNIME_HUB_MOUNT_ID, newMountSettings.getMountID()));
+        assertThat(newMountIDs,
+            Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2", newMountSettings.getMountID()));
 
     }
 
@@ -139,7 +137,6 @@ public class MountPointPreferencesTest {
      */
     @Test
     public void testDefaultOverwrite() throws Exception {
-        ExplorerMountTable.unmount(CoreConstants.KNIME_HUB_MOUNT_ID);
         List<MountSettings> initialSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
         int numberOfSettings = initialSettings.size();
 
@@ -164,7 +161,7 @@ public class MountPointPreferencesTest {
 
         List<MountSettings> modifiedSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
 
-        assertThat(modifiedSettings.size(), Matchers.equalTo(numberOfSettings + 1));
+        assertThat(modifiedSettings.size(), Matchers.equalTo(numberOfSettings));
 
         Optional<MountSettings> optoverwritteMS =
             modifiedSettings.stream().filter(ms -> ms.getMountID().equals("test-mountpoint1")).findFirst();
