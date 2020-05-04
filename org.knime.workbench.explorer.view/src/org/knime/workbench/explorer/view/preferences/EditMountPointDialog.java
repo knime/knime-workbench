@@ -78,6 +78,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
@@ -153,6 +154,8 @@ public class EditMountPointDialog extends ListDialog {
 
     private String m_oldMountID;
 
+    private Thread m_backgroundWaitThread;
+
     /**
      * Creates a new mount point dialog for creating a new mount point.
      *
@@ -180,15 +183,15 @@ public class EditMountPointDialog extends ListDialog {
         init(input, invalidIDs, settings);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    protected void cancelPressed() {
-        super.cancelPressed();
+    public boolean close() {
         if (m_additionalPanel != null) {
             m_additionalPanel.cancelBackgroundWork();
         }
+        if (m_backgroundWaitThread != null && m_backgroundWaitThread.isAlive()) {
+            m_backgroundWaitThread.interrupt();
+        }
+        return super.close();
     }
 
     private void init(final List<AbstractContentProviderFactory> input,
@@ -276,8 +279,6 @@ public class EditMountPointDialog extends ListDialog {
         createButton(final Composite parent, final int id, final String label, final boolean defaultButton) {
         Button b = super.createButton(parent, id, label, defaultButton);
         if (id == IDialogConstants.OK_ID) {
-            // disabled by default until validated
-            b.setEnabled(false);
             m_ok = b;
             m_ok.setText("OK");
         }
@@ -289,9 +290,19 @@ public class EditMountPointDialog extends ListDialog {
      */
     @Override
     protected void okPressed() {
+        okPressed(true);
+    }
+
+    /**
+     * See {@link #okPressed() okPressed}.
+     *
+     * @param waitForBackgroundWork {@code true} ift the current thread should wait for the background work to finish,
+     *            {@code false} otherwise.
+     */
+    private void okPressed(final boolean waitForBackgroundWork) {
         // this method gets called through a double click (if cancel button is
         // added)
-        if (!validate()) {
+        if (!validate(waitForBackgroundWork)) {
             return;
         }
         Object selection = ((IStructuredSelection)getTableViewer().getSelection()).toArray()[0];
@@ -307,7 +318,6 @@ public class EditMountPointDialog extends ListDialog {
             m_contentProvider = m_factory.createContentProvider(m_mountIDval);
         }
         super.okPressed();
-
     }
 
     /**
@@ -487,11 +497,24 @@ public class EditMountPointDialog extends ListDialog {
     }
 
     /**
-     * Enables the ok button and sets the error icon/message.
+     * Sets the error icon/message.
      *
      * @return true, if the selection/input is okay.
      */
     protected boolean validate() {
+       return validate(false);
+    }
+
+    /**
+     * Sets the error icon/message. Disables all input field when waiting for background work to finish
+     *
+     * @param waitForBackgroundWork {@code true} ift the current thread should wait for the background work to finish,
+     *            {@code false} otherwise.
+     *
+     * @return true, if the selection/input is okay.
+     * @since 8.6
+     */
+    protected boolean validate(final boolean waitForBackgroundWork) {
         final Point offset = getShell() != null ? new Point(getShell().getSize().x - getShell().getMinimumSize().x,
             getShell().getSize().y - getShell().getMinimumSize().y) : new Point(0, 0);
         boolean valid = true;
@@ -510,6 +533,10 @@ public class EditMountPointDialog extends ListDialog {
                 loading = true;
                 valid = false;
                 errMsg = loadingMessage;
+                if (waitForBackgroundWork) {
+                    m_backgroundWaitThread = new Thread(this::waitForBackgroundWork);
+                    m_backgroundWaitThread.start();
+                }
             } else if (!StringUtils.isEmpty(additionalError)) {
                 valid = false;
                 errMsg = additionalError;
@@ -566,11 +593,42 @@ public class EditMountPointDialog extends ListDialog {
         m_errIcon.setVisible(!valid);
 
         if (m_ok != null) {
-            m_ok.setEnabled(valid);
             layoutDialog(offset);
         }
 
         return valid;
+    }
+
+    private void waitForBackgroundWork() {
+        Display.getDefault().syncExec(() -> {
+            for (final Control c : getShell().getChildren()) {
+                recursiveSetEnabled(c, false);
+            }
+        });
+        if (m_additionalPanel.waitForBackgroundWork()) {
+            Display.getDefault().syncExec(() -> okPressed(false));
+        }
+        Display.getDefault().syncExec(() -> {
+            if (getShell() != null && !getShell().isDisposed()) {
+                for (final Control c : getShell().getChildren()) {
+                    recursiveSetEnabled(c, true);
+                }
+            }
+        });
+    }
+
+    private void recursiveSetEnabled(final Control control, final boolean enabled) {
+        if (control.isDisposed()) {
+            // Do nothing since the control is already disposed
+        } else if (control instanceof Composite) {
+            final Composite comp = (Composite)control;
+            for (final Control c : comp.getChildren()) {
+                recursiveSetEnabled(c, enabled);
+            }
+        } else if ((control instanceof Text || control instanceof Button || control instanceof Combo)
+            && !control.equals(getButton(CANCEL))) {
+            control.setEnabled(enabled);
+        }
     }
 
     /**

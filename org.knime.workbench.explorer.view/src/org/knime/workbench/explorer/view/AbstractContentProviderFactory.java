@@ -309,6 +309,18 @@ public abstract class AbstractContentProviderFactory {
         public void cancelBackgroundWork() {
             // do nothing
         }
+
+        /**
+         * Waits for background processes that may be still running.
+         *
+         * @return {@code true} if the background thread is not alive anymore, {@code false} otherwise or if the calling
+         *         thread gets interrupted.
+         *
+         * @since 8.6
+         */
+        public boolean waitForBackgroundWork() {
+            return false;
+        }
     }
 
     /**
