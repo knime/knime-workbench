@@ -839,6 +839,10 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
      */
     public void openNodeDialog() {
         final NodeContainerUI container = (NodeContainerUI)getModel();
+        openNodeDialog(container, this);
+    }
+
+    public static void openNodeDialog(final NodeContainerUI container, final NodeContainerEditPart ncEditPart) {
         // if this node does not have a dialog
         if (!container.hasDialog()) {
             LOGGER.debug("No dialog for " + container.getNameWithID());
@@ -920,7 +924,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
             //
             try {
                 WrappedNodeDialog dlg = new WrappedNodeDialog(shell, container,
-                    dp -> preOpenDialogAction(dp, container), dp -> postApplyDialogAction(dp, container, this));
+                    dp -> preOpenDialogAction(dp, container), dp -> postApplyDialogAction(dp, container, ncEditPart));
                 dlg.open();
             } catch (NotConfigurableException ex) {
                 MessageBox mb = new MessageBox(shell, SWT.ICON_WARNING | SWT.OK);
@@ -946,7 +950,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
 
     private static void postApplyDialogAction(final NodeDialogPane dialogPane, final NodeContainerUI nc,
         final NodeContainerEditPart editPart) {
-        if (dialogPane instanceof ConfigurableNodeDialog && wraps(nc, NativeNodeContainer.class)) {
+        if (editPart != null && dialogPane instanceof ConfigurableNodeDialog && wraps(nc, NativeNodeContainer.class)) {
             Optional<ModifiableNodeCreationConfiguration> newNodeCreationConfiguration =
                 ((ConfigurableNodeDialog)dialogPane).getNewNodeCreationConfiguration();
             if (newNodeCreationConfiguration.isPresent()) {
