@@ -86,8 +86,20 @@ public class FindNodeEditorAction extends AbstractEditorAction {
         if (NODE_MENU != null) {
             return;
         }
+        NODE_MENU = fixItemInNodeMenu("Find Node...", "Find Node...\tCtrl+F", FIND_MENU_ITEM_IS_FIXED);
+    }
 
+    /**
+     * Replaces the text of a menu entry in the node menu.
+     *
+     * @param orgItemName the original item text
+     * @param fixedItemName the new item text
+     * @param isFixed set to <code>true</code> once the item is 'fixed'
+     * @return the node menu itself
+     */
+    static Menu fixItemInNodeMenu(final String orgItemName, final String fixedItemName, final AtomicBoolean isFixed) {
         final WorkbenchWindow ww = (WorkbenchWindow)PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+
         if (ww != null) {
             final MMenu mm = ww.getModel().getMainMenu();
             final Menu m = (Menu)mm.getWidget();
@@ -100,20 +112,21 @@ public class FindNodeEditorAction extends AbstractEditorAction {
             }
 
             if (nodeMenuItem != null) {
-                NODE_MENU = nodeMenuItem.getMenu();
-                NODE_MENU.addMenuListener(new MenuListener() {
+                Menu nodeMenu = nodeMenuItem.getMenu();
+                nodeMenu.addMenuListener(new MenuListener() {
                     @Override
-                    public void menuHidden(final MenuEvent e) { }
+                    public void menuHidden(final MenuEvent e) {
+                    }
 
                     @Override
                     public void menuShown(final MenuEvent e) {
-                        if (FIND_MENU_ITEM_IS_FIXED.get()) {
+                        if (isFixed.get()) {
                             return;
                         }
 
                         MenuItem findMenuItem = null;
-                        for (final MenuItem mi : NODE_MENU.getItems()) {
-                            if (mi.getText().equals("Find Node...")) {
+                        for (final MenuItem mi : nodeMenu.getItems()) {
+                            if (mi.getText().equals(orgItemName)) {
                                 findMenuItem = mi;
                                 break;
                             }
@@ -122,17 +135,19 @@ public class FindNodeEditorAction extends AbstractEditorAction {
                         if (findMenuItem != null) {
                             findMenuItem.setAccelerator(SWT.MOD1 | 'F');
                             if (!Platform.getOS().equals(Platform.OS_MACOSX)) {
-                                findMenuItem.setText("Find Node...\tCtrl+F");
+                                findMenuItem.setText(fixedItemName);
                             }
 
-                            FIND_MENU_ITEM_IS_FIXED.set(true);
+                            isFixed.set(true);
 
                             LOGGER.debug("Corrected accelerator on the menu item " + findMenuItem);
                         }
                     }
                 });
+                return nodeMenu;
             }
         }
+        return null;
     }
 
     /**

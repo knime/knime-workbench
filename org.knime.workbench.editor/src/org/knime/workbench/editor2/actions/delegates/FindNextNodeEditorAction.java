@@ -48,17 +48,11 @@
  */
 package org.knime.workbench.editor2.actions.delegates;
 
+import static org.knime.workbench.editor2.actions.delegates.FindNodeEditorAction.fixItemInNodeMenu;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.eclipse.core.runtime.Platform;
-import org.eclipse.e4.ui.model.application.ui.menu.MMenu;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.MenuEvent;
-import org.eclipse.swt.events.MenuListener;
 import org.eclipse.swt.widgets.Menu;
-import org.eclipse.swt.widgets.MenuItem;
-import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.internal.WorkbenchWindow;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.actions.AbstractNodeAction;
@@ -86,53 +80,7 @@ public class FindNextNodeEditorAction extends AbstractEditorAction {
         if (NODE_MENU != null) {
             return;
         }
-
-        final WorkbenchWindow ww = (WorkbenchWindow)PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-        if (ww != null) {
-            final MMenu mm = ww.getModel().getMainMenu();
-            final Menu m = (Menu)mm.getWidget();
-            MenuItem nodeMenuItem = null;
-            for (final MenuItem mi : m.getItems()) {
-                if (mi.getText().equals("Node")) {
-                    nodeMenuItem = mi;
-                    break;
-                }
-            }
-
-            if (nodeMenuItem != null) {
-                NODE_MENU = nodeMenuItem.getMenu();
-                NODE_MENU.addMenuListener(new MenuListener() {
-                    @Override
-                    public void menuHidden(final MenuEvent e) { }
-
-                    @Override
-                    public void menuShown(final MenuEvent e) {
-                        if (FIND_NEXT_MENU_ITEM_IS_FIXED.get()) {
-                            return;
-                        }
-
-                        MenuItem findNextMenuItem = null;
-                        for (final MenuItem mi : NODE_MENU.getItems()) {
-                            if (mi.getText().equals("Find Next Node...")) {
-                                findNextMenuItem = mi;
-                                break;
-                            }
-                        }
-
-                        if (findNextMenuItem != null) {
-                            findNextMenuItem.setAccelerator(SWT.MOD1 | 'G');
-                            if (!Platform.getOS().equals(Platform.OS_MACOSX)) {
-                                findNextMenuItem.setText("Find Next Node...\tCtrl+G");
-                            }
-
-                            FIND_NEXT_MENU_ITEM_IS_FIXED.set(true);
-
-                            LOGGER.debug("Corrected accelerator on the menu item " + findNextMenuItem);
-                        }
-                    }
-                });
-            }
-        }
+        NODE_MENU = fixItemInNodeMenu("Find Next Node...", "Find Next Node...\tCtrl+G", FIND_NEXT_MENU_ITEM_IS_FIXED);
     }
 
     /**
