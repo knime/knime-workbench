@@ -94,6 +94,10 @@ public class MountPointPreferencesTest {
     @Test
     public void testMountPointLoading() throws Exception {
         List<MountSettings> initialSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
+
+        // required when running tests inside Eclipse with server space available
+        initialSettings.removeIf(m -> "My-KNIME-Hub".equals(m.getMountID()));
+
         int numberOfSettings = initialSettings.size();
 
         List<String> initialMountIDs = initialSettings.stream().map(ms -> ms.getMountID()).collect(Collectors.toList());
@@ -101,12 +105,10 @@ public class MountPointPreferencesTest {
         assertThat(initialMountIDs,
             Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2"));
 
-
-
         String mountID = "new-mountpoint";
-        String content = "https://testing.knime.org/tomee/ejb;oole;false;;false";
+        String content = "https://testing.knime.org/tomee/ejb;oole";
         String displayName = "new-mountpoint (oole@https://testing.knime.org/tomee/ejb)";
-        String factoryID = "com.knime.explorer.server";
+        String factoryID = "test-provider";
         int mountPointNumber = 0;
         boolean active = true;
 
@@ -118,6 +120,8 @@ public class MountPointPreferencesTest {
         MountSettings.saveMountSettings(initialSettings);
 
         List<MountSettings> modifiedSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
+        // required when running tests inside Eclipse with server space available
+        modifiedSettings.removeIf(m -> "My-KNIME-Hub".equals(m.getMountID()));
 
 
         List<String> newMountIDs= modifiedSettings.stream().map(ms -> ms.getMountID()).collect(Collectors.toList());
@@ -125,7 +129,6 @@ public class MountPointPreferencesTest {
         assertThat(modifiedSettings.size(), Matchers.is(numberOfSettings + 1));
         assertThat(newMountIDs,
             Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2", newMountSettings.getMountID()));
-
     }
 
     /**
@@ -147,9 +150,9 @@ public class MountPointPreferencesTest {
         assertThat(oldMountSettings, Matchers.notNullValue());
 
         String mountID = "test-mountpoint1";
-        String content = "https://testing.knime.org/tomee/ejb;oole;false;;false;Credentials;/";
+        String content = "https://testing.knime.org/tomee/ejb;oole";
         String displayName = "test-mountpoint1 (oole@https://testing.knime.org/tomee/ejb)";
-        String factoryID = "com.knime.explorer.server";
+        String factoryID = "test-provider";
         int mountPointNumber = 0;
         boolean active = true;
 

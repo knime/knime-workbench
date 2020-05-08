@@ -7,5 +7,11 @@
             TestcaseCollector="org.knime.workbench.explorer.ExplorerTestcaseCollector">
       </TestcaseCollector>
    </extension>
+   <extension
+         point="org.knime.workbench.explorer.contentprovider">
+      <KNIMEExplorerContentProvider
+            ContentProviderFactory="org.knime.workbench.explorer.TestContentProviderFactory">
+      </KNIMEExplorerContentProvider>
+   </extension>
 
 </fragment>
