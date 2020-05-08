@@ -85,11 +85,6 @@ public class NodeUtilTest {
 
         //non-streamable node without parameterized factory
         checkIsStreamable("org.knime.base.node.preproc.joiner.Joiner2NodeFactory", false);
-
-        //a non-streamable dynamic node
-        String factorySettings =
-            "{\"name\":\"settings\",\"value\":{\"nodeDir\":{\"type\":\"string\",\"value\":\"org.knime.dynamic.js.base:nodes/:boxplot_v2\"}}}";
-        checkIsStreamable("org.knime.dynamic.js.v30.DynamicJSNodeFactory", factorySettings, false);
     }
 
     private static void checkIsStreamable(final String nodeFactoryClassname, final boolean isExpectedToBeStreamable)
