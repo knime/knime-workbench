@@ -124,7 +124,7 @@ public class KNIMEUIPlugin extends AbstractUIPlugin {
         KnimeEncryption.setEncryptionKeySupplier(
                 MasterKeyPreferencePage.SUPPLIER);
 
-        if (Display.getCurrent() != null) {
+        if (!Boolean.getBoolean("java.awt.headless") && (Display.getCurrent() != null)) {
             // do not load UI stuff if we run, e.g. the batch executor
             getImageRegistry().put("knime",
                     imageDescriptorFromPlugin(PLUGIN_ID,
