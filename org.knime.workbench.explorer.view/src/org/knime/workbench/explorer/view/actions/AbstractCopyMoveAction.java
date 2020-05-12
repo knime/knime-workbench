@@ -78,6 +78,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.MessageFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -87,7 +88,8 @@ import org.knime.workbench.explorer.view.actions.CopyMove.CopyMoveResult;
 
 public abstract class AbstractCopyMoveAction extends ExplorerAction {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
-            AbstractCopyMoveAction.class);
+        AbstractCopyMoveAction.class);
+
     private AbstractExplorerFileStore m_target;
     private boolean m_performMove;
     /** The textual representation of the performed command. */
@@ -370,6 +372,11 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                 @Override
                 public void run(final IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
                     CopyMove copyMove = new CopyMove(getView(), m_target, destChecker, m_performMove);
+                    // If uploading, check for reset preference
+                    if (!srcFileStores.isEmpty() && !(srcFileStores.get(0) instanceof RemoteExplorerFileStore)
+                        && m_target instanceof RemoteExplorerFileStore) {
+                        copyMove.setExcludeDataInWorkflows(m_target.getContentProvider().isForceResetOnUpload());
+                    }
                     copyMove.setSrcFileStores(srcFileStores);
                     copyMove.setNotOverwritableDest(notOverwritableDest);
                     CopyMoveResult copyMoveResult = copyMove.run(monitor);

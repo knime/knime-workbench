@@ -1611,4 +1611,28 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public boolean isUseRest() {
         return false;
     }
+
+    /**
+     * Checks wether the workflow should be reset before being uploaded. Can only be true if
+     * {@link AbstractContentProvider#isRemote()} is true.
+     *
+     * @return {@code true} if the workflow should be reset {@code false} otherwise.
+     *
+     * @since 8.6
+     */
+    public boolean isForceResetOnUpload() {
+        return false;
+    }
+
+    /**
+     * Checks wether the reset on upload option in the deploy dialog should be enabled. Can only be true if
+     * {@link AbstractContentProvider#isRemote()} is true.
+     *
+     * @return {@code true} if the workflow should be reset {@code false} otherwise.
+     *
+     * @since 8.6
+     */
+    public boolean isEnableResetOnUploadCheckbox() {
+        return false;
+    }
 }

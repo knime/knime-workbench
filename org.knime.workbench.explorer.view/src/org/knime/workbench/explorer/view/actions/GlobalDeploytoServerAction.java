@@ -57,12 +57,14 @@ import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -244,6 +246,8 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
 
         private Button m_excludeDataButton;
         private boolean m_isExcludeData;
+        private Composite m_tooltipContainer;
+        private boolean m_savedSelection;
 
         /**
          * @param parentShell
@@ -270,7 +274,11 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
 
         @Override
         protected void createCustomFooterField(final Composite parent) {
-            m_excludeDataButton = new Button(parent, SWT.CHECK);
+            // Create marginless composite to show tooltip since a disabled checkbox can not trigger any events
+            m_tooltipContainer = new Composite(parent, SWT.NONE);
+            m_tooltipContainer.setLayout(new FillLayout());
+            GridDataFactory.fillDefaults().applyTo(m_tooltipContainer);
+            m_excludeDataButton = new Button(m_tooltipContainer, SWT.CHECK);
             m_isExcludeData = false;
             m_excludeDataButton.setSelection(m_isExcludeData);
             m_excludeDataButton.setText("Reset Workflow(s) before upload");
@@ -279,8 +287,23 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
                 public void widgetSelected(final SelectionEvent e) {
                     Button b = (Button)e.widget;
                     m_isExcludeData = b.getSelection();
+                    // Save selection of checkbox for mount points without configurations
+                    m_savedSelection =
+                        getSelection().getContentProvider().isForceResetOnUpload() ? m_savedSelection : m_isExcludeData;
                 }
             });
+        }
+
+        @Override
+        protected void validateSelectionValue() {
+            super.validateSelectionValue();
+            final AbstractContentProvider ct = getSelection().getContentProvider();
+            m_excludeDataButton
+                .setSelection(ct.isForceResetOnUpload() || (m_savedSelection && m_excludeDataButton.getSelection()));
+            m_excludeDataButton.setEnabled(!ct.isForceResetOnUpload() || ct.isEnableResetOnUploadCheckbox());
+            m_isExcludeData = m_excludeDataButton.getSelection();
+            m_tooltipContainer.setToolTipText(m_excludeDataButton.getEnabled() ? ""
+                : "This option is selected by default as set by the server administrator.");
         }
 
         SelectedDestination getSelectedDestination() {
