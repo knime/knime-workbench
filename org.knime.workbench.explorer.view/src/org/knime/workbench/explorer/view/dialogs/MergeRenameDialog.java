@@ -286,7 +286,8 @@ public class MergeRenameDialog extends Dialog {
 
     private void createSnapshotPanel(final Composite parent) {
         if (m_destination.getContentProvider().supportsSnapshots()) {
-            m_snapshotPanel = new SnapshotPanel(parent, SWT.NONE);
+            m_snapshotPanel =
+                new SnapshotPanel(parent, SWT.NONE, m_destination.getContentProvider().isForceSnapshotCreation());
             m_snapshotPanel.setEnabled(m_overwriteGUI.getSelection());
             m_overwriteGUI.addListener(SWT.Selection, new Listener() {
                 @Override

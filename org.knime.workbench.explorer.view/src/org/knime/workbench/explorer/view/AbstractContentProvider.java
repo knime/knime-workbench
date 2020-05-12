@@ -1601,7 +1601,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     /**
-     * Checks wether the content provider uses the rest service or not. Can only be true if
+     * Checks whether the content provider uses the rest service or not. Can only be true if
      * {@link AbstractContentProvider#isRemote()} is true.
      *
      * @return {@code true} if the rest service is used {@code false} otherwise.
@@ -1613,7 +1613,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     /**
-     * Checks wether the workflow should be reset before being uploaded. Can only be true if
+     * Checks whether the workflow should be reset before being uploaded. Can only be true if
      * {@link AbstractContentProvider#isRemote()} is true.
      *
      * @return {@code true} if the workflow should be reset {@code false} otherwise.
@@ -1625,7 +1625,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     /**
-     * Checks wether the reset on upload option in the deploy dialog should be enabled. Can only be true if
+     * Checks whether the reset on upload option in the deploy dialog should be enabled. Can only be true if
      * {@link AbstractContentProvider#isRemote()} is true.
      *
      * @return {@code true} if the workflow should be reset {@code false} otherwise.
@@ -1633,6 +1633,20 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @since 8.6
      */
     public boolean isEnableResetOnUploadCheckbox() {
+        return false;
+    }
+
+    /**
+     *
+     * Checks whether the a snapshot should always be created when a workflow or file is overwritten. Can only be true if
+     * {@link AbstractContentProvider#isRemote()} is true.
+     *
+     * @return {@code true} if the a snapshot should be created {@code false} otherwise.
+     *
+     * @since 8.6
+     *
+     */
+    public boolean isForceSnapshotCreation() {
         return false;
     }
 }

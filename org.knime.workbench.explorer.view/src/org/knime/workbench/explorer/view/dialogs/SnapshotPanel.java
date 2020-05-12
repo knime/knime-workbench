@@ -46,6 +46,7 @@
  */
 package org.knime.workbench.explorer.view.dialogs;
 
+import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
@@ -64,13 +65,16 @@ import org.eclipse.swt.widgets.Text;
  * @since 6.4
  */
 public class SnapshotPanel extends Composite {
-    private final Button m_createSnapshotButton;
 
-    private final Text m_commentField;
+    private Button m_createSnapshotButton;
+
+    private Text m_commentField;
 
     private boolean m_createSnapshot;
 
     private String m_comment;
+
+    private boolean m_forceCreation;
 
     /**
      * Creates a new panel.
@@ -80,12 +84,41 @@ public class SnapshotPanel extends Composite {
      */
     public SnapshotPanel(final Composite parent, final int style) {
         super(parent, style);
+        createDialogArea();
+    }
+
+
+    /**
+     * Creates a new panel.
+     *
+     * @param parent the parent component
+     * @param style layout styles, the same as for {@link Composite}
+     * @param forceCreation {@code true} if the snapshot shall always be created when overwriting
+     * @since 8.6
+     */
+    public SnapshotPanel(final Composite parent, final int style, final boolean forceCreation) {
+        super(parent, style);
+        m_forceCreation = forceCreation;
+        createDialogArea();
+    }
+
+
+    private void createDialogArea() {
         setLayout(new GridLayout());
         setLayoutData(new GridData(GridData.FILL_BOTH));
 
-        m_createSnapshotButton = new Button(this, SWT.CHECK);
+
+        // Create marginless composite to show tooltip since a disabled checkbox can not trigger any events
+        final Composite tooltipContainer = new Composite(this, SWT.NONE);
+        tooltipContainer.setLayout(new GridLayout());
+        GridDataFactory.fillDefaults().applyTo(tooltipContainer);
+        m_createSnapshotButton = new Button(tooltipContainer, SWT.CHECK);
         m_createSnapshotButton.setText("Create snapshot before overwriting?");
         m_createSnapshotButton.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
+        m_createSnapshotButton.setSelection(m_forceCreation);
+        m_createSnapshotButton.setEnabled(!m_forceCreation);
+        tooltipContainer.setToolTipText(
+            m_forceCreation ? "This option is selected by default as set by the server administrator." : "");
 
         m_commentField = new Text(this, SWT.MULTI | SWT.BORDER | SWT.WRAP | SWT.V_SCROLL);
         GridData gridData = new GridData(SWT.FILL, SWT.FILL, true, true);
@@ -114,7 +147,9 @@ public class SnapshotPanel extends Composite {
     @Override
     public void setEnabled(final boolean enabled) {
         super.setEnabled(enabled);
-        m_createSnapshotButton.setEnabled(enabled);
+        if (!m_forceCreation) {
+            m_createSnapshotButton.setEnabled(enabled);
+        }
         m_commentField.setEnabled(enabled && m_createSnapshotButton.getSelection());
     }
 

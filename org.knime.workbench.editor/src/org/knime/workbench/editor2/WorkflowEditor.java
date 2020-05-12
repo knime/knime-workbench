@@ -2369,6 +2369,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                     && (newLocation instanceof RemoteExplorerFileStore)) {
                     snapshotSupported.set(true);
                 }
+                final AbstractExplorerFileStore target = newLocation;
                 MessageDialog dlg =
                     new MessageDialog(getSite().getShell(), "Confirm SaveAs Overwrite", null,
                         "The selected destination\n\n\t" + newLocation.getMountIDWithFullPath()
@@ -2381,7 +2382,8 @@ public class WorkflowEditor extends GraphicalEditor implements
                         @Override
                         protected Control createCustomArea(final Composite parent) {
                             if (snapshotSupported.get()) {
-                                snapshotPanel.set(new SnapshotPanel(parent, SWT.NONE));
+                                snapshotPanel.set(new SnapshotPanel(parent, SWT.NONE,
+                                    target.getContentProvider().isForceSnapshotCreation()));
                                 snapshotPanel.get().setEnabled(true);
                                 return snapshotPanel.get();
                             } else {
@@ -3949,7 +3951,8 @@ public class WorkflowEditor extends GraphicalEditor implements
                 @Override
                 protected Control createCustomArea(final Composite parent) {
                     if (snapshotSupported) {
-                        snapshotPanel.set(new SnapshotPanel(parent, SWT.NONE));
+                        snapshotPanel.set(new SnapshotPanel(parent, SWT.NONE,
+                            remoteStore.getContentProvider().isForceSnapshotCreation()));
                         snapshotPanel.get().setEnabled(true);
                         return snapshotPanel.get();
                     } else {
