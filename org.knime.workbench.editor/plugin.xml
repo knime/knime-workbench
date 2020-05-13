@@ -765,6 +765,12 @@
             name="Description"/>
          <view
             category="org.knime.workbench.ui.category"
+            class="org.knime.workbench.searchhubview.HubView"
+            icon="icons/knime.png"
+            id="org.knime.workbench.hubview"
+            name="KNIME Hub"/>
+         <view
+            category="org.knime.workbench.ui.category"
             class="org.knime.workbench.searchhubview.SearchHubView"
             icon="icons/knime.png"
             id="org.knime.workbench.searchhubview"

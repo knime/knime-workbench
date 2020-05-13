@@ -27,7 +27,9 @@
 	<modules>
 		<module>org.knime.features.workbench</module>
 		<module>org.knime.features.explorer.view</module>
+		<module>org.knime.features.chromium.swt</module>
 		<module>org.knime.update.workbench</module>
+		<module>org.knime.chromium.swt</module>
 		<module>org.knime.workbench</module>
 		<module>org.knime.workbench.core</module>
 		<module>org.knime.workbench.editor</module>
@@ -78,6 +80,21 @@
 			<id>p2-knime-svg</id>
 			<layout>p2</layout>
 			<url>${knime.svg.p2}</url>
+		</repository>
+		<repository>
+			<id>p2-chromium-swt-78.beta</id>
+			<layout>p2</layout>
+			<url>http://dl.maketechnology.io/chromium-swt/78.beta/repository</url>
+		</repository>
+		<repository>
+			<id>p2-chromium-cef-78.64b</id>
+			<layout>p2</layout>
+			<url>http://dl.maketechnology.io/chromium-cef/78-64b.beta/repository</url>
+		</repository>
+		<repository>
+			<id>p2-chromium-cef-78.dev</id>
+			<layout>p2</layout>
+			<url>http://dl.maketechnology.io/chromium-cef/78-dev.beta/repository</url>
 		</repository>
 	</repositories>
 	<build>

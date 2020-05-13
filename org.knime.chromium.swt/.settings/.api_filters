@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<component id="org.knime.xml" version="2">
+    <resource path="src/org/knime/xml/node/xpath/XPathCellFactory.java" type="org.knime.xml.node.xpath.XPathCellFactory">
+        <filter id="305365105">
+            <message_arguments>
+                <message_argument value="org.knime.xml.node.xpath.XPathCellFactory"/>
+                <message_argument value="org.knime.xml_2.8.0"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/xml/node/xpath/XPathNodeDialog.java" type="org.knime.xml.node.xpath.XPathNodeDialog">
+        <filter id="305365105">
+            <message_arguments>
+                <message_argument value="org.knime.xml.node.xpath.XPathNodeDialog"/>
+                <message_argument value="org.knime.xml_2.8.0"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/xml/node/xpath/XPathNodeModel.java" type="org.knime.xml.node.xpath.XPathNodeModel">
+        <filter id="305365105">
+            <message_arguments>
+                <message_argument value="org.knime.xml.node.xpath.XPathNodeModel"/>
+                <message_argument value="org.knime.xml_2.8.0"/>
+            </message_arguments>
+        </filter>
+    </resource>
+</component>
