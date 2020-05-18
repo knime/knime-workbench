@@ -47,6 +47,7 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.io.File;
 import java.net.URI;
+import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
@@ -108,36 +109,45 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
      */
     @Override
     public void run() {
+        Optional<AbstractExplorerFileStore> fs = getFileStoreForCurrentWorkbenchSelection(m_delegator.getMountedIds());
+        fs.ifPresent(f -> getViewer().setSelection(new StructuredSelection(ContentDelegator.getTreeObjectFor(f)), true));
+    }
+
+    /** Return the file store for the workflow currently selected/edited in the main workbench window or an empty
+     * optional if that's not possible.
+     * @param mountedIds List of mounted IDs.
+     * @return That optional.
+     * @noreference This method is not intended to be referenced by clients.
+     */
+    public static Optional<AbstractExplorerFileStore>
+        getFileStoreForCurrentWorkbenchSelection(final Set<String> mountedIds) {
         IWorkbenchWindow activeWorkbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-        if (activeWorkbenchWindow == null){
-            return; // no window open at all
+        if (activeWorkbenchWindow == null) {
+            return Optional.empty(); // no window open at all
         }
         IEditorPart activeEditor =
             activeWorkbenchWindow.getActivePage().getActiveEditor();
         if (activeEditor == null) {
-            return; // no editor open at all
+            return Optional.empty(); // no editor open at all
         }
         IEditorPart rootEditor = findRootEditor(activeEditor);
         if (rootEditor == null) {
             // no workflow editor
-            return;
+            return Optional.empty();
         }
 
 
         AbstractExplorerFileStore fs = resolveViaFilestore(rootEditor);
         if (fs == null) {
-            fs = resolveViaPath(activeEditor);
+            fs = resolveViaPath(activeEditor, mountedIds);
         }
         if (fs == null) {
             fs = resolveViaURI(activeEditor);
         }
-        if (fs != null) {
-            getViewer().setSelection(new StructuredSelection(ContentDelegator.getTreeObjectFor(fs)), true);
-        }
+        return Optional.ofNullable(fs);
     }
 
-
-    private AbstractExplorerFileStore resolveViaPath(final IEditorPart rootEditor) {
+    private static AbstractExplorerFileStore resolveViaPath(final IEditorPart rootEditor, final Set<String> mountedIds) {
         WorkflowEditorAdapter adapter = rootEditor.getAdapter(WorkflowEditorAdapter.class);
         if (adapter == null) {
             return null;
@@ -152,7 +162,6 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         }
         File wfDir = wfFileRef.getFile();
 
-        Set<String> mountedIds = m_delegator.getMountedIds();
         for (String id : mountedIds) {
             MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
             AbstractExplorerFileStore root = mountPoint.getProvider().getRootStore();
@@ -171,7 +180,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         return null;
     }
 
-    private AbstractExplorerFileStore resolveViaFilestore(final IEditorPart rootEditor) {
+    private static AbstractExplorerFileStore resolveViaFilestore(final IEditorPart rootEditor) {
         IEditorInput editorInput = rootEditor.getEditorInput();
         if (editorInput instanceof FileStoreEditorInput) {
             URI uri = ((FileStoreEditorInput) editorInput).getURI();
@@ -185,7 +194,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         return null;
     }
 
-    private AbstractExplorerFileStore resolveViaURI(final IEditorPart rootEditor) {
+    private static AbstractExplorerFileStore resolveViaURI(final IEditorPart rootEditor) {
         IEditorInput editorInput = rootEditor.getEditorInput();
         if (editorInput instanceof IURIEditorInput) {
             URI uri = ((IURIEditorInput)editorInput).getURI();
@@ -194,7 +203,7 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         return null;
     }
 
-    private IEditorPart findRootEditor(final IEditorPart editor) {
+    private static IEditorPart findRootEditor(final IEditorPart editor) {
         WorkflowEditorAdapter wfAdapter = editor.getAdapter(WorkflowEditorAdapter.class);
         if (wfAdapter != null) {
             if (wfAdapter.getParentEditor() == null) {

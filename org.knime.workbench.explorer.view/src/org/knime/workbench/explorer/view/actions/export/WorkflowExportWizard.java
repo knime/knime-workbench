@@ -51,6 +51,8 @@ import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -60,11 +62,15 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.ui.INewWizard;
+import org.eclipse.ui.IViewReference;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.ExplorerView;
+import org.knime.workbench.explorer.view.actions.SynchronizeExplorerViewAction;
 
 /**
  * This wizard exports KNIME workflows and workflow groups if workflows are selected which are in different workflow
@@ -94,7 +100,29 @@ public class WorkflowExportWizard extends Wizard implements INewWizard {
     public void addPages() {
         AbstractExplorerFileStore initFile = null;
         if (m_selection instanceof IStructuredSelection) {
-            initFile = ContentDelegator.getFileStore(((IStructuredSelection)m_selection).getFirstElement());
+            Object selectedObject = ((IStructuredSelection)m_selection).getFirstElement();
+            initFile = ContentDelegator.getFileStore(selectedObject);
+        }
+
+        // file store is not selected in explorer view,
+        // try to get current selection in workflow editor
+        if (initFile == null) {
+            IViewReference[] views = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getViewReferences();
+
+            Set<String> mountedIds = Collections.emptySet();
+            for (IViewReference view : views) {
+                if (ExplorerView.ID.equals(view.getId())) {
+                    ExplorerView explorerView = (ExplorerView)view.getView(false);
+                    mountedIds = explorerView.getMountedIds();
+                }
+            }
+
+            initFile = SynchronizeExplorerViewAction.getFileStoreForCurrentWorkbenchSelection(mountedIds).orElse(null);
+        }
+
+        // workflow export only available for local workflows
+        if (!(initFile instanceof LocalExplorerFileStore)) {
+            initFile = null;
         }
         m_page = new WorkflowExportPage(initFile);
         addPage(m_page);
