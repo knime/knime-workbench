@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,68 +41,80 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ------------------------------------------------------------------------
+ * ---------------------------------------------------------------------
+ *
+ * History
+ *   May 20, 2020 (hornm): created
  */
-package org.knime.workbench.editor.svgexport.actions;
+package org.knime.workbench.editor2.workflowsummaryexport;
 
-import org.eclipse.jface.action.IAction;
-import org.eclipse.jface.viewers.ISelection;
+import java.util.Optional;
+
+import org.eclipse.core.commands.AbstractHandler;
+import org.eclipse.core.commands.ExecutionEvent;
+import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.wizard.WizardDialog;
-import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.IWorkbenchWindowActionDelegate;
 import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration.SummaryFormat;
+import org.knime.workbench.KNIMEEditorPlugin;
+import org.knime.workbench.editor2.WorkflowEditor;
 
 /**
- * Action which initiates the SVG-export wizard.
- * 
- * @author Andreas Burger
+ * Handler for the export workflow summary commands (xml and json).
+ *
+ * Opens the workflow summary export wizard.
+ *
+ * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-public class ExportToSVGAction implements IWorkbenchWindowActionDelegate {
+public final class ExportWorkflowSummaryHandler extends AbstractHandler {
 
-    private static final int SIZING_WIZARD_WIDTH = 470;
+    private static final String XML_EXPORT_COMMAND_ID = "knime.commands.exportworkflowsummaryxml";
 
-    private static final int SIZING_WIZARD_HEIGHT = 300;
-
-    /**
-     * Creates a new action.
-     */
-    public ExportToSVGAction() {
-    }
+    private static final String JSON_EXPORT_COMMAND_ID = "knime.commands.exportworkflowsummaryjson";
 
     /**
-     * The action has been activated. The argument of the method represents the 'real' action sitting in the workbench
-     * UI.
-     * 
-     * @param action the action proxy that handles the presentation portion of the action
-     * @see IWorkbenchWindowActionDelegate#run
+     * {@inheritDoc}
      */
-    @SuppressWarnings("restriction")
     @Override
-    public void run(final IAction action) {
+    public Object execute(final ExecutionEvent event) throws ExecutionException {
         IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
         if (workbenchWindow == null) {
-            // action has been disposed
-            return;
+            return null;
         }
-        SVGExportWizard wizard = new SVGExportWizard();
-        wizard.init(workbenchWindow.getWorkbench(), null);
-        Shell parent = workbenchWindow.getShell();
-        WizardDialog dialog = new WizardDialog(parent, wizard);
+
+        // Obtain currently active workflow editor and the workflow manager
+        WorkflowEditor editor =
+            (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
+        Optional<WorkflowManager> wfm = editor.getWorkflowManager();
+        if (!wfm.isPresent()) {
+            ErrorDialog.openError(workbenchWindow.getShell(), "Not a local workflow",
+                "Workflow summary can't be exported.",
+                new Status(IStatus.ERROR, KNIMEEditorPlugin.PLUGIN_ID, "Not a local workflow"));
+            return null;
+        }
+
+        String commandId = event.getCommand().getId();
+        assert commandId.equals(XML_EXPORT_COMMAND_ID) || commandId.equals(JSON_EXPORT_COMMAND_ID);
+        ExportWorkflowSummaryWizard wizard = new ExportWorkflowSummaryWizard(
+            XML_EXPORT_COMMAND_ID.equals(commandId) ? SummaryFormat.XML : SummaryFormat.JSON, wfm.get());
+        WizardDialog dialog = new WizardDialog(workbenchWindow.getShell(), wizard);
         dialog.create();
-        dialog.getShell().setSize(Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x), SIZING_WIZARD_HEIGHT);
         dialog.open();
+        return null;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public void selectionChanged(final IAction action, final ISelection selection) {
+    public boolean isEnabled() {
+        IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        return workbenchWindow != null && workbenchWindow.getActivePage().getActiveEditor() instanceof WorkflowEditor;
     }
 
-    @Override
-    public void dispose() {
-    }
-
-    @Override
-    public void init(final IWorkbenchWindow window) {
-    }
 }

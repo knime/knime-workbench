@@ -189,6 +189,18 @@
             description="Connect selected nodes"
             id="knime.commands.linknodes"
             name="Connect selected nodes"/>
+      <command
+            defaultHandler="org.knime.workbench.editor2.workflowsummaryexport.ExportWorkflowSummaryHandler"
+            description="Export Workflow Summary (XML)"
+            id="knime.commands.exportworkflowsummaryxml"
+            name="Export Workflow Summary (XML)">
+      </command>
+       <command
+             defaultHandler="org.knime.workbench.editor2.workflowsummaryexport.ExportWorkflowSummaryHandler"
+             description="Export Workflow Summary (JSON)"
+             id="knime.commands.exportworkflowsummaryjson"
+             name="Export Workflow Summary (JSON)">
+       </command>
     </extension>
     <extension
          point="org.eclipse.ui.editors">
@@ -796,6 +808,23 @@
 		            name="org.knime.workbench.editor2.menu.postmrufilemenu"
 		            visible="true"/>
     	</menuContribution>
+     <menuContribution
+           locationURI="menu:file?after=org.knime.workbench.explorer.view.actions.export.WorkflowExportApplicationAction">
+        <menu
+              icon="icons/knime_export.png"
+              id="org.knime.workbench.editor2.menu.exportas"
+              label="Export active Workflow as"
+              tooltip="Exports the currently active KNIME workflow into another format">
+           <command
+                 commandId="knime.commands.exportworkflowsummaryxml"
+                 label="Workflow Summary (XML)...">
+           </command>
+           <command
+                 commandId="knime.commands.exportworkflowsummaryjson"
+                 label="Workflow Summary (JSON)...">
+           </command>
+        </menu>
+     </menuContribution>
 	</extension>
     <extension
            point="org.eclipse.ui.contexts">
