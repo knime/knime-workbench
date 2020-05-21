@@ -53,11 +53,9 @@ import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
-import org.knime.core.node.Node;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
-import org.knime.core.node.context.ModifiableNodeCreationConfiguration;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
@@ -70,7 +68,6 @@ import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.async.OperationNotAllowedException;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.repository.NodeUsageRegistry;
 import org.knime.workbench.ui.async.AsyncUtil;
 
@@ -115,8 +112,6 @@ public class CreateNodeCommand extends AbstractKNIMECommand {
      */
     protected NodeContainerUI m_container;
 
-    private final ModifiableNodeCreationConfiguration m_creationConfig;
-
     /**
      * Creates a new command.
      *
@@ -136,7 +131,6 @@ public class CreateNodeCommand extends AbstractKNIMECommand {
         m_location = relativeLocation;
         m_absoluteLocation = null;
         m_snapToGrid = snapToGrid;
-        m_creationConfig = null;
     }
 
     /**
@@ -154,37 +148,6 @@ public class CreateNodeCommand extends AbstractKNIMECommand {
         m_location = null;
         m_absoluteLocation = absoluteLocation;
         m_snapToGrid = snapToGrid;
-        m_creationConfig = null;
-    }
-
-    /**
-     * Creates a new node command.
-     *
-     * @param editPart the node container edit part
-     * @param creationConfig the node creation configuration
-     */
-    protected CreateNodeCommand(final NodeContainerEditPart editPart, final ModifiableNodeCreationConfiguration creationConfig) {
-        super(editPart.getWorkflowManager());
-        m_location = null;
-        NodeContainerUI containerUI = (NodeContainerUI)editPart.getModel();
-        m_factory = Wrapper.unwrapOptional(containerUI, NativeNodeContainer.class)//
-            .map(NativeNodeContainer::getNode)//
-            .map(Node::getFactory)//
-            .orElseThrow(() -> new IllegalArgumentException(
-                "The provided edit part does not represent a native node container"));
-        int[] bounds = containerUI.getUIInformation().getBounds();
-        m_absoluteLocation = new Point(bounds[0], bounds[1]);
-        m_snapToGrid = containerUI.getUIInformation().getSnapToGrid();
-        m_creationConfig = creationConfig;
-    }
-
-    /**
-     * Returns the creation configuration.
-     *
-     * @return the creation configuration
-     */
-    protected ModifiableNodeCreationConfiguration getCreationConfig() {
-        return m_creationConfig;
     }
 
     /**
@@ -217,7 +180,7 @@ public class CreateNodeCommand extends AbstractKNIMECommand {
         // Add node to workflow and get the container
         try {
             NodeID id = AsyncUtil.wfmAsyncSwitch(wfm -> {
-                return wfm.createAndAddNode(m_factory, infoBuilder.build(), m_creationConfig);
+                return wfm.createAndAddNode(m_factory, infoBuilder.build(), null);
             }, wfm -> {
                 // TODO: Currently not supported by the async wmf
                 return wfm.createAndAddNodeAsync(m_factory, infoBuilder.build());

@@ -48,20 +48,11 @@
  */
 package org.knime.workbench.editor2.commands;
 
-import java.util.Collections;
-import java.util.Map;
-
 import org.eclipse.gef.RootEditPart;
-import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeSettings;
 import org.knime.core.node.context.ModifiableNodeCreationConfiguration;
-import org.knime.core.node.workflow.ConnectionContainer;
-import org.knime.core.node.workflow.NativeNodeContainer;
-import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.workbench.editor2.BisectAndReplaceAssistant;
+import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
+import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
@@ -69,17 +60,15 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  *
  * @author Mark Ortmann, KNIME GmbH, Berlin, Germany
  */
-public class ReplaceNodePortCommand extends CreateNodeCommand {
+public class ReplaceNodePortCommand extends AbstractKNIMECommand {
 
     private final ModifiableNodeCreationConfiguration m_unmodifiedlConfig;
 
-    private final NodeContainerEditPart m_nodeToReplace;
+    private ModifiableNodeCreationConfiguration m_modifiedConfig;
+
+    private final NodeID m_affectedNodeID;
 
     private final RootEditPart m_root;
-
-    private final DeleteCommand m_delete;
-
-    private final ReplacePortConnectionHelper m_replaceHelper;
 
     /**
      * Constructor.
@@ -89,56 +78,22 @@ public class ReplaceNodePortCommand extends CreateNodeCommand {
      */
     public ReplaceNodePortCommand(final NodeContainerEditPart nodeToReplace,
         final ModifiableNodeCreationConfiguration modifiedConfig) {
-        super(nodeToReplace, modifiedConfig);
-        m_nodeToReplace = nodeToReplace;
-        m_unmodifiedlConfig = Wrapper.unwrap(m_nodeToReplace.getNodeContainer(), NativeNodeContainer.class).getNode()
-            .getCopyOfCreationConfig().get();
-        m_root = m_nodeToReplace.getRoot();
-        m_delete = new DeleteCommand(Collections.singleton(m_nodeToReplace), getHostWFM());
-        m_replaceHelper =
-            new ReplacePortConnectionHelper(getHostWFM(), Wrapper.unwrapNC(m_nodeToReplace.getNodeContainer()));
+        super(nodeToReplace.getWorkflowManager());
+        NodeContainerUI nc = nodeToReplace.getNodeContainer();
+        m_affectedNodeID = nc.getID();
+        m_modifiedConfig = modifiedConfig;
+        m_unmodifiedlConfig = ((NativeNodeContainerUI)nc).getCopyOfCreationConfig().get();
+        m_root = nodeToReplace.getRoot();
     }
 
     @Override
     public boolean canExecute() {
-        // TODO as discussed with Mark, this design of consulting replaceability in the canExecute() phase
-        //          of a command is not great. The BisectAndReplaceAssistant check below replaces a previous
-        //          call to m_replaceHelper.replaceNode() due to the changes made for AP-11772
-        final BisectAndReplaceAssistant.Result canAlterNode
-                = BisectAndReplaceAssistant.canAffectNode(getHostWFM(), m_replaceHelper.getOldNode(), false);
-        return BisectAndReplaceAssistant.Result.OK.equals(canAlterNode) && super.canExecute() && m_delete.canExecute();
+        return getHostWFM().canReplaceNode(m_affectedNodeID);
     }
 
     @Override
     public void execute() {
-        // store the node's settings
-        final NodeSettings settings = new NodeSettings("node settings");
-        try {
-            getHostWFM().saveNodeSettings(m_nodeToReplace.getNodeContainer().getID(), settings);
-        } catch (InvalidSettingsException e) {
-            // no valid settings available, skip
-        }
-        // delete the old node and create the new one
-        m_delete.execute();
-        super.execute();
-
-        // load the previously stored settings
-        final NodeContainer newNode = Wrapper.unwrapNC(m_container);
-        try {
-            getHostWFM().loadNodeSettings(newNode.getID(), settings);
-        } catch (InvalidSettingsException e) {
-            // ignore
-        }
-
-        // copy the node's annotation
-        m_container.getNodeAnnotation().copyFrom(m_nodeToReplace.getNodeContainer().getNodeAnnotation().getData(),
-            true);
-
-        // move the node to the position of the deleted node and re-wire inputs and output
-        m_replaceHelper.setConnectionUIInfoMap(m_delete.getConnectionUIInfo());
-        m_replaceHelper.reconnect(newNode,
-            m_unmodifiedlConfig.getPortConfig().get().mapInputPorts(getCreationConfig().getPortConfig().get()),
-            m_unmodifiedlConfig.getPortConfig().get().mapOutputPorts(getCreationConfig().getPortConfig().get()));
+        getHostWFM().replaceNode(m_affectedNodeID, m_modifiedConfig);
 
         // the connections are not always properly re-drawn after "unmark". (Eclipse bug.) Repaint here.
         m_root.refresh();
@@ -146,52 +101,12 @@ public class ReplaceNodePortCommand extends CreateNodeCommand {
 
     @Override
     public boolean canUndo() {
-        return super.canUndo() && m_delete.canUndo();
+        return getHostWFM().canReplaceNode(m_affectedNodeID);
     }
 
     @Override
     public void undo() {
-        super.undo();
-        m_delete.undo();
-    }
-
-    private static class ReplacePortConnectionHelper extends ReplaceHelper {
-
-        /**
-         * Constructor.
-         *
-         * @param wfm the workflow manager
-         * @param oldNode the node which was replaced
-         */
-        ReplacePortConnectionHelper(final WorkflowManager wfm, final NodeContainer oldNode) {
-            super(wfm, oldNode);
-        }
-
-        void reconnect(final NodeContainer container, final Map<Integer, Integer> inputPortMapping,
-            final Map<Integer, Integer> outputPortMapping) {
-            setUIInformation(container);
-            // set incoming connections
-            final NodeID newId = container.getID();
-            for (final ConnectionContainer c : m_incomingConnections) {
-                if (m_wfm.canAddConnection(c.getSource(), c.getSourcePort(), newId,
-                    inputPortMapping.get(c.getDestPort()))) {
-                    final ConnectionContainer cc = m_wfm.addConnection(c.getSource(), c.getSourcePort(), newId,
-                        inputPortMapping.get(c.getDestPort()));
-                    setConnectionUIInfo(c, cc);
-                }
-            }
-
-            // set outgoing connections
-            for (final ConnectionContainer c : m_outgoingConnections) {
-                if (m_wfm.canAddConnection(newId, outputPortMapping.get(c.getSourcePort()), c.getDest(),
-                    c.getDestPort())) {
-                    final ConnectionContainer cc = m_wfm.addConnection(newId, outputPortMapping.get(c.getSourcePort()),
-                        c.getDest(), c.getDestPort());
-                    setConnectionUIInfo(c, cc);
-                }
-            }
-        }
-
+        getHostWFM().replaceNode(m_affectedNodeID, m_unmodifiedlConfig);
     }
 
 }
