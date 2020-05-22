@@ -53,7 +53,10 @@ import org.knime.core.node.context.ModifiableNodeCreationConfiguration;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
+import org.knime.core.ui.node.workflow.WorkflowManagerUI;
+import org.knime.core.ui.node.workflow.async.OperationNotAllowedException;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.ui.async.AsyncUtil;
 
 /**
  * Command that adds, removes, or exchanges ports of a native node.
@@ -88,25 +91,40 @@ public class ReplaceNodePortCommand extends AbstractKNIMECommand {
 
     @Override
     public boolean canExecute() {
-        return getHostWFM().canReplaceNode(m_affectedNodeID);
+        return getHostWFMUI().canReplaceNode(m_affectedNodeID);
     }
 
     @Override
     public void execute() {
-        getHostWFM().replaceNode(m_affectedNodeID, m_modifiedConfig);
-
+        replaceNodeInternal(getHostWFMUI(), m_affectedNodeID, m_modifiedConfig);
         // the connections are not always properly re-drawn after "unmark". (Eclipse bug.) Repaint here.
         m_root.refresh();
     }
 
+    private static void replaceNodeInternal(final WorkflowManagerUI hostWFM, final NodeID id,
+        final ModifiableNodeCreationConfiguration config) {
+        try {
+            AsyncUtil.wfmAsyncSwitchRethrow(wfm -> {
+                wfm.replaceNode(id, config);
+                return null;
+            }, wfm -> {
+                return wfm.replaceNodeAsync(id, config);
+            }, hostWFM, "Replacing node ports");
+        } catch (OperationNotAllowedException e) {
+            openDialog("Node couldn't be replaced", e.getMessage());
+        }
+    }
+
     @Override
     public boolean canUndo() {
-        return getHostWFM().canReplaceNode(m_affectedNodeID);
+        return getHostWFMUI().canReplaceNode(m_affectedNodeID);
     }
 
     @Override
     public void undo() {
-        getHostWFM().replaceNode(m_affectedNodeID, m_unmodifiedlConfig);
+        replaceNodeInternal(getHostWFMUI(), m_affectedNodeID, m_unmodifiedlConfig);
+        // the connections are not always properly re-drawn after "unmark". (Eclipse bug.) Repaint here.
+        m_root.refresh();
     }
 
 }

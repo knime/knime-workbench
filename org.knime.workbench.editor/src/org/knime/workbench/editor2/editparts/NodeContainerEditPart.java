@@ -946,7 +946,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
 
     private static void postApplyDialogAction(final NodeDialogPane dialogPane, final NodeContainerUI nc,
         final NodeContainerEditPart editPart) {
-        if (dialogPane instanceof ConfigurableNodeDialog && wraps(nc, NativeNodeContainer.class)) {
+        if (dialogPane instanceof ConfigurableNodeDialog && nc instanceof NativeNodeContainerUI) {
             Optional<ModifiableNodeCreationConfiguration> newNodeCreationConfiguration =
                 ((ConfigurableNodeDialog)dialogPane).getNewNodeCreationConfiguration();
             if (newNodeCreationConfiguration.isPresent()) {
@@ -1198,9 +1198,8 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
 
     private void checkModifiablePortIcon() {
         if (getNodeContainer() instanceof NativeNodeContainerUI) {
-            Optional<NativeNodeContainer> nnc = Wrapper.unwrapOptional(getNodeContainer(), NativeNodeContainer.class);
-            if (nnc.isPresent() && nnc.get().getNode().getCopyOfCreationConfig()
-                .map(ncc -> ncc.getPortConfig().isPresent()).orElse(false)) {
+            NativeNodeContainerUI nnc = (NativeNodeContainerUI)getNodeContainer();
+            if (nnc.getCopyOfCreationConfig().map(ncc -> ncc.getPortConfig().isPresent()).orElse(false)) {
                 NodeContainerFigure fig = (NodeContainerFigure)getFigure();
                 fig.setModifiablePortIcon(this);
             }

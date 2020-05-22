@@ -55,12 +55,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.eclipse.jface.action.Action;
-import org.knime.core.node.Node;
 import org.knime.core.node.context.ModifiableNodeCreationConfiguration;
 import org.knime.core.node.context.ports.ModifiablePortsConfiguration;
-import org.knime.core.node.workflow.NativeNodeContainer;
-import org.knime.core.ui.node.workflow.NodeContainerUI;
-import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
@@ -82,9 +79,9 @@ public class PortActionCreator {
      */
     public PortActionCreator(final NodeContainerEditPart editPart) {
         m_editPart = editPart;
-        if (Wrapper.wraps(editPart.getModel(), NativeNodeContainer.class)) {
-            final Node node = Wrapper.unwrap((NodeContainerUI)editPart.getModel(), NativeNodeContainer.class).getNode();
-            final Optional<ModifiableNodeCreationConfiguration> creationConfig = node.getCopyOfCreationConfig();
+        if (editPart.getModel() instanceof NativeNodeContainerUI) {
+            final NativeNodeContainerUI nnc = (NativeNodeContainerUI)editPart.getModel();
+            final Optional<ModifiableNodeCreationConfiguration> creationConfig = nnc.getCopyOfCreationConfig();
             if (creationConfig.isPresent() && creationConfig.get().getPortConfig().isPresent()) {
                 m_creationConfig = creationConfig.get();
             } else {
