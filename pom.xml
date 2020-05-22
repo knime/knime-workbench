@@ -96,8 +96,6 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<plugin id="org.apache.batik.dom.svg.clfix" />
-						<plugin id="org.apache.batik.dom.clfix" />
 						<plugin id="org.knime.workbench" />
 					</excludes>
 				</configuration>
