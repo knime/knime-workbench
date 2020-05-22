@@ -45,6 +45,7 @@
  */
 package org.knime.workbench.editor2.figures;
 
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -90,11 +91,13 @@ public class ProgressPolylineConnection extends PolylineConnection {
      * @see #setHighlighted(boolean, boolean)
      */
     public static void setHighlightColor(final RGB rgb) {
-        if (PREFERENCE_HIGHLIGHTED_COLOR != null) {
-            PREFERENCE_HIGHLIGHTED_COLOR.dispose();
+        Color oldColor = PREFERENCE_HIGHLIGHTED_COLOR;
+        if (oldColor == null || !Objects.equals(rgb, oldColor.getRGB())) {
+            PREFERENCE_HIGHLIGHTED_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), rgb);
+            if (oldColor != null) {
+                oldColor.dispose();
+            }
         }
-
-        PREFERENCE_HIGHLIGHTED_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), rgb);
     }
 
     /**
@@ -105,11 +108,13 @@ public class ProgressPolylineConnection extends PolylineConnection {
      * @see #setHighlighted(boolean, boolean)
      */
     public static void setFlowVariableHighlightColor(final RGB rgb) {
-        if (PREFERENCE_FLOW_HIGHLIGHTED_COLOR != null) {
-            PREFERENCE_FLOW_HIGHLIGHTED_COLOR.dispose();
+        Color oldColor = PREFERENCE_FLOW_HIGHLIGHTED_COLOR;
+        if (oldColor == null || !Objects.equals(rgb, oldColor.getRGB())) {
+            PREFERENCE_FLOW_HIGHLIGHTED_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), rgb);
+            if (oldColor != null) {
+                oldColor.dispose();
+            }
         }
-
-        PREFERENCE_FLOW_HIGHLIGHTED_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), rgb);
     }
 
 
