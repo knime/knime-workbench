@@ -58,6 +58,7 @@ import org.eclipse.jface.action.Action;
 import org.knime.core.node.context.ModifiableNodeCreationConfiguration;
 import org.knime.core.node.context.ports.ModifiablePortsConfiguration;
 import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
+import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
@@ -71,6 +72,8 @@ public class PortActionCreator {
 
     private final ModifiableNodeCreationConfiguration m_creationConfig;
 
+    private final NotSupportedPortAction m_notSupportedPortAction;
+
     /**
      * Constructor.
      *
@@ -81,15 +84,24 @@ public class PortActionCreator {
         m_editPart = editPart;
         if (editPart.getModel() instanceof NativeNodeContainerUI) {
             final NativeNodeContainerUI nnc = (NativeNodeContainerUI)editPart.getModel();
-            final Optional<ModifiableNodeCreationConfiguration> creationConfig = nnc.getCopyOfCreationConfig();
+            Optional<ModifiableNodeCreationConfiguration> creationConfig = null;
+            try {
+                 creationConfig = nnc.getCopyOfCreationConfig();
+            } catch (UnsupportedOperationException e) {
+                m_notSupportedPortAction = new NotSupportedPortAction(editPart, e.getMessage());
+                m_creationConfig = null;
+                return;
+            }
             if (creationConfig.isPresent() && creationConfig.get().getPortConfig().isPresent()) {
                 m_creationConfig = creationConfig.get();
             } else {
                 m_creationConfig = null;
             }
+
         } else {
             m_creationConfig = null;
         }
+        m_notSupportedPortAction = null;
     }
 
     /**
@@ -155,6 +167,15 @@ public class PortActionCreator {
                         requiresPrefix ? "Exchange " + grpName + " port" : grpName))//
                     .collect(Collectors.toList());
             }).orElse(Collections.emptyList());
+    }
+
+    /**
+     * @return an non-empty optional if port actions should be available but are not supported by the given
+     *         {@link NodeContainerUI}-implementation (e.g. because the AP is connected to a older server that doesn't
+     *         support dynamic ports)
+     */
+    public Optional<NotSupportedPortAction> getNotSupportedAction() {
+        return Optional.ofNullable(m_notSupportedPortAction);
     }
 
 }

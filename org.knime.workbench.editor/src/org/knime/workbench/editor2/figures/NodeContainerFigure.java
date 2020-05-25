@@ -45,6 +45,7 @@
  */
 package org.knime.workbench.editor2.figures;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -1428,6 +1429,8 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                 addActions(popUpMenu, portCreator.getAddPortActions(), "Add ports");
                 addActions(popUpMenu, portCreator.getRemovePortActions(), "Remove ports");
                 addActions(popUpMenu, portCreator.getExchangePortActions(), "Exchange ports");
+            } else if (portCreator.getNotSupportedAction().isPresent()) {
+                addActions(popUpMenu, Arrays.asList(portCreator.getNotSupportedAction().get()), "");
             }
         }
 
