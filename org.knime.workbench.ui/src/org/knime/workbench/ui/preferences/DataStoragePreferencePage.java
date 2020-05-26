@@ -47,52 +47,76 @@
  */
 package org.knime.workbench.ui.preferences;
 
+import java.util.Objects;
+
 import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.RadioGroupFieldEditor;
+import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
+import org.knime.core.data.container.BufferedRowContainerFactory;
+import org.knime.core.data.container.RowContainerFactoryRegistry;
 import org.knime.core.data.container.storage.TableStoreFormatRegistry;
 import org.osgi.framework.FrameworkUtil;
 
 /**
- * (Parent) Preference page to select data store settings such as persistence format (old style KNIME vs. column store).
+ * (Parent) Preference page to select table backend settings such as persistence format (old style KNIME + column store
+ * vs pure column store).
  *
  * @author Bernd Wiswedel, KNIME AG, Zurich, Switzerland
+ * @author Christian Dietz, KNIME GmbH, Konstanz, Germany
  */
-public class DataStoragePreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage,
-    IPreferenceChangeListener {
+public class DataStoragePreferencePage extends FieldEditorPreferencePage
+    implements IWorkbenchPreferencePage, IPreferenceChangeListener {
 
     /** The name of "org.knime.core". */
     private static final String CORE_BUNDLE_SYMBOLIC_NAME =
-            FrameworkUtil.getBundle(TableStoreFormatRegistry.class).getSymbolicName();
+        FrameworkUtil.getBundle(TableStoreFormatRegistry.class).getSymbolicName();
 
     static final ScopedPreferenceStore CORE_STORE =
-            new ScopedPreferenceStore(InstanceScope.INSTANCE, CORE_BUNDLE_SYMBOLIC_NAME);
+        new ScopedPreferenceStore(InstanceScope.INSTANCE, CORE_BUNDLE_SYMBOLIC_NAME);
 
-    private RadioGroupFieldEditor m_editor;
+    private RadioGroupFieldEditor m_rowContainerFactoryEditor;
+
+    private RadioGroupFieldEditor m_tableStoreFormatEditor;
 
     /**
      * Creates a new preference page.
      */
     public DataStoragePreferencePage() {
         super(GRID);
-        setDescription("Select the format used to store data. This applies to temporary data and final "
-            + "table results that are persisted as part of an executed workflow.");
+        setDescription("Select the table store backend and table store format (in case of default backend) used to "
+            + "store data. This applies to temporary data and final table results that are persisted as part of an "
+            + "executed workflow.\n"
+            + "Additional options become available once the corresponding extensions are installed.");
     }
 
     @Override
     protected void createFieldEditors() {
+        String[][] rowContainerFactoryLabelsAndText =
+            RowContainerFactoryRegistry.getInstance().getRowContainerFactories().stream()
+                .map(f -> new String[]{f.getName(), f.getClass().getName()}).toArray(String[][]::new);
+        m_rowContainerFactoryEditor =
+            new RadioGroupFieldEditor(RowContainerFactoryRegistry.PREF_KEY_ROWCONTAINER_FACTORY, "KNIME Table Backend",
+                1, rowContainerFactoryLabelsAndText, getFieldEditorParent());
+        addField(m_rowContainerFactoryEditor);
+
         // maps the table store format human readable name to the fully qualified class name
-        String[][] labelsAndText = TableStoreFormatRegistry.getInstance().getTableStoreFormats().stream()
-                .map(f -> new String[] {f.getName(), f.getClass().getName()}).toArray(String[][]::new);
-        m_editor = new RadioGroupFieldEditor(TableStoreFormatRegistry.PREF_KEY_STORAGE_FORMAT,
-            "KNIME Table Storage Format", 1, labelsAndText, getFieldEditorParent());
-        addField(m_editor);
+        String[][] tableStoreFormatLabelsAndText = TableStoreFormatRegistry.getInstance().getTableStoreFormats()
+            .stream().map(f -> new String[]{f.getName(), f.getClass().getName()}).toArray(String[][]::new);
+        m_tableStoreFormatEditor = new RadioGroupFieldEditor(TableStoreFormatRegistry.PREF_KEY_STORAGE_FORMAT,
+            "KNIME Table Storage Format", 1, tableStoreFormatLabelsAndText, getFieldEditorParent());
+        addField(m_tableStoreFormatEditor);
+
+        // NB: in case default value changes at some point, we have to change this behaviour here again.
+        RowContainerFactoryRegistry.getInstance().getInstanceRowContainerFactory();
+        checkEnablementOfTableStoreFormatEditor(
+            RowContainerFactoryRegistry.getInstance().getInstanceRowContainerFactory().getClass().getName());
 
         DefaultScope.INSTANCE.getNode(CORE_BUNDLE_SYMBOLIC_NAME).addPreferenceChangeListener(this);
     }
@@ -100,6 +124,7 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage impleme
     @Override
     public void init(final IWorkbench workbench) {
         setPreferenceStore(CORE_STORE);
+
     }
 
     @Override
@@ -107,14 +132,39 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage impleme
         DefaultScope.INSTANCE.getNode(CORE_BUNDLE_SYMBOLIC_NAME).removePreferenceChangeListener(this);
     }
 
+    /**
+     * The field editor preference page implementation of this <code>IPreferencePage</code> (and
+     * <code>IPropertyChangeListener</code>) method intercepts <code>IS_VALID</code> events but passes other events on
+     * to its superclass.
+     */
+    @Override
+    public void propertyChange(final PropertyChangeEvent event) {
+        super.propertyChange(event);
+        if (event.getSource() == m_rowContainerFactoryEditor) {
+            m_tableStoreFormatEditor.setEnabled(event.getNewValue().equals(BufferedRowContainerFactory.class.getName()),
+                getFieldEditorParent());
+        }
+    }
+
     @Override
     public void preferenceChange(final PreferenceChangeEvent event) {
         // The default preferences may change while this page is open (e.g. by an action on other preference page, e.g.
-        // Novartis). If this editor is showing only default preference it will not upated its contents with the new
+        // Novartis). If this editor is showing only default preference it will not updated its contents with the new
         // default preference and then store the old default preference as user settings once the preference dialog is
         // closed with OK. This listener updates the components when the default preferences change.
         if (TableStoreFormatRegistry.PREF_KEY_STORAGE_FORMAT.equals(event.getKey())) {
-            m_editor.load();
+            m_tableStoreFormatEditor.load();
         }
+
+        if (RowContainerFactoryRegistry.PREF_KEY_ROWCONTAINER_FACTORY.equals(event.getKey())) {
+            m_rowContainerFactoryEditor.load();
+            checkEnablementOfTableStoreFormatEditor(event.getNewValue());
+        }
+    }
+
+    private void checkEnablementOfTableStoreFormatEditor(final Object selectedTableStoreFormat) {
+        m_tableStoreFormatEditor.setEnabled(
+            Objects.equals(selectedTableStoreFormat, BufferedRowContainerFactory.class.getName()),
+            getFieldEditorParent());
     }
 }
