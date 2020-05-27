@@ -176,15 +176,21 @@ public interface PreferenceConstants {
     /** Preference constant for enabling/disabling the auto-refresh for the remote workflow editor */
     public static final String P_REMOTE_WORKFLOW_EDITOR_AUTO_REFRESH = "knime.remoteworkfloweditor.autorefresh.enable";
     /** Preference constant for the auto-workflow-refresh interval in milliseconds */
-    public static final String P_REMOTE_WORKFLOW_EDITOR_AUTO_REFRESH_INTERVAL_MS = "knime.remoteworkfloweditor.autorefresh.interval";
+    public static final String P_REMOTE_WORKFLOW_EDITOR_AUTO_REFRESH_INTERVAL_MS =
+        "knime.remoteworkfloweditor.autorefresh.interval";
     /** Preference constant for the enabling/disabling remote workflow edits. */
     public static final String P_REMOTE_WORKFLOW_EDITOR_EDITS_DISABLED = "knime.remoteworkfloweditor.edits.disabled";
+    /** Preference constant for the size of chunks retrieved when lazily loading data for a node's table view */
+    public static final String P_REMOTE_WORKFLOW_EDITOR_TABLE_VIEW_CHUNK_SIZE =
+        "knime.remoteworkfloweditor.edits.tableviewchunksize";
     /** Default whether auto-refresh is enabled */
     public static final boolean P_DEFAULT_REMOTE_WORKFLOW_EDITOR_AUTO_REFRESH = true;
     /** Default milliseconds the auto-refresh interval for workflows */
     public static final long P_DEFAULT_REMOTE_WORKFLOW_EDITOR_AUTO_REFRESH_INTERVAL_MS = 1000;
     /** Default whether remote workflow edits are enabled */
     public static final boolean P_DEFAULT_REMOTE_WORKFLOW_EDITOR_EDITS_DISABLED = false;
+    /** Default remote table view chunk size */
+    public static final int P_DEFAULT_REMOTE_WORKFLOW_EDITOR_TABLE_VIEW_CHUNK_SIZE = 100;
 
     /** Preference constant for the comma delimited list of zoom levels */
     public static final String P_EDITOR_ZOOM_LEVELS = "knime.zoom.levels";

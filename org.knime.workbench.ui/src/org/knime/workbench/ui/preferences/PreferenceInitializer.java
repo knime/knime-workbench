@@ -132,6 +132,8 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
             PreferenceConstants.P_DEFAULT_REMOTE_WORKFLOW_EDITOR_AUTO_REFRESH_INTERVAL_MS);
         store.setDefault(PreferenceConstants.P_REMOTE_WORKFLOW_EDITOR_EDITS_DISABLED,
             PreferenceConstants.P_DEFAULT_REMOTE_WORKFLOW_EDITOR_EDITS_DISABLED);
+        store.setDefault(PreferenceConstants.P_REMOTE_WORKFLOW_EDITOR_TABLE_VIEW_CHUNK_SIZE,
+            PreferenceConstants.P_DEFAULT_REMOTE_WORKFLOW_EDITOR_TABLE_VIEW_CHUNK_SIZE);
 
         store.setDefault(PreferenceConstants.P_EDITOR_ZOOM_LEVELS, PreferenceConstants.P_DEFAULT_EDITOR_ZOOM_LEVELS);
         store.setDefault(PreferenceConstants.P_EDITOR_ZOOM_MODIFIED_DELTA,
