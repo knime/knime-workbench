@@ -2,8 +2,10 @@
 <site>
    <feature id="org.knime.features.workbench" version="0.0.0"/>
    <feature id="org.knime.features.explorer.view" version="0.0.0"/>
+   <feature id="org.knime.features.workbench.cef" version="0.0.0"/>
    <feature id="org.knime.features.workbench.source" version="0.0.0"/>
    <feature id="org.knime.features.explorer.view.source" version="0.0.0"/>
+   <feature id="org.knime.features.workbench.cef.source" version="0.0.0"/>
 
    <category-def name="knime-workbench" label="Build artifacts from knime-workbench">
        <description>Build artifacts from knime-workbench</description>

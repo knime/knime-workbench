@@ -49,6 +49,7 @@ package org.knime.workbench.editor2;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.io.File;
+import java.util.function.Function;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.swt.SWT;
@@ -95,7 +96,7 @@ import org.knime.workbench.editor2.ElementRadioSelectionDialog.RadioItem;
  * @param <VAL>
  * @since 2.9
  */
-public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
+public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
         REP extends WebViewContent, VAL extends WebViewContent>
         extends AbstractWizardNodeView<T, REP, VAL> {
 
@@ -103,11 +104,11 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
 
     private Shell m_shell;
 
-    private Browser m_browser;
-    private BrowserFunction m_viewRequestCallback;
-    private BrowserFunction m_updateRequestStatusCallback;
-    private BrowserFunction m_cancelRequestCallback;
-    private BrowserFunction m_isPushSupportedCallback;
+    private BrowserWrapper m_browserWrapper;
+    private BrowserFunctionInternal m_viewRequestCallback;
+    private BrowserFunctionInternal m_updateRequestStatusCallback;
+    private BrowserFunctionInternal m_cancelRequestCallback;
+    private BrowserFunctionInternal m_isPushSupportedCallback;
     private boolean m_viewSet = false;
     private boolean m_initialized = false;
     private String m_title;
@@ -135,8 +136,8 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
 
             @Override
             public void run() {
-                if (m_browser != null && !m_browser.isDisposed()) {
-                    synchronized (m_browser) {
+                if (m_browserWrapper != null && !m_browserWrapper.isDisposed()) {
+                    synchronized (m_browserWrapper) {
                         setBrowserURL();
                     }
                 }
@@ -147,8 +148,8 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
     private Display getDisplay() {
         //Display display = new Display();
         Display display = Display.getCurrent();
-        if (display == null && m_browser != null && !m_browser.isDisposed()) {
-            display = m_browser.getDisplay();
+        if (display == null && m_browserWrapper != null && !m_browserWrapper.isDisposed()) {
+            display = m_browserWrapper.getDisplay();
         }
         return display;
     }
@@ -177,9 +178,9 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
         layout.numColumns = 1;
         m_shell.setLayout(layout);
 
-        m_browser = new Browser(m_shell, SWT.NONE);
-        m_browser.setLayoutData(new GridData(GridData.FILL, GridData.FILL, true, true));
-        m_browser.setText(getViewCreator().createMessageHTML("Loading view..."), true);
+        m_browserWrapper = createBrowserWrapper(m_shell);
+        m_browserWrapper.setLayoutData(new GridData(GridData.FILL, GridData.FILL, true, true));
+        m_browserWrapper.setText(getViewCreator().createMessageHTML("Loading view..."), true);
 
         Composite buttonComposite = new Composite(m_shell, SWT.NONE);
         buttonComposite.setLayoutData(new GridData(GridData.END, GridData.END, false, false));
@@ -312,7 +313,7 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
 
             @Override
             public void run() {
-                m_browser.addProgressListener(new ProgressListener() {
+                m_browserWrapper.addProgressListener(new ProgressListener() {
 
                     @Override
                     public void completed(final ProgressEvent event) {
@@ -324,7 +325,7 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
                             initCall = creator.wrapInTryCatch(initCall);
                             //The execute call might fire the completed event again in some browsers!
                             m_initialized = true;
-                            m_browser.execute(initCall);
+                            m_browserWrapper.execute(initCall);
                         }
                     }
 
@@ -334,10 +335,10 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
                     }
                 });
                 setBrowserURL();
-                m_viewRequestCallback = new ViewRequestFunction(m_browser, "knimeViewRequest");
-                m_updateRequestStatusCallback = new UpdateRequestStatusFunction(m_browser, "knimeUpdateRequestStatus");
-                m_cancelRequestCallback = new CancelRequestFunction(m_browser, "knimeCancelRequest");
-                m_isPushSupportedCallback = new PushSupportedFunction(m_browser, "knimePushSupported");
+                m_viewRequestCallback = new ViewRequestFunction(m_browserWrapper, "knimeViewRequest");
+                m_updateRequestStatusCallback = new UpdateRequestStatusFunction(m_browserWrapper, "knimeUpdateRequestStatus");
+                m_cancelRequestCallback = new CancelRequestFunction(m_browserWrapper, "knimeCancelRequest");
+                m_isPushSupportedCallback = new PushSupportedFunction(m_browserWrapper, "knimePushSupported");
             }
         });
 
@@ -376,17 +377,106 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
             m_initialized = false;
             File src = getViewSource();
             if (src != null && src.exists()) {
-                m_browser.setUrl(getViewSource().getAbsolutePath());
+                m_browserWrapper.setUrl("file://" + getViewSource().getAbsolutePath());
                 m_viewSet = true;
             } else {
-                m_browser.setText(getViewCreator().createMessageHTML("No data to display"));
+                m_browserWrapper.setText(getViewCreator().createMessageHTML("No data to display"));
                 m_viewSet = false;
             }
         } catch (Exception e) {
-            m_browser.setText(getViewCreator().createMessageHTML(e.getMessage()));
+            m_browserWrapper.setText(getViewCreator().createMessageHTML(e.getMessage()));
             m_viewSet = false;
             LOGGER.error(e.getMessage(), e);
         }
+    }
+
+    /**
+     * Creates a browser wrapper instance. The browser wrapper is necessary because there is nor
+     * {@link Browser}-interface.
+     *
+     * To be overwritten by subclasses to use another browser implementation.
+     *
+     * @param shell the shell to add the browser widget to
+     * @return the new browser wrapper instance
+     */
+    protected BrowserWrapper createBrowserWrapper(final Shell shell) {
+        final Browser browser = new Browser(shell, SWT.NONE);
+        return new BrowserWrapper() {
+
+            @Override
+            public void execute(final String call) {
+                browser.execute(call);
+            }
+
+            @Override
+            public Display getDisplay() {
+                return browser.getDisplay();
+            }
+
+            @Override
+            public void addProgressListener(final ProgressListener progressListener) {
+                browser.addProgressListener(progressListener);
+            }
+
+            @Override
+            public void setUrl(final String absolutePath) {
+                browser.setUrl(absolutePath);
+            }
+
+            @Override
+            public void setText(final String html) {
+                browser.setText(html);
+            }
+
+            @Override
+            public Shell getShell() {
+                return browser.getShell();
+            }
+
+            @Override
+            public String evaluate(final String evalCode) {
+                return (String)browser.evaluate(evalCode);
+            }
+
+            @Override
+            public boolean isDisposed() {
+                return browser.isDisposed();
+            }
+
+            @Override
+            public void setText(final String html, final boolean trusted) {
+                browser.setText(html, trusted);
+            }
+
+            @Override
+            public void setLayoutData(final GridData gridData) {
+                browser.setLayoutData(gridData);
+            }
+
+            @Override
+            public BrowserFunctionWrapper registerBrowserFunction(final String name,
+                final Function<Object[], Object> func) {
+                final BrowserFunction fct = new BrowserFunction(browser, name) {
+                    @Override
+                    public Object function(final Object[] args) {
+                        return func.apply(args);
+                    }
+                };
+                return new BrowserFunctionWrapper() {
+
+                    @Override
+                    public boolean isDisposed() {
+                        return fct.isDisposed();
+                    }
+
+                    @Override
+                    public void dispose() {
+                        fct.dispose();
+                    }
+                };
+            }
+
+        };
     }
 
     /**
@@ -410,7 +500,7 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
             m_shell.dispose();
         }
         m_shell = null;
-        m_browser = null;
+        m_browserWrapper = null;
         m_viewRequestCallback = null;
         m_updateRequestStatusCallback = null;
         m_cancelRequestCallback = null;
@@ -427,7 +517,7 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
      */
     @Override
     protected boolean showApplyOptionsDialog(final boolean showDiscardOption, final String title, final String message) {
-        ElementRadioSelectionDialog dialog = new ElementRadioSelectionDialog(m_browser.getShell());
+        ElementRadioSelectionDialog dialog = new ElementRadioSelectionDialog(m_browserWrapper.getShell());
         dialog.setTitle(title);
         dialog.setMessage(message);
         dialog.setSize(60, showDiscardOption ? 14 : 11);
@@ -478,7 +568,7 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
         if (validateMethod != null && !validateMethod.isEmpty()) {
             String evalCode = creator
                 .wrapInTryCatch("return JSON.stringify(" + creator.getNamespacePrefix() + validateMethod + "());");
-            String jsonString = (String)m_browser.evaluate(evalCode);
+            String jsonString = m_browserWrapper.evaluate(evalCode);
             valid = Boolean.parseBoolean(jsonString);
         }
         return valid;
@@ -497,7 +587,7 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
         if (ns != null && !ns.isEmpty() && pullMethod != null && !pullMethod.isEmpty()) {
             String evalCode = creator.wrapInTryCatch("if (typeof " + ns.substring(0, ns.length() - 1)
                 + " != 'undefined') { return JSON.stringify(" + ns + pullMethod + "());}");
-            jsonString = (String)m_browser.evaluate(evalCode);
+            jsonString = m_browserWrapper.evaluate(evalCode);
         }
         return jsonString;
     }
@@ -512,7 +602,7 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
         String showErrorMethod = template.getSetValidationErrorMethodName();
         String escapedError = error.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ");
         String showErrorCall = creator.wrapInTryCatch(creator.getNamespacePrefix() + showErrorMethod + "('" + escapedError + "');");
-        m_browser.execute(showErrorCall);
+        m_browserWrapper.execute(showErrorCall);
     }
 
     /**
@@ -533,8 +623,8 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
                 String call = "KnimeInteractivity.respondToViewRequest(JSON.parse('" + response + "'));";
                 WizardViewCreator<REP, VAL> creator = getViewCreator();
                 call = creator.wrapInTryCatch(call);
-                if (m_browser != null && !m_browser.isDisposed()) {
-                    m_browser.execute(call);
+                if (m_browserWrapper != null && !m_browserWrapper.isDisposed()) {
+                    m_browserWrapper.execute(call);
                 }
             }
 
@@ -558,20 +648,20 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
                 String call = "KnimeInteractivity.updateResponseMonitor(JSON.parse('" + monitor + "'));";
                 WizardViewCreator<REP, VAL> creator = getViewCreator();
                 call = creator.wrapInTryCatch(call);
-                if (m_browser != null && !m_browser.isDisposed()) {
-                    m_browser.execute(call);
+                if (m_browserWrapper != null && !m_browserWrapper.isDisposed()) {
+                    m_browserWrapper.execute(call);
                 }
             }
         });
     }
 
-    private class ViewRequestFunction extends BrowserFunction {
+    private class ViewRequestFunction extends BrowserFunctionInternal {
 
         /**
          * @param browser
          * @param name
          */
-        public ViewRequestFunction(final Browser browser, final String name) {
+        public ViewRequestFunction(final BrowserWrapper browser, final String name) {
             super(browser, name);
         }
 
@@ -588,13 +678,13 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
 
     }
 
-    private class UpdateRequestStatusFunction extends BrowserFunction {
+    private class UpdateRequestStatusFunction extends BrowserFunctionInternal {
 
         /**
          * @param browser
          * @param name
          */
-        public UpdateRequestStatusFunction(final Browser browser, final String name) {
+        public UpdateRequestStatusFunction(final BrowserWrapper browser, final String name) {
             super(browser, name);
         }
 
@@ -610,13 +700,13 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
         }
     }
 
-    private class CancelRequestFunction extends BrowserFunction {
+    private class CancelRequestFunction extends BrowserFunctionInternal {
 
         /**
          * @param browser
          * @param name
          */
-        public CancelRequestFunction(final Browser browser, final String name) {
+        public CancelRequestFunction(final BrowserWrapper browser, final String name) {
             super(browser, name);
         }
 
@@ -633,13 +723,13 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
         }
     }
 
-    private class PushSupportedFunction extends BrowserFunction {
+    private class PushSupportedFunction extends BrowserFunctionInternal {
 
         /**
          * @param browser
          * @param name
          */
-        public PushSupportedFunction(final Browser browser, final String name) {
+        public PushSupportedFunction(final BrowserWrapper browser, final String name) {
             super(browser, name);
         }
 
@@ -650,6 +740,65 @@ public final class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>
         public Object function(final Object[] arguments) {
             return isPushEnabled();
         }
+
+    }
+
+    /**
+     * Wrapper to abstract from specific browser implementations.
+     */
+    @SuppressWarnings("javadoc")
+    protected interface BrowserWrapper {
+
+        void execute(String call);
+
+        void setText(String html, boolean b);
+
+        void setLayoutData(GridData gridData);
+
+        Display getDisplay();
+
+        void addProgressListener(ProgressListener progressListener);
+
+        void setUrl(String absolutePath);
+
+        void setText(String html);
+
+        Shell getShell();
+
+        String evaluate(String evalCode);
+
+        boolean isDisposed();
+
+        BrowserFunctionWrapper registerBrowserFunction(String name, Function<Object[], Object> func);
+
+    }
+
+    @SuppressWarnings("javadoc")
+    protected interface BrowserFunctionWrapper {
+
+        boolean isDisposed();
+
+        void dispose();
+
+    }
+
+    private abstract class BrowserFunctionInternal {
+
+        private BrowserFunctionWrapper m_browserFunctionWrapper;
+
+        public BrowserFunctionInternal(final BrowserWrapper browserWrapper, final String name) {
+            m_browserFunctionWrapper = browserWrapper.registerBrowserFunction(name, o -> function(o));
+        }
+
+        public boolean isDisposed() {
+            return m_browserFunctionWrapper.isDisposed();
+        }
+
+        public void dispose() {
+            m_browserFunctionWrapper.dispose();
+        }
+
+        public abstract Object function(final Object[] arguments);
 
     }
 
