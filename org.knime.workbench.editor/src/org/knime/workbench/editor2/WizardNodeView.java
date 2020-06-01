@@ -75,7 +75,6 @@ import org.eclipse.swt.widgets.ToolItem;
 import org.knime.core.node.AbstractNodeView.ViewableModel;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
-import org.knime.core.node.web.WebTemplate;
 import org.knime.core.node.web.WebViewContent;
 import org.knime.core.node.wizard.AbstractWizardNodeView;
 import org.knime.core.node.wizard.WizardNode;
@@ -109,8 +108,12 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
     private BrowserFunctionInternal m_updateRequestStatusCallback;
     private BrowserFunctionInternal m_cancelRequestCallback;
     private BrowserFunctionInternal m_isPushSupportedCallback;
+    private BrowserFunctionInternal m_validateCurrentValueInViewCallback;
+    private BrowserFunctionInternal m_retrieveCurrentValueFromViewCallback;
     private boolean m_viewSet = false;
     private boolean m_initialized = false;
+    private Boolean m_viewValid;
+    private String m_viewValue;
     private String m_title;
 
     /**
@@ -339,6 +342,8 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
                 m_updateRequestStatusCallback = new UpdateRequestStatusFunction(m_browserWrapper, "knimeUpdateRequestStatus");
                 m_cancelRequestCallback = new CancelRequestFunction(m_browserWrapper, "knimeCancelRequest");
                 m_isPushSupportedCallback = new PushSupportedFunction(m_browserWrapper, "knimePushSupported");
+                m_validateCurrentValueInViewCallback = new ValidateCurrentValueInViewFunction(m_browserWrapper, "validateCurrentValueInView");
+                m_retrieveCurrentValueFromViewCallback = new RetrieveCurrentValueFromViewFunction(m_browserWrapper, "retrieveCurrentValueFromView");
             }
         });
 
@@ -496,6 +501,12 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
         if (m_isPushSupportedCallback != null && !m_isPushSupportedCallback.isDisposed()) {
             m_isPushSupportedCallback.dispose();
         }
+        if (m_validateCurrentValueInViewCallback != null && !m_validateCurrentValueInViewCallback.isDisposed()) {
+            m_validateCurrentValueInViewCallback.dispose();
+        }
+        if (m_retrieveCurrentValueFromViewCallback != null && !m_retrieveCurrentValueFromViewCallback.isDisposed()) {
+            m_retrieveCurrentValueFromViewCallback.dispose();
+        }
         if (m_shell != null && !m_shell.isDisposed()) {
             m_shell.dispose();
         }
@@ -505,6 +516,8 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
         m_updateRequestStatusCallback = null;
         m_cancelRequestCallback = null;
         m_isPushSupportedCallback = null;
+        m_validateCurrentValueInViewCallback = null;
+        m_retrieveCurrentValueFromViewCallback = null;
         m_viewSet = false;
         // do instanceof check here to avoid a public discard method in the ViewableModel interface
         if (getViewableModel() instanceof SubnodeViewableModel) {
@@ -561,17 +574,24 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
      */
     @Override
     protected boolean validateCurrentValueInView() {
-        boolean valid = true;
+        Display display = getDisplay();
         WizardViewCreator<REP, VAL> creator = getViewCreator();
-        WebTemplate template = creator.getWebTemplate();
-        String validateMethod = template.getValidateMethodName();
-        if (validateMethod != null && !validateMethod.isEmpty()) {
-            String evalCode = creator
-                .wrapInTryCatch("return JSON.stringify(" + creator.getNamespacePrefix() + validateMethod + "());");
-            String jsonString = m_browserWrapper.evaluate(evalCode);
-            valid = Boolean.parseBoolean(jsonString);
+        String evalCode = creator.wrapInTryCatch("window.KnimePageLoader.validate();");
+        m_browserWrapper.evaluate(evalCode);
+        if (display != null) {
+            while (m_viewValid == null) {
+                if (display.readAndDispatch()) {
+                    display.sleep();
+                }
+            }
+            display.wake();
         }
-        return valid;
+        Boolean localViewValid = m_viewValid;
+        m_viewValid = null;
+        if (!Boolean.TRUE.equals(localViewValid)) {
+            LOGGER.warn("Current view value is invalid");
+        }
+        return localViewValid;
     }
 
     /**
@@ -579,17 +599,24 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
      */
     @Override
     protected String retrieveCurrentValueFromView() {
+        Display display = getDisplay();
         WizardViewCreator<REP, VAL> creator = getViewCreator();
-        WebTemplate template = creator.getWebTemplate();
-        String pullMethod = template.getPullViewContentMethodName();
-        String ns = creator.getNamespacePrefix();
-        String jsonString = null;
-        if (ns != null && !ns.isEmpty() && pullMethod != null && !pullMethod.isEmpty()) {
-            String evalCode = creator.wrapInTryCatch("if (typeof " + ns.substring(0, ns.length() - 1)
-                + " != 'undefined') { return JSON.stringify(" + ns + pullMethod + "());}");
-            jsonString = m_browserWrapper.evaluate(evalCode);
+        String evalCode = creator.wrapInTryCatch("window.KnimePageLoader.getPageValues();");
+        m_browserWrapper.evaluate(evalCode);
+        if (display != null) {
+            while (m_viewValue == null) {
+                if (display.readAndDispatch()) {
+                    display.sleep();
+                }
+            }
+            display.wake();
         }
-        return jsonString;
+        String localValueString = m_viewValue;
+        m_viewValue = null;
+        if (localValueString.equals("{}")) {
+            LOGGER.warn("Unable to retrieve value from view");
+        }
+        return localValueString;
     }
 
     /**
@@ -598,10 +625,9 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
     @Override
     protected void showValidationErrorInView(final String error) {
         WizardViewCreator<REP, VAL> creator = getViewCreator();
-        WebTemplate template = creator.getWebTemplate();
-        String showErrorMethod = template.getSetValidationErrorMethodName();
         String escapedError = error.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ");
-        String showErrorCall = creator.wrapInTryCatch(creator.getNamespacePrefix() + showErrorMethod + "('" + escapedError + "');");
+        String showErrorCall = "window.KnimePageLoader.setValidationError(" + escapedError + ")";
+        showErrorCall = creator.wrapInTryCatch("let response = await " + showErrorCall + ";return response;");
         m_browserWrapper.execute(showErrorCall);
     }
 
@@ -620,7 +646,7 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
             @Override
             public void run() {
                 LOGGER.debug("Sending response: " + response);
-                String call = "KnimeInteractivity.respondToViewRequest(JSON.parse('" + response + "'));";
+                String call = "window.KnimeInteractivity.respondToViewRequest(JSON.parse('" + response + "'));";
                 WizardViewCreator<REP, VAL> creator = getViewCreator();
                 call = creator.wrapInTryCatch(call);
                 if (m_browserWrapper != null && !m_browserWrapper.isDisposed()) {
@@ -645,7 +671,7 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
 
             @Override
             public void run() {
-                String call = "KnimeInteractivity.updateResponseMonitor(JSON.parse('" + monitor + "'));";
+                String call = "window.KnimeInteractivity.updateResponseMonitor(JSON.parse('" + monitor + "'));";
                 WizardViewCreator<REP, VAL> creator = getViewCreator();
                 call = creator.wrapInTryCatch(call);
                 if (m_browserWrapper != null && !m_browserWrapper.isDisposed()) {
@@ -741,6 +767,54 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
             return isPushEnabled();
         }
 
+    }
+
+    private class ValidateCurrentValueInViewFunction extends BrowserFunctionInternal {
+
+        /**
+         * @param browser
+         * @param name
+         */
+        public ValidateCurrentValueInViewFunction(final BrowserWrapper browser, final String name) {
+            super(browser, name);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Object function(final Object[] arguments) {
+            if (arguments == null || arguments.length < 1) {
+                m_viewValid = false;
+                return "{ success: false }";
+            }
+            m_viewValid = Boolean.parseBoolean((String)arguments[0]);
+            return "{ success: true }";
+        }
+    }
+
+    private class RetrieveCurrentValueFromViewFunction extends BrowserFunctionInternal {
+
+        /**
+         * @param browser
+         * @param name
+         */
+        public RetrieveCurrentValueFromViewFunction(final BrowserWrapper browser, final String name) {
+            super(browser, name);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Object function(final Object[] arguments) {
+            if (arguments == null || arguments.length < 1) {
+                m_viewValue = "{}";
+                return "{ success: false }";
+            }
+            m_viewValue = (String)arguments[0];
+            return "{ success: true }";
+        }
     }
 
     /**
