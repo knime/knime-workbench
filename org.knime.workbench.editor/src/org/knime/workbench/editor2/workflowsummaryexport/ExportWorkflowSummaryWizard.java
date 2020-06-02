@@ -61,7 +61,6 @@ import org.eclipse.ui.IWorkbench;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration;
-import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration.SummaryFormat;
 import org.knime.core.util.workflowsummary.WorkflowSummaryGenerator;
 
 /**
@@ -73,25 +72,13 @@ class ExportWorkflowSummaryWizard extends Wizard implements IExportWizard {
 
     private final ExportWorkflowSummaryWizardPage m_page;
 
-    private final SummaryFormat m_format;
-
     private WorkflowManager m_wfm;
 
-    ExportWorkflowSummaryWizard(final SummaryFormat format, final WorkflowManager wfm) {
+    ExportWorkflowSummaryWizard(final WorkflowManager wfm) {
         super();
-        m_format = format;
         m_wfm = wfm;
         setWindowTitle("Export workflow summary");
-        m_page = new ExportWorkflowSummaryWizardPage(format, !wfm.getNodeContainerState().isExecuted());
-        if (format == SummaryFormat.JSON) {
-            m_page.addFileExtensionFilter("*.json", "workflow summary json");
-        } else if (format == SummaryFormat.XML) {
-            m_page.addFileExtensionFilter("*.xml", "workflow summary xml");
-        } else {
-            throw new IllegalStateException(
-                "Unsupported workflow summary format. Most likely an implementation error.");
-        }
-
+        m_page = new ExportWorkflowSummaryWizardPage(!wfm.getNodeContainerState().isExecuted());
     }
 
     /**
@@ -138,8 +125,8 @@ class ExportWorkflowSummaryWizard extends Wizard implements IExportWizard {
 
         // Do the actual export
         try (OutputStream out = new FileOutputStream(new File(fileDestination))) {
-            WorkflowSummaryGenerator.generate(m_wfm, out,
-                WorkflowSummaryConfiguration.builder(m_format).includeExecutionInfo(m_page.includeExecInfo()).build());
+            WorkflowSummaryGenerator.generate(m_wfm, out, WorkflowSummaryConfiguration.builder(m_page.format())
+                .includeExecutionInfo(m_page.includeExecInfo()).build());
             return true;
         } catch (IOException e) {
             String message = "A problem occurred while writing workflow summary: " + e.getMessage();

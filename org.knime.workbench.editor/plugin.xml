@@ -189,17 +189,11 @@
             description="Connect selected nodes"
             id="knime.commands.linknodes"
             name="Connect selected nodes"/>
-      <command
-            defaultHandler="org.knime.workbench.editor2.workflowsummaryexport.ExportWorkflowSummaryHandler"
-            description="Export Workflow Summary (XML)"
-            id="knime.commands.exportworkflowsummaryxml"
-            name="Export Workflow Summary (XML)">
-      </command>
        <command
              defaultHandler="org.knime.workbench.editor2.workflowsummaryexport.ExportWorkflowSummaryHandler"
-             description="Export Workflow Summary (JSON)"
-             id="knime.commands.exportworkflowsummaryjson"
-             name="Export Workflow Summary (JSON)">
+             description="Export Workflow Summary (JSON/XML)"
+             id="knime.commands.exportworkflowsummary"
+             name="Export Workflow Summary (JSON/XML)">
        </command>
     </extension>
     <extension
@@ -813,15 +807,11 @@
         <menu
               icon="icons/knime_export.png"
               id="org.knime.workbench.editor2.menu.exportas"
-              label="Export active Workflow as"
+              label="Export"
               tooltip="Exports the currently active KNIME workflow into another format">
            <command
-                 commandId="knime.commands.exportworkflowsummaryxml"
-                 label="Workflow Summary (XML)...">
-           </command>
-           <command
-                 commandId="knime.commands.exportworkflowsummaryjson"
-                 label="Workflow Summary (JSON)...">
+                 commandId="knime.commands.exportworkflowsummary"
+                 label="Workflow Summary (JSON/XML)...">
            </command>
         </menu>
      </menuContribution>

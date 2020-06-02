@@ -49,14 +49,18 @@
 package org.knime.workbench.editor2.workflowsummaryexport;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration.SummaryFormat;
+import org.knime.workbench.core.util.AbstractImExPage;
 import org.knime.workbench.core.util.ExportToFilePage;
 
 /**
@@ -66,13 +70,22 @@ import org.knime.workbench.core.util.ExportToFilePage;
  */
 class ExportWorkflowSummaryWizardPage extends ExportToFilePage {
 
+    private static String LAST_DEST = null;
+
+    private static SummaryFormat LAST_FORMAT = SummaryFormat.JSON;
+
+    private static boolean LAST_INCLUDE_INFO = false;
+
     private Button m_includeExecInfo;
 
     private boolean m_containsNonExecutedNodes;
 
-    ExportWorkflowSummaryWizardPage(final SummaryFormat format, final boolean containsNonExecutedNodes) {
-        super("Export workflow summary as " + (format == SummaryFormat.XML ? "xml" : "json"),
-            "Please select the destination");
+    private Button m_jsonFormat;
+
+    private Button m_xmlFormat;
+
+    ExportWorkflowSummaryWizardPage(final boolean containsNonExecutedNodes) {
+        super("Export workflow summary as json or xml", "Please select the destination", LAST_DEST);
         m_containsNonExecutedNodes = containsNonExecutedNodes;
     }
 
@@ -84,6 +97,37 @@ class ExportWorkflowSummaryWizardPage extends ExportToFilePage {
         super.createControl(parent);
         Composite container = (Composite)getControl();
 
+        Group format = new Group(container, SWT.NONE);
+        format.setLayout(new RowLayout(SWT.HORIZONTAL));
+        final GridData gridDataFormat = new GridData(GridData.FILL_HORIZONTAL);
+        format.setLayoutData(gridDataFormat);
+        Label formatLabel = new Label(format, SWT.NONE);
+        formatLabel.setText("Export format:");
+        m_jsonFormat = new Button(format, SWT.RADIO);
+        m_jsonFormat.setText("JSON");
+        m_xmlFormat = new Button(format, SWT.RADIO);
+        m_xmlFormat.setText("XML");
+        final AbstractImExPage thisPage = this;
+        m_jsonFormat.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                selectJSONFormat(thisPage);
+            }
+        });
+        m_jsonFormat.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                selectXMLFormat(thisPage);
+            }
+        });
+        if (LAST_FORMAT == SummaryFormat.JSON) {
+            m_jsonFormat.setSelection(true);
+            selectJSONFormat(this);
+        } else {
+            m_xmlFormat.setSelection(true);
+            selectXMLFormat(this);
+        }
+
         final Group group = new Group(container, SWT.NONE);
         group.setLayout(new GridLayout());
         final GridData gridData = new GridData(GridData.FILL_HORIZONTAL);
@@ -91,7 +135,7 @@ class ExportWorkflowSummaryWizardPage extends ExportToFilePage {
         group.setLayoutData(gridData);
 
         m_includeExecInfo = new Button(group, SWT.CHECK);
-        m_includeExecInfo.setSelection(false);
+        m_includeExecInfo.setSelection(LAST_INCLUDE_INFO);
         m_includeExecInfo.setText("Include execution information");
         Label desc = new Label(group, SWT.NONE);
         desc.setText("Execution information comprises:\n" + " KNIME setup with installed plugins;\n"
@@ -103,11 +147,35 @@ class ExportWorkflowSummaryWizardPage extends ExportToFilePage {
                 + "Execution statistics and port summaries won't be available for those.");
             warning.setForeground(Display.getCurrent().getSystemColor(SWT.COLOR_RED));
         }
+    }
 
+    private static void selectJSONFormat(final AbstractImExPage page) {
+        page.clearAllFileExtensionFilter();
+        page.addFileExtensionFilter("*.json", "workflow summary json");
+    }
+
+    private static void selectXMLFormat(final AbstractImExPage page) {
+        page.clearAllFileExtensionFilter();
+        page.addFileExtensionFilter("*.xml", "workflow summary xml");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getFile() {
+        LAST_DEST = super.getFile();
+        return LAST_DEST;
     }
 
     boolean includeExecInfo() {
-        return m_includeExecInfo.getSelection();
+        LAST_INCLUDE_INFO = m_includeExecInfo.getSelection();
+        return LAST_INCLUDE_INFO;
+    }
+
+    SummaryFormat format() {
+        LAST_FORMAT = m_jsonFormat.getSelection() ? SummaryFormat.JSON : SummaryFormat.XML;
+        return LAST_FORMAT;
     }
 
 }

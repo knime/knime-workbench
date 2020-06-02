@@ -64,4 +64,16 @@ public class ExportToFilePage extends AbstractImExPage {
     public ExportToFilePage(final String title, final String description) {
         super(title, description, true);
     }
+
+    /**
+     * Creates a new export page.
+     *
+     * @param title the page's title
+     * @param description the page's description
+     * @param initFile the initially selected file
+     */
+    protected ExportToFilePage(final String title, final String description, final String initFile) {
+        super(title, description, true, initFile);
+    }
+
 }

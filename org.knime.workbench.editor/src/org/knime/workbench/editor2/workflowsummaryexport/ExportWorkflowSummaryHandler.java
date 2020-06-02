@@ -60,7 +60,6 @@ import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration.SummaryFormat;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.editor2.WorkflowEditor;
 
@@ -72,10 +71,6 @@ import org.knime.workbench.editor2.WorkflowEditor;
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 public final class ExportWorkflowSummaryHandler extends AbstractHandler {
-
-    private static final String XML_EXPORT_COMMAND_ID = "knime.commands.exportworkflowsummaryxml";
-
-    private static final String JSON_EXPORT_COMMAND_ID = "knime.commands.exportworkflowsummaryjson";
 
     /**
      * {@inheritDoc}
@@ -98,10 +93,7 @@ public final class ExportWorkflowSummaryHandler extends AbstractHandler {
             return null;
         }
 
-        String commandId = event.getCommand().getId();
-        assert commandId.equals(XML_EXPORT_COMMAND_ID) || commandId.equals(JSON_EXPORT_COMMAND_ID);
-        ExportWorkflowSummaryWizard wizard = new ExportWorkflowSummaryWizard(
-            XML_EXPORT_COMMAND_ID.equals(commandId) ? SummaryFormat.XML : SummaryFormat.JSON, wfm.get());
+        ExportWorkflowSummaryWizard wizard = new ExportWorkflowSummaryWizard(wfm.get());
         WizardDialog dialog = new WizardDialog(workbenchWindow.getShell(), wizard);
         dialog.create();
         dialog.open();

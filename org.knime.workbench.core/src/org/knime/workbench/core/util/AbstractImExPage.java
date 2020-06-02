@@ -82,6 +82,9 @@ public abstract class AbstractImExPage extends WizardPage {
 
     private final boolean m_export;
 
+    private final String m_initFile;
+
+
     /**
      * Creates a new wizard page.
      *
@@ -93,13 +96,27 @@ public abstract class AbstractImExPage extends WizardPage {
      */
     protected AbstractImExPage(final String title, final String description,
             final boolean export) {
-        super("wizardPage", title, export ? ImageRepository
-                .getImageDescriptor(SharedImages.ExportBig) : ImageRepository
-                .getImageDescriptor(SharedImages.ImportBig));
+        this(title, description, export, null);
+    }
+
+    /**
+     * Creates a new wizard page.
+     *
+     * @param title the page's title
+     * @param description the page's description
+     * @param export <code>true</code> if this should be an export page,
+     *            <code>false</code> if it should be an import page
+     * @param initFile an initial file or <code>null</code>
+     */
+    protected AbstractImExPage(final String title, final String description, final boolean export,
+        final String initFile) {
+        super("wizardPage", title, export ? ImageRepository.getImageDescriptor(SharedImages.ExportBig)
+            : ImageRepository.getImageDescriptor(SharedImages.ImportBig));
         setDescription(description);
         m_export = export;
         m_extensions.add("*.*");
         m_extensionDescriptions.add("All files");
+        m_initFile = initFile;
     }
 
     /**
@@ -124,6 +141,9 @@ public abstract class AbstractImExPage extends WizardPage {
         m_fileDestination = new Text(exportGroup, SWT.BORDER | SWT.SINGLE);
         GridData gd = new GridData(GridData.FILL_HORIZONTAL);
         m_fileDestination.setLayoutData(gd);
+        if (m_initFile != null) {
+            m_fileDestination.setText(m_initFile);
+        }
 
         Button selectFileButton = new Button(exportGroup, SWT.PUSH);
         selectFileButton.setText("Select...");
@@ -190,5 +210,13 @@ public abstract class AbstractImExPage extends WizardPage {
             final String description) {
         m_extensions.add(extension);
         m_extensionDescriptions.add(description);
+    }
+
+    /**
+     * Clears all previously set file extension filter.
+     */
+    public void clearAllFileExtensionFilter() {
+        m_extensions.clear();
+        m_extensionDescriptions.clear();
     }
 }
