@@ -811,6 +811,9 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                     page = null;
                 } else {
                     cleanJSONPage(page);
+                    if (!layout.contains("parentLayoutLegacyMode")) {
+                        page.setParentLayoutLegacyMode(true);
+                    }
                     m_jsonDocument = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
                 }
             } catch (IOException e) {
@@ -1255,6 +1258,11 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                 new VisualLayoutEditorJSONNode(nodeContainer.getID().getIndex(), nodeContainer.getName(),
                     nodeContainer.getNodeAnnotation().getText(), getLayout(viewNode.getValue(), viewNode.getKey()),
                     getIcon(nodeContainer), !node.isHideInWizard(), getType(node));
+            if (node instanceof SubNodeContainer) {
+                // set to provide additional info in the Visual Layout Editor
+                boolean isSubNodeContainerUsingLegacyMode = !((SubNodeContainer)node).getLayoutJSONString().contains("\"parentLayoutLegacyMode\":false");
+                jsonNode.setContainerLegacyModeEnabled(isSubNodeContainerUsingLegacyMode);
+            }
             nodes.add(jsonNode);
         }
         return nodes;

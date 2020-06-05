@@ -73,6 +73,18 @@ public class VisualLayoutEditorJSONNode {
     private String m_type;
 
     /**
+     * Subnode layout legacy mode flag designating if the legacy mode flag is
+     * enabled on the subnode container layout or not. This flag does not affect
+     * whether legacy mode is actually used in the subnode container layout; it's
+     * only used to visually identify nested subnodes in the parent layout which
+     * are using the legacy mode flag while viewing the layout in the Visual Layout
+     * Editor.
+     *
+     * @since 4.2
+     */
+    private boolean m_containerLegacyModeEnabled;
+
+    /**
      * @param nodeID node id
      * @param name name of the node
      * @param description custom description of the node
@@ -208,5 +220,21 @@ public class VisualLayoutEditorJSONNode {
      */
     public void setType(final String type) {
         m_type = type;
+    }
+
+    /**
+     * @return containerLegacyModeEnabled
+     * @since 4.2
+     */
+    public boolean getContainerLegacyModeEnabled() {
+        return m_containerLegacyModeEnabled;
+    }
+
+    /**
+     * @param containerLegacyModeEnabled the containerLegacyModeEnabled to set
+     * @since 4.2
+     */
+    public void setContainerLegacyModeEnabled(final boolean containerLegacyModeEnabled) {
+        m_containerLegacyModeEnabled = containerLegacyModeEnabled;
     }
 }
