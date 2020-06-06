@@ -51,8 +51,8 @@ package org.knime.workbench.editor2.commands;
 import org.eclipse.gef.RootEditPart;
 import org.knime.core.node.context.ModifiableNodeCreationConfiguration;
 import org.knime.core.node.workflow.NodeID;
-import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
+import org.knime.core.ui.node.workflow.UndoableUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.async.OperationNotAllowedException;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
@@ -65,13 +65,13 @@ import org.knime.workbench.ui.async.AsyncUtil;
  */
 public class ReplaceNodePortCommand extends AbstractKNIMECommand {
 
-    private final ModifiableNodeCreationConfiguration m_unmodifiedlConfig;
-
     private ModifiableNodeCreationConfiguration m_modifiedConfig;
 
     private final NodeID m_affectedNodeID;
 
     private final RootEditPart m_root;
+
+    private UndoableUI m_undoObject = null;
 
     /**
      * Constructor.
@@ -85,7 +85,6 @@ public class ReplaceNodePortCommand extends AbstractKNIMECommand {
         NodeContainerUI nc = nodeToReplace.getNodeContainer();
         m_affectedNodeID = nc.getID();
         m_modifiedConfig = modifiedConfig;
-        m_unmodifiedlConfig = ((NativeNodeContainerUI)nc).getCopyOfCreationConfig().get();
         m_root = nodeToReplace.getRoot();
     }
 
@@ -96,33 +95,33 @@ public class ReplaceNodePortCommand extends AbstractKNIMECommand {
 
     @Override
     public void execute() {
-        replaceNodeInternal(getHostWFMUI(), m_affectedNodeID, m_modifiedConfig);
+        m_undoObject = replaceNodeInternal(getHostWFMUI(), m_affectedNodeID, m_modifiedConfig);
         // the connections are not always properly re-drawn after "unmark". (Eclipse bug.) Repaint here.
         m_root.refresh();
     }
 
-    private static void replaceNodeInternal(final WorkflowManagerUI hostWFM, final NodeID id,
+    private static UndoableUI replaceNodeInternal(final WorkflowManagerUI hostWFM, final NodeID id,
         final ModifiableNodeCreationConfiguration config) {
         try {
-            AsyncUtil.wfmAsyncSwitchRethrow(wfm -> {
-                wfm.replaceNode(id, config);
-                return null;
+            return AsyncUtil.wfmAsyncSwitchRethrow(wfm -> {
+                return wfm.replaceNode(id, config);
             }, wfm -> {
                 return wfm.replaceNodeAsync(id, config);
             }, hostWFM, "Replacing node ports");
         } catch (OperationNotAllowedException e) {
             openDialog("Node couldn't be replaced", e.getMessage());
+            return null;
         }
     }
 
     @Override
     public boolean canUndo() {
-        return getHostWFMUI().canReplaceNode(m_affectedNodeID);
+        return m_undoObject != null && m_undoObject.canUndo();
     }
 
     @Override
     public void undo() {
-        replaceNodeInternal(getHostWFMUI(), m_affectedNodeID, m_unmodifiedlConfig);
+        m_undoObject.undo();
         // the connections are not always properly re-drawn after "unmark". (Eclipse bug.) Repaint here.
         m_root.refresh();
     }

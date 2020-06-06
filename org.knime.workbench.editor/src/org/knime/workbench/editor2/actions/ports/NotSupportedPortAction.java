@@ -63,7 +63,7 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  */
 public class NotSupportedPortAction extends AbstractNativeNodePortAction {
 
-    private String m_message;
+    private final String m_message;
 
     /**
      * @param editPart
