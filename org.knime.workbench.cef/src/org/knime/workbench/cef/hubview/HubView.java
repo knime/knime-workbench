@@ -50,8 +50,17 @@ package org.knime.workbench.cef.hubview;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.chromium.Browser;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.program.Program;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.ToolBar;
+import org.eclipse.swt.widgets.ToolItem;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
+import org.knime.workbench.core.util.ImageRepository;
 
 /**
  * As part of https://knime-com.atlassian.net/browse/AP-13382 we have this view as sanity check to make sure
@@ -59,17 +68,87 @@ import org.eclipse.ui.part.ViewPart;
  *  of knime-sdk-setup (which cites the appropriate p2 sites in the KNIME-AP-complete-internal target.
  *
  * @author loki der quaeler
+ * @author Emiliano Recofsky (Equo)
  */
 public class HubView extends ViewPart {
+
     private Browser m_browser;
+
+    private static final String PLUGIN_ID = "org.knime.workbench.cef";
+
+    private static final String HOME_URL = "https://hub.knime.com/";
+
+    /**
+     * The fill color for the header bar
+     */
+    public static final Color GENERAL_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 240, 240, 242);
 
     /**
      * {@inheritDoc}
      */
     @Override
     public void createPartControl(final Composite parent) {
+        createButtons(parent);
         m_browser = new Browser(parent, SWT.NONE);
-        m_browser.setUrl("https://hub.knime.com/");
+        m_browser.setUrl(HOME_URL);
+        m_browser.setLayoutData(new GridData(GridData.FILL_BOTH));
+    }
+
+    /**
+     *
+     * @param parent
+     */
+    public void createButtons(final Composite parent) {
+        GridLayout layout = new GridLayout();
+        layout.marginHeight = 0;
+        layout.marginWidth = 0;
+        parent.setLayout(layout);
+        Composite compositeNavBar = new Composite(parent, SWT.NONE);
+        compositeNavBar.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        layout = new GridLayout();
+        layout.numColumns = 2;
+        compositeNavBar.setLayout(layout);
+        compositeNavBar.setBackground(GENERAL_FILL_COLOR);
+        ToolBar toolbarBegin = new ToolBar(compositeNavBar,SWT.HORIZONTAL);
+        Image homeIcon = ImageRepository.getImage(PLUGIN_ID, "/icons/ap-hub-home.png");
+        ToolItem homeButton = new ToolItem(toolbarBegin, SWT.PUSH);
+        homeButton.setImage(homeIcon);
+        homeButton.setToolTipText("Home");
+        Image backIcon = ImageRepository.getImage(PLUGIN_ID, "/icons/ap-hub-back.png");
+        ToolItem backButton = new ToolItem(toolbarBegin, SWT.PUSH);
+        backButton.setImage(backIcon);
+        backButton.setToolTipText("Back");
+        Image forwardIcon = ImageRepository.getImage(PLUGIN_ID, "/icons/ap-hub-forward.png");
+        ToolItem forwardButton = new ToolItem(toolbarBegin, SWT.PUSH);
+        forwardButton.setImage(forwardIcon);
+        forwardButton.setToolTipText("Forward");
+        Image refreshIcon = ImageRepository.getImage(PLUGIN_ID, "/icons/ap-hub-reload.png");
+        ToolItem reloadButton = new ToolItem(toolbarBegin, SWT.PUSH);
+        reloadButton.setImage(refreshIcon);
+        reloadButton.setToolTipText("Reload");
+        ToolBar toolbarEnd = new ToolBar(compositeNavBar, SWT.HORIZONTAL);
+        toolbarEnd.setLayoutData(new GridData(GridData.FILL_HORIZONTAL | GridData.HORIZONTAL_ALIGN_END));
+        Image openIcon = ImageRepository.getImage(PLUGIN_ID, "/icons/ap-hub-open-in-browser.png");
+        ToolItem openButton = new ToolItem(toolbarEnd, SWT.PUSH);
+        openButton.setImage(openIcon);
+        openButton.setToolTipText("Open in browser");
+
+        homeButton.addListener(SWT.Selection, event -> {
+            m_browser.setUrl(HOME_URL);
+        });
+        backButton.addListener(SWT.Selection, event -> {
+            m_browser.back();
+        });
+        forwardButton.addListener(SWT.Selection, event -> {
+            m_browser.forward();
+        });
+        reloadButton.addListener(SWT.Selection, event -> {
+            m_browser.refresh();
+        });
+        openButton.addListener(SWT.Selection, event -> {
+            Program.launch(m_browser.getUrl());
+        });
+
     }
 
     /**
