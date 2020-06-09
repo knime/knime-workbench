@@ -52,8 +52,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
 
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.ui.IExportWizard;
@@ -61,6 +63,7 @@ import org.eclipse.ui.IWorkbench;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration;
+import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration.SummaryFormat;
 import org.knime.core.util.workflowsummary.WorkflowSummaryGenerator;
 
 /**
@@ -124,16 +127,34 @@ class ExportWorkflowSummaryWizard extends Wizard implements IExportWizard {
         }
 
         // Do the actual export
-        try (OutputStream out = new FileOutputStream(new File(fileDestination))) {
-            WorkflowSummaryGenerator.generate(m_wfm, out, WorkflowSummaryConfiguration.builder(m_page.format())
-                .includeExecutionInfo(m_page.includeExecInfo()).build());
-            return true;
-        } catch (IOException e) {
-            String message = "A problem occurred while writing workflow summary: " + e.getMessage();
-            NodeLogger.getLogger(getClass()).error(message, e);
+        final SummaryFormat format = m_page.format();
+        final boolean includeExecInfo = m_page.includeExecInfo();
+        IRunnableWithProgress op = monitor -> {
+            monitor.setTaskName("Generate workflow summary");
+            try (OutputStream out = new FileOutputStream(new File(fileDestination))) {
+                WorkflowSummaryGenerator.generate(m_wfm, out,
+                    WorkflowSummaryConfiguration.builder(format).includeExecutionInfo(includeExecInfo).build());
+            } catch (IOException e) {
+                throw new InvocationTargetException(e);
+            } finally {
+                monitor.done();
+            }
+        };
+        try {
+            getContainer().run(true, false, op);
+        } catch (InterruptedException e) {
+            NodeLogger.getLogger(getClass()).info("Workflow summary export canceled by user.");
+            m_page.setErrorMessage("Workflow summary export was canceled.");
+            return false;
+        } catch (InvocationTargetException e) {
+            Throwable actualException = e.getTargetException();
+            String message = "A problem occurred while writing workflow summary: " + actualException.getMessage();
+            MessageDialog.openError(getShell(), "Error", message);
+            NodeLogger.getLogger(getClass()).error(message, actualException);
             m_page.setErrorMessage(message);
             return false;
         }
+        return true;
     }
 
     /**
