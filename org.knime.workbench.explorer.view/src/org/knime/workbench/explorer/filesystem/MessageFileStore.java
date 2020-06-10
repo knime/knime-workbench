@@ -66,6 +66,22 @@ import org.knime.workbench.core.util.ImageRepository.SharedImages;
 public final class MessageFileStore extends AbstractExplorerFileStore {
     private final String m_msg;
     private final Image m_image;
+    private AbstractExplorerFileStore m_parent = null;
+
+    /**
+     * Creates a new message file store with the specified mount id, message,
+     * and parent.
+     * @param mountID the id of the mount point
+     * @param message the message to display
+     * @param parent the parent file store
+     *
+     * @see AbstractExplorerFileStore#AbstractExplorerFileStore(String, String)
+     * @since 8.6
+     */
+    public MessageFileStore(final String mountID, final String message, final AbstractExplorerFileStore parent) {
+        this(mountID, message);
+        m_parent = parent;
+    }
 
     /**
      * Creates a new message file store with the specified mount id and
@@ -249,7 +265,7 @@ public final class MessageFileStore extends AbstractExplorerFileStore {
      */
     @Override
     public AbstractExplorerFileStore getParent() {
-        return null;
+        return m_parent;
     }
 
     /**
