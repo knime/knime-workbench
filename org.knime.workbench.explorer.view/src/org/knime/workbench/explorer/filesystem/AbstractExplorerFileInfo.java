@@ -80,6 +80,26 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
     public abstract boolean isWorkflowGroup();
 
     /**
+     * Checks whether a file represents a space.
+     *
+     * @return default implementation, always returns false
+     * @since 8.6
+     */
+    public boolean isSpace() {
+        return false;
+    }
+
+    /**
+     * Checks whether a file represents a private space.
+     *
+     * @return default implementation, always returns false
+     * @since 8.6
+     */
+    public boolean isPrivateSpace() {
+        return false;
+    }
+
+    /**
      * Checks whether a file represents a workflow template.
      *
      * @return true if the file is a workflow template, false otherwise
