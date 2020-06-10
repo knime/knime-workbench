@@ -306,8 +306,12 @@ public final class ImageRepository {
         WorkflowHub("icons/server_space/workflow_hub.png"),
         /** ServerSpace Workflow Hub Icon yellow. */
         WorkflowHubYellow("icons/server_space/workflow_hub_yellow.png"),
-        /** Icon for hub spaces */
-        HubSpace("icons/server_space/space.png"),
+        /** Icon for public hub spaces */
+        HubSpace("icons/server_space/public_space.png"),
+        /** Icon for public hub spaces */
+        HubSpacePublic("icons/server_space/public_space.png"),
+        /** Icon for private hub spaces */
+        HubSpacePrivate("icons/server_space/private_space.png"),
 
         /** Configuration icon */
         WorkflowConfiguration("icons/server_space/workflow_configuration.png"),
