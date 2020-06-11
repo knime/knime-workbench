@@ -49,8 +49,8 @@
 package org.knime.workbench.cef.hubview;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.browser.ProgressAdapter;
 import org.eclipse.swt.browser.ProgressEvent;
-import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.chromium.Browser;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
@@ -85,17 +85,14 @@ public class HubView extends ViewPart {
     public static final Color GENERAL_FILL_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 240, 240, 242);
 
     private Browser m_browser;
-    private ToolItem backButton;
-    private ToolItem forwardButton;
+    private ToolItem m_backButton;
+    private ToolItem m_forwardButton;
 
-    final ProgressListener browserProgressListener = new ProgressListener() {
-        @Override
-        public void changed(final ProgressEvent event) {
-        }
+    final ProgressAdapter browserProgressListener = new ProgressAdapter () {
         @Override
         public void completed(final ProgressEvent event) {
-            backButton.setEnabled(m_browser.isBackEnabled());
-            forwardButton.setEnabled(m_browser.isForwardEnabled());
+            m_backButton.setEnabled(m_browser.isBackEnabled());
+            m_forwardButton.setEnabled(m_browser.isForwardEnabled());
         }
     };
 
@@ -124,24 +121,26 @@ public class HubView extends ViewPart {
         compositeNavBar.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         layout = new GridLayout();
         layout.numColumns = 2;
+        layout.makeColumnsEqualWidth = true;
         compositeNavBar.setLayout(layout);
         compositeNavBar.setBackground(GENERAL_FILL_COLOR);
         ToolBar toolbarBegin = new ToolBar(compositeNavBar,SWT.HORIZONTAL);
         toolbarBegin.setCursor(Display.getDefault().getSystemCursor(SWT.CURSOR_HAND));
+        toolbarBegin.setLayoutData(new GridData(GridData.FILL_HORIZONTAL | GridData.HORIZONTAL_ALIGN_BEGINNING));
         Image homeIcon = ImageRepository.getImage(PLUGIN_ID, "/icons/ap-hub-home.png");
         ToolItem homeButton = new ToolItem(toolbarBegin, SWT.PUSH);
         homeButton.setImage(homeIcon);
         homeButton.setToolTipText("Home");
         Image backIcon = ImageRepository.getImage(PLUGIN_ID, "/icons/ap-hub-back.png");
-        backButton = new ToolItem(toolbarBegin, SWT.PUSH);
-        backButton.setImage(backIcon);
-        backButton.setToolTipText("Back");
-        backButton.setEnabled(false);
+        m_backButton = new ToolItem(toolbarBegin, SWT.PUSH);
+        m_backButton.setImage(backIcon);
+        m_backButton.setToolTipText("Back");
+        m_backButton.setEnabled(false);
         Image forwardIcon = ImageRepository.getImage(PLUGIN_ID, "/icons/ap-hub-forward.png");
-        forwardButton = new ToolItem(toolbarBegin, SWT.PUSH);
-        forwardButton.setImage(forwardIcon);
-        forwardButton.setToolTipText("Forward");
-        forwardButton.setEnabled(false);
+        m_forwardButton = new ToolItem(toolbarBegin, SWT.PUSH);
+        m_forwardButton.setImage(forwardIcon);
+        m_forwardButton.setToolTipText("Forward");
+        m_forwardButton.setEnabled(false);
         Image refreshIcon = ImageRepository.getImage(PLUGIN_ID, "/icons/ap-hub-reload.png");
         ToolItem reloadButton = new ToolItem(toolbarBegin, SWT.PUSH);
         reloadButton.setImage(refreshIcon);
@@ -157,10 +156,10 @@ public class HubView extends ViewPart {
         homeButton.addListener(SWT.Selection, event -> {
             m_browser.setUrl(HOME_URL);
         });
-        backButton.addListener(SWT.Selection, event -> {
+        m_backButton.addListener(SWT.Selection, event -> {
             m_browser.back();
         });
-        forwardButton.addListener(SWT.Selection, event -> {
+        m_forwardButton.addListener(SWT.Selection, event -> {
             m_browser.forward();
         });
         reloadButton.addListener(SWT.Selection, event -> {
@@ -178,7 +177,6 @@ public class HubView extends ViewPart {
     @Override
     public void dispose() {
         if (m_browser != null) {
-            m_browser.removeProgressListener(browserProgressListener);
             m_browser.dispose();
         }
 
