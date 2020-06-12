@@ -88,6 +88,8 @@ public class HubView extends ViewPart {
     private ToolItem m_backButton;
     private ToolItem m_forwardButton;
 
+    // TODO this either is a field (but then starts with 'm_' or can be kept as a local variable
+    // another TODO -- the object never gets unregistered
     final ProgressAdapter browserProgressListener = new ProgressAdapter () {
         @Override
         public void completed(final ProgressEvent event) {
