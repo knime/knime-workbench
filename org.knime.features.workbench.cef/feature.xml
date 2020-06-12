@@ -727,6 +727,14 @@ license terms applicable to such Node, including when such Node is
 propagated with or for interoperation with KNIME.
    </license>
 
+   <includes
+         id="com.make.chromium.cef.feature"
+         version="0.0.0"/>
+         
+   <includes
+         id="org.eclipse.swt.chromium.feature"
+         version="0.0.0"/>
+
    <plugin
          id="org.knime.workbench.cef"
          download-size="0"

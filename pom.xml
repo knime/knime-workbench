@@ -98,6 +98,8 @@
 				</executions>
 				<configuration>
 					<excludes>
+						<feature id="com.make.chromium.cef.feature" />
+						<feature id="org.eclipse.swt.chromium.feature" />
 						<plugin id="org.knime.workbench" />
 					</excludes>
 				</configuration>
