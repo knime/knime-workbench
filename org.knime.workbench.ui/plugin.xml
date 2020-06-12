@@ -64,7 +64,7 @@
                moveable="true"
                relationship="stack"
                relative="org.knime.workbench.helpview"
-               visible="false"/>
+               visible="true"/>
          <view
                closeable="true"
                id="org.knime.workbench.searchhubview"
@@ -72,7 +72,7 @@
                ratio="0.885"
                relationship="bottom"
                relative="org.knime.workbench.helpview"
-               visible="true"/>
+               visible="false"/>
          <view
                closeable="true"
                id="org.knime.workbench.workflowcoach.view"
@@ -99,7 +99,6 @@
          <viewShortcut
                id="org.knime.workbench.cef.hubview">
          </viewShortcut>
-         <viewShortcut id="org.knime.workbench.searchhubview"/>
          <viewShortcut id="org.eclipse.pde.runtime.LogView"/>
          <viewShortcut id="org.knime.workbench.nodemonitorview.nodemonitorview"/>
          <viewShortcut id="org.knime.workbench.repository.view.RepositoryView"/>
