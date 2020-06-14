@@ -132,7 +132,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
             VARS, SETTINGS, ALLSETTINGS, TABLE, TIMER, GRAPHANNOTATIONS
     }
 
-    private DISPLAYOPTIONS m_choice = DISPLAYOPTIONS.VARS;
+    private DISPLAYOPTIONS m_choice = DISPLAYOPTIONS.TABLE;
 
     /** {@inheritDoc} */
     @Override

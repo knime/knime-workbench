@@ -194,13 +194,21 @@ public class MonitorDataTable implements NodeMonitorTable {
         m_addDataRowListener = new AddDataRowListener();
         table.addListener(SWT.SetData, m_addDataRowListener);
 
+        int itemCountToDetermineColWidth;
         if (m_autoLoad) {
-            table.setItemCount(Math.min((int)m_numRows, NUM_LOOK_AHEAD_ROWS));
+            int initialItemCount = Math.min((int)m_numRows, NUM_LOOK_AHEAD_ROWS);
+            table.setItemCount(initialItemCount);
+            itemCountToDetermineColWidth = initialItemCount;
         } else {
             table.setItemCount((int)m_numLoadedRows);
+            itemCountToDetermineColWidth = 0;
+        }
+        for (int row = 0; row < itemCountToDetermineColWidth; row++) {
+            fillTableItem(table.getItem(row));
         }
         for (int i = 0; i < table.getColumnCount(); i++) {
-            table.getColumn(i).pack();
+            TableColumn tableColumn = table.getColumn(i);
+            tableColumn.pack();
         }
     }
 
@@ -262,45 +270,52 @@ public class MonitorDataTable implements NodeMonitorTable {
         }
     }
 
+    /** Fills a table item (a row) with its data..
+     * @param item Non-null item to be filled.
+     */
+    private void fillTableItem(final TableItem item) {
+        int index = m_table.indexOf(item);
+        if (m_autoLoad) {
+            m_table.setItemCount(Math.min((int)m_numRows, index + NUM_LOOK_AHEAD_ROWS));
+        } else {
+            m_table.setItemCount((int) m_numLoadedRows);
+        }
+        DataRow row = null;
+        if (index == m_currentIndex) {
+            m_currentIndex++;
+            row = m_it.next();
+        } else {
+            //reset row iterator and go to required index
+            closeIterator();
+            m_it = m_dataTable.iterator();
+            for (m_currentIndex = 0; m_currentIndex <= index; m_currentIndex++) {
+                row = m_it.next();
+            }
+        }
+        if (row != null) {
+            item.setText(0, row.getKey().getString());
+            //get right row count: without id column (and 'remaining column skipped'-column)
+            int colCount = m_table.getColumnCount() == MAX_NUM_COLUMN ? m_table.getColumnCount() - 2
+                : m_table.getColumnCount() - 1;
+            for (int i = 0; i < colCount; i++) {
+                DataCell c = row.getCell(i);
+                String s = c.toString().replaceAll("\\p{Cntrl}", "_");
+                item.setText(i + 1, s);
+            }
+            if (m_table.getColumnCount() == MAX_NUM_COLUMN) {
+                item.setText(MAX_NUM_COLUMN - 1, "...");
+            }
+        } else {
+            item.setText("Row " + m_currentIndex + " could not be read.");
+        }
+    }
+
     private class AddDataRowListener implements Listener {
 
         @Override
         public void handleEvent(final Event event) {
             TableItem item = (TableItem)event.item;
-            int index = m_table.indexOf(item);
-            if (m_autoLoad) {
-                m_table.setItemCount(Math.min((int)m_numRows, index + NUM_LOOK_AHEAD_ROWS));
-            } else {
-                m_table.setItemCount((int) m_numLoadedRows);
-            }
-            DataRow row = null;
-            if (index == m_currentIndex) {
-                m_currentIndex++;
-                row = m_it.next();
-            } else {
-                //reset row iterator and go to required index
-                closeIterator();
-                m_it = m_dataTable.iterator();
-                for (m_currentIndex = 0; m_currentIndex <= index; m_currentIndex++) {
-                    row = m_it.next();
-                }
-            }
-            if (row != null) {
-                item.setText(0, row.getKey().getString());
-                //get right row count: without id column (and 'remaining column skipped'-column)
-                int colCount = m_table.getColumnCount() == MAX_NUM_COLUMN ? m_table.getColumnCount() - 2
-                    : m_table.getColumnCount() - 1;
-                for (int i = 0; i < colCount; i++) {
-                    DataCell c = row.getCell(i);
-                    String s = c.toString().replaceAll("\\p{Cntrl}", "_");
-                    item.setText(i + 1, s);
-                }
-                if (m_table.getColumnCount() == MAX_NUM_COLUMN) {
-                    item.setText(MAX_NUM_COLUMN - 1, "...");
-                }
-            } else {
-                item.setText("Row " + m_currentIndex + " couln't be read.");
-            }
+            fillTableItem(item);
         }
     }
 }
