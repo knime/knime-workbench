@@ -310,6 +310,8 @@ public final class ImageRepository {
         HubSpace("icons/server_space/public_space.png"),
         /** Icon for public hub spaces */
         HubSpacePublic("icons/server_space/public_space.png"),
+        /** Icon for public hub spaces */
+        HubSpacePublicBig("icons/server_space/public_space_32.png"),
         /** Icon for private hub spaces */
         HubSpacePrivate("icons/server_space/private_space.png"),
 
