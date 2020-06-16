@@ -238,9 +238,12 @@ class WorkflowEditorRefresher {
                 @Override
                 public void run() {
                     try {
-                        getAsyncWFM().refreshOrFail(false);
-                        m_hasBeenRefreshed.set(true);
-                        m_lastRefreshSuccessful = true;
+                        Optional<AsyncWorkflowManagerUI> asyncWFM = getAsyncWFM();
+                        if (asyncWFM.isPresent()) {
+                            asyncWFM.get().refreshOrFail(false);
+                            m_hasBeenRefreshed.set(true);
+                            m_lastRefreshSuccessful = true;
+                        }
                     } catch (SnapshotNotFoundException e) {
                         //refresh not possible because, e.g., underlying job has been swapped to disk
                         String message = "The job has been swapped to disk or wasn't accessed for a while."
@@ -260,6 +263,7 @@ class WorkflowEditorRefresher {
                     } catch (Exception e) {
                         //if something went wrong refreshing the workflow (e.g. timeout)
                         //-> just log it, continue refreshing and hope for the best
+                        //(but don't let it kill the REFRESH_TIMER)
                         if (m_lastRefreshSuccessful) {
                             //issue a log-warning once if the workflow has been refreshed in the last cycle
                             LOGGER.warn("Refreshing workflow failed: " + e.getMessage(), e);
@@ -286,16 +290,22 @@ class WorkflowEditorRefresher {
                 m_connectedTimerTask = new TimerTask() {
                     @Override
                     public void run() {
-                        if (m_hasBeenRefreshed.getAndSet(false)) {
-                            //everything fine
-                            if (!isConnected()) {
-                                connect(true);
+                        try {
+                            if (m_hasBeenRefreshed.getAndSet(false)) {
+                                //everything fine
+                                if (!isConnected()) {
+                                    connect(true);
+                                }
+                            } else {
+                                if (isConnected()) {
+                                    disconnect(true,
+                                        "Server not responding, either the server is overloaded or the connection is lost.");
+                                }
                             }
-                        } else {
-                            if (isConnected()) {
-                                disconnect(true,
-                                    "Server not responding, either the server is overloaded or the connection is lost.");
-                            }
+                        } catch (Exception e) {
+                            // just in case in order to not kill the CONNECTED_TIMER altogether
+                            LOGGER.warn(
+                                "Something went wrong file checking for server connection state: " + e.getMessage(), e);
                         }
                     }
                 };
@@ -384,7 +394,7 @@ class WorkflowEditorRefresher {
 
     private void setConnected(final boolean isConnected, final boolean callback) {
         m_isConnected = isConnected;
-        getAsyncWFM().setDisconnected(!isConnected);
+        getAsyncWFM().ifPresent(wfm -> wfm.setDisconnected(!isConnected));
         if (callback) {
             m_connectedCallback.run();
         }
@@ -404,12 +414,15 @@ class WorkflowEditorRefresher {
         return false;
     }
 
-    private AsyncWorkflowManagerUI getAsyncWFM() {
+    private Optional<AsyncWorkflowManagerUI> getAsyncWFM() {
         if (m_editor.getWorkflowManagerUI() instanceof AsyncWorkflowManagerUI) {
-            return (AsyncWorkflowManagerUI)m_editor.getWorkflowManagerUI();
+            return Optional.of((AsyncWorkflowManagerUI)m_editor.getWorkflowManagerUI());
+        } else if (m_editor.getWorkflowManagerUI() == null) {
+            LOGGER.warn("No workflow given");
+            return Optional.empty();
         } else {
-            throw new IllegalStateException(
-                "Workflow refresher only works with AsyncWorkflowManagerUI-implementations.");
+            LOGGER.warn("Workflow refresher only works with AsyncWorkflowManagerUI-implementations");
+            return Optional.empty();
         }
     }
 
