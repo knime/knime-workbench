@@ -103,6 +103,7 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
         extends AbstractWizardNodeView<T, REP, VAL> {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(WizardNodeView.class);
+    private static final int ASYNC_TIMEOUT = 10 * 1000;
     private static final String VIEW_VALID = "viewValid";
     private static final String VIEW_VALUE = "viewValue";
     private static final String EMPTY_OBJECT_STRING = "{}";
@@ -619,8 +620,13 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
         WizardViewCreator<REP, VAL> creator = getViewCreator();
         String wrappedCode = creator.wrapInTryCatch(evalCode);
         m_browserWrapper.execute(wrappedCode);
+        long startTime = System.currentTimeMillis();
         if (display != null) {
             while (reference.get() == null) {
+                if (System.currentTimeMillis() - startTime > ASYNC_TIMEOUT) {
+                    reference.set(defaultValue);
+                    break;
+                }
                 if (display.readAndDispatch()) {
                     display.sleep();
                 }
@@ -788,8 +794,10 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
     @SuppressWarnings("unchecked")
     private class AsyncEvalCallbackFunction<O> extends BrowserFunctionInternal {
 
-        private final AtomicReference<O> m_referenceObject;
+        private static final String SUCCESS_TRUE = "{ success: true }";
+        private static final String SUCCESS_FALSE = "{ success: false }";
 
+        private final AtomicReference<O> m_referenceObject;
         private final O m_defaultValue;
 
         public AsyncEvalCallbackFunction(final BrowserWrapper browser, final String name, final String referenceKey,
@@ -806,10 +814,10 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
         public Object function(final Object[] arguments) {
             if (arguments == null || arguments.length < 1) {
                 m_referenceObject.set(m_defaultValue);
-                return "{ success: false }";
+                return SUCCESS_FALSE;
             }
             m_referenceObject.set((O)arguments[0]);
-            return "{ success: true }";
+            return SUCCESS_TRUE;
         }
 
     }
