@@ -50,6 +50,8 @@ package org.knime.workbench.core.util;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
@@ -72,8 +74,6 @@ import org.knime.workbench.core.util.ImageRepository.SharedImages;
  */
 public abstract class AbstractImExPage extends WizardPage {
     private Text m_fileDestination;
-
-    private String m_filename;
 
     private final List<String> m_extensions = new ArrayList<String>();
 
@@ -165,12 +165,17 @@ public abstract class AbstractImExPage extends WizardPage {
 
                 fileDialog.setText("Specify the "
                         + (m_export ? "export" : "import") + " file.");
-                if (m_filename != null) {
-                    fileDialog.setFileName(m_filename);
+                String filename = m_fileDestination.getText();
+                if (filename != null && !filename.trim().isEmpty()) {
+                    IPath p = new Path(filename.trim());
+                    if (p.segmentCount() > 1) {
+                        fileDialog.setFilterPath(p.removeLastSegments(1).toOSString());
+                        fileDialog.setFileName(p.lastSegment());
+                    }
                 }
+
                 String filePath = fileDialog.open();
                 if (filePath != null && filePath.trim().length() > 0) {
-                    m_filename = filePath;
                     m_fileDestination.setText(filePath);
                 }
             }
