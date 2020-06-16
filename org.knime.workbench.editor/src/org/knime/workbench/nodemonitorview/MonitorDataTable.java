@@ -68,6 +68,8 @@ import org.knime.core.data.container.CloseableRowIterator;
 import org.knime.core.node.BufferedDataTable;
 import org.knime.core.node.BufferedDataTable.KnowsRowCountTable;
 import org.knime.core.node.port.PortObject;
+import org.knime.core.node.tableview.AsyncDataRow;
+import org.knime.core.node.tableview.AsyncTable;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeOutPortUI;
@@ -97,7 +99,7 @@ public class MonitorDataTable implements NodeMonitorTable {
 
     private DataTable m_dataTable;
 
-    private long m_numRows;
+    private long m_numRows = -1;
 
     private long m_numLoadedRows = -1;
 
@@ -105,7 +107,7 @@ public class MonitorDataTable implements NodeMonitorTable {
 
     /* --- in case of deactivated auto-load */
 
-    private RowIterator m_manualIt;
+    private RowIterator m_chunkIt;
 
     private AddDataRowListener m_addDataRowListener;
 
@@ -129,6 +131,7 @@ public class MonitorDataTable implements NodeMonitorTable {
     @Override
     public void loadTableData(final NodeContainerUI ncUI, final NodeContainer nc, final int count)
         throws LoadingFailedException {
+        m_autoLoad = nc != null;
         if (count == 0) {
             // check if we can display something at all:
             int index = m_portIndex;
@@ -155,21 +158,30 @@ public class MonitorDataTable implements NodeMonitorTable {
             } else {
                 po = nop.getPortObject();
             }
-            if (!((po instanceof BufferedDataTable) || (po instanceof KnowsRowCountTable))) {
-                // no table in port - ignore.
-                throw new LoadingFailedException("Unknown or no PortObject");
-            }
+
             // retrieve table
             if (po instanceof BufferedDataTable) {
                 m_numRows = ((BufferedDataTable)po).size();
                 m_dataTable = (DataTable)po;
-            } else {
+            } else if (po instanceof KnowsRowCountTable) {
                 m_numRows = ((KnowsRowCountTable)po).size();
                 m_dataTable = (KnowsRowCountTable)po;
+            } else if (po instanceof DataTable && po instanceof AsyncTable) {
+                assert !m_autoLoad;
+                m_dataTable = (DataTable)po;
+                m_numRows = -1;
+            } else {
+                // no table in port - ignore.
+                throw new LoadingFailedException("Unknown or no PortObject");
             }
         }
-        m_autoLoad = nc != null;
-        loadChunk(count);
+        if (!m_autoLoad) {
+            try {
+                loadChunk(count);
+            } catch (InterruptedException | ExecutionException e) {
+                throw new LoadingFailedException("Loading of the table failed: " + e.getMessage());
+            }
+        }
     }
 
     /**
@@ -195,7 +207,7 @@ public class MonitorDataTable implements NodeMonitorTable {
         table.addListener(SWT.SetData, m_addDataRowListener);
 
         int itemCountToDetermineColWidth;
-        if (m_autoLoad) {
+        if (m_autoLoad && m_numRows >= 0) {
             int initialItemCount = Math.min((int)m_numRows, NUM_LOOK_AHEAD_ROWS);
             table.setItemCount(initialItemCount);
             itemCountToDetermineColWidth = initialItemCount;
@@ -222,10 +234,10 @@ public class MonitorDataTable implements NodeMonitorTable {
         } else {
             loadButton.setText("Show more rows");
         }
-        if (m_numLoadedRows == m_numRows) {
-            loadButton.setEnabled(false);
-        } else {
+        if (!m_autoLoad && m_numRows < 0) {
             loadButton.setEnabled(true);
+        } else {
+            loadButton.setEnabled(false);
         }
         portCombo.setEnabled(true);
     }
@@ -246,16 +258,29 @@ public class MonitorDataTable implements NodeMonitorTable {
         closeIterator();
     }
 
-    private void loadChunk(final int chunkIdx) {
-        if (m_manualIt == null) {
-            m_manualIt = m_dataTable.iterator();
+    private void loadChunk(final int chunkIdx) throws InterruptedException, ExecutionException {
+        if (m_chunkIt == null) {
+            m_chunkIt = m_dataTable.iterator();
         }
         long startRowIdx = chunkIdx * NUM_LOOK_AHEAD_ROWS;
-        long endRowIdx = Math.min(m_numRows, (chunkIdx + 1) * NUM_LOOK_AHEAD_ROWS);
-        for (long i = startRowIdx; i < endRowIdx; i++) {
-            m_manualIt.next();
+        long endRowIdx = (chunkIdx + 1) * NUM_LOOK_AHEAD_ROWS;
+
+        long i;
+        for (i = startRowIdx; i < endRowIdx && m_chunkIt.hasNext(); i++) {
+            DataRow row = m_chunkIt.next();
+            if (row instanceof AsyncDataRow) {
+                ((AsyncDataRow)row).waitUntilLoaded();
+            }
+            if (row.getKey() == null) {
+                // we reached the end of table
+                m_numRows = i;
+                break;
+            }
         }
-        m_numLoadedRows = endRowIdx;
+        m_numLoadedRows = i;
+        if (!m_chunkIt.hasNext()) {
+            m_numRows = m_numLoadedRows;
+        }
         if (m_table != null) {
             Display.getDefault().asyncExec(() -> m_table.setItemCount((int)m_numLoadedRows));
         }
@@ -265,8 +290,8 @@ public class MonitorDataTable implements NodeMonitorTable {
         if (m_it instanceof CloseableRowIterator) {
             ((CloseableRowIterator)m_it).close();
         }
-        if (m_manualIt instanceof CloseableRowIterator) {
-            ((CloseableRowIterator)m_manualIt).close();
+        if (m_chunkIt instanceof CloseableRowIterator) {
+            ((CloseableRowIterator)m_chunkIt).close();
         }
     }
 
@@ -275,11 +300,16 @@ public class MonitorDataTable implements NodeMonitorTable {
      */
     private void fillTableItem(final TableItem item) {
         int index = m_table.indexOf(item);
-        if (m_autoLoad) {
-            m_table.setItemCount(Math.min((int)m_numRows, index + NUM_LOOK_AHEAD_ROWS));
+        int itemCount;
+        if (m_autoLoad && m_numRows >= 0) {
+            itemCount = Math.min((int)m_numRows, index + NUM_LOOK_AHEAD_ROWS);
         } else {
-            m_table.setItemCount((int) m_numLoadedRows);
+            itemCount = (int)m_numLoadedRows;
         }
+        if (m_table.getItemCount() != itemCount) {
+            m_table.setItemCount(itemCount);
+        }
+
         DataRow row = null;
         if (index == m_currentIndex) {
             m_currentIndex++;
@@ -294,7 +324,7 @@ public class MonitorDataTable implements NodeMonitorTable {
         }
         if (row != null) {
             item.setText(0, row.getKey().getString());
-            //get right row count: without id column (and 'remaining column skipped'-column)
+            //get right column count: without id column (and 'remaining column skipped'-column)
             int colCount = m_table.getColumnCount() == MAX_NUM_COLUMN ? m_table.getColumnCount() - 2
                 : m_table.getColumnCount() - 1;
             for (int i = 0; i < colCount; i++) {
