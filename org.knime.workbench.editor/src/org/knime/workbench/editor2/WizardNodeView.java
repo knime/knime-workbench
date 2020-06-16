@@ -49,6 +49,9 @@ package org.knime.workbench.editor2;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
@@ -100,6 +103,9 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
         extends AbstractWizardNodeView<T, REP, VAL> {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(WizardNodeView.class);
+    private static final String VIEW_VALID = "viewValid";
+    private static final String VIEW_VALUE = "viewValue";
+    private static final String EMPTY_OBJECT_STRING = "{}";
 
     private Shell m_shell;
 
@@ -112,8 +118,7 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
     private BrowserFunctionInternal m_retrieveCurrentValueFromViewCallback;
     private boolean m_viewSet = false;
     private boolean m_initialized = false;
-    private Boolean m_viewValid;
-    private String m_viewValue;
+    private final Map<String, AtomicReference<Object>> m_asyncEvalReferenceMap;
     private String m_title;
 
     /**
@@ -122,6 +127,9 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
      */
     public WizardNodeView(final T nodeModel) {
         super(nodeModel);
+        m_asyncEvalReferenceMap = new HashMap<String, AtomicReference<Object>>(2);
+        m_asyncEvalReferenceMap.put(VIEW_VALID, new AtomicReference<Object>(null));
+        m_asyncEvalReferenceMap.put(VIEW_VALUE, new AtomicReference<Object>(null));
     }
 
     /**
@@ -168,6 +176,7 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
     /**
      * {@inheritDoc}
      */
+    @SuppressWarnings("unused")
     @Override
     public final void callOpenView(final String title, final Rectangle knimeWindowBounds) {
         m_title = (title == null ? "View" : title);
@@ -296,7 +305,6 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
             }
         });
 
-        //TODO: make initial size dynamic
         m_shell.setSize(1024, 768);
 
         Point middle = new Point(knimeWindowBounds.width / 2, knimeWindowBounds.height / 2);
@@ -339,11 +347,14 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
                 });
                 setBrowserURL();
                 m_viewRequestCallback = new ViewRequestFunction(m_browserWrapper, "knimeViewRequest");
-                m_updateRequestStatusCallback = new UpdateRequestStatusFunction(m_browserWrapper, "knimeUpdateRequestStatus");
+                m_updateRequestStatusCallback =
+                    new UpdateRequestStatusFunction(m_browserWrapper, "knimeUpdateRequestStatus");
                 m_cancelRequestCallback = new CancelRequestFunction(m_browserWrapper, "knimeCancelRequest");
                 m_isPushSupportedCallback = new PushSupportedFunction(m_browserWrapper, "knimePushSupported");
-                m_validateCurrentValueInViewCallback = new ValidateCurrentValueInViewFunction(m_browserWrapper, "validateCurrentValueInView");
-                m_retrieveCurrentValueFromViewCallback = new RetrieveCurrentValueFromViewFunction(m_browserWrapper, "retrieveCurrentValueFromView");
+                m_validateCurrentValueInViewCallback = new AsyncEvalCallbackFunction<Boolean>(m_browserWrapper,
+                    "validateCurrentValueInView", VIEW_VALID, Boolean.FALSE);
+                m_retrieveCurrentValueFromViewCallback = new AsyncEvalCallbackFunction<String>(m_browserWrapper,
+                        "retrieveCurrentValueFromView", VIEW_VALUE, EMPTY_OBJECT_STRING);
             }
         });
 
@@ -574,24 +585,9 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
      */
     @Override
     protected boolean validateCurrentValueInView() {
-        Display display = getDisplay();
-        WizardViewCreator<REP, VAL> creator = getViewCreator();
-        String evalCode = creator.wrapInTryCatch("window.KnimePageLoader.validate();");
-        m_browserWrapper.evaluate(evalCode);
-        if (display != null) {
-            while (m_viewValid == null) {
-                if (display.readAndDispatch()) {
-                    display.sleep();
-                }
-            }
-            display.wake();
-        }
-        Boolean localViewValid = m_viewValid;
-        m_viewValid = null;
-        if (!Boolean.TRUE.equals(localViewValid)) {
-            LOGGER.warn("Current view value is invalid");
-        }
-        return localViewValid;
+        String evalCode = "window.KnimePageLoader.validate();";
+        String warnMessage = "Current view value is invalid";
+        return evaluateAsync(evalCode, VIEW_VALID, Boolean.FALSE, warnMessage);
     }
 
     /**
@@ -599,24 +595,44 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
      */
     @Override
     protected String retrieveCurrentValueFromView() {
+        String evalCode = "window.KnimePageLoader.getPageValues();";
+        String warnMessage = "Unable to retrieve value from view";
+        return evaluateAsync(evalCode, VIEW_VALUE, EMPTY_OBJECT_STRING, warnMessage);
+    }
+
+    /**
+     * Calls evaluate on the browser and waits until a given object was assigned by a {@link BrowserFunction}
+     *
+     * @param <O> The class of the referenceObject
+     * @param evalCode the code the browser should evaluate
+     * @param referenceObject the object that should be assigned by a {@link BrowserFunction}, this call will wait until
+     *            the object is not null
+     * @param defaultValue the value by which the a warning message should be issued
+     * @param warnMessage a warning message in case the async call is not successful or only the default value is retrieved
+     * @return the retrieved value from the async call, may be null in case of an error
+     */
+    private <O> O evaluateAsync(final String evalCode, final String referenceObject, final O defaultValue,
+        final String warnMessage) {
         Display display = getDisplay();
+        @SuppressWarnings("unchecked")
+        AtomicReference<O> reference = (AtomicReference<O>)m_asyncEvalReferenceMap.get(referenceObject);
         WizardViewCreator<REP, VAL> creator = getViewCreator();
-        String evalCode = creator.wrapInTryCatch("window.KnimePageLoader.getPageValues();");
-        m_browserWrapper.evaluate(evalCode);
+        String wrappedCode = creator.wrapInTryCatch(evalCode);
+        m_browserWrapper.execute(wrappedCode);
         if (display != null) {
-            while (m_viewValue == null) {
+            while (reference.get() == null) {
                 if (display.readAndDispatch()) {
                     display.sleep();
                 }
             }
             display.wake();
         }
-        String localValueString = m_viewValue;
-        m_viewValue = null;
-        if (localValueString.equals("{}")) {
-            LOGGER.warn("Unable to retrieve value from view");
+        O localValue = reference.get();
+        reference.set(null);
+        if (localValue.equals(defaultValue)) {
+            LOGGER.warn(warnMessage);
         }
-        return localValueString;
+        return localValue;
     }
 
     /**
@@ -769,14 +785,18 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
 
     }
 
-    private class ValidateCurrentValueInViewFunction extends BrowserFunctionInternal {
+    @SuppressWarnings("unchecked")
+    private class AsyncEvalCallbackFunction<O> extends BrowserFunctionInternal {
 
-        /**
-         * @param browser
-         * @param name
-         */
-        public ValidateCurrentValueInViewFunction(final BrowserWrapper browser, final String name) {
+        private final AtomicReference<O> m_referenceObject;
+
+        private final O m_defaultValue;
+
+        public AsyncEvalCallbackFunction(final BrowserWrapper browser, final String name, final String referenceKey,
+            final O defaultValue) {
             super(browser, name);
+            m_referenceObject = (AtomicReference<O>)m_asyncEvalReferenceMap.get(referenceKey);
+            m_defaultValue = defaultValue;
         }
 
         /**
@@ -785,36 +805,13 @@ public class WizardNodeView<T extends ViewableModel & WizardNode<REP, VAL>,
         @Override
         public Object function(final Object[] arguments) {
             if (arguments == null || arguments.length < 1) {
-                m_viewValid = false;
+                m_referenceObject.set(m_defaultValue);
                 return "{ success: false }";
             }
-            m_viewValid = Boolean.parseBoolean((String)arguments[0]);
+            m_referenceObject.set((O)arguments[0]);
             return "{ success: true }";
         }
-    }
 
-    private class RetrieveCurrentValueFromViewFunction extends BrowserFunctionInternal {
-
-        /**
-         * @param browser
-         * @param name
-         */
-        public RetrieveCurrentValueFromViewFunction(final BrowserWrapper browser, final String name) {
-            super(browser, name);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public Object function(final Object[] arguments) {
-            if (arguments == null || arguments.length < 1) {
-                m_viewValue = "{}";
-                return "{ success: false }";
-            }
-            m_viewValue = (String)arguments[0];
-            return "{ success: true }";
-        }
     }
 
     /**
