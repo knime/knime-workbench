@@ -102,9 +102,6 @@ class WorkflowEditorRefresher {
     /** Whether the workflow has been refreshed recently. */
     private AtomicBoolean m_hasBeenRefreshed = new AtomicBoolean(true);
 
-    /** If the workflow manager is the client to a server this flag indicates whether it has a connection or not. */
-    private boolean m_isConnected = true;
-
     /** To get notified on events when the workflow editor is hidden or gets visible again */
     private IPartListener2 m_partListener;
 
@@ -115,8 +112,6 @@ class WorkflowEditorRefresher {
 
     /** Called whenever the connection status changes */
     private Runnable m_connectedCallback;
-
-    private String m_disconnectedMessage = null;
 
     /**
      * Creates a new refresher.
@@ -137,7 +132,8 @@ class WorkflowEditorRefresher {
                     // start refresh job for this workflow editor
                     if (m_editor == partRef.getPart(false)) {
                         m_isVisible = true;
-                        tryStartingRefreshTimer();
+                        m_connectedCallback.run();
+                        tryStartingRefreshTimer(0);
                     }
                 }
 
@@ -218,14 +214,17 @@ class WorkflowEditorRefresher {
         }
 
         if (m_isVisible) {
-            tryStartingRefreshTimer();
+            //delay timer start by 500 ms in order to give the editor time to load the workflow visuals before
+            //the change-events (e.g. progress or state) arrive
+            //(which otherwise leads, e.g., to a strange position of the node annotations, sometimes)
+            tryStartingRefreshTimer(500);
         }
     }
 
     /**
      * Tries to start the refresh timer if enabled, not already running etc.
      */
-    void tryStartingRefreshTimer() {
+    private void tryStartingRefreshTimer(final int delay) {
         if (m_editor.getWorkflowManagerUI() != null && m_editor.getWorkflowManagerUI() instanceof AsyncWorkflowManagerUI
             && m_refreshTimerTask == null && m_isAutoRefreshEnabled) {
             synchronized (WorkflowEditor.class) {
@@ -234,48 +233,50 @@ class WorkflowEditorRefresher {
                 }
             }
             m_refreshTimerTask = new TimerTask() {
-                private boolean m_lastRefreshSuccessful = true;
+                private boolean lastRefreshSuccessful = true;
                 @Override
                 public void run() {
+                    AsyncWorkflowManagerUI asyncWFM = getAsyncWFM().orElse(null);
+                    if (asyncWFM == null) {
+                        return;
+                    }
                     try {
-                        Optional<AsyncWorkflowManagerUI> asyncWFM = getAsyncWFM();
-                        if (asyncWFM.isPresent()) {
-                            asyncWFM.get().refreshOrFail(false);
-                            m_hasBeenRefreshed.set(true);
-                            m_lastRefreshSuccessful = true;
-                        }
+                        asyncWFM.refreshOrFail(false);
+                        m_hasBeenRefreshed.set(true);
+                        lastRefreshSuccessful = true;
                     } catch (SnapshotNotFoundException e) {
                         //refresh not possible because, e.g., underlying job has been swapped to disk
+                        cancelTimers();
                         String message = "The job has been swapped to disk or wasn't accessed for a while."
                             + "Try re-opening the job-workflow.";
-                        cancelTimers();
+                        if (getDisconnectedMessage().map(m -> !m.equals(message)).orElse(true)) {
+                            Display.getDefault().syncExec(() -> MessageDialog.openWarning(SWTUtilities.getActiveShell(),
+                                "Auto-refresh failed", message));
+                        }
                         disconnect(true, message);
-                        Display.getDefault().syncExec(() -> MessageDialog.openWarning(SWTUtilities.getActiveShell(),
-                            "Auto-refresh failed", message));
                     } catch (NoSuchElementException e) {
                         //job-workflow is not available anymore
                         //job has mostly likely been deleted on the server
                         String message = "The job has been discarded.";
                         cancelTimers();
+                        if (getDisconnectedMessage().map(m -> !m.equals(message)).orElse(true)) {
+                            Display.getDefault().syncExec(() -> MessageDialog.openWarning(SWTUtilities.getActiveShell(),
+                                "Auto-refresh failed", message));
+                        }
                         disconnect(true, message);
-                        Display.getDefault().syncExec(() -> MessageDialog.openWarning(SWTUtilities.getActiveShell(),
-                            "Auto-refresh failed", message));
                     } catch (Exception e) {
                         //if something went wrong refreshing the workflow (e.g. timeout)
                         //-> just log it, continue refreshing and hope for the best
                         //(but don't let it kill the REFRESH_TIMER)
-                        if (m_lastRefreshSuccessful) {
+                        if (lastRefreshSuccessful) {
                             //issue a log-warning once if the workflow has been refreshed in the last cycle
                             LOGGER.warn("Refreshing workflow failed: " + e.getMessage(), e);
                         }
-                        m_lastRefreshSuccessful = false;
+                        lastRefreshSuccessful = false;
                    }
                 }
             };
-            //delay timer start by 500 ms in order to give the editor time to load the workflow visuals before
-            //the change-events (e.g. progress or state) arrive
-            //(which otherwise leads, e.g., to a strange position of the node annotations, sometimes)
-            REFRESH_TIMER.schedule(m_refreshTimerTask, 500, m_autoRefreshInterval);
+            REFRESH_TIMER.schedule(m_refreshTimerTask, delay, m_autoRefreshInterval);
             LOGGER.debug("Workflow refresh timer scheduled for workflow '" + m_editor.getTitle() + "' every "
                 + m_autoRefreshInterval + " ms");
 
@@ -353,19 +354,14 @@ class WorkflowEditorRefresher {
      * @return <code>true</code> if there is a connection to the server
      */
     boolean isConnected() {
-        return !m_editor.getWorkflowManager().isPresent() && m_isConnected;
+        return getAsyncWFM().map(wfm -> !wfm.getConnectionProblem().isPresent()).orElse(false);
     }
 
     /**
      * @return the reason why the remote workflow editor is disconnected or an empty optional if connected
      */
     Optional<String> getDisconnectedMessage() {
-        if (isConnected()) {
-            assert m_disconnectedMessage == null;
-            return Optional.empty();
-        } else {
-            return Optional.of(m_disconnectedMessage);
-        }
+        return getAsyncWFM().flatMap(wfm -> wfm.getConnectionProblem());
     }
 
     /**
@@ -381,20 +377,14 @@ class WorkflowEditorRefresher {
     }
 
     private void disconnect(final boolean callback, final String message) {
-        if (m_disconnectedMessage == null) {
-            m_disconnectedMessage = message;
+        getAsyncWFM().ifPresent(wfm -> wfm.setConnectionProblem(message));
+        if (callback) {
+            m_connectedCallback.run();
         }
-        setConnected(false, callback);
     }
 
     private void connect(final boolean callback) {
-        m_disconnectedMessage = null;
-        setConnected(true, callback);
-    }
-
-    private void setConnected(final boolean isConnected, final boolean callback) {
-        m_isConnected = isConnected;
-        getAsyncWFM().ifPresent(wfm -> wfm.setDisconnected(!isConnected));
+        getAsyncWFM().ifPresent(wfm -> wfm.setConnectionProblem(null));
         if (callback) {
             m_connectedCallback.run();
         }
@@ -407,7 +397,7 @@ class WorkflowEditorRefresher {
             if (m_connectedTimerTask != null) {
                 m_connectedTimerTask.cancel();
                 m_connectedTimerTask = null;
-                m_hasBeenRefreshed.set(true);
+                m_hasBeenRefreshed.set(false);
             }
             return true;
         }

@@ -146,6 +146,7 @@ import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.NodePortUI;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
+import org.knime.core.ui.node.workflow.async.AsyncWorkflowManagerUI;
 import org.knime.core.ui.node.workflow.lazy.LazyWorkflowManagerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
@@ -1001,6 +1002,15 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
      * @return <code>true</code> if loading was successful or not necessary, <code>false</code> if loading failed
      */
     private static boolean checkAndLoadIfLazyWorkflowManager(final WorkflowManagerUI wm) {
+        if (wm instanceof AsyncWorkflowManagerUI && ((AsyncWorkflowManagerUI)wm).getConnectionProblem().isPresent()) {
+            final Display display = Display.getDefault();
+            display.syncExec(() -> {
+                final Shell shell = SWTUtilities.getActiveShell(display);
+                MessageDialog.openError(shell, "Action not possible",
+                    "Cannot be opened because the job is not available or the server connection is lost");
+            });
+            return false;
+        }
         if (wm instanceof LazyWorkflowManagerUI && !((LazyWorkflowManagerUI)wm).isLoaded()) {
             CompletableFuture<Void> future = ((LazyWorkflowManagerUI)wm).load();
             try {
