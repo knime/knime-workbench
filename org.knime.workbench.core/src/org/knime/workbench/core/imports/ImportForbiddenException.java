@@ -44,75 +44,22 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Jun 27, 2019 (hornm): created
+ *   Jun 17, 2020 (hornm): created
  */
 package org.knime.workbench.core.imports;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URI;
-
 /**
- * Holds the information required to import a repository object (workflow, component, file etc.) in to the AP (e.g., a
- * workflow put into the explorer or a component added to a workflow).
+ * If an import from an URL is not allowed due to insufficient permissions.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-public interface RepoObjectImport extends EntityImport {
+public class ImportForbiddenException extends Exception {
+    private static final long serialVersionUID = 7033594857250125900L;
 
     /**
-     * Repository object types.
+     * @param message the detail exception message
      */
-    static enum RepoObjectType {
-            /**
-             * Aka component.
-             */
-            WorkflowTemplate,
-            /**
-             * A workflowgroup.
-             */
-            WorkflowGroup,
-            /**
-             * A workflow.
-             */
-            Workflow,
-            /**
-             * A data file.
-             */
-            Data,
-            /**
-             * Any other type of repository object.
-             */
-            Other;
-    }
-
-    /**
-     * @return the type of the repository object
-     */
-    RepoObjectType getType();
-
-    /**
-     * @return the object name
-     */
-    String getName();
-
-    /**
-     * The knime-URI (i.e. https://knime/...) that references the repository object.
-     *
-     * @return a knime-URI
-     */
-    URI getKnimeURI();
-
-    /**
-     * @return an URI to download/get the object
-     */
-    URI getDataURI();
-
-    /**
-     * @return the connection to download the object
-     * @throws IOException if something went wrong while establishing the connection
-     */
-    default HttpURLConnection getData() throws IOException {
-        return (HttpURLConnection)getDataURI().toURL().openConnection();
+    public ImportForbiddenException(final String message) {
+        super(message);
     }
 }

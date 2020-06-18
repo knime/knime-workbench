@@ -72,10 +72,11 @@ public interface URIImporter {
      * @param importClass the class of the instance to create
      * @return the import instance or an empty optional, if instance couldn't be created (e.g., because the URI doesn't
      *         represent an entity of the given type)
+     * @throws ImportForbiddenException in case the uri couldn't be imported because user is not logged in
      */
     @SuppressWarnings("unchecked")
     public static <I extends EntityImport> Optional<I> createEntityImport(final URI uri, final URIImporter importer,
-        final Class<I> importClass) {
+        final Class<I> importClass) throws ImportForbiddenException {
         if (RepoObjectImport.class.isAssignableFrom(importClass)) {
             return (Optional<I>)importer.createRepoObjectImport(uri);
         } else if (NodeImport.class.isAssignableFrom(importClass)) {
@@ -94,9 +95,11 @@ public interface URIImporter {
      * @param importer the importer to use to create the import instance
      * @return the import instance or an empty optional, if instance couldn't be created (e.g., because the URI doesn't
      *         represent an entity of the given type)
+     * @throws ImportForbiddenException in case the uri couldn't be imported because user is not logged in
      */
     @SuppressWarnings("unchecked")
-    public static <I extends EntityImport> Optional<I> createEntityImport(final URI uri, final URIImporter importer) {
+    public static <I extends EntityImport> Optional<I> createEntityImport(final URI uri, final URIImporter importer)
+        throws ImportForbiddenException {
         Optional<Class<? extends EntityImport>> entityImportClass = importer.getEntityImportClass(uri);
         if (entityImportClass.isPresent()) {
             return (Optional<I>)createEntityImport(uri, importer, importer.getEntityImportClass(uri).get());
@@ -137,22 +140,25 @@ public interface URIImporter {
      *
      * @param uri the URI to create the import from
      * @return the import or an empty optional if it couldn't be created from the given URI
+     * @throws ImportForbiddenException in case the uri couldn't be imported because user is not logged in
      */
-    Optional<NodeImport> createNodeImport(URI uri);
+    Optional<NodeImport> createNodeImport(URI uri) throws ImportForbiddenException;
 
     /**
      * Creates the actual {@link ExtensionImport}.
      *
      * @param uri the URI to create the import from
      * @return the import or an empty optional if it couldn't be created from the given URI
+     * @throws ImportForbiddenException in case the uri couldn't be imported because user is not logged in
      */
-    Optional<ExtensionImport> createExtensionImport(URI uri);
+    Optional<ExtensionImport> createExtensionImport(URI uri) throws ImportForbiddenException;
 
     /**
      * Creates the actual {@link RepoObjectImport}.
      *
      * @param uri the URI to create the import from
      * @return the import or an empty optional if it couldn't be created from the given URI
+     * @throws ImportForbiddenException in case the uri couldn't be imported because user is not logged in
      */
-    Optional<RepoObjectImport> createRepoObjectImport(URI uri);
+    Optional<RepoObjectImport> createRepoObjectImport(URI uri) throws ImportForbiddenException;
 }

@@ -51,9 +51,11 @@ import static java.util.Arrays.asList;
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
 import static org.knime.core.util.URIUtil.createEncodedURI;
 
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.runtime.IBundleGroup;
 import org.eclipse.core.runtime.IBundleGroupProvider;
@@ -84,6 +86,7 @@ import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.core.imports.EntityImport;
 import org.knime.workbench.core.imports.ExtensionImport;
+import org.knime.workbench.core.imports.ImportForbiddenException;
 import org.knime.workbench.core.imports.NodeImport;
 import org.knime.workbench.core.imports.RepoObjectImport;
 import org.knime.workbench.core.imports.RepoObjectImport.RepoObjectType;
@@ -186,8 +189,27 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         final CreateDropRequest cdr) {
         URI uri;
         if ((uri = createEncodedURI(url).orElse(null)) != null) {
-            Optional<EntityImport> entityImport = URIImporterFinder.getInstance().createEntityImportFor(uri);
-            if (entityImport.isPresent()) {
+            AtomicReference<EntityImport> entityImport = new AtomicReference<>();
+            try {
+                PlatformUI.getWorkbench().getProgressService().busyCursorWhile((monitor) -> {
+                    monitor.setTaskName("Importing object from URI ...");
+                    try {
+                        entityImport.set(URIImporterFinder.getInstance().createEntityImportFor(uri).orElse(null));
+                    } catch (ImportForbiddenException e) {
+                        throw new InvocationTargetException(e);
+                    }
+                });
+            } catch (InvocationTargetException e) {
+                if (e.getTargetException() instanceof ImportForbiddenException) {
+                    showPopup("Not allowed", e.getTargetException().getMessage(), SWT.ICON_WARNING);
+                    LOGGER.debug(e.getMessage());
+                    return null;
+                }
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            if (entityImport.get() != null) {
                 if (entityImport.get() instanceof RepoObjectImport) {
                     return handleObjectDropFromURI(manager, cdr, (RepoObjectImport)entityImport.get());
                 } else if (entityImport.get() instanceof NodeImport) {
@@ -196,7 +218,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                     return handleExtensionDropFromURI((ExtensionImport)entityImport.get());
                 }
             }
-            showPopup("Unknown URL dropped!", "URL (" + uri.getPath() + ") can't be dropped to KNIME workbench!",
+            showPopup("Unknown URL dropped!", "URL can't be dropped to KNIME workbench!\n\nUnknown URL:\n" + uri,
                 SWT.ICON_WARNING);
             LOGGER.debug("Unknown URL dropped: " + uri);
         }

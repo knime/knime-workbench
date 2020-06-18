@@ -110,9 +110,15 @@ public class URIImporterFinder {
      * @param uri the uri to create the entity import from
      * @return the entity import or an empty optional if no importer couldn't be found or entity import couldn't be
      *         created
+     * @throws ImportForbiddenException in case the uri couldn't be imported because user is not logged in
      */
-    public Optional<EntityImport> createEntityImportFor(final URI uri) {
-        return findURIImporterFor(uri).flatMap(i -> createEntityImport(uri, i));
+    public Optional<EntityImport> createEntityImportFor(final URI uri) throws ImportForbiddenException {
+        Optional<URIImporter> uriImporter = findURIImporterFor(uri);
+        if (uriImporter.isPresent()) {
+            return createEntityImport(uri, uriImporter.get());
+        } else {
+            return Optional.empty();
+        }
     }
 
     private static List<URIImporter> collectURIImporter() {

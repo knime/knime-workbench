@@ -51,12 +51,17 @@ package org.knime.workbench.explorer.view.dnd;
 import static org.knime.core.util.URIUtil.createEncodedURI;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.io.IOUtils;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.dnd.URLTransfer;
@@ -64,8 +69,8 @@ import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.FileUtil;
-import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.workbench.core.imports.EntityImport;
+import org.knime.workbench.core.imports.ImportForbiddenException;
 import org.knime.workbench.core.imports.RepoObjectImport;
 import org.knime.workbench.core.imports.RepoObjectImport.RepoObjectType;
 import org.knime.workbench.core.imports.URIImporter;
@@ -171,15 +176,20 @@ public class ExplorerURIDropUtil {
             PlatformUI.getWorkbench().getProgressService().busyCursorWhile((monitor) -> {
                 monitor.beginTask("Downloading file...", 100);
                 try {
-                    Optional<EntityImport> entityImport =
-                        URIImporterFinder.getInstance().createEntityImportFor(knimeURI);
+                    Optional<EntityImport> entityImport;
+                    try {
+                        entityImport = URIImporterFinder.getInstance().createEntityImportFor(knimeURI);
+                    } catch (ImportForbiddenException e) {
+                        LOGGER.warn(e.getMessage());
+                        return;
+                    }
                     if (!entityImport.isPresent()) {
                         LOGGER.warn("Object at URI '" + knimeURI + "' not found");
                         return;
                     }
                     RepoObjectImport objImport = ((RepoObjectImport)entityImport.get());
-                    URI dataURI = objImport.getDataURI();
-                    File tmpFile = ResolverUtil.resolveURItoLocalOrTempFile(dataURI, monitor);
+                    HttpURLConnection dataConnection = objImport.getData();
+                    File tmpFile = fetchRemoteFile(dataConnection);
                     tmpDir.set(FileUtil.createTempDir("download"));
 
                     //change file extension according to the data object to paste
@@ -219,6 +229,14 @@ public class ExplorerURIDropUtil {
             LOGGER.warn("Object from URI '" + knimeURI + "' couldn't be pasted", e);
             return false;
         }
+    }
+
+    private static File fetchRemoteFile(final HttpURLConnection connection) throws IOException {
+        File f = FileUtil.createTempFile("download", ".bin");
+        try (InputStream is = connection.getInputStream(); OutputStream os = new FileOutputStream(f)) {
+            IOUtils.copy(is, os);
+        }
+        return f;
     }
 
 }
