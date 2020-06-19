@@ -66,6 +66,7 @@ import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CLabel;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.ModifyEvent;
@@ -75,6 +76,7 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -126,7 +128,7 @@ public class EditMountPointDialog extends ListDialog {
 
     private Label m_errIcon;
 
-    private Label m_errText;
+    private StyledText m_errText;
 
     private Set<String> m_invalidIDs;
 
@@ -678,11 +680,35 @@ public class EditMountPointDialog extends ListDialog {
         m_errIcon.setImage(ImageRepository.getIconImage(SharedImages.Error));
         m_errIcon.setLayoutData(new GridData(GridData.CENTER, GridData.BEGINNING, false , true));
         m_errIcon.setBackground(white);
-        m_errText = new Label(header, SWT.WRAP);
+
+
+        m_errText = new StyledText(header, SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
+        final Listener scrollBarListener = new Listener() {
+            @Override
+            public void handleEvent(final Event event) {
+                // Show vertical scrollbar only when needed
+                final StyledText t = (StyledText)event.widget;
+                final Rectangle r1 = t.getClientArea();
+                final Rectangle r2 = t.computeTrim(r1.x, r1.y, r1.width, r1.height);
+                final Point p = t.computeSize(r1.width, SWT.DEFAULT, true);
+                t.getVerticalBar().setVisible(r2.height <= p.y);
+                if (event.type == SWT.Modify) {
+                    t.getParent().layout(true);
+                    t.showSelection();
+                }
+            }
+        };
+        m_errText.addListener(SWT.Resize, scrollBarListener);
+        m_errText.addListener(SWT.Modify, scrollBarListener);
         m_errText.setText("Please enter a mount id.");
-        GridData gd = new GridData(GridData.FILL_BOTH);
-        gd.minimumHeight = 75;
+        final GridData gd = new GridData(SWT.FILL, SWT.TOP, true, false);
+        gd.heightHint = 75;
+        gd.widthHint = 50;
+        gd.horizontalSpan = 2;
         m_errText.setLayoutData(gd);
+        m_errText.setEditable(false);
+        m_errText.setCaret(null);
+        m_errText.setCursor(Display.getCurrent().getSystemCursor(SWT.CURSOR_ARROW));
         m_errText.setBackground(white);
         m_errText.addControlListener(new ControlListener() {
 
