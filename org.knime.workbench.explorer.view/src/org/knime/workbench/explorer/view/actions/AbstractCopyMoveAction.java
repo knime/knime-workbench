@@ -265,6 +265,14 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
                 srcFileStores.size() > 1, !m_performMove);
         destChecker.setIsOverwriteDefault(true);
 
+        // Check destination in content provider. Currently only used for the HUB to handle copy/paste on root level
+        final AbstractExplorerFileStore newTarget =
+            m_target.getContentProvider().checkCopyMoveDestination(m_target, srcFileStores);
+        if (newTarget == null) {
+            return false;
+        }
+        setTarget(newTarget);
+
         // Sort sources s.t. workflow groups are handled first as they don't have the 'Apply to all' button.
         srcFileStores.sort((e1, e2) -> {
             if (e1.fetchInfo().isWorkflowGroup()) {

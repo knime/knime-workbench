@@ -1649,4 +1649,18 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public boolean isForceSnapshotCreation() {
         return false;
     }
+
+    /**
+     * Checks the copy or move destination and return the same or a new destination.
+     *
+     * @param target the destination of the copy or move operation.
+     * @param srcFileStores the source file stores to copy or move.
+     * @return the new destination, can be null.
+     *
+     * @since 8.6
+     */
+    public AbstractExplorerFileStore checkCopyMoveDestination(final AbstractExplorerFileStore target,
+        final List<AbstractExplorerFileStore> srcFileStores) {
+        return target;
+    }
 }
