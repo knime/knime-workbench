@@ -66,6 +66,7 @@ import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider.AfterRunCallback;
 import org.knime.workbench.explorer.view.DestinationChecker;
@@ -149,6 +150,7 @@ public final class CopyMove {
         monitor.beginTask(cmd + " " + numFiles + " files to " + m_target.getFullName(), numFiles);
         int iterationCount = processedTargets.size();
         List<ExplorerJob> moveJobs = new ArrayList<>();
+        boolean uploadWarningShown = false;
         for (final Map.Entry<AbstractExplorerFileStore, AbstractExplorerFileStore> entry : destCheckerMappings
             .entrySet()) {
             AbstractExplorerFileStore srcFS = entry.getKey();
@@ -210,6 +212,18 @@ public final class CopyMove {
                     };
                 }
                 if (!isSrcRemote && isDstRemote) { // upload
+                    AbstractExplorerFileStore destParentFS = ((RemoteExplorerFileStore)destFS).getParent();
+                    if(destParentFS instanceof RemoteExplorerFileStore) {
+                        RemoteExplorerFileInfo destParentFSInfo = ((RemoteExplorerFileStore)destParentFS).fetchInfo();
+                        if (!uploadWarningShown && destParentFSInfo.isSpace() && !destParentFSInfo.isPrivateSpace()) {
+                            IStatus userChoice = destFS.getContentProvider().showUploadWarning(destParentFSInfo.getName());
+                            if (userChoice.isOK()) {
+                                uploadWarningShown = true;
+                            } else {
+                                break;
+                            }
+                        }
+                    }
                     destFS.getContentProvider().performUploadAsync((LocalExplorerFileStore)srcFS,
                         (RemoteExplorerFileStore)destFS, m_performMove, m_excludeDataInWorkflows, callback);
                 } else if (isSrcRemote && !isDstRemote) { // download

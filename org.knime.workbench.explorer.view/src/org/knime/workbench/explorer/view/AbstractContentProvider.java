@@ -62,7 +62,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.dialogs.IDialogConstants;
@@ -1662,5 +1664,17 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public AbstractExplorerFileStore checkCopyMoveDestination(final AbstractExplorerFileStore target,
         final List<AbstractExplorerFileStore> srcFileStores) {
         return target;
+    }
+
+    /**
+     * Prompts an upload warning dialog allowing an user to OK or cancel an upload action. The return
+     * status will indicate the user's choice.
+     *
+     * @param uploadTargetName name of the upload target to be included in the warning message
+     * @return default implementation always returning {@link Status#OK_STATUS}
+     * @since 8.6
+     */
+    public IStatus showUploadWarning(final String uploadTargetName) {
+        return Status.OK_STATUS;
     }
 }
