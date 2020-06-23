@@ -812,7 +812,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                 } else {
                     cleanJSONPage(page);
                     if (!layout.contains("parentLayoutLegacyMode")) {
-                        page.setParentLayoutLegacyMode(true);
+                        setMissingLegacyFlag(page);
                     }
                     m_jsonDocument = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
                 }
@@ -1047,6 +1047,31 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
         page.setRows(cleanedRows);
         return errorMsg;
+    }
+
+    private static void setMissingLegacyFlag(final JSONLayoutPage page) {
+        page.setParentLayoutLegacyMode(true);
+        for(final JSONLayoutRow row : page.getRows()) {
+            updateMissingLegacyFlagRow(row);
+        }
+    }
+
+    private static void updateMissingLegacyFlagRow(final JSONLayoutRow row) {
+        if (!row.getColumns().isEmpty()) {
+            for (final JSONLayoutColumn col : row.getColumns()) {
+                if (!col.getContent().isEmpty()) {
+                    for (final JSONLayoutContent item : col.getContent()) {
+                        if (item != null) {
+                            if (item instanceof JSONLayoutViewContent) {
+                                ((JSONLayoutViewContent)item).setUseLegacyMode(true);
+                            } else if (item instanceof JSONLayoutRow) {
+                                updateMissingLegacyFlagRow((JSONLayoutRow)item);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void compareNodeIDs() {
