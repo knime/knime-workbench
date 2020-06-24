@@ -732,6 +732,10 @@ propagated with or for interoperation with KNIME.
          version="0.0.0"/>
          
    <includes
+         id="com.make.chromium.extras.feature"
+         version="0.0.0"/>
+
+   <includes
          id="org.eclipse.swt.chromium.feature"
          version="0.0.0"/>
 
