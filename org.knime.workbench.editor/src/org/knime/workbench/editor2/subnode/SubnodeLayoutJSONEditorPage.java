@@ -1051,27 +1051,19 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
 
     private static void setMissingLegacyFlag(final JSONLayoutPage page) {
         page.setParentLayoutLegacyMode(true);
-        for(final JSONLayoutRow row : page.getRows()) {
-            updateMissingLegacyFlagRow(row);
-        }
+        page.getRows().forEach(row -> updateMissingLegacyFlagRow(row));
     }
 
     private static void updateMissingLegacyFlagRow(final JSONLayoutRow row) {
-        if (!row.getColumns().isEmpty()) {
-            for (final JSONLayoutColumn col : row.getColumns()) {
-                if (!col.getContent().isEmpty()) {
-                    for (final JSONLayoutContent item : col.getContent()) {
-                        if (item != null) {
-                            if (item instanceof JSONLayoutViewContent) {
-                                ((JSONLayoutViewContent)item).setUseLegacyMode(true);
-                            } else if (item instanceof JSONLayoutRow) {
-                                updateMissingLegacyFlagRow((JSONLayoutRow)item);
-                            }
-                        }
-                    }
+        row.getColumns().forEach(col -> {
+            col.getContent().forEach(item -> {
+                if (item instanceof JSONLayoutViewContent) {
+                    ((JSONLayoutViewContent)item).setUseLegacyMode(true);
+                } else if (item instanceof JSONLayoutRow) {
+                    updateMissingLegacyFlagRow((JSONLayoutRow)item);
                 }
-            }
-        }
+            });
+        });
     }
 
     private void compareNodeIDs() {
