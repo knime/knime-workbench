@@ -101,6 +101,8 @@
 						<feature id="com.make.chromium.cef.feature" />
 						<feature id="org.eclipse.swt.chromium.feature" />
 						<feature id="com.make.chromium.extras.feature" />
+						<plugin id="org.apache.batik.dom.svg.clfix" />
+						<plugin id="org.apache.batik.dom.clfix" />
 						<plugin id="org.knime.workbench" />
 					</excludes>
 				</configuration>
