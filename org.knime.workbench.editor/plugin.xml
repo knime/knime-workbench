@@ -596,7 +596,7 @@
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="F6"/>
       <key
-            commandId="knime.commands.editor.gridSettings"
+            commandId="knime.commands.editor.workflowEditorSettings"
             contextId="org.eclipse.ui.contexts.window"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+SHIFT+ALT+X"/>
