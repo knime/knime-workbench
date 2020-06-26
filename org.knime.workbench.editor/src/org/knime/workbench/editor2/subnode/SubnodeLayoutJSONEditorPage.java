@@ -811,9 +811,6 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                     page = null;
                 } else {
                     cleanJSONPage(page);
-                    if (!layout.contains("parentLayoutLegacyMode")) {
-                        setMissingLegacyFlag(page);
-                    }
                     m_jsonDocument = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
                 }
             } catch (IOException e) {
@@ -823,6 +820,17 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
         if (page == null) {
             page = resetLayout();
+        }
+        // check for a legacy layout with missing legacy mode flag
+        if (m_subNodeContainer.isLegacyLayoutDetected() && !layout.contains("parentLayoutLegacyMode")) {
+            try {
+                setMissingLegacyFlag(page);
+                ObjectMapper mapper = createObjectMapperForUpdating();
+                m_jsonDocument = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
+            } catch (IOException e) {
+                LOGGER.error("Error updating legacy JSON layout. Pretty printing not possible: " + e.getMessage(), e);
+                m_jsonDocument = layout;
+            }
         }
         List<JSONLayoutRow> rows = page.getRows();
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
