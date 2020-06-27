@@ -127,6 +127,7 @@ import org.knime.core.node.web.WebTemplate;
 import org.knime.core.node.web.WebViewContent;
 import org.knime.core.node.wizard.ViewHideable;
 import org.knime.core.node.wizard.WizardNode;
+import org.knime.core.node.wizard.util.LayoutUtil;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
@@ -802,11 +803,12 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         m_subNodeContainer = subnodeContainer;
         m_viewNodes = viewNodes;
         JSONLayoutPage page = null;
-        String layout = m_subNodeContainer.getLayoutJSONString();
-        if (StringUtils.isNotEmpty(layout)) {
+        final String originalLayout = subnodeContainer.getLayoutJSONString();
+        String localLayout = originalLayout;
+        if (StringUtils.isNotEmpty(localLayout)) {
             try {
                 ObjectMapper mapper = createObjectMapperForUpdating();
-                page = mapper.readValue(layout, JSONLayoutPage.class);
+                page = mapper.readValue(localLayout, JSONLayoutPage.class);
                 if (page.getRows() == null) {
                     page = null;
                 } else {
@@ -815,22 +817,21 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                 }
             } catch (IOException e) {
                 LOGGER.error("Error parsing layout. Pretty printing not possible: " + e.getMessage(), e);
-                m_jsonDocument = layout;
+                m_jsonDocument = localLayout;
             }
         }
         if (page == null) {
             page = resetLayout();
         }
-        // check for a legacy layout with missing legacy mode flag
-        if (m_subNodeContainer.isLegacyLayoutDetected() && !layout.contains("parentLayoutLegacyMode")) {
-            try {
-                setMissingLegacyFlag(page);
-                ObjectMapper mapper = createObjectMapperForUpdating();
-                m_jsonDocument = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
-            } catch (IOException e) {
-                LOGGER.error("Error updating legacy JSON layout. Pretty printing not possible: " + e.getMessage(), e);
-                m_jsonDocument = layout;
-            }
+        // added 4.2; versioned layout update
+        try {
+            ObjectMapper mapper = createObjectMapperForUpdating();
+            m_jsonDocument = LayoutUtil.updateLayout(mapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(page), originalLayout, subnodeContainer.getLayoutVersion());
+            page = mapper.readValue(m_jsonDocument, JSONLayoutPage.class);
+        } catch (IOException e) {
+            LOGGER.error("Error updating JSON layout. Pretty printing not possible: " + e.getMessage(), e);
+            m_jsonDocument = localLayout;
         }
         List<JSONLayoutRow> rows = page.getRows();
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
