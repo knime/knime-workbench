@@ -47,6 +47,9 @@
  */
 package org.knime.workbench;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTError;
@@ -57,6 +60,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.util.ThreadsafeImageRegistry;
 import org.knime.workbench.editor2.svgexport.WorkflowSVGExport;
 import org.knime.workbench.ui.KNIMEUIPlugin;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
 /**
@@ -115,7 +119,31 @@ public class KNIMEEditorPlugin extends AbstractUIPlugin {
                     "Unable to instantiate" + WorkflowSVGExport.class.getName() + " implementation", e);
             }
         }
+        initChromiumSWT(context);
+    }
 
+    /** (2020-06-28) Temporary workaround added as part of AP-14231 -- If Chromium Embedded Framwork / Chromium.SWT is
+     * installed it must be loaded prior the SWT browser instance. The maintainers provide a (again, temporary)
+     * workaround to ensure it. {@link org.eclipse.ui.IStartup IStartUp} did not suffice / was called too late.
+     * @param context this bundle's context to find the corresponding Chromium start plug-in.
+     */
+    private static void initChromiumSWT(final BundleContext context)
+        throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        final long start = System.currentTimeMillis();
+        Bundle chromiumStartupBundle = context.getBundle("com.make.chromium.startup");
+        if (chromiumStartupBundle != null) {
+            NodeLogger logger = NodeLogger.getLogger(KNIMEEditorPlugin.class);
+            try {
+                Class<?> startupCl = chromiumStartupBundle.loadClass("com.make.chromium.startup.ChromiumStartup");
+                Method initMethod = startupCl.getMethod("init");
+                initMethod.invoke(null);
+                logger.debugWithFormat("Succesfully invoked ChromiumStartup.init() (%d ms)",
+                    System.currentTimeMillis() - start);
+            } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
+                    | InvocationTargetException e) {
+                logger.error("Failed to invoke ChromiumStartup.init()", e);
+            }
+        }
     }
 
     /**
