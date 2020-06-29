@@ -1916,7 +1916,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             //      is enabled
             if (ProgressPolylineConnection.PREFERENCE_DISPLAY_HIGHLIGHTING) {
                 final ISelectionProvider isp = getSite().getSelectionProvider();
-                if (!isp.getSelection().isEmpty()) {
+                if (isp != null && !isp.getSelection().isEmpty()) {
                     isp.setSelection(new StructuredSelection());
                 }
             }
