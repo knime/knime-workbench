@@ -805,7 +805,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         JSONLayoutPage page = null;
         final String originalLayout = subnodeContainer.getLayoutJSONString();
         String localLayout = originalLayout;
-        if (StringUtils.isNotEmpty(localLayout)) {
+        if (!LayoutUtil.requiresLayout(localLayout)) {
             try {
                 ObjectMapper mapper = createObjectMapperForUpdating();
                 page = mapper.readValue(localLayout, JSONLayoutPage.class);
@@ -823,11 +823,10 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         if (page == null) {
             page = resetLayout();
         }
-        // added 4.2; versioned layout update
         try {
             ObjectMapper mapper = createObjectMapperForUpdating();
             m_jsonDocument = LayoutUtil.updateLayout(mapper.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(page), originalLayout, subnodeContainer.getLayoutVersion());
+                .writeValueAsString(page), originalLayout);
             page = mapper.readValue(m_jsonDocument, JSONLayoutPage.class);
         } catch (IOException e) {
             LOGGER.error("Error updating JSON layout. Pretty printing not possible: " + e.getMessage(), e);
