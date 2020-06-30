@@ -62,7 +62,7 @@ public class ExportToSVGHandler extends AbstractHandler {
 
     private static final int SIZING_WIZARD_WIDTH = 470;
 
-    private static final int SIZING_WIZARD_HEIGHT = 300;
+    private static final int SIZING_WIZARD_HEIGHT = 400;
 
     /**
      * {@inheritDoc}
