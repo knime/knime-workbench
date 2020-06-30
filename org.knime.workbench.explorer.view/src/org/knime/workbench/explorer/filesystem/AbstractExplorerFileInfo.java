@@ -158,6 +158,16 @@ public abstract class AbstractExplorerFileInfo extends FileInfo {
     public abstract boolean isModifiable();
 
     /**
+     * Returns if the file store is writeable. The default implementation calls {@link #isModifiable()}.
+     *
+     * @return <code>true</code> if the store is writeable, <code>false</code> otherwise.
+     * @since 8.6
+     */
+    public boolean isWriteable() {
+        return isModifiable();
+    }
+
+    /**
      * @return true if the file store can be read, false otherwise
      */
     public abstract boolean isReadable();

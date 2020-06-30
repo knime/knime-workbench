@@ -155,7 +155,7 @@ public class PasteFromClipboardAction extends AbstractCopyMoveAction {
             final AbstractExplorerFileInfo fileInfo = file.fetchInfo();
             // for workflow groups check if it is writable
             if (fileInfo.isWorkflowGroup()) {
-                if (!fileInfo.isModifiable()) {
+                if (!fileInfo.isWriteable()) {
                     return false;
                 }
             } else {

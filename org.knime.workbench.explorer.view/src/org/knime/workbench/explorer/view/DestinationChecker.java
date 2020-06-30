@@ -151,7 +151,7 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
                 // it doesn't exist - check permissions to create it
                 AbstractExplorerFileInfo parentInfo =
                         result.getParent().fetchInfo();
-                if (parentInfo.exists() && !parentInfo.isModifiable()) {
+                if (parentInfo.exists() && !parentInfo.isWriteable()) {
                     MessageDialog.openError(m_shell, m_cmd
                             + " Error", "You don't have permissions to "
                             + "store a workflow in the workflow group ("
