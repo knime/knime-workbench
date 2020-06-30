@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.editor2.workflowsummaryexport;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -60,7 +61,6 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration.SummaryFormat;
-import org.knime.workbench.core.util.AbstractImExPage;
 import org.knime.workbench.core.util.ExportToFilePage;
 
 /**
@@ -107,14 +107,14 @@ class ExportWorkflowSummaryWizardPage extends ExportToFilePage {
         m_jsonFormat.setText("JSON");
         m_xmlFormat = new Button(format, SWT.RADIO);
         m_xmlFormat.setText("XML");
-        final AbstractImExPage thisPage = this;
+        final ExportWorkflowSummaryWizardPage thisPage = this;
         m_jsonFormat.addSelectionListener(new SelectionAdapter() {
             @Override
             public void widgetSelected(final SelectionEvent e) {
                 selectJSONFormat(thisPage);
             }
         });
-        m_jsonFormat.addSelectionListener(new SelectionAdapter() {
+        m_xmlFormat.addSelectionListener(new SelectionAdapter() {
             @Override
             public void widgetSelected(final SelectionEvent e) {
                 selectXMLFormat(thisPage);
@@ -149,14 +149,35 @@ class ExportWorkflowSummaryWizardPage extends ExportToFilePage {
         }
     }
 
-    private static void selectJSONFormat(final AbstractImExPage page) {
+    private static void selectJSONFormat(final ExportWorkflowSummaryWizardPage page) {
         page.clearAllFileExtensionFilter();
         page.addFileExtensionFilter("*.json", "workflow summary json");
+        page.setFile(adjustFileExtension(page.getFile(), SummaryFormat.JSON));
     }
 
-    private static void selectXMLFormat(final AbstractImExPage page) {
+    private static void selectXMLFormat(final ExportWorkflowSummaryWizardPage page) {
         page.clearAllFileExtensionFilter();
         page.addFileExtensionFilter("*.xml", "workflow summary xml");
+        page.setFile(adjustFileExtension(page.getFile(), SummaryFormat.XML));
+    }
+
+    private static String adjustFileExtension(final String file, final SummaryFormat format) {
+        if (StringUtils.isBlank(file)) {
+            return file;
+        }
+        String fileExtension = format == SummaryFormat.JSON ? ".json" : ".xml";
+        String otherExtension = format == SummaryFormat.JSON ? ".xml" : ".json";
+        String res;
+        if (file.endsWith(otherExtension)) {
+            // replace extension
+            res = file.substring(0, file.length() - otherExtension.length()) + fileExtension;
+        } else if (!file.endsWith(fileExtension)) {
+            // append extension
+            res = file + fileExtension;
+        } else {
+            res = file;
+        }
+        return res;
     }
 
     /**

@@ -198,6 +198,15 @@ public abstract class AbstractImExPage extends WizardPage {
         return m_fileDestination.getText();
     }
 
+    /**
+     * Changes the file destination.
+     *
+     * @param file the new file path
+     */
+    protected void setFile(final String file) {
+        m_fileDestination.setText(file);
+    }
+
     @Override
     public boolean isPageComplete() {
         return true;
