@@ -204,7 +204,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         while (destinationDialog.open() == Window.OK) {
             SelectedDestination destGroup = destinationDialog.getSelectedDestination();
             AbstractExplorerFileInfo destGroupInfo = destGroup.getDestination().fetchInfo();
-            if (!destGroupInfo.isModifiable()) {
+            if (!destGroupInfo.isWriteable()) {
                 boolean chooseNew = MessageDialog.openConfirm(shell, "Not writable",
                     "The selected group is not writable.\n\nChoose a new location.");
                 if (chooseNew) {
