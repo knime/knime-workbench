@@ -50,6 +50,7 @@ package org.knime.workbench;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.SWTError;
@@ -119,18 +120,17 @@ public class KNIMEEditorPlugin extends AbstractUIPlugin {
                     "Unable to instantiate" + WorkflowSVGExport.class.getName() + " implementation", e);
             }
         }
-        initChromiumSWT(context);
+        initChromiumSWT();
     }
 
     /** (2020-06-28) Temporary workaround added as part of AP-14231 -- If Chromium Embedded Framwork / Chromium.SWT is
      * installed it must be loaded prior the SWT browser instance. The maintainers provide a (again, temporary)
      * workaround to ensure it. {@link org.eclipse.ui.IStartup IStartUp} did not suffice / was called too late.
-     * @param context this bundle's context to find the corresponding Chromium start plug-in.
      */
-    private static void initChromiumSWT(final BundleContext context)
+    private static void initChromiumSWT()
         throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
         final long start = System.currentTimeMillis();
-        Bundle chromiumStartupBundle = context.getBundle("com.make.chromium.startup");
+        Bundle chromiumStartupBundle = Platform.getBundle("com.make.chromium.startup");
         if (chromiumStartupBundle != null) {
             NodeLogger logger = NodeLogger.getLogger(KNIMEEditorPlugin.class);
             try {
