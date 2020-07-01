@@ -135,8 +135,7 @@ public class SubnodeLayoutWizard extends Wizard {
     @Override
     public boolean performFinish() {
         if (m_page.isJSONValid()) {
-            String layout = m_page.getJsonDocument();
-            m_subNodeContainer.setLayoutJSONString(layout);
+            m_subNodeContainer.getJSONLayoutStringProvider().setLayoutString(m_page.getJsonDocument());
             return m_page.applyUsageChanges();
         } else {
             return false;
