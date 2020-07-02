@@ -60,6 +60,7 @@ import org.knime.core.node.wizard.WizardNode;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.node.workflow.SubnodeContainerLayoutStringProvider;
 import org.knime.core.node.workflow.WebResourceController;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.KNIMEEditorPlugin;
@@ -135,7 +136,10 @@ public class SubnodeLayoutWizard extends Wizard {
     @Override
     public boolean performFinish() {
         if (m_page.isJSONValid()) {
-            m_subNodeContainer.getSubnodeLayoutStringProvider().setLayoutString(m_page.getJsonDocument());
+            SubnodeContainerLayoutStringProvider layoutStringProvider =
+                m_subNodeContainer.getSubnodeLayoutStringProvider();
+            layoutStringProvider.setLayoutString(m_page.getJsonDocument());
+            m_subNodeContainer.setSubnodeLayoutStringProvider(layoutStringProvider);
             return m_page.applyUsageChanges();
         } else {
             return false;

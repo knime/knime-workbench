@@ -168,7 +168,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
     private SubNodeContainer m_subNodeContainer;
     private WorkflowManager m_wfManager;
     private Map<NodeIDSuffix, ViewHideable> m_viewNodes;
-    private SubnodeContainerLayoutStringProvider m_SubnodeLayoutStringProvider;
+    private SubnodeContainerLayoutStringProvider m_subnodeLayoutStringProvider;
     private Label m_statusLine;
     private RSyntaxTextArea m_textArea;
     private int m_caretPosition = 5;
@@ -191,7 +191,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         super(pageName);
         setDescription("Specify in what way the contained view and wizard nodes are allowed to be used and define "
             + "a layout. \nThe layout is used in the KNIME WebPortal and the Component View.");
-        m_SubnodeLayoutStringProvider = new SubnodeContainerLayoutStringProvider("");
+        m_subnodeLayoutStringProvider = new SubnodeContainerLayoutStringProvider("");
         m_basicMap = new LinkedHashMap<NodeIDSuffix, BasicLayoutInfo>();
     }
 
@@ -234,9 +234,9 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                 final ObjectMapper mapper = createObjectMapperForUpdating();
                 final ObjectReader reader = mapper.readerForUpdating(new JSONLayoutPage());
                 try {
-                    JSONLayoutPage page = reader.readValue(m_SubnodeLayoutStringProvider.getLayoutString());
+                    JSONLayoutPage page = reader.readValue(m_subnodeLayoutStringProvider.getLayoutString());
                     cleanJSONPage(page);
-                    m_SubnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
+                    m_subnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
                         .writeValueAsString(page));
                 } catch (IOException ex) {
                     LOGGER.error("Failed to retrieve JSON string from layout:" + ex.getMessage(), ex);
@@ -694,7 +694,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
             m_textArea.setAntiAliasingEnabled(true);
             RTextScrollPane sp = new RTextScrollPane(m_textArea);
             sp.setDoubleBuffered(true);
-            m_textArea.setText(m_SubnodeLayoutStringProvider.getLayoutString());
+            m_textArea.setText(m_subnodeLayoutStringProvider.getLayoutString());
             m_textArea.setEditable(true);
             m_textArea.setEnabled(true);
             contentPane.add(sp);
@@ -731,7 +731,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                         composite.getDisplay().asyncExec(new Runnable() {
                             @Override
                             public void run() {
-                                m_SubnodeLayoutStringProvider.setLayoutString(m_textArea.getText());
+                                m_subnodeLayoutStringProvider.setLayoutString(m_textArea.getText());
                                 if (m_statusLine != null && !m_statusLine.isDisposed()) {
                                     m_statusLine.setText("");
                                     isJSONValid();
@@ -769,14 +769,14 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
 
                 @Override
                 public void modifyText(final ModifyEvent e) {
-                    m_SubnodeLayoutStringProvider.setLayoutString(m_text.getText());
+                    m_subnodeLayoutStringProvider.setLayoutString(m_text.getText());
                     if (m_statusLine != null && !m_statusLine.isDisposed()) {
                         m_statusLine.setText("");
                         isJSONValid();
                     }
                 }
             });
-            m_text.setText(m_SubnodeLayoutStringProvider.getLayoutString());
+            m_text.setText(m_subnodeLayoutStringProvider.getLayoutString());
         }
 
         // add status line
@@ -805,16 +805,16 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         m_subNodeContainer = subnodeContainer;
         m_viewNodes = viewNodes;
         JSONLayoutPage page = null;
-        m_SubnodeLayoutStringProvider = subnodeContainer.getSubnodeLayoutStringProvider();
-        if (!m_SubnodeLayoutStringProvider.isEmptyLayout() && !m_SubnodeLayoutStringProvider.isPlaceholderLayout()) {
+        m_subnodeLayoutStringProvider = subnodeContainer.getSubnodeLayoutStringProvider();
+        if (!m_subnodeLayoutStringProvider.isEmptyLayout() && !m_subnodeLayoutStringProvider.isPlaceholderLayout()) {
             try {
                 ObjectMapper mapper = createObjectMapperForUpdating();
-                page = mapper.readValue(m_SubnodeLayoutStringProvider.getLayoutString(), JSONLayoutPage.class);
+                page = mapper.readValue(m_subnodeLayoutStringProvider.getLayoutString(), JSONLayoutPage.class);
                 if (page.getRows() == null) {
                     page = null;
                 } else {
                     cleanJSONPage(page);
-                    m_SubnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
+                    m_subnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
                         .writeValueAsString(page));
                 }
             } catch (IOException e) {
@@ -826,10 +826,10 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
         try {
             ObjectMapper mapper = createObjectMapperForUpdating();
-            m_SubnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
+            m_subnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
                 .writeValueAsString(page));
-            LayoutUtil.updateLayout(m_SubnodeLayoutStringProvider);
-            page = mapper.readValue(m_SubnodeLayoutStringProvider.getLayoutString(), JSONLayoutPage.class);
+            LayoutUtil.updateLayout(m_subnodeLayoutStringProvider);
+            page = mapper.readValue(m_subnodeLayoutStringProvider.getLayoutString(), JSONLayoutPage.class);
         } catch (IOException e) {
             LOGGER.error("Error updating JSON layout. Pretty printing not possible: " + e.getMessage(), e);
         }
@@ -855,7 +855,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         ObjectMapper mapper = JSONLayoutPage.getConfiguredObjectMapper();
         try {
             String initialJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
-            m_SubnodeLayoutStringProvider.setLayoutString(initialJson);
+            m_subnodeLayoutStringProvider.setLayoutString(initialJson);
             return page;
         } catch (JsonProcessingException e) {
             LOGGER.error("Could not create initial layout: " + e.getMessage(), e);
@@ -1014,7 +1014,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         m_basicStatusLine.setText(errorMsg);
         ObjectMapper mapper = createObjectMapperForUpdating();
         String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
-        m_SubnodeLayoutStringProvider.setLayoutString(json);
+        m_subnodeLayoutStringProvider.setLayoutString(json);
     }
 
     private static String cleanJSONPage(final JSONLayoutPage page) {
@@ -1166,7 +1166,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         ObjectMapper mapper = createObjectMapperForUpdating();
         ObjectReader reader = mapper.readerForUpdating(new JSONLayoutPage());
         try {
-            String json = isWindows() ? m_textArea.getText() : m_SubnodeLayoutStringProvider.getLayoutString();
+            String json = isWindows() ? m_textArea.getText() : m_subnodeLayoutStringProvider.getLayoutString();
             JSONLayoutPage page = reader.readValue(json);
             m_documentNodeIDs.clear();
             if (page.getRows() != null) {
@@ -1228,7 +1228,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         ObjectMapper mapper = createObjectMapperForUpdating();
         ObjectReader reader = mapper.readerForUpdating(new JSONLayoutPage());
         try {
-            return mapper.writeValueAsString(reader.readValue(m_SubnodeLayoutStringProvider.getLayoutString()));
+            return mapper.writeValueAsString(reader.readValue(m_subnodeLayoutStringProvider.getLayoutString()));
         } catch (IOException e) {
             LOGGER.error("Failed to retrieve JSON string from layout:" + e.getMessage(), e);
         }
@@ -1242,9 +1242,9 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
 
     private void updateJsonTextArea() {
         if (isWindows()) {
-            m_textArea.setText(m_SubnodeLayoutStringProvider.getLayoutString());
+            m_textArea.setText(m_subnodeLayoutStringProvider.getLayoutString());
         } else {
-            m_text.setText(m_SubnodeLayoutStringProvider.getLayoutString());
+            m_text.setText(m_subnodeLayoutStringProvider.getLayoutString());
         }
     }
 
@@ -1452,7 +1452,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
             }
 
             try {
-                m_SubnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
+                m_subnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
                     .writeValueAsString(page));
             } catch (Exception e) {
                 LOGGER.error("Cannot write layout from visual editor. " + e.getMessage(), e);
