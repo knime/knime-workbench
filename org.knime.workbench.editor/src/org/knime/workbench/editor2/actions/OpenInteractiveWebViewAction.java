@@ -73,16 +73,16 @@ import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.action.InteractiveWebViewsResult.SingleInteractiveWebViewResult;
 import org.knime.core.ui.node.workflow.InteractiveWebViewsResultUI.SingleInteractiveWebViewResultUI;
-import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
+import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.NodeContainerWrapper;
 import org.knime.core.ui.wrapper.SingleInteractiveWebViewResultWrapper;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.js.core.JSCorePlugin;
+import org.knime.js.swt.wizardnodeview.WizardNodeView;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
-import org.knime.workbench.editor2.WizardNodeView;
 
 /**
  * Action to open an interactive web view of a node.
