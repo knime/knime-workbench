@@ -2321,7 +2321,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                     preSel);
             SaveAsValidator validator = new SaveAsValidator(dialog, currentStore);
             String defName = currentName + " - Copy";
-            if (!isTempRemoteWorkflowEditor()) {
+            if (!isTempRemoteWorkflowEditor() && !isTempLocalWorkflowEditor()) {
                 if (currentParent != null) {
                     try {
                         Set<String> childs =
