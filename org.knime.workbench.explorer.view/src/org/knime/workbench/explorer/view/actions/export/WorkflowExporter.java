@@ -194,9 +194,9 @@ public final class WorkflowExporter {
      *
      * @param store the resource to check
      * @return true if the given resource should be excluded, false if it should be included
-     * @since 7.1
+     * @since 8.6
      */
-    protected static boolean excludeResource(final File store) {
+    public static boolean excludeResource(final File store) {
         String name = store.getName();
         if (name.equals("internal")) {
             return true;
