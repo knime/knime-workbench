@@ -319,10 +319,11 @@ public class Nodalizer implements IApplication {
             System.setProperty("java.awt.headless", "true");
         }
         final Root root = RepositoryManager.INSTANCE.getCompleteRoot();
+        List<String> previouslyReadFactories = new ArrayList<>();
 
-        parseNodesInRoot(root, null, nodeDir, extensions, bundles);
+        parseNodesInRoot(root, null, nodeDir, extensions, bundles, previouslyReadFactories);
         if (factoryList != null) {
-            parseDeprecatedNodeList(factoryList, nodeDir, extensions, bundles);
+            parseDeprecatedNodeList(factoryList, nodeDir, extensions, bundles, previouslyReadFactories);
         }
 
         // Write extensions
@@ -377,7 +378,7 @@ public class Nodalizer implements IApplication {
     // -- Parse nodes --
 
     private void parseNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory,
-        final Map<String, ExtensionInfo> extensions, final List<String> bundles) {
+        final Map<String, ExtensionInfo> extensions, final List<String> bundles, final List<String> readFactories) {
         if (object instanceof NodeTemplate) {
             try {
                 final NodeTemplate template = (NodeTemplate)object;
@@ -385,19 +386,20 @@ public class Nodalizer implements IApplication {
                 final NodeAndBundleInformation nodeAndBundleInfo = NodeAndBundleInformationPersistor.create(fac);
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
                     nodeAndBundleInfo, fac.isDeprecated(), directory, extensions, bundles);
+                readFactories.add(fac.getClass().toString());
             } catch (final Throwable e) {
                 LOGGER.error("Failed to read node: " + object.getName() + ".", e);
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
-                parseNodesInRoot(child, new ArrayList<>(), directory, extensions, bundles);
+                parseNodesInRoot(child, new ArrayList<>(), directory, extensions, bundles, readFactories);
             }
         } else if (object instanceof Category) {
             for (final IRepositoryObject child : ((Category)object).getChildren()) {
                 final Category c = (Category)object;
                 final List<String> p = new ArrayList<>(path);
                 p.add(c.getName());
-                parseNodesInRoot(child, p, directory, extensions, bundles);
+                parseNodesInRoot(child, p, directory, extensions, bundles, readFactories);
             }
         } else {
             return;
@@ -405,7 +407,7 @@ public class Nodalizer implements IApplication {
     }
 
     private static void parseDeprecatedNodeList(final Path factoryListFile, final File directory,
-        final Map<String, ExtensionInfo> extensions, final List<String> bundles) {
+        final Map<String, ExtensionInfo> extensions, final List<String> bundles, final List<String> previouslyReadFactories) {
         if (factoryListFile == null) {
             return;
         }
@@ -418,6 +420,10 @@ public class Nodalizer implements IApplication {
         }
 
         for (final String factory : factories) {
+            if (previouslyReadFactories.stream().anyMatch(f -> f.equals(factory))) {
+                LOGGER.info("Skipping previously read factory: " + factory);
+                continue;
+            }
             try {
                 final String[] parts = factory.split("#");
                 final NodeFactory<? extends NodeModel> fac = RepositoryManager.loadNodeFactory(parts[0]);
