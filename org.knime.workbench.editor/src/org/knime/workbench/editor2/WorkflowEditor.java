@@ -1334,7 +1334,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                         ps.busyCursorWhile(loadWorkflowRunnable);
                     } else {
                         LoadMetaNodeTemplateRunnable loadTemplateRunnable = new LoadMetaNodeTemplateRunnable(this,
-                            m_origRemoteLocation != null ? m_origRemoteLocation : uri);
+                            m_origRemoteLocation != null ? m_origRemoteLocation : uri, mountPointRoot);
                         ps.busyCursorWhile(loadTemplateRunnable);
                         if (m_manager != null && Wrapper.wraps(m_manager, WorkflowManager.class)
                             && m_manager.isEncrypted()) {

@@ -87,9 +87,11 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
     private final URI m_templateURI;
 
-    private WorkflowEditor m_editor;
+    private final WorkflowEditor m_editor;
 
     private MetaNodeLinkUpdateResult m_result;
+
+    private final File m_mountpointRoot;
 
     /**
      *
@@ -101,6 +103,8 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
         final AbstractExplorerFileStore templateKNIMEFolder) {
         m_parentWFM = wfm;
         m_templateURI = templateKNIMEFolder.toURI();
+        m_editor = null;
+        m_mountpointRoot = null;
     }
 
     /**
@@ -110,6 +114,8 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
     public LoadMetaNodeTemplateRunnable(final WorkflowManager wfm, final URI templateURI) {
         m_parentWFM = wfm;
         m_templateURI = templateURI;
+        m_editor = null;
+        m_mountpointRoot = null;
     }
 
     /**
@@ -118,8 +124,9 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
      *
      * @param editor the editor to open the component with
      * @param templateURI URI to the workflow directory or file from which the template should be loaded
+     * @param mountpointRoot the root directory of the mountpoint in which the workflow is contained
      */
-    public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI) {
+    public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI, final File mountpointRoot) {
         m_parentWFM = WorkflowManager.ROOT;
 
         //strip "workflow.knime" from the URI which is append if
@@ -136,6 +143,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             m_templateURI = templateURI;
         }
         m_editor = editor;
+        m_mountpointRoot = mountpointRoot;
     }
 
     /**
@@ -169,7 +177,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             Display d = Display.getDefault();
 
             GUIWorkflowLoadHelper loadHelper = new GUIWorkflowLoadHelper(d, parentFile.getName(), m_templateURI,
-                parentFile, null, false, true, m_editor != null);
+                parentFile, m_mountpointRoot, false, true, m_editor != null);
             TemplateNodeContainerPersistor loadPersistor =
                     loadHelper.createTemplateLoadPersistor(parentFile, m_templateURI);
             MetaNodeLinkUpdateResult loadResult =
