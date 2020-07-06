@@ -330,7 +330,8 @@ public class Nodalizer implements IApplication {
             for (final ExtensionInfo ext : extensions.values()) {
                 if (ext.hasNodes() || !ext.getCategoryPath().isEmpty()) {
                     try {
-                        final String fileName = ext.getSymbolicName().replaceAll("\\.", "_");
+                        final String fileName =
+                            ext.getSymbolicName().replaceAll("\\.", "_") + "_" + ext.getId().substring(1);
                         writeFile(extDir, fileName, ext);
                     } catch (final JsonProcessingException | FileNotFoundException ex) {
                         LOGGER.error("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName(), ex);
@@ -629,7 +630,7 @@ public class Nodalizer implements IApplication {
         }
 
         // Write to file
-        writeFile(directory, categoryPath + "/" + name, nInfo);
+        writeFile(directory, categoryPath + "/" + name + "_" + nInfo.getId().substring(1), nInfo);
     }
 
     private static List<DynamicPortGroup> parseDynamicPorts(final Element nodeXML, final String xmlTag,
