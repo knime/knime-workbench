@@ -419,7 +419,7 @@ public class Nodalizer implements IApplication {
         for (final String factory : factories) {
             try {
                 final String[] parts = factory.split("#");
-                final NodeFactory<? extends NodeModel> fac = RepositoryManager.INSTANCE.loadNodeFactory(parts[0]);
+                final NodeFactory<? extends NodeModel> fac = RepositoryManager.loadNodeFactory(parts[0]);
 
                 // Dynamic nodes require additional information to load the factory
                 if ((fac instanceof DynamicNodeFactory) && (parts.length > 1)) {
@@ -978,7 +978,7 @@ public class Nodalizer implements IApplication {
         if (e.children().isEmpty()) {
             return e.hasText();
         }
-        boolean hasText = false;
+        boolean hasText = e.hasText();
         for (final org.jsoup.nodes.Element child : e.children()) {
             hasText |= hasText(child);
         }
