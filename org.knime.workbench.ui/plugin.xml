@@ -60,13 +60,6 @@
                relative="org.eclipse.ui.editorss"/>
          <view
                closeable="true"
-               id="com.knime.workbench.hubview"
-               moveable="true"
-               relationship="stack"
-               relative="org.knime.workbench.helpview"
-               visible="true"/>
-         <view
-               closeable="true"
                id="org.knime.workbench.searchhubview"
                moveable="true"
                ratio="0.885"
@@ -97,7 +90,6 @@
          <viewShortcut id="org.eclipse.ui.console.ConsoleView"/>
          <!--viewShortcut id="org.eclipse.ui.views.ProgressView"/-->
          <viewShortcut id="org.knime.workbench.helpview"/>
-         <viewShortcut id="com.knime.workbench.hubview" />
          <viewShortcut id="org.eclipse.pde.runtime.LogView"/>
          <viewShortcut id="org.knime.workbench.nodemonitorview.nodemonitorview"/>
          <viewShortcut id="org.knime.workbench.repository.view.RepositoryView"/>
