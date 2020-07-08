@@ -430,7 +430,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
     }
 
     private boolean isEnabled(final Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selectedProviders) {
-        return m_target.fetchInfo().isModifiable() && isCopyOrMovePossible(selectedProviders, m_performMove);
+        return m_target.fetchInfo().isWriteable() && isCopyOrMovePossible(selectedProviders, m_performMove);
     }
 
     /**
