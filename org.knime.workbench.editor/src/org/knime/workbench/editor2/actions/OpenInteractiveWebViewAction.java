@@ -247,17 +247,6 @@ public final class OpenInteractiveWebViewAction extends Action {
         if (viewClass == null) {
             // try loading defaults
             viewClass = getViewClassByReflection(CHROMIUM_BROWSER, configurationElements);
-            if (viewClass == null) {
-                viewClass = getViewClassByReflection(CHROME_BROWSER, configurationElements);
-                try {
-                    Method isChromePresentM = viewClass.getMethod("isChromePresent");
-                    boolean isChromePresent = (boolean)isChromePresentM.invoke(null);
-                    if (!isChromePresent) {
-                        // no Chrome found on system, defaulting to SWT browser
-                        viewClass = null;
-                    }
-                } catch (Exception e) { /* do nothing */ }
-            }
         }
         if (viewClass != null) {
             try {
