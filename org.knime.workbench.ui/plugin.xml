@@ -65,7 +65,7 @@
                ratio="0.885"
                relationship="bottom"
                relative="org.knime.workbench.helpview"
-               visible="false"/>
+               visible="true"/>
          <view
                closeable="true"
                id="org.knime.workbench.workflowcoach.view"
