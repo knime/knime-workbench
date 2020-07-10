@@ -236,6 +236,11 @@ public final class OpenInteractiveWebViewAction extends Action {
 
         Class<?> viewClass = null;
         String classString = JSCorePlugin.getDefault().getPreferenceStore().getString(JSCorePlugin.P_VIEW_BROWSER);
+        // disable Chrome in general or Chromium if the binaries are not installed
+        if (classString.equals(CHROME_BROWSER) ||
+                (classString.equals(CHROMIUM_BROWSER) && !JSCorePlugin.isChromiumInstalled())) {
+            classString = null;
+        }
         if (StringUtils.isNotEmpty(classString)) {
             // try loading selected view
             viewClass = getViewClassByReflection(classString, configurationElements);
@@ -245,8 +250,10 @@ public final class OpenInteractiveWebViewAction extends Action {
             }
         }
         if (viewClass == null) {
-            // try loading defaults
-            viewClass = getViewClassByReflection(CHROMIUM_BROWSER, configurationElements);
+            // try loading default
+            if (JSCorePlugin.isChromiumInstalled()) {
+                viewClass = getViewClassByReflection(CHROMIUM_BROWSER, configurationElements);
+            }
         }
         if (viewClass != null) {
             try {
