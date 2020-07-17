@@ -7,13 +7,13 @@ properties([
     pipelineTriggers([
         upstream('knime-js-core/' + env.BRANCH_NAME.replaceAll('/', '%2F'))
     ]),
+    parameters(workflowTests.getConfigurationsAsParameters()),
     buildDiscarder(logRotator(numToKeepStr: '5')),
     disableConcurrentBuilds()
 ])
 
 
 try {
-    // provide the name of the update site project
     knimetools.defaultTychoBuild('org.knime.update.workbench')
 
     stage('Sonarqube analysis') {
