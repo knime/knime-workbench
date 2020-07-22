@@ -92,7 +92,7 @@ public class SelectLoopAction extends AbstractNodeAction {
      */
     @Override
     public String getText() {
-        return "Select Loop";
+        return "Select Scope";
     }
 
     /**
