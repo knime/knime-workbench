@@ -247,7 +247,8 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         private Button m_excludeDataButton;
         private boolean m_isExcludeData;
         private Composite m_tooltipContainer;
-        private boolean m_savedSelection;
+
+        private AbstractContentProvider m_currentContentProvider;
 
         /**
          * @param parentShell
@@ -270,6 +271,9 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
             setTitle("Destination");
             setHeader("Deploy to...");
             setDescription("Select the destination workflow group.");
+
+            m_currentContentProvider = initialSelection == null || initialSelection.getFileStore() == null ? null
+                : initialSelection.getFileStore().getContentProvider();
         }
 
         @Override
@@ -279,7 +283,8 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
             m_tooltipContainer.setLayout(new FillLayout());
             GridDataFactory.fillDefaults().applyTo(m_tooltipContainer);
             m_excludeDataButton = new Button(m_tooltipContainer, SWT.CHECK);
-            m_isExcludeData = false;
+            m_isExcludeData =
+                m_currentContentProvider != null && m_currentContentProvider.isForceResetOnUpload();
             m_excludeDataButton.setSelection(m_isExcludeData);
             m_excludeDataButton.setText("Reset Workflow(s) before upload");
             m_excludeDataButton.addSelectionListener(new SelectionAdapter() {
@@ -287,9 +292,6 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
                 public void widgetSelected(final SelectionEvent e) {
                     Button b = (Button)e.widget;
                     m_isExcludeData = b.getSelection();
-                    // Save selection of checkbox for mount points without configurations
-                    m_savedSelection =
-                        getSelection().getContentProvider().isForceResetOnUpload() ? m_savedSelection : m_isExcludeData;
                 }
             });
         }
@@ -298,8 +300,11 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         protected void validateSelectionValue() {
             super.validateSelectionValue();
             final AbstractContentProvider ct = getSelection().getContentProvider();
-            m_excludeDataButton
-                .setSelection(ct.isForceResetOnUpload() || (m_savedSelection && m_excludeDataButton.getSelection()));
+            final boolean changedContentProvider = !ct.equals(m_currentContentProvider);
+            m_currentContentProvider = ct;
+
+            m_excludeDataButton.setSelection(
+                (changedContentProvider && ct.isForceResetOnUpload()) || m_excludeDataButton.getSelection());
             m_excludeDataButton.setEnabled(!ct.isForceResetOnUpload() || ct.isEnableResetOnUploadCheckbox());
             m_isExcludeData = m_excludeDataButton.getSelection();
             m_tooltipContainer.setToolTipText(m_excludeDataButton.getEnabled() ? ""
