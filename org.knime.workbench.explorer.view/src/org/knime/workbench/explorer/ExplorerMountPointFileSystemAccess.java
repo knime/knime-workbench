@@ -218,6 +218,11 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
         throws IOException {
         final LocalExplorerFileStore sourceStore = new TmpLocalExplorerFile(source, true);
         final AbstractExplorerFileStore targetStore = getStore(target);
+        if (targetStore.fetchInfo().exists() && !overwrite) {
+            throw new IOException(
+                String.format("Destination path \"%s\" exists and must not be overwritten due to user settings.",
+                    targetStore.toString()));
+        }
         try {
             targetStore.importAsWorkflow(sourceStore, overwrite, attemptOpen, null);
         } catch (CoreException e) {
