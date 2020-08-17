@@ -305,4 +305,10 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
     public IFileStore getNativeFilestore() {
         return this;
     }
+
+    @Override
+    public void importAsWorkflow(final LocalExplorerFileStore workflowSource, final boolean overwrite,
+        final boolean attemptOpen, final IProgressMonitor monitor) throws CoreException {
+        throw new UnsupportedOperationException("Importing workflows not support in temp space");
+    }
 }

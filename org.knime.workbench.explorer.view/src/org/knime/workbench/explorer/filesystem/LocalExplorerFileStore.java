@@ -49,6 +49,7 @@ package org.knime.workbench.explorer.filesystem;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.commons.io.FileUtils;
 import org.eclipse.core.filesystem.EFS;
@@ -57,13 +58,28 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IEditorDescriptor;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.FileStoreEditorInput;
+import org.eclipse.ui.ide.IDE;
+import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeTimer;
+import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.explorer.view.ContentDelegator;
+import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  *
  * @author ohl, University of Konstanz
  */
 public abstract class LocalExplorerFileStore extends AbstractExplorerFileStore {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalExplorerFileStore.class);
 
     /**
      * @param mountID the id of the mount point
@@ -164,4 +180,52 @@ public abstract class LocalExplorerFileStore extends AbstractExplorerFileStore {
                     ((AbstractExplorerFileStore)destParent).refresh();
                 }
             }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @since 8.6
+     */
+    @Override
+    public void importAsWorkflow(final LocalExplorerFileStore workflowSource, final boolean overwrite,
+        final boolean attemptOpen, final IProgressMonitor monitor) throws CoreException {
+
+        workflowSource.copy(this, overwrite ? EFS.OVERWRITE : EFS.NONE, monitor);
+
+        if (PlatformUI.isWorkbenchRunning() && attemptOpen) {
+            final IWorkbench workbench = PlatformUI.getWorkbench();
+
+            // refresh project explorer
+            Arrays.stream(workbench.getWorkbenchWindows()).flatMap(window -> Arrays.stream(window.getPages()))
+                .flatMap(page -> Arrays.stream(page.getViewReferences()))
+                .filter(ref -> ref.getId().equals(ExplorerView.ID)).map(ref -> (ExplorerView)ref.getView(true))
+                .map(ExplorerView::getViewer).findAny()
+                .ifPresent(viewer -> viewer.getControl().getDisplay().asyncExec(() -> {
+                    viewer.refresh();
+                    final Object object = ContentDelegator.getTreeObjectFor(this);
+                    if (object != null) {
+                        viewer.reveal(object);
+                        viewer.setSelection(new StructuredSelection(object));
+                    }
+                }));
+
+            // open workflow
+            Display.getDefault().asyncExec(() -> openWorkflow(workflowSource, workbench));
+        }
+    }
+
+    /** Used by {@link #importAsWorkflow(LocalExplorerFileStore, boolean, boolean, IProgressMonitor)} to open the
+     * workflow after import. */
+    private void openWorkflow(final LocalExplorerFileStore workflowSource, final IWorkbench workbench) {
+        final LocalExplorerFileStore workflow = getChild(WorkflowPersistor.WORKFLOW_FILE);
+        try {
+            final IEditorDescriptor editorDescriptor = IDE.getEditorDescriptor(workflow.getName(), true, true);
+            workbench.getActiveWorkbenchWindow().getActivePage().openEditor(new FileStoreEditorInput(workflow),
+                editorDescriptor.getId());
+            NodeTimer.GLOBAL_TIMER.incWorkflowOpening();
+        } catch (PartInitException ex) {
+            LOGGER.info(String.format("Could not open editor for imported workflow %s: %s.",
+                workflowSource.getName(), ex.getMessage()), ex);
+        }
+    }
 }
