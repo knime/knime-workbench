@@ -1416,7 +1416,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 addAfterOpenRunnable(workflowSelectionForMetadataDisplay);
             }
 
-            MRUFileMenuItem.INSTANCE.editorHasOpenedWithInput(input);
+            MRUFileMenuItem.editorHasOpenedWithInput(input);
 
             // update Actions, as now there's everything available
             updateActions();

@@ -99,24 +99,19 @@ import org.xml.sax.SAXException;
  * @author loki der quaeler
  */
 public final class MRUFileMenuItem extends ContributionItem {
-    /**
-     * The singleton of this class; it will be set by the time app startup has completed, by the Eclipse frameworks due
-     * to declarations in this plugin's plugin.xml file.
-     */
-    public static MRUFileMenuItem INSTANCE = null;
 
     private static final int MAXIMUM_WORKFLOWS_TO_DISPLAY = 10;
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(MRUFileMenuItem.class);
 
 
-    private LRUMap<String, Object> m_recentURIMap;
+    private static LRUMap<String, Object> m_recentURIMap;
 
     /**
      * Default constructor.
      */
     public MRUFileMenuItem() {
-        INSTANCE = this;
+        super();
     }
 
     /**
@@ -125,8 +120,6 @@ public final class MRUFileMenuItem extends ContributionItem {
      */
     public MRUFileMenuItem(final String id) {
         super(id);
-
-        INSTANCE = this;
     }
 
     /**
@@ -135,7 +128,7 @@ public final class MRUFileMenuItem extends ContributionItem {
      * @param input
      */
     @SuppressWarnings("javadoc")
-    public void editorHasOpenedWithInput(final IEditorInput input) {
+    public static void editorHasOpenedWithInput(final IEditorInput input) {
         if (input instanceof RemoteWorkflowInput) {
             /*
              * See the comment discussion in AP-12953 for why remote workflows are currently not supported.
@@ -209,7 +202,7 @@ public final class MRUFileMenuItem extends ContributionItem {
         }
     }
 
-    private synchronized void assureMapInitialPopulation() {
+    private static synchronized void assureMapInitialPopulation() {
         if (m_recentURIMap == null) {
             m_recentURIMap = new LRUMap<>(MAXIMUM_WORKFLOWS_TO_DISPLAY);
 
