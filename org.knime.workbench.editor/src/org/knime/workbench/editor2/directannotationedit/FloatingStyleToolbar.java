@@ -49,6 +49,8 @@
 package org.knime.workbench.editor2.directannotationedit;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.runtime.Platform;
@@ -82,7 +84,7 @@ public class FloatingStyleToolbar {
     private final ArrayList<Region> m_regionsToDispose;
 
     // presently there will never be more than one
-    private final ArrayList<Control> m_controlsInView = new ArrayList<>();
+    private final Set<Control> m_controlsInView = new HashSet<>();
 
     private final Listener m_showListener;
     private final Listener m_hideListener;

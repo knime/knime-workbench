@@ -1403,7 +1403,18 @@ public class StyledTextEditor extends CellEditor implements WorkflowCanvasClickL
 
         m_colorDropDown.setSelectedColor(color);
         m_colorDropDown.setLocation((bounds.x + parentLocation.x), (bounds.y + bounds.height));
-        m_colorDropDown.setVisible(true);
+
+        // We are using the same ColorDropDown instance for font, background and border color.
+        // Clicking two of these buttons succesively means that the colour drop down was
+        // already visible. `setVisible(true)` then does not produce a new SWT.Show event.
+        // This event is needed to 1) trigger FloatingStyleToolbar#recomputeRegion and
+        // 2) have TransientEditAssetGroup behave as intended.
+        if (m_colorDropDown.isVisible()) {
+            m_colorDropDown.notifyListeners(SWT.Show, new Event());
+        } else {
+            // Will produce event if not visible before.
+            m_colorDropDown.setVisible(true);
+        }
 
         m_colorDropDown.setFocus();
 
