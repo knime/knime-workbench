@@ -51,6 +51,7 @@ package org.knime.workbench.editor2.directannotationedit;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ShellEvent;
 import org.eclipse.swt.events.ShellListener;
@@ -103,7 +104,14 @@ public class FloatingStyleToolbar {
         m_mainApplicationWindow.addShellListener(m_shellListener);
         m_mainWindowActiveState = new AtomicBoolean(true);
 
-        m_toolbarWindow = new Shell(display, SWT.NO_TRIM | SWT.ON_TOP);
+        // AP-14496: On Linux/GTK, since at least SWT 4.16, SWT.ON_TOP behaves
+        // differently than before w.r.t. manually transferring focus between Shells.
+        // SWT.TOOL is an alternative flag that provides similar behaviour.
+        int toolbarWindowFlags = Platform.OS_LINUX.equals(Platform.getOS()) ?
+              SWT.NO_TRIM | SWT.TOOL
+            : SWT.NO_TRIM | SWT.ON_TOP;
+        m_toolbarWindow = new Shell(display, toolbarWindowFlags);
+
         final GridLayout gl = new GridLayout(1, false);
         gl.marginHeight = 0;
         gl.marginWidth = 0;
@@ -123,9 +131,6 @@ public class FloatingStyleToolbar {
         };
         m_hideListener = (event) -> {
             m_controlsInView.remove(event.widget);
-
-            m_mainApplicationWindow.forceActive();
-
             recomputeRegion();
         };
         m_toolbar.addShowHideListeners(m_showListener, m_hideListener);
@@ -307,9 +312,21 @@ public class FloatingStyleToolbar {
     private class ToolbarHideDecider implements Runnable {
         @Override
         public void run () {
-            try {
-                Thread.sleep(80);
-            } catch (final Exception e) { }
+            // The XYActiveState fields below are being set by ShellListeners
+            // i.e. on activation/deactivation of a Shell.
+            // These events are processed on the UI thread, here we are working on
+            // a different thread. Hence, we need to ensure that there are no unprocessed
+            // events before we determine and use the state of these fields.
+            // `syncExec` blocks the current thread until the UI thread ran the given runnable.
+            // `display.readAndDispatch()` processes all unprocessed events.
+            Display display = m_toolbarWindow.getDisplay();
+            display.syncExec(() -> {
+                long start = System.currentTimeMillis();
+                while (start + 2000 > System.currentTimeMillis()) {
+                    while (display.readAndDispatch()) {
+                    }
+                }
+            });
 
             for (final VendedShellListener listener : m_vendedShellListeners) {
                 if (listener.getActiveState()) {

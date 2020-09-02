@@ -165,6 +165,7 @@ public class AnnotationEditFloatingToolbar extends Composite implements FlatButt
         m_fontSizeButton.addClickListener(this);
         m_fontSizeButton.setBackground(BACKGROUND_COLOR);
         m_fontSizeButton.setToolTipText("Font Size");
+        m_fontSizeButton.addValueClickListener(focusTransferor);
 
         /*
          * Note that we add the focusTransferor such that it is notified after the state changing messaging.

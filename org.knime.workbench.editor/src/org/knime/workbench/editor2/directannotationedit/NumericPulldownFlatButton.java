@@ -164,6 +164,8 @@ public class NumericPulldownFlatButton extends FlatButton
         m_chevronPath = createChevronPath(getDisplay(), m_pulldownBounds);
 
         m_dropDownList = new DropDownValueList(parent.getShell());
+        // Needs to be set explicitly, else `isVisible` is assumed to be true.
+        m_dropDownList.setVisible(false);
 
         m_textBox = new Text(parent.getShell(), SWT.BORDER);
         final GridData gd = new GridData();
@@ -189,6 +191,16 @@ public class NumericPulldownFlatButton extends FlatButton
         m_textBox.moveBelow(null);
 
         addClickListener(this);
+    }
+
+    /**
+     * Set a listener to be called when a value from the dropdown is selected.
+     * @param listener The listener to be called when a value is selected.
+     */
+    void addValueClickListener(final FlatButton.ClickListener listener) {
+        if (m_dropDownList != null) {
+            m_dropDownList.addValueClickListener(listener);
+        }
     }
 
     void addShowHideListeners(final Listener showListener, final Listener hideListener) {
@@ -349,6 +361,16 @@ public class NumericPulldownFlatButton extends FlatButton
     private class DropDownValueList extends Canvas {
         private final LabelFlatButton[] m_buttons;
         private int m_selectedIndex;
+
+        /**
+         * Attaches the given click listener to each of the buttons in the dropdown.
+         * @param listener The click listener to be attached to each of the buttons in the dropdown.
+         */
+        void addValueClickListener(final FlatButton.ClickListener listener) {
+            for (LabelFlatButton btn : m_buttons) {
+                btn.addClickListener(listener);
+            }
+        }
 
         DropDownValueList(final Composite parent) {
             super(parent, SWT.NONE);
