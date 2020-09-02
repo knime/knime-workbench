@@ -212,7 +212,7 @@ abstract class AbstractLinkNodesAction extends AbstractNodeAction {
             // disable if there are no nodes that are (no longer) contained in the workflow
             // this is a very common case when nodes get deleted and actions in the toolbar are
             // updated in response to that
-            if (!Arrays.stream(selected).anyMatch(p)) {
+            if (!Arrays.stream(selected).allMatch(p)) {
                 return false;
             }
 
