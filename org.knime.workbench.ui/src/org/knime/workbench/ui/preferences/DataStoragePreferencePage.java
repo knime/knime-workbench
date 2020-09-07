@@ -59,9 +59,9 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
-import org.knime.core.data.container.BufferedRowContainerFactory;
-import org.knime.core.data.container.RowContainerFactoryRegistry;
+import org.knime.core.data.container.IDataContainerFactoryRegistry;
 import org.knime.core.data.container.storage.TableStoreFormatRegistry;
+import org.knime.core.node.BufferedDataContainer;
 import org.osgi.framework.FrameworkUtil;
 
 /**
@@ -99,10 +99,10 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
     @Override
     protected void createFieldEditors() {
         String[][] rowContainerFactoryLabelsAndText =
-            RowContainerFactoryRegistry.getInstance().getRowContainerFactories().stream()
+            IDataContainerFactoryRegistry.getInstance().getRowContainerFactories().stream()
                 .map(f -> new String[]{f.getName(), f.getClass().getName()}).toArray(String[][]::new);
         m_rowContainerFactoryEditor =
-            new RadioGroupFieldEditor(RowContainerFactoryRegistry.PREF_KEY_ROWCONTAINER_FACTORY, "KNIME Table Backend",
+            new RadioGroupFieldEditor(IDataContainerFactoryRegistry.PREF_KEY_ROWCONTAINER_FACTORY, "KNIME Table Backend",
                 1, rowContainerFactoryLabelsAndText, getFieldEditorParent());
         addField(m_rowContainerFactoryEditor);
 
@@ -114,9 +114,9 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
         addField(m_tableStoreFormatEditor);
 
         // NB: in case default value changes at some point, we have to change this behaviour here again.
-        RowContainerFactoryRegistry.getInstance().getInstanceRowContainerFactory();
+        IDataContainerFactoryRegistry.getInstance().getInstanceRowContainerFactory();
         checkEnablementOfTableStoreFormatEditor(
-            RowContainerFactoryRegistry.getInstance().getInstanceRowContainerFactory().getClass().getName());
+            IDataContainerFactoryRegistry.getInstance().getInstanceRowContainerFactory().getClass().getName());
 
         DefaultScope.INSTANCE.getNode(CORE_BUNDLE_SYMBOLIC_NAME).addPreferenceChangeListener(this);
     }
@@ -141,7 +141,7 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
     public void propertyChange(final PropertyChangeEvent event) {
         super.propertyChange(event);
         if (event.getSource() == m_rowContainerFactoryEditor) {
-            m_tableStoreFormatEditor.setEnabled(event.getNewValue().equals(BufferedRowContainerFactory.class.getName()),
+            m_tableStoreFormatEditor.setEnabled(event.getNewValue().equals(BufferedDataContainer.class.getName()),
                 getFieldEditorParent());
         }
     }
@@ -156,7 +156,7 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
             m_tableStoreFormatEditor.load();
         }
 
-        if (RowContainerFactoryRegistry.PREF_KEY_ROWCONTAINER_FACTORY.equals(event.getKey())) {
+        if (IDataContainerFactoryRegistry.PREF_KEY_ROWCONTAINER_FACTORY.equals(event.getKey())) {
             m_rowContainerFactoryEditor.load();
             checkEnablementOfTableStoreFormatEditor(event.getNewValue());
         }
@@ -164,7 +164,7 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
 
     private void checkEnablementOfTableStoreFormatEditor(final Object selectedTableStoreFormat) {
         m_tableStoreFormatEditor.setEnabled(
-            Objects.equals(selectedTableStoreFormat, BufferedRowContainerFactory.class.getName()),
+            Objects.equals(selectedTableStoreFormat, BufferedDataContainer.class.getName()),
             getFieldEditorParent());
     }
 }
