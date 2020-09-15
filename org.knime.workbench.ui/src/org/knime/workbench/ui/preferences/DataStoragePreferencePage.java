@@ -59,7 +59,7 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
-import org.knime.core.data.container.IDataContainerFactoryRegistry;
+import org.knime.core.data.container.DataContainerDelegateFactoryRegistry;
 import org.knime.core.data.container.storage.TableStoreFormatRegistry;
 import org.knime.core.node.BufferedDataContainer;
 import org.osgi.framework.FrameworkUtil;
@@ -81,7 +81,7 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
     static final ScopedPreferenceStore CORE_STORE =
         new ScopedPreferenceStore(InstanceScope.INSTANCE, CORE_BUNDLE_SYMBOLIC_NAME);
 
-    private RadioGroupFieldEditor m_rowContainerFactoryEditor;
+    private RadioGroupFieldEditor m_dataContainerFactoryEditor;
 
     private RadioGroupFieldEditor m_tableStoreFormatEditor;
 
@@ -98,13 +98,13 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
 
     @Override
     protected void createFieldEditors() {
-        String[][] rowContainerFactoryLabelsAndText =
-            IDataContainerFactoryRegistry.getInstance().getRowContainerFactories().stream()
+        String[][] dataContainerFactoryLabelsAndText =
+            DataContainerDelegateFactoryRegistry.getInstance().getDataContainerDelegateFactories().stream()
                 .map(f -> new String[]{f.getName(), f.getClass().getName()}).toArray(String[][]::new);
-        m_rowContainerFactoryEditor =
-            new RadioGroupFieldEditor(IDataContainerFactoryRegistry.PREF_KEY_ROWCONTAINER_FACTORY, "KNIME Table Backend",
-                1, rowContainerFactoryLabelsAndText, getFieldEditorParent());
-        addField(m_rowContainerFactoryEditor);
+        m_dataContainerFactoryEditor =
+            new RadioGroupFieldEditor(DataContainerDelegateFactoryRegistry.PREF_KEY_DATACONTAINER_DELEGATE_FACTORY, "KNIME Table Backend",
+                1, dataContainerFactoryLabelsAndText, getFieldEditorParent());
+        addField(m_dataContainerFactoryEditor);
 
         // maps the table store format human readable name to the fully qualified class name
         String[][] tableStoreFormatLabelsAndText = TableStoreFormatRegistry.getInstance().getTableStoreFormats()
@@ -114,9 +114,9 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
         addField(m_tableStoreFormatEditor);
 
         // NB: in case default value changes at some point, we have to change this behaviour here again.
-        IDataContainerFactoryRegistry.getInstance().getInstanceRowContainerFactory();
+        DataContainerDelegateFactoryRegistry.getInstance().getInstanceDataContainerDelegateFactory();
         checkEnablementOfTableStoreFormatEditor(
-            IDataContainerFactoryRegistry.getInstance().getInstanceRowContainerFactory().getClass().getName());
+            DataContainerDelegateFactoryRegistry.getInstance().getInstanceDataContainerDelegateFactory().getClass().getName());
 
         DefaultScope.INSTANCE.getNode(CORE_BUNDLE_SYMBOLIC_NAME).addPreferenceChangeListener(this);
     }
@@ -140,7 +140,7 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
     @Override
     public void propertyChange(final PropertyChangeEvent event) {
         super.propertyChange(event);
-        if (event.getSource() == m_rowContainerFactoryEditor) {
+        if (event.getSource() == m_dataContainerFactoryEditor) {
             m_tableStoreFormatEditor.setEnabled(event.getNewValue().equals(BufferedDataContainer.class.getName()),
                 getFieldEditorParent());
         }
@@ -156,8 +156,8 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
             m_tableStoreFormatEditor.load();
         }
 
-        if (IDataContainerFactoryRegistry.PREF_KEY_ROWCONTAINER_FACTORY.equals(event.getKey())) {
-            m_rowContainerFactoryEditor.load();
+        if (DataContainerDelegateFactoryRegistry.PREF_KEY_DATACONTAINER_DELEGATE_FACTORY.equals(event.getKey())) {
+            m_dataContainerFactoryEditor.load();
             checkEnablementOfTableStoreFormatEditor(event.getNewValue());
         }
     }
