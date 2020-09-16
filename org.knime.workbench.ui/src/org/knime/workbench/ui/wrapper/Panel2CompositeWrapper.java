@@ -133,19 +133,6 @@ public class Panel2CompositeWrapper extends Composite {
         final Dimension size = sizeReference.get();
         setSize(size.width, size.height);
 
-        addFocusListener(new FocusAdapter() {
-            /**
-             * {@inheritDoc}
-             * @param e focus event passed to the underlying AWT component
-             */
-            @Override
-            public void focusGained(final FocusEvent e) {
-                ViewUtils.runOrInvokeLaterInEDT(() -> {
-                    panel.requestFocus();
-                });
-            }
-        });
-
         // Bug 6275: Use a focus listener to check if wrapper component, AWT Frame and dialog panel
         // have the same size. The asynchronous queuing in SWT_AWT.new_Frame() leads to sizes not being correctly
         // set on the AWT components sometimes at this point. The following code corrects this.
