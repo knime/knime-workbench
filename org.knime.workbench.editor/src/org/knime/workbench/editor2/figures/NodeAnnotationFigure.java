@@ -193,8 +193,17 @@ public class NodeAnnotationFigure extends Figure implements EditorModeParticipan
         });
 
         final Color previousBackgroundColor = getBackgroundColor();
+        final Color bg = ColorUtilities.RGBintToColor(m_annotation.getBgColor());
+        // Note that for `Color`, `equals` checks whether the colors have identical RGB values
+        // (and some more) but not that the objects themselves are identical. This boolean is merely a way
+        // of determining whether the user color selection has changed. This is needed to determine whether
+        // `previousBackgroundColor` should indeed be disposed. If selection has not changed, it mustn't
+        // be disposed since then that exact same object will still be the Figures' currently set background
+        // color, causing methods such as setBackground which access it to fail (on Linux, see AP-15093).
+        final boolean bgHasChanged = bg.equals(previousBackgroundColor);
         if ((previousBackgroundColor != null)
-            && !AnnotationUtilities.getWorkflowAnnotationDefaultBackgroundColor().equals(previousBackgroundColor)) {
+            && !AnnotationUtilities.getWorkflowAnnotationDefaultBackgroundColor().equals(previousBackgroundColor)
+            && !bgHasChanged) {
             previousBackgroundColor.dispose();
         }
         m_disposableForegroundStyledTextColors.stream().forEach((c) -> {
@@ -202,7 +211,6 @@ public class NodeAnnotationFigure extends Figure implements EditorModeParticipan
         });
         m_disposableForegroundStyledTextColors.clear();
 
-        final Color bg = ColorUtilities.RGBintToColor(m_annotation.getBgColor());
         setBackgroundColor(bg);
         m_page.setBackgroundColor(bg);
         if (isNodeAnnotation
