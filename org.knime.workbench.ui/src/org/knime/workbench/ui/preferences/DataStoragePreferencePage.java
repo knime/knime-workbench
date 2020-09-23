@@ -47,20 +47,15 @@
  */
 package org.knime.workbench.ui.preferences;
 
-import java.util.Objects;
-
 import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.IPreferenceChangeListener;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences.PreferenceChangeEvent;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.RadioGroupFieldEditor;
-import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
-import org.knime.core.data.container.BufferedRowContainerFactory;
-import org.knime.core.data.container.RowContainerFactoryRegistry;
 import org.knime.core.data.container.storage.TableStoreFormatRegistry;
 import org.osgi.framework.FrameworkUtil;
 
@@ -81,8 +76,6 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
     static final ScopedPreferenceStore CORE_STORE =
         new ScopedPreferenceStore(InstanceScope.INSTANCE, CORE_BUNDLE_SYMBOLIC_NAME);
 
-    private RadioGroupFieldEditor m_rowContainerFactoryEditor;
-
     private RadioGroupFieldEditor m_tableStoreFormatEditor;
 
     /**
@@ -98,25 +91,12 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
 
     @Override
     protected void createFieldEditors() {
-        String[][] rowContainerFactoryLabelsAndText =
-            RowContainerFactoryRegistry.getInstance().getRowContainerFactories().stream()
-                .map(f -> new String[]{f.getName(), f.getClass().getName()}).toArray(String[][]::new);
-        m_rowContainerFactoryEditor =
-            new RadioGroupFieldEditor(RowContainerFactoryRegistry.PREF_KEY_ROWCONTAINER_FACTORY, "KNIME Table Backend",
-                1, rowContainerFactoryLabelsAndText, getFieldEditorParent());
-        addField(m_rowContainerFactoryEditor);
-
         // maps the table store format human readable name to the fully qualified class name
         String[][] tableStoreFormatLabelsAndText = TableStoreFormatRegistry.getInstance().getTableStoreFormats()
             .stream().map(f -> new String[]{f.getName(), f.getClass().getName()}).toArray(String[][]::new);
         m_tableStoreFormatEditor = new RadioGroupFieldEditor(TableStoreFormatRegistry.PREF_KEY_STORAGE_FORMAT,
             "KNIME Table Storage Format", 1, tableStoreFormatLabelsAndText, getFieldEditorParent());
         addField(m_tableStoreFormatEditor);
-
-        // NB: in case default value changes at some point, we have to change this behaviour here again.
-        RowContainerFactoryRegistry.getInstance().getInstanceRowContainerFactory();
-        checkEnablementOfTableStoreFormatEditor(
-            RowContainerFactoryRegistry.getInstance().getInstanceRowContainerFactory().getClass().getName());
 
         DefaultScope.INSTANCE.getNode(CORE_BUNDLE_SYMBOLIC_NAME).addPreferenceChangeListener(this);
     }
@@ -132,20 +112,6 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
         DefaultScope.INSTANCE.getNode(CORE_BUNDLE_SYMBOLIC_NAME).removePreferenceChangeListener(this);
     }
 
-    /**
-     * The field editor preference page implementation of this <code>IPreferencePage</code> (and
-     * <code>IPropertyChangeListener</code>) method intercepts <code>IS_VALID</code> events but passes other events on
-     * to its superclass.
-     */
-    @Override
-    public void propertyChange(final PropertyChangeEvent event) {
-        super.propertyChange(event);
-        if (event.getSource() == m_rowContainerFactoryEditor) {
-            m_tableStoreFormatEditor.setEnabled(event.getNewValue().equals(BufferedRowContainerFactory.class.getName()),
-                getFieldEditorParent());
-        }
-    }
-
     @Override
     public void preferenceChange(final PreferenceChangeEvent event) {
         // The default preferences may change while this page is open (e.g. by an action on other preference page, e.g.
@@ -155,16 +121,5 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
         if (TableStoreFormatRegistry.PREF_KEY_STORAGE_FORMAT.equals(event.getKey())) {
             m_tableStoreFormatEditor.load();
         }
-
-        if (RowContainerFactoryRegistry.PREF_KEY_ROWCONTAINER_FACTORY.equals(event.getKey())) {
-            m_rowContainerFactoryEditor.load();
-            checkEnablementOfTableStoreFormatEditor(event.getNewValue());
-        }
-    }
-
-    private void checkEnablementOfTableStoreFormatEditor(final Object selectedTableStoreFormat) {
-        m_tableStoreFormatEditor.setEnabled(
-            Objects.equals(selectedTableStoreFormat, BufferedRowContainerFactory.class.getName()),
-            getFieldEditorParent());
     }
 }
