@@ -13,6 +13,10 @@
 	<artifactId>org.knime.workbench.ui.browser</artifactId>
 	<packaging>eclipse-plugin</packaging>
 
+	<properties>
+		<revision>4.2.1</revision>
+	</properties>
+
 	<build>
 		<plugins>
 			<plugin>

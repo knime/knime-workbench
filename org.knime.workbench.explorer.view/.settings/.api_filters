@@ -1,29 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <component id="org.knime.workbench.explorer.view" version="2">
-    <resource path="src/org/knime/workbench/explorer/filesystem/LocalExplorerFileStore.java" type="org.knime.workbench.explorer.filesystem.LocalExplorerFileStore">
-        <filter id="623939596">
-            <message_arguments>
-                <message_argument value="NodeTimer"/>
-                <message_argument value="LocalExplorerFileStore"/>
-                <message_argument value="GLOBAL_TIMER"/>
-            </message_arguments>
-        </filter>
-        <filter id="640712815">
-            <message_arguments>
-                <message_argument value="GlobalNodeStats"/>
-                <message_argument value="LocalExplorerFileStore"/>
-                <message_argument value="incWorkflowOpening()"/>
-            </message_arguments>
-        </filter>
-    </resource>
-	<resource path="META-INF/MANIFEST.MF" type="org.knime.workbench.explorer.ExplorerMountPointIDProvider">
-        <filter id="305324134">
-            <message_arguments>
-                <message_argument value="org.knime.workbench.explorer.ExplorerMountPointIDProvider"/>
-                <message_argument value="org.knime.workbench.explorer.view_8.6.0"/>
-            </message_arguments>
-        </filter>
-    </resource>
     <resource path="src/org/knime/workbench/explorer/ExplorerURLStreamHandler.java" type="org.knime.workbench.explorer.ExplorerURLStreamHandler">
         <filter id="640712815">
             <message_arguments>
@@ -44,6 +20,22 @@
                 <message_argument value="NodeContext"/>
                 <message_argument value="ExplorerURLStreamHandler"/>
                 <message_argument value="getNodeContainer()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/filesystem/LocalExplorerFileStore.java" type="org.knime.workbench.explorer.filesystem.LocalExplorerFileStore">
+        <filter id="623939596">
+            <message_arguments>
+                <message_argument value="NodeTimer"/>
+                <message_argument value="LocalExplorerFileStore"/>
+                <message_argument value="GLOBAL_TIMER"/>
+            </message_arguments>
+        </filter>
+        <filter id="640712815">
+            <message_arguments>
+                <message_argument value="GlobalNodeStats"/>
+                <message_argument value="LocalExplorerFileStore"/>
+                <message_argument value="incWorkflowOpening()"/>
             </message_arguments>
         </filter>
     </resource>
@@ -77,14 +69,6 @@
                 <message_argument value="GlobalNodeStats"/>
                 <message_argument value="WorkflowImportAction"/>
                 <message_argument value="incWorkflowImport()"/>
-            </message_arguments>
-        </filter>
-    </resource>
-    <resource path="src/org/knime/workbench/explorer/view/actions/imports/WorkflowImportOperation.java" type="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation">
-        <filter id="338722907">
-            <message_arguments>
-                <message_argument value="org.knime.workbench.explorer.view.actions.imports.WorkflowImportOperation"/>
-                <message_argument value="WorkflowImportOperation(Collection&lt;IWorkflowImportElement&gt;, AbstractExplorerFileStore, Shell)"/>
             </message_arguments>
         </filter>
     </resource>
