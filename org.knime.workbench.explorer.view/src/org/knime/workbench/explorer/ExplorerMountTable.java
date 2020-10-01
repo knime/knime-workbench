@@ -640,6 +640,9 @@ public final class ExplorerMountTable {
             return;
         }
 
+        // TODO: remove this once KNIME Hub is available on prem.
+        final boolean allowKnimeHub = Boolean.getBoolean("com.knime.server.allow_knime_hub");
+
         for (IConfigurationElement elem : point.getConfigurationElements()) {
             String contProvFact = elem.getAttribute(ATTR_CONT_PROV_FACT);
             String decl = elem.getDeclaringExtension().getUniqueIdentifier();
@@ -667,7 +670,9 @@ public final class ExplorerMountTable {
                 }
             }
 
-            if (instance != null) {
+            if (instance != null
+                    // TODO: remove this check once KNIME Hub is available on prem.
+                && (allowKnimeHub || !"com.knime.explorer.server.knime_hub".equals(instance.getID()))) {
                 CONTENT_FACTORIES.put(instance.getID(), instance);
                 FACTORY_NAMES.put(instance.toString(), instance.getID());
             }
