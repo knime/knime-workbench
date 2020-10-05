@@ -83,10 +83,10 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
      */
     public DataStoragePreferencePage() {
         super(GRID);
-        setDescription("Select the table store backend and table store format (in case of default backend) used to "
-            + "store data. This applies to temporary data and final table results that are persisted as part of an "
-            + "executed workflow.\n"
-            + "Additional options become available once the corresponding extensions are installed.");
+        setDescription(
+            "Select the format used to store data for workflows that are configured to use the legacy data storage. "
+            + "This applies to temporary data and final table results "
+            + "that are persisted as part of an executed workflow.");
     }
 
     @Override
