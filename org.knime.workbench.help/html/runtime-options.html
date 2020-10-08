@@ -160,6 +160,37 @@
       temp-file sizes but also (sometimes significant) longer runtime. The
       default is <tt>SNAPPY</tt>.
     </dd>
+    
+    <dt>
+      knime.columnar.chunksize=<em><em>&lt;number&gt;</em>
+    </dt>
+    <dd>
+      The columnar table backend horizontally divides tables into batches and vertically divides these batches into column chunks.
+      This property controls the initial size of these chunks and thereby the number of rows per batch.
+      A chunk is the smallest unit that must be materialized to access a single value.
+      Changing this value can therefore impact memory footprint and overall performance.
+      Do not change this value unless you have good reasons.
+      The default value is 28,000.
+    </dd>
+    
+    <dt>
+      knime.columnar.reservedmemorymb=<em>&lt;number&gt;</em>
+    </dt>
+    <dd>
+      The columnar table backend caches table data off-heap.
+      To this end, it requires memory in addition to the JVM's heap memory, whose size is controlled via the -Xmx parameter.
+      If no explicit cache sizes are set in the preferences, the default memory available for caching is computed as follows:
+      Total physical memory minus reserved memory minus 1.25 times heap memory.
+      The reserved memory size in this equation (in MB) can be configured via this property.
+      The default is 4,096.
+    </dd>
+    
+    <dt>
+      knime.columnar.verbose=<em>(true|false)</em>
+    </dt>
+    <dd>
+      Setting this property to true activates verbose debug logging in the columnar table backend.
+    </dd>
 
     <dt>
       knime.disable.rowid.duplicatecheck=<em>(true|false)</em>
