@@ -496,6 +496,10 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         gl.marginHeight = 0;
         gl.marginWidth = 0;
         m_headerButtonPane.setLayout(gl);
+        // for css styling to compensate for problems when switching back from the web-ui perspective
+        // (or any other theme-change)
+        m_headerButtonPane.setData("org.eclipse.e4.ui.css.CssClassName", "MetadataViewButtonPane");
+
 
 
 
@@ -742,6 +746,10 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         pack();
 
         m_floatingHeaderPositioner = new FloatingHeaderBarPositioner();
+
+        // for css styling to compensate for problems when switching back from the web-ui perspective
+        // (or any other theme-change)
+        super.setData("org.eclipse.e4.ui.css.CssClassName", "MetadataView");
     }
 
     /**

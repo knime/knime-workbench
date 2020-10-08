@@ -1730,7 +1730,7 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     /** Sets background color according to edit mode (see
      * {@link WorkflowManager#isWriteProtected()}. */
-    private void updateEditorBackgroundColor() {
+    public void updateEditorBackgroundColor() {
         final Color color;
         if (m_manager instanceof AsyncWorkflowManagerUI) {
             assert m_refresher != null;
