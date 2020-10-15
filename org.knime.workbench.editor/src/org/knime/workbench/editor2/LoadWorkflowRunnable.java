@@ -51,16 +51,15 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.swing.UIManager;
 
-import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -72,9 +71,12 @@ import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
+import org.knime.core.data.container.storage.TableStoreFormatInformation;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.KNIMEComponentInformation;
+import org.knime.core.node.NodeAndBundleInformationPersistor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
@@ -312,37 +314,61 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
             @Override
             public void run() {
                 Shell shell = SWTUtilities.getActiveShell();
-                if (result.getMissingNodes().isEmpty() && result.getMissingTableFormats().isEmpty()) {
+                List<NodeAndBundleInformationPersistor> missingNodes = result.getMissingNodes();
+                List<TableStoreFormatInformation> missingTableFormats = result.getMissingTableFormats();
+                if (missingNodes.isEmpty() && missingTableFormats.isEmpty()) {
                     String title = isWorkflow ? "Workflow Load" : "Component Load";
                     // will not open if status is OK.
                     ErrorDialog.openError(shell, title, message, status);
                 } else {
+                    String missingExtensions = Stream.concat(missingNodes.stream(), missingTableFormats.stream()) //
+                            .map(KNIMEComponentInformation::getComponentName) //
+                            .distinct() //
+                            .collect(Collectors.joining(", "));
 
-                    List<String> missingExtensionList = new ArrayList<>();
-
-                    result.getMissingNodes().stream().map(i -> i.getComponentName()).distinct()
-                        .forEach(missingExtensionList::add);
-
-                    result.getMissingTableFormats().stream().map(i -> i.getComponentName()).distinct()
-                        .forEach(missingExtensionList::add);
-
-                    String missingExtensions = StringUtils.join(missingExtensionList, ", ");
+                    String missingPrefix = determineMissingPrefix(missingNodes, missingTableFormats);
 
                     String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
-                    String title =
-                        isWorkflow ? "Workflow requires missing extensions" : "Component requires missing extensions";
+                    String title = (isWorkflow ? "Workflow" : "Component") + " requires " + missingPrefix;
                     MessageDialog dialog = new MessageDialog(shell, title, null,
-                        message + " due to missing extensions (" + missingExtensions
+                        message + " due to " + missingPrefix + " (" + missingExtensions
                             + "). Do you want to search and install the required extensions?",
                         MessageDialog.WARNING, dialogButtonLabels, 0);
                     if (dialog.open() == 0) {
-                        Job j = new InstallMissingNodesJob(result.getMissingNodes(), result.getMissingTableFormats());
+                        Job j = new InstallMissingNodesJob(missingNodes, missingTableFormats);
                         j.setUser(true);
                         j.schedule();
                     }
                 }
             }
         });
+    }
+
+    /**
+     * Depending on what's missing it returns "a missing node extension", "a missing table format extension" and also
+     * respects singular/plural.
+     */
+    static String determineMissingPrefix(final List<NodeAndBundleInformationPersistor> missingNodes,
+        final List<TableStoreFormatInformation> missingTableFormats) {
+        StringBuilder b = new StringBuilder();
+        if (missingNodes.size() + missingTableFormats.size() == 1) {
+            b.append("a ");
+        }
+        b.append("missing ");
+        if (missingTableFormats.isEmpty()) {
+            b.append("node extension");
+            if (missingNodes.size() > 1) {
+                b.append("s");
+            }
+        } else if (missingNodes.isEmpty()) {
+            b.append("table format extension");
+            if (missingTableFormats.size() > 1) {
+                b.append("s");
+            }
+        } else {
+            b.append("extensions");
+        }
+        return b.toString();
     }
 
     /** @return True if the load process has been interrupted. */
