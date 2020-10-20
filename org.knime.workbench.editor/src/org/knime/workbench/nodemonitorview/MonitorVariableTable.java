@@ -114,7 +114,8 @@ public class MonitorVariableTable implements NodeMonitorTable {
         for (FlowVariable fv : m_variables) {
             TableItem item = new TableItem(table, SWT.NONE);
             item.setText(0, fv.getName());
-            item.setText(1, fv.getValueAsString());
+            final String value = fv.getValueAsString();
+            item.setText(1, value != null ? value : "null");
         }
         for (int i = 0; i < table.getColumnCount(); i++) {
             table.getColumn(i).pack();
