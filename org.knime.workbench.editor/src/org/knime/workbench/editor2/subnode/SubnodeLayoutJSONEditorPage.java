@@ -323,15 +323,15 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         final List<VisualLayoutEditorJSONNode> nodes = createJSONNodeList();
         // ensure node layout is written the same as the metanode layout
         final ObjectMapper mapper = JSONLayoutPage.getConfiguredObjectMapper();
-        String jsonNodes = "";
+        String JSONNodes = "";
         try {
-            jsonNodes = mapper.writeValueAsString(nodes);
+            JSONNodes = mapper.writeValueAsString(nodes);
         } catch (JsonProcessingException e) {
             LOGGER.error("Cannot write JSON: " + e.getMessage(), e);
         }
         // variables in progress listener must be final
-        final String jsonLayoutConst = getJsonDocument();
-        final String jsonNodesConst = jsonNodes;
+        final String JSONLayout = getJsonDocument();
+        final String jsonNodes = JSONNodes;
         m_browser.addProgressListener(new ProgressListener() {
 
             @Override
@@ -341,8 +341,8 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
 
             @Override
             public void completed(final ProgressEvent event) {
-                m_browser.evaluate("setNodes(\'" + jsonNodesConst + "\');");
-                m_browser.evaluate("setLayout(\'" + jsonLayoutConst + "\');");
+                m_browser.evaluate("setNodes(\'" + jsonNodes + "\');");
+                m_browser.evaluate("setLayout(\'" + JSONLayout + "\');");
             }
         });
         m_visualLayoutUpdate = new UpdateLayoutFunction(m_browser, "pushLayout");

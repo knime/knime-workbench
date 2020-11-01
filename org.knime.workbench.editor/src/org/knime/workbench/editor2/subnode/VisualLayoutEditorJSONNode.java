@@ -48,7 +48,7 @@
  */
 package org.knime.workbench.editor2.subnode;
 
-import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.knime.js.core.layout.LayoutTemplateProvider;
 import org.knime.js.core.layout.bs.JSONLayoutContent;
 import org.knime.js.core.layout.bs.JSONLayoutViewContent;
@@ -95,7 +95,7 @@ public class VisualLayoutEditorJSONNode {
      */
     public VisualLayoutEditorJSONNode(final int nodeID, final String name, final String description, final JSONLayoutContent layout,
         final String icon, final boolean availableInView, final String type) {
-        m_nodeID = Integer.toString(nodeID);
+        m_nodeID = nodeID + "";
         // it doesn't seem to be possible to escape the apostrophe for the resulting script to be executed correctly
         // replacing it with a 'right single quotation mark' keeps the visual appearance
         m_name =  StringEscapeUtils.escapeJava(name.replace("'", "’"));
