@@ -114,6 +114,7 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.view.dnd.ExplorerURIDropUtil;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.NodeTemplate;
 
@@ -152,7 +153,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
     protected Command getCreateCommand(final CreateRequest request) {
         final WorkflowRootEditPart workflowPart = (WorkflowRootEditPart)this.getHost();
         final WorkflowManagerUI managerUI = workflowPart.getWorkflowManager();
-        final Optional<WorkflowManager> manager = Wrapper.unwrapWFMOptional(managerUI);
+        final WorkflowManager manager = Wrapper.unwrapWFMOptional(managerUI).orElse(null);
 
         if (request instanceof CreateDropRequest) {
             final Object obj = request.getNewObject();
@@ -161,7 +162,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 return handleNodeDrop(managerUI, (NodeFactory<? extends NodeModel>)obj, cdr);
             }
 
-            if (!manager.isPresent()) {
+            if (manager == null) {
                 //drops of the objects below are not yet supported
                 //for WorkflowManagerUI-implementations
                 return null;
@@ -169,13 +170,13 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             if (obj instanceof AbstractExplorerFileStore) {
                 final AbstractExplorerFileStore fs = (AbstractExplorerFileStore)obj;
                 if (AbstractExplorerFileStore.isWorkflowTemplate(fs)) {
-                    return handleMetaNodeTemplateDrop(manager.get(), cdr, fs.toURI(),
+                    return handleMetaNodeTemplateDrop(manager, cdr, fs.toURI(),
                         fs instanceof RemoteExplorerFileStore);
                 }
             } else if (obj instanceof WorkflowPersistor) {
-                return handleMetaNodeDrop(manager.get(), (WorkflowPersistor)obj, cdr);
+                return handleMetaNodeDrop(manager, (WorkflowPersistor)obj, cdr);
             } else if (obj instanceof ReaderNodeSettings) {
-                return handleFileDrop(manager.get(), (ReaderNodeSettings)obj, cdr);
+                return handleFileDrop(manager, (ReaderNodeSettings)obj, cdr);
             } else if (obj instanceof URL) {
                 return handleURLDrop(managerUI, manager, (URL)obj, cdr);
             } else {
@@ -185,7 +186,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         return null;
     }
 
-    private Command handleURLDrop(final WorkflowManagerUI managerUI, final Optional<WorkflowManager> manager, final URL url,
+    private Command handleURLDrop(final WorkflowManagerUI managerUI, final WorkflowManager manager, final URL url,
         final CreateDropRequest cdr) {
         URI uri;
         if ((uri = createEncodedURI(url).orElse(null)) != null) {
@@ -225,13 +226,18 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         return null;
     }
 
-    private Command handleObjectDropFromURI(final Optional<WorkflowManager> manager, final CreateDropRequest cdr,
+    private Command handleObjectDropFromURI(final WorkflowManager manager, final CreateDropRequest cdr,
         final RepoObjectImport uriImport) {
-        // If the entity corresponds to a workflow (group) the action will be simply ignored
         if (uriImport.getType() == RepoObjectType.WorkflowTemplate) {
-            return handleMetaNodeTemplateDrop(manager.get(), cdr, uriImport.getKnimeURI(), true);
+            return handleMetaNodeTemplateDrop(manager, cdr, uriImport.getKnimeURI(), true);
+        } else if (uriImport.getType() == RepoObjectType.Workflow || uriImport.getType() == RepoObjectType.WorkflowGroup
+            || uriImport.getType() == RepoObjectType.Data) {
+            ExplorerURIDropUtil.performDrop(uriImport);
+            return null;
+        } else {
+            // ignore drop for any other types
+            return null;
         }
-        return null;
     }
 
     private Command handleMetaNodeTemplateDrop(final WorkflowManager manager, final CreateDropRequest request,
