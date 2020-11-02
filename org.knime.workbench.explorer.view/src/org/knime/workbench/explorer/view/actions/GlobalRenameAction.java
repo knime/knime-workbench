@@ -182,7 +182,7 @@ public class GlobalRenameAction extends ExplorerAction {
          */
         ExplorerFileSystemUtils.unlockWorkflows(lockedWFs);
         try {
-            srcFileStore.move(dstFileStore, EFS.NONE, null);
+            srcFileStore.move(dstFileStore, EFS.OVERWRITE, null);
             // unlockDstWorkflows(acp, srcFileStore, dstFileStore, lockedWFs);
             LOGGER.debug("Renamed \"" + srcFileStore + "\" to \""
                     + dstFileStore + "\".");
