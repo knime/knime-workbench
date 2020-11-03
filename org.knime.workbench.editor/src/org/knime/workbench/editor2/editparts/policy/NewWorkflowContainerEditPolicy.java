@@ -91,6 +91,7 @@ import org.knime.workbench.core.imports.NodeImport;
 import org.knime.workbench.core.imports.RepoObjectImport;
 import org.knime.workbench.core.imports.RepoObjectImport.RepoObjectType;
 import org.knime.workbench.core.imports.URIImporterFinder;
+import org.knime.workbench.core.imports.UpdateSiteInfo;
 import org.knime.workbench.editor2.CreateDropRequest;
 import org.knime.workbench.editor2.CreateDropRequest.RequestType;
 import org.knime.workbench.editor2.InstallMissingNodesJob;
@@ -268,11 +269,12 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
     }
 
     private static Command handleExtensionDropFromURI(final ExtensionImport extImport) {
-        handleExtensionDrop(extImport.getName(), extImport.getSymbolicName());
+        handleExtensionDrop(extImport.getName(), extImport.getSymbolicName(), extImport.getUpdateSiteInfo());
         return null;
     }
 
-    private static void handleExtensionDrop(final String featureName, final String featureSymbolicName) {
+    private static void handleExtensionDrop(final String featureName, final String featureSymbolicName,
+        final UpdateSiteInfo siteInfo) {
         if (isFeatureInstalled(featureSymbolicName)) {
             showPopup("Extension cannot be installed!", "Extension " + featureName + " is already installed",
                 SWT.ICON_INFORMATION);
@@ -285,7 +287,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             if (dialog.open() == 0) {
 
                 //try installing the missing extension
-                openInstallationJob(featureName, featureSymbolicName);
+                startInstallationJob(featureName, featureSymbolicName, siteInfo);
             }
         }
     }
@@ -368,7 +370,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                     + "\n\nNote: Please drag and drop the node again once the installation process is finished.",
                 MessageDialog.QUESTION, dialogButtonLabels, 0);
             if (dialog.open() == 0) {
-                openInstallationJob(featureName, featureSymbolicName);
+                startInstallationJob(featureName, featureSymbolicName, nodeImport.getUpdateSiteInfo());
                 // TODO: add the node once the extension has been installed
                 return null;
             } else {
@@ -491,7 +493,8 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         return command;
     }
 
-    private static void openInstallationJob(final String featureName, final String featureSymbolicName) {
+    private static void startInstallationJob(final String featureName, final String featureSymbolicName,
+        final UpdateSiteInfo siteInfo) {
         Job j = new InstallMissingNodesJob(asList(new KNIMEComponentInformation() {
 
             @Override
@@ -510,7 +513,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             public Optional<String> getBundleSymbolicName() {
                 return Optional.empty();
             }
-        }));
+        }), siteInfo);
         j.setUser(true);
         j.schedule();
     }

@@ -64,4 +64,9 @@ public interface ExtensionImport extends EntityImport {
      * @return a unique identifier for the extension
      */
     String getSymbolicName();
+
+    /**
+     * @return additional info about the update site which provides the extension
+     */
+    UpdateSiteInfo getUpdateSiteInfo();
 }

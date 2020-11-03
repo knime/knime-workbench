@@ -44,46 +44,35 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Jun 27, 2019 (hornm): created
+ *   Nov 3, 2020 (hornm): created
  */
 package org.knime.workbench.core.imports;
 
 /**
- * Represents the information required to import a node into the AP (i.e. to add a node to a workflow and potentially
- * trigger an installation of the respective extension).
+ * Provides information about a update site.
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-public interface NodeImport extends EntityImport {
+public interface UpdateSiteInfo {
 
     /**
-     * @return the node's canonical factory class name
+     * @return the update site url
      */
-    String getCanonicalNodeFactory();
+    String getUrl();
 
     /**
-     * @return the node's name/title
+     * @return the update site version
      */
-    String getNodeName();
+    String getVersion();
 
     /**
-     * @return whether the node is a dynamic node (i.e. programmatically created)
+     * @return whether the update site is regarded as trusted
      */
-    boolean isDynamicNode();
+    boolean isTrusted();
 
     /**
-     * @return the name of the feature (extensions/plugin) the node is part of
+     * @return the update site name
      */
-    String getFeatureName();
-
-    /**
-     * @return a unique identifier for the feature (extension/plugin) the node is part of
-     */
-    String getFeatureSymbolicName();
-
-    /**
-     * @return additional info about the update site which provides the node
-     */
-    UpdateSiteInfo getUpdateSiteInfo();
+    String getName();
 
 }
