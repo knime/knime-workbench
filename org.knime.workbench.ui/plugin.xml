@@ -3,6 +3,7 @@
 <plugin>
    <extension-point id="multipleInstanceViews" name="KNIME multiple instances views" schema="schema/multipleInstanceViews.exsd"/>
    <extension-point id="startupMessages" name="StartupMessages" schema="schema/startupMessages.exsd"/>
+   <extension-point id="HubLinkHandler" name="HubLinkHandler" schema="schema/HubLinkHandler.exsd"/>
      <extension
          point="org.eclipse.ui.perspectives">
       <perspective
