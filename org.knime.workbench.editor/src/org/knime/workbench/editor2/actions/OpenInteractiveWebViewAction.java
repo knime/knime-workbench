@@ -76,6 +76,7 @@ import org.knime.core.ui.node.workflow.InteractiveWebViewsResultUI.SingleInterac
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.util.SWTUtilities;
+import org.knime.core.ui.wrapper.NativeNodeContainerWrapper;
 import org.knime.core.ui.wrapper.NodeContainerWrapper;
 import org.knime.core.ui.wrapper.SingleInteractiveWebViewResultWrapper;
 import org.knime.core.ui.wrapper.Wrapper;
@@ -166,22 +167,7 @@ public final class OpenInteractiveWebViewAction extends Action {
             //required objects need to be unwrapped
             NativeNodeContainer nativeNC =
                 unwrap(m_webViewForNode, SingleInteractiveWebViewResult.class).getNativeNodeContainer();
-            try {
-                @SuppressWarnings("rawtypes")
-                AbstractWizardNodeView view = null;
-                NodeContext.pushContext(nativeNC);
-                try {
-                    NodeModel nodeModel = nativeNC.getNodeModel();
-                    view = getConfiguredWizardNodeView(nodeModel);
-                } finally {
-                    NodeContext.removeLastContext();
-                }
-                view.setWorkflowManagerAndNodeID(nativeNC.getParent(), nativeNC.getID());
-                final String title = m_webViewForNode.getViewName();
-                Node.invokeOpenView(view, title, OpenViewAction.getAppBoundsAsAWTRec());
-            } catch (Throwable t) {
-                showWarningDialog(m_nodeContainer, t);
-            }
+            openView(nativeNC, m_webViewForNode.getViewName());
         } else {
             //create view by using the UI-objects directly
             //and don't block the UI
@@ -207,6 +193,30 @@ public final class OpenInteractiveWebViewAction extends Action {
                 //canceled by user, don't open
                 //(cancellation doesn't work, yet)
             }
+        }
+    }
+
+    /**
+     * Opens the actual view.
+     *
+     * @param nc the node container to open the view for
+     * @param viewName the view name
+     */
+    public static void openView(final NativeNodeContainer nc, final String viewName) {
+        try {
+            @SuppressWarnings("rawtypes")
+            AbstractWizardNodeView view = null;
+            NodeContext.pushContext(nc);
+            try {
+                NodeModel nodeModel = nc.getNodeModel();
+                view = getConfiguredWizardNodeView(nodeModel);
+            } finally {
+                NodeContext.removeLastContext();
+            }
+            view.setWorkflowManagerAndNodeID(nc.getParent(), nc.getID());
+            Node.invokeOpenView(view, viewName, OpenViewAction.getAppBoundsAsAWTRec());
+        } catch (Throwable t) {
+            showWarningDialog(NativeNodeContainerWrapper.wrap(nc), t);
         }
     }
 

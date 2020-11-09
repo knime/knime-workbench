@@ -126,35 +126,20 @@ public final class OpenSubnodeWebViewAction extends Action {
 
     @Override
     public String getToolTipText() {
-        return "Opens interactive node view: " + getSubnodeViewName();
+        return "Opens interactive node view: " + getSubnodeViewName(m_nodeContainer);
     }
 
     @Override
     public String getText() {
-        return "Interactive View: " + getSubnodeViewName();
+        return "Interactive View: " + getSubnodeViewName(m_nodeContainer);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void run() {
-        LOGGER.debug("Open Interactive Web Node View " + getSubnodeViewName());
+        LOGGER.debug("Open Interactive Web Node View " + getSubnodeViewName(m_nodeContainer));
         mapSNC(snc -> {
-            try {
-                @SuppressWarnings("rawtypes")
-                AbstractWizardNodeView view = null;
-                NodeContext.pushContext(snc);
-                try {
-                    SubnodeViewableModel model = new SubnodeViewableModel(snc, getSubnodeViewName());
-                    view = OpenInteractiveWebViewAction.getConfiguredWizardNodeView(model);
-                    model.registerView(view);
-                } finally {
-                    NodeContext.removeLastContext();
-                }
-                view.setWorkflowManagerAndNodeID(snc.getParent(), snc.getID());
-                Node.invokeOpenView(view, snc.getName(), OpenViewAction.getAppBoundsAsAWTRec());
-            } catch (Throwable t) {
-                handleException(t);
-            }
+            openView(snc);
             return null;
         }, snc -> {
             try {
@@ -170,19 +155,19 @@ public final class OpenSubnodeWebViewAction extends Action {
                 }
                 Node.invokeOpenView(view, snc.getName(), OpenViewAction.getAppBoundsAsAWTRec());
             } catch (Throwable t) {
-                handleException(t);
+                handleException(t, snc.getNameWithID());
             }
             return null;
         }, m_nodeContainer);
 
     }
 
-    private void handleException(final Throwable t) {
+    private static void handleException(final Throwable t, final String nodeName) {
         final MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_ERROR | SWT.OK);
         mb.setText("Interactive View cannot be opened");
         mb.setMessage("The interactive view cannot be opened for the following reason:\n" + t.getMessage());
         mb.open();
-        LOGGER.error("The interactive view for node '" + m_nodeContainer.getNameWithID() + "' has thrown a '"
+        LOGGER.error("The interactive view for node '" + nodeName + "' has thrown a '"
             + t.getClass().getSimpleName() + "'. That is most likely an implementation error.", t);
     }
 
@@ -191,9 +176,14 @@ public final class OpenSubnodeWebViewAction extends Action {
         return "knime.open.subnode.web.view.action";
     }
 
-    private String getSubnodeViewName() {
+    private static String getSubnodeViewName(final SubNodeContainerUI snc) {
         //TODO: decide if this is the correct name for the view
-        return m_nodeContainer.getName();
+        return snc.getName();
+    }
+
+    private static String getSubnodeViewName(final SubNodeContainer snc) {
+        //TODO: decide if this is the correct name for the view
+        return snc.getName();
     }
 
     static boolean hasContainerView(final NodeContainerUI cont) {
@@ -203,6 +193,30 @@ public final class OpenSubnodeWebViewAction extends Action {
         }, snc -> {
             return snc.hasWizardPage();
         }, cont).orElse(false);
+    }
+
+    /**
+     * Opens the actual view.
+     *
+     * @param snc the component to open the view for
+     */
+    public static void openView(final SubNodeContainer snc) {
+        try {
+            @SuppressWarnings("rawtypes")
+            AbstractWizardNodeView view = null;
+            NodeContext.pushContext(snc);
+            try {
+                SubnodeViewableModel model = new SubnodeViewableModel(snc, getSubnodeViewName(snc));
+                view = OpenInteractiveWebViewAction.getConfiguredWizardNodeView(model);
+                model.registerView(view);
+            } finally {
+                NodeContext.removeLastContext();
+            }
+            view.setWorkflowManagerAndNodeID(snc.getParent(), snc.getID());
+            Node.invokeOpenView(view, snc.getName(), OpenViewAction.getAppBoundsAsAWTRec());
+        } catch (Throwable t) {
+            handleException(t, snc.getNameWithID());
+        }
     }
 
 }
