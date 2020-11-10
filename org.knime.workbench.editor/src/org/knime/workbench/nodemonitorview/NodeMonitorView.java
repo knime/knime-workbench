@@ -99,6 +99,7 @@ import org.knime.workbench.nodemonitorview.NodeMonitorTable.LoadingFailedExcepti
  *
  * @author M. Berthold, KNIME.com AG
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
+ * @author Nicolas Sebey, Equo
  */
 public class NodeMonitorView extends ViewPart implements ISelectionListener, LocationListener, NodeStateChangeListener {
 
@@ -109,6 +110,8 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
     private Text m_state;
 
     private Label m_info;
+
+    private Label m_tableInfo;
 
     private ComboViewer m_portIndex;
 
@@ -301,6 +304,8 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
         for (int i = 0; i < titles.length; i++) {
             m_table.getColumn(i).pack();
         }
+        m_tableInfo = new Label(infoPanel, SWT.NONE );
+        m_tableInfo.setText("n/a.                               ");
         m_lastNode = null;
         getViewSite().getPage().addSelectionListener(this);
     }
@@ -344,6 +349,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
             m_title.setText("");
             m_state.setText("no node selected");
             m_table.removeAll();
+            m_tableInfo.setVisible(false);
             return;
         }
         if (structSel.size() > 1) {
@@ -351,6 +357,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
             m_title.setText("");
             m_state.setText("more than one element selected");
             m_table.removeAll();
+            m_tableInfo.setVisible(false);
             return;
         }
         // retrieve first (and only!) selection:
@@ -458,6 +465,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
             //already load the data in case of an ordinary node monitor
             m_currentMonitorTable.loadTableData(m_lastNode, unwrapNC(m_lastNode), 0);
             m_currentMonitorTable.setupTable(m_table);
+            m_currentMonitorTable.updateTableInfoLabel(m_tableInfo);
         } catch (LoadingFailedException e) {
             warningMessage(e.getMessage());
         }
@@ -481,6 +489,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
         if (m_choice != DISPLAYOPTIONS.TABLE) {
             m_portIndex.getCombo().setEnabled(false);
         }
+        m_tableInfo.setVisible(false);
     }
 
     /** {@inheritDoc} */
@@ -532,8 +541,8 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
                 PlatformUI.getWorkbench().getProgressService().busyCursorWhile((monitor) -> {
                     monitor.beginTask("Loading data ...", 100);
                     try {
-                        m_currentMonitorTable.loadTableData(m_lastNode, Wrapper.unwrapNCOptional(m_lastNode).orElse(null),
-                            m_loadButtonPressedCount.get());
+                        m_currentMonitorTable.loadTableData(m_lastNode,
+                            Wrapper.unwrapNCOptional(m_lastNode).orElse(null), m_loadButtonPressedCount.get());
                     } catch (LoadingFailedException e1) {
                         lfe.set(e1);
                     }
@@ -543,6 +552,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
                 }
                 if (m_loadButtonPressedCount.get() == 0) {
                     m_currentMonitorTable.setupTable(m_table);
+                    m_currentMonitorTable.updateTableInfoLabel(m_tableInfo);
                 }
                 m_currentMonitorTable.updateControls(m_loadButton, m_portIndex.getCombo(),
                     m_loadButtonPressedCount.get() + 1);

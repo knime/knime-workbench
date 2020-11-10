@@ -67,6 +67,10 @@ import org.knime.core.ui.node.workflow.NodeContainerUI;
 public class MonitorTimerTable implements NodeMonitorTable {
     private NodeTimer m_nodeTimer;
 
+    private int m_columns;
+
+    private int m_rows;
+
     /**
      * {@inheritDoc}
      */
@@ -116,6 +120,8 @@ public class MonitorTimerTable implements NodeMonitorTable {
         for (int i = 0; i < table.getColumnCount(); i++) {
             table.getColumn(i).pack();
         }
+        m_columns = titles.length;
+        m_rows = table.getItemCount();
     }
 
     /**
@@ -139,5 +145,17 @@ public class MonitorTimerTable implements NodeMonitorTable {
     @Override
     public void dispose(final Table table) {
         //nothing to do here
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void updateTableInfoLabel(final Label info) {
+        if (m_rows > 0 && m_columns > 0) {
+            setLabelTableInfo(info, m_rows, m_columns);
+        } else {
+            info.setVisible(false);
+        }
     }
 }

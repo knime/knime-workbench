@@ -70,6 +70,10 @@ public class MonitorGraphAnnotationTable implements NodeMonitorTable {
 
     private Set<NodeGraphAnnotation> m_nodeGraphAnnotation;
 
+    private int m_rows;
+
+    private int m_columns;
+
     /**
      * {@inheritDoc}
      */
@@ -126,6 +130,8 @@ public class MonitorGraphAnnotationTable implements NodeMonitorTable {
         for (int i = 0; i < table.getColumnCount(); i++) {
             table.getColumn(i).pack();
         }
+        m_columns = table.getColumnCount();
+        m_rows = table.getItemCount();
     }
 
     /**
@@ -150,6 +156,18 @@ public class MonitorGraphAnnotationTable implements NodeMonitorTable {
     @Override
     public void dispose(final Table table) {
         //nothing to do here
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void updateTableInfoLabel(final Label info) {
+        if (m_rows > 0 && m_columns > 0) {
+            setLabelTableInfo(info, m_rows, m_columns);
+        } else {
+            info.setVisible(false);
+        }
     }
 
 }

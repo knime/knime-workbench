@@ -124,7 +124,6 @@ public class MonitorDataTable implements NodeMonitorTable {
         m_portIndex = portIndex;
     }
 
-
     /**
      * {@inheritDoc}
      */
@@ -146,7 +145,6 @@ public class MonitorDataTable implements NodeMonitorTable {
                 throw new LoadingFailedException("Node not executed");
             }
             NodeOutPortUI nop = ncUI.getOutPort(index);
-
 
             PortObject po;
             if (nop instanceof AsyncNodeOutPortUI) {
@@ -295,7 +293,9 @@ public class MonitorDataTable implements NodeMonitorTable {
         }
     }
 
-    /** Fills a table item (a row) with its data..
+    /**
+     * Fills a table item (a row) with its data..
+     *
      * @param item Non-null item to be filled.
      */
     private void fillTableItem(final TableItem item) {
@@ -346,6 +346,18 @@ public class MonitorDataTable implements NodeMonitorTable {
         public void handleEvent(final Event event) {
             TableItem item = (TableItem)event.item;
             fillTableItem(item);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void updateTableInfoLabel(final Label info) {
+        if (m_numRows > 0 && m_dataTable.getDataTableSpec().getNumColumns() > 0) {
+            setLabelTableInfo(info, m_numRows, m_dataTable.getDataTableSpec().getNumColumns());
+        } else {
+            info.setVisible(false);
         }
     }
 }

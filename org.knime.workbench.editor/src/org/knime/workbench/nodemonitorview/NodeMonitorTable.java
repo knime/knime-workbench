@@ -63,6 +63,7 @@ import org.knime.core.ui.node.workflow.NodeContainerUI;
  * {@link #loadTableData(NodeContainerUI, NodeContainer, int)}!
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
+ * @author Nicolas Sebey, Equo, Argentina.
  */
 public interface NodeMonitorTable {
     /**
@@ -101,6 +102,14 @@ public interface NodeMonitorTable {
      */
     void updateInfoLabel(Label info);
 
+
+    /**
+     * Let one change the infoTable label.
+     *
+     * @param info the label to be updated
+     */
+    void updateTableInfoLabel(Label info);
+
     /**
      * Clean up when this monitor table isn't used anymore. E.g. de-registering listeneres etc.
      *
@@ -116,5 +125,15 @@ public interface NodeMonitorTable {
         LoadingFailedException(final String cause) {
             super(cause);
         }
+    }
+
+    /** the label with the info of the table is set.
+     * @param info
+     * @param rows
+     * @param columns
+     */
+    public default void setLabelTableInfo(final Label info, final long rows, final int columns) {
+        info.setVisible(true);
+        info.setText("Rows: " + rows + ", Columns: " + columns);
     }
 }
