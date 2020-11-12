@@ -138,10 +138,10 @@ public class NodeUsageComposite extends Composite {
         FontData fontData = wizardLabel.getFont().getFontData()[0];
         Font boldFont =
             new Font(Display.getCurrent(), new FontData(fontData.getName(), fontData.getHeight(), SWT.BOLD));
-        wizardLabel.setText("WebPortal /\nComponent View");
+        wizardLabel.setText("WebPortal /\nComposite view");
         wizardLabel.setFont(boldFont);
         Label dialogLabel = new Label(composite, SWT.CENTER);
-        dialogLabel.setText("\nComponent Dialog");
+        dialogLabel.setText("\nComponent dialog");
         dialogLabel.setFont(boldFont);
 
         //select all checkboxes
@@ -184,6 +184,36 @@ public class NodeUsageComposite extends Composite {
                 new Composite(composite, SWT.NONE); /* Placeholder */
             }
         }
+
+//        Disabled for the moment, as Configuration nodes should not be shown in the node usage tab.
+//        If this feature is wanted, uncomment these lines
+//        for (Entry<NodeIDSuffix, DialogNode> entry : configurationNodes.entrySet()) {
+//            NodeIDSuffix suffix = entry.getKey();
+//            if (m_wizardUsageMap.containsKey(suffix.prependParent(subNodeContainer.getWorkflowManager().getID()))) {
+//                continue;
+//            }
+//            NodeID id = suffix.prependParent(subNodeContainer.getWorkflowManager().getID());
+//            subNodeContainer.getWorkflowManager().getNodeContainer(id);
+//            NodeContainer nodeContainer =
+//                configurationNodes.containsKey(suffix) ? subNodeContainer.getWorkflowManager().getNodeContainer(id) : null;
+//            createNodeLabelComposite(composite, id, nodeContainer);
+//            new Composite(composite, SWT.NONE); /* Placeholder */
+//            MetaNodeDialogNode model = entry.getValue();
+//            if (model instanceof DialogNode) {
+//                Button dialogButton = createCheckbox(composite);
+//                dialogButton.addSelectionListener(new SelectionAdapter() {
+//                    @Override
+//                    public void widgetSelected(final SelectionEvent e) {
+//                        checkAllSelected(m_dialogUsageMap, selectAllDialog);
+//                    }
+//                });
+//                dialogButton.setToolTipText("Enable/disable for usage in component configure dialog.");
+//                dialogButton.setSelection(!((DialogNode<?, ?>)model).isHideInDialog());
+//                m_dialogUsageMap.put(id, dialogButton);
+//            } else {
+//                new Composite(composite, SWT.NONE); /* Placeholder */
+//            }
+//        }
         checkAllSelected(m_wizardUsageMap, selectAllWizard);
         checkAllSelected(m_dialogUsageMap, selectAllDialog);
 

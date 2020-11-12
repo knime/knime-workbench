@@ -55,11 +55,13 @@ import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jface.wizard.Wizard;
+import org.knime.core.node.dialog.DialogNode;
 import org.knime.core.node.wizard.ViewHideable;
 import org.knime.core.node.wizard.WizardNode;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.node.workflow.SubnodeContainerConfigurationStringProvider;
 import org.knime.core.node.workflow.SubnodeContainerLayoutStringProvider;
 import org.knime.core.node.workflow.WebResourceController;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -102,6 +104,12 @@ public class SubnodeLayoutWizard extends Wizard {
             NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(wfManager.getID(), entry.getKey());
             resultMap.put(idSuffix, entry.getValue());
         }
+        Map<NodeID, DialogNode> viewConfigurationNodes = wfManager.findNodes(DialogNode.class, false);
+        LinkedHashMap<NodeIDSuffix, DialogNode> resultMapConfiguration = new LinkedHashMap<>();
+        for (Map.Entry<NodeID, DialogNode> entry : viewConfigurationNodes.entrySet()) {
+            NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(wfManager.getID(), entry.getKey());
+            resultMapConfiguration.put(idSuffix, entry.getValue());
+        }
         List<NodeID> nodeIDs = new ArrayList<NodeID>();
         nodeIDs.addAll(viewNodes.keySet());
         for (Map.Entry<NodeID, SubNodeContainer> entry : nestedSubnodes.entrySet()) {
@@ -116,6 +124,7 @@ public class SubnodeLayoutWizard extends Wizard {
         Collections.sort(nodeIDs);
         m_page = new SubnodeLayoutJSONEditorPage("Change the layout configuration");
         m_page.setNodes(wfManager, m_subNodeContainer, resultMap);
+        m_page.setConfigurationNodes(wfManager, m_subNodeContainer, resultMapConfiguration);
         addPage(m_page);
     }
 
@@ -137,9 +146,13 @@ public class SubnodeLayoutWizard extends Wizard {
     public boolean performFinish() {
         if (m_page.isJSONValid()) {
             SubnodeContainerLayoutStringProvider layoutStringProvider =
-                m_subNodeContainer.getSubnodeLayoutStringProvider();
+                    m_subNodeContainer.getSubnodeLayoutStringProvider();
+            SubnodeContainerConfigurationStringProvider configurationStringProvider =
+                    m_subNodeContainer.getSubnodeConfigurationLayoutStringProvider();
             layoutStringProvider.setLayoutString(m_page.getJsonDocument());
+            configurationStringProvider.setConfigurationLayoutString(m_page.getJsonConfigurationDocument());
             m_subNodeContainer.setSubnodeLayoutStringProvider(layoutStringProvider);
+            m_subNodeContainer.setSubnodeConfigurationStringProvider(configurationStringProvider);
             return m_page.applyUsageChanges();
         } else {
             return false;

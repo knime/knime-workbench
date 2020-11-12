@@ -62,7 +62,6 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -77,12 +76,9 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Platform;
-import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.layout.PixelConverter;
-import org.eclipse.jface.window.Window;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.awt.SWT_AWT;
@@ -90,30 +86,23 @@ import org.eclipse.swt.browser.Browser;
 import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.browser.ProgressEvent;
 import org.eclipse.swt.browser.ProgressListener;
-import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.events.FocusAdapter;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
-import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.TabFolder;
 import org.eclipse.swt.widgets.TabItem;
 import org.eclipse.swt.widgets.Text;
@@ -122,24 +111,27 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.dialog.DialogNode;
+import org.knime.core.node.dialog.util.ConfigurationLayoutUtil;
 import org.knime.core.node.util.ViewUtils;
 import org.knime.core.node.web.WebTemplate;
 import org.knime.core.node.web.WebViewContent;
 import org.knime.core.node.wizard.ViewHideable;
 import org.knime.core.node.wizard.WizardNode;
 import org.knime.core.node.wizard.util.LayoutUtil;
-import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.node.workflow.SubnodeContainerConfigurationStringProvider;
 import org.knime.core.node.workflow.SubnodeContainerLayoutStringProvider;
 import org.knime.core.node.workflow.WebResourceController;
 import org.knime.core.node.workflow.WorkflowLock;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.js.core.JavaScriptViewCreator;
+import org.knime.js.core.layout.DefaultConfigurationCreatorImpl;
 import org.knime.js.core.layout.DefaultLayoutCreatorImpl;
 import org.knime.js.core.layout.bs.JSONLayoutColumn;
+import org.knime.js.core.layout.bs.JSONLayoutConfigurationContent;
 import org.knime.js.core.layout.bs.JSONLayoutContent;
 import org.knime.js.core.layout.bs.JSONLayoutPage;
 import org.knime.js.core.layout.bs.JSONLayoutRow;
@@ -168,19 +160,19 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
     private SubNodeContainer m_subNodeContainer;
     private WorkflowManager m_wfManager;
     private Map<NodeIDSuffix, ViewHideable> m_viewNodes;
+    private Map<NodeIDSuffix, DialogNode> m_dialogNodes;
     private SubnodeContainerLayoutStringProvider m_subnodeLayoutStringProvider;
+    private SubnodeContainerConfigurationStringProvider m_subnodeConfigurationStringProvider;
     private Label m_statusLine;
     private RSyntaxTextArea m_textArea;
     private int m_caretPosition = 5;
     private Text m_text;
     private List<Integer> m_documentNodeIDs = new ArrayList<Integer>();
-    private boolean m_basicPanelAvailable = true;
-    private final Map<NodeIDSuffix, BasicLayoutInfo> m_basicMap;
-    private Composite m_basicComposite;
-    private Label m_basicStatusLine;
     private NodeUsageComposite m_nodeUsageComposite;
     private Browser m_browser;
+    private Browser m_configurationBrowser;
     private BrowserFunction m_visualLayoutUpdate;
+    private BrowserFunction m_configurationLayoutUpdate;
 
     /**
      * Crates a new page instance with a given page name
@@ -189,10 +181,10 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
      */
     protected SubnodeLayoutJSONEditorPage(final String pageName) {
         super(pageName);
-        setDescription("Specify in what way the contained view and wizard nodes are allowed to be used and define "
-            + "a layout. \nThe layout is used in the KNIME WebPortal and the Component View.");
+        setDescription("Define a layout for the KNIME WebPortal and the composite view.\n" +
+                "Specify the order of the contained configuration nodes for the configuration dialog of the component.");
         m_subnodeLayoutStringProvider = new SubnodeContainerLayoutStringProvider("");
-        m_basicMap = new LinkedHashMap<NodeIDSuffix, BasicLayoutInfo>();
+        m_subnodeConfigurationStringProvider = new SubnodeContainerConfigurationStringProvider("");
     }
 
     /**
@@ -208,15 +200,15 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         usageTab.setControl(m_nodeUsageComposite);
 
         TabItem visualTab = new TabItem(tabs, SWT.NONE);
-        visualTab.setText("Visual Layout");
-
-        TabItem basicTab = new TabItem(tabs, SWT.NONE);
-        basicTab.setText("Basic Layout");
-        basicTab.setControl(createBasicComposite(tabs));
+        visualTab.setText("Composite View Layout");
 
         TabItem jsonTab = new TabItem(tabs, SWT.NONE);
-        jsonTab.setText("Advanced Layout");
+        jsonTab.setText("Advanced Composite View Layout");
         jsonTab.setControl(createJSONEditorComposite(tabs));
+
+        TabItem configurationTab = new TabItem(tabs, SWT.NONE);
+        configurationTab.setText("Configuration Dialog Layout");
+        configurationTab.setControl(createConfigurationLayoutComposite(tabs));
 
         // The visual layout tab should be the second tab, but its control should be made
         // after the Advanced tab. This ensures that the JSON document is created before
@@ -238,19 +230,22 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                     cleanJSONPage(page);
                     m_subnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
                         .writeValueAsString(page));
+                    JSONLayoutPage configurationPage = reader.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString());
+                    m_subnodeConfigurationStringProvider.setConfigurationLayoutString(mapper.writerWithDefaultPrettyPrinter()
+                        .writeValueAsString(configurationPage));
                 } catch (IOException ex) {
                     LOGGER.error("Failed to retrieve JSON string from layout:" + ex.getMessage(), ex);
                 }
 
                 switch (tabText) {
-                    case "Visual Layout":
+                    case "Composite View Layout":
                         updateVisualLayout();
                         break;
-                    case "Basic Layout":
-                        updateModelFromJson();
-                        break;
-                    case "Advanced Layout":
+                    case "Advanced Composite View Layout":
                         updateJsonTextArea();
+                        break;
+                    case "Configuration Dialog Layout":
+                        updateConfigurationLayout();
                         break;
                 }
             }
@@ -349,314 +344,60 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         return composite;
     }
 
-    private Composite createBasicComposite(final Composite parent) {
-        Composite composite = new Composite(parent, SWT.NONE);
-        composite.setLayout(new GridLayout(1, true));
-        GridData gridData = new GridData(GridData.VERTICAL_ALIGN_FILL | GridData.GRAB_VERTICAL);
-        composite.setLayoutData(gridData);
-        ScrolledComposite scrollPane = new ScrolledComposite(composite, SWT.V_SCROLL | SWT.H_SCROLL | SWT.BORDER);
-        scrollPane.setLayout(new FillLayout(SWT.VERTICAL));
-        scrollPane.setExpandHorizontal(true);
-        scrollPane.setExpandVertical(true);
-        m_basicComposite = new Composite(scrollPane, SWT.NONE);
-        scrollPane.setContent(m_basicComposite);
-        scrollPane.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, true, true));
+    private Composite createConfigurationLayoutComposite(final Composite parent) {
+        final Composite composite = new Composite(parent, SWT.NONE);
+        composite.setLayout(new GridLayout(1, false));
+        composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
-        fillBasicComposite();
-
-        return composite;
-    }
-
-    private void fillBasicComposite() {
-        if (!m_basicPanelAvailable) {
-            m_basicComposite.setLayout(new GridLayout(1, true));
-            GridData gridData = new GridData();
-            gridData.grabExcessHorizontalSpace = true;
-            gridData.horizontalAlignment = SWT.CENTER;
-            gridData.grabExcessVerticalSpace = true;
-            Label infoLabel = new Label(m_basicComposite, SWT.FILL);
-            infoLabel
-                .setText("A basic configuration of the layout is not possible. \nPlease use the \"Advanced\" tab.");
-            infoLabel.setLayoutData(gridData);
-
-            // Ensure scroll bar appears when composite data changes
-            ((ScrolledComposite)m_basicComposite.getParent())
-                .setMinSize(m_basicComposite.computeSize(SWT.DEFAULT, SWT.DEFAULT));
-            ((ScrolledComposite)m_basicComposite.getParent()).requestLayout();
-            return;
+        // Web resources
+        final WebTemplate template = WebResourceController.getWebTemplateFromBundleID("knimeNodeSorter_1.0.0");
+        final WebTemplate dT = WebResourceController.getWebTemplateFromBundleID("knimeNodeSorter_1.0.0_Debug");
+        VisualLayoutViewCreator creator = new VisualLayoutViewCreator(template, dT);
+        String html = "";
+        try {
+            html = creator.createWebResources("configuration layout editor", null, null, "");
+        } catch (final IOException e) {
+            LOGGER.error("Cannot create configuration layout editor", e);
         }
 
-        m_basicComposite.setLayout(new GridLayout(7, false));
-        m_basicComposite.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, true, true));
+        // Create browser
+        m_configurationBrowser = new Browser(composite, SWT.NONE);
 
-        Label titleLabel = new Label(m_basicComposite, SWT.LEFT);
-        FontData fontData = titleLabel.getFont().getFontData()[0];
-        Font boldFont =
-            new Font(Display.getCurrent(), new FontData(fontData.getName(), fontData.getHeight(), SWT.BOLD));
-        titleLabel.setText("Node");
-        titleLabel.setFont(boldFont);
-        new Composite(m_basicComposite, SWT.NONE); /* Warning placeholder */
-        Label rowLabel = new Label(m_basicComposite, SWT.CENTER);
-        rowLabel.setText("Row");
-        rowLabel.setFont(boldFont);
-        Label colLabel = new Label(m_basicComposite, SWT.CENTER);
-        colLabel.setText("Column");
-        colLabel.setFont(boldFont);
-        Label widthLabel = new Label(m_basicComposite, SWT.CENTER);
-        widthLabel.setText("Width");
-        widthLabel.setFont(boldFont);
-        new Composite(m_basicComposite, SWT.NONE); /* More placeholder */
-        new Composite(m_basicComposite, SWT.NONE); /* Remove placeholder */
-
-        for (final Entry<NodeIDSuffix, BasicLayoutInfo> entry : m_basicMap.entrySet()) {
-            final NodeIDSuffix suffix = entry.getKey();
-            final BasicLayoutInfo layoutInfo = entry.getValue();
-            final NodeID nodeID = suffix.prependParent(m_subNodeContainer.getWorkflowManager().getID());
-            final NodeContainer nodeContainer = m_viewNodes.containsKey(suffix) ? m_wfManager.getNodeContainer(nodeID) : null;
-
-            createNodeLabelComposite(m_basicComposite, nodeID, nodeContainer);
-
-            final Label warningLabel = new Label(m_basicComposite, SWT.CENTER);
-            if (nodeContainer != null && m_viewNodes.get(suffix).isHideInWizard()) {
-                warningLabel
-                    .setImage(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/layout/warning.png"));
-                warningLabel
-                    .setToolTipText("Node is set to 'Hide in Wizard'. It might not be displayed in the layout.");
-            }
-
-            GridData gridData = new GridData(SWT.LEFT, SWT.CENTER, false, false);
-            gridData.widthHint = 50;
-            final Spinner rowSpinner =
-                createBasicPanelSpinner(m_basicComposite, layoutInfo.getRow(), 1, 999);
-            rowSpinner.addSelectionListener(new SelectionAdapter() {
-
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    layoutInfo.setRow(rowSpinner.getSelection());
-                    tryUpdateJsonFromBasic();
-                }
-            });
-            final Spinner colSpinner =
-                createBasicPanelSpinner(m_basicComposite, layoutInfo.getCol(), 1, 99);
-            colSpinner.addSelectionListener(new SelectionAdapter() {
-
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    layoutInfo.setCol(colSpinner.getSelection());
-                    tryUpdateJsonFromBasic();
-                }
-            });
-            final Spinner widthSpinner =
-                createBasicPanelSpinner(m_basicComposite, layoutInfo.getColWidth(), 1, 12);
-            widthSpinner.addSelectionListener(new SelectionAdapter() {
-
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    layoutInfo.setColWidth(widthSpinner.getSelection());
-                    tryUpdateJsonFromBasic();
-                }
-            });
-
-            final Button advancedButton = new Button(m_basicComposite, SWT.PUSH | SWT.CENTER);
-            advancedButton
-                .setImage(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/layout/settings.png"));
-            advancedButton.setToolTipText("Additional layout settings");
-            if (nodeContainer == null || !(nodeContainer instanceof NativeNodeContainer)) {
-                advancedButton.setEnabled(false);
-            } else {
-                advancedButton.addSelectionListener(new SelectionAdapter() {
-
-                    @Override
-                    public void widgetSelected(final SelectionEvent e) {
-                        JSONLayoutViewContent defaultViewContent =
-                            DefaultLayoutCreatorImpl.getDefaultViewContentForNode(suffix, m_viewNodes.get(suffix));
-                        ViewContentSettingsDialog settingsDialog =
-                            new ViewContentSettingsDialog(m_basicComposite.getShell(),
-                                (JSONLayoutViewContent)layoutInfo.getView(), defaultViewContent);
-                        if (settingsDialog.open() == Window.OK) {
-                            layoutInfo.setView(settingsDialog.getViewSettings());
-                            tryUpdateJsonFromBasic();
-                        }
-                    }
-                });
-            }
-
-            final Button removeButton = new Button(m_basicComposite, SWT.PUSH | SWT.CENTER);
-            removeButton.setImage(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/layout/remove.png"));
-            removeButton.setToolTipText("Remove node from layout");
-            removeButton.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    if (nodeContainer != null) {
-                        if (!MessageDialog.openConfirm(m_basicComposite.getShell(), "Confirm deletion",
-                            "Are you sure you want to delete node " + suffix + " from the layout?")) {
-                            return;
-                        }
-                    }
-                    m_basicMap.remove(suffix);
-                    tryUpdateJsonFromBasic();
-                    // repaint
-                    updateModelFromJson();
-                }
-            });
+        try {
+            m_configurationBrowser.setUrl(new File(html).toURI().toURL().toString());
+        } catch (MalformedURLException e) {
+            LOGGER.error(e.getMessage(), e);
         }
+        m_configurationBrowser.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
-        for (final Entry<NodeIDSuffix, ViewHideable> entry : m_viewNodes.entrySet()) {
-            if (m_basicMap.containsKey(entry.getKey())) {
-                continue;
-            }
-            // Node not in layout
-            NodeID nodeID = entry.getKey().prependParent(m_subNodeContainer.getWorkflowManager().getID());
-            NodeContainer nodeContainer = m_wfManager.getNodeContainer(nodeID);
-            createNodeLabelComposite(m_basicComposite, nodeID, nodeContainer);
-
-            final Label warningLabel = new Label(m_basicComposite, SWT.CENTER);
-            if (nodeContainer != null && m_viewNodes.get(entry.getKey()).isHideInWizard()) {
-                warningLabel
-                    .setImage(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/layout/warning.png"));
-                warningLabel
-                    .setToolTipText("Node is set to 'Hide in Wizard'. It might not be displayed in the layout.");
-            }
-
-            final Button addButton = new Button(m_basicComposite, SWT.PUSH | SWT.CENTER);
-            addButton.setImage(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/layout/add.png"));
-            addButton.setToolTipText("Add node to layout");
-            addButton.addSelectionListener(new SelectionAdapter() {
-
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    int lastRow = 0;
-                    for (BasicLayoutInfo basicLayoutInfo : m_basicMap.values()) {
-                        lastRow = Math.max(lastRow, basicLayoutInfo.getRow());
-                    }
-                    BasicLayoutInfo newInfo = new BasicLayoutInfo();
-                    newInfo.setRow(lastRow + 1);
-                    newInfo.setCol(1);
-                    newInfo.setColWidth(12);
-                    ViewHideable view = entry.getValue();
-                    if (view instanceof SubNodeContainer) {
-                        JSONNestedLayout nestedLayout = new JSONNestedLayout();
-                        nestedLayout.setNodeID(entry.getKey().toString());
-                        newInfo.setView(nestedLayout);
-                    } else {
-                        newInfo.setView(DefaultLayoutCreatorImpl.getDefaultViewContentForNode(entry.getKey(), view));
-                    }
-                    m_basicMap.put(entry.getKey(), newInfo);
-                    tryUpdateJsonFromBasic();
-                    // repaint
-                    updateModelFromJson();
-                }
-            });
-            GridData gridData = new GridData();
-            gridData.horizontalSpan = 4;
-            Label space = new Label(m_basicComposite, SWT.NONE);
-            space.setLayoutData(gridData);
+        // Create JSON Objects
+        final List<ConfigurationLayoutEditorJSONNode> nodes = createJSONConfigurationNodeList();
+        // ensure node layout is written the same as the metanode layout
+        final ObjectMapper mapper = JSONLayoutPage.getConfiguredObjectMapper();
+        String jsonNodes = "";
+        try {
+            jsonNodes = mapper.writeValueAsString(nodes);
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Cannot write JSON: " + e.getMessage(), e);
         }
-
-        GridData fillRow = new GridData();
-        fillRow.grabExcessHorizontalSpace = true;
-        fillRow.horizontalAlignment = SWT.CENTER;
-        fillRow.horizontalSpan = 7;
-
-        Button resetButton = new Button(m_basicComposite, SWT.PUSH | SWT.CENTER);
-        resetButton.setImage(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/layout/reset.png"));
-        resetButton.setText("Reset");
-        resetButton.setToolTipText("Reset layout to default according to currently available nodes.");
-        resetButton.setLayoutData(fillRow);
-        resetButton.addSelectionListener(new SelectionAdapter() {
+        // variables in progress listener must be final
+        final String jsonLayoutConst = getJsonConfigurationDocument();
+        final String jsonNodesConst = jsonNodes;
+        m_configurationBrowser.addProgressListener(new ProgressListener() {
 
             @Override
-            public void widgetSelected(final SelectionEvent e) {
-                if (!MessageDialog.openConfirm(m_basicComposite.getShell(), "Confirm reset",
-                    "Are you sure you want to reset the layout according to the currently available nodes?")) {
-                    return;
-                }
-                resetLayout();
-                // repaint
-                updateModelFromJson();
+            public void changed(final ProgressEvent event) {
+                // do nothing
+            }
+
+            @Override
+            public void completed(final ProgressEvent event) {
+                m_configurationBrowser.evaluate("setNodes(\'" + jsonNodesConst + "\');");
+                m_configurationBrowser.evaluate("setLayout(\'" + jsonLayoutConst + "\');");
             }
         });
-
-        // Add status line
-        m_basicStatusLine = new Label(m_basicComposite, SWT.SHADOW_NONE | SWT.WRAP);
-        m_basicStatusLine.setForeground(new Color(Display.getCurrent(), 255, 140, 0));
-        final GridData statusGridData = new GridData(SWT.LEFT, SWT.BOTTOM, true, false);
-        statusGridData.horizontalSpan = 7;
-        statusGridData.heightHint =  new PixelConverter(m_basicStatusLine).convertHeightInCharsToPixels(2);
-        statusGridData.minimumHeight = new PixelConverter(m_basicStatusLine).convertHeightInCharsToPixels(1);
-        statusGridData.minimumWidth = (int) (m_basicComposite.getBounds().width * 0.75);
-        m_basicStatusLine.setLayoutData(statusGridData);
-
-        // Ensure scroll bar appears when composite data changes
-        ((ScrolledComposite)m_basicComposite.getParent())
-            .setMinSize(m_basicComposite.computeSize(SWT.DEFAULT, SWT.DEFAULT));
-        ((ScrolledComposite)m_basicComposite.getParent()).requestLayout();
-    }
-
-    private Composite createNodeLabelComposite(final Composite parent, final NodeID nodeID,
-        final NodeContainer nodeContainer) {
-
-        Composite labelComposite = new Composite(m_basicComposite, SWT.NONE);
-        labelComposite.setLayout(new GridLayout(2, false));
-        labelComposite.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-
-        Label iconLabel = new Label(labelComposite, SWT.CENTER);
-        iconLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-        if (nodeContainer == null) {
-            iconLabel.setImage(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/layout/missing.png"));
-            iconLabel.setToolTipText("This node does not exist. \nIt is suggested to delete it from the layout.");
-        } else if (nodeContainer instanceof SubNodeContainer) {
-            iconLabel.setImage(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/layout_16.png"));
-            iconLabel.setToolTipText(
-                "This node might contain a nested layout, which needs to be configured inside the node.");
-        } else {
-            try (InputStream iconURLStream = FileLocator.resolve(nodeContainer.getIcon()).openStream()) {
-                iconLabel.setImage(new Image(Display.getCurrent(), iconURLStream));
-            } catch (IOException e) {
-                /* do nothing */ }
-        }
-
-        Label nodeLabel = new Label(labelComposite, SWT.LEFT);
-        nodeLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
-        String nodeName;
-        String annotation = null;
-        if (nodeContainer == null) {
-            nodeName = "[MISSING]";
-            FontData font = nodeLabel.getFont().getFontData()[0];
-            nodeLabel.setFont(
-                new Font(m_basicComposite.getDisplay(), new FontData(font.getName(), font.getHeight(), SWT.ITALIC)));
-            nodeLabel.setToolTipText("This node does not exist. \nIt is suggested to delete it from the layout.");
-        } else {
-            nodeName = nodeContainer.getName();
-            annotation = nodeContainer.getNodeAnnotation().getText();
-            if (annotation.length() > 42) {
-                nodeLabel.setToolTipText(annotation);
-            }
-            annotation = StringUtils.abbreviateMiddle(annotation, " [...] ", 50).replaceAll("[\n|\r]", "");
-        }
-        String nodeLabelText = nodeName + "\nID: " + nodeID.getIndex();
-        if (StringUtils.isNoneBlank(annotation)) {
-            nodeLabelText += "\n" + annotation;
-        }
-        nodeLabel.setText(nodeLabelText);
-        return labelComposite;
-    }
-
-    private static Spinner createBasicPanelSpinner(final Composite parent, final int initialValue, final int min,
-        final int max) {
-        Spinner spinner = new Spinner(parent, SWT.BORDER);
-        spinner.setMinimum(min);
-        spinner.setMaximum(max);
-        spinner.setIncrement(1);
-        spinner.setDigits(0);
-        spinner.setSelection(initialValue);
-        GridData gridData = new GridData(SWT.LEFT, SWT.CENTER, false, false);
-        gridData.widthHint = 50;
-        if (Platform.OS_LINUX.equals(Platform.getOS())) {
-            gridData.widthHint = 100;
-        }
-        spinner.setLayoutData(gridData);
-        return spinner;
+        m_configurationLayoutUpdate = new UpdateConfigurationFunction(m_configurationBrowser, "pushLayout");
+        return composite;
     }
 
     private Composite createJSONEditorComposite(final Composite parent) {
@@ -837,7 +578,50 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
             JSONLayoutRow row = rows.get(rowIndex);
             populateDocumentNodeIDs(row);
-            processBasicLayoutRow(row, rowIndex);
+        }
+    }
+
+    /**
+     * Sets all currently available dialog nodes on the node sorter page.
+     *
+     * @param manager the workflow manager
+     * @param subnodeContainer the component container
+     * @param dialogNodes a map of all available view nodes
+     */
+    public void setConfigurationNodes(final WorkflowManager manager, final SubNodeContainer subnodeContainer,
+        final Map<NodeIDSuffix, DialogNode> dialogNodes) {
+        m_wfManager = manager;
+        m_subNodeContainer = subnodeContainer;
+        m_dialogNodes = dialogNodes;
+        JSONLayoutPage page = null;
+        m_subnodeConfigurationStringProvider = subnodeContainer.getSubnodeConfigurationLayoutStringProvider();
+        if (!m_subnodeConfigurationStringProvider.isEmptyLayout()) {
+            try {
+                ConfigurationLayoutUtil.addUnreferencedViews(m_subnodeConfigurationStringProvider, dialogNodes, m_wfManager.getID());
+                ObjectMapper mapper = createObjectMapperForUpdating();
+                page = mapper.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString(), JSONLayoutPage.class);
+                if (page.getRows() == null) {
+                    page = null;
+                } else {
+                    cleanJSONPage(page);
+                    removeMissingRows(page, dialogNodes);
+                    m_subnodeConfigurationStringProvider.setConfigurationLayoutString(mapper.writerWithDefaultPrettyPrinter()
+                        .writeValueAsString(page));
+                }
+            } catch (IOException e) {
+                LOGGER.error("Error parsing layout. Pretty printing not possible: " + e.getMessage(), e);
+            }
+        }
+        if (page == null) {
+            page = resetConfigurationLayout();
+        }
+        try {
+            ObjectMapper mapper = createObjectMapperForUpdating();
+            m_subnodeConfigurationStringProvider.setConfigurationLayoutString(mapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(page));
+            ConfigurationLayoutUtil.updateLayout(m_subnodeConfigurationStringProvider);
+        } catch (IOException e) {
+            LOGGER.error("Error updating JSON layout. Pretty printing not possible: " + e.getMessage(), e);
         }
     }
 
@@ -846,7 +630,6 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
      */
     private JSONLayoutPage resetLayout() {
         m_documentNodeIDs.clear();
-        m_basicMap.clear();
         return generateInitialJson();
     }
 
@@ -856,6 +639,26 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         try {
             String initialJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
             m_subnodeLayoutStringProvider.setLayoutString(initialJson);
+            return page;
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Could not create initial layout: " + e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * @param page
+     */
+    private JSONLayoutPage resetConfigurationLayout() {
+        return generateInitialConfigurationJson();
+    }
+
+    private JSONLayoutPage generateInitialConfigurationJson() {
+        JSONLayoutPage page = DefaultConfigurationCreatorImpl.createDefaultConfigurationLayoutStructure(m_dialogNodes);
+        ObjectMapper mapper = JSONLayoutPage.getConfiguredObjectMapper();
+        try {
+            String initialJson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
+            m_subnodeConfigurationStringProvider.setConfigurationLayoutString(initialJson);
             return page;
         } catch (JsonProcessingException e) {
             LOGGER.error("Could not create initial layout: " + e.getMessage(), e);
@@ -886,135 +689,6 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                 m_documentNodeIDs.add(Integer.parseInt(id));
             }
         }
-    }
-
-    private void updateBasicLayout() {
-        ObjectMapper mapper = createObjectMapperForUpdating();
-        JSONLayoutPage page = new JSONLayoutPage();
-        ObjectReader reader = mapper.readerForUpdating(page);
-        try {
-            page = reader.readValue(getJsonDocument());
-        } catch (Exception e) {
-            /* do nothing, input needs to be validated beforehand */ }
-        m_basicMap.clear();
-        m_basicPanelAvailable = true;
-        List<JSONLayoutRow> rows = page.getRows();
-        if (rows == null) {
-            return;
-        }
-        for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
-            JSONLayoutRow row = rows.get(rowIndex);
-            populateDocumentNodeIDs(row);
-            processBasicLayoutRow(row, rowIndex);
-        }
-    }
-
-    /**
-     * Processes one layout row, creates {@link BasicLayoutInfo} for each contained node and determines if basic layout
-     * is available. Some advanced configurations (additional styles or classes, HTML content or nested layouts) can not
-     * be represented in a basic layout.
-     *
-     * @param row the row to process
-     * @param rowIndex the index of the row as it appears in the layout
-     */
-    private void processBasicLayoutRow(final JSONLayoutRow row, final int rowIndex) {
-        if (listNotNullOrEmpty(row.getAdditionalStyles()) || listNotNullOrEmpty(row.getAdditionalClasses())) {
-            // basic layout not possible, show only advanced tab
-            m_basicPanelAvailable = false;
-            return;
-        }
-        List<JSONLayoutColumn> columns = row.getColumns();
-        for (int colIndex = 0; colIndex < columns.size(); colIndex++) {
-            JSONLayoutColumn column = columns.get(colIndex);
-            if (listNotNullOrEmpty(column.getAdditionalStyles()) || listNotNullOrEmpty(column.getAdditionalClasses())) {
-                // basic layout not possible, show only advanced tab
-                m_basicPanelAvailable = false;
-                return;
-            }
-            List<JSONLayoutContent> content = column.getContent();
-            if (content != null) {
-                for (JSONLayoutContent jsonLayoutContent : content) {
-                    if (jsonLayoutContent != null) {
-                        boolean isView = jsonLayoutContent instanceof JSONLayoutViewContent;
-                        boolean isNested = jsonLayoutContent instanceof JSONNestedLayout;
-                        if (isView || isNested) {
-                            NodeIDSuffix id;
-                            if (isView) {
-                                JSONLayoutViewContent viewContent = (JSONLayoutViewContent)jsonLayoutContent;
-                                if (listNotNullOrEmpty(viewContent.getAdditionalStyles())
-                                    || listNotNullOrEmpty(viewContent.getAdditionalClasses())) {
-                                    // basic layout not possible, show only advanced tab
-                                    m_basicPanelAvailable = false;
-                                    return;
-                                }
-                                id = NodeIDSuffix.fromString(viewContent.getNodeID());
-                            } else {
-                                JSONNestedLayout nestedLayout = (JSONNestedLayout)jsonLayoutContent;
-                                id = NodeIDSuffix.fromString(nestedLayout.getNodeID());
-                            }
-                            BasicLayoutInfo basicInfo = new BasicLayoutInfo();
-                            basicInfo.setRow(rowIndex + 1);
-                            basicInfo.setCol(colIndex + 1);
-                            basicInfo.setColWidth(column.getWidthXS() != null ? column.getWidthXS() : column.getWidthMD());
-                            basicInfo.setView(jsonLayoutContent);
-
-                            m_basicMap.put(id, basicInfo);
-                        } else {
-                            // basic layout not possible, show only advanced tab
-                            m_basicPanelAvailable = false;
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private static boolean listNotNullOrEmpty(final List<?> list) {
-        return list != null && list.size() > 0;
-    }
-
-    private void tryUpdateJsonFromBasic() {
-        try {
-            basicLayoutToJson();
-        } catch (Exception e) {
-            //TODO show error in dialog?, this should not happen
-            LOGGER.error(e.getMessage(), e);
-        }
-    }
-
-    private void basicLayoutToJson() throws Exception {
-        JSONLayoutPage page = new JSONLayoutPage();
-        List<JSONLayoutRow> rows = new ArrayList<JSONLayoutRow>();
-        for (BasicLayoutInfo basicLayoutInfo : m_basicMap.values()) {
-            while (rows.size() < basicLayoutInfo.getRow()) {
-                rows.add(new JSONLayoutRow());
-            }
-            JSONLayoutRow row = rows.get(basicLayoutInfo.getRow() - 1);
-            if (row.getColumns() == null) {
-                row.setColumns(new ArrayList<JSONLayoutColumn>());
-            }
-            List<JSONLayoutColumn> columns = row.getColumns();
-            while (columns.size() < basicLayoutInfo.getCol()) {
-                columns.add(new JSONLayoutColumn());
-            }
-            JSONLayoutColumn column = columns.get(basicLayoutInfo.getCol() - 1);
-            int colWidth = basicLayoutInfo.getColWidth();
-            // avoid creating responsive layout from basic editor, set only smallest col
-            column.setWidthXS(colWidth);
-            List<JSONLayoutContent> contentList = column.getContent();
-            if (contentList == null) {
-                contentList = new ArrayList<JSONLayoutContent>(1);
-            }
-            contentList.add(basicLayoutInfo.getView());
-            column.setContent(contentList);
-        }
-        page.setRows(rows);
-        final String errorMsg = cleanJSONPage(page);
-        m_basicStatusLine.setText(errorMsg);
-        ObjectMapper mapper = createObjectMapperForUpdating();
-        String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page);
-        m_subnodeLayoutStringProvider.setLayoutString(json);
     }
 
     private static String cleanJSONPage(final JSONLayoutPage page) {
@@ -1056,6 +730,38 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
         page.setRows(cleanedRows);
         return errorMsg;
+    }
+
+    private static void removeMissingRows(final JSONLayoutPage page, final Map<NodeIDSuffix, DialogNode> allNodes) {
+        if (page.getRows() == null) {
+            return;
+        }
+        final List<JSONLayoutRow> cleanedRows = new ArrayList<>();
+        for(final JSONLayoutRow row : page.getRows()) {
+            if (!row.getColumns().isEmpty()) {
+                final List<JSONLayoutColumn> cleanedColumns = new ArrayList<>();
+                for (final JSONLayoutColumn col : row.getColumns()) {
+                    if (col.getContent() != null) {
+                        col.getContent().stream().forEach(content -> {
+                            if (content instanceof JSONLayoutConfigurationContent) {
+                                if (allNodes.containsKey(NodeIDSuffix.fromString(((JSONLayoutConfigurationContent)content).getNodeID()))) {
+                                    cleanedColumns.add(col);
+                                }
+                            } else if (content instanceof JSONNestedLayout) {
+                                if (allNodes.containsKey(NodeIDSuffix.fromString(((JSONNestedLayout)content).getNodeID()))) {
+                                    cleanedColumns.add(col);
+                                }
+                            }
+                        });
+                    }
+                }
+                if (!cleanedColumns.isEmpty()) {
+                    row.setColumns(cleanedColumns);
+                    cleanedRows.add(row);
+                }
+            }
+        }
+        page.setRows(cleanedRows);
     }
 
     private static void setMissingLegacyFlag(final JSONLayoutPage page) {
@@ -1133,19 +839,6 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
     }
 
-    private void updateModelFromJson() {
-        if (isJSONValid()) {
-            updateBasicLayout();
-        } else {
-            m_basicPanelAvailable = false;
-        }
-        for (Control control : m_basicComposite.getChildren()) {
-            control.dispose();
-        }
-        fillBasicComposite();
-        m_basicComposite.layout(true);
-    }
-
     private void updateVisualLayout() {
         final List<VisualLayoutEditorJSONNode> nodes = createJSONNodeList();
         final ObjectMapper mapper = JSONLayoutPage.getConfiguredObjectMapper();
@@ -1157,6 +850,19 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
         m_browser.evaluate("setNodes(\'" + JSONNodes + "\');");
         m_browser.evaluate("setLayout(\'" + getJsonDocument() + "\');");
+    }
+
+    private void updateConfigurationLayout() {
+        final List<ConfigurationLayoutEditorJSONNode> nodes = createJSONConfigurationNodeList();
+        final ObjectMapper mapper = JSONLayoutPage.getConfiguredObjectMapper();
+        String JSONNodes = "";
+        try {
+            JSONNodes = mapper.writeValueAsString(nodes);
+        } catch (JsonProcessingException e) {
+            LOGGER.error("Cannot write JSON: " + e.getMessage(), e);
+        }
+        m_configurationBrowser.evaluate("setNodes(\'" + JSONNodes + "\');");
+        m_configurationBrowser.evaluate("setLayout(\'" + getJsonConfigurationDocument() + "\');");
     }
 
     /**
@@ -1236,6 +942,22 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         return "";
     }
 
+    /**
+     * @return the jsonDocument
+     */
+    public String getJsonConfigurationDocument() {
+        // keep empty fields
+        ObjectMapper mapper = createObjectMapperForUpdating();
+        ObjectReader reader = mapper.readerForUpdating(new JSONLayoutPage());
+        try {
+            return mapper.writeValueAsString(reader.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString()));
+        } catch (IOException e) {
+            LOGGER.error("Failed to retrieve JSON string from layout:" + e.getMessage(), e);
+        }
+
+        return "";
+    }
+
     private static boolean isWindows() {
         return Platform.OS_WIN32.equals(Platform.getOS());
     }
@@ -1253,11 +975,19 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         if (m_browser != null && !m_browser.isDisposed()) {
             m_browser.dispose();
         }
+        if (m_configurationBrowser != null && !m_configurationBrowser.isDisposed()) {
+            m_configurationBrowser.dispose();
+        }
         if (m_visualLayoutUpdate != null && !m_visualLayoutUpdate.isDisposed()) {
             m_visualLayoutUpdate.dispose();
         }
+        if (m_configurationLayoutUpdate != null && !m_configurationLayoutUpdate.isDisposed()) {
+            m_configurationLayoutUpdate.dispose();
+        }
         m_browser = null;
         m_visualLayoutUpdate = null;
+        m_configurationBrowser = null;
+        m_configurationLayoutUpdate = null;
         super.dispose();
     }
 
@@ -1293,6 +1023,21 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         return nodes;
     }
 
+    private List<ConfigurationLayoutEditorJSONNode> createJSONConfigurationNodeList() {
+        final List<ConfigurationLayoutEditorJSONNode> nodes = new ArrayList<>();
+        for (final Entry<NodeIDSuffix, DialogNode> viewNode : m_dialogNodes.entrySet()) {
+            final DialogNode node = viewNode.getValue();
+            final NodeID nodeID = viewNode.getKey().prependParent(m_subNodeContainer.getWorkflowManager().getID());
+            final NodeContainer nodeContainer = m_wfManager.getNodeContainer(nodeID);
+            final ConfigurationLayoutEditorJSONNode jsonNode =
+                new ConfigurationLayoutEditorJSONNode(nodeContainer.getID().getIndex(), nodeContainer.getName(),
+                    nodeContainer.getNodeAnnotation().getText(), getConfigurationLayout(viewNode.getValue(), viewNode.getKey()),
+                    getIcon(nodeContainer), !node.isHideInDialog(), "configuration");
+            nodes.add(jsonNode);
+        }
+        return nodes;
+    }
+
     private static JSONLayoutContent getLayout(final ViewHideable node, final NodeIDSuffix id) {
         if (node instanceof SubNodeContainer) {
             final JSONNestedLayout layout = new JSONNestedLayout();
@@ -1300,6 +1045,10 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
             return layout;
         }
         return DefaultLayoutCreatorImpl.getDefaultViewContentForNode(id, node);
+    }
+
+    private static JSONLayoutConfigurationContent getConfigurationLayout(final DialogNode node, final NodeIDSuffix id) {
+        return DefaultConfigurationCreatorImpl.getDefaultConfigurationContentForNode(id, node);
     }
 
     private static String getType(final ViewHideable node) {
@@ -1350,71 +1099,6 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         return "data:image/png;base64," + Base64.getEncoder().encodeToString(out.toByteArray());
     }
 
-    private static class BasicLayoutInfo {
-
-        private int m_row;
-        private int m_col;
-        private int m_colWidth;
-        private JSONLayoutContent m_view;
-
-        /**
-         * @return the row
-         */
-        public int getRow() {
-            return m_row;
-        }
-
-        /**
-         * @param row the row to set
-         */
-        public void setRow(final int row) {
-            m_row = row;
-        }
-
-        /**
-         * @return the col
-         */
-        public int getCol() {
-            return m_col;
-        }
-
-        /**
-         * @param col the col to set
-         */
-        public void setCol(final int col) {
-            m_col = col;
-        }
-
-        /**
-         * @return the colWidth
-         */
-        public int getColWidth() {
-            return m_colWidth;
-        }
-
-        /**
-         * @param colWidth the colWidth to set
-         */
-        public void setColWidth(final int colWidth) {
-            m_colWidth = colWidth;
-        }
-
-        /**
-         * @return the view
-         */
-        JSONLayoutContent getView() {
-            return m_view;
-        }
-
-        /**
-         * @param view the view to set
-         */
-        void setView(final JSONLayoutContent view) {
-            m_view = view;
-        }
-
-    }
-
     private static final class VisualLayoutViewCreator extends JavaScriptViewCreator<WebViewContent, WebViewContent> {
         VisualLayoutViewCreator(final WebTemplate template, final WebTemplate debugTemplate) {
             super(null);
@@ -1453,6 +1137,48 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
 
             try {
                 m_subnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(page));
+            } catch (Exception e) {
+                LOGGER.error("Cannot write layout from visual editor. " + e.getMessage(), e);
+                return false;
+            }
+
+            return true;
+        }
+
+    }
+
+    private class UpdateConfigurationFunction extends BrowserFunction {
+
+        /**
+         * @param browser
+         * @param name
+         */
+        public UpdateConfigurationFunction(final Browser browser, final String name) {
+            super(browser, name);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Object function(final Object[] arguments) {
+            if (arguments == null || arguments.length < 1) {
+                return false;
+            }
+            final String layout = arguments[0].toString();
+            final ObjectMapper mapper = createObjectMapperForUpdating();
+            JSONLayoutPage page = new JSONLayoutPage();
+            final ObjectReader reader = mapper.readerForUpdating(page);
+            try {
+                page = reader.readValue(layout);
+            } catch (Exception e) {
+                LOGGER.error("Cannot read layout from visual editor. " + e.getMessage(), e);
+                return false;
+            }
+
+            try {
+                m_subnodeConfigurationStringProvider.setConfigurationLayoutString(mapper.writerWithDefaultPrettyPrinter()
                     .writeValueAsString(page));
             } catch (Exception e) {
                 LOGGER.error("Cannot write layout from visual editor. " + e.getMessage(), e);
