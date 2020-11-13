@@ -191,6 +191,19 @@ public interface PreferenceConstants {
     public static final boolean P_DEFAULT_REMOTE_WORKFLOW_EDITOR_EDITS_DISABLED = false;
     /** Default remote table view chunk size */
     public static final int P_DEFAULT_REMOTE_WORKFLOW_EDITOR_TABLE_VIEW_CHUNK_SIZE = 100;
+    /**
+     * Preference constant for client timeout in milliseconds
+     *
+     * @since 4.3
+     */
+    public static final String P_REMOTE_WORKFLOW_EDITOR_CLIENT_TIMEOUT = "knime.remoteworkfloweditor.client.timeout";
+    /**
+     * Default value for client timeout in milliseconds
+     *
+     * @since 4.3
+     */
+    public static final int P_DEFAULT_REMOTE_WORKFLOW_EDITOR_CLIENT_TIMEOUT = 60000;
+
 
     /** Preference constant for the comma delimited list of zoom levels */
     public static final String P_EDITOR_ZOOM_LEVELS = "knime.zoom.levels";
