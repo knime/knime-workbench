@@ -350,8 +350,8 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
         // Web resources
-        final WebTemplate template = WebResourceController.getWebTemplateFromBundleID("knimeNodeSorter_1.0.0");
-        final WebTemplate dT = WebResourceController.getWebTemplateFromBundleID("knimeNodeSorter_1.0.0_Debug");
+        final WebTemplate template = WebResourceController.getWebTemplateFromBundleID("knimeConfigurationLayoutEditor_1.0.0");
+        final WebTemplate dT = WebResourceController.getWebTemplateFromBundleID("knimeConfigurationLayoutEditor_1.0.0_Debug");
         VisualLayoutViewCreator creator = new VisualLayoutViewCreator(template, dT);
         String html = "";
         try {
@@ -1059,10 +1059,13 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
             }
             return "view";
         }
+        if (node instanceof DialogNode) {
+            return "configuration";
+        }
         if (node instanceof SubNodeContainer) {
             return "nestedLayout";
         }
-        throw new IllegalArgumentException("Node is not view, subnode, or quickform: " + node.getClass());
+        throw new IllegalArgumentException("Node is not view, subnode, configuration or quickform: " + node.getClass());
     }
 
     private static String getIcon(final NodeContainer nodeContainer) {
