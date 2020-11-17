@@ -62,9 +62,9 @@ import org.eclipse.ui.IExportWizard;
 import org.eclipse.ui.IWorkbench;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration;
-import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration.SummaryFormat;
-import org.knime.core.util.workflowsummary.WorkflowSummaryGenerator;
+import org.knime.core.util.workflowsummary.WorkflowSummary;
+import org.knime.core.util.workflowsummary.WorkflowSummaryCreator;
+import org.knime.core.util.workflowsummary.WorkflowSummaryUtil;
 
 /**
  * Wizard to export the workflow summary file (xml and json) for the currently opened and selected workflow.
@@ -72,6 +72,16 @@ import org.knime.core.util.workflowsummary.WorkflowSummaryGenerator;
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
 class ExportWorkflowSummaryWizard extends Wizard implements IExportWizard {
+
+    /**
+     * The format of the workflow summary.
+     */
+    enum SummaryFormat {
+            /** as xml document */
+            XML,
+            /** as json document */
+            JSON;
+    }
 
     private final ExportWorkflowSummaryWizardPage m_page;
 
@@ -132,8 +142,7 @@ class ExportWorkflowSummaryWizard extends Wizard implements IExportWizard {
         IRunnableWithProgress op = monitor -> {
             monitor.setTaskName("Generate workflow summary");
             try (OutputStream out = new FileOutputStream(new File(fileDestination))) {
-                WorkflowSummaryGenerator.generate(m_wfm, out,
-                    WorkflowSummaryConfiguration.builder(format).includeExecutionInfo(includeExecInfo).build());
+                createAndWriteWorkflowSummary(m_wfm, format, includeExecInfo, out);
             } catch (IOException e) {
                 throw new InvocationTargetException(e);
             } finally {
@@ -155,6 +164,16 @@ class ExportWorkflowSummaryWizard extends Wizard implements IExportWizard {
             return false;
         }
         return true;
+    }
+
+    private static void createAndWriteWorkflowSummary(final WorkflowManager wfm, final SummaryFormat format,
+        final boolean includeExecInfo, final OutputStream out) throws IOException {
+        WorkflowSummary ws = WorkflowSummaryCreator.create(wfm, includeExecInfo);
+        if (format == SummaryFormat.XML) {
+            WorkflowSummaryUtil.writeXML(out, ws, includeExecInfo);
+        } else {
+            WorkflowSummaryUtil.writeJSON(out, ws, includeExecInfo);
+        }
     }
 
     /**

@@ -60,8 +60,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
-import org.knime.core.util.workflowsummary.WorkflowSummaryConfiguration.SummaryFormat;
 import org.knime.workbench.core.util.ExportToFilePage;
+import org.knime.workbench.editor2.workflowsummaryexport.ExportWorkflowSummaryWizard.SummaryFormat;
 
 /**
  * Export workflow summary page to select the destination file and additiona configurations.
