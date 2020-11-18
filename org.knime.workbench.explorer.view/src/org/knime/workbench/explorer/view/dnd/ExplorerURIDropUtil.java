@@ -51,39 +51,29 @@ package org.knime.workbench.explorer.view.dnd;
 import static org.knime.core.util.URIUtil.createEncodedURI;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.net.HttpURLConnection;
 import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Predicate;
 
-import org.apache.commons.io.IOUtils;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.dnd.URLTransfer;
-import org.eclipse.ui.IWorkbenchPage;
-import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
-import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.FileUtil;
 import org.knime.workbench.core.imports.EntityImport;
 import org.knime.workbench.core.imports.ImportForbiddenException;
 import org.knime.workbench.core.imports.RepoObjectImport;
-import org.knime.workbench.core.imports.RepoObjectImport.RepoObjectType;
 import org.knime.workbench.core.imports.URIImporter;
 import org.knime.workbench.core.imports.URIImporterFinder;
+import org.knime.workbench.core.imports.URIImporterUtil;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerView;
 import org.knime.workbench.explorer.view.actions.PasteFromClipboardAction;
-import org.knime.workbench.explorer.view.actions.imports.WorkflowImportAction;
 
 /**
  * Provides (and 'encapsulates') the logic required to validate and perform drops from an URI into the Explorer. The
@@ -165,167 +155,57 @@ public class ExplorerURIDropUtil {
      *
      * @param uri the URI to drop/paste that represents an object, such as a workflow, workflow group or data file
      * @param view the view the drop/paste is performed into
-     * @param target the target (e.g. a workflow group) to drop the object (can be <code>null</code>)
+     * @param target the target (e.g. a workflow group) to drop the object
      * @return <code>true</code> if the drop was successful
      */
     public static boolean performDrop(final String uri, final ExplorerView view,
         final AbstractExplorerFileStore target) {
-
-        RepoObjectImport objImport = getRepoObjectImportFromURI(uri);
-        if(objImport == null) {
-            return false;
-        }
-
-        return performDrop(objImport, file -> {
-            boolean result = target.getContentProvider().performDrop(view, new String[]{file.getAbsolutePath()}, target,
-                DND.DROP_COPY);
-            view.getViewer().refresh(ContentDelegator.getTreeObjectFor(target));
-            return result;
-        });
-    }
-
-    private static RepoObjectImport getRepoObjectImportFromURI(final String uri) {
         URI knimeURI = createEncodedURI(uri.split("\n")[0]).orElse(null);
         if (knimeURI == null) {
-            return null;
-        }
-
-        Optional<EntityImport> entityImport;
-        try {
-            entityImport = URIImporterFinder.getInstance().createEntityImportFor(knimeURI);
-        } catch (ImportForbiddenException e) {
-            LOGGER.warn(e.getMessage(), e);
-            return null;
-        }
-        if (!entityImport.isPresent()) {
-            LOGGER.warn("Object at URI '" + knimeURI + "' not found");
-            return null;
-        }
-        return ((RepoObjectImport)entityImport.get());
-    }
-
-    private static ExplorerView getExplorerView() {
-        IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-        ExplorerView view = null;
-        if (window != null) {
-            IWorkbenchPage page = window.getActivePage();
-            if (page != null) {
-                view = (ExplorerView)page.findView(ExplorerView.ID);
-            }
-        }
-        if (view == null) {
-            LOGGER.warn("The KNIME Explorer view couldn't be found");
-        }
-        return view;
-    }
-
-    /**
-     * Performs the drop/paste, main steps:
-     * <ul>
-     * <li>download the object to a temporary location</li>
-     * <li>open import wizard in case of a workflow or workflow group and import</li>
-     * <li>refresh explorer view</li>
-     * <li>delete temporary file</li>
-     * </ul>
-     * Will open the import wizard in case of a workflow and workflow group. Once the operation is finished successfully
-     * the explorer view will be refreshed.
-     *
-     * @param uri the URI to drop/paste that represents an object, such as a workflow, workflow group or data file
-     * @return <code>true</code> if the drop was successful
-     */
-    public static boolean performDrop(final String uri) {
-        RepoObjectImport objImport = getRepoObjectImportFromURI(uri);
-        if (objImport == null) {
             return false;
         }
-
-        return performDrop(objImport);
-    }
-
-    /**
-     * Performs the drop/paste, main steps:
-     * <ul>
-     * <li>download the object to a temporary location</li>
-     * <li>open import wizard in case of a workflow or workflow group and import</li>
-     * <li>refresh explorer view</li>
-     * <li>delete temporary file</li>
-     * </ul>
-     * Will open the import wizard in case of a workflow and workflow group. Once the operation is finished successfully
-     * the explorer view will be refreshed.
-     *
-     * @param objImport the repository object to import
-     * @return <code>true</code> if the drop was successful
-     */
-    public static boolean performDrop(final RepoObjectImport objImport) {
-        final ExplorerView view = getExplorerView();
-        if (view == null) {
-            return false;
-        }
-        return performDrop(objImport, file -> {
-            new WorkflowImportAction(view, null, file.getAbsolutePath()).run();
-            return true;
-        });
-    }
-
-    private static boolean performDrop(final RepoObjectImport objImport, final Predicate<File> importAction) {
-        AtomicReference<File> file = new AtomicReference<>();
-        AtomicReference<File> tmpDir = new AtomicReference<>();
         try {
+            AtomicReference<File> file = new AtomicReference<File>();
+            AtomicReference<File> tmpDir = new AtomicReference<File>();
             PlatformUI.getWorkbench().getProgressService().busyCursorWhile((monitor) -> {
                 monitor.beginTask("Downloading file...", 100);
                 try {
-                    HttpURLConnection dataConnection = objImport.getData();
-                    File tmpFile = fetchRemoteFile(dataConnection);
-                    tmpDir.set(FileUtil.createTempDir("download"));
-
-                    //change file extension according to the data object to paste
-                    RepoObjectType objType = objImport.getType();
-                    String fileExt = "";
-                    if (objType == RepoObjectType.Workflow) {
-                        fileExt = "." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION;
-                    } else if (objType == RepoObjectType.WorkflowGroup) {
-                        fileExt = "." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION;
-                    } else {
-                        //
-                    }
-
-                    file.set(new File(tmpDir.get(), objImport.getName() + fileExt));
-                    if (!tmpFile.renameTo(file.get())) {
-                        LOGGER.warn("Pasting failed. The temporary file '" + file.get() + "' couldn't be renamed to '"
-                            + file.get() + "'");
+                    Optional<EntityImport> entityImport;
+                    try {
+                        entityImport = URIImporterFinder.getInstance().createEntityImportFor(knimeURI);
+                    } catch (ImportForbiddenException e) {
+                        LOGGER.warn(e.getMessage());
                         return;
                     }
+                    if (!entityImport.isPresent()) {
+                        LOGGER.warn("Object at URI '" + knimeURI + "' not found");
+                        return;
+                    }
+                    RepoObjectImport objImport = ((RepoObjectImport)entityImport.get());
+                    tmpDir.set(FileUtil.createTempDir("download"));
+                    file.set(URIImporterUtil.fetchFile(objImport, tmpDir.get()));
                 } catch (IOException e) {
-                    LOGGER.warn("Object from URI '" + objImport.getKnimeURI() + "' couldn't be pasted", e);
+                    LOGGER.warn("Object from URI '" + knimeURI + "' couldn't be pasted", e);
                     return;
                 }
             });
-        } catch (InvocationTargetException | InterruptedException e) { // NOSONAR
-            LOGGER.warn("Object from URI '" + objImport.getKnimeURI() + "' couldn't be pasted", e);
+            if (file.get() == null) {
+                return false;
+            }
+
+            boolean result = target.getContentProvider().performDrop(view, new String[]{file.get().getAbsolutePath()},
+                target, DND.DROP_COPY);
+            view.getViewer().refresh(ContentDelegator.getTreeObjectFor(target));
+
+            //remove temporary directory
+            if (!file.get().delete() || !tmpDir.get().delete()) {
+                LOGGER.warn("The temporary file '" + file.get() + "' couldn't be deleted");
+            }
+            return result;
+        } catch (InvocationTargetException | InterruptedException e) {
+            LOGGER.warn("Object from URI '" + knimeURI + "' couldn't be pasted", e);
             return false;
         }
-
-        boolean result;
-        if (file.get() == null) {
-            return false;
-        } else {
-            result = importAction.test(file.get());
-        }
-
-        //remove temporary directory
-        if (!file.get().delete() || !tmpDir.get().delete()) {
-            LOGGER.warn("The temporary file '" + file.get() + "' couldn't be deleted");
-        }
-        return result;
-
-    }
-
-    private static File fetchRemoteFile(final HttpURLConnection connection) throws IOException {
-        File f = FileUtil.createTempFile("download", ".bin");
-        try (InputStream is = connection.getInputStream(); OutputStream os = new FileOutputStream(f)) {
-            IOUtils.copy(is, os);
-        }
-        return f;
     }
 
 }

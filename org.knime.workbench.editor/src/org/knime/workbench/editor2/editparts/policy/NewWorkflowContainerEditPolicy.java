@@ -51,15 +51,21 @@ import static java.util.Arrays.asList;
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
 import static org.knime.core.util.URIUtil.createEncodedURI;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.runtime.IBundleGroup;
 import org.eclipse.core.runtime.IBundleGroupProvider;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.gef.EditPart;
@@ -71,8 +77,10 @@ import org.eclipse.gef.requests.CreateRequest;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.KNIMEComponentInformation;
 import org.knime.core.node.NodeCreationContext;
@@ -84,6 +92,7 @@ import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.util.FileUtil;
 import org.knime.workbench.core.imports.EntityImport;
 import org.knime.workbench.core.imports.ExtensionImport;
 import org.knime.workbench.core.imports.ImportForbiddenException;
@@ -91,6 +100,7 @@ import org.knime.workbench.core.imports.NodeImport;
 import org.knime.workbench.core.imports.RepoObjectImport;
 import org.knime.workbench.core.imports.RepoObjectImport.RepoObjectType;
 import org.knime.workbench.core.imports.URIImporterFinder;
+import org.knime.workbench.core.imports.URIImporterUtil;
 import org.knime.workbench.core.imports.UpdateSiteInfo;
 import org.knime.workbench.editor2.CreateDropRequest;
 import org.knime.workbench.editor2.CreateDropRequest.RequestType;
@@ -115,7 +125,8 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
-import org.knime.workbench.explorer.view.dnd.ExplorerURIDropUtil;
+import org.knime.workbench.explorer.view.ExplorerJob;
+import org.knime.workbench.explorer.view.actions.OpenKNIMEArchiveFileAction;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.NodeTemplate;
 
@@ -233,12 +244,41 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             return handleMetaNodeTemplateDrop(manager, cdr, uriImport.getKnimeURI(), true);
         } else if (uriImport.getType() == RepoObjectType.Workflow || uriImport.getType() == RepoObjectType.WorkflowGroup
             || uriImport.getType() == RepoObjectType.Data) {
-            ExplorerURIDropUtil.performDrop(uriImport);
+            downloadAndOpenRepoObject(uriImport);
             return null;
         } else {
             // ignore drop for any other types
             return null;
         }
+    }
+
+    /**
+     * Downloads and opens/imports workflows/workflow groups.
+     *
+     * @param uriImport
+     *
+     * TODO move to a more appropriate place
+     */
+    public static void downloadAndOpenRepoObject(final RepoObjectImport uriImport) {
+        IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+        ExplorerJob job = new ExplorerJob("Downloading " + uriImport.getName()) {
+
+            @Override
+            protected IStatus run(final IProgressMonitor monitor) {
+                try {
+                    File tmpDir = FileUtil.createTempDir("knime_download");
+                    File file = URIImporterUtil.fetchFile(uriImport, tmpDir);
+                    OpenKNIMEArchiveFileAction a =
+                        new OpenKNIMEArchiveFileAction(activePage, Collections.singletonList(file));
+                    Display.getDefault().asyncExec(a::run);
+                } catch (IOException e) {
+                    LOGGER.error("Problem downloading and importing repository object '" + uriImport.getName()
+                        + "' from '" + uriImport.getDataURI() + "'", e);
+                }
+                return Status.OK_STATUS;
+            }
+        };
+        job.schedule();
     }
 
     private Command handleMetaNodeTemplateDrop(final WorkflowManager manager, final CreateDropRequest request,
