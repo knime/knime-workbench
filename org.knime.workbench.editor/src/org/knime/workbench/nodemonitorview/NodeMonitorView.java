@@ -56,6 +56,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
@@ -109,6 +110,8 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
     private Text m_state;
 
     private Label m_info;
+
+    private Label m_tableInfo;
 
     private ComboViewer m_portIndex;
 
@@ -274,6 +277,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
                         m_portIndex.getCombo().setEnabled(true);
                     } else {
                         m_currentMonitorTable.updateControls(m_loadButton, m_portIndex.getCombo(), 0);
+                        updateDataTableInfo();
                     }
                 } catch (NumberFormatException nfe) {
                     // ignore.
@@ -301,6 +305,9 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
         for (int i = 0; i < titles.length; i++) {
             m_table.getColumn(i).pack();
         }
+        m_tableInfo = new Label(infoPanel, SWT.NONE );
+        m_tableInfo.setText(StringUtils.repeat(" ", 100));
+        m_tableInfo.setVisible(false);
         m_lastNode = null;
         getViewSite().getPage().addSelectionListener(this);
     }
@@ -344,6 +351,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
             m_title.setText("");
             m_state.setText("no node selected");
             m_table.removeAll();
+            updateDataTableInfo();
             return;
         }
         if (structSel.size() > 1) {
@@ -351,6 +359,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
             m_title.setText("");
             m_state.setText("more than one element selected");
             m_table.removeAll();
+            updateDataTableInfo();
             return;
         }
         // retrieve first (and only!) selection:
@@ -367,6 +376,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
                 m_lastNode.removeNodeStateChangeListener(NodeMonitorView.this);
                 m_lastNode = null;
             }
+            updateDataTableInfo();
             warningMessage("no node selected");
         }
     }
@@ -446,7 +456,22 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
             loadAndSetupMonitorTableForOrdinaryNC();
         } else {
             m_currentMonitorTable.updateControls(m_loadButton, m_portIndex.getCombo(), 0);
+            updateDataTableInfo();
         }
+    }
+
+    private void updateDataTableInfo() {
+        if (m_lastNode != null && m_currentMonitorTable instanceof MonitorDataTable) {
+            MonitorDataTable dataTable = (MonitorDataTable)m_currentMonitorTable;
+            if (dataTable.getNumRows() > 0 && dataTable.getNumColumns() > 0) {
+                m_tableInfo
+                    .setText(String.format("Rows: %d, Columns: %d", dataTable.getNumRows(), dataTable.getNumColumns()));
+                m_tableInfo.setVisible(true);
+                return;
+            }
+        }
+        m_tableInfo.setText("");
+        m_tableInfo.setVisible(false);
     }
 
     /*
@@ -458,6 +483,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
             //already load the data in case of an ordinary node monitor
             m_currentMonitorTable.loadTableData(m_lastNode, unwrapNC(m_lastNode), 0);
             m_currentMonitorTable.setupTable(m_table);
+            updateDataTableInfo();
         } catch (LoadingFailedException e) {
             warningMessage(e.getMessage());
         }
@@ -481,6 +507,8 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
         if (m_choice != DISPLAYOPTIONS.TABLE) {
             m_portIndex.getCombo().setEnabled(false);
         }
+
+        updateDataTableInfo();
     }
 
     /** {@inheritDoc} */
@@ -532,8 +560,9 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
                 PlatformUI.getWorkbench().getProgressService().busyCursorWhile((monitor) -> {
                     monitor.beginTask("Loading data ...", 100);
                     try {
-                        m_currentMonitorTable.loadTableData(m_lastNode, Wrapper.unwrapNCOptional(m_lastNode).orElse(null),
-                            m_loadButtonPressedCount.get());
+                        m_currentMonitorTable.loadTableData(m_lastNode,
+                            Wrapper.unwrapNCOptional(m_lastNode).orElse(null), m_loadButtonPressedCount.get());
+                        Display.getDefault().asyncExec(() -> updateDataTableInfo());
                     } catch (LoadingFailedException e1) {
                         lfe.set(e1);
                     }

@@ -99,9 +99,14 @@ public class MonitorDataTable implements NodeMonitorTable {
 
     private DataTable m_dataTable;
 
+    // also used as indicator whether a table has been loaded completely
     private long m_numRows = -1;
 
     private long m_numLoadedRows = -1;
+
+    private long m_numTotalRows = -1;
+
+    private int m_numTotalCols = -1;
 
     private boolean m_autoLoad;
 
@@ -161,15 +166,26 @@ public class MonitorDataTable implements NodeMonitorTable {
 
             // retrieve table
             if (po instanceof BufferedDataTable) {
-                m_numRows = ((BufferedDataTable)po).size();
+                BufferedDataTable table = (BufferedDataTable) po;
+                m_numRows = m_numTotalRows = table.size();
+                m_numTotalCols = table.getDataTableSpec().getNumColumns();
                 m_dataTable = (DataTable)po;
             } else if (po instanceof KnowsRowCountTable) {
-                m_numRows = ((KnowsRowCountTable)po).size();
+                KnowsRowCountTable table = (KnowsRowCountTable) po;
+                m_numRows = m_numTotalRows = table.size();
+                m_numTotalCols = table.getDataTableSpec().getNumColumns();
                 m_dataTable = (KnowsRowCountTable)po;
             } else if (po instanceof DataTable && po instanceof AsyncTable) {
                 assert !m_autoLoad;
                 m_dataTable = (DataTable)po;
-                m_numRows = -1;
+                m_numRows = m_numTotalRows = -1;
+                m_numTotalCols = -1;
+                if (po instanceof AsyncTable) {
+                    ((AsyncTable)po).setRowCountKnownCallback(c -> {
+                        m_numTotalRows = c;
+                        m_numTotalCols = m_dataTable.getDataTableSpec().getNumColumns();
+                    });
+                }
             } else {
                 // no table in port - ignore.
                 throw new LoadingFailedException("Unknown or no PortObject");
@@ -273,13 +289,15 @@ public class MonitorDataTable implements NodeMonitorTable {
             }
             if (row.getKey() == null) {
                 // we reached the end of table
-                m_numRows = i;
+                m_numRows = m_numTotalRows = i;
+                m_numTotalCols = row.getNumCells();
                 break;
             }
         }
         m_numLoadedRows = i;
         if (!m_chunkIt.hasNext()) {
-            m_numRows = m_numLoadedRows;
+            m_numRows = m_numTotalRows = m_numLoadedRows;
+            m_numTotalCols = m_dataTable.getDataTableSpec().getNumColumns();
         }
         if (m_table != null) {
             Display.getDefault().asyncExec(() -> m_table.setItemCount((int)m_numLoadedRows));
@@ -338,6 +356,14 @@ public class MonitorDataTable implements NodeMonitorTable {
         } else {
             item.setText("Row " + m_currentIndex + " could not be read.");
         }
+    }
+
+    long getNumRows() {
+        return m_numTotalRows;
+    }
+
+    int getNumColumns() {
+        return m_numTotalCols;
     }
 
     private class AddDataRowListener implements Listener {
