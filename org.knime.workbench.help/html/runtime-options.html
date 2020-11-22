@@ -239,7 +239,7 @@
       default value is 1, that is one row at a time.</dd>
       
     <dt>
-      knime.database.enable.concurrency=<em>&lt;boolean&gt;</em>
+      knime.database.enable.concurrency=<em>(true|false)</em>
     </dt>
     <dd> Used to switch on/off the database connection access (applies only for the same database connection). Default 
       is true, that is all database accesses are synchronized based on single connection; false means off, that is, the 
@@ -251,6 +251,14 @@
     <dd>Allows one to change the maximum log file size (default is 10 MB).
       Values must be integer, possibly succeeded by "m" or "k" to denote that
       the given value is in mega or kilo byte.</dd>
+
+    <dt>
+      knime.settings.passwords.forbidden=<em>(true|false)</em></em>
+    </dt>
+    <dd>If <em>true</em>, nodes using passwords as part of their configuration (e.g. DB connection or SendEmail) will
+      not store the password as part of the workflow on disc. Instead a null value is stored, which will cause the 
+      node's configuration to be incorrect (but valid) after the workflow is restored from disc. 
+      Default is <em>false</em>.</dd>
 
     <dt>
       knime.repository.non-instant-search=<em>(true|false)</em>

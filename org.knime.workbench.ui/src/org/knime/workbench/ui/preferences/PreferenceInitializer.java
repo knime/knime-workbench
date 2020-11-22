@@ -84,6 +84,8 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
 
         store.setDefault(PreferenceConstants.P_CONFIRM_LOAD_NIGHTLY_BUILD_WORKFLOW, true);
 
+        store.setDefault(PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS, true);
+
         store.setDefault(PreferenceConstants.P_EXEC_NODES_DATA_AWARE_DIALOGS, MessageDialogWithToggle.PROMPT);
 
         store.setDefault(PreferenceConstants.P_FAV_FREQUENCY_HISTORY_SIZE, 10);

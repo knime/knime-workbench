@@ -54,6 +54,7 @@ import org.eclipse.jface.preference.RadioGroupFieldEditor;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
+import org.knime.core.node.Node;
 import org.knime.core.node.NodeLogger.LEVEL;
 import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.ui.KNIMEUIPlugin;
@@ -121,6 +122,12 @@ public class MainPreferencePage extends FieldEditorPreferencePage
         addField(new BooleanFieldEditor(
             PreferenceConstants.P_CONFIRM_LOAD_NIGHTLY_BUILD_WORKFLOW,
             "Confirm when loading workflows created by a nightly build", parent));
+
+        // added with AP-15442 -- don't bother user with this unless this property is set
+        if (Node.DISALLOW_WEAK_PASSWORDS_IN_NODE_CONFIGURATION) {
+            addField(new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS,
+                "Confirm when storing (weakly encrypted) passwords in node configurations", parent));
+        }
 
         ComboFieldEditor dataAwareExecutePromptEditor = new ComboFieldEditor(
             PreferenceConstants.P_EXEC_NODES_DATA_AWARE_DIALOGS,

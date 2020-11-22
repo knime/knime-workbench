@@ -71,8 +71,7 @@ public interface PreferenceConstants {
     public static final String P_CONFIRM_RECONNECT = "knime.confirm.reconnect";
 
     /** Preference constant to confirm executing nodes not saved on close. */
-    public static final String P_CONFIRM_EXEC_NODES_NOT_SAVED =
-        "knime.confirm.exec_nodes_not_saved";
+    public static final String P_CONFIRM_EXEC_NODES_NOT_SAVED = "knime.confirm.exec_nodes_not_saved";
 
     /** Preference constant to (not) warn when loading nightly build workflow.
      * @since 3.5 */
@@ -80,6 +79,10 @@ public interface PreferenceConstants {
 
     /** Preference constant to execute upstream nodes for nodes w/ data aware dialog (ALWAYS, NEVER, PROMPT). */
     public static final String P_EXEC_NODES_DATA_AWARE_DIALOGS = "knime.exec_nodes_for_data_aware_dialogs";
+
+    /** Preference constant to (not) warn when storing passwords in node configurations and
+     * {@link org.knime.core.node.KNIMEConstants#PROPERTY_WEAK_PASSWORDS_IN_SETTINGS_FORBIDDEN} is set. */
+    public static final String P_CONFIRM_PASSWORDS_IN_SETTINGS = "knime.confirm.passwords_in_settings";
 
     /** Preference constant for the size of the favorite nodes frequency
      * history size.

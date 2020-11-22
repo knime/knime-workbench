@@ -87,9 +87,12 @@ import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.Node;
 import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NotConfigurableException;
+import org.knime.core.node.config.base.ConfigPasswordEntry;
 import org.knime.core.node.util.ViewUtils;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
@@ -616,7 +619,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
                         // valid settings
                         if (confirmApply()) {
                             // apply settings
-                            m_nodeContainer.applySettingsFromDialog();
+                            checkSettingsForPasswordsAndWarn(m_nodeContainer.applySettingsFromDialog());
                             return true;
                         } else {
                             // user canceled reset and apply
@@ -635,7 +638,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
             } else {
                 // not executed
                 getShell().setCursor(Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
-                m_nodeContainer.applySettingsFromDialog();
+                checkSettingsForPasswordsAndWarn(m_nodeContainer.applySettingsFromDialog());
 
                 if (m_postApplyDialogAction != null) {
                     m_postApplyDialogAction.accept(m_dialogPane);
@@ -662,6 +665,26 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
             getShell().setCursor(null);
         }
         return false;
+    }
+
+    private static void checkSettingsForPasswordsAndWarn(final NodeSettings settings) {
+        if (Node.DISALLOW_WEAK_PASSWORDS_IN_NODE_CONFIGURATION && settings != null
+            && ConfigPasswordEntry.containsPassword(settings, false)) {
+            IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
+            if (!store.contains(PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS)
+                || store.getBoolean(PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS)) {
+                final MessageDialogWithToggle dialog = MessageDialogWithToggle.openInformation(
+                    SWTUtilities.getActiveShell(), "Passwords in node configuration...",
+                    "This node uses (weakly encrypted) passwords in its configuration.\n\n"
+                        + "Passwords will not be saved to disc. You can continue to work but sharing this workflow or "
+                        + "loading it later will cause this node to loose the password (reconfiguration required).",
+                    "Do not show again", false, store, PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS);
+                if (dialog.getToggleState()) {
+                    store.setValue(PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS, false);
+                    KNIMEUIPlugin.getDefault().savePluginPreferences();
+                }
+            }
+        }
     }
 
     /**
