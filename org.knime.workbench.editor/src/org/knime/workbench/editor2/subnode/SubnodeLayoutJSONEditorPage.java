@@ -160,6 +160,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
     private SubNodeContainer m_subNodeContainer;
     private WorkflowManager m_wfManager;
     private Map<NodeIDSuffix, ViewHideable> m_viewNodes;
+    @SuppressWarnings("rawtypes")
     private Map<NodeIDSuffix, DialogNode> m_dialogNodes;
     private SubnodeContainerLayoutStringProvider m_subnodeLayoutStringProvider;
     private SubnodeContainerConfigurationStringProvider m_subnodeConfigurationStringProvider;
@@ -181,8 +182,8 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
      */
     protected SubnodeLayoutJSONEditorPage(final String pageName) {
         super(pageName);
-        setDescription("Define a layout for the KNIME WebPortal and the composite view.\n" +
-                "Specify the order of the contained configuration nodes for the configuration dialog of the component.");
+        setDescription("Define a layout for the KNIME WebPortal and the composite view.\n"
+            + "Specify the order of the contained configuration nodes for the configuration dialog of the component.");
         m_subnodeLayoutStringProvider = new SubnodeContainerLayoutStringProvider("");
         m_subnodeConfigurationStringProvider = new SubnodeContainerConfigurationStringProvider("");
     }
@@ -228,11 +229,12 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                 try {
                     JSONLayoutPage page = reader.readValue(m_subnodeLayoutStringProvider.getLayoutString());
                     cleanJSONPage(page);
-                    m_subnodeLayoutStringProvider.setLayoutString(mapper.writerWithDefaultPrettyPrinter()
-                        .writeValueAsString(page));
-                    JSONLayoutPage configurationPage = reader.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString());
-                    m_subnodeConfigurationStringProvider.setConfigurationLayoutString(mapper.writerWithDefaultPrettyPrinter()
-                        .writeValueAsString(configurationPage));
+                    m_subnodeLayoutStringProvider
+                        .setLayoutString(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page));
+                    JSONLayoutPage configurationPage =
+                        reader.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString());
+                    m_subnodeConfigurationStringProvider.setConfigurationLayoutString(
+                        mapper.writerWithDefaultPrettyPrinter().writeValueAsString(configurationPage));
                 } catch (IOException ex) {
                     LOGGER.error("Failed to retrieve JSON string from layout:" + ex.getMessage(), ex);
                 }
@@ -350,8 +352,10 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
         // Web resources
-        final WebTemplate template = WebResourceController.getWebTemplateFromBundleID("knimeConfigurationLayoutEditor_1.0.0");
-        final WebTemplate dT = WebResourceController.getWebTemplateFromBundleID("knimeConfigurationLayoutEditor_1.0.0_Debug");
+        final WebTemplate template =
+            WebResourceController.getWebTemplateFromBundleID("knimeConfigurationLayoutEditor_1.0.0");
+        final WebTemplate dT =
+            WebResourceController.getWebTemplateFromBundleID("knimeConfigurationLayoutEditor_1.0.0_Debug");
         VisualLayoutViewCreator creator = new VisualLayoutViewCreator(template, dT);
         String html = "";
         try {
@@ -589,7 +593,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
      * @param dialogNodes a map of all available view nodes
      */
     public void setConfigurationNodes(final WorkflowManager manager, final SubNodeContainer subnodeContainer,
-        final Map<NodeIDSuffix, DialogNode> dialogNodes) {
+        @SuppressWarnings("rawtypes") final Map<NodeIDSuffix, DialogNode> dialogNodes) {
         m_wfManager = manager;
         m_subNodeContainer = subnodeContainer;
         m_dialogNodes = dialogNodes;
@@ -597,16 +601,18 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         m_subnodeConfigurationStringProvider = subnodeContainer.getSubnodeConfigurationLayoutStringProvider();
         if (!m_subnodeConfigurationStringProvider.isEmptyLayout()) {
             try {
-                ConfigurationLayoutUtil.addUnreferencedViews(m_subnodeConfigurationStringProvider, dialogNodes, m_wfManager.getID());
+                ConfigurationLayoutUtil.addUnreferencedViews(m_subnodeConfigurationStringProvider, dialogNodes,
+                    m_wfManager.getID());
                 ObjectMapper mapper = createObjectMapperForUpdating();
-                page = mapper.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString(), JSONLayoutPage.class);
+                page = mapper.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString(),
+                    JSONLayoutPage.class);
                 if (page.getRows() == null) {
                     page = null;
                 } else {
                     cleanJSONPage(page);
                     removeMissingRows(page, dialogNodes);
-                    m_subnodeConfigurationStringProvider.setConfigurationLayoutString(mapper.writerWithDefaultPrettyPrinter()
-                        .writeValueAsString(page));
+                    m_subnodeConfigurationStringProvider
+                        .setConfigurationLayoutString(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page));
                 }
             } catch (IOException e) {
                 LOGGER.error("Error parsing layout. Pretty printing not possible: " + e.getMessage(), e);
@@ -732,23 +738,26 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         return errorMsg;
     }
 
-    private static void removeMissingRows(final JSONLayoutPage page, final Map<NodeIDSuffix, DialogNode> allNodes) {
+    private static void removeMissingRows(final JSONLayoutPage page,
+        @SuppressWarnings("rawtypes") final Map<NodeIDSuffix, DialogNode> allNodes) {
         if (page.getRows() == null) {
             return;
         }
         final List<JSONLayoutRow> cleanedRows = new ArrayList<>();
-        for(final JSONLayoutRow row : page.getRows()) {
+        for (final JSONLayoutRow row : page.getRows()) {
             if (!row.getColumns().isEmpty()) {
                 final List<JSONLayoutColumn> cleanedColumns = new ArrayList<>();
                 for (final JSONLayoutColumn col : row.getColumns()) {
                     if (col.getContent() != null) {
                         col.getContent().stream().forEach(content -> {
                             if (content instanceof JSONLayoutConfigurationContent) {
-                                if (allNodes.containsKey(NodeIDSuffix.fromString(((JSONLayoutConfigurationContent)content).getNodeID()))) {
+                                if (allNodes.containsKey(
+                                    NodeIDSuffix.fromString(((JSONLayoutConfigurationContent)content).getNodeID()))) {
                                     cleanedColumns.add(col);
                                 }
                             } else if (content instanceof JSONNestedLayout) {
-                                if (allNodes.containsKey(NodeIDSuffix.fromString(((JSONNestedLayout)content).getNodeID()))) {
+                                if (allNodes
+                                    .containsKey(NodeIDSuffix.fromString(((JSONNestedLayout)content).getNodeID()))) {
                                     cleanedColumns.add(col);
                                 }
                             }
@@ -762,23 +771,6 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
             }
         }
         page.setRows(cleanedRows);
-    }
-
-    private static void setMissingLegacyFlag(final JSONLayoutPage page) {
-        page.setParentLayoutLegacyMode(true);
-        page.getRows().forEach(row -> updateMissingLegacyFlagRow(row));
-    }
-
-    private static void updateMissingLegacyFlagRow(final JSONLayoutRow row) {
-        row.getColumns().forEach(col -> {
-            col.getContent().forEach(item -> {
-                if (item instanceof JSONLayoutViewContent) {
-                    ((JSONLayoutViewContent)item).setUseLegacyMode(true);
-                } else if (item instanceof JSONLayoutRow) {
-                    updateMissingLegacyFlagRow((JSONLayoutRow)item);
-                }
-            });
-        });
     }
 
     private void compareNodeIDs() {
@@ -950,7 +942,8 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         ObjectMapper mapper = createObjectMapperForUpdating();
         ObjectReader reader = mapper.readerForUpdating(new JSONLayoutPage());
         try {
-            return mapper.writeValueAsString(reader.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString()));
+            return mapper.writeValueAsString(
+                reader.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString()));
         } catch (IOException e) {
             LOGGER.error("Failed to retrieve JSON string from layout:" + e.getMessage(), e);
         }
@@ -1025,14 +1018,15 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
 
     private List<ConfigurationLayoutEditorJSONNode> createJSONConfigurationNodeList() {
         final List<ConfigurationLayoutEditorJSONNode> nodes = new ArrayList<>();
-        for (final Entry<NodeIDSuffix, DialogNode> viewNode : m_dialogNodes.entrySet()) {
+        for (@SuppressWarnings("rawtypes") final Entry<NodeIDSuffix, DialogNode> viewNode : m_dialogNodes.entrySet()) {
+            @SuppressWarnings("rawtypes")
             final DialogNode node = viewNode.getValue();
             final NodeID nodeID = viewNode.getKey().prependParent(m_subNodeContainer.getWorkflowManager().getID());
             final NodeContainer nodeContainer = m_wfManager.getNodeContainer(nodeID);
-            final ConfigurationLayoutEditorJSONNode jsonNode =
-                new ConfigurationLayoutEditorJSONNode(nodeContainer.getID().getIndex(), nodeContainer.getName(),
-                    nodeContainer.getNodeAnnotation().getText(), getConfigurationLayout(viewNode.getValue(), viewNode.getKey()),
-                    getIcon(nodeContainer), !node.isHideInDialog(), "configuration");
+            final ConfigurationLayoutEditorJSONNode jsonNode = new ConfigurationLayoutEditorJSONNode(
+                nodeContainer.getID().getIndex(), nodeContainer.getName(), nodeContainer.getNodeAnnotation().getText(),
+                getConfigurationLayout(viewNode.getValue(), viewNode.getKey()), getIcon(nodeContainer),
+                !node.isHideInDialog(), "configuration");
             nodes.add(jsonNode);
         }
         return nodes;
@@ -1047,7 +1041,8 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         return DefaultLayoutCreatorImpl.getDefaultViewContentForNode(id, node);
     }
 
-    private static JSONLayoutConfigurationContent getConfigurationLayout(final DialogNode node, final NodeIDSuffix id) {
+    private static JSONLayoutConfigurationContent
+        getConfigurationLayout(@SuppressWarnings("rawtypes") final DialogNode node, final NodeIDSuffix id) {
         return DefaultConfigurationCreatorImpl.getDefaultConfigurationContentForNode(id, node);
     }
 
@@ -1181,8 +1176,8 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
             }
 
             try {
-                m_subnodeConfigurationStringProvider.setConfigurationLayoutString(mapper.writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(page));
+                m_subnodeConfigurationStringProvider
+                    .setConfigurationLayoutString(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page));
             } catch (Exception e) {
                 LOGGER.error("Cannot write layout from visual editor. " + e.getMessage(), e);
                 return false;

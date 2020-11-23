@@ -81,8 +81,8 @@ public class ConfigurationLayoutEditorJSONNode {
      * @param availableInDialog if the node is displayed
      * @param type the node type (view, configuration, quickform, or nestedLayout)
      */
-    public ConfigurationLayoutEditorJSONNode(final int nodeID, final String name, final String description, final JSONLayoutContent layout,
-        final String icon, final boolean availableInDialog, final String type) {
+    public ConfigurationLayoutEditorJSONNode(final int nodeID, final String name, final String description,
+        final JSONLayoutContent layout, final String icon, final boolean availableInDialog, final String type) {
         m_nodeID = Integer.toString(nodeID);
         // it doesn't seem to be possible to escape the apostrophe for the resulting script to be executed correctly
         // replacing it with a 'right single quotation mark' keeps the visual appearance
