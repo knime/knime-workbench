@@ -677,7 +677,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
                     SWTUtilities.getActiveShell(), "Passwords in node configuration...",
                     "This node uses (weakly encrypted) passwords in its configuration.\n\n"
                         + "Passwords will not be saved to disc. You can continue to work but sharing this workflow or "
-                        + "loading it later will cause this node to loose the password (reconfiguration required).",
+                        + "loading it later will cause this node to lose the password (reconfiguration required).",
                     "Do not show again", false, store, PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS);
                 if (dialog.getToggleState()) {
                     store.setValue(PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS, false);
