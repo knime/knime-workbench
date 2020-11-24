@@ -601,8 +601,7 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
         m_subnodeConfigurationStringProvider = subnodeContainer.getSubnodeConfigurationLayoutStringProvider();
         if (!m_subnodeConfigurationStringProvider.isEmptyLayout()) {
             try {
-                ConfigurationLayoutUtil.addUnreferencedViews(m_subnodeConfigurationStringProvider, dialogNodes,
-                    m_wfManager.getID());
+                ConfigurationLayoutUtil.addUnreferencedViews(m_subnodeConfigurationStringProvider, dialogNodes);
                 ObjectMapper mapper = createObjectMapperForUpdating();
                 page = mapper.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString(),
                     JSONLayoutPage.class);
