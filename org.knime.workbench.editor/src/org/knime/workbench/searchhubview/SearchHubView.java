@@ -51,6 +51,7 @@ package org.knime.workbench.searchhubview;
 import java.net.URLEncoder;
 
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.KeyAdapter;
@@ -59,15 +60,22 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.program.Program;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.internal.PartSite;
 import org.eclipse.ui.part.ViewPart;
 import org.knime.core.node.NodeLogger;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  * The genesis of this view is https://knime-com.atlassian.net/browse/AP-11738
@@ -97,10 +105,46 @@ public final class SearchHubView extends ViewPart {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(SearchHubView.class);
 
+    private static final String SHOW_HUB_SEARCH_PREF = "knime.searchhubview.show";
+
     private Text m_searchTextField;
 
     @Override
     public void createPartControl(final Composite parent) {
+        IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
+        if (store.contains(SHOW_HUB_SEARCH_PREF) && store.getBoolean(SHOW_HUB_SEARCH_PREF)) {
+            createSearchControls(parent);
+        } else {
+            createHubViewInstallOrOpenControls(parent, () -> {
+                for (Control child : parent.getChildren()) {
+                    child.dispose();
+                }
+                parent.setLayout(new FillLayout(SWT.HORIZONTAL));
+                store.setValue(SHOW_HUB_SEARCH_PREF, true);
+                createSearchControls(parent);
+                parent.layout();
+            });
+        }
+    }
+
+    private void createHubViewInstallOrOpenControls(final Composite parent, final Runnable switchToHubSearch) {
+        parent.setLayout(new RowLayout());
+        Button installHubView = new Button(parent, SWT.PUSH);
+        installHubView.setText("   Use Hub Integration   ");
+        installHubView.addListener(SWT.Selection, e -> installOrOpenHubView());
+        Button hubSearchButton = new Button(parent, SWT.PUSH);
+        hubSearchButton.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_WHITE));
+        hubSearchButton.setText("Back to old Hub Search");
+        hubSearchButton.addListener(SWT.Selection, e -> switchToHubSearch.run());
+    }
+
+    private void installOrOpenHubView() {
+        InstallOrOpenHubViewJob job = new InstallOrOpenHubViewJob(((PartSite)getSite()).getContext());
+        job.setUser(true);
+        job.schedule();
+    }
+
+    private void createSearchControls(final Composite parent) {
         final Composite container = new Composite(parent, SWT.NONE);
         final GridLayout gl = IS_LINUX ? new GridLayout(2, false) : new GridLayout(1, false);
         gl.marginHeight = 6;
