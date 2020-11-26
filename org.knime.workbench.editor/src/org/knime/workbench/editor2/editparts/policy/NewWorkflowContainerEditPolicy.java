@@ -87,6 +87,8 @@ import org.knime.core.node.NodeCreationContext;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.extension.NodeFactoryExtensionManager;
+import org.knime.core.node.extension.NodeSetFactoryExtension;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
@@ -386,36 +388,49 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
 
     private Command handleNodeDropFromURI(final WorkflowManagerUI manager, final NodeImport nodeImport,
         final CreateDropRequest request) {
-        String nodeFactory = nodeImport.getCanonicalNodeFactory();
+        String nodeFactoryName = nodeImport.getCanonicalNodeFactory();
         String nodeName = nodeImport.getNodeName();
         boolean isDynamicNode = nodeImport.isDynamicNode();
-        final NodeTemplate nodeTemplate = getNodeTemplate(nodeFactory, nodeName, isDynamicNode);
-        if (nodeTemplate != null) {
-            try {
-                return handleNodeDrop(manager, nodeTemplate.createFactoryInstance(), request);
-            } catch (Exception e) {
-                //shouldn't happen
-                LOGGER.error("Cannot add node (node factory: " + nodeFactory + ", node name: " + nodeName + ")", e);
-                return null;
-            }
-        } else {
-            String featureName = nodeImport.getFeatureName();
-            String featureSymbolicName = nodeImport.getFeatureSymbolicName();
-            //try installing the missing extension
-            String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
-            Shell shell = SWTUtilities.getActiveShell();
-            // TODO: derive feature name from feature symbolic name (TODO)
-            MessageDialog dialog = new MessageDialog(shell, "The KNIME Extension for the node is not installed!", null,
-                "The extension '" + featureName + "' is not installed. Do you want to search and install it?"
-                    + "\n\nNote: Please drag and drop the node again once the installation process is finished.",
-                MessageDialog.QUESTION, dialogButtonLabels, 0);
-            if (dialog.open() == 0) {
-                startInstallationJob(featureName, featureSymbolicName, nodeImport.getUpdateSiteInfo());
-                // TODO: add the node once the extension has been installed
-                return null;
+        NodeFactory<? extends NodeModel> nodeFactory;
+        try {
+            if (isDynamicNode) {
+                // TODO once the hub provides the additional factory settings, do (while keeping the fallbacks)
+                // createDynamicNodeFactory(nodeFactoryName, settings)
+
+                nodeFactory = createDynamicNodeFactoryFromRepositoryWithNodeNameFallback(nodeFactoryName, nodeName);
+                // If the node still couldn't be found in the node repository (most likely because it's deprecated)
+                // - consult the respective extension directly (in an inefficient way!)
+                if (nodeFactory == null) {
+                    nodeFactory = createDynamicNodeFactoryFromExtensionWithNodeNameFallback(nodeFactoryName, nodeName);
+                }
             } else {
-                return null;
+                nodeFactory = createNodeFactory(nodeFactoryName);
             }
+            if (nodeFactory != null) {
+                return handleNodeDrop(manager, nodeFactory, request);
+            }
+        } catch (Exception e) {
+            //shouldn't happen
+            LOGGER.error("Cannot add node (node factory: " + nodeFactoryName + ", node name: " + nodeName + ")", e);
+            return null;
+        }
+
+        String featureName = nodeImport.getFeatureName();
+        String featureSymbolicName = nodeImport.getFeatureSymbolicName();
+        //try installing the missing extension
+        String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
+        Shell shell = SWTUtilities.getActiveShell();
+        // TODO: derive feature name from feature symbolic name (TODO)
+        MessageDialog dialog = new MessageDialog(shell, "The KNIME Extension for the node is not installed!", null,
+            "The extension '" + featureName + "' is not installed. Do you want to search and install it?"
+                + "\n\nNote: Please drag and drop the node again once the installation process is finished.",
+            MessageDialog.QUESTION, dialogButtonLabels, 0);
+        if (dialog.open() == 0) {
+            startInstallationJob(featureName, featureSymbolicName, nodeImport.getUpdateSiteInfo());
+            // TODO: add the node once the extension has been installed
+            return null;
+        } else {
+            return null;
         }
     }
 
@@ -455,15 +470,18 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         }
     }
 
-    private static NodeTemplate getNodeTemplate(final String factoryName, final String nodeName,
-        final boolean isDynamicNode) {
-        String templateId = factoryName;
+    private static NodeFactory<? extends NodeModel> createNodeFactory(final String factoryName) throws Exception {
+        return NodeFactoryExtensionManager.getInstance().createNodeFactory(factoryName).orElse(null);
+    }
 
-        // If we are dealing with a dynamic node the node template
-        // can only be found with the id {node_factory}#{node-name}.
-        if (isDynamicNode) {
-            templateId = factoryName + "#" + nodeName;
-        }
+    /*
+     * Method should be replaced by providing additional factory settings instead of the node name to resolve
+     * dynamic nodes.
+     */
+    private static NodeFactory<? extends NodeModel> createDynamicNodeFactoryFromRepositoryWithNodeNameFallback(
+        final String factoryName, final String nodeName) throws Exception {
+        // The repository manager keeps a map from id, which is {node_factory}#{node-name}, to template
+        String templateId = factoryName + "#" + nodeName;
 
         NodeTemplate template = RepositoryManager.INSTANCE.getNodeTemplate(templateId);
 
@@ -472,13 +490,50 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
         // via {node-factory}#{node-name}. But we don't know beforehand
         // - that's why we try again with the node name appended if template is still null.
         // (see https://knime-com.atlassian.net/browse/AP-12220)
-        if (template == null && !isDynamicNode) {
+        if (template == null) {
             templateId = templateId + "#" + nodeName;
             template = RepositoryManager.INSTANCE.getNodeTemplate(templateId);
         }
 
-        return template;
+        if (template != null) {
+            return template.createFactoryInstance();
+        }
+
+        return null;
     }
+
+    /*
+     * Resolves the dynamic node factory instance from the respective extension using the factory- and node-name.
+     * This is inefficient and should be replaced by using additional factory settings to create the respective
+     * dynamic node factory instance.
+     */
+    private static NodeFactory<? extends NodeModel>
+        createDynamicNodeFactoryFromExtensionWithNodeNameFallback(final String factoryName, final String nodeName) {
+        NodeSetFactoryExtension nodeSetFactoryExtension =
+            NodeFactoryExtensionManager.getInstance().getNodeSetFactoryExtension(factoryName).orElse(null);
+        if (nodeSetFactoryExtension != null) {
+            for (String factoryId : nodeSetFactoryExtension.getNodeFactoryIds()) {
+                NodeFactory<? extends NodeModel> nodeFactory =
+                    nodeSetFactoryExtension.createNodeFactory(factoryId).orElse(null);
+                if (nodeFactory != null && nodeFactory.getNodeName().equals(nodeName)) {
+                    return nodeFactory;
+                }
+            }
+        }
+        return null;
+    }
+
+//    This is how a dynamic node factory should be created eventually
+//    private static NodeFactory<? extends NodeModel> createDynamicNodeFactory(final String factoryName,
+//        final ConfigRO settings) throws InstantiationException, IllegalAccessException,
+//        InvalidNodeFactoryExtensionException, InvalidSettingsException {
+//        NodeFactory<? extends NodeModel> nodeFactory =
+//            NodeFactoryExtensionManager.getInstance().createNodeFactory(factoryName).orElse(null);
+//        if (nodeFactory != null) {
+//            nodeFactory.loadAdditionalFactorySettings(settings);
+//        }
+//        return nodeFactory;
+//    }
 
     @Override
     public EditPart getTargetEditPart(final Request request) {
