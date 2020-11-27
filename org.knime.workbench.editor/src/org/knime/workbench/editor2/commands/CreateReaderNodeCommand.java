@@ -133,9 +133,16 @@ public class CreateReaderNodeCommand extends AbstractKNIMECommand {
                     .setIsDropLocation(true).build();
             m_container.setUIInformation(info);
 
-            // Open the dialog -- sometimes...
-            if ((m_container instanceof SingleNodeContainer)
-                    && m_container.getNodeContainerState().isIdle() && m_container.hasDialog()
+            /* Ideally only open dialogs for nodes that require further configuration (additional params needed
+            * or insufficient auto-guessing). In the past we would open dialogs only if the node remains state.isIdle().
+            * Some nodes, however, like the CSV Reader are correctly configured right after drag and drop, yet will
+            * fail during execution as some parameters are not appropriate, e.g., for .txt files the file separator
+            * might be different to ',' (the default configuration for this parameter). As a consequence we now always
+            * open the dialog. In case we want to have a more we'd need to add an additional method to the
+            * ConfigurableNodeFactory that allows to specify whether or not the node requires the dialog to be opened
+            * after dragging and dropping an associated file.
+            */
+            if ((m_container instanceof SingleNodeContainer) && m_container.hasDialog()
                     // and has only a variable in port
                     && (m_container.getNrInPorts() == 1)) {
                 // if not executable and has a dialog and is fully connected
