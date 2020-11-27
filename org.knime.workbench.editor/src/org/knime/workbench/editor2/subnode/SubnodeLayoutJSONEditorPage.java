@@ -226,13 +226,14 @@ public class SubnodeLayoutJSONEditorPage extends WizardPage {
                 // clean JSON
                 final ObjectMapper mapper = createObjectMapperForUpdating();
                 final ObjectReader reader = mapper.readerForUpdating(new JSONLayoutPage());
+                final ObjectReader configurationReader = mapper.readerForUpdating(new JSONLayoutPage());
                 try {
                     JSONLayoutPage page = reader.readValue(m_subnodeLayoutStringProvider.getLayoutString());
                     cleanJSONPage(page);
                     m_subnodeLayoutStringProvider
                         .setLayoutString(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(page));
                     JSONLayoutPage configurationPage =
-                        reader.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString());
+                        configurationReader.readValue(m_subnodeConfigurationStringProvider.getConfigurationLayoutString());
                     m_subnodeConfigurationStringProvider.setConfigurationLayoutString(
                         mapper.writerWithDefaultPrettyPrinter().writeValueAsString(configurationPage));
                 } catch (IOException ex) {
