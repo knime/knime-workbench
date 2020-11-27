@@ -115,8 +115,9 @@ public class MountPointTableEditor extends FieldEditor {
             switch (columnIndex) {
                 case CONTENT_PROP:
                 case TYPE_PROP:
-                    MountSettings settings = (MountSettings)element;
-                    return ExplorerMountTable.getContentProviderFactory(settings.getFactoryID()).getImage();
+                    final MountSettings settings = (MountSettings)element;
+                    final AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
+                    return factory == null ? null : factory.getImage();
 
                 default:
                     break;
@@ -142,8 +143,11 @@ public class MountPointTableEditor extends FieldEditor {
                     return provider.toString();
                 } else {
                     factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
+                    if (factory == null) {
+                        return null;
+                    }
                     AbstractContentProvider provider =
-                            factory.createContentProvider(settings.getMountID(), settings.getContent());
+                        factory.createContentProvider(settings.getMountID(), settings.getContent());
                     String value = provider.toString();
                     provider.dispose();
                     return value;
@@ -151,7 +155,7 @@ public class MountPointTableEditor extends FieldEditor {
 
             case TYPE_PROP:
                 factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
-                return factory.toString();
+                return factory == null ? null : factory.toString();
 
             default:
                 break;

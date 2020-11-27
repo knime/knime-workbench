@@ -90,6 +90,8 @@ public class MountSettings {
     /** Used for separating the different setting elements. */
     private static final String ELEMENTS_SEPARATOR = ":";
 
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(MountSettings.class);
+
     /**
      * The workspace version for which KNIME Hub has been added. If the version is less than this number then the KNIME
      * Hub will be added automatically and the EXAMPLES will be renamed, as probably an AP update occurred.
@@ -632,6 +634,13 @@ public class MountSettings {
         final int mountPointNumber) {
         AbstractContentProviderFactory factory =
             ExplorerMountTable.getContentProviderFactories().get(settings.getFactoryID());
+
+        if (factory == null) {
+            LOGGER.error("Unable to save mount point '" + settings.getMountID()
+                + "': No content provider factory with id '" + settings.getFactoryID() + "' known.");
+            return;
+        }
+
         AbstractContentProvider contenProvider =
             factory.createContentProvider(settings.getMountID(), settings.getContent());
 
