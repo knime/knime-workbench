@@ -54,6 +54,7 @@ import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.JFaceResources;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.graphics.Color;
@@ -63,7 +64,6 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.program.Program;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
@@ -128,14 +128,33 @@ public final class SearchHubView extends ViewPart {
     }
 
     private void createHubViewInstallOrOpenControls(final Composite parent, final Runnable switchToHubSearch) {
-        parent.setLayout(new RowLayout());
-        Button installHubView = new Button(parent, SWT.PUSH);
-        installHubView.setText("   Use Hub Integration   ");
+        ScrolledComposite sc = new ScrolledComposite(parent, SWT.V_SCROLL | SWT.H_SCROLL);
+        Composite composite = new Composite(sc, SWT.NONE);
+        composite.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_WHITE));
+        sc.setContent(composite);
+
+        GridLayout layout = new GridLayout(2, false);
+        composite.setLayout(layout);
+
+        Label text = new Label(composite, SWT.NONE);
+        GridData gridData = new GridData();
+        gridData.horizontalAlignment = GridData.FILL;
+        gridData.horizontalSpan = 2;
+        text.setForeground(Display.getDefault().getSystemColor(SWT.COLOR_BLACK));
+        text.setText("We have introduced an improved KNIME Hub Integration.\nDo you want to give it a try?");
+        text.setLayoutData(gridData);
+        Button installHubView = new Button(composite, SWT.PUSH);
+        installHubView.setText("Switch to Hub Integration");
         installHubView.addListener(SWT.Selection, e -> installOrOpenHubView());
-        Button hubSearchButton = new Button(parent, SWT.PUSH);
+        Button hubSearchButton = new Button(composite, SWT.PUSH);
         hubSearchButton.setBackground(Display.getDefault().getSystemColor(SWT.COLOR_WHITE));
         hubSearchButton.setText("Back to old Hub Search");
         hubSearchButton.addListener(SWT.Selection, e -> switchToHubSearch.run());
+
+        sc.setExpandHorizontal(true);
+        sc.setExpandVertical(true);
+        sc.setMinSize(composite.computeSize(SWT.DEFAULT, SWT.DEFAULT));
+
     }
 
     private void installOrOpenHubView() {

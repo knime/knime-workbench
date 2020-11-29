@@ -53,6 +53,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -61,7 +62,11 @@ import org.eclipse.core.runtime.jobs.IJobChangeEvent;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.e4.core.contexts.IEclipseContext;
+import org.eclipse.e4.ui.model.application.MApplication;
+import org.eclipse.e4.ui.model.application.ui.MUIElement;
 import org.eclipse.e4.ui.model.application.ui.basic.MPart;
+import org.eclipse.e4.ui.model.application.ui.basic.MPartStack;
+import org.eclipse.e4.ui.workbench.modeling.EModelService;
 import org.eclipse.e4.ui.workbench.modeling.EPartService;
 import org.eclipse.e4.ui.workbench.modeling.EPartService.PartState;
 import org.eclipse.equinox.p2.core.ProvisionException;
@@ -125,13 +130,24 @@ public class InstallOrOpenHubViewJob extends Job {
 
     private boolean openHubView() {
         EPartService partService = m_context.get(EPartService.class);
-        MPart view = partService.createPart(HUB_VIEW_ID);
-        if (view == null) {
-            return false;
-        } else {
-            Display.getDefault().syncExec(() -> partService.showPart(view, PartState.ACTIVATE));
-            return true;
+        AtomicReference<MPart> view = new AtomicReference<>(partService.findPart(HUB_VIEW_ID));
+        if (view.get() == null) {
+            view.set(partService.createPart(HUB_VIEW_ID));
+            MApplication app = m_context.get(MApplication.class);
+            EModelService modelService = m_context.get(EModelService.class);
+            // try to open it next to the node description if it's opened for the first time
+            Display.getDefault().syncExec(() -> {
+                MUIElement el = modelService.find("org.knime.workbench.helpview", app).getParent();
+                if (el instanceof MPartStack) {
+                    ((MPartStack)el).getChildren().add(view.get());
+                }
+            });
         }
+        if (view.get() == null) {
+            return false;
+        }
+        Display.getDefault().syncExec(() -> partService.showPart(view.get(), PartState.ACTIVATE));
+        return true;
     }
 
     private static void installHubViewExtension() {
