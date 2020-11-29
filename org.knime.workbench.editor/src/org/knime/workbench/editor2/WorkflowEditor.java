@@ -697,18 +697,16 @@ public class WorkflowEditor extends GraphicalEditor implements
         final ISelectionService iss = getSite().getWorkbenchWindow().getSelectionService();
         iss.removeSelectionListener(this);
         iss.removeSelectionListener(m_connectionHighlighter);
-        if ((m_parentEditor != null) && (m_manager != null)) {
+        if (m_manager != null) {
             // Store the editor settings with the metanode
-            if (getWorkflowManagerUI().isDirty()) {
+            if ((m_parentEditor != null) && getWorkflowManagerUI().isDirty()) {
                 saveEditorSettingsToWorkflowManager(); // doesn't persist settings to disk
             }
-            // bug fix 2051: Possible memory leak related to sub-flow editor.
-            // metanode editors were still referenced by the EditorHistory
+            // With AP-15770 & bug fix 2051: memory leak: WorkflowEditor still kept in EditorHistory on dispose.
             IWorkbench workbench = PlatformUI.getWorkbench();
             if (workbench instanceof Workbench) {
                 EditorHistory hist = ((Workbench)workbench).getEditorHistory();
-                WorkflowManagerInput wfmInput =
-                        new WorkflowManagerInput(m_manager, m_parentEditor);
+                WorkflowManagerInput wfmInput = new WorkflowManagerInput(m_manager, m_parentEditor);
                 hist.remove(wfmInput);
             }
         }
