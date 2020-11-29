@@ -710,6 +710,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                 hist.remove(wfmInput);
             }
         }
+
         if (m_autoSaveJob != null) {
             m_autoSaveJob.cancel();
             m_autoSaveJob = null;
@@ -740,6 +741,16 @@ public class WorkflowEditor extends GraphicalEditor implements
         }
 
         notifyCloseEventListeners();
+
+        // cleanup viewer references to nodes & co
+        final GraphicalViewer viewer = getGraphicalViewer();
+        getEditDomain().removeViewer(viewer);
+        viewer.getVisualPartMap().clear();
+        viewer.getEditPartRegistry().clear();
+        viewer.getRootEditPart().deactivate();
+        viewer.getRootEditPart().getContents().deactivate();
+
+        m_overviewOutlinePage = null;
 
         super.dispose();
     }
