@@ -119,6 +119,7 @@ public class SnapshotPanel extends Composite {
         m_createSnapshotButton.setEnabled(!m_forceCreation);
         tooltipContainer.setToolTipText(
             m_forceCreation ? "This option is selected by default as set by the server administrator." : "");
+        m_createSnapshot = m_forceCreation;
 
         m_commentField = new Text(this, SWT.MULTI | SWT.BORDER | SWT.WRAP | SWT.V_SCROLL);
         GridData gridData = new GridData(SWT.FILL, SWT.FILL, true, true);
