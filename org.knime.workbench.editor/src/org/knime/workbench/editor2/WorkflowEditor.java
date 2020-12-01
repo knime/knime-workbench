@@ -744,7 +744,6 @@ public class WorkflowEditor extends GraphicalEditor implements
 
         // cleanup viewer references to nodes & co
         final GraphicalViewer viewer = getGraphicalViewer();
-        getEditDomain().removeViewer(viewer);
         viewer.getVisualPartMap().clear();
         viewer.getEditPartRegistry().clear();
         viewer.getRootEditPart().deactivate();
