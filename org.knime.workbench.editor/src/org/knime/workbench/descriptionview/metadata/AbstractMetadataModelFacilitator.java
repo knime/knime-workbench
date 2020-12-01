@@ -53,6 +53,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.metadata.MetadataXML;
@@ -141,8 +142,11 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
      * This will be called when the consumption of the metadata has finished.
      *
      * @param defaultTitleName the default name for the title field if none has been defined in the source metadata
+     * @param defaultCreationDate the default creation date (e.g. retrieved from the workflow.knime file) for the
+     *            creation-date field if none is defined in the source metadata - supplied in a lazy manner
      */
-    public void parsingHasFinishedWithDefaultTitleName(final String defaultTitleName) {
+    public void parsingHasFinishedWithDefaultTitleName(final String defaultTitleName,
+        final Supplier<Calendar> defaultCreationDate) {
         if (m_authorAtom == null) {
             m_authorAtom = new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, MetadataXML.AUTHOR_LABEL,
                 System.getProperty("user.name"), false);
@@ -170,7 +174,8 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
         }
 
         if (m_creationDateAtom == null) {
-            m_creationDateAtom = new DateMetaInfoAtom(MetadataXML.CREATION_DATE_LABEL, Calendar.getInstance(), false);
+            m_creationDateAtom =
+                new DateMetaInfoAtom(MetadataXML.CREATION_DATE_LABEL, defaultCreationDate.get(), false);
             m_creationDateAtom.addChangeListener(this);
         }
     }

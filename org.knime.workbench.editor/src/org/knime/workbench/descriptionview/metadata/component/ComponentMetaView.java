@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
+import java.util.Calendar;
 import java.util.EnumSet;
 
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -240,7 +241,7 @@ public class ComponentMetaView extends AbstractMetaView {
         m_currentAssetName = subNodeContainer.getName();    // TODO getMetadataTitle or similar...
         currentAssetNameHasChanged();
 
-        m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName);
+        m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName, Calendar::getInstance);
         m_modelFacilitator.setModelObserver(this);
 
         m_currentWriteProtectionState = m_currentSubNodeContainer.isWriteProtected();
