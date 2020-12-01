@@ -48,15 +48,24 @@
  */
 package org.knime.workbench.descriptionview.metadata.workflow;
 
+import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isWorkflowGroup;
+
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -73,7 +82,9 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.internal.ReferencedFile;
+import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.NodeSettings;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
@@ -124,7 +135,7 @@ public class WorkflowMetaView extends AbstractMetaView {
      * this item prior to receiving this invocation, and so <code>m_currentWorkflowName</code> has been correctly
      * populated.
      *
-     * If the author, description, and creation date are all null, it will be interpretted as a failure to fetch remote
+     * If the author, description, and creation date are all null, it will be interpreted as a failure to fetch remote
      * metadata.
      *
      * @param author the author, or null
@@ -135,7 +146,8 @@ public class WorkflowMetaView extends AbstractMetaView {
     public void handleAsynchronousRemoteMetadataPopulation(final String author, final String legacyDescription,
         final Calendar creationDate, final boolean shouldShowCCBY40License) {
         m_modelFacilitator = new MetadataModelFacilitator(author, legacyDescription, creationDate);
-        m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName);
+        m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName,
+            () -> creationDate == null ? Calendar.getInstance() : creationDate);
         m_modelFacilitator.setModelObserver(this);
 
         if (m_metadataCanBeEdited.get()) {
@@ -173,6 +185,7 @@ public class WorkflowMetaView extends AbstractMetaView {
         m_assetRepresentsAJob.set(false);
         m_shouldDisplayLicenseSection.set(!SHOW_LICENSE_ONLY_FOR_HUB);
         m_assetIsReadable.set(true);
+        final Supplier<Calendar> defaultCreationDateSupplier;
         if (knimeExplorerItem) {
             final AbstractExplorerFileStore fs = ((ContentObject) o).getFileStore();
             final AbstractExplorerFileInfo fileInfo = fs.fetchInfo();
@@ -212,6 +225,16 @@ public class WorkflowMetaView extends AbstractMetaView {
                 }
                 canEditMetadata = true;
             }
+            defaultCreationDateSupplier = createDefaultCreationDateSupplier(() -> {
+                try {
+                    if (!isRemote && !isWorkflowGroup(fs)) {
+                        return fs.toLocalFile().toPath();
+                    }
+                } catch (CoreException e) {
+                    LOGGER.error(e);
+                }
+                return null;
+            });
         } else {
             final WorkflowRootEditPart wrep = (WorkflowRootEditPart)o;
             final WorkflowManagerUI wmUI = wrep.getWorkflowManager();
@@ -232,10 +255,13 @@ public class WorkflowMetaView extends AbstractMetaView {
                         .getActivePage().getActiveEditor();
                     canEditMetadata = (!editor.isTempRemoteWorkflowEditor() && !editor.isTempLocalWorkflowEditor());
                 }
+                defaultCreationDateSupplier =
+                    createDefaultCreationDateSupplier(() -> wm.get().getContext().getCurrentLocation().toPath());
             } else {
                 m_assetRepresentsAJob.set(true);
                 metadataFile = null;
                 canEditMetadata = false;
+                defaultCreationDateSupplier = Calendar::getInstance;
             }
         }
 
@@ -263,7 +289,7 @@ public class WorkflowMetaView extends AbstractMetaView {
         } else {
             m_modelFacilitator = new MetadataModelFacilitator();
         }
-        m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName);
+        m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName, defaultCreationDateSupplier);
         m_modelFacilitator.setModelObserver(this);
 
         if (m_metadataCanBeEdited.get() != canEditMetadata) {
@@ -278,6 +304,21 @@ public class WorkflowMetaView extends AbstractMetaView {
                 updateDisplay();
             }
         });
+    }
+
+    private static Supplier<Calendar> createDefaultCreationDateSupplier(final Supplier<Path> workflowPath) {
+        return () -> {
+            Calendar calendar = Calendar.getInstance();
+            try {
+                Path path = workflowPath.get();
+                if (path != null) {
+                    setFallbackCreationDateFromWorkflowFile(calendar, workflowPath.get());
+                }
+            } catch (IOException | InvalidSettingsException | ParseException e) {
+                LOGGER.error("The creation date couldn't be extracted from the workflow.", e);
+            }
+            return calendar;
+        };
     }
 
     /**
@@ -311,4 +352,41 @@ public class WorkflowMetaView extends AbstractMetaView {
             LOGGER.error("Failed to save metadata.", e);
         }
     }
+
+    /**
+     * Helper method to read the creation date from the workflow file (<code>workflow.knime</code>) and set as the new
+     * time of the provided calendar. Usually used as a fallback when, e.g., no <code>workflowset.meta</code> file is
+     * given.
+     *
+     * @param calendar the calendar to set the new creation date into
+     * @param workflowPath the workflow directory
+     * @throws IOException
+     * @throws InvalidSettingsException
+     * @throws ParseException
+     */
+    public static void setFallbackCreationDateFromWorkflowFile(final Calendar calendar, final Path workflowPath)
+        throws IOException, InvalidSettingsException, ParseException {
+        Date creationDateFromWorkflowFile = getCreationDateFromWorkflowFile(workflowPath);
+        if (creationDateFromWorkflowFile != null) {
+            calendar.setTime(creationDateFromWorkflowFile);
+        }
+    }
+
+    private static Date getCreationDateFromWorkflowFile(final Path workflowPath)
+        throws IOException, InvalidSettingsException, ParseException {
+        Path workflowFile = workflowPath.resolve(WorkflowPersistor.WORKFLOW_FILE);
+        if (Files.exists(workflowFile)) {
+            NodeSettings ns = new NodeSettings("ignored");
+            try (final InputStream is = Files.newInputStream(workflowFile)) {
+                ns.load(is);
+                final String s = ns.getConfigBase("authorInformation").getString("authored-when");
+                final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
+                return df.parse(s);
+            }
+        } else {
+            throw new FileNotFoundException(
+                "Failed to read creation date from workflow. File '" + workflowFile + "' not found");
+        }
+    }
+
 }
