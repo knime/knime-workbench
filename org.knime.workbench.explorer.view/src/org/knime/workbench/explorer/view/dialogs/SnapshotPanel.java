@@ -70,6 +70,8 @@ public class SnapshotPanel extends Composite {
 
     private Text m_commentField;
 
+    private boolean m_createSnapshot;
+
     private String m_comment;
 
     private boolean m_forceCreation;
@@ -105,6 +107,7 @@ public class SnapshotPanel extends Composite {
         setLayout(new GridLayout());
         setLayoutData(new GridData(GridData.FILL_BOTH));
 
+
         // Create marginless composite to show tooltip since a disabled checkbox can not trigger any events
         final Composite tooltipContainer = new Composite(this, SWT.NONE);
         tooltipContainer.setLayout(new GridLayout());
@@ -116,6 +119,7 @@ public class SnapshotPanel extends Composite {
         m_createSnapshotButton.setEnabled(!m_forceCreation);
         tooltipContainer.setToolTipText(
             m_forceCreation ? "This option is selected by default as set by the server administrator." : "");
+        m_createSnapshot = m_forceCreation;
 
         m_commentField = new Text(this, SWT.MULTI | SWT.BORDER | SWT.WRAP | SWT.V_SCROLL);
         GridData gridData = new GridData(SWT.FILL, SWT.FILL, true, true);
@@ -126,6 +130,7 @@ public class SnapshotPanel extends Composite {
             @Override
             public void handleEvent(final Event event) {
                 m_commentField.setEnabled(m_createSnapshotButton.getSelection());
+                m_createSnapshot = m_createSnapshotButton.getSelection();
             }
         });
 
@@ -155,7 +160,7 @@ public class SnapshotPanel extends Composite {
      * @return <code>true</code> if a snapshot should be created, <code>false</code> otherwise
      */
     public boolean createSnapshot() {
-        return m_createSnapshotButton.getSelection();
+        return m_createSnapshot;
     }
 
     /**
