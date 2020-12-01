@@ -688,7 +688,10 @@ public class WorkflowEditor extends GraphicalEditor implements
         // remember that this editor has been closed
         m_closed = true;
         for (IEditorPart child : getSubEditors()) {
-            child.getEditorSite().getPage().closeEditor(child, false);
+            IWorkbenchPage page = child.getEditorSite().getPage();
+            if (page != null) { // null for child-child editor
+                page.closeEditor(child, false);
+            }
         }
         NodeProvider.INSTANCE.removeListener(this);
         final ISelectionService iss = getSite().getWorkbenchWindow().getSelectionService();
