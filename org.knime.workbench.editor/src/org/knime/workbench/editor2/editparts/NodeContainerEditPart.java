@@ -840,6 +840,16 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
      */
     public void openNodeDialog() {
         final NodeContainerUI container = (NodeContainerUI)getModel();
+        openDialog(container, this);
+    }
+
+    /**
+     * Helper method to open the dialog of the provided node container (if it has one).
+     *
+     * @param container the node to open the dialog for
+     * @param editPart the node container edit-part, can be <code>null</code> (not undo-able in that case!)
+     */
+    public static void openDialog(final NodeContainerUI container, final NodeContainerEditPart editPart) {
         // if this node does not have a dialog
         if (!container.hasDialog()) {
             LOGGER.debug("No dialog for " + container.getNameWithID());
@@ -921,7 +931,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
             //
             try {
                 WrappedNodeDialog dlg = new WrappedNodeDialog(shell, container,
-                    dp -> preOpenDialogAction(dp, container), dp -> postApplyDialogAction(dp, container, this));
+                    dp -> preOpenDialogAction(dp, container), dp -> postApplyDialogAction(dp, container, editPart));
                 dlg.open();
             } catch (NotConfigurableException ex) {
                 MessageBox mb = new MessageBox(shell, SWT.ICON_WARNING | SWT.OK);
@@ -951,12 +961,18 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
             Optional<ModifiableNodeCreationConfiguration> newNodeCreationConfiguration =
                 ((ConfigurableNodeDialog)dialogPane).getNewNodeCreationConfiguration();
             if (newNodeCreationConfiguration.isPresent()) {
-                editPart.getViewer().getEditDomain().getCommandStack()
-                    .execute(new ReplaceNodePortCommand(editPart, newNodeCreationConfiguration.get()));
+                if (editPart != null) {
+                    editPart.getViewer().getEditDomain().getCommandStack()
+                        .execute(new ReplaceNodePortCommand(editPart, newNodeCreationConfiguration.get()));
+                } else {
+                    ReplaceNodePortCommand.replaceNode(nc.getParent(), nc.getID(), newNodeCreationConfiguration.get());
+                }
             }
 
-            //the connections are not always properly re-drawn after "unmark". (Eclipse bug.) Repaint here.
-            editPart.getRoot().refresh();
+            if (editPart != null) {
+                //the connections are not always properly re-drawn after "unmark". (Eclipse bug.) Repaint here.
+                editPart.getRoot().refresh();
+            }
         }
     }
 

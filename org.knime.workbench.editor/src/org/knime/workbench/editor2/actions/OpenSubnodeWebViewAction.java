@@ -134,7 +134,6 @@ public final class OpenSubnodeWebViewAction extends Action {
         return "Interactive View: " + getSubnodeViewName(m_nodeContainer);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public void run() {
         LOGGER.debug("Open Interactive Web Node View " + getSubnodeViewName(m_nodeContainer));
