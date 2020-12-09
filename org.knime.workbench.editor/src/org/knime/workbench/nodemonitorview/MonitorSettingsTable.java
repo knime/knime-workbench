@@ -138,6 +138,11 @@ public class MonitorSettingsTable implements NodeMonitorTable {
             TableItem item3 = new TableItem(table, SWT.NONE);
             item3.setText(0, "Node's plug-in version (last saved with)");
             item3.setText(1, m_nodeAndBundleInfo.getBundleVersion().map(v -> v.toString()).orElse("?"));
+
+            TableItem item7 = new TableItem(table, SWT.NONE);
+            item7.setText(0, "Node's factory class");
+            item7.setText(1, m_nodeAndBundleInfo.getFactoryClassNotNull());
+
         }
         // add settings to table
         Stack<Pair<Iterator<String>, ConfigBaseRO>> stack = new Stack<Pair<Iterator<String>, ConfigBaseRO>>();
