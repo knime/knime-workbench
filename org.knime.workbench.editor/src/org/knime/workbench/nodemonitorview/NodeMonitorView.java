@@ -306,8 +306,7 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
             m_table.getColumn(i).pack();
         }
         m_tableInfo = new Label(infoPanel, SWT.NONE );
-        m_tableInfo.setText(StringUtils.repeat(" ", 100));
-        m_tableInfo.setVisible(false);
+        clearTableInfoLabel();
         m_lastNode = null;
         getViewSite().getPage().addSelectionListener(this);
     }
@@ -464,13 +463,17 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
         if (m_lastNode != null && m_currentMonitorTable instanceof MonitorDataTable) {
             MonitorDataTable dataTable = (MonitorDataTable)m_currentMonitorTable;
             if (dataTable.getNumRows() > 0 && dataTable.getNumColumns() > 0) {
+                m_tableInfo.setVisible(true);
                 m_tableInfo
                     .setText(String.format("Rows: %d, Columns: %d", dataTable.getNumRows(), dataTable.getNumColumns()));
-                m_tableInfo.setVisible(true);
                 return;
             }
         }
-        m_tableInfo.setText("");
+        clearTableInfoLabel();
+    }
+
+    private void clearTableInfoLabel() {
+        m_tableInfo.setText(StringUtils.repeat(" ", 100));
         m_tableInfo.setVisible(false);
     }
 
