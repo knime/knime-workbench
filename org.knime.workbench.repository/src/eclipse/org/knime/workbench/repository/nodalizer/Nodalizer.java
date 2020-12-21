@@ -90,12 +90,15 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.DynamicNodeFactory;
+import org.knime.core.node.MapNodeFactoryClassMapper;
 import org.knime.core.node.NodeAndBundleInformationPersistor;
 import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeFactoryClassMapper;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
+import org.knime.core.node.RegexNodeFactoryClassMapper;
 import org.knime.core.node.context.ports.ConfigurablePortGroup;
 import org.knime.core.node.context.ports.ModifiablePortsConfiguration;
 import org.knime.core.node.context.ports.PortGroupConfiguration;
@@ -260,6 +263,8 @@ public class Nodalizer implements IApplication {
             LOGGER.fatal("Given path is not a directory: " + outputDir.getAbsolutePath());
             return IApplication.EXIT_OK;
         }
+
+        writeNodeMappings(outputDir);
 
         if (factoryList != null) {
             if (!Files.exists(factoryList)) {
@@ -1032,5 +1037,45 @@ public class Nodalizer implements IApplication {
             return symbolicName.substring(0, symbolicName.length() - 14);
         }
         return symbolicName;
+    }
+
+    /**
+     * Creates the nodeMappings directory inside the output directory and writes all available node mappings
+     * to the associated text file. Node factory mappings are written to 'nodeFactoryMappings.txt' and regex mappings to 'regexMappings.txt'
+     *
+     * The format of 'nodeFactoryMappings.txt' is for each line the source and target delimited by a colon.
+     * e.g.: source:target
+     *
+     * The format of 'regexMappings.txt' is for each line the regex and replacement delimited by a colon.
+     * e.g.: regex:replacement
+     *
+     * @param outputDir the output directory to which the files are written
+     * @throws FileNotFoundException
+     * @throws UnsupportedEncodingException
+     */
+    private static void writeNodeMappings(final File outputDir) throws FileNotFoundException, UnsupportedEncodingException {
+        File nodeMappingsDir = new File(outputDir, "nodeMappings");
+        if (!nodeMappingsDir.exists()) {
+            nodeMappingsDir.mkdir();
+        }
+
+        File nodeFactoryMappings = new File(nodeMappingsDir, "nodeFactoryMappings.txt");
+        File regexMappings = new File(nodeMappingsDir, "regexMappings.txt");
+
+        try (PrintWriter nodeFactoryWriter = new PrintWriter(nodeFactoryMappings, StandardCharsets.UTF_8.displayName());
+                final PrintWriter regexWriter = new PrintWriter(regexMappings, StandardCharsets.UTF_8.displayName())) {
+            List<NodeFactoryClassMapper> classMapperList = NodeFactoryClassMapper.getRegisteredMappers();
+            for (NodeFactoryClassMapper nodeFactoryClassMapper : classMapperList) {
+                if (nodeFactoryClassMapper instanceof MapNodeFactoryClassMapper) {
+                    MapNodeFactoryClassMapper nodeFactoryMapper = (MapNodeFactoryClassMapper)nodeFactoryClassMapper;
+                    nodeFactoryMapper.getMap().forEach((key, value) -> nodeFactoryWriter.print(key + ":" + value.getName() + "\n"));
+                } else if (nodeFactoryClassMapper instanceof RegexNodeFactoryClassMapper) {
+                    RegexNodeFactoryClassMapper regexMapper = (RegexNodeFactoryClassMapper)nodeFactoryClassMapper;
+                    regexMapper.getRegexRules().forEach((key, value) -> regexWriter.print(key + ":" + value.getSecond() + "\n"));
+                } else {
+                    // Only NodeFactoryClassMappers that extend MapNodeFactoryClassMapper or RegexNodeFactoryClassMapper can be extracted
+                }
+            }
+        }
     }
 }
