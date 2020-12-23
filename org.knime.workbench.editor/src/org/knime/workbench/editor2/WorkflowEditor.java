@@ -316,13 +316,6 @@ public class WorkflowEditor extends GraphicalEditor implements
     /** The root clipboard name **/
     public static final String CLIPBOARD_ROOT_NAME = "clipboard";
 
-    /**
-     * The genesis of this flag is AP-5741.
-     *
-     * This should only be affected by KNIMEApplicationWorkbenchAdvisor during pre-shutdown.
-     */
-    public static final AtomicBoolean APP_IS_UNDERGOING_EXIT = new AtomicBoolean(false);
-
     private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowEditor.class);
 
     /**
@@ -513,7 +506,7 @@ public class WorkflowEditor extends GraphicalEditor implements
     @Override
     public void init(final IEditorSite site, final IEditorInput input)
             throws PartInitException {
-        if (APP_IS_UNDERGOING_EXIT.get()) {
+        if (site.getWorkbenchWindow().isClosing()) {
             m_initAbortedDueToAppExit = true;
             return;
         }
