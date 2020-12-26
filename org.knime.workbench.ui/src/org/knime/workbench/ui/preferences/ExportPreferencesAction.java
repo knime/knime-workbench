@@ -50,9 +50,9 @@ package org.knime.workbench.ui.preferences;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.eclipse.jface.action.Action;
@@ -62,6 +62,7 @@ import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -73,7 +74,7 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 public class ExportPreferencesAction extends Action {
 
     private static final ImageDescriptor ICON =
-            KNIMEUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+            AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
                     "icons/prefs_export.png");
 
     /**
@@ -151,34 +152,26 @@ public class ExportPreferencesAction extends Action {
             }
         }
 
-        OutputStream out = null;
-        try {
-            out = new BufferedOutputStream(new FileOutputStream(outFile));
-            IPreferencesService prefService = Platform.getPreferencesService();
-            NodeLogger.getLogger(ExportPreferencesAction.class).info(
-                    "Exporting preferences to file "
-                            + outFile.getAbsolutePath());
-            /* Do not export the default values and the profile (contains only update site URLs). */
-            prefService.exportPreferences(prefService.getRootNode(), out, new String[]{"bundle_defaults", "profile",
-                "instance/org.knime.product//us_info-"});
-        } catch (Throwable t) {
+        NodeLogger.getLogger(ExportPreferencesAction.class).info(
+            "Exporting preferences to file " + outFile.getAbsolutePath());
+
+        try (OutputStream out = new BufferedOutputStream(new FileOutputStream(outFile))) {
+            exportPreferences(out);
+        } catch (Throwable t) { // NOSONAR
             String msg = "Unable to write preferences to output file";
             if (t.getMessage() != null && !t.getMessage().isEmpty()) {
                 msg = t.getMessage();
             }
+            NodeLogger.getLogger(ExportPreferencesAction.class).error(msg, t);
             MessageDialog.openError(workbenchWindow.getShell(),
                     "Error Writing File", msg);
-            return;
-
-        } finally {
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
         }
+    }
 
+    static void exportPreferences(final OutputStream out) throws CoreException {
+        IPreferencesService prefService = Platform.getPreferencesService();
+        /* Do not export the default values and the profile (contains only update site URLs). */
+        prefService.exportPreferences(prefService.getRootNode(), out, new String[]{"bundle_defaults", "profile",
+            "instance/org.knime.product//us_info-"});
     }
 }

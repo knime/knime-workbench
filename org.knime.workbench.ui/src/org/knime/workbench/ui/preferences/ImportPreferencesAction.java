@@ -48,11 +48,19 @@
 package org.knime.workbench.ui.preferences;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
+import org.apache.commons.io.IOUtils;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.preferences.ConfigurationScope;
 import org.eclipse.core.runtime.preferences.IExportedPreferences;
@@ -159,7 +167,7 @@ public class ImportPreferencesAction extends Action {
 
         try (InputStream in = new BufferedInputStream(new FileInputStream(inFile))) {
             IPreferencesService prefService = Platform.getPreferencesService();
-            LOGGER.info("Importing preferences from file " + inFile.getAbsolutePath() + " now ...");
+            LOGGER.debugWithFormat("Importing preferences from file %s...", inFile.getAbsolutePath());
             IExportedPreferences prefs = prefService.readPreferences(in);
             IPreferenceFilter filter = new IPreferenceFilter() {
                 @Override
@@ -175,22 +183,33 @@ public class ImportPreferencesAction extends Action {
                     return null; // this filter is applicable for all nodes
                 }
             };
+            Set<String> oldPreferences = exportPreferences();
             /* Calling this method with filters and not the applyPreferences
              * without filters is very important! The other method does not
              * merge the preferences but deletes all default values. */
-            prefService.applyPreferences(prefs,
-                    new IPreferenceFilter[] {filter});
-            MessageDialog.openInformation(workbenchWindow.getShell(), "Import Preferences",
-                "Preferences have been imported successfully.");
-            LOGGER.info("Import of preferences successfully finished.");
-        } catch (Throwable t) {
+            prefService.applyPreferences(prefs, new IPreferenceFilter[] {filter});
+            Set<String> newPreferences = exportPreferences();
+            final String msg;
+            if (newPreferences.equals(oldPreferences)) {
+                msg = "Preferences have been imported but no changes were made.";
+            } else {
+                msg = "Preferences have been imported successfully";
+            }
+            MessageDialog.openInformation(workbenchWindow.getShell(), "Import Preferences", msg);
+            LOGGER.debug(msg);
+        } catch (Throwable t) { // NOSONAR
             String msg = "Unable to read preferences from selected file";
             if (t.getMessage() != null && !t.getMessage().isEmpty()) {
                 msg = t.getMessage();
             }
             MessageDialog.openError(workbenchWindow.getShell(),
                     "Error Importing Preferences", msg);
-            return;
         }
+    }
+
+    private static Set<String> exportPreferences() throws CoreException, IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ExportPreferencesAction.exportPreferences(out);
+        return new HashSet<>(IOUtils.readLines(new ByteArrayInputStream(out.toByteArray()), StandardCharsets.UTF_8));
     }
 }
