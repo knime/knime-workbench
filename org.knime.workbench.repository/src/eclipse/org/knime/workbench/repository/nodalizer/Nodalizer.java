@@ -47,6 +47,8 @@ package org.knime.workbench.repository.nodalizer;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
@@ -68,6 +70,12 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
+import javax.json.JsonWriter;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -264,7 +272,7 @@ public class Nodalizer implements IApplication {
             return IApplication.EXIT_OK;
         }
 
-        writeNodeMappings(outputDir);
+        writeNodeMappingsJson(outputDir);
 
         if (factoryList != null) {
             if (!Files.exists(factoryList)) {
@@ -1040,41 +1048,70 @@ public class Nodalizer implements IApplication {
     }
 
     /**
-     * Creates the nodeMappings directory inside the output directory and writes all available node mappings
-     * to the associated text file. Node factory mappings are written to 'nodeFactoryMappings.txt' and regex mappings to 'regexMappings.txt'
+     * Creates the node mappings directory inside the output directory and writes all available node mappings
+     * to a JSON file.
      *
-     * The format of 'nodeFactoryMappings.txt' is for each line the source and target delimited by a colon.
-     * e.g.: source:target
+     * The format of the node mappings, inside the JSON file, is the type of the mapping, source or regex and target or replacement.
+     * e.g.:
+     * <pre>
+     *  [
+     *      {
+     *          "type":"FACTORY_NAME",
+     *          "source":"org.knime.base.node.mine.treeensemble.node.learner.TreeEnsembleLearnerNodeFactory",
+     *          "target":"org.knime.base.node.mine.treeensemble2.node.learner.classification.TreeEnsembleClassificationLearnerNodeFactory"
+     *      },
+     *      {
+     *          "type":"REGEX",
+     *          "regex":"^com\\.knime\\.bigdata.*",
+     *          "replacement":"org.knime.bigdata"
+     *      }
+     *  ]
+     * </pre>
      *
-     * The format of 'regexMappings.txt' is for each line the regex and replacement delimited by a colon.
-     * e.g.: regex:replacement
-     *
-     * @param outputDir the output directory to which the files are written
-     * @throws FileNotFoundException
-     * @throws UnsupportedEncodingException
+     * @param outputDir the output directory to which the file is written
+     * @throws IOException
      */
-    private static void writeNodeMappings(final File outputDir) throws FileNotFoundException, UnsupportedEncodingException {
+    public static void writeNodeMappingsJson(final File outputDir) throws IOException {
         File nodeMappingsDir = new File(outputDir, "nodeMappings");
         if (!nodeMappingsDir.exists()) {
             nodeMappingsDir.mkdir();
         }
 
-        File nodeFactoryMappings = new File(nodeMappingsDir, "nodeFactoryMappings.txt");
-        File regexMappings = new File(nodeMappingsDir, "regexMappings.txt");
+        JsonArrayBuilder nodeMappingsBuilder = Json.createArrayBuilder();
 
-        try (PrintWriter nodeFactoryWriter = new PrintWriter(nodeFactoryMappings, StandardCharsets.UTF_8.displayName());
-                final PrintWriter regexWriter = new PrintWriter(regexMappings, StandardCharsets.UTF_8.displayName())) {
-            List<NodeFactoryClassMapper> classMapperList = NodeFactoryClassMapper.getRegisteredMappers();
-            for (NodeFactoryClassMapper nodeFactoryClassMapper : classMapperList) {
-                if (nodeFactoryClassMapper instanceof MapNodeFactoryClassMapper) {
-                    MapNodeFactoryClassMapper nodeFactoryMapper = (MapNodeFactoryClassMapper)nodeFactoryClassMapper;
-                    nodeFactoryMapper.getMap().forEach((key, value) -> nodeFactoryWriter.print(key + ":" + value.getName() + "\n"));
-                } else if (nodeFactoryClassMapper instanceof RegexNodeFactoryClassMapper) {
-                    RegexNodeFactoryClassMapper regexMapper = (RegexNodeFactoryClassMapper)nodeFactoryClassMapper;
-                    regexMapper.getRegexRules().forEach((key, value) -> regexWriter.print(key + ":" + value.getSecond() + "\n"));
-                } else {
-                    // Only NodeFactoryClassMappers that extend MapNodeFactoryClassMapper or RegexNodeFactoryClassMapper can be extracted
-                }
+        List<NodeFactoryClassMapper> classMapperList = NodeFactoryClassMapper.getRegisteredMappers();
+        for (NodeFactoryClassMapper nodeFactoryClassMapper : classMapperList) {
+            if (nodeFactoryClassMapper instanceof MapNodeFactoryClassMapper) {
+                MapNodeFactoryClassMapper nodeFactoryMapper = (MapNodeFactoryClassMapper)nodeFactoryClassMapper;
+                nodeFactoryMapper.getMap().forEach((key, value) -> {
+                    JsonObject nodeFactoryMapping = Json.createObjectBuilder()
+                            .add("type", "FACTORY_NAME")
+                            .add("source", key)
+                            .add("target", value.getName())
+                            .build();
+                    nodeMappingsBuilder.add(nodeFactoryMapping);
+                });
+            } else if (nodeFactoryClassMapper instanceof RegexNodeFactoryClassMapper) {
+                RegexNodeFactoryClassMapper regexMapper = (RegexNodeFactoryClassMapper)nodeFactoryClassMapper;
+                regexMapper.getRegexRules().forEach((key, value) -> {
+                    JsonObject regexMapping = Json.createObjectBuilder()
+                            .add("type", "REGEX")
+                            .add("regex", key)
+                            .add("replacement", value.getSecond())
+                            .build();
+                    nodeMappingsBuilder.add(regexMapping);
+                });
+            } else {
+                // Only NodeFactoryClassMappers that extend MapNodeFactoryClassMapper or RegexNodeFactoryClassMapper can be extracted
+            }
+        }
+
+        JsonArray nodeMappings = nodeMappingsBuilder.build();
+
+        File nodeMappingsJson = new File(nodeMappingsDir, "nodeMappings.json");
+        try (FileOutputStream fileOutputStream = new FileOutputStream(nodeMappingsJson)) {
+            try (JsonWriter writer = Json.createWriter(fileOutputStream)) {
+                writer.writeArray(nodeMappings);
             }
         }
     }
