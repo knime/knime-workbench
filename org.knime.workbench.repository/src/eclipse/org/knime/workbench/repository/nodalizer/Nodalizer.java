@@ -47,11 +47,7 @@ package org.knime.workbench.repository.nodalizer;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -70,12 +66,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonArrayBuilder;
-import javax.json.JsonObject;
-import javax.json.JsonWriter;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -98,15 +88,12 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.DynamicNodeFactory;
-import org.knime.core.node.MapNodeFactoryClassMapper;
 import org.knime.core.node.NodeAndBundleInformationPersistor;
 import org.knime.core.node.NodeFactory;
-import org.knime.core.node.NodeFactoryClassMapper;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSettings;
 import org.knime.core.node.NodeSettingsRO;
-import org.knime.core.node.RegexNodeFactoryClassMapper;
 import org.knime.core.node.context.ports.ConfigurablePortGroup;
 import org.knime.core.node.context.ports.ModifiablePortsConfiguration;
 import org.knime.core.node.context.ports.PortGroupConfiguration;
@@ -129,10 +116,7 @@ import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
 import org.w3c.dom.Element;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  * An application which scans the node repository, and outputs a JSON file containing each encountered node's metadata.
@@ -272,7 +256,7 @@ public class Nodalizer implements IApplication {
             return IApplication.EXIT_OK;
         }
 
-        writeNodeMappingsJson(outputDir);
+        NodalizerUtil.writeNodeMappingsJson(outputDir);
 
         if (factoryList != null) {
             if (!Files.exists(factoryList)) {
@@ -317,7 +301,7 @@ public class Nodalizer implements IApplication {
             }
             if (features != null) {
                 for (final String feature : features) {
-                    final String cleanedName = cleanSymbolicName(feature.split("/")[0]);
+                    final String cleanedName = NodalizerUtil.cleanSymbolicName(feature.split("/")[0]);
                     if (!extensions.containsKey(cleanedName)) {
                         LOGGER.warn(cleanedName + " extension not found on given update sites");
                     }
@@ -346,7 +330,7 @@ public class Nodalizer implements IApplication {
                     try {
                         final String fileName =
                             ext.getSymbolicName().replaceAll("\\.", "_") + "_" + ext.getId().substring(1);
-                        writeFile(extDir, fileName, ext);
+                        NodalizerUtil.writeFile(extDir, fileName, ext);
                     } catch (final JsonProcessingException | FileNotFoundException ex) {
                         LOGGER.error("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName(), ex);
                     }
@@ -491,7 +475,7 @@ public class Nodalizer implements IApplication {
         NodeAndBundleInformation nabi = nodeAndBundleInfo;
         if (extensions != null && bundles != null) {
             // TODO: Check symbolic name and version once we support reading multiple extension versions
-            String cleanedSymbolicName = cleanSymbolicName(nabi.getFeatureSymbolicName().orElse(null));
+            String cleanedSymbolicName = NodalizerUtil.cleanSymbolicName(nabi.getFeatureSymbolicName().orElse(null));
             if (extensions.containsKey(cleanedSymbolicName)) {
                 // HACK: See https://knime-com.atlassian.net/browse/AP-13547 for details
                 ExtensionInfo e;
@@ -602,14 +586,14 @@ public class Nodalizer implements IApplication {
                     final Elements matches = sibling.getElementsByAttributeValue("class", "dt");
                     for (final org.jsoup.nodes.Element match : matches) {
                         if (match.ownText().equals("" + (i - 1))) {
-                            portDescriptHTML = cleanHTML(match.nextElementSibling());
+                            portDescriptHTML = NodalizerUtil.cleanHTML(match.nextElementSibling());
                             break;
                         }
                     }
                 }
             }
             final PortInfo port = new PortInfo(kcn.getInportName(i), portDescriptHTML, kcn.getInputType(i).isOptional(),
-                kcn.getInputType(i).getName(), getColorAsHex(kcn.getInputType(i).getColor()),
+                kcn.getInputType(i).getName(), NodalizerUtil.getColorAsHex(kcn.getInputType(i).getColor()),
                 kcn.getInputType(i).getPortObjectClass().getCanonicalName());
             inports[i - 1] = port;
         }
@@ -622,7 +606,7 @@ public class Nodalizer implements IApplication {
                     final Elements matches = sibling.getElementsByAttributeValue("class", "dt");
                     for (final org.jsoup.nodes.Element match : matches) {
                         if (match.ownText().equals("" + (i - 1))) {
-                            portDescriptHTML = cleanHTML(match.nextElementSibling());
+                            portDescriptHTML = NodalizerUtil.cleanHTML(match.nextElementSibling());
                             break;
                         }
                     }
@@ -630,7 +614,7 @@ public class Nodalizer implements IApplication {
             }
             final PortInfo port =
                 new PortInfo(kcn.getOutportName(i), portDescriptHTML, kcn.getOutputType(i).isOptional(),
-                    kcn.getOutputType(i).getName(), getColorAsHex(kcn.getOutputType(i).getColor()),
+                    kcn.getOutputType(i).getName(), NodalizerUtil.getColorAsHex(kcn.getOutputType(i).getColor()),
                     kcn.getOutputType(i).getPortObjectClass().getCanonicalName());
             outports[i - 1] = port;
         }
@@ -649,7 +633,7 @@ public class Nodalizer implements IApplication {
         }
 
         // Write to file
-        writeFile(directory, categoryPath + "/" + name + "_" + nInfo.getId().substring(1), nInfo);
+        NodalizerUtil.writeFile(directory, categoryPath + "/" + name + "_" + nInfo.getId().substring(1), nInfo);
     }
 
     private static List<DynamicPortGroup> parseDynamicPorts(final Element nodeXML, final String xmlTag,
@@ -672,10 +656,10 @@ public class Nodalizer implements IApplication {
                             for (int i = 0; i < types.length; i++) {
                                 final PortType t = supportedTypes[i];
                                 types[i] = new DynamicPortType(t.getPortObjectClass().getCanonicalName(), t.getName(),
-                                    getColorAsHex(t.getColor()));
+                                    NodalizerUtil.getColorAsHex(t.getColor()));
                             }
                             final DynamicPortGroup port =
-                                new DynamicPortGroup(groupName, cleanHTML(description), types);
+                                new DynamicPortGroup(groupName, NodalizerUtil.cleanHTML(description), types);
                             dynamicPorts.add(port);
                         }
                     } catch (final NoSuchElementException exception) {
@@ -709,7 +693,7 @@ public class Nodalizer implements IApplication {
             org.jsoup.nodes.Element sibling = doH2.nextElementSibling();
             if (sibling.tagName().equalsIgnoreCase("dl")) {
                 final List<NamedField> fields = new ArrayList<>();
-                parseDLTag(sibling, fields, true);
+                NodalizerUtil.parseDLTag(sibling, fields, true);
                 dialogOptions.add(new DialogOptionGroup(null, null, fields));
             }
             if (sibling.tagName().equalsIgnoreCase("div")) {
@@ -719,13 +703,13 @@ public class Nodalizer implements IApplication {
                     final List<NamedField> fields = new ArrayList<>();
                     for (final org.jsoup.nodes.Element c : sibling.children()) {
                         if (c.attr("class").equals("groupname")) {
-                            nameHTML = cleanHTML(c);
+                            nameHTML = NodalizerUtil.cleanHTML(c);
                         }
                         if (c.attr("class").equals("group-description")) {
-                            descriptHTML = cleanHTML(c);
+                            descriptHTML = NodalizerUtil.cleanHTML(c);
                         }
                         if (c.tagName().equals("dl")) {
-                            parseDLTag(c, fields, true);
+                            NodalizerUtil.parseDLTag(c, fields, true);
                         }
                     }
                     dialogOptions.add(new DialogOptionGroup(nameHTML, descriptHTML, fields));
@@ -744,7 +728,7 @@ public class Nodalizer implements IApplication {
         if (viewH2 != null) {
             final org.jsoup.nodes.Element sib = viewH2.nextElementSibling();
             if (sib.tagName().equalsIgnoreCase("dl")) {
-                parseDLTag(sib, views, false);
+                NodalizerUtil.parseDLTag(sib, views, false);
             }
         }
 
@@ -758,7 +742,7 @@ public class Nodalizer implements IApplication {
         if (interactiveViewH2 != null) {
             final org.jsoup.nodes.Element sib = interactiveViewH2.nextElementSibling();
             if ((sib != null) && sib.tagName().equalsIgnoreCase("div")) {
-                interactiveView = new NamedField(interactiveViewName, cleanHTML(sib));
+                interactiveView = new NamedField(interactiveViewName, NodalizerUtil.cleanHTML(sib));
             }
         }
 
@@ -807,7 +791,7 @@ public class Nodalizer implements IApplication {
             // TODO: Modify query once we support reading multiple extension versions
             final IQueryResult<IInstallableUnit> ius =
                 mr.query(QueryUtil.createLatestQuery(QueryUtil.createIUGroupQuery()), new NullProgressMonitor());
-            final SiteInfo siteInfo = parseUpdateSite(mr);
+            final SiteInfo siteInfo = NodalizerUtil.parseUpdateSite(mr);
             // TODO: Mapping symbolic name to extension may not be sufficient once we support reading multiple versions
             for (final IInstallableUnit iu : ius) {
                 if (features != null && !features.stream().anyMatch(f -> f.startsWith(iu.getId() + "/"))) {
@@ -843,7 +827,7 @@ public class Nodalizer implements IApplication {
                 }
 
                 final ExtensionInfo ext = new ExtensionInfo();
-                ext.setSymbolicName(cleanSymbolicName(iu.getId()));
+                ext.setSymbolicName(NodalizerUtil.cleanSymbolicName(iu.getId()));
                 ext.setVersion(v);
                 ext.setName(iu.getProperty("org.eclipse.equinox.p2.name"));
                 ext.setDescription(iu.getProperty("org.eclipse.equinox.p2.description"));
@@ -927,192 +911,4 @@ public class Nodalizer implements IApplication {
         }
     }
 
-    // -- Parse Update Site --
-
-    private static SiteInfo parseUpdateSite(final IMetadataRepository repo) {
-        final String name = repo.getName();
-        final String url = repo.getLocation().toString();
-        final boolean enabledByDefault = siteEnabledByDefault(url);
-        final boolean isTrusted = isTrusted(url);
-        return new SiteInfo(url, enabledByDefault, isTrusted, name);
-    }
-
-    private static boolean siteEnabledByDefault(final String url) {
-        return url.contains("://update.knime.com/analytics-platform")
-            || url.contains("://update.knime.com/community-contributions/trusted/")
-            || url.contains("://update.knime.com/partner/");
-    }
-
-    private static boolean isTrusted(final String url) {
-        return siteEnabledByDefault(url);
-    }
-
-    // -- Helper methods --
-
-    private static void parseDLTag(final org.jsoup.nodes.Element dl, final List<NamedField> fields,
-        final boolean checkOptional) {
-        String keyHTML = "";
-        boolean optional = false;
-        for (final org.jsoup.nodes.Element child : dl.children()) {
-            if (child.tagName().equals("dd")) {
-                NamedField f;
-                if (checkOptional) {
-                    f = new NamedField(keyHTML, cleanHTML(child), optional);
-                } else {
-                    f = new NamedField(keyHTML, cleanHTML(child));
-                }
-                fields.add(f);
-            }
-            if (child.tagName().equals("dt")) {
-                keyHTML = cleanHTML(child);
-                if (checkOptional) {
-                    optional = false;
-                    if (!StringUtils.isEmpty(keyHTML)) {
-                        // strip out all HTML tags from field name
-                        keyHTML = child.ownText();
-                        for (final org.jsoup.nodes.Element e : child.children()) {
-                            if (e.tagName().equalsIgnoreCase("span") && e.text().equalsIgnoreCase("(optional)")) {
-                                optional = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private static String cleanHTML(final org.jsoup.nodes.Element e) {
-        if (e.children().isEmpty()) {
-            return e.html();
-        }
-        for (final org.jsoup.nodes.Element child : e.children()) {
-            if (!hasText(child) && !child.tagName().equalsIgnoreCase("br")) {
-                child.remove();
-            }
-        }
-        return e.html();
-    }
-
-    private static boolean hasText(final org.jsoup.nodes.Element e) {
-        if (e.children().isEmpty()) {
-            return e.hasText();
-        }
-        boolean hasText = e.hasText();
-        for (final org.jsoup.nodes.Element child : e.children()) {
-            hasText |= hasText(child);
-        }
-        return hasText;
-    }
-
-    private static String getColorAsHex(final int color) {
-        final StringBuffer buf = new StringBuffer();
-        buf.append(Integer.toHexString(color));
-        while (buf.length() < 6) {
-            buf.insert(0, "0");
-        }
-        String opacity = "";
-        while (buf.length() > 6) {
-            opacity += buf.charAt(0);
-            buf.deleteCharAt(0);
-        }
-        if (!opacity.isEmpty() && !opacity.equalsIgnoreCase("ff")) {
-            throw new IllegalArgumentException("Opacity is not supported for node port colors");
-        }
-        return buf.toString();
-    }
-
-    private static void writeFile(final File outputDir, final String baseFileName, final Object pojoToWrite)
-        throws JsonProcessingException, FileNotFoundException, UnsupportedEncodingException {
-        final ObjectMapper map = new ObjectMapper();
-        map.setSerializationInclusion(Include.NON_ABSENT);
-        map.enable(SerializationFeature.INDENT_OUTPUT);
-        final String json = map.writeValueAsString(pojoToWrite);
-        String fileName = baseFileName.replaceAll("\\W+", "_");
-        File f = new File(outputDir, fileName + ".json");
-        int count = 2;
-        while (f.exists()) {
-            f = new File(outputDir, fileName + count + ".json");
-            count++;
-        }
-        try (final PrintWriter pw = new PrintWriter(f, StandardCharsets.UTF_8.displayName())) {
-            pw.write(json);
-        }
-    }
-
-    private static String cleanSymbolicName(final String symbolicName) {
-        if (symbolicName != null && symbolicName.endsWith(".feature.group")) {
-            return symbolicName.substring(0, symbolicName.length() - 14);
-        }
-        return symbolicName;
-    }
-
-    /**
-     * Creates the node mappings directory inside the output directory and writes all available node mappings
-     * to a JSON file.
-     *
-     * The format of the node mappings, inside the JSON file, is the type of the mapping, source or regex and target or replacement.
-     * e.g.:
-     * <pre>
-     *  [
-     *      {
-     *          "type":"FACTORY_NAME",
-     *          "source":"org.knime.base.node.mine.treeensemble.node.learner.TreeEnsembleLearnerNodeFactory",
-     *          "target":"org.knime.base.node.mine.treeensemble2.node.learner.classification.TreeEnsembleClassificationLearnerNodeFactory"
-     *      },
-     *      {
-     *          "type":"REGEX",
-     *          "regex":"^com\\.knime\\.bigdata.*",
-     *          "replacement":"org.knime.bigdata"
-     *      }
-     *  ]
-     * </pre>
-     *
-     * @param outputDir the output directory to which the file is written
-     * @throws IOException
-     */
-    public static void writeNodeMappingsJson(final File outputDir) throws IOException {
-        File nodeMappingsDir = new File(outputDir, "nodeMappings");
-        if (!nodeMappingsDir.exists()) {
-            nodeMappingsDir.mkdir();
-        }
-
-        JsonArrayBuilder nodeMappingsBuilder = Json.createArrayBuilder();
-
-        List<NodeFactoryClassMapper> classMapperList = NodeFactoryClassMapper.getRegisteredMappers();
-        for (NodeFactoryClassMapper nodeFactoryClassMapper : classMapperList) {
-            if (nodeFactoryClassMapper instanceof MapNodeFactoryClassMapper) {
-                MapNodeFactoryClassMapper nodeFactoryMapper = (MapNodeFactoryClassMapper)nodeFactoryClassMapper;
-                nodeFactoryMapper.getMap().forEach((key, value) -> {
-                    JsonObject nodeFactoryMapping = Json.createObjectBuilder()
-                            .add("type", "FACTORY_NAME")
-                            .add("source", key)
-                            .add("target", value.getName())
-                            .build();
-                    nodeMappingsBuilder.add(nodeFactoryMapping);
-                });
-            } else if (nodeFactoryClassMapper instanceof RegexNodeFactoryClassMapper) {
-                RegexNodeFactoryClassMapper regexMapper = (RegexNodeFactoryClassMapper)nodeFactoryClassMapper;
-                regexMapper.getRegexRules().forEach((key, value) -> {
-                    JsonObject regexMapping = Json.createObjectBuilder()
-                            .add("type", "REGEX")
-                            .add("regex", key)
-                            .add("replacement", value.getSecond())
-                            .build();
-                    nodeMappingsBuilder.add(regexMapping);
-                });
-            } else {
-                // Only NodeFactoryClassMappers that extend MapNodeFactoryClassMapper or RegexNodeFactoryClassMapper can be extracted
-            }
-        }
-
-        JsonArray nodeMappings = nodeMappingsBuilder.build();
-
-        File nodeMappingsJson = new File(nodeMappingsDir, "nodeMappings.json");
-        try (FileOutputStream fileOutputStream = new FileOutputStream(nodeMappingsJson)) {
-            try (JsonWriter writer = Json.createWriter(fileOutputStream)) {
-                writer.writeArray(nodeMappings);
-            }
-        }
-    }
 }
