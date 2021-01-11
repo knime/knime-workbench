@@ -252,9 +252,10 @@ public final class NodalizerUtil {
      *          "target":"org.knime.base.node.mine.treeensemble2.node.learner.classification.TreeEnsembleClassificationLearnerNodeFactory"
      *      },
      *      {
-     *          "type":"REGEX",
-     *          "regex":"^com\\.knime\\.bigdata.*",
-     *          "replacement":"org.knime.bigdata"
+     *          "type": "REGEX",
+     *          "matchPattern": "^com\\.knime\\.reporting.*",
+     *          "replacePattern": "^com\\.knime\\.reporting",
+     *          "replacement": "org.knime.reporting"
      *      }
      *  ]
      * </pre>
@@ -287,7 +288,8 @@ public final class NodalizerUtil {
                 regexMapper.getRegexRules().forEach((key, value) -> {
                     JsonObject regexMapping = Json.createObjectBuilder()
                             .add("type", "REGEX")
-                            .add("regex", key)
+                            .add("matchPattern", key)
+                            .add("replacePattern", value.getFirst())
                             .add("replacement", value.getSecond())
                             .build();
                     nodeMappingsBuilder.add(regexMapping);
