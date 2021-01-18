@@ -110,8 +110,8 @@ public class FloatingStyleToolbar {
         // differently than before w.r.t. manually transferring focus between Shells.
         // SWT.TOOL is an alternative flag that provides similar behaviour.
         int toolbarWindowFlags = Platform.OS_LINUX.equals(Platform.getOS()) ?
-              SWT.NO_TRIM | SWT.TOOL
-            : SWT.NO_TRIM | SWT.ON_TOP;
+              (SWT.NO_TRIM | SWT.TOOL)
+            : (SWT.NO_TRIM | SWT.ON_TOP);
         m_toolbarWindow = new Shell(display, toolbarWindowFlags);
 
         final GridLayout gl = new GridLayout(1, false);
@@ -119,19 +119,17 @@ public class FloatingStyleToolbar {
         gl.marginWidth = 0;
         gl.verticalSpacing = 0;
         m_toolbarWindow.setLayout(gl);
-        m_toolbar = new AnnotationEditFloatingToolbar(m_toolbarWindow, editor, (source) -> {
-            m_mainApplicationWindow.forceActive();
-        });
+        m_toolbar = new AnnotationEditFloatingToolbar(m_toolbarWindow, editor, source -> m_mainApplicationWindow.forceActive());
 
         m_toolbarWindow.addShellListener(new ToolbarListener());
         m_toolbarActiveState = new AtomicBoolean(false);
 
-        m_showListener = (event) -> {
+        m_showListener = event -> {
             m_controlsInView.add((Control)event.widget);
 
             recomputeRegion();
         };
-        m_hideListener = (event) -> {
+        m_hideListener = event -> {
             m_controlsInView.remove(event.widget);
             recomputeRegion();
         };
@@ -237,7 +235,9 @@ public class FloatingStyleToolbar {
          * {@inheritDoc}
          */
         @Override
-        public void shellClosed(final ShellEvent se) { }
+        public void shellClosed(final ShellEvent se) {
+            // no-op
+        }
 
         /**
          * {@inheritDoc}
@@ -282,7 +282,9 @@ public class FloatingStyleToolbar {
          * {@inheritDoc}
          */
         @Override
-        public void shellClosed(final ShellEvent se) { }
+        public void shellClosed(final ShellEvent se) {
+            // no-op
+        }
 
         /**
          * {@inheritDoc}
@@ -299,13 +301,17 @@ public class FloatingStyleToolbar {
          * {@inheritDoc}
          */
         @Override
-        public void shellDeiconified(final ShellEvent se) { }
+        public void shellDeiconified(final ShellEvent se) {
+            // no-op
+        }
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public void shellIconified(final ShellEvent se) { }
+        public void shellIconified(final ShellEvent se) {
+            // no-op
+        }
     }
 
 
@@ -326,6 +332,7 @@ public class FloatingStyleToolbar {
                 long start = System.currentTimeMillis();
                 while (start + 2000 > System.currentTimeMillis()) {
                     while (display.readAndDispatch()) {
+                        // repeat while there are still events in the queue.
                     }
                 }
             });
