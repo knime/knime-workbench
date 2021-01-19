@@ -397,7 +397,7 @@ public final class InstallMissingNodesJob extends Job {
     }
 
     private static boolean isUpdateSiteOfNewerVersionThanAP(final UpdateSiteInfo info) {
-        if (info.getVersion() != null) {
+        if (info != null && info.getVersion() != null) {
             return new Version(info.getVersion()).compareTo(new Version(KNIMEConstants.VERSION)) > 0;
         } else {
             return false;
