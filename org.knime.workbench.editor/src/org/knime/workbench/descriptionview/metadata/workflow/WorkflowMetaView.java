@@ -48,6 +48,8 @@
  */
 package org.knime.workbench.descriptionview.metadata.workflow;
 
+import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isWorkflowGroup;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -225,7 +227,7 @@ public class WorkflowMetaView extends AbstractMetaView {
             }
             defaultCreationDateSupplier = createDefaultCreationDateSupplier(() -> {
                 try {
-                    if (!isRemote) {
+                    if (!isRemote && !isWorkflowGroup(fs)) {
                         return fs.toLocalFile().toPath();
                     }
                 } catch (CoreException e) {
@@ -304,7 +306,7 @@ public class WorkflowMetaView extends AbstractMetaView {
         });
     }
 
-    private Supplier<Calendar> createDefaultCreationDateSupplier(final Supplier<Path> workflowPath) {
+    private static Supplier<Calendar> createDefaultCreationDateSupplier(final Supplier<Path> workflowPath) {
         return () -> {
             Calendar calendar = Calendar.getInstance();
             try {
