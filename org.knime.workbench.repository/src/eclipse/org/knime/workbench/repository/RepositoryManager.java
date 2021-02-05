@@ -368,6 +368,7 @@ public final class RepositoryManager {
 
                 Pair<DefaultNodeTemplate, Boolean> nodePair = RepositoryFactory.createNode(nodeFactoryExtension);
                 DefaultNodeTemplate node = nodePair.getFirst();
+                node.setDeprecated(nodeFactoryExtension.isDeprecated());
                 Boolean isDeprecatedInNode = nodePair.getSecond();
 
                 // nodeFactoryExtension.isDeprecated() - reads the flag from the plugin.xml
