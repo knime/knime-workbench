@@ -69,6 +69,8 @@ public abstract class NodeTemplate extends AbstractNodeTemplate {
 
     private NodeType m_type;
 
+    private boolean m_isDeprecated;
+
     /**
      * Creates a copy of the given node template.
      *
@@ -77,6 +79,7 @@ public abstract class NodeTemplate extends AbstractNodeTemplate {
     protected NodeTemplate(final NodeTemplate copy) {
         super(copy);
         this.m_type = copy.m_type;
+        this.m_isDeprecated = copy.m_isDeprecated;
     }
 
     /**
@@ -129,11 +132,30 @@ public abstract class NodeTemplate extends AbstractNodeTemplate {
         if (!(obj instanceof NodeTemplate)) {
             return false;
         }
-        return Objects.equals(m_type, ((NodeTemplate)obj).m_type);
+        return Objects.equals(m_type, ((NodeTemplate)obj).m_type)
+                && Objects.equals(m_isDeprecated, ((NodeTemplate)obj).m_isDeprecated);
     }
 
     @Override
     public String toString() {
         return getID();
+    }
+
+    /**
+     * Sets the isDeprecated value of this {@link NodeTemplate}
+     *
+     * @param isDeprecated if this {@link NodeTemplate} is deprecated or not
+     */
+    public void setDeprecated(final boolean isDeprecated) {
+        this.m_isDeprecated = isDeprecated;
+    }
+
+    /**
+     * Returns whether this {@link NodeTemplate} is deprecated or not
+     *
+     * @return a boolean indicating if this {@link NodeTemplate} is deprecated
+     */
+    public boolean isDeprecated() {
+        return this.m_isDeprecated;
     }
 }

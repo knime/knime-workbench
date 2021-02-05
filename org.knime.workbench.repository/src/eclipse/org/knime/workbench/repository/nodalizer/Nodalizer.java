@@ -382,7 +382,7 @@ public class Nodalizer implements IApplication {
                 final NodeFactory<? extends NodeModel> fac = template.createFactoryInstance();
                 final NodeAndBundleInformation nodeAndBundleInfo = NodeAndBundleInformationPersistor.create(fac);
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
-                    nodeAndBundleInfo, fac.isDeprecated(), directory, extensions, bundles);
+                    nodeAndBundleInfo, template.isDeprecated(), directory, extensions, bundles);
                 readFactories.add(fac.getClass().toString());
             } catch (final Throwable e) {
                 LOGGER.error("Failed to read node: " + object.getName() + ".", e);
