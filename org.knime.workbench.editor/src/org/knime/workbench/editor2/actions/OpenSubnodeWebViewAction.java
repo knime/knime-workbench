@@ -64,7 +64,7 @@ import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.wizard.SinglePageManager;
+import org.knime.core.wizard.CompositeViewPageManager;
 import org.knime.core.wizard.SubnodeViewableModel;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
@@ -98,7 +98,7 @@ public final class OpenSubnodeWebViewAction extends Action {
     public boolean isEnabled() {
         boolean executed = m_nodeContainer.getNodeContainerState().isExecuted();
         return mapSNC(snc -> {
-            SinglePageManager spm = SinglePageManager.of(snc.getParent());
+            CompositeViewPageManager spm = CompositeViewPageManager.of(snc.getParent());
             return executed && spm.hasWizardPage(snc.getID());
         }, snc -> {
             return executed && snc.hasWizardPage();
@@ -187,7 +187,7 @@ public final class OpenSubnodeWebViewAction extends Action {
 
     static boolean hasContainerView(final NodeContainerUI cont) {
         return mapSNC(snc -> {
-            SinglePageManager spm = SinglePageManager.of(snc.getParent());
+            CompositeViewPageManager spm = CompositeViewPageManager.of(snc.getParent());
             return spm.hasWizardPage(cont.getID());
         }, snc -> {
             return snc.hasWizardPage();
