@@ -153,7 +153,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
  *
  * @author Christian Albrecht, KNIME.com GmbH, Konstanz, Germany
  */
-public class SubnodeLayoutJSONEditorPage extends WizardPage {
+public final class SubnodeLayoutJSONEditorPage extends WizardPage {
 
     private static NodeLogger LOGGER = NodeLogger.getLogger(SubnodeLayoutJSONEditorPage.class);
 

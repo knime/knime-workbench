@@ -165,16 +165,16 @@ public class ExplorerURIDropUtil {
             return false;
         }
         try {
-            AtomicReference<File> file = new AtomicReference<File>();
-            AtomicReference<File> tmpDir = new AtomicReference<File>();
-            PlatformUI.getWorkbench().getProgressService().busyCursorWhile((monitor) -> {
+            AtomicReference<File> file = new AtomicReference<>();
+            AtomicReference<File> tmpDir = new AtomicReference<>();
+            PlatformUI.getWorkbench().getProgressService().busyCursorWhile(monitor -> {
                 monitor.beginTask("Downloading file...", 100);
                 try {
                     Optional<EntityImport> entityImport;
                     try {
                         entityImport = URIImporterFinder.getInstance().createEntityImportFor(knimeURI);
                     } catch (ImportForbiddenException e) {
-                        LOGGER.warn(e.getMessage());
+                        LOGGER.warn(e.getMessage(), e);
                         return;
                     }
                     if (!entityImport.isPresent()) {
