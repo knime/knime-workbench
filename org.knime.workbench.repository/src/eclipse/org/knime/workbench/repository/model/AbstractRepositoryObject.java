@@ -53,13 +53,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import org.knime.core.node.extension.NodeAndCategorySorter.NodeOrCategory;
+
 /**
  * Abstract base implementation of a generic repository object.
  *
  * @author Florian Georg, University of Konstanz
  */
-public abstract class AbstractRepositoryObject implements IRepositoryObject,
-        Comparable<AbstractRepositoryObject> {
+public abstract class AbstractRepositoryObject implements IRepositoryObject, NodeOrCategory<AbstractRepositoryObject> {
     private IContainerObject m_parent;
 
     private String m_name;
@@ -196,6 +197,7 @@ public abstract class AbstractRepositoryObject implements IRepositoryObject,
      *
      * @return the after-ID
      */
+    @Override
     public String getAfterID() {
         return m_afterID;
     }
