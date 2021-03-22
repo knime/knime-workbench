@@ -114,7 +114,7 @@ public final class RepositoryFactory {
     static Pair<DefaultNodeTemplate, Boolean> createNode(final NodeFactoryExtension nodeFactoryExtension)
         throws InvalidNodeFactoryExtensionException {
         // Try to load the node factory class...
-        NodeFactory<? extends NodeModel> factory = nodeFactoryExtension.createFactory();
+        NodeFactory<? extends NodeModel> factory = nodeFactoryExtension.getFactory();
         boolean isDeprecated = factory.isDeprecated();
 
         String pluginID = nodeFactoryExtension.getPlugInSymbolicName();
@@ -332,7 +332,7 @@ public final class RepositoryFactory {
         // for all nodes in the node set
         for (String factoryId : set.getNodeFactoryIds()) {
             // Try to load the node factory class...
-            Optional<NodeFactory<? extends NodeModel>> factoryOptional = set.createNodeFactory(factoryId);
+            Optional<NodeFactory<? extends NodeModel>> factoryOptional = set.getNodeFactory(factoryId);
             if (!factoryOptional.isPresent()) {
                 continue; // error handling done elsewhere
             }

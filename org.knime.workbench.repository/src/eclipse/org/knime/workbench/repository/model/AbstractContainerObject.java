@@ -53,6 +53,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
+import org.knime.core.node.extension.NodeAndCategorySorter;
+
 /**
  * Abstract base implementation of a container object.
  *
@@ -226,8 +228,7 @@ public abstract class AbstractContainerObject extends AbstractRepositoryObject
      * @return the sorted list
      */
     private static List<AbstractRepositoryObject> sortChildren(final List<AbstractRepositoryObject> children) {
-        CategorySorter sorter = new CategorySorter();
-        return sorter.sortCategory(children);
+        return NodeAndCategorySorter.sortNodesAndCategories(children);
     }
 
     /**
@@ -352,5 +353,13 @@ public abstract class AbstractContainerObject extends AbstractRepositoryObject
     @Override
     public boolean isLocked() {
         return m_isLocked;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isNode() {
+        return false;
     }
 }

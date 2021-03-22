@@ -146,4 +146,12 @@ public abstract class AbstractNodeTemplate extends AbstractRepositoryObject {
         }
         return true;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isNode() {
+        return true;
+    }
 }
