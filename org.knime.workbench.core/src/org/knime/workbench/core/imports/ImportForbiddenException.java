@@ -62,4 +62,12 @@ public class ImportForbiddenException extends Exception {
     public ImportForbiddenException(final String message) {
         super(message);
     }
+
+    /**
+     * @param message
+     * @param cause
+     */
+    public ImportForbiddenException(final String message, final Throwable cause) {
+        super(message, cause);
+    }
 }
