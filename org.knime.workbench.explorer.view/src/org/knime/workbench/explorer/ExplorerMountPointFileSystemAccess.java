@@ -234,6 +234,24 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
     /**
      * {@inheritDoc}
      *
+     * @since 8.7
+     */
+    @Override
+    public File toLocalWorkflowDir(final URI uri) throws IOException {
+        try {
+            AbstractExplorerFileStore store = getStore(uri);
+            if (!AbstractExplorerFileStore.isWorkflow(store)) {
+                throw new IOException("Not a workflow");
+            }
+            return store.resolveToLocalFile();
+        } catch (CoreException e) {
+            throw new IOException(e);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     *
      * @throws IllegalArgumentException if mountpoint does not exist
      */
     @Override
