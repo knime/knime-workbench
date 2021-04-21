@@ -58,12 +58,15 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Collection;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -87,6 +90,18 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
 
     private ExplorerURLStreamHandler m_handler = new ExplorerURLStreamHandler();
 
+
+    private Set<NodeID> m_staticWFMs;
+
+    /**
+     * Remember the WFMS that were known before any test ran. Don't touch them on {@link #cleanup()}.
+     */
+    @Before
+    public void indexWFMsBefore() {
+        m_staticWFMs =
+                WorkflowManager.ROOT.getNodeContainers().stream().map(NodeContainer::getID).collect(Collectors.toSet());
+    }
+
     /**
      * Cleanup after each test.
      *
@@ -102,8 +117,8 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
             }
         }
 
-        Collection<NodeID> workflows =
-            WorkflowManager.ROOT.getNodeContainers().stream().map(nc -> nc.getID()).collect(Collectors.toList());
+        Collection<NodeID> workflows = WorkflowManager.ROOT.getNodeContainers().stream().map(nc -> nc.getID())
+                .filter(id -> !m_staticWFMs.contains(id)).collect(Collectors.toList());
         workflows.stream().forEach(id -> WorkflowManager.ROOT.removeProject(id));
     }
 
