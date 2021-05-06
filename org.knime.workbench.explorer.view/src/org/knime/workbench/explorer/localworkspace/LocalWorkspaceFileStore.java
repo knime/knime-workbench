@@ -54,18 +54,17 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileStore;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
+import org.knime.core.internal.KNIMEPath;
 import org.knime.core.util.PathUtils;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -82,31 +81,6 @@ import org.osgi.framework.FrameworkUtil;
  */
 public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
 
-    private static Supplier<IPath> localMountpointRootSupplier = defaultLocalMountPointRootSupplier();
-
-    /**
-     * Overwrites the default mountpoint root supplier (i.e. a function that supplies the absolute root directory for
-     * all workflows). By default it's the eclipse workspace directory and usually doesn't need to be overwritten
-     * (mainly only used for testflow runs).
-     *
-     * @param supplier the supplier, never <code>null</code>, the supplier itself must also never return
-     *            <code>null</code>
-     */
-    public static void setLocalMountPointRootSupplier(final Supplier<IPath> supplier) {
-        localMountpointRootSupplier = supplier;
-    }
-
-    /**
-     * Resets the mountpoint root supplier back to the default one (i.e. the eclipse workspace directory).
-     */
-    public static void resetLocalMountPointRootSupplier() {
-        localMountpointRootSupplier = defaultLocalMountPointRootSupplier();
-    }
-
-    private static Supplier<IPath> defaultLocalMountPointRootSupplier() {
-        return () -> ResourcesPlugin.getWorkspace().getRoot().getLocation();
-    }
-
     private final IFileStore m_file;
 
     /**
@@ -115,7 +89,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      */
     public LocalWorkspaceFileStore(final String mountID, final String fullPath) {
         super(mountID, fullPath);
-        IPath rootPath = localMountpointRootSupplier.get();
+        IPath rootPath = Path.fromPortableString(KNIMEPath.getWorkspaceDirPath().getAbsolutePath());
         IPath filePath = rootPath.append(new Path(getFullName()));
         m_file = EFS.getLocalFileSystem().getStore(filePath);
     }
