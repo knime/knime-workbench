@@ -49,6 +49,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.draw2d.DelegatingLayout;
 import org.eclipse.draw2d.Figure;
@@ -539,7 +540,13 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
 
     // TODO general image utilities class (along with AnnotationEditPart and other locations)
     private static Image makeImageGhostly(final Image image) {
-        final Image i = new Image(Display.getCurrent(), image, SWT.IMAGE_GRAY);
+        Image iWithoutDataProvider = null;
+
+        if (Platform.OS_MACOSX.equals(Platform.getOS())) {
+            iWithoutDataProvider = new Image(Display.getCurrent(), image.getImageData());
+        }
+
+        final Image i = new Image(Display.getCurrent(), iWithoutDataProvider != null ? iWithoutDataProvider : image, SWT.IMAGE_GRAY);
 
         final ImageData id = i.getImageData();
         id.alpha = 32;
@@ -550,6 +557,9 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
 
         final Image ghostlyImage = new Image(Display.getCurrent(), id);
         i.dispose();
+        if (iWithoutDataProvider != null) {
+            iWithoutDataProvider.dispose();
+        }
 
         return ghostlyImage;
     }
