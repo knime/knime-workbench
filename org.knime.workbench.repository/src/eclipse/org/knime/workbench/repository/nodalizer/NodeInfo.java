@@ -56,12 +56,15 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
 import org.knime.core.util.workflowalizer.NodeAndBundleInformation;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * POJO for KNIME Node information.
@@ -90,6 +93,7 @@ public class NodeInfo {
     private String m_owner;
     private List<DynamicPortGroup> m_dynInPorts;
     private List<DynamicPortGroup> m_dynOutPorts;
+    private Locale m_locale = Locale.US;
 
     /**
      * Returns the title of this node.
@@ -278,6 +282,16 @@ public class NodeInfo {
      */
     public List<DynamicPortGroup> getDynOutPorts() {
         return m_dynOutPorts == null ? Collections.emptyList() : m_dynOutPorts;
+    }
+
+    /**
+     * Returns the locale for the translation.
+     *
+     * @return a locale, never <code>null</code>
+     */
+    @JsonProperty("_locale")
+    public Locale getLocale() {
+        return m_locale;
     }
 
     /**
@@ -476,6 +490,15 @@ public class NodeInfo {
      */
     public void setDynOutPorts(final List<DynamicPortGroup> dynOutPorts) {
         m_dynOutPorts = dynOutPorts;
+    }
+
+    /**
+     * Sets the locale for the translation.
+     *
+     * @param locale a locale, must not be <code>null</code>
+     */
+    public void setLocale(final Locale locale) {
+        m_locale = Objects.requireNonNull(locale);
     }
 
     // -- Helper Classes --

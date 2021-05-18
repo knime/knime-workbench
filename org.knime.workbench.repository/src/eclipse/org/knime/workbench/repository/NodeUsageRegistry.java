@@ -53,6 +53,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -167,7 +168,7 @@ public final class NodeUsageRegistry {
     public static void addNode(final NodeFactory<?> nodeFactory) {
         String id = nodeFactory.getClass().getCanonicalName();
         if (nodeFactory instanceof DynamicNodeFactory) {
-            id += "#" + nodeFactory.getNodeName();
+            id += "#" + nodeFactory.getNodeDescription(Locale.getDefault()).getNodeName();
         }
         addNode(RepositoryManager.INSTANCE.getNodeTemplate(id));
     }

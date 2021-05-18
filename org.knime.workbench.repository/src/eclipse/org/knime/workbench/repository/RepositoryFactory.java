@@ -52,6 +52,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.eclipse.core.runtime.FileLocator;
@@ -120,7 +121,7 @@ public final class RepositoryFactory {
         String pluginID = nodeFactoryExtension.getPlugInSymbolicName();
         String categoryPath = nodeFactoryExtension.getCategoryPath();
         DefaultNodeTemplate node = new DefaultNodeTemplate((Class<NodeFactory<? extends NodeModel>>)factory.getClass(),
-            factory.getNodeName(), pluginID, categoryPath, factory.getType());
+            factory.getNodeDescription(Locale.getDefault()).getNodeName(), pluginID, categoryPath, factory.getType());
         node.setAfterID(nodeFactoryExtension.getAfterID());
 
         if (!Boolean.getBoolean("java.awt.headless")) {
@@ -350,7 +351,7 @@ public final class RepositoryFactory {
             @SuppressWarnings("unchecked")
             DynamicNodeTemplate node = new DynamicNodeTemplate(set,
                 (Class<? extends NodeFactory<? extends NodeModel>>)factory.getClass(), factoryId,
-                factory.getNodeName(), categoryPath, nodeType);
+                factory.getNodeDescription(Locale.getDefault()).getNodeName(), categoryPath, nodeType);
 
             node.setAfterID(nodeSet.getAfterID(factoryId));
 

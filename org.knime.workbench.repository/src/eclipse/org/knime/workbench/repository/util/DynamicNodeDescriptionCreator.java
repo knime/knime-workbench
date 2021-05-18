@@ -48,6 +48,7 @@
 package org.knime.workbench.repository.util;
 
 import java.io.FileNotFoundException;
+import java.util.Locale;
 import java.util.Set;
 
 import javax.xml.transform.TransformerException;
@@ -101,7 +102,7 @@ public final class DynamicNodeDescriptionCreator {
      *
      * @return the HTML header with stylesheet import and opened body tag.
      */
-    public String getHeader() {
+    public static String getHeader() {
         StringBuilder content = new StringBuilder();
         content.append("<html><head>");
         // include stylesheet
@@ -179,15 +180,16 @@ public final class DynamicNodeDescriptionCreator {
         NodeFactory<? extends NodeModel> nf = null;
         try {
             nf = template.createFactoryInstance();
+            var nodeDescription = nf.getNodeDescription(Locale.getDefault());
             if (useSingleLine) {
                 bld.append("<dt><b>");
-                bld.append(nf.getNodeName());
+                bld.append(nodeDescription.getNodeName());
                 bld.append(":</b></dt><dd>");
-                bld.append(goodOneLineDescr(NodeFactoryHTMLCreator.instance.readShortDescriptionFromXML(nf
-                    .getXMLDescription())));
+                bld.append(goodOneLineDescr(
+                    NodeFactoryHTMLCreator.instance.readShortDescriptionFromXML(nodeDescription.getXMLDescription())));
                 bld.append("</dd>");
             } else {
-                bld.append(NodeFactoryHTMLCreator.instance.readFullDescription(nf.getXMLDescription()));
+                bld.append(NodeFactoryHTMLCreator.instance.readFullDescription(nodeDescription.getXMLDescription()));
             }
         } catch (Exception e) {
             if (useSingleLine) {
@@ -233,11 +235,12 @@ public final class DynamicNodeDescriptionCreator {
                 bld.append("<dd>");
                 // TODO functionality disabled
                 bld.append(goodOneLineDescr(NodeFactoryHTMLCreator.instance.readShortDescriptionFromXML(singleNC
-                    .getXMLDescription())));
+                    .getXMLDescription(Locale.getDefault()))));
                 bld.append("</dd>");
             } else {
                 try {
-                    bld.append(NodeFactoryHTMLCreator.instance.readFullDescription(singleNC.getXMLDescription()));
+                    bld.append(NodeFactoryHTMLCreator.instance
+                        .readFullDescription(singleNC.getXMLDescription(Locale.getDefault())));
                 } catch (FileNotFoundException ex) {
                     NodeLogger.getLogger(DynamicNodeDescriptionCreator.class).error(
                         "Could not create HTML node description: " + ex.getMessage(), ex);
@@ -343,7 +346,7 @@ public final class DynamicNodeDescriptionCreator {
      * @return a not null string containing some (more or less) meaningfull text
      *         with no special characters in html.
      */
-    private String goodOneLineDescr(final String oneLineFromFactory) {
+    private static String goodOneLineDescr(final String oneLineFromFactory) {
         if ((oneLineFromFactory == null) || (oneLineFromFactory.length() == 0)) {
             return " - No node description available - ";
         } else {

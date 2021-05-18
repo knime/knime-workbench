@@ -47,6 +47,7 @@ package org.knime.workbench.repository.nodalizer;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
@@ -59,12 +60,18 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
+import java.util.jar.JarFile;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
@@ -82,6 +89,8 @@ import org.eclipse.equinox.p2.repository.artifact.IArtifactRepository;
 import org.eclipse.equinox.p2.repository.artifact.IArtifactRepositoryManager;
 import org.eclipse.equinox.p2.repository.metadata.IMetadataRepository;
 import org.eclipse.equinox.p2.repository.metadata.IMetadataRepositoryManager;
+import org.eclipse.osgi.internal.loader.ModuleClassLoader;
+import org.eclipse.osgi.internal.loader.classpath.ClasspathEntry;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.TextNode;
@@ -103,6 +112,7 @@ import org.knime.core.util.Version;
 import org.knime.core.util.workflowalizer.NodeAndBundleInformation;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.Category;
+import org.knime.workbench.repository.model.IContainerObject;
 import org.knime.workbench.repository.model.IRepositoryObject;
 import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.repository.model.Root;
@@ -316,11 +326,14 @@ public class Nodalizer implements IApplication {
             System.setProperty("java.awt.headless", "true");
         }
         final Root root = RepositoryManager.INSTANCE.getCompleteRoot();
+        var availableLocales = collectLocales(root);
+        LOGGER.info("Creating node files for the following locales: " + String.join(",", availableLocales));
         List<String> previouslyReadFactories = new ArrayList<>();
 
-        parseNodesInRoot(root, null, nodeDir, extensions, bundles, previouslyReadFactories);
+        parseNodesInRoot(root, null, nodeDir, extensions, bundles, previouslyReadFactories, availableLocales);
         if (factoryList != null) {
-            parseDeprecatedNodeList(factoryList, nodeDir, extensions, bundles, previouslyReadFactories);
+            parseDeprecatedNodeList(factoryList, nodeDir, extensions, bundles, previouslyReadFactories,
+                availableLocales);
         }
 
         // Write extensions
@@ -330,7 +343,7 @@ public class Nodalizer implements IApplication {
                     try {
                         final String fileName =
                             ext.getSymbolicName().replaceAll("\\.", "_") + "_" + ext.getId().substring(1);
-                        NodalizerUtil.writeFile(extDir, fileName, ext);
+                        NodalizerUtil.writeFile(extDir, fileName, ext, Locale.US);
                     } catch (final JsonProcessingException | FileNotFoundException ex) {
                         LOGGER.error("Failed to write extension " + ext.getName() + " " + ext.getSymbolicName(), ex);
                     }
@@ -372,39 +385,118 @@ public class Nodalizer implements IApplication {
     public void stop() {
     }
 
+    private static final Pattern LOCALE_PATTERN = Pattern.compile(".+\\.([^\\./]+)\\.xml$");
+
+    private static Set<String> collectLocales(final Root root) throws IOException {
+        var locales = new HashSet<String>();
+        var processedFiles = new HashSet<File>();
+        collectLocales(root, locales, processedFiles);
+
+        // these two entries come from unrelated XML files that match the node factory XML pattern
+        locales.remove("model");
+        locales.remove("config");
+        locales.add(Locale.US.toLanguageTag());
+        return locales;
+    }
+
+    @SuppressWarnings("restriction")
+    private static void collectLocales(final IRepositoryObject ro, final Set<String> locales,
+        final Set<File> processedFiles) throws IOException {
+        if (ro instanceof NodeTemplate) {
+            var nodeFactory = ((NodeTemplate) ro).getFactory();
+            var cl = nodeFactory.getClassLoader();
+            if (cl instanceof ModuleClassLoader) {
+                var mcl = (ModuleClassLoader) cl;
+                collectLocales(mcl.getClasspathManager().getHostClasspathEntries(), locales, processedFiles);
+                for (var classPathEntry : mcl.getClasspathManager().getFragmentClasspaths()) {
+                    collectLocales(classPathEntry.getEntries(), locales, processedFiles);
+                }
+            }
+        } else if (ro instanceof IContainerObject) {
+            for (var child : ((IContainerObject) ro).getChildren()) {
+                collectLocales(child, locales, processedFiles);
+            }
+        }
+    }
+
+    @SuppressWarnings("restriction")
+    private static void collectLocales(final ClasspathEntry[] entries, final Set<String> locales,
+        final Set<File> processedFiles) throws IOException {
+        for (var classPathEntry : entries) {
+            var baseFile = classPathEntry.getBundleFile().getBaseFile();
+            if (processedFiles.add(baseFile)) {
+                if (baseFile.isDirectory()) {
+                    collectInDirectory(baseFile, locales);
+                } else {
+                    try (var jarFile = new JarFile(baseFile)) {
+                        collectInJar(jarFile, locales);
+                    }
+                }
+            }
+        }
+    }
+
+
+    private static void collectInDirectory(final File directory, final Set<String> locales) {
+        for (var f : directory.listFiles()) {
+            if (f.isDirectory()) {
+                collectInDirectory(f, locales);
+            } else {
+                var matcher = LOCALE_PATTERN.matcher(f.getName());
+                if (matcher.matches()) {
+                    locales.add(matcher.group(1));
+                }
+            }
+        }
+    }
+
+    private static void collectInJar(final JarFile jar, final Set<String> locales) throws IOException {
+        var entries = jar.entries();
+        while (entries.hasMoreElements()) {
+            var entry = entries.nextElement();
+            var name = entry.getName();
+            var matcher = LOCALE_PATTERN.matcher(name);
+            if (matcher.matches()) {
+                locales.add(matcher.group(1));
+            }
+        }
+    }
+
+
     // -- Parse nodes --
 
     private void parseNodesInRoot(final IRepositoryObject object, final List<String> path, final File directory,
-        final Map<String, ExtensionInfo> extensions, final List<String> bundles, final List<String> readFactories) {
+        final Map<String, ExtensionInfo> extensions, final List<String> bundles, final List<String> readFactories,
+        final Collection<String> availableLocales) {
         if (object instanceof NodeTemplate) {
             try {
                 final NodeTemplate template = (NodeTemplate)object;
                 final NodeFactory<? extends NodeModel> fac = template.createFactoryInstance();
                 final NodeAndBundleInformation nodeAndBundleInfo = NodeAndBundleInformationPersistor.create(fac);
                 parseNodeAndPrint(fac, fac.getClass().getName(), path, template.getCategoryPath(), template.getName(),
-                    nodeAndBundleInfo, template.isDeprecated(), directory, extensions, bundles);
+                    nodeAndBundleInfo, template.isDeprecated(), directory, extensions, bundles, availableLocales);
                 readFactories.add(fac.getClass().toString());
             } catch (final Throwable e) {
                 LOGGER.error("Failed to read node: " + object.getName() + ".", e);
             }
         } else if (object instanceof Root) {
             for (final IRepositoryObject child : ((Root)object).getChildren()) {
-                parseNodesInRoot(child, new ArrayList<>(), directory, extensions, bundles, readFactories);
+                parseNodesInRoot(child, new ArrayList<>(), directory, extensions, bundles, readFactories,
+                    availableLocales);
             }
         } else if (object instanceof Category) {
             for (final IRepositoryObject child : ((Category)object).getChildren()) {
                 final Category c = (Category)object;
                 final List<String> p = new ArrayList<>(path);
                 p.add(c.getName());
-                parseNodesInRoot(child, p, directory, extensions, bundles, readFactories);
+                parseNodesInRoot(child, p, directory, extensions, bundles, readFactories, availableLocales);
             }
-        } else {
-            return;
         }
     }
 
     private static void parseDeprecatedNodeList(final Path factoryListFile, final File directory,
-        final Map<String, ExtensionInfo> extensions, final List<String> bundles, final List<String> previouslyReadFactories) {
+        final Map<String, ExtensionInfo> extensions, final List<String> bundles,
+        final List<String> previouslyReadFactories, final Collection<String> availableLocales) {
         if (factoryListFile == null) {
             return;
         }
@@ -443,8 +535,9 @@ public class Nodalizer implements IApplication {
                     // always pass true for isDeprecated, even though the factory may not say it is deprecated
                     // pass the factory name in the file, not the name of the loaded class - due to factory class
                     // mapping these may not match
-                    parseNodeAndPrint(fac, parts[0], path, categoryPath, fac.getNodeName(), b, true, directory,
-                        extensions, bundles);
+                    parseNodeAndPrint(fac, parts[0], path, categoryPath,
+                        fac.getNodeDescription(Locale.getDefault()).getNodeName(), b, true, directory, extensions,
+                        bundles, availableLocales);
                 } else {
                     if (!b.getBundleName().isPresent()) {
                         LOGGER.warn("Bundle name is missing! " + factory);
@@ -466,7 +559,7 @@ public class Nodalizer implements IApplication {
     private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final List<String> path,
         final String categoryPath, final String name, final NodeAndBundleInformation nodeAndBundleInfo,
         final boolean isDeprecated, final File directory, final Map<String, ExtensionInfo> extensions,
-        final List<String> bundles) throws Exception {
+        final List<String> bundles, final Collection<String> availableLocales) throws Exception {
         // Read update site info
         // Do this early to prevent instantiating unnecessary nodes.
         String extensionId = null;
@@ -514,12 +607,25 @@ public class Nodalizer implements IApplication {
         nInfo.setBundleInformation(nabi, extensionId);
         nInfo.setOwner(owner);
 
+        for (var localeString : availableLocales) {
+            var locale = Locale.forLanguageTag(localeString);
+            if (fac.hasLocalizedDescription(locale)) {
+                nInfo.setLocale(locale);
+                parseNodeAndPrint(fac, factoryString, path, categoryPath, name, isDeprecated, directory, kcn, nInfo);
+            }
+        }
+    }
+
+    private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final List<String> path,
+        final String categoryPath, final String name, final boolean isDeprecated, final File directory,
+        final org.knime.core.node.Node kcn, final NodeInfo nInfo) throws Exception {
+        var nodeDescription = fac.getNodeDescription(nInfo.getLocale());
         // Read from node
         final NodeSettings settings = new NodeSettings("");
         fac.saveAdditionalFactorySettings(settings);
         final String factoryName = factoryString + ConfigUtils.contentBasedHashString(settings);
         nInfo.setFactoryName(factoryName);
-        nInfo.setTitle(name.trim());
+        nInfo.setTitle(nodeDescription.getNodeName().trim());
         nInfo.setNodeType(kcn.getType().toString());
         nInfo.setPath(path);
         nInfo.setDeprecated(isDeprecated);
@@ -539,7 +645,7 @@ public class Nodalizer implements IApplication {
         nInfo.setIcon(iconBase64);
 
         // Parse HTML, and read fields
-        final Element nodeXML = fac.getXMLDescription();
+        final Element nodeXML = nodeDescription.getXMLDescription();
         Document nodeHTML = null;
         if (nodeXML == null) {
             LOGGER.warn("Node factory XML not found for " + fac.getClass() + ". Skipping ...");
@@ -572,13 +678,13 @@ public class Nodalizer implements IApplication {
             }
         }
         nInfo.setDescription(descriptHTML);
-        parseHTML(nodeHTML, nInfo, kcn.getInteractiveViewName());
+        parseHTML(nodeHTML, nInfo, nodeDescription.getInteractiveViewName());
 
         // Read PortInfo
         final PortInfo[] inports = new PortInfo[kcn.getNrInPorts() - 1];
         final PortInfo[] outports = new PortInfo[kcn.getNrOutPorts() - 1];
         for (int i = 1; i < kcn.getNrInPorts(); i++) {
-            String portDescriptHTML = fac.getInportDescription(i - 1);
+            String portDescriptHTML = nodeDescription.getInportDescription(i - 1);
             if (!nodeHTML.getElementsMatchingOwnText("Input Ports").isEmpty()) {
                 final org.jsoup.nodes.Element sibling =
                     nodeHTML.getElementsMatchingOwnText("Input Ports").first().nextElementSibling();
@@ -598,7 +704,7 @@ public class Nodalizer implements IApplication {
             inports[i - 1] = port;
         }
         for (int i = 1; i < kcn.getNrOutPorts(); i++) {
-            String portDescriptHTML = fac.getOutportDescription(i - 1);
+            String portDescriptHTML = nodeDescription.getOutportDescription(i - 1);
             if (!nodeHTML.getElementsMatchingOwnText("Output Ports").isEmpty()) {
                 final org.jsoup.nodes.Element sibling =
                     nodeHTML.getElementsMatchingOwnText("Output Ports").first().nextElementSibling();
@@ -633,7 +739,8 @@ public class Nodalizer implements IApplication {
         }
 
         // Write to file
-        NodalizerUtil.writeFile(directory, categoryPath + "/" + name + "_" + nInfo.getId().substring(1), nInfo);
+        NodalizerUtil.writeFile(directory, categoryPath + "/" + name + "_" + nInfo.getId().substring(1), nInfo,
+            nInfo.getLocale());
     }
 
     private static List<DynamicPortGroup> parseDynamicPorts(final Element nodeXML, final String xmlTag,

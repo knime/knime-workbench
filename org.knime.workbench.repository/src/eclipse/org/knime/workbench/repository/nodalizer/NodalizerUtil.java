@@ -56,6 +56,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -201,19 +202,21 @@ public final class NodalizerUtil {
      * @param outputDir the output directory to write to
      * @param baseFileName the "base" of the file name (i.e. factoryName or symbolicName)
      * @param pojoToWrite the POJO to write to a file (i.e. {@link NodeInfo} or {@link ExtensionInfo})
+     * @param locale the locale
      * @throws JsonProcessingException if an error occurs when writing the POJOs to JSON
      * @throws FileNotFoundException if the given output directory does not exist
      * @throws UnsupportedEncodingException if the file encoding (UTF-8) is not supported
      */
-    public static void writeFile(final File outputDir, final String baseFileName, final Object pojoToWrite)
-        throws JsonProcessingException, FileNotFoundException, UnsupportedEncodingException {
+    public static void writeFile(final File outputDir, final String baseFileName, final Object pojoToWrite,
+        final Locale locale) throws JsonProcessingException, FileNotFoundException, UnsupportedEncodingException {
         final ObjectMapper map = new ObjectMapper();
         map.setSerializationInclusion(Include.NON_ABSENT);
         map.enable(SerializationFeature.INDENT_OUTPUT);
         final String json = map.writeValueAsString(pojoToWrite);
         final String regex = "\\W+";
         String fileName = baseFileName.replaceAll(regex, "_");
-        File f = new File(outputDir, fileName + ".json");
+        File f =
+            new File(outputDir, fileName + (locale.equals(Locale.US) ? "" : ("." + locale.toLanguageTag())) + ".json");
         int count = 2;
         while (f.exists()) {
             f = new File(outputDir, fileName + count + ".json");
