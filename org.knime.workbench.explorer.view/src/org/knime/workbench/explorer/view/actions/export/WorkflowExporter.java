@@ -62,7 +62,6 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubProgressMonitor;
 import org.knime.core.node.FileNodePersistor;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.NodePersistor;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.node.workflow.WorkflowPersistor;
@@ -164,7 +163,7 @@ public final class WorkflowExporter {
             if (name.startsWith(FileNodePersistor.FILESTORE_FOLDER_PREFIX)) {
                 return true;
             }
-            if (name.startsWith(NodePersistor.INTERN_FILE_DIR)) {
+            if (name.startsWith(FileNodePersistor.INTERN_FILE_DIR)) {
                 return true;
             }
             if (name.startsWith(SingleNodeContainer.DROP_DIR_NAME)) {
@@ -212,7 +211,7 @@ public final class WorkflowExporter {
             if (name.startsWith(FileNodePersistor.FILESTORE_FOLDER_PREFIX)) {
                 return true;
             }
-            if (name.startsWith(NodePersistor.INTERN_FILE_DIR)) {
+            if (name.startsWith(FileNodePersistor.INTERN_FILE_DIR)) {
                 return true;
             }
         } else {
