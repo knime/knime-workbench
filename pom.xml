@@ -80,30 +80,6 @@
 	<build>
 		<plugins>
 			<plugin>
-				<groupId>org.eclipse.tycho.extras</groupId>
-				<artifactId>tycho-source-feature-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>source-feature</id>
-						<phase>package</phase>
-						<goals>
-							<goal>source-feature</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<excludes>
-						<feature id="com.make.chromium.cef.feature"/>
-						<feature id="org.eclipse.swt.chromium.feature"/>
-						<feature id="com.make.chromium.extras.feature"/>
-						<plugin id="org.apache.batik.dom.svg.clfix"/>
-						<plugin id="org.apache.batik.dom.clfix"/>
-						<plugin id="org.knime.workbench"/>
-					</excludes>
-				</configuration>
-			</plugin>
-
-			<plugin>
 				<groupId>org.eclipse.tycho</groupId>
 				<artifactId>target-platform-configuration</artifactId>
 				<configuration>
