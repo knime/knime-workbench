@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" name="org.knime.workbench.explorer.serverinfo">
+   <implementation class="org.knime.workbench.explorer.serverinfo.RegisteredServerInfoService"/>
+   <service>
+      <provide interface="org.knime.workbench.ui.util.IRegisteredServerInfoService"/>
+   </service>
+</scr:component>

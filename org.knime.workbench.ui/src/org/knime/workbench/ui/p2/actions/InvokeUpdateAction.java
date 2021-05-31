@@ -52,6 +52,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -68,7 +69,11 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.eclipseUtil.UpdateChecker;
 import org.knime.core.eclipseUtil.UpdateChecker.UpdateInfo;
+import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.util.MutableBoolean;
+import org.knime.workbench.ui.KNIMEUIPlugin;
+import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndVersionInfo;
 
 /**
  * Custom action to open the install wizard. In addition to just opening the update manager, it also checks if there is
@@ -117,6 +122,7 @@ public class InvokeUpdateAction extends AbstractP2Action {
                 monitor.worked(1);
             }
 
+            MutableBoolean abortFlag = new MutableBoolean(false);
             if (!updateInfos.isEmpty()) {
                 Display.getDefault().syncExec(new Runnable() {
                     @Override
@@ -130,8 +136,15 @@ public class InvokeUpdateAction extends AbstractP2Action {
 
                         String message = "New releases of the following components are available:\n";
                         for (UpdateInfo ui : updateInfos) {
+                            if (ui.getName().matches("KNIME Analytics Platform \\d+.*")) {
+                                if (!showWarningIfServerConnectionsWithOldExecutorAreRegistered(shell, ui.getShortName())) {
+                                    abortFlag.setValue(true);
+                                    return;
+                                }
+                            }
                             message += "\t" + ui.getName() + "\n";
                         }
+
 
                         if (updatePossible) {
                             message += "Do you want to upgrade to the new version?";
@@ -146,12 +159,15 @@ public class InvokeUpdateAction extends AbstractP2Action {
                                 "Unfortunately a direct update is not possible. Please download the new version"
                                     + " from the KNIME web page.";
                             MessageDialog.openInformation(shell, "New KNIME release available", message);
+                            abortFlag.setValue(true);
                         }
 
                     }
                 });
             }
-            startLoadJob();
+            if (!abortFlag.booleanValue()) {
+                startLoadJob();
+            }
             return Status.OK_STATUS;
         }
     }
@@ -177,6 +193,32 @@ public class InvokeUpdateAction extends AbstractP2Action {
         }
 
         new NewReleaseCheckerJob().schedule();
+    }
+
+    private boolean showWarningIfServerConnectionsWithOldExecutorAreRegistered(final Shell shell, final String toBeInstalledAPVersion) {
+        List<ServerAndVersionInfo> outdatedServerList = KNIMEUIPlugin.getServerAndVersionInfos().stream()
+            .filter(info -> info.isExecutorOlderThan(KNIMEConstants.VERSION)).collect(Collectors.toList());
+        if (outdatedServerList.isEmpty()) {
+            return true;
+        }
+        StringBuilder b = new StringBuilder();
+        if (outdatedServerList.size() == 1) {
+            var s = outdatedServerList.get(0);
+            b.append("This client is connecting to server \"").append(s.getServerInfo()) //
+                .append("\", which is using an executor installation in version ") //
+                .append(s.getExecutorInfo().get()) // NOSONAR
+                .append(", which is older than the version to be installed. ");
+        } else {
+            b.append("This client is connecting to multiple servers (") //
+                .append(" using executor installations older than the one to be installed") //
+                .append(outdatedServerList.stream().map(ServerAndVersionInfo::getServerInfo)
+                    .collect(Collectors.joining(", ", "\"", "\""))) //
+                .append(". ");
+        }
+        b.append("Workflows created with new versions of KNIME Analytics Platform will not properly ")
+            .append("run on outdated KNIME Servers.\n\n") //
+            .append("Do you want to continue with the update?");
+        return MessageDialog.openQuestion(shell, "Connections to older servers", b.toString());
     }
 
     @Override

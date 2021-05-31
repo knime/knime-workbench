@@ -47,6 +47,8 @@
  */
 package org.knime.workbench.ui;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
@@ -73,7 +75,11 @@ import org.knime.workbench.repository.NodeUsageRegistry;
 import org.knime.workbench.ui.favorites.FavoriteNodesManager;
 import org.knime.workbench.ui.masterkey.MasterKeyPreferencePage;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.knime.workbench.ui.util.IRegisteredServerInfoService;
+import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndVersionInfo;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.ServiceReference;
 
 /**
  * Plugin class for the eclipse UI contributions.
@@ -266,6 +272,26 @@ public class KNIMEUIPlugin extends AbstractUIPlugin {
         }
         return m_resourceBundle;
     }
+
+    public static List<ServerAndVersionInfo> getServerAndVersionInfos() {
+        BundleContext context = FrameworkUtil.getBundle(KNIMEUIPlugin.class).getBundleContext();
+        ServiceReference<?> serviceReference = context.getServiceReference(IRegisteredServerInfoService.class.getName());
+        if (serviceReference == null) {
+            return Collections.emptyList();
+        }
+
+        try {
+            var service = (IRegisteredServerInfoService)context.getService(serviceReference);
+            if (service == null) {
+                return Collections.emptyList();
+            } else {
+                return service.getServerAndVersionInfos();
+            }
+        } finally {
+            context.ungetService(serviceReference);
+        }
+    }
+
 
     /**
      * Returns a (cached) image from the image registry.

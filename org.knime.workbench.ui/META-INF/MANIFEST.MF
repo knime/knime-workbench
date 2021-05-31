@@ -19,6 +19,7 @@ Export-Package: org.knime.workbench.ui,
  org.knime.workbench.ui.perspective,
  org.knime.workbench.ui.preferences,
  org.knime.workbench.ui.startup,
+ org.knime.workbench.ui.util,
  org.knime.workbench.ui.wfvars,
  org.knime.workbench.ui.workflow.metadata,
  org.knime.workbench.ui.wrapper
