@@ -79,8 +79,9 @@ public class FontStore {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(FontStore.class);
 
-    private final Map<StoreKey, StoreValue> m_fontMap =
-            new HashMap<StoreKey, StoreValue>();
+    private final Map<StoreKey, StoreValue> m_fontMap = new HashMap<>();
+
+    private final Set<String> m_installedFontFamilyNames;
 
     private final String m_defFontName;
 
@@ -98,13 +99,14 @@ public class FontStore {
      * @param defaultFont
      */
     private FontStore() {
-        Font defaultFont = defaultFont();
+        m_installedFontFamilyNames = getInstalledFontFamilyNames();
+        Font defaultFont = defaultFont(m_installedFontFamilyNames);
         FontData defaultFontData = defaultFont.getFontData()[0];
         m_defFontName = defaultFontData.getName();
         m_defFontStyle = defaultFontData.getStyle();
     }
 
-    private static Font defaultFont() {
+    private static Font defaultFont(final Set<String> installedFontFamilyNames) {
         /* We want to use "Arial" as THE font.
          * Fallback on Windows is:
          *     Microsoft Sans Serif, Trebuchet MS
@@ -115,9 +117,7 @@ public class FontStore {
          */
         // the "new Font(..." constructor does not verify the validity of a font name so we need to check first
         // if the font is available.
-        Set<String> installedFontFamilyNames = Stream.of(Display.getCurrent().getFontList(null, true))
-                .map(f -> f.getName())
-                .collect(Collectors.toSet());
+
         int defFontSize = getFontSizeFromKNIMEPrefPage();
         Font defFont = null;
         String name = "Arial";
@@ -148,6 +148,14 @@ public class FontStore {
             LOGGER.warn("Using the system default font for annotations: " + defFont);
         }
         return defFont;
+    }
+
+    /**
+     * @return
+     */
+    private static Set<String> getInstalledFontFamilyNames() {
+        return Stream.of(Display.getCurrent().getFontList(null, true)).map(FontData::getName)
+            .collect(Collectors.toSet());
     }
 
     /** Used to instantiate SWT Font objects given a name. It will check the (AWT) list of available font names first.
@@ -193,7 +201,8 @@ public class FontStore {
         if (value != null) {
             value.incrUseCount();
         } else {
-            value = new StoreValue(name, pt, style);
+            String fontName = m_installedFontFamilyNames.contains(name) ? name : m_defFontName;
+            value = new StoreValue(fontName, pt, style);
             m_fontMap.put(key, value);
         }
         return value.getFont();
