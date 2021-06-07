@@ -48,8 +48,9 @@
  */
 package org.knime.workbench.explorer.serverinfo;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.ui.util.IRegisteredServerInfoService;
@@ -62,8 +63,10 @@ import org.knime.workbench.ui.util.IRegisteredServerInfoService;
 public final class RegisteredServerInfoService implements IRegisteredServerInfoService {
 
     @Override
-    public List<ServerAndVersionInfo> getServerAndVersionInfos() {
-        return Collections.singletonList(new ServerAndVersionInfo("datasciene13", "9.12.17", "3.1"));
+    public List<ServerAndExecutorVersions> getServerAndVersionInfos() {
+        return ExplorerMountTable.getAllMountedIDs().stream()
+            .map(id -> ExplorerMountTable.getMountPoint(id).getProvider().getServerAndExecutorVersions())
+            .filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList());
     }
 
 }

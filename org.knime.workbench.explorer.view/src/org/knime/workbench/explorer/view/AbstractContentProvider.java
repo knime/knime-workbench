@@ -55,6 +55,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -128,6 +129,7 @@ import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
 import org.knime.workbench.repository.util.ConfigurableNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndExecutorVersions;
 import org.osgi.service.prefs.Preferences;
 
 /**
@@ -1676,5 +1678,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public IStatus showUploadWarning(final String uploadTargetName) {
         return Status.OK_STATUS;
+    }
+
+    /**
+     * In case this mount point connects to a KNIME Server it provides a collection with known server and executor info.
+     *
+     * @return the info or an empty optional if the mount point doesn't connect to a KNIME Server
+     */
+    public Optional<ServerAndExecutorVersions> getServerAndExecutorVersions() {
+        return Optional.empty();
     }
 }

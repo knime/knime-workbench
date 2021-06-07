@@ -76,7 +76,7 @@ import org.knime.workbench.ui.favorites.FavoriteNodesManager;
 import org.knime.workbench.ui.masterkey.MasterKeyPreferencePage;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.knime.workbench.ui.util.IRegisteredServerInfoService;
-import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndVersionInfo;
+import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndExecutorVersions;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
@@ -273,7 +273,12 @@ public class KNIMEUIPlugin extends AbstractUIPlugin {
         return m_resourceBundle;
     }
 
-    public static List<ServerAndVersionInfo> getServerAndVersionInfos() {
+    /**
+     * Returns the KNIME Server and executor versions of mounted servers.
+     *
+     * @return the versions
+     */
+    public static List<ServerAndExecutorVersions> getServerAndExecutorVersions() {
         BundleContext context = FrameworkUtil.getBundle(KNIMEUIPlugin.class).getBundleContext();
         ServiceReference<?> serviceReference = context.getServiceReference(IRegisteredServerInfoService.class.getName());
         if (serviceReference == null) {

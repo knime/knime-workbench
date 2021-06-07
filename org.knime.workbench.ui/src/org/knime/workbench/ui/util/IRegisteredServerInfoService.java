@@ -48,49 +48,109 @@
  */
 package org.knime.workbench.ui.util;
 
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 
 import org.knime.core.util.Version;
 import org.knime.workbench.ui.p2.actions.InvokeUpdateAction;
 
 /**
- * Used by {@link InvokeUpdateAction} to inform the user that an upgrade may possibly break connectivity
- * with connected KNIME Server (server executors older than AP version after upgrade), see AP-16035.
+ * Used by {@link InvokeUpdateAction} to inform the user that an upgrade may possibly break connectivity with connected
+ * KNIME Server (server executors older than AP version after upgrade), see AP-16035.
  *
  * @author wiswedel
  * @noreference Not to be implemented or used by code outside of KNIME core framework.
  */
 public interface IRegisteredServerInfoService {
 
-    public List<ServerAndVersionInfo> getServerAndVersionInfos();
+    public List<ServerAndExecutorVersions> getServerAndVersionInfos();
 
-    public static class ServerAndVersionInfo {
-        private final String m_serverInfo;
-        private final String m_serverVersion;
-        private Optional<String> m_executorInfo;
+    /**
+     * Class containing KNIME Server and KNIME Executor versions.
+     */
+    public static class ServerAndExecutorVersions {
+        private static final Version KS_413 = new Version(4,13,0);
 
-        public ServerAndVersionInfo(final String serverInfo, final String versionInfo, final String executorInfo) {
-            m_serverInfo = serverInfo;
-            m_serverVersion = versionInfo;
-            m_executorInfo = Optional.ofNullable(executorInfo);
+        private final String m_mountId;
+
+        private final Version m_serverVersion;
+
+        private Set<Version> m_executorVersion = new HashSet<>();
+
+        private Set<Version> m_analyticsPlatformVersion = new HashSet<>();
+
+        /**
+         * Creates a new object.
+         *
+         * @param mountId the mount id of the KNIME Server
+         * @param serverVersion the version of the KNIME Server
+         * @param executorVersions the versions of the executors known by the server
+         * @param analyticsPlatformVersions the versions of the Analytics Platform of the executors
+         */
+        public ServerAndExecutorVersions(final String mountId, final Version serverVersion,
+            final Set<Version> executorVersions, final Set<Version> analyticsPlatformVersions) {
+            m_mountId = mountId;
+            m_serverVersion = serverVersion;
+            m_executorVersion.addAll(executorVersions);
+            m_analyticsPlatformVersion.addAll(analyticsPlatformVersions);
         }
 
-        public String getServerInfo() {
-            return m_serverInfo;
+        /**
+         * Returns the mount id of the KNIME Server.
+         *
+         * @return the mount id
+         */
+        public String getServerMountId() {
+            return m_mountId;
         }
 
-        public Optional<String> getExecutorInfo() {
-            return m_executorInfo;
+        /**
+         * Returns the known executor versions of the KNIME Server.
+         *
+         * @return the versions
+         */
+        public Set<Version> getExecutorVersions() {
+            return m_executorVersion;
         }
 
-        public String getServerVersion() {
+        /**
+         * Returns the known Analytics Platform versions of the executors of the KNIME Server.
+         *
+         * @return the versions
+         */
+        public Set<Version> getAnalyticsPlatformVersions() {
+            return m_analyticsPlatformVersion;
+        }
+
+        /**
+         * Returns the server version
+         *
+         * @return the version
+         */
+        public Version getServerVersion() {
             return m_serverVersion;
         }
 
-        public boolean isExecutorOlderThan(final String clientVersion) {
-            return m_executorInfo.isPresent()
-                && new Version(clientVersion).isSameOrNewer(new Version(m_executorInfo.get()));
+        /**
+         * Checks if the server is older than version 4.13.0 which introduced this feature.
+         *
+         * @return <code>true</code> if the version is older than 4.13.0, <code>false</code> otherwise
+         */
+        public boolean isServerOlderThan413() {
+            return !m_serverVersion.isSameOrNewer(KS_413);
+        }
+
+        /**
+         * Compares the known Analytics Platform versions of the executor with the provided client version.
+         *
+         * @param clientVersion the Analytics Platform version of the client
+         * @return <code>true</code> if the server contains at least one executor that is older than the provided
+         *         Analytics Platform version, <code>false</code> otherwise
+         */
+        public boolean hasAnalyticsPlatformOlderThan(final Version clientVersion) {
+            return m_analyticsPlatformVersion.stream()
+                .anyMatch(v -> clientVersion.isSameOrNewer(v) && !v.isSameOrNewer(clientVersion));
         }
 
     }

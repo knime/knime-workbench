@@ -69,11 +69,11 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.eclipseUtil.UpdateChecker;
 import org.knime.core.eclipseUtil.UpdateChecker.UpdateInfo;
-import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.MutableBoolean;
+import org.knime.core.util.Version;
 import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndVersionInfo;
+import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndExecutorVersions;
 
 /**
  * Custom action to open the install wizard. In addition to just opening the update manager, it also checks if there is
@@ -195,28 +195,43 @@ public class InvokeUpdateAction extends AbstractP2Action {
         new NewReleaseCheckerJob().schedule();
     }
 
-    private boolean showWarningIfServerConnectionsWithOldExecutorAreRegistered(final Shell shell, final String toBeInstalledAPVersion) {
-        List<ServerAndVersionInfo> outdatedServerList = KNIMEUIPlugin.getServerAndVersionInfos().stream()
-            .filter(info -> info.isExecutorOlderThan(KNIMEConstants.VERSION)).collect(Collectors.toList());
-        if (outdatedServerList.isEmpty()) {
+    private static boolean showWarningIfServerConnectionsWithOldExecutorAreRegistered(final Shell shell, // NOSONAR
+        final String toBeInstalledAPVersion) {
+        final var clientVersion = new Version(toBeInstalledAPVersion);
+        final var olderServerList = KNIMEUIPlugin.getServerAndExecutorVersions().stream()
+            .filter(info -> info.isServerOlderThan413() || info.hasAnalyticsPlatformOlderThan(clientVersion))
+            .collect(Collectors.toList());
+
+        if (olderServerList.isEmpty()) {
             return true;
         }
+
         StringBuilder b = new StringBuilder();
-        if (outdatedServerList.size() == 1) {
-            var s = outdatedServerList.get(0);
-            b.append("This client is connecting to server \"").append(s.getServerInfo()) //
-                .append("\", which is using an executor installation in version ") //
-                .append(s.getExecutorInfo().get()) // NOSONAR
-                .append(", which is older than the version to be installed. ");
+        if (olderServerList.size() == 1) {
+            var s = olderServerList.get(0);
+            if(s.isServerOlderThan413()) {
+                b.append("This client is connecting to server \"").append(s.getServerMountId()) //
+                .append("\" with version \"").append(s.getServerVersion()).append("\". ");
+            } else {
+                b.append("This client is connecting to server \"").append(s.getServerMountId()) //
+                    .append("\" communicating with at least one executor with")
+                    .append(" an older Analytics Platform version (") //
+                    .append(s.getAnalyticsPlatformVersions().stream().filter(v -> !v.isSameOrNewer(clientVersion))
+                        .map(Object::toString).collect(Collectors.joining(", ", "\"", "\"")))
+                    .append("), which is older than the version to be installed (\"") //
+                    .append(toBeInstalledAPVersion).append("\"). ");
+            }
         } else {
             b.append("This client is connecting to multiple servers (") //
-                .append(" using executor installations older than the one to be installed") //
-                .append(outdatedServerList.stream().map(ServerAndVersionInfo::getServerInfo)
+                .append(olderServerList.stream().map(ServerAndExecutorVersions::getServerMountId)
                     .collect(Collectors.joining(", ", "\"", "\""))) //
-                .append(". ");
+                .append(") each communicating with at least one executor with an older") //
+                .append(" Analytics Platform version, which is older than the version to be installed (\"") //
+                .append(toBeInstalledAPVersion) //
+                .append("\"). ");
         }
         b.append("Workflows created with new versions of KNIME Analytics Platform will not properly ")
-            .append("run on outdated KNIME Servers.\n\n") //
+            .append("run on older KNIME Servers.\n\n") //
             .append("Do you want to continue with the update?");
         return MessageDialog.openQuestion(shell, "Connections to older servers", b.toString());
     }
