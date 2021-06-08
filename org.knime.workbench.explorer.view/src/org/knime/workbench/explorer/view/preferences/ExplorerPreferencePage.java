@@ -66,6 +66,8 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
     private ComboFieldEditor m_linkTemplateEditor;
     private BooleanFieldEditor m_showEJBWarningEditor;
 
+    private BooleanFieldEditor m_showOlderServerWarningEditor;
+
     /**
     *
     */
@@ -103,6 +105,11 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
             "Show a warning dialog when connecting to a server via EJB", getFieldEditorParent());
         addField(m_showEJBWarningEditor);
 
+        m_showOlderServerWarningEditor =
+            new BooleanFieldEditor(PreferenceConstants.P_SHOW_OLDER_SERVER_WARNING_DIALOG,
+                "Show a warning dialog when connecting to an older server", getFieldEditorParent());
+        addField(m_showOlderServerWarningEditor);
+
         DefaultScope.INSTANCE.getNode(FrameworkUtil.getBundle(ExplorerActivator.class).getSymbolicName())
             .addPreferenceChangeListener(this);
     }
@@ -124,6 +131,8 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
             m_linkTemplateEditor.load();
         } else if (PreferenceConstants.P_SHOW_EJB_WARNING_DIALOG.equals(event.getKey())) {
             m_showEJBWarningEditor.load();
+        } else if(PreferenceConstants.P_SHOW_OLDER_SERVER_WARNING_DIALOG.equals(event.getKey())) {
+            m_showOlderServerWarningEditor.load();
         }
     }
 

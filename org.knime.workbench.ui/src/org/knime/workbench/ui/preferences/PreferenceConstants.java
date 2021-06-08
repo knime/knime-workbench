@@ -250,4 +250,9 @@ public interface PreferenceConstants {
     public static final String P_SHOW_EJB_WARNING_DIALOG = "knime.explorer.show_EJB_warning";
     /** The default value for whether a warning dialog should appear when connecting to a server via EJB or not */
     public static final boolean P_DEFAULT_SHOW_EJB_WARNING_DIALOG = true;
+
+    /** Preference constant for showing a warning dialog when connecting to an older server */
+    public static final String P_SHOW_OLDER_SERVER_WARNING_DIALOG = "knime.explorer.show_older_server_warning";
+    /** The default value for whether a warning dialog should appear when connecting to an older server or not */
+    public static final boolean P_DEFAULT_SHOW_OLDER_SERVER_WARNING_DIALOG = true;
 }
