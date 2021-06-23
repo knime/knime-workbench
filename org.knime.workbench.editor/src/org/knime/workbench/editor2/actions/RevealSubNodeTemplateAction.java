@@ -163,8 +163,16 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
                 /* To check if this action is enabled firstly check if the component exists, the mount point is connected,
                  * and if it's actually part of the mount point. This can be easily tested by getting the root of the mount
                  * point and check if the Component is a descendant of the root, which is reflected by the full name. */
+                boolean exists = false;
+                try {
+                    // this can throw a runtime exception (javax.ws.rs.ForbiddenException) if p is a component stored on
+                    // a user's private hub space and the user is not logged in
+                    exists = fileStore.fetchInfo().exists();
+                } catch (Exception e) {
+                    // assume exists = false
+                }
                 if (templateInfo.getRole().equals(Role.Link) && fileStore.getFullName().startsWith(rootPath)
-                    && fileStore.fetchInfo().exists() && AbstractExplorerFileStore.isWorkflowGroup(rootStore)) {
+                    && exists && AbstractExplorerFileStore.isWorkflowGroup(rootStore)) {
                     return true;
                 }
             }
