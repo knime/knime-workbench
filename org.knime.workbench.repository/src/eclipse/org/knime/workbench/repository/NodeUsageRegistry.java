@@ -178,6 +178,9 @@ public final class NodeUsageRegistry {
      * @param node the last used node (is added to last used nodes and the frequency is counted)
      */
     public static void addNode(final NodeTemplate node) {
+        if (node == null) { // see AP-16950
+            return;
+        }
         NodeTemplateFrequency nodeFreq = new NodeTemplateFrequency(node);
         NodeTemplateFrequency existing = FREQUENCIES.get(nodeFreq);
         if (existing == null) {
