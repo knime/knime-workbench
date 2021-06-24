@@ -277,7 +277,10 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                     updateInput(LOADING_MESSAGE);
                     checkForStatisticUpdates();
                 }
-                m_loadState.set(LoadState.Initizalized);
+                if (m_loadState.get() != LoadState.Disposed) {
+                    // Prevent state transition if already disposed. In that case, the Part can no longer be used.
+                    m_loadState.set(LoadState.Initizalized);
+                }
                 NodeRecommendationManager.getInstance().addUpdateListener(WorkflowCoachView.this);
                 updateFrequencyColumnHeadersAndToolTips();
                 updateInput(StructuredSelection.EMPTY);
@@ -437,6 +440,9 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
             recommendations = NodeRecommendationManager.getInstance().getNodeRecommendationFor();
         } else {
             Display.getDefault().syncExec(() -> {
+                if (m_loadState.get() == LoadState.Disposed) {
+                    return;
+                }
                 m_viewer.setInput("");
                 m_viewer.refresh();
             });
@@ -470,6 +476,9 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         //update viewer
         changeViewerStateTo(ViewerState.RECOMMENDATIONS);
         Display.getDefault().syncExec(() -> {
+            if (m_loadState.get() == LoadState.Disposed) {
+                return;
+            }
             m_viewer.setInput(recommendationsWithoutDups);
             m_viewer.refresh();
             m_recommendationsAvailable = true;
@@ -493,6 +502,10 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      * Updates the names and tooltips of the frequency column headers.
      */
     private void updateFrequencyColumnHeadersAndToolTips() {
+        if (m_loadState.get() == LoadState.Disposed) {
+            return;
+        }
+
         m_namesAndToolTips  =
             NodeRecommendationManager.getInstance().getNodeTripleProviders().stream().filter(p -> p.isEnabled())
                 .map(p -> new Pair<>(p.getName(), p.getDescription())).collect(Collectors.toList());
