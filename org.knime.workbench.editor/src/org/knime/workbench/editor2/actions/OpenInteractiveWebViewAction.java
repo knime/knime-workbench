@@ -47,6 +47,9 @@ package org.knime.workbench.editor2.actions;
 
 import static org.knime.core.ui.wrapper.Wrapper.unwrap;
 import static org.knime.core.ui.wrapper.Wrapper.wraps;
+import static org.knime.js.core.JSCorePlugin.CEF_BROWSER;
+import static org.knime.js.core.JSCorePlugin.CHROME_BROWSER;
+import static org.knime.js.core.JSCorePlugin.CHROMIUM_BROWSER;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -84,6 +87,7 @@ import org.knime.js.core.JSCorePlugin;
 import org.knime.js.swt.wizardnodeview.WizardNodeView;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.core.util.KNIMEWorkspaceUtil;
 
 /**
  * Action to open an interactive web view of a node.
@@ -94,9 +98,6 @@ import org.knime.workbench.core.util.ImageRepository;
 public final class OpenInteractiveWebViewAction extends Action {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(OpenInteractiveWebViewAction.class);
-
-    private static final String CHROMIUM_BROWSER = "org.knime.ext.seleniumdrivers.multios.ChromiumWizardNodeView";
-    private static final String CHROME_BROWSER = "org.knime.ext.seleniumdrivers.multios.ChromeWizardNodeView";
 
     private final SingleInteractiveWebViewResultUI<?, ?, ?> m_webViewForNode;
     private final NodeContainerUI m_nodeContainer;
@@ -251,6 +252,13 @@ public final class OpenInteractiveWebViewAction extends Action {
                 (classString.equals(CHROMIUM_BROWSER) && !JSCorePlugin.isChromiumInstalled())) {
             classString = null;
         }
+
+        // TEMPORARY - WILL BE REMOVED AGAIN SOON - see AP-17033
+        if (KNIMEWorkspaceUtil.isRunningOnMacCatalina() && CEF_BROWSER.equals(classString)) {
+            // make sure to never use the CEF browser on Catalina
+            classString = null;
+        }
+
         if (StringUtils.isNotEmpty(classString)) {
             // try loading selected view
             viewClass = getViewClassByReflection(classString, configurationElements);
