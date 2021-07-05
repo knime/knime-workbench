@@ -572,17 +572,17 @@
    <extension point="org.eclipse.ui.bindings">
       <key
             commandId="knime.commands.updateMetaNodeLink"
-            contextId="org.eclipse.ui.contexts.window"
+            contextId="org.knime.workbench.editor.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+ALT+U"/>
       <key
             commandId="knime.commands.findnode"
-            contextId="org.eclipse.ui.contexts.window"
+            contextId="org.knime.workbench.editor.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+F"/>
       <key
             commandId="knime.commands.findnextnode"
-            contextId="org.eclipse.ui.contexts.window"
+            contextId="org.knime.workbench.editor.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+G"/>
       <key
