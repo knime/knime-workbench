@@ -345,6 +345,9 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
         getShell().setBounds(newLocation.x, newLocation.y, size.x, size.y);
 
         finishDialogCreation();
+        // set focus on wrapped component so that it can be navigated using the keyboard and elements
+        // can request the focus correctly
+        m_wrapper.setFocus();
     }
 
     /**
