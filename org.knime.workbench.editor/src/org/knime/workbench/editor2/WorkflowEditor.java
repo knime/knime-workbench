@@ -2730,9 +2730,10 @@ public class WorkflowEditor extends GraphicalEditor implements
     protected void firePropertyChange(final int property) {
 
         super.firePropertyChange(property);
-
-        // updates the editor actions
-        updateActions(m_editorActions);
+        if (!m_isClosing) { // see AP-17103
+            // updates the editor actions
+            updateActions(m_editorActions);
+        }
     }
 
     /**
