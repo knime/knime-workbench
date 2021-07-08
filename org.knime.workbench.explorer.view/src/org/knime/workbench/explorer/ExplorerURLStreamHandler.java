@@ -54,7 +54,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -400,8 +399,22 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
     }
 
-    private static String decodePath(final URL url) throws UnsupportedEncodingException {
-        return URLDecoder.decode(url.getPath(), "UTF-8");
+    /**
+     * @param url The URL to extract the decoded path part from.
+     * @return The decoded path part of the given URL, i.e. any escaped hex sequences in the shape of "% hex hex"
+     *         (potentially repeated) are decoded into their respective Unicode characters.
+     * @see URI#getPath()
+     * @throws IOException in case the given URL does not constitute a valid URI.
+     */
+    private static String decodePath(final URL url) throws IOException {
+        try {
+            // `java.net.URL` does not do any encoding or decoding of URL components. For that,
+            // it is recommended to use `java.net.URI`, which acts in accordance with RFC2396
+            // (see class documentation).
+            return url.toURI().getPath();
+        } catch (URISyntaxException e) {
+            throw new IOException(e.getCause());
+        }
     }
 
     private static boolean leavesWorkflow(final String decodedPath) {
