@@ -412,6 +412,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         try {
             // This constructs a new URI containing only the path part.
             // The single-argument URI constructor will parse the given information and throw an exception on failure.
+            // getPath will decode the given path.
             return new URI(path).getPath();
         } catch (URISyntaxException e) {  // NOSONAR: Exception is handled.
             // In this case, we assume there are disallowed characters in the path string, although

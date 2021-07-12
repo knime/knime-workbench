@@ -140,6 +140,7 @@ public class ExplorerURLStreamHandlerTest {
         m_handler.openConnection(url);
     }
 
+
     /**
      * Checks if a missing {@link NodeContext} is handled correctly.
      *
@@ -197,6 +198,16 @@ public class ExplorerURLStreamHandlerTest {
         url = new URL("knime://knime.workflow/../test.txt");
         conn = m_handler.openConnection(url);
         expectedPath = currentLocation.resolve("..").resolve("test.txt");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+
+        // Check proper handling of potentially encoded paths (see AP-17103).
+        url = new URL("knime://knime.workflow/../With Space+Plus.txt");
+        conn = m_handler.openConnection(url);
+        expectedPath = currentLocation.resolve("..").resolve("With Space+Plus.txt");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+        url = new URL("knime://knime.workflow/../With%20Space+Plus.txt");
+        conn = m_handler.openConnection(url);
+        expectedPath = currentLocation.resolve("..").resolve("With Space+Plus.txt");
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
     }
 
