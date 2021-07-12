@@ -400,20 +400,27 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     }
 
     /**
+     * Extract, decode and return the path part of a given URL. If the path part is not valid according to the spec,
+     * assume it is already decoded and return it unchanged.
      * @param url The URL to extract the decoded path part from.
      * @return The decoded path part of the given URL, i.e. any escaped hex sequences in the shape of "% hex hex"
      *         (potentially repeated) are decoded into their respective Unicode characters.
      * @see URI#getPath()
-     * @throws IOException in case the given URL does not constitute a valid URI.
      */
-    private static String decodePath(final URL url) throws IOException {
+    private static String decodePath(final URL url) {
+        String path = url.getPath();  // Consider only the path part.
         try {
-            // `java.net.URL` does not do any encoding or decoding of URL components. For that,
-            // it is recommended to use `java.net.URI`, which acts in accordance with RFC2396
-            // (see class documentation).
-            return url.toURI().getPath();
-        } catch (URISyntaxException e) {
-            throw new IOException(e.getCause());
+            // This constructs a new URI containing only the path part.
+            // The single-argument URI constructor will parse the given information and throw an exception on failure.
+            return new URI(path).getPath();
+        } catch (URISyntaxException e) {  // NOSONAR: Exception is handled.
+            // In this case, we assume there are disallowed characters in the path string, although
+            //   there are other instances that also trigger a parse error. This means this method does not enforce
+            //   or ensure that the given and returned paths are actually valid.
+            // Assuming there are disallowed characters, we conclude that the string is already decoded and return it as-is.
+            // (Checking for encoded-ness is not trivial because of ambiguous instances such as "per%cent" which may be
+            //   taken literally or interpret %ce as a byte pair representing an encoded character.)
+            return path;
         }
     }
 
