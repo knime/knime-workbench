@@ -217,15 +217,16 @@ public final class DestinationChecker <S extends AbstractExplorerFileStore,
         return result;
     }
 
+    @SuppressWarnings({"java:S1067", "java:S1541"})
     private static boolean isSameType(final AbstractExplorerFileInfo srcInfo,
         final AbstractExplorerFileInfo resultInfo) {
-        return srcInfo.isWorkflowGroup() && resultInfo.isWorkflowGroup()
-            || srcInfo.isWorkflow() && resultInfo.isWorkflow()
-            || srcInfo.isFile() && resultInfo.isFile()
-            || srcInfo.isMetaNode() && resultInfo.isMetaNode()
-            || srcInfo.isMetaNodeTemplate() && resultInfo.isMetaNodeTemplate()
-            || srcInfo.isComponentTemplate() && resultInfo.isComponentTemplate()
-            || srcInfo.isSnapshot() && resultInfo.isSnapshot();
+        return (srcInfo.isWorkflowGroup() && resultInfo.isWorkflowGroup())//
+            || (srcInfo.isWorkflow() && resultInfo.isWorkflow())//
+            || (srcInfo.isFile() && resultInfo.isFile())//
+            // allow metanode- and component-templates to overwrite each other (both are so-called workflow-templates)
+            || ((srcInfo.isMetaNode() || srcInfo.isWorkflowTemplate())
+                && (resultInfo.isMetaNode() || resultInfo.isWorkflowTemplate()))//
+            || (srcInfo.isSnapshot() && resultInfo.isSnapshot());
     }
 
     private T openMergeDialog(final S source, final T dest) {
