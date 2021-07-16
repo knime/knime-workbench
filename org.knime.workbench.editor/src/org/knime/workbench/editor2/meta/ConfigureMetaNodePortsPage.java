@@ -96,7 +96,7 @@ public class ConfigureMetaNodePortsPage extends WizardPage {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(ConfigureMetaNodePortsPage.class);
 
-    private static final String DESCRIPTION = "Specifiy the name of the node and define the number and type of "
+    private static final String DESCRIPTION = "Specify the name of the node and define the number and type of "
         + "the desired in and out ports.";
 
     private Composite m_previewPanel;
