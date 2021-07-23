@@ -56,6 +56,7 @@ import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
+import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger.LEVEL;
 import org.knime.core.node.port.database.DatabaseConnectionSettings;
 import org.knime.workbench.core.KNIMECorePlugin;
@@ -69,7 +70,7 @@ public class HeadlessPreferencesInitializer extends AbstractPreferenceInitialize
     @Override
     public void initializeDefaultPreferences() {
         IPreferenceStore store = KNIMECorePlugin.getDefault().getPreferenceStore();
-        store.setDefault(P_MAXIMUM_THREADS, 2 * Runtime.getRuntime().availableProcessors());
+        store.setDefault(P_MAXIMUM_THREADS, KNIMEConstants.DEF_MAX_THREAD_COUNT);
 
         store.setDefault(P_TEMP_DIR, System.getProperty("java.io.tmpdir"));
 
