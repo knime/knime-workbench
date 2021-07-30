@@ -47,7 +47,6 @@ package org.knime.workbench.editor2.actions;
 
 import static org.knime.core.ui.wrapper.Wrapper.unwrap;
 import static org.knime.core.ui.wrapper.Wrapper.wraps;
-import static org.knime.js.core.JSCorePlugin.CEF_BROWSER;
 import static org.knime.js.core.JSCorePlugin.CHROME_BROWSER;
 import static org.knime.js.core.JSCorePlugin.CHROMIUM_BROWSER;
 
@@ -87,7 +86,6 @@ import org.knime.js.core.JSCorePlugin;
 import org.knime.js.swt.wizardnodeview.WizardNodeView;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
-import org.knime.workbench.core.util.KNIMEWorkspaceUtil;
 
 /**
  * Action to open an interactive web view of a node.
@@ -250,12 +248,6 @@ public final class OpenInteractiveWebViewAction extends Action {
         // disable Chrome in general or Chromium if the binaries are not installed
         if (classString.equals(CHROME_BROWSER) ||
                 (classString.equals(CHROMIUM_BROWSER) && !JSCorePlugin.isChromiumInstalled())) {
-            classString = null;
-        }
-
-        // TEMPORARY - WILL BE REMOVED AGAIN SOON - see AP-17033
-        if (KNIMEWorkspaceUtil.isRunningOnMacCatalina() && CEF_BROWSER.equals(classString)) {
-            // make sure to never use the CEF browser on Catalina
             classString = null;
         }
 
