@@ -146,9 +146,9 @@ public interface PreferenceConstants {
     /** Pref constant for the line width of node connections. */
     public static final String P_CONNECTIONS_LINE_WIDTH = "knime.connectionslinewidth";
     /** Default value for the curved connection property.  */
-    public static final boolean P_DEFAULT_CURVED_CONNECTIONS = false;
+    public static final boolean P_DEFAULT_CURVED_CONNECTIONS = true;
     /** Default value for the connection line width. */
-    public static final int P_DEFAULT_CONNECTION_LINE_WIDTH = 1;
+    public static final int P_DEFAULT_CONNECTION_LINE_WIDTH = 2;
 
     /** Pref constant whether to enable auto save for workflows. */
     public static final String P_AUTO_SAVE_ENABLE = "knime.autosave.enable";
