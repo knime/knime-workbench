@@ -408,12 +408,15 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      * @see URI#getPath()
      */
     private static String decodePath(final URL url) {
-        String path = url.getPath();  // Consider only the path part.
         try {
-            // This constructs a new URI containing only the path part.
-            // The single-argument URI constructor will parse the given information and throw an exception on failure.
-            // getPath will decode the given path.
-            return new URI(path).getPath();
+            // Obtain the decoded path part using java.net.URI. Note that using java.net.URLDecoder follows a different
+            //    spec and is not correct (see AP-17103).
+            // We must not use something like `new URI( input.getPath() )` here because inputs
+            //    containing double slashes at the beginning of the path part (e.g. knime://knime.workflow//Files;
+            //    these are indeed technically valid) will lead the `URI` constructor to incorrectly interpret this as a
+            //    scheme part.
+            // Instead, we can rely on converting the entire `URL` to `URI`. `URI#getPath` will decode its path part.
+            return url.toURI().getPath();
         } catch (URISyntaxException e) {  // NOSONAR: Exception is handled.
             // In this case, we assume there are disallowed characters in the path string, although
             //   there are other instances that also trigger a parse error. This means this method does not enforce
@@ -421,7 +424,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             // Assuming there are disallowed characters, we conclude that the string is already decoded and return it as-is.
             // (Checking for encoded-ness is not trivial because of ambiguous instances such as "per%cent" which may be
             //   taken literally or interpret %ce as a byte pair representing an encoded character.)
-            return path;
+            return url.getPath();
         }
     }
 

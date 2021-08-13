@@ -205,9 +205,31 @@ public class ExplorerURLStreamHandlerTest {
         conn = m_handler.openConnection(url);
         expectedPath = currentLocation.resolve("..").resolve("With Space+Plus.txt");
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+
         url = new URL("knime://knime.workflow/../With%20Space+Plus.txt");
         conn = m_handler.openConnection(url);
         expectedPath = currentLocation.resolve("..").resolve("With Space+Plus.txt");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+
+        // Properly handle double slashes in URLs (resolve to same directory), see AP-17103.
+        url = new URL("knime://knime.workflow//Double Slash Decoded");
+        conn = m_handler.openConnection(url);
+        expectedPath = currentLocation.resolve("Double Slash Decoded");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+
+        url = new URL("knime://knime.workflow/..//Double%20Slash%20Encoded");
+        conn = m_handler.openConnection(url);
+        expectedPath = currentLocation.resolve("..").resolve("Double Slash Encoded");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+
+        url = new URL("knime://knime.workflow/..//Double Slash Decoded");
+        conn = m_handler.openConnection(url);
+        expectedPath = currentLocation.resolve("..").resolve("Double Slash Decoded");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+
+        url = new URL("knime://knime.workflow//Double%20Slash%20Encoded");
+        conn = m_handler.openConnection(url);
+        expectedPath = currentLocation.resolve("Double Slash Encoded");
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
     }
 
