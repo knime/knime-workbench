@@ -379,6 +379,9 @@ public class WorkflowMetaView extends AbstractMetaView {
             NodeSettings ns = new NodeSettings("ignored");
             try (final InputStream is = Files.newInputStream(workflowFile)) {
                 ns.load(is);
+                if (!ns.containsKey("authorInformation")) {
+                    return null;
+                }
                 final String s = ns.getConfigBase("authorInformation").getString("authored-when");
                 final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
                 return df.parse(s);
