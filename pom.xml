@@ -1,4 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
 
@@ -21,24 +23,41 @@
 	</properties>
 
 
-	<modules>
-		<module>org.knime.features.workbench</module>
-		<module>org.knime.features.explorer.view</module>
-		<module>org.knime.update.workbench</module>
-		<module>org.knime.workbench</module>
-		<module>org.knime.workbench.core</module>
-		<module>org.knime.workbench.editor</module>
-		<module>org.knime.workbench.explorer.view</module>
-		<module>org.knime.workbench.editor.svgexport</module>
-		<module>org.knime.workbench.explorer.view.tests</module>
-		<module>org.knime.workbench.help</module>
-		<module>org.knime.workbench.repository</module>
-		<module>org.knime.workbench.repository.tests</module>
-		<module>org.knime.workbench.ui</module>
-		<module>org.knime.workbench.ui.browser</module>
-		<module>org.knime.workbench.ui.layout</module>
-		<module>org.knime.workbench.workflowcoach</module>
-	</modules>
+	<profiles>
+		<profile>
+			<id>build</id>
+			<modules>
+				<module>org.knime.features.workbench</module>
+				<module>org.knime.features.explorer.view</module>
+				<module>org.knime.update.workbench</module>
+				<module>org.knime.workbench</module>
+				<module>org.knime.workbench.core</module>
+				<module>org.knime.workbench.editor</module>
+				<module>org.knime.workbench.explorer.view</module>
+				<module>org.knime.workbench.editor.svgexport</module>
+				<module>org.knime.workbench.help</module>
+				<module>org.knime.workbench.repository</module>
+				<module>org.knime.workbench.ui</module>
+				<module>org.knime.workbench.ui.browser</module>
+				<module>org.knime.workbench.ui.layout</module>
+				<module>org.knime.workbench.workflowcoach</module>
+			</modules>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+		</profile>
+		<profile>
+			<id>test</id>
+			<modules>
+				<module>org.knime.workbench.core</module>
+				<module>org.knime.workbench.explorer.view</module>
+				<module>org.knime.workbench.explorer.view.tests</module>
+				<module>org.knime.workbench.repository</module>
+				<module>org.knime.workbench.repository.tests</module>
+				<module>org.knime.workbench.ui</module>
+			</modules>
+		</profile>
+	</profiles>
 
 	<repositories>
 		<repository>

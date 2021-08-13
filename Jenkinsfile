@@ -14,7 +14,14 @@ properties([
 
 
 try {
-    knimetools.defaultTychoBuild('org.knime.update.workbench')
+    parallel (
+        'Tycho Build': {
+            knimetools.defaultTychoBuild('org.knime.update.workbench')
+        },
+        'Integrated Workflowtests': {
+            workflowTests.runIntegratedWorkflowTests(profile: 'test')
+        },
+    )
 
     stage('Sonarqube analysis') {
         env.lastStage = env.STAGE_NAME
