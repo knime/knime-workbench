@@ -85,8 +85,6 @@ import org.eclipse.jface.layout.PixelConverter;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.awt.SWT_AWT;
-import org.eclipse.swt.browser.Browser;
-import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.browser.ProgressEvent;
 import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.events.FocusAdapter;
@@ -316,7 +314,7 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
 
         // Create browser
-        m_browser = new Browser(composite, SWT.NONE);
+        m_browser = Browser.createBrowser(composite);
 
         try {
             m_browser.setUrl(new File(html).toURI().toURL().toString());
@@ -374,7 +372,7 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
 
         // Create browser
-        m_configurationBrowser = new Browser(composite, SWT.NONE);
+        m_configurationBrowser = Browser.createBrowser(composite);
 
         try {
             m_configurationBrowser.setUrl(new File(html).toURI().toURL().toString());
