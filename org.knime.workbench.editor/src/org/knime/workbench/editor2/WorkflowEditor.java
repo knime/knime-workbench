@@ -243,7 +243,6 @@ import org.knime.workbench.editor2.actions.ResetAction;
 import org.knime.workbench.editor2.actions.ResumeLoopAction;
 import org.knime.workbench.editor2.actions.RevealMetaNodeTemplateAction;
 import org.knime.workbench.editor2.actions.RevealSubNodeTemplateAction;
-import org.knime.workbench.editor2.actions.SaveAsAction;
 import org.knime.workbench.editor2.actions.SaveAsMetaNodeTemplateAction;
 import org.knime.workbench.editor2.actions.SaveAsSubNodeTemplateAction;
 import org.knime.workbench.editor2.actions.SelectLoopAction;
@@ -766,7 +765,6 @@ public class WorkflowEditor extends GraphicalEditor implements
         // Editor Actions
         final WorkbenchPartAction delete = new NodeConnectionContainerDeleteAction(this);
         final WorkbenchPartAction save = new SaveAction(this);
-        final WorkbenchPartAction saveAs = new SaveAsAction(this);
         final WorkbenchPartAction print = new PrintAction(this);
         final WorkbenchPartAction hideNodeName = new HideNodeNamesAction(this);
         final WorkbenchPartAction showNodeIdAction = new ShowNodeIdsAction(this);
@@ -833,7 +831,6 @@ public class WorkflowEditor extends GraphicalEditor implements
         m_actionRegistry.registerAction(redo);
         m_actionRegistry.registerAction(delete);
         m_actionRegistry.registerAction(save);
-        m_actionRegistry.registerAction(saveAs);
         m_actionRegistry.registerAction(print);
 
         m_actionRegistry.registerAction(openDialog);
@@ -895,7 +892,6 @@ public class WorkflowEditor extends GraphicalEditor implements
         m_editorActions.add(redo.getId());
         m_editorActions.add(delete.getId());
         m_editorActions.add(save.getId());
-        m_editorActions.add(saveAs.getId());
 
         m_editorActions.add(openDialog.getId());
         m_editorActions.add(execute.getId());
