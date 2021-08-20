@@ -131,7 +131,8 @@ final class URIPathEncoder {
      * @return a string representation of the encoded UNC path
      */
     private String encodeUNCPath(final URI uri) {
-        return "///" + encodeURI(uri).getPath();
+        URI uriEncoded = encodeURI(uri);
+        return "////" + uriEncoded.getHost() + uriEncoded.getPath();
     }
 
     /**
