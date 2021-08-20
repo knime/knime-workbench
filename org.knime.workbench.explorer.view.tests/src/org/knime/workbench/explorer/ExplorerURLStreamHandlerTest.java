@@ -354,32 +354,6 @@ public class ExplorerURLStreamHandlerTest {
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
     }
 
-
-    /**
-     * Checks if mountpoint-relative knime-URLs that reside on an UNC drive are resolved correctly (see AP-7427).
-     *
-     * @throws Exception if an error occurs
-     */
-    @Test
-    public void testResolveMountpointRelativeLocalUNC() throws Exception {
-        Assume.assumeThat(Platform.getOS(), is(Platform.OS_WIN32));
-
-        URL url = new URL("knime://knime.mountpoint/test.txt");
-
-        File currentLocation = new File("\\\\server\\repo\\workflow");
-        WorkflowCreationHelper ch = new WorkflowCreationHelper();
-        WorkflowContext.Factory fac = new WorkflowContext.Factory(currentLocation);
-        fac.setMountpointRoot(currentLocation.getParentFile());
-        ch.setWorkflowContext(fac.createContext());
-        WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), ch);
-        NodeContext.pushContext(wfm);
-
-        URLConnection conn = m_handler.openConnection(url);
-        File expectedPath = new File(currentLocation.getParentFile(), "test.txt");
-        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toURI()));
-        assertThat("Unexpected resulting file", new File(conn.getURL().toURI()), is(expectedPath));
-    }
-
     /**
      * Checks if mountpoint-relative knime-URLs are resolved correctly for old executors.
      *
@@ -454,40 +428,6 @@ public class ExplorerURLStreamHandlerTest {
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedUri));
         // we cannot check whether the Authorization header is set correctly, because HttpURLConnection
         // doesn't return it for security reasons
-    }
-
-
-
-
-    /**
-     * Checks if workflow-relative knime-URLs that reside on an UNC drive are resolved correctly (see AP-7427).
-     *
-     * @throws Exception if an error occurs
-     */
-    @Test
-    public void testResolveWorkflowRelativeLocalUNC() throws Exception {
-        Assume.assumeThat(Platform.getOS(), is(Platform.OS_WIN32));
-
-        URL url = new URL("knime://knime.workflow/workflow.knime");
-
-        File currentLocation = new File("\\\\server\\repo\\workflow");
-        WorkflowCreationHelper ch = new WorkflowCreationHelper();
-        WorkflowContext.Factory fac = new WorkflowContext.Factory(currentLocation);
-        fac.setMountpointRoot(currentLocation.getParentFile());
-        ch.setWorkflowContext(fac.createContext());
-        WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), ch);
-        NodeContext.pushContext(wfm);
-
-        URLConnection conn = m_handler.openConnection(url);
-        File expectedPath = new File(currentLocation, "workflow.knime");
-        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toURI()));
-
-        // path outside the workflow
-        url = new URL("knime://knime.workflow/../test.txt");
-        conn = m_handler.openConnection(url);
-        expectedPath = new File(currentLocation, "../test.txt");
-        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toURI()));
-        assertThat("Unexpected resulting file", new File(conn.getURL().toURI()), is(expectedPath));
     }
 
 
