@@ -112,9 +112,17 @@ public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
 
     /**
      * @return true, if the workflow of this job got overwritten after the job was created
-     * @since 5.0
+     * @since 8.7
      */
     public abstract boolean isOutDated();
+
+    /**
+     * Checks whether the job is vanished, e.g. due to a crashed executor.
+     *
+     * @return <code>true</code> if the job is vanished, <code>false</code> otherwise
+     * @since 5.0
+     */
+    public abstract boolean isVanished();
 
     /**
      * Checks whether a file represents a workflow containing a report.
