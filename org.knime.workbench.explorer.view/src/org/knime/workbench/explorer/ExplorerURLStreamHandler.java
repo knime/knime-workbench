@@ -58,7 +58,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
@@ -330,7 +329,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
     private static URL resolveMountpointRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
         throws IOException {
-        String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
+        String decodedPath = decodePath(origUrl);
 
         if (workflowContext.getRemoteRepositoryAddress().isPresent()
             && workflowContext.getServerAuthToken().isPresent()) {
@@ -376,7 +375,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         if (nodeDirectoryRef == null) {
             throw new IOException("Workflow must be saved before node-relative URLs can be used");
         }
-        String decodedPath = URLDecoder.decode(origUrl.getPath(), "UTF-8");
+        String decodedPath = decodePath(origUrl);
         File resolvedPath = new File(nodeDirectoryRef.getFile().getAbsolutePath(), decodedPath);
 
         File currentLocation = workflowContext.getCurrentLocation();

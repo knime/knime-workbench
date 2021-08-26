@@ -339,8 +339,6 @@ public class ExplorerURLStreamHandlerTest {
      */
     @Test
     public void testResolveMountPointRelativeLocal() throws Exception {
-        URL url = new URL("knime://knime.mountpoint/test.txt");
-
         Path currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
         WorkflowCreationHelper ch = new WorkflowCreationHelper();
         WorkflowContext.Factory fac = new WorkflowContext.Factory(currentLocation.toFile());
@@ -349,8 +347,20 @@ public class ExplorerURLStreamHandlerTest {
         WorkflowManager wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(), ch);
         NodeContext.pushContext(wfm);
 
+        URL url = new URL("knime://knime.mountpoint/test.txt");
         URLConnection conn = m_handler.openConnection(url);
         Path expectedPath = currentLocation.getParent().resolve("test.txt");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+
+        // Check proper handling of potentially encoded paths (see AP-17103).
+        url = new URL("knime://knime.mountpoint/With Space+Plus.txt");
+        conn = m_handler.openConnection(url);
+        expectedPath = currentLocation.getParent().resolve("With Space+Plus.txt");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+
+        url = new URL("knime://knime.mountpoint/With%20Space+Plus.txt");
+        conn = m_handler.openConnection(url);
+        expectedPath = currentLocation.getParent().resolve("With Space+Plus.txt");
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
     }
 
@@ -567,8 +577,6 @@ public class ExplorerURLStreamHandlerTest {
      */
     @Test
     public void testResolveNodeRelativeLocal() throws Exception {
-        URL url = new URL("knime://knime.node/test.txt");
-
         Path currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
         WorkflowCreationHelper ch = new WorkflowCreationHelper();
         WorkflowContext.Factory fac = new WorkflowContext.Factory(currentLocation.toFile());
@@ -578,8 +586,20 @@ public class ExplorerURLStreamHandlerTest {
         wfm.save(currentLocation.toFile(), new ExecutionMonitor(), false);
         NodeContext.pushContext(wfm);
 
+        URL url = new URL("knime://knime.node/test.txt");
         URLConnection conn = m_handler.openConnection(url);
         Path expectedPath = currentLocation.resolve("test.txt");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+
+        // Check proper handling of potentially encoded paths (see AP-17103).
+        url = new URL("knime://knime.node/With Space+Plus.txt");
+        conn = m_handler.openConnection(url);
+        expectedPath = currentLocation.resolve("With Space+Plus.txt");
+        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
+
+        url = new URL("knime://knime.node/With%20Space+Plus.txt");
+        conn = m_handler.openConnection(url);
+        expectedPath = currentLocation.resolve("With Space+Plus.txt");
         assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedPath.toUri()));
     }
 
