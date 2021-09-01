@@ -149,9 +149,7 @@ public class ExecuteAndOpenViewAction extends AbstractNodeAction {
         WorkflowManagerUI wm = getEditor().getWorkflowManagerUI();
         for (int i = 0; i < parts.length; i++) {
             NodeContainerUI nc = parts[i].getNodeContainer();
-            boolean hasView = nc.getNrViews() > 0;
-            hasView |= nc.hasInteractiveView() || nc.getInteractiveWebViews().size() > 0;
-            hasView |= OpenSubnodeWebViewAction.hasContainerView(nc);
+            boolean hasView = hasView(nc);
             if (wm.canExecuteNode(nc.getID()) && hasView) {
                 return true;
             }
@@ -159,12 +157,18 @@ public class ExecuteAndOpenViewAction extends AbstractNodeAction {
         return false;
     }
 
+    private static boolean hasView(final NodeContainerUI nc) {
+        boolean hasView = nc.getNrViews() > 0;
+        hasView |= nc.hasInteractiveView() || nc.getInteractiveWebViews().size() > 0;
+        hasView |= OpenSubnodeWebViewAction.hasContainerView(nc);
+        hasView |= OpenNodeViewAction.hasNodeView(nc);
+        return hasView;
+    }
+
     private void executeAndOpen(final NodeContainerUI cont) {
-        boolean hasView = cont.getNrViews() > 0;
+        boolean hasView = hasView(cont);
         @SuppressWarnings("rawtypes")
         final InteractiveWebViewsResultUI interactiveWebViews = cont.getInteractiveWebViews();
-        hasView |= cont.hasInteractiveView() || interactiveWebViews.size() > 0;
-        hasView |= OpenSubnodeWebViewAction.hasContainerView(cont);
         if (hasView) {
             // another listener must be registered at the workflow manager to
             // receive also those events from nodes that have just been queued
@@ -188,6 +192,8 @@ public class ExecuteAndOpenViewAction extends AbstractNodeAction {
                                     viewAction = new OpenSubnodeWebViewAction((SubNodeContainerUI)cont);
                                 } else if (interactiveWebViews.size() > 0) {
                                     viewAction = new OpenInteractiveWebViewAction(cont, interactiveWebViews.get(0));
+                                } else if(OpenNodeViewAction.hasNodeView(cont)) {
+                                    viewAction = new OpenNodeViewAction(cont);
                                 } else {
                                     viewAction = new OpenViewAction(unwrap(cont, NodeContainer.class), 0);
                                 }

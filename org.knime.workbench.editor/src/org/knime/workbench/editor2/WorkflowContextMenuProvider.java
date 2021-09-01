@@ -108,6 +108,7 @@ import org.knime.workbench.editor2.actions.MetaNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.OpenDialogAction;
 import org.knime.workbench.editor2.actions.OpenInteractiveViewAction;
 import org.knime.workbench.editor2.actions.OpenInteractiveWebViewAction;
+import org.knime.workbench.editor2.actions.OpenNodeViewAction;
 import org.knime.workbench.editor2.actions.OpenPortViewAction;
 import org.knime.workbench.editor2.actions.OpenSubNodeEditorAction;
 import org.knime.workbench.editor2.actions.OpenSubnodeWebViewAction;
@@ -401,31 +402,7 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                     ((AbstractNodeAction)action).update();
                 }
 
-                // add for node views option if applicable
-                int numNodeViews = container.getNrViews();
-                for (int i = 0; i < numNodeViews; i++) {
-                    action = new OpenViewAction(Wrapper.unwrapNC(container), i);
-                    manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
-                }
-
-                // add interactive view options
-                if (container.hasInteractiveView()) {
-                    action = new OpenInteractiveViewAction(Wrapper.unwrapNC(container));
-                    manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
-                } else {
-                    // in the 'else' block? Yes:
-                    // it's only one or the other -- do not support nodes that have
-                    // both (standard swing) interactive and web interactive views
-                    // For subnodes the views are moved into a submenu (see further below)
-                    if (!(container instanceof SubNodeContainerUI)) {
-                        final InteractiveWebViewsResultUI<?, ?, ?> interactiveWebViewsResult =
-                            container.getInteractiveWebViews();
-                        for (int i = 0; i < interactiveWebViewsResult.size(); i++) {
-                            action = new OpenInteractiveWebViewAction(container, interactiveWebViewsResult.get(i));
-                            manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
-                        }
-                    }
-                }
+                addNodeViewActions(manager, container);
 
                 if (container instanceof WorkflowManagerUI) {
                     metanodeMenuMgr = getMetaNodeMenuManager(metanodeMenuMgr, manager);
@@ -607,6 +584,39 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
         }
 
         manager.updateAll(true);
+    }
+
+    private static void addNodeViewActions(final IMenuManager menuManager, final NodeContainerUI container) {
+        // add for node views option if applicable
+        int numNodeViews = container.getNrViews();
+        IAction action;
+        for (int i = 0; i < numNodeViews; i++) {
+            action = new OpenViewAction(Wrapper.unwrapNC(container), i);
+            menuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
+        }
+
+        // add interactive view options
+        if (container.hasInteractiveView()) {
+            action = new OpenInteractiveViewAction(Wrapper.unwrapNC(container));
+            menuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
+        } else {
+            // in the 'else' block? Yes:
+            // it's only one or the other -- do not support nodes that have
+            // both (standard swing) interactive and web interactive views
+            // For subnodes the views are moved into a submenu (see further below)
+            if (!(container instanceof SubNodeContainerUI)) {
+                final InteractiveWebViewsResultUI<?, ?, ?> interactiveWebViewsResult =
+                    container.getInteractiveWebViews();
+                for (int i = 0; i < interactiveWebViewsResult.size(); i++) {
+                    action = new OpenInteractiveWebViewAction(container, interactiveWebViewsResult.get(i));
+                    menuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
+                }
+            }
+        }
+
+        // add node view actions (ui extensions framework)
+        OpenNodeViewAction.createActionIfApplicable(container)
+            .ifPresent(a -> menuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, a));
     }
 
     private static void createPortConfigMenu(final IMenuManager manager, final NodeContainerEditPart editPart) {
