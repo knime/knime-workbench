@@ -197,9 +197,11 @@ public abstract class LocalExplorerFileStore extends AbstractExplorerFileStore {
 
             // refresh project explorer
             Arrays.stream(workbench.getWorkbenchWindows()).flatMap(window -> Arrays.stream(window.getPages()))
-                .flatMap(page -> Arrays.stream(page.getViewReferences()))
-                .filter(ref -> ref.getId().equals(ExplorerView.ID)).map(ref -> (ExplorerView)ref.getView(true))
-                .map(ExplorerView::getViewer).findAny()
+                .flatMap(page -> Arrays.stream(page.getViewReferences())) //
+                .filter(ref -> ref.getId().equals(ExplorerView.ID)) //
+                .findAny() // null if Workflow Explorer view not yet initialized
+                .map(ref -> (ExplorerView)ref.getView(true)) // returns empty Optional if result is null
+                .map(ExplorerView::getViewer) //
                 .ifPresent(viewer -> viewer.getControl().getDisplay().asyncExec(() -> {
                     viewer.refresh();
                     final Object object = ContentDelegator.getTreeObjectFor(this);
