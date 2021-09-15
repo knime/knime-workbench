@@ -66,14 +66,13 @@ import org.knime.core.node.AbstractNodeView;
 import org.knime.core.node.Node;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.CheckUtils;
-import org.knime.core.node.webui.NodeView;
-import org.knime.core.node.webui.NodeViewFactory;
-import org.knime.core.node.webui.internal.NodeViewFactoryInternal;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.webui.node.view.NodeView;
+import org.knime.core.webui.node.view.NodeViewManager;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 
@@ -175,7 +174,7 @@ public class OpenNodeViewAction extends Action {
     public static boolean hasNodeView(final NodeContainerUI nc) {
         if (Wrapper.wraps(nc, NativeNodeContainer.class)) {
             NativeNodeContainer nnc = Wrapper.unwrap(nc, NativeNodeContainer.class);
-            if (NodeViewFactory.hasNodeView(nnc) || NodeViewFactoryInternal.hasNodeView(nnc)) {
+            if (NodeViewManager.hasNodeView(nnc)) {
                 return true;
             }
         }
