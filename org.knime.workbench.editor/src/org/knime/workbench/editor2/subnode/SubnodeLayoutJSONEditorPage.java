@@ -124,7 +124,6 @@ import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.SubnodeContainerConfigurationStringProvider;
 import org.knime.core.node.workflow.SubnodeContainerLayoutStringProvider;
-import org.knime.core.node.workflow.WebResourceController;
 import org.knime.core.node.workflow.WorkflowLock;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.js.core.JavaScriptViewCreator;
@@ -137,6 +136,7 @@ import org.knime.js.core.layout.bs.JSONLayoutPage;
 import org.knime.js.core.layout.bs.JSONLayoutRow;
 import org.knime.js.core.layout.bs.JSONLayoutViewContent;
 import org.knime.js.core.layout.bs.JSONNestedLayout;
+import org.knime.js.core.webtemplate.WebTemplateUtil;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 
@@ -297,8 +297,8 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
         composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
         // Web resources
-        final WebTemplate template = WebResourceController.getWebTemplateFromBundleID("knimeLayoutEditor_1.0.0");
-        final WebTemplate dT = WebResourceController.getWebTemplateFromBundleID("knimeLayoutEditor_1.0.0_Debug");
+        final WebTemplate template = WebTemplateUtil.getWebTemplateFromBundleID("knimeLayoutEditor_1.0.0");
+        final WebTemplate dT = WebTemplateUtil.getWebTemplateFromBundleID("knimeLayoutEditor_1.0.0_Debug");
         VisualLayoutViewCreator creator = new VisualLayoutViewCreator(template, dT);
         String html = "";
         try {
@@ -354,9 +354,9 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
 
         // Web resources
         final WebTemplate template =
-            WebResourceController.getWebTemplateFromBundleID("knimeConfigurationLayoutEditor_1.0.0");
+            WebTemplateUtil.getWebTemplateFromBundleID("knimeConfigurationLayoutEditor_1.0.0");
         final WebTemplate dT =
-            WebResourceController.getWebTemplateFromBundleID("knimeConfigurationLayoutEditor_1.0.0_Debug");
+            WebTemplateUtil.getWebTemplateFromBundleID("knimeConfigurationLayoutEditor_1.0.0_Debug");
         VisualLayoutViewCreator creator = new VisualLayoutViewCreator(template, dT);
         String html = "";
         try {
