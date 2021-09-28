@@ -48,26 +48,23 @@
  */
 package org.knime.workbench.editor2.subnode;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jface.wizard.Wizard;
 import org.knime.core.node.dialog.DialogNode;
-import org.knime.core.node.wizard.ViewHideable;
-import org.knime.core.node.wizard.WizardNode;
+import org.knime.core.node.wizard.page.WizardPageUtil;
+import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
+import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.SubnodeContainerConfigurationStringProvider;
 import org.knime.core.node.workflow.SubnodeContainerLayoutStringProvider;
-import org.knime.core.node.workflow.WebResourceController;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
-import org.knime.workbench.editor2.actions.SubnodeLayoutAction;
 
 /**
  *
@@ -97,12 +94,12 @@ public class SubnodeLayoutWizard extends Wizard {
         setDefaultPageImageDescriptor(
             ImageRepository.getImageDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "icons/layout_55.png"));
         WorkflowManager wfManager = m_subNodeContainer.getWorkflowManager();
-        Map<NodeID, SubNodeContainer> nestedSubnodes = WebResourceController.getSubnodeContainers(wfManager);
-        Map<NodeID, WizardNode> viewNodes = wfManager.findNodes(WizardNode.class, false);
-        LinkedHashMap<NodeIDSuffix, ViewHideable> resultMap = new LinkedHashMap<>();
-        for (Map.Entry<NodeID, WizardNode> entry : viewNodes.entrySet()) {
-            NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(wfManager.getID(), entry.getKey());
-            resultMap.put(idSuffix, entry.getValue());
+        Map<NodeID, SubNodeContainer> nestedSubnodes = WizardPageUtil.getSubPageNodes(wfManager);
+        List<NativeNodeContainer> viewNodes = WizardPageUtil.getAllWizardPageNodes(wfManager, false);
+        LinkedHashMap<NodeIDSuffix, SingleNodeContainer> resultMap = new LinkedHashMap<>();
+        for (NativeNodeContainer nc : viewNodes) {
+            NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(wfManager.getID(), nc.getID());
+            resultMap.put(idSuffix, nc);
         }
         Map<NodeID, DialogNode> viewConfigurationNodes = wfManager.findNodes(DialogNode.class, false);
         LinkedHashMap<NodeIDSuffix, DialogNode> resultMapConfiguration = new LinkedHashMap<>();
@@ -110,18 +107,10 @@ public class SubnodeLayoutWizard extends Wizard {
             NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(wfManager.getID(), entry.getKey());
             resultMapConfiguration.put(idSuffix, entry.getValue());
         }
-        List<NodeID> nodeIDs = new ArrayList<NodeID>();
-        nodeIDs.addAll(viewNodes.keySet());
         for (Map.Entry<NodeID, SubNodeContainer> entry : nestedSubnodes.entrySet()) {
-            WorkflowManager nestedWFManager = nestedSubnodes.get(entry.getKey()).getWorkflowManager();
-            if (!nestedWFManager.findNodes(WizardNode.class, SubnodeLayoutAction.WIZARD_NODE_FILTER, false, true)
-                .isEmpty()) {
-                NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(wfManager.getID(), entry.getKey());
-                resultMap.put(idSuffix, entry.getValue());
-                nodeIDs.add(entry.getKey());
-            }
+            NodeID.NodeIDSuffix idSuffix = NodeID.NodeIDSuffix.create(wfManager.getID(), entry.getKey());
+            resultMap.put(idSuffix, entry.getValue());
         }
-        Collections.sort(nodeIDs);
         m_page = new SubnodeLayoutJSONEditorPage("Change the layout configuration");
         m_page.setNodes(wfManager, m_subNodeContainer, resultMap);
         m_page.setConfigurationNodes(wfManager, m_subNodeContainer, resultMapConfiguration);

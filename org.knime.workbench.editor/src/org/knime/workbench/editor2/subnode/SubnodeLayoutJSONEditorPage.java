@@ -110,6 +110,7 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.NodeModel;
 import org.knime.core.node.dialog.DialogNode;
 import org.knime.core.node.dialog.util.ConfigurationLayoutUtil;
 import org.knime.core.node.util.ViewUtils;
@@ -118,9 +119,11 @@ import org.knime.core.node.web.WebViewContent;
 import org.knime.core.node.wizard.ViewHideable;
 import org.knime.core.node.wizard.WizardNode;
 import org.knime.core.node.wizard.util.LayoutUtil;
+import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
+import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.SubnodeContainerConfigurationStringProvider;
 import org.knime.core.node.workflow.SubnodeContainerLayoutStringProvider;
@@ -159,7 +162,7 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
 
     private SubNodeContainer m_subNodeContainer;
     private WorkflowManager m_wfManager;
-    private Map<NodeIDSuffix, ViewHideable> m_viewNodes;
+    private Map<NodeIDSuffix, SingleNodeContainer> m_viewNodes;
     @SuppressWarnings("rawtypes")
     private Map<NodeIDSuffix, DialogNode> m_dialogNodes;
     private SubnodeContainerLayoutStringProvider m_subnodeLayoutStringProvider;
@@ -546,7 +549,7 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
      * @param viewNodes a map of all available view nodes
      */
     public void setNodes(final WorkflowManager manager, final SubNodeContainer subnodeContainer,
-        final Map<NodeIDSuffix, ViewHideable> viewNodes) {
+        final Map<NodeIDSuffix, SingleNodeContainer> viewNodes) {
         m_wfManager = manager;
         m_subNodeContainer = subnodeContainer;
         m_viewNodes = viewNodes;
@@ -997,14 +1000,12 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
 
     private List<VisualLayoutEditorJSONNode> createJSONNodeList() {
         final List<VisualLayoutEditorJSONNode> nodes = new ArrayList<>();
-        for (final Entry<NodeIDSuffix, ViewHideable> viewNode : m_viewNodes.entrySet()) {
-            final ViewHideable node = viewNode.getValue();
-            final NodeID nodeID = viewNode.getKey().prependParent(m_subNodeContainer.getWorkflowManager().getID());
-            final NodeContainer nodeContainer = m_wfManager.getNodeContainer(nodeID);
+        for (final Entry<NodeIDSuffix, SingleNodeContainer> viewNode : m_viewNodes.entrySet()) {
+            final SingleNodeContainer node = viewNode.getValue();
             final VisualLayoutEditorJSONNode jsonNode =
-                new VisualLayoutEditorJSONNode(nodeContainer.getID().getIndex(), nodeContainer.getName(),
-                    nodeContainer.getNodeAnnotation().getText(), getLayout(viewNode.getValue(), viewNode.getKey()),
-                    getIcon(nodeContainer), !node.isHideInWizard(), getType(node));
+                new VisualLayoutEditorJSONNode(node.getID().getIndex(), node.getName(),
+                    node.getNodeAnnotation().getText(), getLayout(viewNode.getValue(), viewNode.getKey()),
+                    getIcon(node), !isHideInWizard(node), getType(node));
             if (node instanceof SubNodeContainer) {
                 // set to provide additional info in the Visual Layout Editor
                 boolean isSubNodeContainerUsingLegacyMode = !((SubNodeContainer)node).getSubnodeLayoutStringProvider()
@@ -1014,6 +1015,16 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
             nodes.add(jsonNode);
         }
         return nodes;
+    }
+
+    private static boolean isHideInWizard(final SingleNodeContainer nc) {
+        if (nc instanceof NativeNodeContainer) {
+            NodeModel model = ((NativeNodeContainer)nc).getNodeModel();
+            if (model instanceof ViewHideable) {
+                return ((ViewHideable)model).isHideInWizard();
+            }
+        }
+        return false;
     }
 
     private List<ConfigurationLayoutEditorJSONNode> createJSONConfigurationNodeList() {
@@ -1032,13 +1043,13 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
         return nodes;
     }
 
-    private static JSONLayoutContent getLayout(final ViewHideable node, final NodeIDSuffix id) {
+    private static JSONLayoutContent getLayout(final SingleNodeContainer node, final NodeIDSuffix id) {
         if (node instanceof SubNodeContainer) {
             final JSONNestedLayout layout = new JSONNestedLayout();
             layout.setNodeID(id.toString());
             return layout;
         }
-        return DefaultLayoutCreatorImpl.getDefaultViewContentForNode(id, node);
+        return DefaultLayoutCreatorImpl.getDefaultViewContentForNode(id, (NativeNodeContainer)node);
     }
 
     private static JSONLayoutConfigurationContent
@@ -1046,21 +1057,23 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
         return DefaultConfigurationCreatorImpl.getDefaultConfigurationContentForNode(id, node);
     }
 
-    private static String getType(final ViewHideable node) {
-        final boolean isWizardNode = node instanceof WizardNode;
+    private static String getType(final SingleNodeContainer node) {
+        NodeModel model = node instanceof NativeNodeContainer ? ((NativeNodeContainer)node).getNodeModel() : null;
+        final boolean isWizardNode = model instanceof WizardNode;
         if (isWizardNode) {
-            if (node instanceof DialogNode) {
+            if (model instanceof DialogNode) {
                 return "quickform";
             }
             return "view";
         }
-        if (node instanceof DialogNode) {
+        if (model instanceof DialogNode) {
             return "configuration";
         }
         if (node instanceof SubNodeContainer) {
             return "nestedLayout";
         }
-        throw new IllegalArgumentException("Node is not view, subnode, configuration or quickform: " + node.getClass());
+        throw new IllegalArgumentException(
+            "Node is not view, subnode, configuration or quickform: " + node.getNameWithID());
     }
 
     private static String getIcon(final NodeContainer nodeContainer) {

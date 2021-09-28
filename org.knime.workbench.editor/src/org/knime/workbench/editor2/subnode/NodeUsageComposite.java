@@ -69,11 +69,13 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
-import org.knime.core.node.dialog.DialogNode;
+import org.knime.core.node.NodeModel;
 import org.knime.core.node.wizard.ViewHideable;
+import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeID.NodeIDSuffix;
+import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
@@ -94,7 +96,7 @@ public class NodeUsageComposite extends Composite {
      * @param viewNodes the quickforms and view nodes in this component
      * @param subNodeContainer the container of the wrapped meta node
      */
-    public NodeUsageComposite(final Composite parent, final Map<NodeIDSuffix, ViewHideable> viewNodes,
+    public NodeUsageComposite(final Composite parent, final Map<NodeIDSuffix, SingleNodeContainer> viewNodes,
         final SubNodeContainer subNodeContainer) {
         super(parent, SWT.NONE);
 
@@ -122,7 +124,7 @@ public class NodeUsageComposite extends Composite {
 
     @SuppressWarnings("unused")
     private void createNodeGrid(final SubNodeContainer subNodeContainer,
-        final Map<NodeIDSuffix, ViewHideable> viewNodes) {
+        final Map<NodeIDSuffix, SingleNodeContainer> viewNodes) {
         ScrolledComposite scrollPane = new ScrolledComposite(this, SWT.V_SCROLL | SWT.H_SCROLL | SWT.BORDER);
         scrollPane.setExpandHorizontal(true);
         scrollPane.setExpandVertical(true);
@@ -151,38 +153,36 @@ public class NodeUsageComposite extends Composite {
         Button selectAllDialog = createCheckbox(composite);
 
         //individual nodes
-        for (Entry<NodeIDSuffix, ViewHideable> entry : viewNodes.entrySet()) {
+        for (Entry<NodeIDSuffix, SingleNodeContainer> entry : viewNodes.entrySet()) {
             NodeIDSuffix suffix = entry.getKey();
             NodeID id = suffix.prependParent(subNodeContainer.getWorkflowManager().getID());
             NodeContainer nodeContainer =
                 viewNodes.containsKey(suffix) ? subNodeContainer.getWorkflowManager().getNodeContainer(id) : null;
             createNodeLabelComposite(composite, id, nodeContainer);
 
-            ViewHideable model = entry.getValue();
-            Button wizardButton = createCheckbox(composite);
-            wizardButton.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    checkAllSelected(m_wizardUsageMap, selectAllWizard);
+            ViewHideable viewHideable = null;
+            SingleNodeContainer viewNode = entry.getValue();
+            if (viewNode instanceof SubNodeContainer) {
+                viewHideable = (SubNodeContainer)viewNode;
+            } else {
+                NodeModel model = ((NativeNodeContainer)viewNode).getNodeModel();
+                if (model instanceof ViewHideable) {
+                    viewHideable = (ViewHideable)model;
                 }
-            });
-            wizardButton.setToolTipText("Enable/disable for usage in WebPortal and wizard execution.");
-            wizardButton.setSelection(!model.isHideInWizard());
-            m_wizardUsageMap.put(id, wizardButton);
-            if (model instanceof DialogNode) {
-                Button dialogButton = createCheckbox(composite);
-                dialogButton.addSelectionListener(new SelectionAdapter() {
+            }
+            if (viewHideable != null) {
+                Button wizardButton = createCheckbox(composite);
+                wizardButton.addSelectionListener(new SelectionAdapter() {
                     @Override
                     public void widgetSelected(final SelectionEvent e) {
-                        checkAllSelected(m_dialogUsageMap, selectAllDialog);
+                        checkAllSelected(m_wizardUsageMap, selectAllWizard);
                     }
                 });
-                dialogButton.setToolTipText("Enable/disable for usage in component configure dialog.");
-                dialogButton.setSelection(!((DialogNode<?, ?>)model).isHideInDialog());
-                m_dialogUsageMap.put(id, dialogButton);
-            } else {
-                new Composite(composite, SWT.NONE); /* Placeholder */
+                wizardButton.setToolTipText("Enable/disable for usage in WebPortal and wizard execution.");
+                wizardButton.setSelection(!viewHideable.isHideInWizard());
+                m_wizardUsageMap.put(id, wizardButton);
             }
+            new Composite(composite, SWT.NONE); /* Placeholder */
         }
 
 //        Disabled for the moment, as Configuration nodes should not be shown in the node usage tab.
