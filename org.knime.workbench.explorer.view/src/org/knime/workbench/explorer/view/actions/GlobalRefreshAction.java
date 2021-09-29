@@ -68,7 +68,7 @@ import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
  * @author morent, KNIME AG, Zurich, Switzerland
  */
 public class GlobalRefreshAction extends ExplorerAction {
-    private static final String TOOLTIP = "Refresh the view";
+    private static final String TOOLTIP = "Refresh the selected items";
 
 
     /**
