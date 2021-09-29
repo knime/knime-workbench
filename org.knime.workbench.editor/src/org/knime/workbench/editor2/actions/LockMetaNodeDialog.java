@@ -261,8 +261,8 @@ public class LockMetaNodeDialog extends IconAndMessageDialog {
                     if (!verifyPassword(pass, m_passwordKnimeCOMTextField.getText())) {
                         MessageDialog.openError(getParentShell(),
                                                 "Invalid password", "The password you entered does "
-                                                + "not match the signature (write EMail to "
-                                                + "contact@knime.com for details)");
+                                                + "not match the signature. Write email to "
+                                                + "support@knime.com for details.");
                     } else {
                         m_newPassword = pass;
                         m_passwordHint = m_passwordHintTextField.getText();
@@ -270,7 +270,7 @@ public class LockMetaNodeDialog extends IconAndMessageDialog {
                 } catch (Exception e) {
                     MessageDialog.openError(getParentShell(),
                             "Password error", "Error while checking password. Please check if the entered signature is"
-                            + " valid or write EMail to contact@knime.com for details");
+                            + " valid or write email to support@knime.com for details.");
                     return;
                 }
             } else {
