@@ -73,6 +73,7 @@ import org.knime.core.node.wizard.AbstractWizardNodeView;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
+import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.node.workflow.action.InteractiveWebViewsResult.SingleInteractiveWebViewResult;
 import org.knime.core.ui.node.workflow.InteractiveWebViewsResultUI.SingleInteractiveWebViewResultUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
@@ -175,7 +176,7 @@ public final class OpenInteractiveWebViewAction extends Action {
                     monitor.beginTask("Waiting for the view to open", 100);
                     monitor.setCanceled(true);
                     @SuppressWarnings("rawtypes")
-                    AbstractWizardNodeView view = getConfiguredWizardNodeView(m_webViewForNode.getModel());
+                    AbstractWizardNodeView view = getConfiguredWizardNodeView(null, m_webViewForNode.getModel());
                     final String title = m_webViewForNode.getViewName();
                     Display.getDefault().asyncExec(() -> {
                         try {
@@ -208,7 +209,7 @@ public final class OpenInteractiveWebViewAction extends Action {
             NodeContext.pushContext(nc);
             try {
                 NodeModel nodeModel = nc.getNodeModel();
-                view = getConfiguredWizardNodeView(nodeModel);
+                view = getConfiguredWizardNodeView(nc, nodeModel);
             } finally {
                 NodeContext.removeLastContext();
             }
@@ -238,7 +239,8 @@ public final class OpenInteractiveWebViewAction extends Action {
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    static AbstractWizardNodeView getConfiguredWizardNodeView(final ViewableModel model) {
+    static AbstractWizardNodeView getConfiguredWizardNodeView(final SingleNodeContainer snc,
+        final ViewableModel model) {
         IExtensionRegistry registry = Platform.getExtensionRegistry();
         IConfigurationElement[] configurationElements =
                 registry.getConfigurationElementsFor("org.knime.core.WizardNodeView");
@@ -278,13 +280,13 @@ public final class OpenInteractiveWebViewAction extends Action {
         }
         if (viewClass != null) {
             try {
-                Constructor<?> constructor = viewClass.getConstructor(ViewableModel.class);
+                Constructor<?> constructor = viewClass.getConstructor(SingleNodeContainer.class, ViewableModel.class);
                 return (AbstractWizardNodeView)constructor.newInstance(model);
             } catch (Exception e) {
                 LOGGER.error("JS view can not be initialized. Falling back to internal SWT browser.");
             }
         }
-        return new WizardNodeView(model);
+        return new WizardNodeView(snc, model);
     }
 
     private static Class<?> getViewClassByReflection(final String className, final IConfigurationElement[] confElements) {

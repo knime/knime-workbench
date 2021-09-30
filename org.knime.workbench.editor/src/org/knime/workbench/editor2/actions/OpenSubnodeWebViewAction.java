@@ -142,13 +142,12 @@ public final class OpenSubnodeWebViewAction extends Action {
             return null;
         }, snc -> {
             try {
-                snc.getInteractiveWebViews();
                 @SuppressWarnings("rawtypes")
                 AbstractWizardNodeView view = null;
                 NodeContext.pushContext(snc);
                 try {
                     view = OpenInteractiveWebViewAction
-                        .getConfiguredWizardNodeView(snc.getInteractiveWebViews().get(0).getModel());
+                        .getConfiguredWizardNodeView(null, snc.getInteractiveWebViews().get(0).getModel());
                 } finally {
                     NodeContext.removeLastContext();
                 }
@@ -206,7 +205,7 @@ public final class OpenSubnodeWebViewAction extends Action {
             NodeContext.pushContext(snc);
             try {
                 SubnodeViewableModel model = new SubnodeViewableModel(snc, getSubnodeViewName(snc));
-                view = OpenInteractiveWebViewAction.getConfiguredWizardNodeView(model);
+                view = OpenInteractiveWebViewAction.getConfiguredWizardNodeView(snc, model);
                 model.registerView(view);
             } finally {
                 NodeContext.removeLastContext();
