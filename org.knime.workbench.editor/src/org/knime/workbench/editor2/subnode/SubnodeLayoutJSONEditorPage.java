@@ -48,6 +48,8 @@
  */
 package org.knime.workbench.editor2.subnode;
 
+import static org.knime.core.node.wizard.page.WizardPageUtil.isWizardPageNode;
+
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Frame;
@@ -117,7 +119,6 @@ import org.knime.core.node.util.ViewUtils;
 import org.knime.core.node.web.WebTemplate;
 import org.knime.core.node.web.WebViewContent;
 import org.knime.core.node.wizard.ViewHideable;
-import org.knime.core.node.wizard.WizardNode;
 import org.knime.core.node.wizard.util.LayoutUtil;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
@@ -1058,20 +1059,22 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
     }
 
     private static String getType(final SingleNodeContainer node) {
-        NodeModel model = node instanceof NativeNodeContainer ? ((NativeNodeContainer)node).getNodeModel() : null;
-        final boolean isWizardNode = model instanceof WizardNode;
-        if (isWizardNode) {
-            if (model instanceof DialogNode) {
-                return "quickform";
-            }
-            return "view";
-        }
-        if (model instanceof DialogNode) {
-            return "configuration";
-        }
         if (node instanceof SubNodeContainer) {
             return "nestedLayout";
+        } else if (node instanceof NativeNodeContainer) {
+            NativeNodeContainer nnc = (NativeNodeContainer)node;
+            NodeModel model = nnc.getNodeModel();
+            if (isWizardPageNode(nnc)) {
+                if (model instanceof DialogNode) {
+                    return "quickform";
+                }
+                return "view";
+            }
+            if (model instanceof DialogNode) {
+                return "configuration";
+            }
         }
+
         throw new IllegalArgumentException(
             "Node is not view, subnode, configuration or quickform: " + node.getNameWithID());
     }
