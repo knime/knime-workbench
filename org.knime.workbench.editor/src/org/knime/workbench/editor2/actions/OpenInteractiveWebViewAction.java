@@ -281,7 +281,7 @@ public final class OpenInteractiveWebViewAction extends Action {
         if (viewClass != null) {
             try {
                 Constructor<?> constructor = viewClass.getConstructor(SingleNodeContainer.class, ViewableModel.class);
-                return (AbstractWizardNodeView)constructor.newInstance(model);
+                return (AbstractWizardNodeView)constructor.newInstance(snc, model);
             } catch (Exception e) {
                 LOGGER.error("JS view can not be initialized. Falling back to internal SWT browser.");
             }
