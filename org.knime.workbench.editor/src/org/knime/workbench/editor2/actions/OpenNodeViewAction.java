@@ -105,7 +105,7 @@ public class OpenNodeViewAction extends Action {
 
     @Override
     public String getText() {
-        return m_nnc.getNodeViewName(0);
+        return "Interactive View: " + m_nnc.getNodeViewName(0);
     }
 
     @Override
