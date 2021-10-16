@@ -157,6 +157,8 @@ import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.WorkflowEditorMode;
 import org.knime.workbench.editor2.WorkflowManagerInput;
 import org.knime.workbench.editor2.WorkflowSelectionDragEditPartsTracker;
+import org.knime.workbench.editor2.actions.OpenDialogAction;
+import org.knime.workbench.editor2.actions.OpenNodeViewAction;
 import org.knime.workbench.editor2.commands.CreateConnectionCommand;
 import org.knime.workbench.editor2.commands.ReplaceNodePortCommand;
 import org.knime.workbench.editor2.commands.ShiftConnectionCommand;
@@ -840,7 +842,14 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
      */
     public void openNodeDialog() {
         final NodeContainerUI container = (NodeContainerUI)getModel();
-        openDialog(container, this);
+
+        if (OpenDialogAction.hasNodeDialog(container)) {
+            var nnc = Wrapper.unwrap(container, NativeNodeContainer.class);
+            OpenNodeViewAction.openNodeView(nnc, OpenNodeViewAction.createNodeView(nnc, true),
+                "Dialog - " + nnc.getDisplayLabel());
+        } else {
+            openDialog(container, this);
+        }
     }
 
     /**

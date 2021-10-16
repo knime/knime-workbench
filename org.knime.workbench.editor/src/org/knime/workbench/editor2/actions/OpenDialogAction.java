@@ -45,7 +45,14 @@
  */
 package org.knime.workbench.editor2.actions;
 
+import static org.knime.core.ui.wrapper.Wrapper.unwrapNC;
+import static org.knime.core.ui.wrapper.Wrapper.wraps;
+
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.ui.node.workflow.NodeContainerUI;
+import org.knime.core.webui.node.dialog.NodeDialog;
+import org.knime.core.webui.node.dialog.NodeDialogManager;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -116,7 +123,18 @@ public class OpenDialogAction extends AbstractNodeAction {
 
         NodeContainerEditPart part = selected[0];
 
-        return part.getNodeContainer().hasDialog();
+        var nc = part.getNodeContainer();
+        return nc.hasDialog() || hasNodeDialog(nc);
+    }
+
+    /**
+     * Checks whether a node has a {@link NodeDialog}.
+     *
+     * @param nc the node to check
+     * @return <code>true</code> if the node has a {@link NodeDialog}
+     */
+    public static boolean hasNodeDialog(final NodeContainerUI nc) {
+        return wraps(nc, NodeContainer.class) && NodeDialogManager.hasNodeDialog(unwrapNC(nc));
     }
 
     /**
