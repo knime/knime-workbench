@@ -100,7 +100,7 @@ public class OpenNodeViewAction extends Action {
 
     @Override
     public void run() {
-        openNodeView(m_nnc, createNodeView(m_nnc, false), getText());
+        openNodeView(m_nnc, createNodeView(m_nnc, false, true), getText());
     }
 
     @Override
@@ -159,9 +159,10 @@ public class OpenNodeViewAction extends Action {
      *
      * @param nnc the node to create the view instance for
      * @param isDialog whether the view instance is used to actually display a dialog
+     * @param isView  whether the view instance is used to actually display a view
      * @return the new view instance
      */
-    public static AbstractNodeView<?> createNodeView(final NativeNodeContainer nnc, final boolean isDialog) {
+    public static AbstractNodeView<?> createNodeView(final NativeNodeContainer nnc, final boolean isDialog, final boolean isView) {
         IExtensionRegistry registry = Platform.getExtensionRegistry();
         IExtensionPoint point = registry.getExtensionPoint(NODE_VIEW_EXTENSION_ID);
         CheckUtils.checkState(point != null, "Invalid extension point: %s", NODE_VIEW_EXTENSION_ID);
@@ -172,8 +173,9 @@ public class OpenNodeViewAction extends Action {
         try {
             Class<?> nodeViewClass = Platform.getBundle(el.getDeclaringExtension().getContributor().getName())
                 .loadClass(el.getAttribute("class"));
-            return (AbstractNodeView<?>)nodeViewClass.getConstructor(NativeNodeContainer.class, boolean.class)
-                .newInstance(nnc, isDialog);
+            return (AbstractNodeView<?>)nodeViewClass
+                .getConstructor(NativeNodeContainer.class, boolean.class, boolean.class)
+                .newInstance(nnc, isDialog, isView);
         } catch (ClassNotFoundException | InvalidRegistryObjectException | InstantiationException
                 | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
                 | SecurityException e) {
