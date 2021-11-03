@@ -74,6 +74,8 @@ import org.knime.core.ui.node.workflow.WorkflowContextUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.KNIMEServerHostnameVerifier;
+import org.knime.core.util.auth.Authenticator;
+import org.knime.core.util.auth.CouldNotAuthorizeException;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.osgi.framework.Bundle;
@@ -155,7 +157,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             WorkflowContextUI workflowContext =
                 NodeContext.getContext().getContextObjectForClass(WorkflowManagerUI.class).get().getContext();
             URLConnection conn = resolvedUrl.openConnection();
-            getServerAuthToken(workflowContext).ifPresent(t -> conn.setRequestProperty("Authorization", "Bearer " + t));
+            authorizeClient(workflowContext, conn);
 
             getRemoteRepositoryAddress(workflowContext).ifPresent(u -> m_requestModifier.modifyRequest(u, conn));
 
@@ -232,12 +234,24 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
     }
 
-    private static Optional<String> getServerAuthToken(final WorkflowContextUI workflowContext) {
+    private static void authorizeClient(final WorkflowContextUI workflowContext, final URLConnection conn)
+        throws IOException {
+        Authenticator authenticator = null;
         if (workflowContext instanceof RemoteWorkflowContext) {
-            return Optional.of(((RemoteWorkflowContext)workflowContext).getServerAuthToken());
+            authenticator = ((RemoteWorkflowContext)workflowContext).getServerAuthenticator();
         } else {
-            return Wrapper.unwrapOptional(workflowContext, WorkflowContext.class)
-                .map(c -> c.getServerAuthToken().orElse(null));
+            var unwrappedAuthenticator = Wrapper.unwrapOptional(workflowContext, WorkflowContext.class)
+                .map(c -> c.getServerAuthenticator().orElse(null));
+
+            authenticator = unwrappedAuthenticator.orElse(null);
+        }
+
+        if (authenticator != null) {
+            try {
+                authenticator.authorizeClient(conn);
+            } catch (CouldNotAuthorizeException e) {
+                throw new IOException("Error while authenticating the client: " + e.getMessage(), e);
+            }
         }
     }
 
@@ -273,7 +287,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         boolean leavesWorkflow = leavesWorkflow(decodedPath);
 
         if (leavesWorkflow && workflowContext.getRemoteRepositoryAddress().isPresent()
-            && workflowContext.getServerAuthToken().isPresent()) {
+            && workflowContext.getServerAuthenticator().isPresent()) {
             URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(),
                 workflowContext.getRelativeRemotePath().get() + "/" + decodedPath + ":data");
             return uri.normalize().toURL();
@@ -332,7 +346,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         String decodedPath = decodePath(origUrl);
 
         if (workflowContext.getRemoteRepositoryAddress().isPresent()
-            && workflowContext.getServerAuthToken().isPresent()) {
+            && workflowContext.getServerAuthenticator().isPresent()) {
             URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(), decodedPath + ":data");
             return uri.normalize().toURL();
         } else if (workflowContext.isTemporaryCopy() && workflowContext.getMountpointURI().isPresent()) {
