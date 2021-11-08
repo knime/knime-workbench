@@ -515,13 +515,17 @@ public class SpaceResourceSelectionDialog extends Dialog {
     }
 
     /**
-     * Enable/disable the name field. Must be set before dialog display/creation.
+     * Enable/disable the name field. Must be set to <code>true</code> before dialog display/creation to be shown.
+     * Invocations during the shown dialog will simply enable/disable the field if visible.
      *
      * @param enabled true if the name field should be shown, false otherwise
      * @since 6.2
      */
     public void setNameFieldEnabled(final boolean enabled) {
         m_nameFieldEnabled = enabled;
+        if (m_nameField != null) {
+            m_nameField.setEnabled(enabled);
+        }
     }
 
     /**
