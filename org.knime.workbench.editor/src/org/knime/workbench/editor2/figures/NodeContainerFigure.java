@@ -86,6 +86,7 @@ import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.interactive.ReExecutable;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NativeNodeContainer.LoopStatus;
 import org.knime.core.node.workflow.NodeContainerState;
@@ -202,6 +203,9 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
     private static final Color HEADING_CONTAINER_FOREGROUND = ColorConstants.black;
 
 
+    /** Re-execution sign */
+    public static final Image REEXECUTION_SIGN = ImageRepository.getUnscaledImage(EDITOR_PLUGIN_ID, "icons/re-execution-active.png");
+
     /** content pane, contains the port visuals and the icon. */
     private final SymbolFigure m_symbolFigure;
 
@@ -236,6 +240,8 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
     private Image m_jobExec;
 
     private Image m_metaNodeLinkIcon;
+
+    private Image m_reExecutionIcon;
 
     private Image m_metaNodeLockIcon;
 
@@ -437,6 +443,16 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
         if (!Objects.equals(m_metaNodeLockIcon, icon)) {
             m_metaNodeLockIcon = icon;
             m_symbolFigure.refreshMetaNodeLockIcon();
+        }
+    }
+
+    /**
+     * @param icon the icon associated with re-execution
+     */
+    public void setReExecutionIcon(final Image icon) {
+        if (!Objects.equals(m_reExecutionIcon, icon)) {
+            m_reExecutionIcon = icon;
+            m_symbolFigure.refreshReExecutionIcon();
         }
     }
 
@@ -706,8 +722,22 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
             setStatusAmple();
             m_statusFigure.setIcon(INACTIVE, INACTIVE_GHOSTLY);
         }
+        setReExecutableStatus(nc);
         setLoopStatus(loopStatus, state.isExecuted());
         repaint();
+    }
+
+    private void setReExecutableStatus(final NodeContainerUI nc) {
+        if (Wrapper.wraps(nc, NativeNodeContainer.class)) {
+            var nnc = Wrapper.unwrap(nc, NativeNodeContainer.class);
+            if(nnc.getNodeModel() instanceof ReExecutable) {
+                if (((ReExecutable) nnc.getNodeModel()).canTriggerReExecution()) {
+                    setReExecutionIcon(REEXECUTION_SIGN);
+                } else {
+                    setReExecutionIcon(null);
+                }
+            }
+        }
     }
 
     /**
@@ -955,6 +985,8 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
 
         private Label m_metaNodeLockLabel;
 
+        private Label m_reExecutionLabel;
+
         private Label m_nodeLockLabel;
 
         private Label m_modifiablePortLabel;
@@ -1062,6 +1094,26 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                             new RelativeLocator(m_backgroundIcon, 0.79, .24));
                 }
                 m_metaNodeLockLabel.setIcon(m_metaNodeLockIcon);
+                repaint();
+            }
+        }
+
+        /**
+         * Refreshes the re-execution icon.
+         */
+        protected void refreshReExecutionIcon() {
+            if (m_reExecutionLabel != null && m_reExecutionIcon == null) {
+                m_backgroundIcon.remove(m_reExecutionLabel);
+                m_reExecutionLabel = null;
+            } else {
+                if (m_reExecutionLabel == null) {
+                    m_reExecutionLabel = new Label();
+                    m_reExecutionLabel.setOpaque(false);
+                    m_backgroundIcon.add(m_reExecutionLabel);
+                    m_backgroundIcon.setConstraint(m_reExecutionLabel,
+                            new RelativeLocator(m_backgroundIcon, 0.79, .24));
+                }
+                m_reExecutionLabel.setIcon(m_reExecutionIcon);
                 repaint();
             }
         }
