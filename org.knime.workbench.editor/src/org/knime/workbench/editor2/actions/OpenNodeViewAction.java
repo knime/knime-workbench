@@ -53,14 +53,20 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtensionPoint;
 import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.InvalidRegistryObjectException;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.layout.GridDataFactory;
+import org.eclipse.jface.resource.FontDescriptor;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.AbstractNodeView;
 import org.knime.core.node.Node;
@@ -73,6 +79,7 @@ import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.webui.node.view.NodeView;
 import org.knime.core.webui.node.view.NodeViewManager;
+import org.knime.js.core.JSCorePlugin;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 
@@ -166,9 +173,13 @@ public class OpenNodeViewAction extends Action {
         IExtensionRegistry registry = Platform.getExtensionRegistry();
         IExtensionPoint point = registry.getExtensionPoint(NODE_VIEW_EXTENSION_ID);
         CheckUtils.checkState(point != null, "Invalid extension point: %s", NODE_VIEW_EXTENSION_ID);
-        IConfigurationElement el = Arrays.stream(point.getExtensions())//
-            .flatMap(ext -> Stream.of(ext.getConfigurationElements())).iterator().next();
-        // TODO what if nothing registered
+        var iterator = Arrays.stream(point.getExtensions())//
+            .flatMap(ext -> Stream.of(ext.getConfigurationElements())).iterator();
+        if (!iterator.hasNext()) {
+            // no node-view extension registered
+            showNoNodeViewAvailableDialog();
+        }
+        var el = iterator.next();
         NodeContext.pushContext(nnc);
         try {
             Class<?> nodeViewClass = Platform.getBundle(el.getDeclaringExtension().getContributor().getName())
@@ -182,6 +193,36 @@ public class OpenNodeViewAction extends Action {
             throw new IllegalStateException("Node view could not be created", e);
         } finally {
             NodeContext.removeLastContext();
+        }
+    }
+
+    private static void showNoNodeViewAvailableDialog() {
+        var dialog =
+            new MessageDialog(null, "CEF Browser not installed", null, "Do you want to install the CEF Browser?",
+                MessageDialog.QUESTION, 0, IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL) {
+                @Override
+                protected Control createMessageArea(final Composite composite) {
+                    var control = super.createMessageArea(composite);
+                    var boldDescriptor = FontDescriptor.createFrom(messageLabel.getFont()).setStyle(SWT.BOLD);
+                    var boldFont = boldDescriptor.createFont(messageLabel.getDisplay());
+                    messageLabel.setFont(boldFont);
+                    return control;
+                }
+
+                @Override
+                protected Control createCustomArea(final Composite parent) {
+                    var desc = new Label(parent, getMessageLabelStyle());
+                    desc.setText("In order to open the node view the Chromium Embedded Framework (CEF) Browser is used"
+                        + " and needs to be installed. It is part of the Hub Integration extension.");
+                    GridDataFactory.fillDefaults().align(SWT.FILL, SWT.BEGINNING).grab(true, false)
+                        .hint(convertHorizontalDLUsToPixels(IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH), SWT.DEFAULT)
+                        .applyTo(desc);
+                    return parent;
+                }
+            };
+
+        if (dialog.open() == 0) {
+            JSCorePlugin.installHubExtension();
         }
     }
 
