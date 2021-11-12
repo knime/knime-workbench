@@ -204,7 +204,7 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
 
 
     /** Re-execution sign */
-    public static final Image REEXECUTION_SIGN = ImageRepository.getUnscaledImage(EDITOR_PLUGIN_ID, "icons/re-execution-active.png");
+    private static final Image REEXECUTION_SIGN = ImageRepository.getUnscaledImage(EDITOR_PLUGIN_ID, "icons/re-execution-active.png");
 
     /** content pane, contains the port visuals and the icon. */
     private final SymbolFigure m_symbolFigure;
@@ -449,7 +449,7 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
     /**
      * @param icon the icon associated with re-execution
      */
-    public void setReExecutionIcon(final Image icon) {
+    private void setReExecutionIcon(final Image icon) {
         if (!Objects.equals(m_reExecutionIcon, icon)) {
             m_reExecutionIcon = icon;
             m_symbolFigure.refreshReExecutionIcon();
@@ -1101,7 +1101,7 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
         /**
          * Refreshes the re-execution icon.
          */
-        protected void refreshReExecutionIcon() {
+        private void refreshReExecutionIcon() {
             if (m_reExecutionLabel != null && m_reExecutionIcon == null) {
                 m_backgroundIcon.remove(m_reExecutionLabel);
                 m_reExecutionLabel = null;
