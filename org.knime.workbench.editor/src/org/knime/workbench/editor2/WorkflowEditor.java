@@ -180,6 +180,8 @@ import org.knime.core.node.workflow.NodePropertyChangedEvent;
 import org.knime.core.node.workflow.NodePropertyChangedListener;
 import org.knime.core.node.workflow.NodeStateChangeListener;
 import org.knime.core.node.workflow.NodeStateEvent;
+import org.knime.core.node.workflow.NodeTimer;
+import org.knime.core.node.workflow.NodeTimer.GlobalNodeStats.WorkflowType;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.NodeUIInformationEvent;
 import org.knime.core.node.workflow.NodeUIInformationListener;
@@ -531,6 +533,21 @@ public class WorkflowEditor extends GraphicalEditor implements
 
         final IPreferenceStore prefStore = KNIMEUIPlugin.getDefault().getPreferenceStore();
         prefStore.addPropertyChangeListener(this);
+
+        // update usage statistics for all workflow types e.g. from local/remote repository or KNIME Hub by
+        // double click or drag&drop or if the workflow was already open during startup but.
+        //This also includes workflows opened in remote job view.
+        if (input instanceof IURIEditorInput) {
+            //this excludes all metanodes and subnodes
+            //this workflow was opened from a Server repository or KNIME Hub but not via remote job view
+            final WorkflowType type;
+            if (input instanceof RemoteWorkflowInput) {
+                type = WorkflowType.REMOTE;
+            } else {
+                type = WorkflowType.LOCAL;
+            }
+            NodeTimer.GLOBAL_TIMER.incWorkflowOpening(getWorkflowManager().orElse(null), type);
+        }
 
         queueAfterOpen();
     }
