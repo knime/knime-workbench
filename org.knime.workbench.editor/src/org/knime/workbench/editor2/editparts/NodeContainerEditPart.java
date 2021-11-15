@@ -986,6 +986,15 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
                 editPart.getRoot().refresh();
             }
         }
+
+        if (editPart != null) {
+            // (Mis-)uses the stateChanged-method to make sure the node's
+            // visuals get updated after the node dialog is closed.
+            // E.g. in order to update the node's 're-executable'-status
+            // which is indirectly controlled by a node setting
+            // - see, e.g., NodeContainerFigure#setReExecutableStatus(...).
+            editPart.stateChanged(null);
+        }
     }
 
     public void openSubWorkflowEditor() {
