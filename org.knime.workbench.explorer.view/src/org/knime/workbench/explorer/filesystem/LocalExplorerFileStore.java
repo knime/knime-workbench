@@ -67,7 +67,6 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.NodeTimer;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.view.ContentDelegator;
@@ -224,7 +223,6 @@ public abstract class LocalExplorerFileStore extends AbstractExplorerFileStore {
             final IEditorDescriptor editorDescriptor = IDE.getEditorDescriptor(workflow.getName(), true, true);
             workbench.getActiveWorkbenchWindow().getActivePage().openEditor(new FileStoreEditorInput(workflow),
                 editorDescriptor.getId());
-            NodeTimer.GLOBAL_TIMER.incWorkflowOpening();
         } catch (PartInitException ex) {
             LOGGER.info(String.format("Could not open editor for imported workflow %s: %s.",
                 workflowSource.getName(), ex.getMessage()), ex);

@@ -57,7 +57,6 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.NodeTimer;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerView;
@@ -130,7 +129,6 @@ public class OpenWorkflowAction extends ExplorerAction {
             editorDescriptor = IDE.getEditorDescriptor(fileStore.getName());
             PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()
                 .openEditor(new FileStoreEditorInput(fileStore), editorDescriptor.getId());
-            NodeTimer.GLOBAL_TIMER.incWorkflowOpening();
             return true;
         } catch (PartInitException ex) {
             LOGGER.warn("Cannot open editor for " + fileStore + ": " + ex.getMessage(), ex);
