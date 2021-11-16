@@ -275,6 +275,11 @@ public class WorkflowMetaView extends AbstractMetaView {
             final SAXInputHandler handler = new SAXInputHandler();
             try {
                 final SAXParserFactory parserFactory = SAXParserFactory.newInstance();
+
+                // completely disable DOCTYPE declaration to prevent XXE attacks
+                // see https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
+                parserFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+
                 parserFactory.setNamespaceAware(true);
 
                 final SAXParser parser = parserFactory.newSAXParser();
