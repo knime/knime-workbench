@@ -90,7 +90,7 @@ public final class DisplayableNodeType {
         m.put(NodeType.VirtualOut, "virtual_out");
         m.put(NodeType.Visualizer, "viewer");
         m.put(NodeType.Widget, "viewer");
-        m.put(NodeType.Container, "quickform");
+        m.put(NodeType.Container, "workflowservice");
         return m;
     }
 
@@ -106,14 +106,17 @@ public final class DisplayableNodeType {
     public synchronized static DisplayableNodeType getTypeForNodeType(final NodeFactory.NodeType nodeType,
         final boolean isComponent) {
         return CACHE.computeIfAbsent(Pair.create(nodeType, isComponent), k -> {
-            Image image = ImageRepository.getUnscaledImage(KNIMEEditorPlugin.PLUGIN_ID,
-                "icons/node/background_" + NODE_IMAGE_MAP.get(nodeType) + (isComponent ? "_component" : "") + ".png");
+            String path =
+                "icons/node/background_" + NODE_IMAGE_MAP.get(nodeType) + (isComponent ? "_component" : "") + ".png";
+            var image = ImageRepository.getUnscaledImage(KNIMEEditorPlugin.PLUGIN_ID, path);
             return new DisplayableNodeType(nodeType.name(), nodeType, image);
         });
     }
 
     private final String m_displayText;
+
     private final NodeFactory.NodeType m_nodeType;
+
     private final Image m_nodeBackgroundImage;
 
     private DisplayableNodeType(final String displayText, final NodeFactory.NodeType nodeType,
