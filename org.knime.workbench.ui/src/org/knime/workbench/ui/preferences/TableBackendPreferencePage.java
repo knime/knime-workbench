@@ -51,10 +51,16 @@ package org.knime.workbench.ui.preferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.RadioGroupFieldEditor;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
+import org.eclipse.ui.forms.widgets.FormText;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
+import org.knime.core.data.TableBackend;
 import org.knime.core.data.TableBackendRegistry;
 import org.osgi.framework.FrameworkUtil;
 
@@ -74,6 +80,8 @@ public final class TableBackendPreferencePage extends FieldEditorPreferencePage 
         new ScopedPreferenceStore(InstanceScope.INSTANCE, CORE_BUNDLE_SYMBOLIC_NAME);
 
     private RadioGroupFieldEditor m_backendSelectionEditor;
+
+    private FormText m_descriptionText;
 
     /**
      * Creates a new (empty) table backend preference page.
@@ -95,16 +103,52 @@ public final class TableBackendPreferencePage extends FieldEditorPreferencePage 
     @Override
     protected void createFieldEditors() {
         final Composite parent = getFieldEditorParent();
+
+        // Backend selection
         final String[][] backendOptions = TableBackendRegistry.getInstance().getTableBackends() //
             .stream() //
             .map(t -> new String[]{t.getShortName(), t.getClass().getName()}) //
             .toArray(String[][]::new);
         m_backendSelectionEditor = new RadioGroupFieldEditor(TableBackendRegistry.PREF_KEY_TABLE_BACKEND,
-            "Table backend for new workflows", 1, backendOptions, parent);
+            "Table backend for new workflows", 1, backendOptions, parent) {
+            @Override
+            protected void fireValueChanged(final String property, final Object oldValue, final Object newValue) {
+                super.fireValueChanged(property, oldValue, newValue);
+                updateDescription((String)newValue);
+            }
+        };
         addField(m_backendSelectionEditor);
 
-        // TODO show the description
-        // The description is HTML and I did not find a widget for that
-        // Tried "Browser" (looks strange) and "FormText" (does not accept the markup)
+        // Separator
+        final Label separator = new Label(parent, SWT.SEPARATOR | SWT.HORIZONTAL);
+        separator.setLayoutData(new GridData(GridData.FILL, GridData.CENTER, true, false));
+
+        // Description
+        m_descriptionText = new FormText(parent, SWT.NO_FOCUS) {
+            @Override
+            public Point computeSize(final int wHint, final int hHint, final boolean changed) {
+                // Prevent this FormText from requesting more than 500px width
+                if (wHint == SWT.DEFAULT || wHint > 500) {
+                    return super.computeSize(500, hHint, changed);
+                }
+                return super.computeSize(wHint, hHint, changed);
+            }
+        };
+        m_descriptionText.setLayoutData(new GridData(GridData.FILL, GridData.FILL, true, true));
+        updateDescription(CORE_STORE.getString(TableBackendRegistry.PREF_KEY_TABLE_BACKEND));
+    }
+
+    @Override
+    protected void performDefaults() {
+        super.performDefaults();
+        updateDescription(m_backendSelectionEditor.getSelectionValue());
+    }
+
+    /** Update the description text using the description from the given table backend */
+    private void updateDescription(final String tableBackendName) {
+        final TableBackend selectedBackend = TableBackendRegistry.getInstance().getTableBackend(tableBackendName);
+        final String description = selectedBackend.getDescription();
+        m_descriptionText.setText(description, false, false);
+        m_descriptionText.getParent().getParent().layout(true, true);
     }
 }
