@@ -48,35 +48,63 @@
  */
 package org.knime.workbench.ui.preferences;
 
-import org.eclipse.jface.preference.PreferencePage;
-import org.eclipse.swt.SWT;
+import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.eclipse.jface.preference.FieldEditorPreferencePage;
+import org.eclipse.jface.preference.RadioGroupFieldEditor;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
+import org.eclipse.ui.preferences.ScopedPreferenceStore;
+import org.knime.core.data.TableBackendRegistry;
+import org.osgi.framework.FrameworkUtil;
 
 /**
- * This is the (empty) preference page for KNIME table backends.
+ * This is the preference page for KNIME table backends.
  *
  * @author Marc Bux, KNIME GmbH, Berlin, Germany
+ * @author Benjamin Wilhelm, KNIME GmbH, Konstanz, Germany
  */
-public final class TableBackendPreferencePage extends PreferencePage implements IWorkbenchPreferencePage {
+public final class TableBackendPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
+
+    /** The name of "org.knime.core". */
+    private static final String CORE_BUNDLE_SYMBOLIC_NAME =
+        FrameworkUtil.getBundle(TableBackendRegistry.class).getSymbolicName();
+
+    static final ScopedPreferenceStore CORE_STORE =
+        new ScopedPreferenceStore(InstanceScope.INSTANCE, CORE_BUNDLE_SYMBOLIC_NAME);
+
+    private RadioGroupFieldEditor m_backendSelectionEditor;
 
     /**
      * Creates a new (empty) table backend preference page.
      */
     public TableBackendPreferencePage() {
-        setDescription("This subsection contains preferences for KNIME table backends.");
+        setDescription("This subsection contains preferences for KNIME table backends. "
+            + "Select the table backend which should be used for new workflows here.");
     }
 
     @Override
     public void init(final IWorkbench workbench) {
-        // nothing to do
+        setPreferenceStore(CORE_STORE);
+        if (TableBackendRegistry.getInstance().isBackendPropertySet()) {
+            setMessage("The VM property \"" + TableBackendRegistry.PROPERTY_TABLE_BACKEND_IMPLEMENTATION + "\" is set. "
+                + "The configuration on this page will be ignored.", WARNING);
+        }
     }
 
     @Override
-    protected Control createContents(final Composite parent) {
-        return new Composite(parent, SWT.NULL);
-    }
+    protected void createFieldEditors() {
+        final Composite parent = getFieldEditorParent();
+        final String[][] backendOptions = TableBackendRegistry.getInstance().getTableBackends() //
+            .stream() //
+            .map(t -> new String[]{t.getShortName(), t.getClass().getName()}) //
+            .toArray(String[][]::new);
+        m_backendSelectionEditor = new RadioGroupFieldEditor(TableBackendRegistry.PREF_KEY_TABLE_BACKEND,
+            "Table backend for new workflows", 1, backendOptions, parent);
+        addField(m_backendSelectionEditor);
 
+        // TODO show the description
+        // The description is HTML and I did not find a widget for that
+        // Tried "Browser" (looks strange) and "FormText" (does not accept the markup)
+    }
 }

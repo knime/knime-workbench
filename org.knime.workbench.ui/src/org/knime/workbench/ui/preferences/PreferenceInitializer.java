@@ -53,6 +53,7 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.data.ExtensibleUtilityFactory;
+import org.knime.core.data.TableBackendRegistry;
 import org.knime.core.data.container.storage.TableStoreFormatRegistry;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -158,5 +159,6 @@ public class PreferenceInitializer extends AbstractPreferenceInitializer {
             fac.getDefaultRenderer(); // this sets the default preference for the renderer for this data type
         }
         TableStoreFormatRegistry.getInstance().getDefaultTableStoreFormat();
+        TableBackendRegistry.initDefaultPreferences();
     }
 }
