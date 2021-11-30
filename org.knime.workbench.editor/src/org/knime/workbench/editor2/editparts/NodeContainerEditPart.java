@@ -1246,12 +1246,8 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
     private void checkModifiablePortIcon() {
         if (getNodeContainer() instanceof NativeNodeContainerUI) {
             NativeNodeContainerUI nnc = (NativeNodeContainerUI)getNodeContainer();
-            try {
-                if (!nnc.getCopyOfCreationConfig().map(ncc -> ncc.getPortConfig().isPresent()).orElse(false)) {
-                    return;
-                }
-            } catch (UnsupportedOperationException e) {
-                // still show '...'-figure to inform the user about dynamic ports not being supported
+            if (!nnc.isPortConfigurableViaMenu()) {
+                return;
             }
             NodeContainerFigure fig = (NodeContainerFigure)getFigure();
             fig.setModifiablePortIcon(this);
