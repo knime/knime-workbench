@@ -168,14 +168,16 @@
 			<xsl:if test="t:dynInPort">
                 <div class="group">
                     <div class="groupname">Dynamic Input Ports</div>
-                    <table>
-                        <tr>
-                            <td>
-                                Click on the three dots in the bottom left corner of the node or use the context 
-                                menu entry to add additional input ports.
-                            </td>
-                        </tr>
-                    </table>
+                    <xsl:if test="count(t:dynInPort[@configurable-via-menu='false']) = 0">
+                        <table>
+                            <tr>
+                                <td>
+                                    Click on the three dots in the bottom left corner of the node or use the context 
+                                    menu entry to add additional input ports.
+                                </td>
+                            </tr>
+                        </table>
+                    </xsl:if>
                     <table>
                         <xsl:for-each select="t:dynInPort">
                             <xsl:sort select="@insert-before" data-type="number"/>
@@ -194,14 +196,16 @@
             <xsl:if test="t:dynOutPort">
                 <div class="group">
                     <div class="groupname">Dynamic Output Ports</div>
-                    <table>
-                        <tr>
-                            <td>
-                                Click on the three dots in the bottom left corner of the node or use the context 
-                                menu entry to add additional output ports.
-                            </td>
-                        </tr>
-                    </table>
+                    <xsl:if test="count(t:dynOutPort[@configurable-via-menu='false']) = 0">
+	                    <table>
+	                        <tr>
+	                            <td>
+	                                Click on the three dots in the bottom left corner of the node or use the context 
+	                                menu entry to add additional output ports.
+	                            </td>
+	                        </tr>
+	                    </table>
+                    </xsl:if>
                     <table>
                         <xsl:for-each select="t:dynOutPort">
                             <xsl:sort select="@insert-before" data-type="number"/>
