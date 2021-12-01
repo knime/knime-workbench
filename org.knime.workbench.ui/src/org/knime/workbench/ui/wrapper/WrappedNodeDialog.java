@@ -622,7 +622,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
                         // valid settings
                         if (confirmApply()) {
                             // apply settings
-                            checkSettingsForPasswordsAndWarn(m_nodeContainer.applySettingsFromDialog());
+                            checkSettingsForPasswordsAndWarn(callApplySettingsFromDialog());
                             return true;
                         } else {
                             // user canceled reset and apply
@@ -632,7 +632,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
                     } else {
                         // invalid settings
                         // apply settings to get the exception
-                        m_nodeContainer.applySettingsFromDialog();
+                        callApplySettingsFromDialog();
                         // we should never go here
                         // (since we should have invalid settings)
                         throw new IllegalStateException("Settings are not valid but apply settings throws no exception");
@@ -641,12 +641,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
             } else {
                 // not executed
                 getShell().setCursor(Display.getCurrent().getSystemCursor(SWT.CURSOR_WAIT));
-                checkSettingsForPasswordsAndWarn(m_nodeContainer.applySettingsFromDialog());
-
-                if (m_postApplyDialogAction != null) {
-                    m_postApplyDialogAction.accept(m_dialogPane);
-                    m_postApplyDialogAction = null; //to call the action only once
-                }
+                checkSettingsForPasswordsAndWarn(callApplySettingsFromDialog());
                 return true;
             }
         } catch (InvalidSettingsException ise) {
@@ -668,6 +663,18 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
             getShell().setCursor(null);
         }
         return false;
+    }
+
+    /**
+     * Calls m_nodeContainer.applySettingsFromDialog() and applies the m_postApplyDialogAction, if set.
+     */
+    private NodeSettings callApplySettingsFromDialog() throws InvalidSettingsException {
+        var result = m_nodeContainer.applySettingsFromDialog();
+        if (m_postApplyDialogAction != null) {
+            m_postApplyDialogAction.accept(m_dialogPane);
+            m_postApplyDialogAction = null; //to call the action only once
+        }
+        return result;
     }
 
     private static void checkSettingsForPasswordsAndWarn(final NodeSettings settings) {
