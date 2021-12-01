@@ -204,7 +204,7 @@ public final class OpenSubnodeWebViewAction extends Action {
             AbstractWizardNodeView view = null;
             NodeContext.pushContext(snc);
             try {
-                SubnodeViewableModel model = new SubnodeViewableModel(snc, getSubnodeViewName(snc));
+                SubnodeViewableModel model = new SubnodeViewableModel(snc, getSubnodeViewName(snc), true, null);
                 view = OpenInteractiveWebViewAction.getConfiguredWizardNodeView(snc, model);
                 model.registerView(view);
             } finally {
