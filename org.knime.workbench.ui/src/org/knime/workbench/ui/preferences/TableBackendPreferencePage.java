@@ -95,8 +95,9 @@ public final class TableBackendPreferencePage extends FieldEditorPreferencePage 
     public void init(final IWorkbench workbench) {
         setPreferenceStore(CORE_STORE);
         if (TableBackendRegistry.getInstance().isBackendPropertySet()) {
-            setMessage("The VM property \"" + TableBackendRegistry.PROPERTY_TABLE_BACKEND_IMPLEMENTATION + "\" is set. "
-                + "The configuration on this page will be ignored.", WARNING);
+            setMessage("The system property \"" + TableBackendRegistry.PROPERTY_TABLE_BACKEND_IMPLEMENTATION
+                + "\" is set (probably in the knime.ini file). The configuration on this page will be ignored.",
+                WARNING);
         }
     }
 
