@@ -58,6 +58,7 @@ import org.knime.core.node.workflow.NodeAnnotation;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.NodeUIInformationEvent;
+import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.WorkflowSelectionDragEditPartsTracker;
 import org.knime.workbench.editor2.figures.NodeAnnotationFigure;
@@ -98,11 +99,12 @@ public class NodeAnnotationEditPart extends AnnotationEditPart {
             int h = anno.getHeight();
             boolean update = false; // update only if anno has no ui info
             boolean isDirty = false; // check if the workflow is already dirty
+            WorkflowManagerUI workflowManager = parent != null ? parent.getWorkflowManager() : null;
             //there seem to be occasions where the node container doesn't exist anymore
-            if (!parent.getWorkflowManager().containsNodeContainer(nodeID)) {
+            if (workflowManager == null || !workflowManager.containsNodeContainer(nodeID)) {
                 return;
             }
-            final NodeUIInformation nodeUI = parent.getWorkflowManager().getNodeContainer(nodeID).getUIInformation();
+            final NodeUIInformation nodeUI = workflowManager.getNodeContainer(nodeID).getUIInformation();
             if ((w <= 0) || (h <= 0)) {
                 /* this code can be removed (but not for a bug fix release) as this
                  * method is called at least twice during activation and the 2nd
@@ -134,7 +136,7 @@ public class NodeAnnotationEditPart extends AnnotationEditPart {
             }
             if (nodeUI != null) {
                 final NodeContainerEditPart nodePart =
-                    (NodeContainerEditPart)getViewer().getEditPartRegistry().get(parent.getWorkflowManager().getNodeContainer(nodeID));
+                    (NodeContainerEditPart)getViewer().getEditPartRegistry().get(workflowManager.getNodeContainer(nodeID));
                 final Point offset;
                 final int nodeHeight;
                 final int symbFigWidth;
