@@ -3672,8 +3672,11 @@ public class WorkflowEditor extends GraphicalEditor implements
         }
     }
 
-    /** Unsets the dirty flag if underlying wfm is not dirty. */
-    private void unmarkDirty() {
+    /**
+     * Unsets the dirty flag if underlying wfm is not dirty.
+     * @since 4.6 (made public)
+     **/
+    public void unmarkDirty() {
         if (m_isDirty && !m_manager.isDirty()) {
             m_isDirty = false;
             SyncExecQueueDispatcher.asyncExec(new Runnable() {
