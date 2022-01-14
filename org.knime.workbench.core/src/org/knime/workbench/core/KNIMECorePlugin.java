@@ -55,6 +55,7 @@ import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.jface.util.IPropertyChangeListener;
@@ -298,8 +299,9 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             KNIMECorePlugin.getDefault().getPreferenceStore();
         int maxThreads = pStore.getInt(
                 HeadlessPreferencesConstants.P_MAXIMUM_THREADS);
-        String maxTString =
-            System.getProperty(KNIMEConstants.PROPERTY_MAX_THREAD_COUNT);
+        var useEnv = !StringUtils.isEmpty(System.getenv(KNIMEConstants.ENV_MAX_THREAD_COUNT));
+        String maxTString = useEnv ? System.getenv(KNIMEConstants.ENV_MAX_THREAD_COUNT)
+            : System.getProperty(KNIMEConstants.PROPERTY_MAX_THREAD_COUNT);
         if (maxTString == null) {
             if (maxThreads <= 0) {
                 LOGGER.warn("Can't set " + maxThreads
@@ -307,12 +309,13 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             } else {
                 KNIMEConstants.GLOBAL_THREAD_POOL.setMaxThreads(maxThreads);
                 LOGGER.debug("Setting KNIME max thread count to "
-                        + maxThreads);
+                    + maxThreads);
             }
         } else {
-            LOGGER.debug("Ignoring thread count from preference page ("
-                    + maxThreads + "), since it has set by java property "
-                    + "\"org.knime.core.maxThreads\" (" + maxTString + ")");
+            LOGGER.debug(String.format(
+                "Ignoring thread count from preference page (%d), since it has been set by %s \"%s\" (%s)", maxThreads,
+                useEnv ? "java property" : "environment variable",
+                useEnv ? KNIMEConstants.ENV_MAX_THREAD_COUNT : KNIMEConstants.PROPERTY_MAX_THREAD_COUNT, maxTString));
         }
     }
 
