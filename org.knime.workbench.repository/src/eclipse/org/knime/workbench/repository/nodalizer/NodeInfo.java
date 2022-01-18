@@ -84,7 +84,7 @@ public class NodeInfo {
     private String m_icon;
     private String m_nodeType;
     private boolean m_deprecated;
-    private boolean m_streamable;
+    private List<String> m_tags;
     private PortInfo[] m_inPorts;
     private PortInfo[] m_outPorts;
     private String m_owner;
@@ -227,12 +227,12 @@ public class NodeInfo {
     }
 
     /**
-     * Returns {@code true} if the node is streamable.
+     * Returns list of tags.
      *
-     * @return {@code true} if the node is streamable
+     * @return list of tags
      */
-    public boolean getStreamable() {
-        return m_streamable;
+    public List<String> getTags() {
+        return m_tags;
     }
 
     /**
@@ -425,12 +425,12 @@ public class NodeInfo {
     }
 
     /**
-     * Sets if the node is streamable or not.
+     * Sets list of tags.
      *
-     * @param streamable if the node is streamable or not
+     * @param tags an array of tags
      */
-    public void setStreamable(final boolean streamable) {
-        m_streamable = streamable;
+    public void setTags(final List<String> tags) {
+        m_tags = tags;
     }
 
     /**

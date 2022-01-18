@@ -523,7 +523,12 @@ public class Nodalizer implements IApplication {
         nInfo.setNodeType(kcn.getType().toString());
         nInfo.setPath(path);
         nInfo.setDeprecated(isDeprecated);
-        nInfo.setStreamable(NodeUtil.isStreamable(kcn));
+
+        nInfo.getTags().addAll(nInfo.getPath());
+
+        if (NodeUtil.isStreamable(kcn)) {
+            nInfo.getTags().add("streamable");
+        }
 
         // Read icon
         URL imageURL = fac.getIcon();
