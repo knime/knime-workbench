@@ -527,7 +527,7 @@ public class Nodalizer implements IApplication {
         nInfo.getTags().addAll(nInfo.getPath());
 
         if (NodeUtil.isStreamable(kcn)) {
-            nInfo.getTags().add("streamable");
+            nInfo.getTags().add("Streamable");
         }
 
         // Read icon
