@@ -84,6 +84,7 @@ public class NodeInfo {
     private String m_icon;
     private String m_nodeType;
     private boolean m_deprecated;
+    private boolean m_streamable;
     private List<String> m_tags;
     private PortInfo[] m_inPorts;
     private PortInfo[] m_outPorts;
@@ -224,6 +225,15 @@ public class NodeInfo {
      */
     public boolean getDeprecated() {
         return m_deprecated;
+    }
+
+    /**
+     * Returns {@code true} if the node is streamable.
+     *
+     * @return {@code true} if the node is streamable
+     */
+    public boolean getStreamable() {
+        return m_streamable;
     }
 
     /**
@@ -422,6 +432,15 @@ public class NodeInfo {
      */
     public void setDeprecated(final boolean deprecated) {
         m_deprecated = deprecated;
+    }
+
+    /**
+     * Sets if the node is streamable or not.
+     *
+     * @param streamable if the node is streamable or not
+     */
+    public void setStreamable(final boolean streamable) {
+        m_streamable = streamable;
     }
 
     /**
