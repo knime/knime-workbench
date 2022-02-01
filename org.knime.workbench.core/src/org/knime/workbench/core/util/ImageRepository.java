@@ -317,6 +317,9 @@ public final class ImageRepository {
         /** Icon for private hub spaces */
         HubSpacePrivate("icons/server_space/private_space.png"),
 
+        /** Reset workflow icon. */
+        ResetWorkflow("icons/server_space/reset_workflow.png"),
+
         /** Configuration icon */
         WorkflowConfiguration("icons/server_space/workflow_configuration.png"),
         /** Completely transparent icon */
