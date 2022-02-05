@@ -157,9 +157,9 @@
             name="Open Metanode Wizard..."/>
       <command
             categoryId="knime.command.category"
-            description="Checks and updates metanode links"
+            description="Checks and updates component and metanode links"
             id="knime.commands.updateMetaNodeLink"
-            name="Update Metanode Links"/>
+            name="Update Links"/>
       <command
             categoryId="knime.command.category"
             description="Do one loop step"
@@ -312,10 +312,10 @@
                disabledIcon="icons/meta/metanode_link_update.png"
                icon="icons/meta/metanode_link_update.png"
                id="knime.action.meta_node_check_update_link_all"
-               label="Update Metanode Links"
+               label="Update Links"
                menubarPath="org.knime.workbench.editor.menu/group1"
                style="push"
-               tooltip="Check and update metanode links"/>
+               tooltip="Check and update metanode and component links"/>
          <action
                class="org.knime.workbench.editor2.actions.delegates.FindNextNodeEditorAction"
                definitionId="knime.commands.findnextnode"

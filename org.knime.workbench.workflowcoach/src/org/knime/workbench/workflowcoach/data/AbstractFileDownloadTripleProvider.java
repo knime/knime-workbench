@@ -187,7 +187,7 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
         try {
             NodeFrequencies.from(Files.newInputStream(file));
         } catch (IOException e) {
-            throw new IOException("Downloaded file doesn't contain node recommendation data.");
+            throw new IOException("Downloaded file doesn't contain node recommendation data.", e);
         }
     }
 
