@@ -213,7 +213,7 @@ public class OpenNodeViewAction extends Action {
                 protected Control createCustomArea(final Composite parent) {
                     var desc = new Label(parent, getMessageLabelStyle());
                     desc.setText("In order to open the node view the Chromium Embedded Framework (CEF) Browser is used"
-                        + " and needs to be installed. It is part of the Hub Integration extension.");
+                        + " and needs to be installed.");
                     GridDataFactory.fillDefaults().align(SWT.FILL, SWT.BEGINNING).grab(true, false)
                         .hint(convertHorizontalDLUsToPixels(IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH), SWT.DEFAULT)
                         .applyTo(desc);
@@ -222,7 +222,7 @@ public class OpenNodeViewAction extends Action {
             };
 
         if (dialog.open() == 0) {
-            JSCorePlugin.installHubExtension();
+            JSCorePlugin.installCEFExtension();
         }
     }
 
