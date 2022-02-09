@@ -104,7 +104,7 @@ public class GlobalResetWorkflowAction extends ExplorerAction {
             return;
         }
         WorkflowManager wfm = getWorkflow();
-        wfm.resetAndConfigureAll();
+        wfm.getParent().resetAndConfigureNode(wfm.getID());
     }
 
 
