@@ -342,4 +342,8 @@ public class TreeSelectionControl {
         void treeSelectionChanged(final Object newSelection, final boolean valid);
     }
 
+    public void expandToLevel(int level) {
+        m_treeViewer.expandToLevel(level);
+    }
+
 }

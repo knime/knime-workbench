@@ -126,6 +126,10 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     private static final Color RED = Display.getCurrent().getSystemColor(SWT.COLOR_RED);
 
+    private Integer m_initTreeLevel;
+
+    private boolean m_resultPanelEnabled = true;
+
     /**
      * Creates a new dialog showing the passed mount ids.
      *
@@ -136,6 +140,11 @@ public class SpaceResourceSelectionDialog extends Dialog {
      */
     public SpaceResourceSelectionDialog(final Shell parentShell,
             final String[] mountIDs, final ContentObject initialSelection) {
+        this(parentShell, mountIDs, initialSelection, new Point(350, 700));
+    }
+
+    public SpaceResourceSelectionDialog(final Shell parentShell, final String[] mountIDs, final ContentObject initialSelection, final
+            Point minInitialSize) {
         super(parentShell);
         m_mountIDs = mountIDs;
         m_initialSelection = initialSelection;
@@ -144,8 +153,8 @@ public class SpaceResourceSelectionDialog extends Dialog {
         } else {
             m_selectedContainer = null;
         }
-        m_minInitialX = 350;
-        m_minInitialY = 700;
+        m_minInitialX = minInitialSize.x;
+        m_minInitialY = minInitialSize.y;
     }
 
     /**
@@ -310,6 +319,9 @@ public class SpaceResourceSelectionDialog extends Dialog {
                 event.detail &= ~SWT.SELECTED;
             }
         });
+        if (m_initTreeLevel != null) {
+            m_tree.expandToLevel(m_initTreeLevel);
+        }
     }
 
     private void handleTreeSelectionChanged(final Object newSelection, final boolean valid) {
@@ -372,36 +384,40 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * @param parent the parent composite
      */
     protected void createResultPanel(final Composite parent) {
-        Composite panel = new Composite(parent, SWT.FILL);
-        panel.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
-        panel.setLayout(new GridLayout(1, true));
-        m_path = new Label(parent, SWT.NONE);
-        m_path.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false));
-        updateResultPanel();
+        if (m_resultPanelEnabled) {
+            Composite panel = new Composite(parent, SWT.FILL);
+            panel.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+            panel.setLayout(new GridLayout(1, true));
+            m_path = new Label(parent, SWT.NONE);
+            m_path.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false));
+            updateResultPanel();
+        }
     }
 
     /**
      * Update the result panel.
      */
     protected void updateResultPanel() {
-        String path = null;
-        String name = null;
-        if (m_nameFieldEnabled) {
-            name = m_nameFieldValue;
-        }
-        if (m_validator != null) {
-            path = m_validator.getResultPath(m_selectedContainer, name);
-        } else {
-            if (m_selectedContainer != null) {
-                path = "knime://" + m_selectedContainer.getMountID() + m_selectedContainer.getFullName();
+        if (m_resultPanelEnabled) {
+            String path = null;
+            String name = null;
+            if (m_nameFieldEnabled) {
+                name = m_nameFieldValue;
             }
-        }
-        if (path != null && !path.isEmpty()) {
-            m_path.setText(path);
-            m_path.setToolTipText(path);
-        } else {
-            m_path.setText("");
-            m_path.setToolTipText(null);
+            if (m_validator != null) {
+                path = m_validator.getResultPath(m_selectedContainer, name);
+            } else {
+                if (m_selectedContainer != null) {
+                    path = "knime://" + m_selectedContainer.getMountID() + m_selectedContainer.getFullName();
+                }
+            }
+            if (path != null && !path.isEmpty()) {
+                m_path.setText(path);
+                m_path.setToolTipText(path);
+            } else {
+                m_path.setText("");
+                m_path.setToolTipText(null);
+            }
         }
     }
 
@@ -418,7 +434,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
         m_error = new Label(parent, SWT.NONE);
         m_error.setBackground(white);
         m_error.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, false));
-        m_error.setForeground(getParentShell().getDisplay().getSystemColor(SWT.COLOR_RED));
+        m_error.setForeground(Display.getDefault().getSystemColor(SWT.COLOR_RED));
         m_error.setText("");
         m_error.setToolTipText(null);
     }
@@ -577,6 +593,19 @@ public class SpaceResourceSelectionDialog extends Dialog {
             m_nameField.setText(val);
             handleNameFieldValueChanged();
         }
+    }
+
+    /**
+     * Set the level to which the tree should initially be expanded
+     * @since 4.6
+     * @param level
+     */
+    public void setInitTreeLevel(final int level) {
+        m_initTreeLevel = level;
+    }
+
+    public void setResultPanelEnabled(final boolean enabled) {
+        m_resultPanelEnabled = enabled;
     }
 
     /** Possibly overwritten by subclasses to add a customer footer panel. This implementation is empty.
