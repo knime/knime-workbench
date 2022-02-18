@@ -238,6 +238,7 @@ import org.knime.workbench.editor2.actions.LockSubNodeAction;
 import org.knime.workbench.editor2.actions.MetaNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.NodeConnectionContainerDeleteAction;
 import org.knime.workbench.editor2.actions.OpenDialogAction;
+import org.knime.workbench.editor2.actions.OpenFlowVariableConfig;
 import org.knime.workbench.editor2.actions.PasteAction;
 import org.knime.workbench.editor2.actions.PasteActionContextMenu;
 import org.knime.workbench.editor2.actions.PauseLoopExecutionAction;
@@ -842,6 +843,9 @@ public class WorkflowEditor extends GraphicalEditor implements
         final ConvertMetaNodeToSubNodeAction wrap = new ConvertMetaNodeToSubNodeAction(this);
         final ConvertSubNodeToMetaNodeAction unWrap = new ConvertSubNodeToMetaNodeAction(this);
 
+        // ui-ext action
+        final OpenFlowVariableConfig openFlowVariableConfig = new OpenFlowVariableConfig(this);
+
 
         // register the actions
         m_actionRegistry.registerAction(undo);
@@ -903,6 +907,9 @@ public class WorkflowEditor extends GraphicalEditor implements
         m_actionRegistry.registerAction(sendAnnotationBackward);
         m_actionRegistry.registerAction(sendAnnotationToBack);
 
+        // ui-ext action
+        m_actionRegistry.registerAction(openFlowVariableConfig);
+
         // remember ids for later updates via 'updateActions'
         m_editorActions = new ArrayList<>();
         m_editorActions.add(undo.getId());
@@ -942,6 +949,9 @@ public class WorkflowEditor extends GraphicalEditor implements
         m_editorActions.add(bringAnnotationForward.getId());
         m_editorActions.add(sendAnnotationBackward.getId());
         m_editorActions.add(sendAnnotationToBack.getId());
+
+        // ui-ext action
+        m_editorActions.add(openFlowVariableConfig.getId());
     }
 
     /**

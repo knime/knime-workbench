@@ -72,6 +72,7 @@ import org.knime.core.node.port.DataTableSpecProvider;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.flowvariable.FlowVariablePortObject;
 import org.knime.core.node.workflow.LoopEndNode;
+import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.ui.node.workflow.InteractiveWebViewsResultUI;
@@ -81,6 +82,7 @@ import org.knime.core.ui.node.workflow.SingleNodeContainerUI;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.webui.node.dialog.NodeDialogManager;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.actions.AbstractNodeAction;
@@ -106,6 +108,7 @@ import org.knime.workbench.editor2.actions.LockMetaNodeAction;
 import org.knime.workbench.editor2.actions.LockSubNodeAction;
 import org.knime.workbench.editor2.actions.MetaNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.OpenDialogAction;
+import org.knime.workbench.editor2.actions.OpenFlowVariableConfig;
 import org.knime.workbench.editor2.actions.OpenInteractiveViewAction;
 import org.knime.workbench.editor2.actions.OpenInteractiveWebViewAction;
 import org.knime.workbench.editor2.actions.OpenNodeViewAction;
@@ -278,6 +281,23 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                         }
                     });
                 }
+            }
+        }
+
+        // show some menu items on ui-extensions only
+        if (parts.size() == 1) {
+            EditPart p = (EditPart)parts.get(0);
+            if (p instanceof NodeContainerEditPart) {
+                final NodeContainerUI container = (NodeContainerUI)((NodeContainerEditPart)p).getModel();
+                Wrapper.unwrapOptional(container, NativeNodeContainer.class).ifPresent(sncImpl -> {
+                    if (NodeDialogManager.hasNodeDialog(sncImpl)) {
+                        // show flow variable configuration and job manager selection
+                        IAction showFlowVariableTab;
+                        showFlowVariableTab = m_actionRegistry.getAction(OpenFlowVariableConfig.ID);
+                        manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, showFlowVariableTab);
+                        ((AbstractNodeAction)showFlowVariableTab).update();
+                    }
+                });
             }
         }
 

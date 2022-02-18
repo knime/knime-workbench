@@ -854,6 +854,14 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
     }
 
     /**
+     * Opens only the flow variable and job manager tab for nodes with new node dialog
+     */
+    public void openFlowVariableTab() {
+        final NodeContainerUI container = (NodeContainerUI)getModel();
+        openDialog(container, this);
+    }
+
+    /**
      * Helper method to open the dialog of the provided node container (if it has one).
      *
      * @param container the node to open the dialog for
