@@ -108,7 +108,7 @@ import org.knime.workbench.editor2.actions.LockMetaNodeAction;
 import org.knime.workbench.editor2.actions.LockSubNodeAction;
 import org.knime.workbench.editor2.actions.MetaNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.OpenDialogAction;
-import org.knime.workbench.editor2.actions.OpenFlowVariableConfig;
+import org.knime.workbench.editor2.actions.OpenFlowVariableConfigAction;
 import org.knime.workbench.editor2.actions.OpenInteractiveViewAction;
 import org.knime.workbench.editor2.actions.OpenInteractiveWebViewAction;
 import org.knime.workbench.editor2.actions.OpenNodeViewAction;
@@ -292,8 +292,7 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                 Wrapper.unwrapOptional(container, NativeNodeContainer.class).ifPresent(sncImpl -> {
                     if (NodeDialogManager.hasNodeDialog(sncImpl)) {
                         // show flow variable configuration and job manager selection
-                        IAction showFlowVariableTab;
-                        showFlowVariableTab = m_actionRegistry.getAction(OpenFlowVariableConfig.ID);
+                        IAction showFlowVariableTab = m_actionRegistry.getAction(OpenFlowVariableConfigAction.ID);
                         manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, showFlowVariableTab);
                         ((AbstractNodeAction)showFlowVariableTab).update();
                     }

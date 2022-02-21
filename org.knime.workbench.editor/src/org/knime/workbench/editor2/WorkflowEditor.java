@@ -238,7 +238,7 @@ import org.knime.workbench.editor2.actions.LockSubNodeAction;
 import org.knime.workbench.editor2.actions.MetaNodeReconfigureAction;
 import org.knime.workbench.editor2.actions.NodeConnectionContainerDeleteAction;
 import org.knime.workbench.editor2.actions.OpenDialogAction;
-import org.knime.workbench.editor2.actions.OpenFlowVariableConfig;
+import org.knime.workbench.editor2.actions.OpenFlowVariableConfigAction;
 import org.knime.workbench.editor2.actions.PasteAction;
 import org.knime.workbench.editor2.actions.PasteActionContextMenu;
 import org.knime.workbench.editor2.actions.PauseLoopExecutionAction;
@@ -844,7 +844,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         final ConvertSubNodeToMetaNodeAction unWrap = new ConvertSubNodeToMetaNodeAction(this);
 
         // ui-ext action
-        final OpenFlowVariableConfig openFlowVariableConfig = new OpenFlowVariableConfig(this);
+        final var openFlowVariableConfig = new OpenFlowVariableConfigAction(this);
 
 
         // register the actions

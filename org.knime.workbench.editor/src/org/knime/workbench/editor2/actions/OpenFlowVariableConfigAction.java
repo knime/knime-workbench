@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.editor2.actions;
 
+import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
@@ -55,7 +56,7 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  *
  * @author Konrad Amtenbrink, KNIME GmbH, Berlin, Germany
  */
-public class OpenFlowVariableConfig extends AbstractNodeAction {
+public class OpenFlowVariableConfigAction extends AbstractNodeAction {
 
     /** unique ID for this action. * */
     public static final String ID = "knime.action.openFlowVariableConfig";
@@ -63,7 +64,7 @@ public class OpenFlowVariableConfig extends AbstractNodeAction {
     /**
      * @param editor
      */
-    public OpenFlowVariableConfig(final WorkflowEditor editor) {
+    public OpenFlowVariableConfigAction(final WorkflowEditor editor) {
         super(editor);
     }
 
@@ -97,10 +98,10 @@ public class OpenFlowVariableConfig extends AbstractNodeAction {
     @Override
     public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
         if (nodeParts.length > 0) {
-            final NodeContainerEditPart nodeContainerEditPart = nodeParts[0];
-            nodeContainerEditPart.openFlowVariableTab();
+            final var nodeContainerEditPart = nodeParts[0];
+            final NodeContainerUI container = (NodeContainerUI)nodeContainerEditPart.getModel();
+            NodeContainerEditPart.openDialog(container, nodeContainerEditPart);
         }
-
     }
 
     /**
@@ -116,7 +117,7 @@ public class OpenFlowVariableConfig extends AbstractNodeAction {
      */
     @Override
     protected boolean canHandleWorkflowManagerUI() {
-        return true;
+        return false;
     }
 
 }
