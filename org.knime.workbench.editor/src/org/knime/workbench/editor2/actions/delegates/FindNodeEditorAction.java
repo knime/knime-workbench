@@ -103,6 +103,10 @@ public class FindNodeEditorAction extends AbstractEditorAction {
         if (ww != null) {
             final MMenu mm = ww.getModel().getMainMenu();
             final Menu m = (Menu)mm.getWidget();
+            if (m == null) {
+                // Main menu may not be available in Web-UI perspective (NXT-807)
+                return null;
+            }
             MenuItem nodeMenuItem = null;
             for (final MenuItem mi : m.getItems()) {
                 if (mi.getText().equals("Node")) {
