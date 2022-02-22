@@ -48,7 +48,10 @@
  */
 package org.knime.workbench.editor2.actions;
 
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
+import org.knime.workbench.KNIMEEditorPlugin;
+import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
@@ -90,6 +93,14 @@ public class OpenFlowVariableConfigAction extends AbstractNodeAction {
     @Override
     public String getToolTipText() {
         return "Open flow variable configuration and job manager selection for this node";
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ImageDescriptor getImageDescriptor() {
+        return ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "icons/flowvariables.png");
     }
 
     /**
