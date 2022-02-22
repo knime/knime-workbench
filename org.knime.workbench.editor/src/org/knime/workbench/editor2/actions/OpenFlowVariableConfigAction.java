@@ -81,7 +81,7 @@ public class OpenFlowVariableConfigAction extends AbstractNodeAction {
      */
     @Override
     public String getText() {
-        return "Flow Variable Configuration / Job Manager Selection \t";
+        return "Configure Flow Variables ...";
     }
 
     /**

@@ -284,6 +284,15 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
             }
         }
 
+        // reset
+        action = m_actionRegistry.getAction(ResetAction.ID);
+        manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
+        ((AbstractNodeAction)action).update();
+        // set name and description
+        action = m_actionRegistry.getAction(SetNodeDescriptionAction.ID);
+        manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
+        ((AbstractNodeAction)action).update();
+
         // show some menu items on ui-extensions only
         if (parts.size() == 1) {
             EditPart p = (EditPart)parts.get(0);
@@ -299,15 +308,6 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                 });
             }
         }
-
-        // reset
-        action = m_actionRegistry.getAction(ResetAction.ID);
-        manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
-        ((AbstractNodeAction)action).update();
-        // set name and description
-        action = m_actionRegistry.getAction(SetNodeDescriptionAction.ID);
-        manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
-        ((AbstractNodeAction)action).update();
 
         // add workflow annotation
         action = m_actionRegistry.getAction(AddAnnotationAction.ID);
