@@ -298,14 +298,16 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
             EditPart p = (EditPart)parts.get(0);
             if (p instanceof NodeContainerEditPart) {
                 final NodeContainerUI container = (NodeContainerUI)((NodeContainerEditPart)p).getModel();
-                Wrapper.unwrapOptional(container, NativeNodeContainer.class).ifPresent(sncImpl -> {
-                    if (NodeDialogManager.hasNodeDialog(sncImpl)) {
-                        // show flow variable configuration and job manager selection
-                        IAction showFlowVariableTab = m_actionRegistry.getAction(OpenFlowVariableConfigAction.ID);
-                        manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, showFlowVariableTab);
-                        ((AbstractNodeAction)showFlowVariableTab).update();
-                    }
-                });
+                if (container instanceof NativeNodeContainerUI) {
+                    Wrapper.unwrapOptional(container, NativeNodeContainer.class).ifPresent(sncImpl -> {
+                        if (NodeDialogManager.hasNodeDialog(sncImpl)) { // NOSONAR
+                            // show flow variable configuration and job manager selection
+                            IAction showFlowVariableTab = m_actionRegistry.getAction(OpenFlowVariableConfigAction.ID);
+                            manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, showFlowVariableTab);
+                            ((AbstractNodeAction)showFlowVariableTab).update();
+                        }
+                    });
+                }
             }
         }
 
