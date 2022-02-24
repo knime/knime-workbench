@@ -608,9 +608,17 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
     }
 
     private static void addNodeViewActions(final IMenuManager menuManager, final NodeContainerUI container) {
+        IAction action;
+
+        // add node view actions (ui extensions framework)
+        action = OpenNodeViewAction.createActionIfApplicable(container).orElse(null);
+        if (action != null) {
+            menuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
+            return;
+        }
+
         // add for node views option if applicable
         int numNodeViews = container.getNrViews();
-        IAction action;
         for (int i = 0; i < numNodeViews; i++) {
             action = new OpenViewAction(Wrapper.unwrapNC(container), i);
             menuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
@@ -634,10 +642,6 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
                 }
             }
         }
-
-        // add node view actions (ui extensions framework)
-        OpenNodeViewAction.createActionIfApplicable(container)
-            .ifPresent(a -> menuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, a));
     }
 
     private static void createPortConfigMenu(final IMenuManager manager, final NodeContainerEditPart editPart) {
