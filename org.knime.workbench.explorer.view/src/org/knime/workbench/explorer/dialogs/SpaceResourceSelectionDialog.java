@@ -143,8 +143,17 @@ public class SpaceResourceSelectionDialog extends Dialog {
         this(parentShell, mountIDs, initialSelection, new Point(350, 700));
     }
 
-    public SpaceResourceSelectionDialog(final Shell parentShell, final String[] mountIDs, final ContentObject initialSelection, final
-            Point minInitialSize) {
+    /**
+     * Creates a new dialog showing the passed mount ids.
+     *
+     * @param parentShell the parent shell
+     * @param mountIDs the ids of the mount points to show
+     * @param initialSelection the object to select initially, maybe <code>null</code> if no group should be selected
+     *            initially
+     * @param minInitialSize the initial dialog size
+     */
+    public SpaceResourceSelectionDialog(final Shell parentShell, final String[] mountIDs,
+        final ContentObject initialSelection, final Point minInitialSize) {
         super(parentShell);
         m_mountIDs = mountIDs;
         m_initialSelection = initialSelection;
@@ -604,6 +613,9 @@ public class SpaceResourceSelectionDialog extends Dialog {
         m_initTreeLevel = level;
     }
 
+    /**
+     * @param enabled whether to enable the result panel (which displays the currently selected workflow)
+     */
     public void setResultPanelEnabled(final boolean enabled) {
         m_resultPanelEnabled = enabled;
     }
