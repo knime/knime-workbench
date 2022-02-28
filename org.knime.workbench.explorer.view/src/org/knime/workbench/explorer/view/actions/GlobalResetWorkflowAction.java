@@ -88,7 +88,9 @@ public class GlobalResetWorkflowAction extends ExplorerAction {
     @Override
     public boolean isEnabled() {
         WorkflowManager wfm = getWorkflow();
-        return wfm != null && wfm.getParent().canResetNode(wfm.getID());
+        return wfm != null //
+            && !wfm.getNodeContainers().isEmpty() //
+            && wfm.getParent().canResetNode(wfm.getID());
     }
 
     /**
