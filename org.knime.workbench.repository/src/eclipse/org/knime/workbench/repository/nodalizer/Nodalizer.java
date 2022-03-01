@@ -525,6 +525,7 @@ public class Nodalizer implements IApplication {
         nInfo.setDeprecated(isDeprecated);
         nInfo.setStreamable(NodeUtil.isStreamable(kcn));
 
+        nInfo.setTags(new ArrayList<>());
         nInfo.getTags().addAll(nInfo.getPath());
 
         if (NodeUtil.isStreamable(kcn)) {
