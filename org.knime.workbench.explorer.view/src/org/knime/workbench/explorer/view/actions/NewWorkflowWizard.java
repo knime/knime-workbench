@@ -51,9 +51,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -108,26 +111,27 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         return true;
     }
 
+    public void init(final IWorkbench workbench,
+            final IStructuredSelection selection,
+            Predicate<AbstractContentProvider> mountIDRestrictions) {
+        m_mountIDs = getValidMountpoints()
+                .filter(e -> mountIDRestrictions.test(e.getValue()))
+                .map(Map.Entry::getKey)
+                .toArray(String[]::new);
+        init(workbench, selection);
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
     public void init(final IWorkbench workbench,
             final IStructuredSelection selection) {
-        // add the ids of all mounted, writable content provider
-        List<String> validMountPointList = new ArrayList<String>();
-        AbstractContentProvider localCP = null; // keep a local content provider (needed later)
-        for (Map.Entry<String, AbstractContentProvider> entry : ExplorerMountTable.getMountedContent().entrySet()) {
-            AbstractContentProvider cp = entry.getValue();
-            if (cp.isWritable() && !(isWorkflowCreated() && cp.isRemote())) {
-                // no remote creation of workflows is supported
-                validMountPointList.add(entry.getKey());
-            }
-            if (!cp.isRemote()) {
-                localCP = cp;
-            }
+
+        List<String> validMountPointList = getValidMountpoints().map(Map.Entry::getKey).collect(Collectors.toList());
+        if (m_mountIDs == null) {
+            m_mountIDs = validMountPointList.toArray(String[]::new);
         }
-        m_mountIDs = validMountPointList.toArray(new String[0]);
 
         if ((selection != null) && !selection.isEmpty()) {
             String defaultLocalID = new LocalWorkspaceContentProviderFactory().getDefaultMountID();
@@ -142,14 +146,15 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                 if (!validMountPointList.contains(firstSelectedItem.getMountID())
                         || (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote())) {
                     // can't create workflow on the selected item (it is remote)
+                    // find some local content provider to use as a fallback
+                    Optional<AbstractContentProvider>
+                            defaultLocalContentProvider = ExplorerMountTable.getMountedContent().values().stream()
+                            .filter(cp -> !cp.isRemote()).findFirst();
                     if (ExplorerMountTable.getMountPoint(defaultLocalID) != null) {
                         m_initialSelection =
                                 ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getRootStore();
-                    } else if (localCP != null) {
-                        m_initialSelection = localCP.getRootStore();
-                    } else {
-                        m_initialSelection = null;
-                    }
+                    } else
+                        m_initialSelection = defaultLocalContentProvider.map(AbstractContentProvider::getRootStore).orElse(null);
                 } else if (firstSelectedItem.fetchInfo().isWorkflowGroup()) {
                     m_initialSelection = firstSelectedItem;
                 } else {
@@ -318,4 +323,13 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
             }
         });
     }
+
+    private Stream<Map.Entry<String, AbstractContentProvider>> getValidMountpoints() {
+        return ExplorerMountTable.getMountedContent().entrySet().stream()
+                .filter(entry -> {
+                    AbstractContentProvider cp = entry.getValue();
+                    return cp.isWritable() && !(isWorkflowCreated() && cp.isRemote());
+                });
+    }
+
 }
