@@ -111,13 +111,17 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         return true;
     }
 
-    public void init(final IWorkbench workbench,
-            final IStructuredSelection selection,
-            Predicate<AbstractContentProvider> mountIDRestrictions) {
-        m_mountIDs = getValidMountpoints()
-                .filter(e -> mountIDRestrictions.test(e.getValue()))
-                .map(Map.Entry::getKey)
-                .toArray(String[]::new);
+    /**
+     * @param workbench see {@link #init(IWorkbench, IStructuredSelection)}
+     * @param selection see {@link #init(IWorkbench, IStructuredSelection)}
+     * @param mountPointFilter predicate to filter the allowed mountpoints
+     */
+    public void init(final IWorkbench workbench, final IStructuredSelection selection,
+        final Predicate<AbstractContentProvider> mountPointFilter) {
+        m_mountIDs = getValidMountpoints() //
+            .filter(e -> mountPointFilter.test(e.getValue())) //
+            .map(Map.Entry::getKey) //
+            .toArray(String[]::new);
         init(workbench, selection);
     }
 
@@ -146,15 +150,16 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                 if (!validMountPointList.contains(firstSelectedItem.getMountID())
                         || (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote())) {
                     // can't create workflow on the selected item (it is remote)
-                    // find some local content provider to use as a fallback
-                    Optional<AbstractContentProvider>
-                            defaultLocalContentProvider = ExplorerMountTable.getMountedContent().values().stream()
-                            .filter(cp -> !cp.isRemote()).findFirst();
                     if (ExplorerMountTable.getMountPoint(defaultLocalID) != null) {
                         m_initialSelection =
                                 ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getRootStore();
-                    } else
+                    } else {
+                        // find some local content provider to use as a fallback
+                        Optional<AbstractContentProvider>
+                                defaultLocalContentProvider = ExplorerMountTable.getMountedContent().values().stream()
+                                .filter(cp -> !cp.isRemote()).findFirst();
                         m_initialSelection = defaultLocalContentProvider.map(AbstractContentProvider::getRootStore).orElse(null);
+                    }
                 } else if (firstSelectedItem.fetchInfo().isWorkflowGroup()) {
                     m_initialSelection = firstSelectedItem;
                 } else {
