@@ -47,6 +47,7 @@
  */
 package org.knime.workbench.explorer.dialogs;
 
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.viewers.StructuredSelection;
@@ -232,6 +233,18 @@ public class SpaceResourceSelectionDialog extends Dialog {
         createResultPanel(overall);
         createNameField(overall);
         createCustomFooterField(overall);
+
+        if (Platform.OS_MACOSX.equals(Platform.getOS())) {
+            // On Mac, the initial element is always scrolled to (so that it is the first element visible),
+            // even if the whole tree would fit inside the dialog.
+            // If the tree fits inside the dialog, scrolling functionality is not available, so the items
+            // before the initial item are not reachable.
+            // This is fixed for MacOS by explicitly setting the top item. The initial item is still selected,
+            // but not scrolled to. See HUB-2437.
+            final var firstItem = m_tree.getTree().getItem(0);
+            m_tree.getTree().setTopItem(firstItem);
+        }
+
         return overall;
 
     }
