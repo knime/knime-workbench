@@ -842,14 +842,24 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
      */
     public void openNodeDialog() {
         final NodeContainerUI container = (NodeContainerUI)getModel();
+        openNodeDialog(container);
+    }
 
+    /**
+     * Helper method to open a dialog - no matter if it's a swing-based dialog or a html/js-based one.
+     *
+     * @param container
+     *
+     * @since 4.6
+     */
+    public static void openNodeDialog(final NodeContainerUI container) {
         if (OpenDialogAction.hasNodeDialog(container)) {
             var nnc = Wrapper.unwrap(container, NativeNodeContainer.class);
             OpenNodeViewAction.openNodeView(nnc,
                 OpenNodeViewAction.createNodeView(nnc, true, OpenNodeViewAction.hasNodeView(container)),
                 "Dialog - " + nnc.getDisplayLabel());
         } else {
-            openDialog(container, this);
+            openDialog(container, null);
         }
     }
 
