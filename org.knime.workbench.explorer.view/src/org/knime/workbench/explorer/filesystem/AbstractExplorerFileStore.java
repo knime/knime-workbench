@@ -55,12 +55,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.Path;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -378,8 +379,8 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      */
     @Override
     public String getName() {
-        String lastSegment  = new Path(m_fullPath).lastSegment();
-        return lastSegment == null ? "/" : lastSegment;
+        String lastSegment = FilenameUtils.getName(m_fullPath);
+        return StringUtils.isEmpty(lastSegment) ? "/" : lastSegment;
     }
 
     /** @return a human readable name including mount ID and path. */
