@@ -44,6 +44,9 @@
  */
 package org.knime.workbench.ui.navigator.actions.selection;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.viewers.DoubleClickEvent;
@@ -95,6 +98,8 @@ public class TreeSelectionControl {
     private ViewerComparator m_comparator;
 
     private ViewerFilter m_filter;
+
+    private List<Runnable> m_doubleClickListeners;
 
     /**
      * Sets the message displayed above the selection tree. Has no effect, after
@@ -208,6 +213,9 @@ public class TreeSelectionControl {
                 if (selection instanceof IStructuredSelection && ((IStructuredSelection)selection).size() == 1) {
                     Object selectionObj = ((IStructuredSelection)selection).getFirstElement();
                     m_treeViewer.setExpandedState(selectionObj, !m_treeViewer.getExpandedState(selectionObj));
+                    if (m_doubleClickListeners != null) {
+                        m_doubleClickListeners.forEach(Runnable::run);
+                    }
                 }
             }
         });
@@ -342,8 +350,18 @@ public class TreeSelectionControl {
         void treeSelectionChanged(final Object newSelection, final boolean valid);
     }
 
-    public void expandToLevel(int level) {
+    public void expandToLevel(final int level) {
         m_treeViewer.expandToLevel(level);
+    }
+
+    /**
+     * @param listener a listener called whenever a elementi in tree is double-clicked
+     */
+    public void addDoubleClickListener(final Runnable listener) {
+        if (m_doubleClickListeners == null) {
+            m_doubleClickListeners = new ArrayList<>();
+        }
+        m_doubleClickListeners.add(listener);
     }
 
 }

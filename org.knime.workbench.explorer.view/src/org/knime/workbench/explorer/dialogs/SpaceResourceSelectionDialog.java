@@ -113,6 +113,10 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     private int m_minInitialY;
 
+    private int m_maxInitialX;
+
+    private int m_maxInitialY;
+
     private Text m_nameField;
 
     private boolean m_nameFieldEnabled = false;
@@ -131,6 +135,8 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     private boolean m_resultPanelEnabled = true;
 
+    private final boolean m_allowWorkflowSelectionWithDoubleClick;
+
     /**
      * Creates a new dialog showing the passed mount ids.
      *
@@ -139,9 +145,10 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * @param initialSelection the object to select initially, maybe <code>null</code> if no group should be selected
      *            initially
      */
-    public SpaceResourceSelectionDialog(final Shell parentShell,
-            final String[] mountIDs, final ContentObject initialSelection) {
-        this(parentShell, mountIDs, initialSelection, new Point(350, 700));
+    public SpaceResourceSelectionDialog(final Shell parentShell, final String[] mountIDs,
+        final ContentObject initialSelection) {
+        this(parentShell, mountIDs, initialSelection, new Point(350, 700),
+            new Point(Integer.MAX_VALUE, Integer.MAX_VALUE), false);
     }
 
     /**
@@ -151,13 +158,18 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * @param mountIDs the ids of the mount points to show
      * @param initialSelection the object to select initially, maybe <code>null</code> if no group should be selected
      *            initially
-     * @param minInitialSize the initial dialog size
+     * @param minInitialSize the minimal initial dialog size
+     * @param maxInitialSize the maximal initial dialog size
+     * @param enableSelectionWithDoubleClick if {@code true} resources can be selected via double-click. But only the
+     *            resources that are valid, if a validator is specified (see {@link #setValidator(Validator)}).
      */
     public SpaceResourceSelectionDialog(final Shell parentShell, final String[] mountIDs,
-        final ContentObject initialSelection, final Point minInitialSize) {
+        final ContentObject initialSelection, final Point minInitialSize, final Point maxInitialSize,
+        final boolean enableSelectionWithDoubleClick) {
         super(parentShell);
         m_mountIDs = mountIDs;
         m_initialSelection = initialSelection;
+        m_allowWorkflowSelectionWithDoubleClick = enableSelectionWithDoubleClick;
         if (initialSelection != null) {
             m_selectedContainer = initialSelection.getObject();
         } else {
@@ -165,6 +177,8 @@ public class SpaceResourceSelectionDialog extends Dialog {
         }
         m_minInitialX = minInitialSize.x;
         m_minInitialY = minInitialSize.y;
+        m_maxInitialX = maxInitialSize.x;
+        m_maxInitialY = maxInitialSize.y;
     }
 
     /**
@@ -174,12 +188,8 @@ public class SpaceResourceSelectionDialog extends Dialog {
     protected Point getInitialSize() {
         Point size = super.getInitialSize();
         Point newsize = new Point(size.x, size.y);
-        if (size.x < m_minInitialX) {
-            newsize.x = m_minInitialX;
-        }
-        if (size.y < m_minInitialY) {
-            newsize.y = m_minInitialY;
-        }
+        newsize.x = Math.min(Math.max(m_minInitialX, size.x), m_maxInitialX);
+        newsize.y = Math.min(Math.max(m_minInitialY, size.y), m_maxInitialY);
         return newsize;
     }
 
@@ -343,6 +353,14 @@ public class SpaceResourceSelectionDialog extends Dialog {
         });
         if (m_initTreeLevel != null) {
             m_tree.expandToLevel(m_initTreeLevel);
+        }
+        if (m_allowWorkflowSelectionWithDoubleClick) {
+            m_tree.addDoubleClickListener(() -> {
+                if (m_validator != null
+                    && m_validator.validateSelectionValue(m_selectedContainer, m_nameFieldValue) == null) {
+                    okPressed();
+                }
+            });
         }
     }
 
