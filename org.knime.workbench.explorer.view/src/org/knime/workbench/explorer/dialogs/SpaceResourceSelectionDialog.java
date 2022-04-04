@@ -186,11 +186,11 @@ public class SpaceResourceSelectionDialog extends Dialog {
      */
     @Override
     protected Point getInitialSize() {
-        Point size = super.getInitialSize();
-        Point newsize = new Point(size.x, size.y);
-        newsize.x = Math.min(Math.max(m_minInitialX, size.x), m_maxInitialX);
-        newsize.y = Math.min(Math.max(m_minInitialY, size.y), m_maxInitialY);
-        return newsize;
+        Point initialSize = super.getInitialSize();
+        return new Point( //
+            Math.min(Math.max(m_minInitialX, initialSize.x), m_maxInitialX), //
+            Math.min(Math.max(m_minInitialY, initialSize.y), m_maxInitialY) //
+        );
     }
 
     /**
@@ -356,8 +356,8 @@ public class SpaceResourceSelectionDialog extends Dialog {
         }
         if (m_allowWorkflowSelectionWithDoubleClick) {
             m_tree.addDoubleClickListener(() -> {
-                if (m_validator != null
-                    && m_validator.validateSelectionValue(m_selectedContainer, m_nameFieldValue) == null) {
+                if (m_validator == null
+                    || m_validator.validateSelectionValue(m_selectedContainer, m_nameFieldValue) == null) {
                     okPressed();
                 }
             });

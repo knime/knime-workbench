@@ -44,8 +44,8 @@
  */
 package org.knime.workbench.ui.navigator.actions.selection;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
@@ -99,7 +99,7 @@ public class TreeSelectionControl {
 
     private ViewerFilter m_filter;
 
-    private List<Runnable> m_doubleClickListeners;
+    private Set<Runnable> m_doubleClickListeners;
 
     /**
      * Sets the message displayed above the selection tree. Has no effect, after
@@ -213,9 +213,13 @@ public class TreeSelectionControl {
                 if (selection instanceof IStructuredSelection && ((IStructuredSelection)selection).size() == 1) {
                     Object selectionObj = ((IStructuredSelection)selection).getFirstElement();
                     m_treeViewer.setExpandedState(selectionObj, !m_treeViewer.getExpandedState(selectionObj));
-                    if (m_doubleClickListeners != null) {
-                        m_doubleClickListeners.forEach(Runnable::run);
-                    }
+                    notifyDoubleClickListeners();
+                }
+            }
+
+            private void notifyDoubleClickListeners() {
+                if (m_doubleClickListeners != null) {
+                    m_doubleClickListeners.forEach(Runnable::run);
                 }
             }
         });
@@ -359,7 +363,7 @@ public class TreeSelectionControl {
      */
     public void addDoubleClickListener(final Runnable listener) {
         if (m_doubleClickListeners == null) {
-            m_doubleClickListeners = new ArrayList<>();
+            m_doubleClickListeners = new HashSet<>();
         }
         m_doubleClickListeners.add(listener);
     }
