@@ -153,10 +153,20 @@ public class SubnodeLayoutAction extends AbstractNodeAction {
     public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
         WorkflowManager manager = getManager();
         SubNodeContainer subnode = (SubNodeContainer)manager.getDirectNCParent();
-        SubnodeLayoutWizard wizard = new SubnodeLayoutWizard(subnode);
-        WizardDialog dlg = new WizardDialog(SWTUtilities.getActiveShell(), wizard);
+        openLayoutEditor(subnode);
+    }
+
+    /**
+     * Opens the layout editor of a component
+     *
+     * @param subnode The component to layout
+     */
+    public static void openLayoutEditor(final SubNodeContainer subnode) {
+        var wizard = new SubnodeLayoutWizard(subnode);
+        var dlg = new WizardDialog(SWTUtilities.getActiveShell(), wizard);
         dlg.setMinimumPageSize(1000, 600);
         dlg.create();
         dlg.open();
     }
+
 }
