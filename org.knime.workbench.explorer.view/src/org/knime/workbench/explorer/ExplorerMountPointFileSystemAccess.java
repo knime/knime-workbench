@@ -55,6 +55,8 @@ import java.net.URL;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
 import org.knime.filehandling.core.connections.base.attributes.BaseFileAttributes;
@@ -72,17 +74,22 @@ import org.knime.workbench.explorer.filesystem.TmpLocalExplorerFile;
  */
 public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemAccess {
 
-    /**
-     * {@inheritDoc}
-     */
+    private static String getProviderFactoryId(final String mountId) {
+        return ExplorerMountTable.getMountPoint(mountId).getProviderFactory().getID();
+    }
+
     @Override
     public List<String> getMountedIDs() {
         return ExplorerMountTable.getAllMountedIDs();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
+    public List<String> getMountedIDs(final Set<String> providerFactoryIDs) {
+        return getMountedIDs().stream() //
+                .filter(mountId -> providerFactoryIDs.contains(getProviderFactoryId(mountId))) //
+                .collect(Collectors.toUnmodifiableList());
+    }
+
     @Override
     public URL resolveKNIMEURL(final URL url) throws IOException {
         return ExplorerURLStreamHandler.resolveKNIMEURL(url);
@@ -292,5 +299,4 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
             return store;
         }
     }
-
 }
