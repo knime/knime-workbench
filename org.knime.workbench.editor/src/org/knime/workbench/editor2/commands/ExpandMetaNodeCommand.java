@@ -163,7 +163,7 @@ public class ExpandMetaNodeCommand extends AbstractKNIMECommand {
             hostWFM.removeNode(id);
         }
         for (WorkflowAnnotation anno : hostWFM.getWorkflowAnnotations(m_pastedAnnotationIDs)) {
-            hostWFM.removeAnnotation(anno);
+            hostWFM.removeAnnotation(anno.getID());
         }
         hostWFM.paste(m_undoCopyPersistor);
         m_pastedNodes = null;

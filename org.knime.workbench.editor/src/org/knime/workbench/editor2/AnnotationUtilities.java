@@ -49,7 +49,7 @@
 package org.knime.workbench.editor2;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.draw2d.TextUtilities;
@@ -63,6 +63,7 @@ import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
 import org.knime.core.node.workflow.NodeAnnotation;
 import org.knime.core.node.workflow.WorkflowAnnotation;
+import org.knime.core.node.workflow.WorkflowAnnotationID;
 import org.knime.core.util.ColorUtilities;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.FontStore;
@@ -295,16 +296,14 @@ public class AnnotationUtilities {
      * edit part).
      *
      * @param annoParts the selected annotation parts
-     * @return The workflow annotation models (possibly fewer than selected edit parts!!!)
+     * @return The IDs of the workflow annotation models (possibly fewer than selected edit parts!!!)
      */
-    public static WorkflowAnnotation[] extractWorkflowAnnotations(final AnnotationEditPart[] annoParts) {
-        final List<WorkflowAnnotation> annoList = new ArrayList<WorkflowAnnotation>();
-        for (int i = 0; i < annoParts.length; i++) {
-            final Annotation model = annoParts[i].getModel();
-            if (model instanceof WorkflowAnnotation) {
-                annoList.add((WorkflowAnnotation)model);
-            }
-        }
-        return annoList.toArray(new WorkflowAnnotation[annoList.size()]);
+    public static WorkflowAnnotationID[] extractWorkflowAnnotationIDs(final AnnotationEditPart[] annoParts) {
+        return Arrays.stream(annoParts) //
+                .map(AnnotationEditPart::getModel) //
+                .filter(WorkflowAnnotation.class::isInstance) //
+                .map(WorkflowAnnotation.class::cast) //
+                .map(WorkflowAnnotation::getID) //
+                .toArray(WorkflowAnnotationID[]::new);
     }
 }

@@ -58,7 +58,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
-import org.knime.core.node.workflow.WorkflowAnnotation;
+import org.knime.core.node.workflow.WorkflowAnnotationID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.action.CollapseIntoMetaNodeResult;
 import org.knime.core.node.workflow.action.MetaNodeToSubNodeResult;
@@ -76,7 +76,7 @@ public class CollapseMetaNodeCommand extends AbstractKNIMECommand {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(CollapseMetaNodeCommand.class);
 
     private final NodeID[] m_nodes;
-    private final WorkflowAnnotation[] m_annos;
+    private final WorkflowAnnotationID[] m_annos;
     private final boolean m_encapsulateAsSubnode;
     private final String m_name;
     private CollapseIntoMetaNodeResult m_collapseResult;
@@ -90,7 +90,7 @@ public class CollapseMetaNodeCommand extends AbstractKNIMECommand {
      * @param name of new metanode
      */
     private CollapseMetaNodeCommand(final WorkflowManager wfm,
-            final NodeID[] nodes, final WorkflowAnnotation[] annos,
+            final NodeID[] nodes, final WorkflowAnnotationID[] annos,
             final String name, final boolean encapsulateAsSubnode) {
         super(wfm);
         m_encapsulateAsSubnode = encapsulateAsSubnode;
@@ -105,7 +105,7 @@ public class CollapseMetaNodeCommand extends AbstractKNIMECommand {
         if (!super.canExecute()) {
             return false;
         }
-        return null == getHostWFM().canCollapseNodesIntoMetaNode(m_nodes);
+        return null == getHostWFM().canCollapseNodesIntoMetaNode(m_nodes, m_annos);
     }
 
     /**
@@ -171,7 +171,7 @@ public class CollapseMetaNodeCommand extends AbstractKNIMECommand {
         for (int i = 0; i < nodeParts.length; i++) {
             nodeIds[i] = nodeParts[i].getNodeContainer().getID();
         }
-        final WorkflowAnnotation[] annos = AnnotationUtilities.extractWorkflowAnnotations(annoParts);
+        final WorkflowAnnotationID[] annoIDs = AnnotationUtilities.extractWorkflowAnnotationIDs(annoParts);
         try {
             // before testing anything, let's see if we should reset
             // the selected nodes:
@@ -197,7 +197,7 @@ public class CollapseMetaNodeCommand extends AbstractKNIMECommand {
                 // those nodes (which we don't want to do before we
                 // have not gathered all info - and allowed the user
                 // to cancel the operation!)
-                final String res = manager.canCollapseNodesIntoMetaNode(nodeIds);
+                final String res = manager.canCollapseNodesIntoMetaNode(nodeIds, annoIDs);
                 if (res != null) {
                     throw new IllegalArgumentException(res);
                 }
@@ -222,12 +222,12 @@ public class CollapseMetaNodeCommand extends AbstractKNIMECommand {
                     }
                 }
                 // check if there is another reason why we cannot collapse
-                final String res = manager.canCollapseNodesIntoMetaNode(nodeIds);
+                final String res = manager.canCollapseNodesIntoMetaNode(nodeIds, annoIDs);
                 if (res != null) {
                     throw new IllegalArgumentException(res);
                 }
                 name = idia.getValue();
-                return Optional.of(new CollapseMetaNodeCommand(manager, nodeIds, annos, name, encapsulateAsSubnode));
+                return Optional.of(new CollapseMetaNodeCommand(manager, nodeIds, annoIDs, name, encapsulateAsSubnode));
             }
         } catch (IllegalArgumentException e) {
             final MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ERROR);

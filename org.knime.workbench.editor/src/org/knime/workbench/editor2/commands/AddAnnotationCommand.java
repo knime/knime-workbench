@@ -55,6 +55,7 @@ import org.eclipse.gef.editparts.ZoomManager;
 import org.eclipse.swt.graphics.Point;
 import org.knime.core.node.workflow.AnnotationData;
 import org.knime.core.node.workflow.WorkflowAnnotation;
+import org.knime.core.node.workflow.WorkflowAnnotationID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.ColorUtilities;
 import org.knime.workbench.editor2.AnnotationUtilities;
@@ -80,7 +81,7 @@ public class AddAnnotationCommand extends AbstractKNIMECommand {
     private final Point m_location;
 
     // remember the new annotation for undo
-    private WorkflowAnnotation m_anno;
+    private WorkflowAnnotationID m_anno;
 
     /**
      * Adds a workflow annotation.
@@ -111,7 +112,6 @@ public class AddAnnotationCommand extends AbstractKNIMECommand {
         final PrecisionPoint location = new PrecisionPoint(m_location.x, m_location.y);
         WorkflowEditor.adaptZoom(zoomManager, location, true);
 
-        m_anno = new WorkflowAnnotation();
         final AnnotationData data = new AnnotationData();
         // it is a workflow annotation
         data.setBgColor(INITIAL_FLOWANNO_COLOR);
@@ -119,15 +119,15 @@ public class AddAnnotationCommand extends AbstractKNIMECommand {
         data.setBorderSize(AnnotationUtilities.getAnnotationDefaultBorderSizePreferenceValue());
         data.setBorderColor(INITAL_FLOWBORDER_COLOR);
         data.setStyleRanges(new AnnotationData.StyleRange[0]);
-        m_anno.copyFrom(data, true);
         final WorkflowManager hostWFM = getHostWFM();
-        hostWFM.addWorkflowAnnotation(m_anno);
+        WorkflowAnnotation annotation = hostWFM.addWorkflowAnnotation(data, -1);
+        m_anno = annotation.getID();
         m_viewer.deselectAll();
         // select the new ones....
         if ((m_viewer.getRootEditPart().getContents() != null)
             && (m_viewer.getRootEditPart().getContents() instanceof WorkflowRootEditPart)) {
             ((WorkflowRootEditPart)m_viewer.getRootEditPart().getContents())
-                .setFutureAnnotationSelection(Collections.singleton(m_anno));
+                .setFutureAnnotationSelection(Collections.singleton(annotation));
         }
     }
 
