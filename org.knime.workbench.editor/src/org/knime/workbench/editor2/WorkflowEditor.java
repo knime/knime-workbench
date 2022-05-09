@@ -1773,20 +1773,19 @@ public class WorkflowEditor extends GraphicalEditor implements
                 color = BG_COLOR_DEFAULT;
             }
         }
-        Runnable r = new Runnable() {
-            /** {@inheritDoc} */
-            @Override
-            public void run() {
-                GraphicalViewer gv = getGraphicalViewer();
-                Control control = gv.getControl();
-                control.setBackground(color);
-            }
-        };
+        runInDisplayThread(() -> {
+            GraphicalViewer gv = getGraphicalViewer();
+            Control control = gv.getControl();
+            control.setBackground(color);
+        });
+    }
+
+    private static void runInDisplayThread(final Runnable task) {
         Display display = Display.getDefault();
         if (display.getThread() == Thread.currentThread()) {
-            r.run();
+            task.run();
         } else {
-            display.asyncExec(r);
+            display.asyncExec(task);
         }
     }
 
@@ -3673,7 +3672,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             break;
         case MetaNodePorts:
             // for metanode editors in case the port bar needs to dis/appear
-            getViewer().getContents().refresh();
+            runInDisplayThread(() -> getViewer().getContents().refresh());
             break;
         case LockStatus:
             // nothing to do
