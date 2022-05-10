@@ -111,7 +111,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
      * @param viewer the associated tree viewer
      */
     public GlobalDeploytoServerAction(final ExplorerView viewer) {
-        super(viewer, "Deploy to Server...");
+        super(viewer, "Upload to Server or Hub");
         setImageDescriptor(ICON);
     }
 
@@ -130,13 +130,13 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
     public void run() {
         AbstractExplorerFileStore srcFileStore = getSingleSelectedElement()
                 .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
-        String dialogTitle = "Deploy " + srcFileStore.getName();
+        String dialogTitle = "Upload " + srcFileStore.getName();
 
         String lockableMessage = ExplorerFileSystemUtils.isLockable(Collections.singletonList(srcFileStore), true);
         if (lockableMessage != null) {
             MessageBox mb =
                 new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
-            mb.setText("Can't Deploy All Selected Items To Server");
+            mb.setText("Can't Upload All Selected Items");
             mb.setMessage(lockableMessage);
             mb.open();
             return;
@@ -177,13 +177,13 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
             statusList.add(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
                 "invocation error: " + e.getMessage(), e));
         } catch (InterruptedException e) {
-            LOGGER.debug("Deploy failed: interrupted, " + e.getMessage(), e);
+            LOGGER.debug("Upload failed: interrupted, " + e.getMessage(), e);
             statusList.add(new Status(IStatus.ERROR, ExplorerActivator.PLUGIN_ID,
                 "interrupted: " + e.getMessage(), e));
         }
         if (statusList.size() > 1) {
             IStatus multiStatus = new MultiStatus(ExplorerActivator.PLUGIN_ID, IStatus.ERROR,
-                statusList.toArray(new IStatus[0]), "Could not deploy all elements.", null);
+                statusList.toArray(new IStatus[0]), "Could not upload all elements.", null);
             ErrorDialog.openError(Display.getDefault().getActiveShell(), dialogTitle,
                 "Some problems occurred during the operation.", multiStatus);
         } else if (statusList.size() == 1) {
@@ -269,7 +269,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
             });
             setFilter(new MessageJobFilter());
             setTitle("Destination");
-            setHeader("Deploy to...");
+            setHeader("Upload to...");
             setDescription("Select the destination workflow group.");
 
             m_currentContentProvider = initialSelection == null || initialSelection.getFileStore() == null ? null
