@@ -48,15 +48,18 @@
 package org.knime.workbench.repository;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtension;
 import org.eclipse.core.runtime.IExtensionPoint;
@@ -68,6 +71,8 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.extension.CategoryExtension;
+import org.knime.core.node.extension.CategorySetFactory;
 import org.knime.core.node.extension.InvalidNodeFactoryExtensionException;
 import org.knime.core.node.extension.NodeFactoryExtension;
 import org.knime.core.node.extension.NodeFactoryExtensionManager;
@@ -140,6 +145,8 @@ public final class RepositoryManager {
 
     private static final String ID_META_NODE
             = "org.knime.workbench.repository.metanode";
+
+    private static final String ID_CATEGORY_SET  = "org.knime.workbench.repository.categorysets";
 
     private final List<Listener> m_loadListeners =
             new CopyOnWriteArrayList<Listener>();
@@ -267,83 +274,125 @@ public final class RepositoryManager {
         }
     }
 
-    private void readCategories(final IProgressMonitor monitor, final Root root) {
-        //
-        // First, process the contributed categories
-        //
-        IExtension[] categoryExtensions = getExtensions(ID_CATEGORY);
-        ArrayList<IConfigurationElement> allElements =
-                new ArrayList<IConfigurationElement>();
+    private Stream<CategoryExtension> extractDeclarationsFromSet(final IExtension categorySetExtension) {
+        var pluginId = categorySetExtension.getNamespaceIdentifier();
+        return Stream.of(categorySetExtension.getConfigurationElements())//
+            .map(RepositoryManager::createFactory)//
+            .filter(Objects::nonNull)//
+            .map(CategorySetFactory::getCategories)//
+            .flatMap(Collection::stream)//
+            .filter(c -> filterCategoryExtensionForForeignPlugins(c, pluginId));
+    }
 
-        for (IExtension ext : categoryExtensions) {
-            // iterate through the config elements and create 'Category' objects
-            IConfigurationElement[] elements = ext.getConfigurationElements();
-            allElements.addAll(Arrays.asList(elements));
+    /** Filter out category declarations that claim to come from another group than the category set */
+    private static boolean filterCategoryExtensionForForeignPlugins(final CategoryExtension category,
+        final String pluginIdOfCategorySet) {
+        if (pluginIdOfCategorySet.startsWith("org.knime.")) {
+            // If the category set comes from KNIME, we know that the plugin ids
+            // of the CategoryExtension elements are set correctly
+            // => We allow all pluginIds in the category
+            return true;
         }
+        if (!isPluginIdFromSameVendor(pluginIdOfCategorySet, category.getContributingPlugin())) {
+            LOGGER.errorWithFormat("The category %s of the category set from plugin %s has the pluginId %s."
+                + "This is not allowed because category sets can only define categories of plugins from the same group.",
+                category.getCompletePath(), pluginIdOfCategorySet, category.getContributingPlugin());
+            return false;
+        }
+        return true;
+    }
 
-        // remove duplicated categories
-        removeDuplicatesFromCategories(allElements);
+    private static CategorySetFactory createFactory(final IConfigurationElement factoryElement) {
+        try {
+            return (CategorySetFactory)factoryElement.createExecutableExtension("factory-class");
+        } catch (CoreException e) {
+            LOGGER.error(String.format("Failed to create CategorySetFactory from plugin '%s'.",
+                factoryElement.getDeclaringExtension().getNamespaceIdentifier()), e);
+            return null;
+        }
+    }
+
+    private void readCategories(final IProgressMonitor monitor, final Root root) {
+        var categories = new ArrayList<>(getCategoryEntriesFromExtPoint());
 
         // sort first by path-depth, so that everything is there in the
         // right order
-        Collections.sort(allElements, new Comparator<IConfigurationElement>() {
-            @Override
-            public int compare(final IConfigurationElement o1,
-                    final IConfigurationElement o2) {
-                String element1 = o1.getAttribute("path");
-                String element2 = o2.getAttribute("path");
-                if (element1 == element2) {
-                    return 0;
-                } else if (element1 == null) {
-                    return -1;
-                } else if (element2 == null) {
-                    return 1;
-                } else if (element1.equals(element2)) {
-                    return 0;
-                } else if ("/".equals(element1)) {
-                    return -1;
-                } else if ("/".equals(element2)) {
-                    return 1;
-                } else {
-                    int countSlashes1 = 0;
-                    for (int i = 0; i < element1.length(); i++) {
-                        if (element1.charAt(i) == '/') { countSlashes1++; }
-                    }
+        Collections.sort(categories, RepositoryManager::compareByPathDepth);
 
-                    int countSlashes2 = 0;
-                    for (int i = 0; i < element2.length(); i++) {
-                        if (element2.charAt(i) == '/') { countSlashes2++; }
-                    }
-                    return countSlashes1 - countSlashes2;
-                }
-            }
-        });
-
-        for (IConfigurationElement e : allElements) {
+        for (var cat : categories) {
             if (monitor.isCanceled()) {
                 return;
             }
             try {
-                Category category = RepositoryFactory.createCategory(root, e);
-                LOGGER.debug("Found category extension '" + category.getID()
-                        + "' on path '" + category.getPath() + "'");
+                Category category = RepositoryFactory.createCategory(root, cat);
+                LOGGER.debugWithFormat("Found category extension '%s' on path '%s'", category.getID(),
+                    category.getPath());
                 for (Listener l : m_loadListeners) {
                     l.newCategory(root, category);
                 }
             } catch (Exception ex) {
-                String message =
-                        "Category '"
-                                + e.getAttribute("level-id")
-                                + "' from plugin '"
-                                + e.getDeclaringExtension()
-                                        .getNamespaceIdentifier()
-                                + "' could not be created in parent path '"
-                                + e.getAttribute("path") + "'.";
-                LOGGER.error(message, ex);
+                LOGGER.error(String.format("Category '%s' from plugin '%s' could not be created in parent path '%s'.",
+                    cat.getLevelId(), cat.getContributingPlugin(), cat.getPath()), ex);
             }
         }
     }
 
+    private Collection<CategoryExtension> getCategoryEntriesFromExtPoint() {
+        // categories extension point
+        IExtension[] categoryExtensions = getExtensions(ID_CATEGORY);
+        Stream<CategoryExtension> categoryExtPointEntries = Stream.of(categoryExtensions)//
+            .flatMap(e -> Stream.of(e.getConfigurationElements()))//
+            .map(CategoryExtension::fromConfigurationElement);
+
+        // cateogorysets extension point
+        IExtension[] categorySetExtensions = getExtensions(ID_CATEGORY_SET);
+        Stream<CategoryExtension> categorySetFactoryExtPointEntries = Stream.of(categorySetExtensions)//
+            .flatMap(this::extractDeclarationsFromSet);
+
+        return Stream.concat(categoryExtPointEntries, categorySetFactoryExtPointEntries)//
+            .sequential()//
+            .collect(Collectors.toMap(CategoryExtension::getCompletePath, Function.identity(),
+                RepositoryManager::takeLeftAndReportDuplicateIfNameDiffers))
+            .values();
+    }
+
+    private static int compareByPathDepth(final CategoryExtension o1, final CategoryExtension o2) {
+        String element1 = o1.getPath();
+        String element2 = o2.getPath();
+        if (Objects.equals(element1, element2)) {
+            return 0;
+        } else if (element1 == null) {
+            return -1;
+        } else if (element2 == null) {
+            return 1;
+        } else {
+            int countSlashes1 = 0;
+            for (int i = 0; i < element1.length(); i++) {
+                if (element1.charAt(i) == '/') { countSlashes1++; }
+            }
+
+            int countSlashes2 = 0;
+            for (int i = 0; i < element2.length(); i++) {
+                if (element2.charAt(i) == '/') { countSlashes2++; }
+            }
+            return countSlashes1 - countSlashes2;
+        }
+    }
+
+    private static CategoryExtension takeLeftAndReportDuplicateIfNameDiffers(final CategoryExtension left,
+        final CategoryExtension right) {
+        assert left.getCompletePath().equals(right.getCompletePath()) : "Should only be called in case of a collision.";
+        // only report removal if the names differ (otherwise users will not notice any difference
+        // except for icon and description
+        if (!left.getName().equals(right.getName())) {
+            LOGGER.warnWithFormat(
+                "Category '%s' was found twice. Names are '%s'(Plugin: %s) and '%s'(Plugin: %s). "
+                    + "The category with name '%s' is ignored.",
+                left.getCompletePath(), left.getName(), left.getContributingPlugin(), right.getName(),
+                right.getContributingPlugin(), right.getName());
+        }
+        return left;
+    }
 
     private void readNodes(final IProgressMonitor monitor, final Root root, final boolean isIncludeDeprecated) {
         IContainerObject uncategorized = root.findContainer("/uncategorized");
@@ -410,19 +459,12 @@ public final class RepositoryManager {
                 } else {
                     String nodePluginId = nodeFactoryExtension.getPlugInSymbolicName();
                     String categoryPluginId = parentContainer.getContributingPlugin();
-                    if (categoryPluginId == null) {
-                        categoryPluginId = "";
-                    }
-                    int secondDotIndex = nodePluginId.indexOf('.', nodePluginId.indexOf('.') + 1);
-                    if (secondDotIndex == -1) {
-                        secondDotIndex = 0;
-                    }
 
                     if (!parentContainer.isLocked() ||
                             nodePluginId.equals(categoryPluginId) ||
                             nodePluginId.startsWith("org.knime.") ||
                             nodePluginId.startsWith("com.knime.") ||
-                            nodePluginId.regionMatches(0, categoryPluginId, 0, secondDotIndex)) {
+                            isPluginIdFromSameVendor(categoryPluginId, nodePluginId)) {
                         // container not locked, or node and category from same plug-in
                         // or the vendor is the same (comparing the first two parts of the plug-in ids)
                         parentContainer.addChild(node);
@@ -438,6 +480,18 @@ public final class RepositoryManager {
             }
 
         } // for configuration elements
+    }
+
+    static boolean isPluginIdFromSameVendor(final String pluginIdA, final String pluginIdB) {
+        if (pluginIdA == null || pluginIdB == null) {
+            return false;
+        }
+
+        int secondDotIndex = pluginIdA.indexOf('.', pluginIdA.indexOf('.') + 1);
+        if (secondDotIndex == -1) {
+            secondDotIndex = 0;
+        }
+        return pluginIdA.regionMatches(0, pluginIdB, 0, secondDotIndex);
     }
 
 
@@ -492,57 +546,6 @@ public final class RepositoryManager {
 
         }
         return point.getExtensions();
-    }
-
-    private static void removeDuplicatesFromCategories(
-            final ArrayList<IConfigurationElement> allElements) {
-
-        // brute force search
-        for (int i = 0; i < allElements.size(); i++) {
-            for (int j = allElements.size() - 1; j > i; j--) {
-
-                String pathOuter = allElements.get(i).getAttribute("path");
-                String levelIdOuter =
-                        allElements.get(i).getAttribute("level-id");
-                String pathInner = allElements.get(j).getAttribute("path");
-                String levelIdInner =
-                        allElements.get(j).getAttribute("level-id");
-
-                if (pathOuter.equals(pathInner)
-                        && levelIdOuter.equals(levelIdInner)) {
-
-                    String nameI = allElements.get(i).getAttribute("name");
-                    String nameJ = allElements.get(j).getAttribute("name");
-
-                    // the removal is only reported in case the names
-                    // are not equal (if they are equal,the user will not
-                    // notice any difference (except possibly the picture))
-                    if (!nameI.equals(nameJ)) {
-                        String pluginI =
-                                allElements.get(i).getDeclaringExtension()
-                                        .getNamespaceIdentifier();
-                        String pluginJ =
-                                allElements.get(j).getDeclaringExtension()
-                                        .getNamespaceIdentifier();
-
-                        String message =
-                                "Category '" + pathOuter + "/" + levelIdOuter
-                                        + "' was found twice. Names are '"
-                                        + nameI + "'(Plugin: " + pluginI
-                                        + ") and '" + nameJ + "'(Plugin: "
-                                        + pluginJ
-                                        + "). The category with name '" + nameJ
-                                        + "' is ignored.";
-
-                        LOGGER.warn(message);
-                    }
-
-                    // remove from the end of the list
-                    allElements.remove(j);
-
-                }
-            }
-        }
     }
 
     private static void removeEmptyCategories(

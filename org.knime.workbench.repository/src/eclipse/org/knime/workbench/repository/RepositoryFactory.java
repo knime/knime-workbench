@@ -48,6 +48,7 @@
 package org.knime.workbench.repository;
 
 import java.io.File;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -66,6 +67,7 @@ import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.NodeSetFactory;
+import org.knime.core.node.extension.CategoryExtension;
 import org.knime.core.node.extension.InvalidNodeFactoryExtensionException;
 import org.knime.core.node.extension.NodeFactoryExtension;
 import org.knime.core.node.extension.NodeFactoryExtensionManager;
@@ -219,46 +221,88 @@ public final class RepositoryFactory {
      * @param root The root to insert the category in
      * @param element Configuration element from the contributing plugin
      * @return Category object to be used within the repository.
-     * @throws IllegalArgumentException If the element is not compatible (e.g.
-     *             wrong attributes)
+     * @throws IllegalArgumentException If the element is not compatible (e.g. wrong attributes)
      */
-    public static Category createCategory(final Root root,
-            final IConfigurationElement element) {
-        String id = element.getAttribute("level-id");
+    static Category createCategory(final Root root, final CategoryExtension catExtension) {
+        String id = catExtension.getLevelId();
 
         // get the id of the contributing plugin
-        String pluginID =
-                element.getDeclaringExtension().getNamespaceIdentifier();
-        boolean locked =
-            Boolean.parseBoolean(element.getAttribute("locked"))
-                || ((element.getAttribute("locked") == null) && pluginID.matches("^(?:org|com)\\.knime\\..+"));
+        String pluginID = catExtension.getContributingPlugin();
+        boolean locked = catExtension.isLocked();
 
-        Category cat = new Category(id, str(element.getAttribute("name"), "!name is missing!"), pluginID, locked);
-        cat.setDescription(str(element.getAttribute("description"), ""));
-        cat.setAfterID(str(element.getAttribute("after"), ""));
-        String path = str(element.getAttribute("path"), "/");
+        Category cat = new Category(id, catExtension.getName(), pluginID, locked);
+        cat.setDescription(catExtension.getDescription());
+        cat.setAfterID(catExtension.getAfterID());
+        var path = catExtension.getPath();
         cat.setPath(path);
         if (!Boolean.getBoolean("java.awt.headless")) {
-            String iconPath = element.getAttribute("icon");
-            Image img;
-            if (iconPath == null) {
-                img = ImageRepository.getIconImage(SharedImages.DefaultCategoryIcon);
-
-            } else {
-                img = ImageRepository.getIconImage(pluginID, iconPath);
-                if (img == null) {
-                    LOGGER.coding("Icon '" + element.getAttribute("icon") + "' for category " + cat.getPath() + "/"
-                        + cat.getName() + " does not exist");
-                    img = ImageRepository.getIconImage(SharedImages.DefaultCategoryIcon);
-                }
-            }
-            cat.setIcon(img);
+            cat.setIcon(findCategoryIcon(catExtension.getIcon(), pluginID, catExtension.getCompletePath()));
         }
 
         //
-        // Insert in proper location, create all categories on the path
-        // if not already there
+        // Insert in proper location
         //
+        IContainerObject container = findParentContainer(root, path);
+
+        if (canAdd(pluginID, container)) {
+            container.addChild(cat);
+        } else {
+            LOGGER.errorWithFormat("Locked parent category for category %s: %s. Category will NOT be added!",
+                cat.getID(), cat.getPath());
+        }
+
+        return cat;
+    }
+
+    private static Image findCategoryIcon(final String icon, final String pluginID, final String completeCategoryPath) {
+        if (icon == null) {
+            return defaultCategoryIcon();
+        }
+
+        // Find the URL to the icon
+        final Path iconPath = new Path(icon);
+        final URL iconUrl;
+        if (iconPath.isAbsolute()) {
+            try {
+                iconUrl = iconPath.toFile().toURI().toURL();
+            } catch (final MalformedURLException e) {
+                LOGGER.error(
+                    String.format("Icon '%s' for category %s could not be resolved.", icon, completeCategoryPath), e);
+                return defaultCategoryIcon();
+            }
+        } else {
+            // Relative path from the plugin root
+            iconUrl = FileLocator.find(Platform.getBundle(pluginID), iconPath, null);
+        }
+
+        // Get the image from the ImageRepository
+        Image img = null;
+        if (iconUrl != null) {
+            img = ImageRepository.getIconImage(iconUrl);
+        }
+        if (img != null) {
+            return img;
+        }
+
+        // Image was null -> Log a coding error and return the default icon
+        LOGGER.codingWithFormat("Icon '%s' for category %s does not exist", icon, completeCategoryPath);
+        return defaultCategoryIcon();
+    }
+
+    private static Image defaultCategoryIcon() {
+        return ImageRepository.getIconImage(SharedImages.DefaultCategoryIcon);
+    }
+
+    private static boolean canAdd(final String pluginID, final IContainerObject container) {
+        String parentPluginId = container.getContributingPlugin();
+        return !container.isLocked() || // it's generally allowed to add to the category
+            pluginID.equals(parentPluginId) || // the child is from the same plugin as the category
+            pluginID.startsWith("org.knime.") || // the child is contributed by KNIME
+            pluginID.startsWith("com.knime.") || // the child is contributed by KNIME
+            RepositoryManager.isPluginIdFromSameVendor(parentPluginId, pluginID); // the child is from the same vendor
+    }
+
+    private static IContainerObject findParentContainer(final Root root, String path) {
         if (path.startsWith("/")) {
             path = path.substring(1);
         }
@@ -270,37 +314,13 @@ public final class RepositoryFactory {
         for (int i = 0; i < segments.length; i++) {
             IRepositoryObject obj = container.getChildByID(segments[i], false);
             if (obj == null) {
-                throw new IllegalArgumentException("The segment '"
-                        + segments[i] + "' in path '" + path
-                        + "' does not exist!");
+                throw new IllegalArgumentException(
+                    "The segment '" + segments[i] + "' in path '" + path + "' does not exist!");
             }
             // continue at this level
             container = (IContainerObject)obj;
         }
-
-        String parentPluginId = container.getContributingPlugin();
-        if (parentPluginId == null) {
-            parentPluginId = "";
-        }
-        int secondDotIndex = pluginID.indexOf('.', pluginID.indexOf('.') + 1);
-        if (secondDotIndex == -1) {
-            secondDotIndex = 0;
-        }
-
-        if (!container.isLocked() ||
-                pluginID.equals(parentPluginId) ||
-                pluginID.startsWith("org.knime.") ||
-                pluginID.startsWith("com.knime.") ||
-                pluginID.regionMatches(0, parentPluginId, 0, secondDotIndex)) {
-            // container not locked, or both categories from same plug-in
-            // or the vendor is the same (comparing the first two parts of the plug-in ids)
-            container.addChild(cat);
-        } else {
-            LOGGER.error("Locked parent category for category " + cat.getID() + ": " + cat.getPath()
-                    + ". Category will NOT be added!");
-        }
-
-        return cat;
+        return container;
     }
 
     //
