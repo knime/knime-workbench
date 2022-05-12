@@ -47,20 +47,28 @@
  */
 package org.knime.workbench.editor2.actions;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
+
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.ActionFactory;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowAnnotationID;
 import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.ui.node.workflow.WorkflowCopyUI;
+import org.knime.core.ui.wrapper.WorkflowDefWrapper;
+import org.knime.shared.workflow.storage.text.util.ObjectMapperUtil;
 import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.ClipboardObject;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.ui.async.AsyncUtil;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
  * Implements the clipboard copy action to copy nodes and connections into the
@@ -71,7 +79,10 @@ import org.knime.workbench.ui.async.AsyncUtil;
 public class CopyAction extends AbstractClipboardAction {
 
     private NodeContainerEditPart[] m_nodeParts;
+
     private AnnotationEditPart[] m_annotationParts;
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(CutAction.class);
 
     /**
      * Constructs a new clipboard copy action.
@@ -137,12 +148,29 @@ public class CopyAction extends AbstractClipboardAction {
         WorkflowCopyContent.Builder content = WorkflowCopyContent.builder();
         content.setNodeIDs(ids);
         content.setAnnotationIDs(annotationIDs);
-        WorkflowCopyUI wfCopy = AsyncUtil.wfmAsyncSwitch(wfm -> wfm.copy(content.build()),
-            wfm -> wfm.copyAsync(content.build()), super.getManagerUI(), "Copying workflow parts ...");
+        WorkflowCopyUI wfCopy = AsyncUtil.wfmAsyncSwitch(//
+            syncWfmUI -> syncWfmUI.copy(content.build()),// calls copyToDef
+            asyncWfmUI -> asyncWfmUI.copyAsync(content.build()), //
+            super.getManagerUI(), "Copying workflow parts ...");
 
-        // the information about the nodes is stored in the config XML format
-        // also used to store workflow information in the kflow files
-        getEditor().setClipboardContent(new ClipboardObject(wfCopy));
+        if (wfCopy instanceof WorkflowDefWrapper) {
+            var workflowDef = ((WorkflowDefWrapper)wfCopy).unwrap();
+            var mapper = ObjectMapperUtil.getInstance().getObjectMapper();
+            String serializedContent;
+            try {
+                serializedContent = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(workflowDef);
+                Toolkit.getDefaultToolkit().getSystemClipboard()//
+                    .setContents(new StringSelection(serializedContent), null);
+            } catch (JsonProcessingException e) {
+                  LOGGER.error("Cannot copy to system clipboard: ", e);
+            }
+
+        } else {
+            // TODO use eclipse clipboard for copy & paste from remote to remote
+            // the information about the nodes is stored in the config XML format
+            // also used to store workflow information in the kflow files
+            getEditor().setClipboardContent(new ClipboardObject(wfCopy));
+        }
 
         // update the actions
         getEditor().updateActions();

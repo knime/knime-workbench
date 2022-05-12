@@ -136,6 +136,12 @@ public class PasteActionContextMenu extends PasteAction {
                 }
                 return new int[]{shiftx, shifty};
             }
+
+
+            @Override
+            public int[] calculateShift(final Iterable<int[]> bounds, final WorkflowManagerUI manager) {
+                return calculateShift(bounds, manager, null);
+            }
         };
     }
 

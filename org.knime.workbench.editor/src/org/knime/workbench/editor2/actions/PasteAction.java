@@ -47,21 +47,30 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import static org.knime.core.ui.wrapper.Wrapper.wraps;
+import java.awt.HeadlessException;
+import java.awt.Toolkit;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.io.IOException;
+import java.util.Optional;
 
+import org.eclipse.gef.commands.Command;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.ActionFactory;
-import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.core.ui.node.workflow.WorkflowCopyUI;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
+import org.knime.shared.workflow.def.WorkflowDef;
+import org.knime.shared.workflow.storage.text.util.ObjectMapperUtil;
 import org.knime.workbench.editor2.ClipboardObject;
 import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.commands.PasteFromWorkflowDefCommand;
 import org.knime.workbench.editor2.commands.PasteFromWorkflowPersistorCommand;
 import org.knime.workbench.editor2.commands.PasteFromWorkflowPersistorCommand.ShiftCalculator;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 /**
  * Implements the clipboard paste action to paste nodes and connections from the
@@ -73,6 +82,7 @@ public class PasteAction extends AbstractClipboardAction {
 
     private static final int OFFSET = 120;
 
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(PasteAction.class);
 
     /**
      * Constructs a new clipboard paste action.
@@ -110,7 +120,56 @@ public class PasteAction extends AbstractClipboardAction {
     }
 
     /**
-     * At least one <code>NodeSettings</code> object must be in the clipboard.
+     * @return whether we're executing the paste in a remote workflow editor
+     */
+    private boolean inRemoteWorkflowEditor() {
+        return getEditor().getWorkflowManager().isEmpty();
+    }
+
+    /**
+     * @return the operating system clipboard content as unicode string
+     */
+    private static Optional<String> getSystemClipboardContentAsString(){
+        String clipboardContent = null;
+        try {
+            clipboardContent = (String)Toolkit.getDefaultToolkit().getSystemClipboard()//
+                .getContents(null)//
+                .getTransferData(java.awt.datatransfer.DataFlavor.stringFlavor);
+        } catch (HeadlessException e) {
+            LOGGER.error("Cannot access system clipboard via java.awt.Toolkit in headless mode.", e);
+        } catch (UnsupportedFlavorException e) {
+            // if the requested data flavor is not supported
+            LOGGER.error("The java.awt.Toolkit system clipboard implementation does not support stringFlavor.", e);
+        } catch (IOException e) {
+            // if the data is no longer available in the requested flavor
+            LOGGER.debug("System clipboard does not contain contents compatible to string", e);
+        }
+        return Optional.ofNullable(clipboardContent);
+    }
+
+    /**
+     * Parse the system clipboard string contents into a workflow def.
+     */
+    private static Optional<WorkflowDef> getSystemClipboardAsDef(){
+        var optContent = getSystemClipboardContentAsString();
+        if(optContent.isPresent()) {
+            var mapper = ObjectMapperUtil.getInstance().getObjectMapper();
+            try {
+                final var mapped = mapper.readValue(optContent.get(), WorkflowDef.class);
+                return Optional.of(mapped);
+            } catch (JsonMappingException e) {
+                LOGGER.error("Cannot parse the contents of the system clipboard to KNIME workflow content.", e);
+            } catch (JsonProcessingException e) {
+                // this requires no warning since we cannot expect the system clipboard content to be parseable
+                LOGGER.debug(e);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * In the workflow editor, any string content in the system clipboard will enable the paste action.
+     * In the remote workflow editor, any content of the workbench clipboard will enable the paste action.
      *
      * {@inheritDoc}
      */
@@ -119,15 +178,10 @@ public class PasteAction extends AbstractClipboardAction {
         if (getManagerUI().isWriteProtected()) {
             return false;
         }
-        if(getEditor().getClipboardContent() == null) {
-            return false;
+        if(inRemoteWorkflowEditor()) {
+            return getEditor().getClipboardContent() != null;
         }
-        WorkflowCopyUI copy = getEditor().getClipboardContent().getWorkflowCopy();
-        if (wraps(copy, WorkflowPersistor.class) ^ wraps(getManagerUI(), WorkflowManager.class)) {
-            //cross-copies between WorkflowManager and WorkflowManagerUI are not possible, yet
-            return false;
-        }
-        return true;
+        return getSystemClipboardContentAsString().isPresent();
     }
 
     /**
@@ -135,19 +189,35 @@ public class PasteAction extends AbstractClipboardAction {
      */
     @Override
     public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
-        ClipboardObject clipObject = getEditor().getClipboardContent();
-        ShiftCalculator shiftCalculator = newShiftCalculator();
-        PasteFromWorkflowPersistorCommand pasteCommand =
-            new PasteFromWorkflowPersistorCommand(
-                    getEditor(), clipObject, shiftCalculator);
-        getCommandStack().execute(pasteCommand); // enables undo
 
-        // update the actions
-        getEditor().updateActions();
+        var shiftCalculator = newShiftCalculator();
 
-        // Give focus to the editor again. Otherwise the actions (selection)
-        // is not updated correctly.
-        getWorkbenchPart().getSite().getPage().activate(getWorkbenchPart());
+        Command pasteCommand = null;
+        if(inRemoteWorkflowEditor()) {
+            ClipboardObject clipObject = getEditor().getClipboardContent();
+            pasteCommand = new PasteFromWorkflowPersistorCommand(getEditor(), clipObject, shiftCalculator);
+        } else {
+            //
+            Optional<WorkflowDef> parsedClipboardContent = getSystemClipboardAsDef();
+            if(parsedClipboardContent.isEmpty()) {
+                LOGGER.info("The system clipboard does not contain KNIME workflow content.");
+            } else {
+                pasteCommand = new PasteFromWorkflowDefCommand(getEditor(), parsedClipboardContent.get(), shiftCalculator);
+            }
+        }
+
+        // the system clipboard content can change between internalCalculateEnabled and runOnNodes
+        // that's why we might not have an executable paste here
+        if(pasteCommand != null) {
+            getCommandStack().execute(pasteCommand); // enables undo
+            // update the actions
+            getEditor().updateActions();
+
+            // Give focus to the editor again. Otherwise the actions (selection)
+            // is not updated correctly.
+            getWorkbenchPart().getSite().getPage().activate(getWorkbenchPart());
+        }
+
     }
 
 
@@ -167,16 +237,7 @@ public class PasteAction extends AbstractClipboardAction {
                     final ClipboardObject clipObject) {
                 final int counter =
                     clipObject.incrementAndGetRetrievalCounter();
-                int offsetX = OFFSET;
-                int offsetY = OFFSET;
-                if (getEditor().getEditorSnapToGrid()) {
-                    // with grid
-                    offsetX = getEditor().getEditorGridXOffset(OFFSET);
-                    offsetY = getEditor().getEditorGridYOffset(OFFSET);
-                }
-                int newX = (offsetX * counter);
-                int newY = (offsetY * counter);
-                return new int[] {newX, newY};
+                return calculateShift(counter);
             }
 
             /**
@@ -186,6 +247,25 @@ public class PasteAction extends AbstractClipboardAction {
             public int[] calculateShift(final int offsetX, final int offsetY, final ClipboardObject clipObject) {
                 return calculateShift(null, null, clipObject);
             }
+
+            @Override
+            public int[] calculateShift(final Iterable<int[]> bounds, final WorkflowManagerUI manager) {
+                // TODO increment
+                return calculateShift(1);
+            }
+
+            private int[] calculateShift(final int counter) {
+            int offsetX = OFFSET;
+            int offsetY = OFFSET;
+            if (getEditor().getEditorSnapToGrid()) {
+                // with grid
+                offsetX = getEditor().getEditorGridXOffset(OFFSET);
+                offsetY = getEditor().getEditorGridYOffset(OFFSET);
+            }
+            int newX = (offsetX * counter);
+            int newY = (offsetY * counter);
+            return new int[] {newX, newY};
+        }
         };
     }
 

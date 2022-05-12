@@ -74,6 +74,7 @@ import org.knime.core.ui.node.workflow.WorkflowCopyUI;
 import org.knime.core.ui.node.workflow.WorkflowCopyWithOffsetUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.async.OperationNotAllowedException;
+import org.knime.shared.workflow.def.WorkflowDef;
 import org.knime.workbench.editor2.ClipboardObject;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.WorkflowEditorMode;
@@ -82,8 +83,11 @@ import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.ui.async.AsyncUtil;
 
 /**
- * Pasts the current clipboard object (containing workflow persistor) into
- * the current workflow.
+ * Only used for remote workflow editor. Supports pasting only for content copied from a remote workflow editor. The
+ * regular workflow editor uses copy & paste via the system clipboard using a string representation based on the
+ * intermediate workflow format, see {@link PasteFromWorkflowDefCommand}.
+ *
+ * Pastes the current clipboard object (containing workflow persistor) into the current workflow.
  *
  * @author Bernd Wiswedel, University of Konstanz
  */
@@ -135,6 +139,20 @@ public final class PasteFromWorkflowPersistorCommand
             if (!copyPersistor.getWorkflowAnnotations().isEmpty()) {
                 return true;
             }
+
+        } else if (wraps(wfCopy, WorkflowDef.class)) {
+            if (!wraps(getHostWFMUI(), WorkflowManager.class)) {
+                //cross copies from WorkflowManager to WorkflowManagerUI not possible, yet
+                return false;
+            }
+            //workflow definition for local workflows
+            var workflowDef = unwrap(wfCopy, WorkflowDef.class);
+            if (!workflowDef.getNodes().isEmpty()) {
+                return true;
+            }
+            if (!workflowDef.getAnnotations().isEmpty()) {
+                return true;
+            }
         } else {
             if (wraps(getHostWFMUI(), WorkflowManager.class)) {
                 //cross copies from WorkflowManager to WorkflowManagerUI not possible, yet
@@ -151,14 +169,14 @@ public final class PasteFromWorkflowPersistorCommand
         final WorkflowManagerUI manager = m_editor.getWorkflowManagerUI();
         final WorkflowCopyUI wfCopy = m_clipboardObject.getWorkflowCopy();
 
-        m_pastedContent = AsyncUtil.wfmAsyncSwitch(wfm -> {
+        m_pastedContent = AsyncUtil.wfmAsyncSwitch(syncWfmUI -> {
             //in case of a sync workflow managewr:
             //paste the content, calculate the shift and then move the pasted objects accordingly
-            final WorkflowCopyContent pastedContent = wfm.paste(wfCopy);
+            final WorkflowCopyContent pastedContent = syncWfmUI.paste(wfCopy);
 
             final NodeID[] pastedNodes = pastedContent.getNodeIDs();
             // As of AP-8593, it will not be possible to have nodes and annotations on the clipboard concurrently
-            final WorkflowAnnotation[] pastedAnnos = wfm.getWorkflowAnnotations(pastedContent.getAnnotationIDs());
+            final WorkflowAnnotation[] pastedAnnos = syncWfmUI.getWorkflowAnnotations(pastedContent.getAnnotationIDs());
             final boolean pasteIsForNodes = ((pastedNodes != null) && (pastedNodes.length > 0));
             final boolean needToggle =
                 pasteIsForNodes ? (!WorkflowEditorMode.NODE_EDIT.equals(m_editor.getEditorMode()))
@@ -209,7 +227,7 @@ public final class PasteFromWorkflowPersistorCommand
             setFutureSelection(pastedContent.getNodeIDs(),
                 Arrays.asList(manager.getWorkflowAnnotations(pastedContent.getAnnotationIDs())));
             return pastedContent;
-        }, wfm -> {
+        }, asyncWfmUI -> {
             //in case of async workflow managers:
             //get the offset, calculate the shift and then paste the objects considering this shift
             assert wfCopy instanceof WorkflowCopyWithOffsetUI;
@@ -226,7 +244,7 @@ public final class PasteFromWorkflowPersistorCommand
             Display.getDefault().syncExec(() -> {
                 setFutureSelection(WorkflowRootEditPart.ALL_NEW_NODES, WorkflowRootEditPart.ALL_NEW_ANNOTATIONS);
             });
-            return wfm.pasteAsync(wfCopyOffset);
+            return asyncWfmUI.pasteAsync(wfCopyOffset);
         }, manager, "Pasting workflow parts ...");
     }
 
@@ -302,6 +320,15 @@ public final class PasteFromWorkflowPersistorCommand
                 final WorkflowManagerUI manager,
                 final ClipboardObject clipObject);
 
+        /** Calculates the shift (offset) when inserting nodes/annotations.
+         * @param bounds The bounds of the inserted elements
+         * @param manager The manager where they were inserted.
+         * @return The shift (array of length 2).
+         */
+        public abstract int[] calculateShift(Iterable<int[]> bounds,
+                final WorkflowManagerUI manager);
+
+
         /**
          * Calculates the shift based on a given position (x,y).
          *
@@ -317,7 +344,7 @@ public final class PasteFromWorkflowPersistorCommand
      * constructor. It's used in redo operations to replay the exact same
      * behavior.
      */
-    private final class FixedShiftCalculator extends ShiftCalculator {
+    static final class FixedShiftCalculator extends ShiftCalculator {
 
         private final int[] m_moveDist;
 
@@ -339,6 +366,14 @@ public final class PasteFromWorkflowPersistorCommand
          */
         @Override
         public int[] calculateShift(final int offsetX, final int offsetY, final ClipboardObject clipObject) {
+            return m_moveDist;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public int[] calculateShift(final Iterable<int[]> bounds, final WorkflowManagerUI manager) {
             return m_moveDist;
         }
     }
