@@ -194,6 +194,7 @@ public class PasteAction extends AbstractClipboardAction {
 
         Command pasteCommand = null;
         if(inRemoteWorkflowEditor()) {
+            //TODO change this to support the persistor paste
             ClipboardObject clipObject = getEditor().getClipboardContent();
             pasteCommand = new PasteFromWorkflowPersistorCommand(getEditor(), clipObject, shiftCalculator);
         } else {
