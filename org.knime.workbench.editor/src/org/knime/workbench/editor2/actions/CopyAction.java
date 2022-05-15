@@ -60,6 +60,7 @@ import org.knime.core.node.workflow.WorkflowAnnotationID;
 import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.ui.node.workflow.WorkflowCopyUI;
 import org.knime.core.ui.wrapper.WorkflowDefWrapper;
+import org.knime.shared.workflow.storage.text.util.DefClipboardContent;
 import org.knime.shared.workflow.storage.text.util.ObjectMapperUtil;
 import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.ClipboardObject;
@@ -82,7 +83,7 @@ public class CopyAction extends AbstractClipboardAction {
 
     private AnnotationEditPart[] m_annotationParts;
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(CutAction.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(CopyAction.class);
 
     /**
      * Constructs a new clipboard copy action.
@@ -155,10 +156,10 @@ public class CopyAction extends AbstractClipboardAction {
 
         if (wfCopy instanceof WorkflowDefWrapper) {
             var workflowDef = ((WorkflowDefWrapper)wfCopy).unwrap();
+            var defClipboardContent = new DefClipboardContent(workflowDef);
             var mapper = ObjectMapperUtil.getInstance().getObjectMapper();
-            String serializedContent;
             try {
-                serializedContent = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(workflowDef);
+                var serializedContent = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(defClipboardContent);
                 Toolkit.getDefaultToolkit().getSystemClipboard()//
                     .setContents(new StringSelection(serializedContent), null);
             } catch (JsonProcessingException e) {

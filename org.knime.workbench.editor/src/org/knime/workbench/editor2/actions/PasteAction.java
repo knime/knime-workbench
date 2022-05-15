@@ -61,16 +61,14 @@ import org.eclipse.ui.actions.ActionFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.shared.workflow.def.WorkflowDef;
-import org.knime.shared.workflow.storage.text.util.ObjectMapperUtil;
+import org.knime.shared.workflow.storage.text.util.DefClipboardContent;
+import org.knime.shared.workflow.storage.text.util.InvalidDefClipboardContentVersionException;
 import org.knime.workbench.editor2.ClipboardObject;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.PasteFromWorkflowDefCommand;
 import org.knime.workbench.editor2.commands.PasteFromWorkflowPersistorCommand;
 import org.knime.workbench.editor2.commands.PasteFromWorkflowPersistorCommand.ShiftCalculator;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 /**
  * Implements the clipboard paste action to paste nodes and connections from the
@@ -150,26 +148,22 @@ public class PasteAction extends AbstractClipboardAction {
     /**
      * Parse the system clipboard string contents into a workflow def.
      */
-    private static Optional<WorkflowDef> getSystemClipboardAsDef(){
+    private static Optional<WorkflowDef> getSystemClipboardAsDef() {
         var optContent = getSystemClipboardContentAsString();
-        if(optContent.isPresent()) {
-            var mapper = ObjectMapperUtil.getInstance().getObjectMapper();
+        if (optContent.isPresent()) {
             try {
-                final var mapped = mapper.readValue(optContent.get(), WorkflowDef.class);
-                return Optional.of(mapped);
-            } catch (JsonMappingException e) {
-                LOGGER.error("Cannot parse the contents of the system clipboard to KNIME workflow content.", e);
-            } catch (JsonProcessingException e) {
-                // this requires no warning since we cannot expect the system clipboard content to be parseable
-                LOGGER.debug(e);
+                var defClipboardContent = DefClipboardContent.valueOf(optContent.get());
+                return defClipboardContent.map(DefClipboardContent::getPayload);
+            } catch (InvalidDefClipboardContentVersionException idccve) {
+                LOGGER.warn(idccve);
             }
         }
         return Optional.empty();
     }
 
     /**
-     * In the workflow editor, any string content in the system clipboard will enable the paste action.
-     * In the remote workflow editor, any content of the workbench clipboard will enable the paste action.
+     * In the workflow editor, any string content in the system clipboard will enable the paste action. In the remote
+     * workflow editor, any content of the workbench clipboard will enable the paste action.
      *
      * {@inheritDoc}
      */
