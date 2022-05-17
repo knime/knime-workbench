@@ -62,7 +62,6 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.shared.workflow.def.WorkflowDef;
 import org.knime.shared.workflow.storage.text.util.DefClipboardContent;
-import org.knime.shared.workflow.storage.text.util.InvalidDefClipboardContentVersionException;
 import org.knime.workbench.editor2.ClipboardObject;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.PasteFromWorkflowDefCommand;
@@ -151,12 +150,8 @@ public class PasteAction extends AbstractClipboardAction {
     private static Optional<WorkflowDef> getSystemClipboardAsDef() {
         var optContent = getSystemClipboardContentAsString();
         if (optContent.isPresent()) {
-            try {
-                var defClipboardContent = DefClipboardContent.valueOf(optContent.get());
-                return defClipboardContent.map(DefClipboardContent::getPayload);
-            } catch (InvalidDefClipboardContentVersionException idccve) {
-                LOGGER.warn(idccve);
-            }
+            var defClipboardContent = DefClipboardContent.valueOf(optContent.get());
+            return defClipboardContent.map(DefClipboardContent::getPayload);
         }
         return Optional.empty();
     }
