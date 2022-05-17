@@ -67,6 +67,7 @@ import org.knime.core.ui.node.workflow.ConnectionContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.wrapper.WorkflowDefWrapper;
 import org.knime.shared.workflow.def.WorkflowDef;
+import org.knime.shared.workflow.storage.clipboard.DefClipboardContent;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.WorkflowEditorMode;
 import org.knime.workbench.editor2.actions.ToggleEditorModeAction;
@@ -82,7 +83,7 @@ import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 public final class PasteFromWorkflowDefCommand
     extends AbstractKNIMECommand {
 
-    private final WorkflowDef m_contentToPaste;
+    private final DefClipboardContent m_contentToPaste;
     private final WorkflowEditor m_editor;
     private ShiftCalculator m_shiftCalculator;
 
@@ -96,7 +97,7 @@ public final class PasteFromWorkflowDefCommand
      *
      */
     public PasteFromWorkflowDefCommand(final WorkflowEditor editor,
-            final WorkflowDef contentToPaste,
+            final DefClipboardContent contentToPaste,
             final ShiftCalculator shiftCalculator) {
         super(editor.getWorkflowManagerUI());
         m_editor = editor;
@@ -119,7 +120,7 @@ public final class PasteFromWorkflowDefCommand
         }
         final boolean hasEditor = m_editor != null;
         // don't allow empty pastes (they don't belong into the history as undoing them doesn't make sense)
-        final boolean hasEffect = !isEmpty(m_contentToPaste);
+        final boolean hasEffect = !isEmpty(m_contentToPaste.getPayload());
         return hasEditor && hasEffect;
     }
 

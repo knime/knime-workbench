@@ -63,7 +63,6 @@ import org.knime.core.node.workflow.WorkflowAnnotationID;
 import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.ui.node.workflow.WorkflowCopyUI;
 import org.knime.core.ui.wrapper.WorkflowDefWrapper;
-import org.knime.shared.workflow.storage.text.util.DefClipboardContent;
 import org.knime.shared.workflow.storage.text.util.ObjectMapperUtil;
 import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.ClipboardObject;
@@ -158,8 +157,7 @@ public class CopyAction extends AbstractClipboardAction {
             super.getManagerUI(), "Copying workflow parts ...");
 
         if (wfCopy instanceof WorkflowDefWrapper) {
-            var workflowDef = ((WorkflowDefWrapper)wfCopy).unwrap();
-            var defClipboardContent = new DefClipboardContent(workflowDef);
+            var defClipboardContent = ((WorkflowDefWrapper)wfCopy).unwrap();
             var mapper = ObjectMapperUtil.getInstance().getObjectMapper();
             try {
                 var serializedContent = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(defClipboardContent);

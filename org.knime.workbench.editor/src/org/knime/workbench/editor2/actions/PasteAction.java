@@ -56,8 +56,8 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.ActionFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
-import org.knime.shared.workflow.def.WorkflowDef;
-import org.knime.shared.workflow.storage.text.util.DefClipboardContent;
+import org.knime.shared.workflow.storage.clipboard.DefClipboardContent;
+import org.knime.shared.workflow.storage.clipboard.InvalidDefClipboardContentVersionException;
 import org.knime.workbench.editor2.ClipboardObject;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.PasteFromWorkflowDefCommand;
@@ -129,11 +129,14 @@ public class PasteAction extends AbstractClipboardAction {
     /**
      * Parse the system clipboard string contents into a workflow def.
      */
-    private static Optional<WorkflowDef> getSystemClipboardAsDef() {
+    private static Optional<DefClipboardContent> getSystemClipboardAsDef() {
         var optContent = getSystemClipboardContentAsString();
         if (optContent.isPresent()) {
-            var defClipboardContent = DefClipboardContent.valueOf(optContent.get());
-            return defClipboardContent.map(DefClipboardContent::getPayload);
+            try {
+                return DefClipboardContent.valueOf(optContent.get());
+            } catch (InvalidDefClipboardContentVersionException idccve) {
+                LOGGER.warn(idccve.getMessage(), idccve);
+            }
         }
         return Optional.empty();
     }
@@ -170,7 +173,7 @@ public class PasteAction extends AbstractClipboardAction {
             pasteCommand = new PasteFromWorkflowPersistorCommand(getEditor(), clipObject, shiftCalculator);
         } else {
             //
-            Optional<WorkflowDef> parsedClipboardContent = getSystemClipboardAsDef();
+            var parsedClipboardContent = getSystemClipboardAsDef();
             if(parsedClipboardContent.isEmpty()) {
                 LOGGER.info("The system clipboard does not contain KNIME workflow content.");
             } else {
