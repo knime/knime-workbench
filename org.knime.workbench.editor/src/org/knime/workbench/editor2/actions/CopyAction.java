@@ -47,10 +47,13 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import java.awt.Toolkit;
-import java.awt.datatransfer.StringSelection;
+import java.util.Optional;
 
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.swt.dnd.Clipboard;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.ActionFactory;
@@ -160,8 +163,7 @@ public class CopyAction extends AbstractClipboardAction {
             var mapper = ObjectMapperUtil.getInstance().getObjectMapper();
             try {
                 var serializedContent = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(defClipboardContent);
-                Toolkit.getDefaultToolkit().getSystemClipboard()//
-                    .setContents(new StringSelection(serializedContent), null);
+                copyToSystemClipboard(serializedContent);
             } catch (JsonProcessingException e) {
                   LOGGER.error("Cannot copy to system clipboard: ", e);
             }
@@ -179,6 +181,33 @@ public class CopyAction extends AbstractClipboardAction {
         // Give focus to the editor again. Otherwise the actions (selection)
         // is not updated correctly.
         getWorkbenchPart().getSite().getPage().activate(getWorkbenchPart());
+    }
+
+    /** Write (non-null) argument string to system clipboard. */
+    private static void copyToSystemClipboard(final String s) {
+        Display display = PlatformUI.getWorkbench().getDisplay();
+        Clipboard cb = new Clipboard(display);
+        try {
+            cb.setContents(new Object[] {s}, new Transfer[] {TextTransfer.getInstance()});
+        } finally {
+            cb.dispose();
+        }
+    }
+
+    /** Read text from system clipboard. */
+    static Optional<String> readFromSystemClipboard() {
+        Display display = PlatformUI.getWorkbench().getDisplay();
+        Clipboard cb = new Clipboard(display);
+        try {
+            Object contents = cb.getContents(TextTransfer.getInstance());
+            if (contents instanceof String) {
+                return Optional.of((String)contents);
+            } else {
+                return Optional.empty();
+            }
+        } finally {
+            cb.dispose();
+        }
     }
 
     /** @return the annotationParts */

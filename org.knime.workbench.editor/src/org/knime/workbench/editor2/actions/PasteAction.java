@@ -47,10 +47,6 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import java.awt.HeadlessException;
-import java.awt.Toolkit;
-import java.awt.datatransfer.UnsupportedFlavorException;
-import java.io.IOException;
 import java.util.Optional;
 
 import org.eclipse.gef.commands.Command;
@@ -126,22 +122,8 @@ public class PasteAction extends AbstractClipboardAction {
     /**
      * @return the operating system clipboard content as unicode string
      */
-    private static Optional<String> getSystemClipboardContentAsString(){
-        String clipboardContent = null;
-        try {
-            clipboardContent = (String)Toolkit.getDefaultToolkit().getSystemClipboard()//
-                .getContents(null)//
-                .getTransferData(java.awt.datatransfer.DataFlavor.stringFlavor);
-        } catch (HeadlessException e) {
-            LOGGER.error("Cannot access system clipboard via java.awt.Toolkit in headless mode.", e);
-        } catch (UnsupportedFlavorException e) {
-            // if the requested data flavor is not supported
-            LOGGER.error("The java.awt.Toolkit system clipboard implementation does not support stringFlavor.", e);
-        } catch (IOException e) {
-            // if the data is no longer available in the requested flavor
-            LOGGER.debug("System clipboard does not contain contents compatible to string", e);
-        }
-        return Optional.ofNullable(clipboardContent);
+    private static Optional<String> getSystemClipboardContentAsString() {
+        return CopyAction.readFromSystemClipboard();
     }
 
     /**
@@ -167,7 +149,7 @@ public class PasteAction extends AbstractClipboardAction {
         if (getManagerUI().isWriteProtected()) {
             return false;
         }
-        if(inRemoteWorkflowEditor()) {
+        if (inRemoteWorkflowEditor()) {
             return getEditor().getClipboardContent() != null;
         }
         return getSystemClipboardContentAsString().isPresent();
