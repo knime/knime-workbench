@@ -395,11 +395,7 @@ public final class RepositoryManager {
     }
 
     private void readNodes(final IProgressMonitor monitor, final Root root, final boolean isIncludeDeprecated) {
-        IContainerObject uncategorized = root.findContainer("/uncategorized");
-        if (uncategorized == null) {
-            // this should never happen, but who knows...
-            uncategorized = root;
-        }
+        IContainerObject uncategorized = findUncategorizedCategory(root);
 
         for (NodeFactoryExtension nodeFactoryExtension : NodeFactoryExtensionManager.getInstance()
             .getNodeFactoryExtensions()) {
@@ -458,13 +454,8 @@ public final class RepositoryManager {
                     uncategorized.addChild(node);
                 } else {
                     String nodePluginId = nodeFactoryExtension.getPlugInSymbolicName();
-                    String categoryPluginId = parentContainer.getContributingPlugin();
 
-                    if (!parentContainer.isLocked() ||
-                            nodePluginId.equals(categoryPluginId) ||
-                            nodePluginId.startsWith("org.knime.") ||
-                            nodePluginId.startsWith("com.knime.") ||
-                            isPluginIdFromSameVendor(categoryPluginId, nodePluginId)) {
+                    if (RepositoryFactory.canAdd(nodePluginId, parentContainer)) {
                         // container not locked, or node and category from same plug-in
                         // or the vendor is the same (comparing the first two parts of the plug-in ids)
                         parentContainer.addChild(node);
@@ -480,6 +471,15 @@ public final class RepositoryManager {
             }
 
         } // for configuration elements
+    }
+
+    private static IContainerObject findUncategorizedCategory(final Root root) {
+        IContainerObject uncategorized = root.findContainer("/uncategorized");
+        if (uncategorized == null) {
+            // this should never happen, but who knows...
+            uncategorized = root;
+        }
+        return uncategorized;
     }
 
     static boolean isPluginIdFromSameVendor(final String pluginIdA, final String pluginIdB) {
@@ -516,16 +516,16 @@ public final class RepositoryManager {
                 IContainerObject parentContainer = root.findContainer(node.getCategoryPath());
 
                 // If parent category is illegal, log an error and append the node to the repository root.
-                if (parentContainer == null) {
-                    LOGGER.warnWithFormat("Invalid category-path for node contribution: '%s' - adding to root instead",
-                        node.getCategoryPath());
-                    root.addChild(node);
-                } else {
+                if (parentContainer != null
+                    && RepositoryFactory.canAdd(node.getContributingPlugin(), parentContainer)) {
                     // everything is fine, add the node to its parent
                     // category
                     parentContainer.addChild(node);
+                } else {
+                    LOGGER.coding("Locked category for node " + node.getID() + ": " + node.getCategoryPath()
+                        + ". Node will be added to 'Uncategorized' instead");
+                    findUncategorizedCategory(root).addChild(node);
                 }
-
             }
         }
     }

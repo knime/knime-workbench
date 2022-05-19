@@ -293,7 +293,7 @@ public final class RepositoryFactory {
         return ImageRepository.getIconImage(SharedImages.DefaultCategoryIcon);
     }
 
-    private static boolean canAdd(final String pluginID, final IContainerObject container) {
+    static boolean canAdd(final String pluginID, final IContainerObject container) {
         String parentPluginId = container.getContributingPlugin();
         return !container.isLocked() || // it's generally allowed to add to the category
             pluginID.equals(parentPluginId) || // the child is from the same plugin as the category
@@ -398,16 +398,23 @@ public final class RepositoryFactory {
             IContainerObject container = root;
             String currentPath = "";
             for (int i = 0; i < segments.length; i++) {
-                IRepositoryObject obj =
-                        container.getChildByID(segments[i], false);
+                IRepositoryObject obj = container.getChildByID(segments[i], false);
                 currentPath += segments[i];
                 if (obj == null) {
-                    Category cat =
-                            createCategory(pluginID, segments[i], "",
-                                    segments[i], "", iconPath, currentPath);
-                    // append the newly created category to the container
-                    container.addChild(cat);
-                    obj = cat;
+                    if (canAdd(pluginID, container)) {
+                        LOGGER.warnWithFormat("Category %s is not registered properly. "
+                            + "Use the categorysets extension point to register categories dynamically "
+                            + "(node factory %s, node set factory: %s).", currentPath, factoryId, set);
+                        Category cat =
+                            createCategory(pluginID, segments[i], "", segments[i], "", iconPath, currentPath);
+                        // append the newly created category to the container
+                        container.addChild(cat);
+                        obj = cat;
+                    } else {
+                        LOGGER.errorWithFormat("Locked parent category for category %s. Category will NOT be added!",
+                            currentPath);
+                        break;
+                    }
                 }
                 currentPath += "/";
                 // continue at this level
