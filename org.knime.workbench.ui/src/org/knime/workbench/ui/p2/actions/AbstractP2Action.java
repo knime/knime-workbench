@@ -117,7 +117,7 @@ public abstract class AbstractP2Action extends Action {
      *
      * @return <code>true</code> if the action should continue, <code>false</code> if it should be aborted
      */
-    protected final boolean checkSDKAndReadOnly() {
+    public static final boolean checkSDKAndReadOnly() {
         final ProvisioningUI provUI = ProvisioningUI.getDefaultUI();
         if (provUI.getRepositoryTracker() == null) {
             MessageBox mbox = new MessageBox(ProvUI.getDefaultParentShell(), SWT.ICON_WARNING | SWT.OK);
@@ -134,10 +134,9 @@ public abstract class AbstractP2Action extends Action {
         if (!configurationLocation.contains(installLocation)) {
             MessageBox mbox = new MessageBox(ProvUI.getDefaultParentShell(), SWT.ICON_WARNING | SWT.YES | SWT.NO);
             mbox.setText("Permission problem");
-            mbox.setMessage("Your KNIME installation directory seems to be "
-                + "read-only, maybe because KNIME was installed by a "
-                + "different user. Installing extensions or updating KNIME "
-                + "may cause problems. Do you really want to continue?");
+            mbox.setMessage("Your KNIME installation directory seems to be read-only, maybe because KNIME was "
+                + "installed by a different user, e.g., the system administrator. Installing extensions or updating "
+                + "KNIME without write permissions may cause problems. Do you really want to continue?");
             return (mbox.open() == SWT.YES);
         }
         return true;

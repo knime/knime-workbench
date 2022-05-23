@@ -92,6 +92,7 @@ import org.knime.core.util.LockFailedException;
 import org.knime.workbench.editor2.WorkflowEditorEventListener.ActiveWorkflowEditorEvent;
 import org.knime.workbench.editor2.actions.CheckUpdateMetaNodeLinkAllAction;
 import org.knime.workbench.ui.KNIMEUIPlugin;
+import org.knime.workbench.ui.p2.actions.AbstractP2Action;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
@@ -334,7 +335,7 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                         message + " due to " + missingPrefix + " (" + missingExtensions
                             + "). Do you want to search and install the required extensions?",
                         MessageDialog.WARNING, dialogButtonLabels, 0);
-                    if (dialog.open() == 0) {
+                    if ((dialog.open() == 0) && AbstractP2Action.checkSDKAndReadOnly()) {
                         Job j = new InstallMissingNodesJob(missingNodes, missingTableFormats);
                         j.setUser(true);
                         j.schedule();
