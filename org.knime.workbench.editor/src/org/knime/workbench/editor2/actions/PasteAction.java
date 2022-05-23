@@ -167,14 +167,14 @@ public class PasteAction extends AbstractClipboardAction {
         var shiftCalculator = newShiftCalculator();
 
         Command pasteCommand = null;
-        if(inRemoteWorkflowEditor()) {
+        ClipboardObject clipObject = getEditor().getClipboardContent();
+        if (clipObject != null) {
             //TODO change this to support the persistor paste
-            ClipboardObject clipObject = getEditor().getClipboardContent();
             pasteCommand = new PasteFromWorkflowPersistorCommand(getEditor(), clipObject, shiftCalculator);
         } else {
             //
             var parsedClipboardContent = getSystemClipboardAsDef();
-            if(parsedClipboardContent.isEmpty()) {
+            if (parsedClipboardContent.isEmpty()) {
                 LOGGER.info("The system clipboard does not contain KNIME workflow content.");
             } else {
                 pasteCommand = new PasteFromWorkflowDefCommand(getEditor(), parsedClipboardContent.get(), shiftCalculator);
@@ -183,7 +183,7 @@ public class PasteAction extends AbstractClipboardAction {
 
         // the system clipboard content can change between internalCalculateEnabled and runOnNodes
         // that's why we might not have an executable paste here
-        if(pasteCommand != null) {
+        if (pasteCommand != null) {
             getCommandStack().execute(pasteCommand); // enables undo
             // update the actions
             getEditor().updateActions();
