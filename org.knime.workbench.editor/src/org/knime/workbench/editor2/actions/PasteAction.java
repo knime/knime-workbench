@@ -207,7 +207,7 @@ public class PasteAction extends AbstractClipboardAction {
      */
     private PasteFromWorkflowDefCommand createDefPasteCommand(final DefClipboardContent contentToPaste) {
         final UUID newPayload = contentToPaste.getPayloadIdentifier();
-        var isNewContent = m_lastPastedPayloadIdentifier.map(last -> last.equals(newPayload)).orElse(false);
+        var isNewContent = m_lastPastedPayloadIdentifier.map(last -> !last.equals(newPayload)).orElse(true);
         if(isNewContent) {
             m_lastPastedPayloadIdentifier = Optional.of(newPayload);
             m_pasteCount = 1;
