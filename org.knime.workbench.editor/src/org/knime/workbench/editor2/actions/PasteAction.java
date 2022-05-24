@@ -48,6 +48,7 @@
 package org.knime.workbench.editor2.actions;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import org.eclipse.gef.commands.Command;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -76,6 +77,11 @@ public class PasteAction extends AbstractClipboardAction {
     private static final int OFFSET = 120;
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(PasteAction.class);
+
+    /** The payload identifier of the clipboard content that was previously pasted. */
+    private Optional<UUID> m_lastPastedPayloadIdentifier = Optional.empty();
+    /** The number of times the payload with identifier {@link #m_lastPastedPayloadIdentifier} has been pasted. */
+    private int m_pasteCount = 0;
 
     /**
      * Constructs a new clipboard paste action.
@@ -172,12 +178,12 @@ public class PasteAction extends AbstractClipboardAction {
             //TODO change this to support the persistor paste
             pasteCommand = new PasteFromWorkflowPersistorCommand(getEditor(), clipObject, shiftCalculator);
         } else {
-            //
+
             var parsedClipboardContent = getSystemClipboardAsDef();
             if (parsedClipboardContent.isEmpty()) {
                 LOGGER.info("The system clipboard does not contain KNIME workflow content.");
             } else {
-                pasteCommand = new PasteFromWorkflowDefCommand(getEditor(), parsedClipboardContent.get(), shiftCalculator);
+                pasteCommand = createDefPasteCommand(parsedClipboardContent.get());
             }
         }
 
@@ -195,6 +201,70 @@ public class PasteAction extends AbstractClipboardAction {
 
     }
 
+    /**
+     * @param parsedClipboardContent
+     * @return
+     */
+    private PasteFromWorkflowDefCommand createDefPasteCommand(final DefClipboardContent contentToPaste) {
+        final UUID newPayload = contentToPaste.getPayloadIdentifier();
+        var isNewContent = m_lastPastedPayloadIdentifier.map(last -> last.equals(newPayload)).orElse(false);
+        if(isNewContent) {
+            m_lastPastedPayloadIdentifier = Optional.of(newPayload);
+            m_pasteCount = 1;
+        } else {
+            m_pasteCount++;
+        }
+        var shiftCalculator = newShiftCalculator(m_pasteCount);
+        var result = new PasteFromWorkflowDefCommand(getEditor(), contentToPaste, shiftCalculator);
+        return result;
+    }
+
+    /**
+     * A shift operator that calculates a fixed offset. The sub class
+     * {@link PasteActionContextMenu} overrides this method to return a
+     * different shift calculator that respects the current mouse
+     * pointer location.
+     * @return A new shift calculator.
+     */
+    protected ShiftCalculator newShiftCalculator(final int pasteCount) {
+        return new ShiftCalculator() {
+            /** {@inheritDoc} */
+            @Override
+            public int[] calculateShift(final Iterable<int[]> boundsList,
+                    final WorkflowManagerUI manager,
+                    final ClipboardObject clipObject) {
+                final int counter =
+                    clipObject.incrementAndGetRetrievalCounter();
+                return calculateShift(counter);
+            }
+
+            /**
+             * {@inheritDoc}
+             */
+            @Override
+            public int[] calculateShift(final int offsetX, final int offsetY, final ClipboardObject clipObject) {
+                return calculateShift(null, null, clipObject);
+            }
+
+            @Override
+            public int[] calculateShift(final Iterable<int[]> bounds, final WorkflowManagerUI manager) {
+                return calculateShift(pasteCount);
+            }
+
+            private int[] calculateShift(final int counter) {
+            int offsetX = OFFSET;
+            int offsetY = OFFSET;
+            if (getEditor().getEditorSnapToGrid()) {
+                // with grid
+                offsetX = getEditor().getEditorGridXOffset(OFFSET);
+                offsetY = getEditor().getEditorGridYOffset(OFFSET);
+            }
+            int newX = (offsetX * counter);
+            int newY = (offsetY * counter);
+            return new int[] {newX, newY};
+        }
+        };
+    }
 
     /**
      * A shift operator that calculates a fixed offset. The sub class

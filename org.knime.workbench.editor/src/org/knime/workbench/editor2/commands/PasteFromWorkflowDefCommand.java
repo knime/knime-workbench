@@ -65,6 +65,7 @@ import org.knime.core.node.workflow.WorkflowAnnotationID;
 import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.ui.node.workflow.ConnectionContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
+import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.WorkflowDefWrapper;
 import org.knime.shared.workflow.def.WorkflowDef;
 import org.knime.shared.workflow.storage.clipboard.DefClipboardContent;
@@ -148,17 +149,7 @@ public final class PasteFromWorkflowDefCommand
         }
 
         final Set<NodeID> newIDs = new HashSet<>(); // fast lookup below
-        final List<int[]> insertedElementBounds = new ArrayList<>();
-        for (final NodeID i : pastedNodes) {
-            final NodeContainerUI nc = syncWfmUI.getNodeContainer(i);
-            final NodeUIInformation ui = nc.getUIInformation();
-            final int[] bounds = ui.getBounds();
-            insertedElementBounds.add(bounds);
-        }
-        for (final WorkflowAnnotation a : pastedAnnos) {
-            final var bounds = new int[]{a.getX(), a.getY(), a.getWidth(), a.getHeight()};
-            insertedElementBounds.add(bounds);
-        }
+        final List<int[]> insertedElementBounds = calculateBounds(syncWfmUI, pastedNodes, pastedAnnos);
         final int[] moveDist = m_shiftCalculator.calculateShift(insertedElementBounds, syncWfmUI);
         // for redo-operations we need the exact same shift.
         m_shiftCalculator = new PasteFromWorkflowPersistorCommand.FixedShiftCalculator(moveDist);
@@ -187,6 +178,28 @@ public final class PasteFromWorkflowDefCommand
             Arrays.asList(syncWfmUI.getWorkflowAnnotations(pastedContent.getAnnotationIDs())));
         m_pastedContent = pastedContent;
 
+    }
+
+    /**
+     * @param syncWfmUI
+     * @param pastedNodes
+     * @param pastedAnnos
+     * @return
+     */
+    private List<int[]> calculateBounds(final WorkflowManagerUI syncWfmUI, final NodeID[] pastedNodes,
+        final WorkflowAnnotation[] pastedAnnos) {
+        final List<int[]> insertedElementBounds = new ArrayList<>();
+        for (final NodeID i : pastedNodes) {
+            final NodeContainerUI nc = syncWfmUI.getNodeContainer(i);
+            final NodeUIInformation ui = nc.getUIInformation();
+            final int[] bounds = ui.getBounds();
+            insertedElementBounds.add(bounds);
+        }
+        for (final WorkflowAnnotation a : pastedAnnos) {
+            final var bounds = new int[]{a.getX(), a.getY(), a.getWidth(), a.getHeight()};
+            insertedElementBounds.add(bounds);
+        }
+        return insertedElementBounds;
     }
 
     private void setFutureSelection(final NodeID[] nodeIds, final Collection<WorkflowAnnotation> was) {
