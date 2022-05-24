@@ -215,8 +215,7 @@ public class PasteAction extends AbstractClipboardAction {
             m_pasteCount++;
         }
         var shiftCalculator = newShiftCalculator(m_pasteCount);
-        var result = new PasteFromWorkflowDefCommand(getEditor(), contentToPaste, shiftCalculator);
-        return result;
+        return new PasteFromWorkflowDefCommand(getEditor(), contentToPaste, shiftCalculator);
     }
 
     /**

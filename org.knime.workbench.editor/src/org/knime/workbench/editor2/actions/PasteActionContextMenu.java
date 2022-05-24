@@ -82,6 +82,11 @@ public class PasteActionContextMenu extends PasteAction {
         return ID;
     }
 
+    @Override
+    protected ShiftCalculator newShiftCalculator(final int pasteCount) {
+        return newShiftCalculator();
+    }
+
     /** {@inheritDoc} */
     @Override
     protected ShiftCalculator newShiftCalculator() {

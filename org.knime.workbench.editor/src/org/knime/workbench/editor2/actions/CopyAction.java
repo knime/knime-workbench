@@ -160,7 +160,7 @@ public class CopyAction extends AbstractClipboardAction {
             var defClipboardContent = ((WorkflowDefWrapper)wfCopy).unwrap();
             var mapper = ObjectMapperUtil.getInstance().getObjectMapper();
             try {
-                var serializedContent = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(defClipboardContent);
+                var serializedContent = mapper.writeValueAsString(defClipboardContent);
                 copyToSystemClipboard(serializedContent);
             } catch (JsonProcessingException e) {
                   LOGGER.error("Cannot copy to system clipboard: ", e);
