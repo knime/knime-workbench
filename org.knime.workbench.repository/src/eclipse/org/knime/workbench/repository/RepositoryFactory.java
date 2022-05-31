@@ -402,7 +402,7 @@ public final class RepositoryFactory {
                 currentPath += segments[i];
                 if (obj == null) {
                     if (canAdd(pluginID, container)) {
-                        LOGGER.warnWithFormat("Category %s is not registered properly. "
+                        LOGGER.debugWithFormat("Category %s is not registered properly. "
                             + "Use the categorysets extension point to register categories dynamically "
                             + "(node factory %s, node set factory: %s).", currentPath, factoryId, set);
                         Category cat =
