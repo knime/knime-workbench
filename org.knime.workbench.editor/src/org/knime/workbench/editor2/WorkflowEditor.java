@@ -3646,6 +3646,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                             break;
                         }
                     }
+                    markDirty();
                     break;
                 case NODE_SETTINGS_CHANGED:
                     markDirty();
