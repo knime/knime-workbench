@@ -401,7 +401,7 @@ public final class RepositoryFactory {
                 IRepositoryObject obj = container.getChildByID(segments[i], false);
                 currentPath += segments[i];
                 if (obj == null) {
-                    if (canAdd(pluginID, container)) {
+                    if (!"org.knime.python3.nodes".equals(pluginID) && canAdd(pluginID, container)) {
                         LOGGER.debugWithFormat("Category %s is not registered properly. "
                             + "Use the categorysets extension point to register categories dynamically "
                             + "(node factory %s, node set factory: %s).", currentPath, factoryId, set);
