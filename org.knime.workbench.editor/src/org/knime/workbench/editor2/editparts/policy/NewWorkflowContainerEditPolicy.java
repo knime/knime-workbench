@@ -129,6 +129,7 @@ import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.explorer.view.actions.OpenKNIMEArchiveFileAction;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.NodeTemplate;
+import org.knime.workbench.ui.p2.actions.AbstractP2Action;
 
 /**
  * Container policy, handles the creation of new nodes that are inserted into the workflow. The request wraps an object
@@ -324,8 +325,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             MessageDialog dialog = new MessageDialog(SWTUtilities.getActiveShell(), "Install Extension?", null,
                 "Do you want to search and install the extension '" + featureName + "'?", MessageDialog.QUESTION,
                 dialogButtonLabels, 0);
-            if (dialog.open() == 0) {
-
+            if ((dialog.open() == 0) && AbstractP2Action.checkSDKAndReadOnly()) {
                 //try installing the missing extension
                 startInstallationJob(featureName, featureSymbolicName, siteInfo);
             }
