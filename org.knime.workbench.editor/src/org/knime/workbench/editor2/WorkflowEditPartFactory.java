@@ -57,6 +57,7 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.contexts.IContextActivation;
 import org.eclipse.ui.contexts.IContextService;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.ConnectionContainer;
 import org.knime.core.node.workflow.NodeAnnotation;
@@ -101,6 +102,9 @@ import org.knime.workbench.editor2.model.WorkflowPortBar;
  * @author Fabian Dill, University of Konstanz
  */
 public final class WorkflowEditPartFactory implements EditPartFactory, IPartListener2 {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowEditPartFactory.class);
+
     /*
      * we need this flag to determine between the "root" workflow manager and
      * all subsequent metanodes. This means that we implicitely assume that
@@ -307,9 +311,12 @@ public final class WorkflowEditPartFactory implements EditPartFactory, IPartList
      */
     @Override
     public void partHidden(final IWorkbenchPartReference partRef) {
-        if (WorkflowEditor.ID.equals(partRef.getId()) && m_activateContext != null) {
+        if (WorkflowEditor.ID.equals(partRef.getId()) && m_activateContext != null
+            && m_visibleWorkflowEditorRef == partRef) {
             m_activateContext.getContextService().deactivateContext(m_activateContext);
             m_activateContext = null;
+            m_visibleWorkflowEditorRef = null;
+            LOGGER.debug("Deactivate org.knime.workbench.editor.context");
         }
     }
 
@@ -323,15 +330,19 @@ public final class WorkflowEditPartFactory implements EditPartFactory, IPartList
 
     private IContextActivation m_activateContext;
 
+    // introduced to fix AP-18733
+    private IWorkbenchPartReference m_visibleWorkflowEditorRef = null;
+
     /**
      * {@inheritDoc}
      */
     @Override
     public void partVisible(final IWorkbenchPartReference partRef) {
         if (WorkflowEditor.ID.equals(partRef.getId()) && m_activateContext == null) {
-            final IContextService contextService =
-                PlatformUI.getWorkbench().getService(IContextService.class);
+            final IContextService contextService = PlatformUI.getWorkbench().getService(IContextService.class);
             m_activateContext = contextService.activateContext("org.knime.workbench.editor.context");
+            m_visibleWorkflowEditorRef = partRef;
+            LOGGER.debug("Activate org.knime.workbench.editor.context");
         }
     }
 }
