@@ -409,7 +409,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 "The extension '" + featureName + "' is not installed. Do you want to search and install it?"
                     + "\n\nNote: Please drag and drop the node again once the installation process is finished.",
                 MessageDialog.QUESTION, dialogButtonLabels, 0);
-            if (dialog.open() == 0) {
+            if ((dialog.open() == 0) && AbstractP2Action.checkSDKAndReadOnly()) {
                 startInstallationJob(featureName, featureSymbolicName, nodeImport.getUpdateSiteInfo());
                 // TODO: add the node once the extension has been installed
                 return null;
