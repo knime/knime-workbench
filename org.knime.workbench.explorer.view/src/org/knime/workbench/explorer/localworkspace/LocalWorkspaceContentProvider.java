@@ -373,11 +373,9 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
             && !URLTransfer.getInstance().isSupportedType(transferType)) {
             return false;
         }
-        boolean valid =
-                !(AbstractExplorerFileStore.isNode(target)
-                        || AbstractExplorerFileStore.isWorkflow(target)
-                        || AbstractExplorerFileStore.isMetaNode(target));
-        return valid;
+        AbstractExplorerFileStore parent = target.getParent();
+        return target.fetchInfo().isWorkflowGroup() || parent != null
+            && validateDrop(parent, operation, transferType);
     }
 
     /** {@inheritDoc} */
@@ -408,6 +406,11 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     @Override
     public boolean performDrop(final ExplorerView view, final Object data,
             final AbstractExplorerFileStore target, final int operation) {
+        AbstractExplorerFileStore targetGroup = target.fetchInfo().isWorkflowGroup() ? target : target.getParent();
+        if (targetGroup == null || !targetGroup.fetchInfo().isWorkflowGroup()) {
+            LOGGER.warn(String.format("Could not perform drop: Invalid target '%s' selected", target.getFullName()));
+            return false;
+        }
         // read current selection and check whether it comes from the very same
         // view - disregard selection from other views (not ExploreFileStore)
         LocalSelectionTransfer transfer = LocalSelectionTransfer.getTransfer();
@@ -422,7 +425,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 LOGGER.warn(msg);
                 return false;
             }
-            return copyOrMove(view, fileStores, target, performMove);
+            return copyOrMove(view, fileStores, targetGroup, performMove);
         } else if (data instanceof String[]) { // we have a file transfer
             String[] files = (String[])data;
             List<AbstractExplorerFileStore> dropSource = new ArrayList<AbstractExplorerFileStore>();
@@ -436,22 +439,22 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                 }
                 for (String path : files) {
                     File src = new File(path);
-                    if (src.exists() && !target.toLocalFile(EFS.NONE, null).equals(src.getParentFile())) {
+                    if (src.exists() && !targetGroup.toLocalFile(EFS.NONE, null).equals(src.getParentFile())) {
                         if (path.endsWith("." + KNIMEConstants.KNIME_ARCHIVE_FILE_EXTENSION)
                             || path.endsWith("." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION)) {
-                            new WorkflowImportAction(view, target, path).run();
+                            new WorkflowImportAction(view, targetGroup, path).run();
                         } else {
                             dropSource.add(new TmpLocalExplorerFile(new File(path)));
                         }
                     }
                 }
                 if (!dropSource.isEmpty()) {
-                    return copyOrMove(view, dropSource, target, DND.DROP_MOVE == operation);
+                    return copyOrMove(view, dropSource, targetGroup, DND.DROP_MOVE == operation);
                 } else {
                     return true;
                 }
             } catch (CoreException e) {
-                LOGGER.error("Could not get local file for item " + target.getFullName() + ".", e);
+                LOGGER.error("Could not get local file for item " + targetGroup.getFullName() + ".", e);
             }
         }
         return false;
