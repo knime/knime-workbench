@@ -198,7 +198,7 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
         }
         String[] validMountPoints = validMountPointList.toArray(new String[0]);
         final Shell shell = SWTUtilities.getActiveShell();
-        ContentObject defSel = getDefaultSaveLocation(wm);
+        ContentObject defSel = getDefaultSaveLocation(snc);
         DestinationSelectionDialog dialog = new DestinationSelectionDialog(shell, validMountPoints, defSel);
         if (dialog.open() != Window.OK) {
             return;
@@ -237,9 +237,8 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
         contentProvider.saveSubNodeTemplate(snc, target, exampleInputData.get());
     }
 
-    private ContentObject getDefaultSaveLocation(
-            final WorkflowManager arg) {
-        final NodeID id = arg.getID();
+    private static ContentObject getDefaultSaveLocation(final SubNodeContainer snc) {
+        final NodeID id = snc.getID();
         URI uri = DisconnectSubNodeLinkCommand.RECENTLY_USED_URIS.get(id);
         if (uri == null || !ExplorerFileSystem.SCHEME.equals(uri.getScheme())) {
             return null;
