@@ -98,6 +98,9 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
         return null;
     }
 
+    @Override
+    public abstract RemoteExplorerFileStore getParent(); // overridden, narrows return type
+
     /**
      * If this store represents a workflow return an open stream that sends the
      * zipped flow. If it is a file, the unzipped content is streamed.

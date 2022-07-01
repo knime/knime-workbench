@@ -10,7 +10,7 @@
 	<packaging>eclipse-test-plugin</packaging>
 
 	<properties>
-		<revision>8.7.0</revision>
+		<revision>8.9.0</revision>
 		<changelist>-SNAPSHOT</changelist>
     </properties>
 
