@@ -52,6 +52,7 @@ import java.util.List;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.CanceledExecutionException;
@@ -64,6 +65,7 @@ import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
 import org.knime.core.node.workflow.WorkflowPersistor.NodeContainerTemplateLinkUpdateResult;
 import org.knime.core.ui.util.SWTUtilities;
+import org.knime.workbench.KNIMEEditorPlugin;
 
 
 /**
@@ -112,6 +114,11 @@ public class UpdateMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
         IStatus[] stats = new IStatus[m_ids.length];
         for (int i = 0; i < m_ids.length; i++) {
             NodeID id = m_ids[i];
+            if (!needsUpdate(id)) {
+                stats[i] = new Status(IStatus.OK, KNIMEEditorPlugin.PLUGIN_ID,
+                    "Node with ID \"" + id + "\" already has been updated.", null);
+                continue;
+            }
             NodeContainerTemplate tnc =
                 (NodeContainerTemplate)m_parentWFM.findNodeContainer(id);
             LOGGER.debug("Updating " + tnc.getNameWithID() + " from "
@@ -177,6 +184,29 @@ public class UpdateMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 ErrorDialog.openError(SWTUtilities.getActiveShell(), "Update Node Links", message, status);
             }
         });
+    }
+
+    /**
+     * Does a final check before actually updating the node. Called for the following edge case:
+     *
+     * Outer component has an inner component inside and both have an update available. However, the outer update
+     * would fix the inner update, which means, the inner update can be skipped. Since UpdateMetaNodeTemplateRunnable always
+     * receives both components and tries to update them, this failed previously.
+     *
+     * @param id NodeID
+     * @return should the template still be updated?
+     */
+    private boolean needsUpdate(final NodeID id) {
+        boolean needsUpdate;
+        try {
+            // this line will fail with in IllegalArgumentException if the node already has been updated
+            // basically a computationally cheaper option to WorkflowManager#checkUpdateMetaNodeLink
+            needsUpdate = m_parentWFM.findNodeContainer(id) instanceof NodeContainerTemplate;
+        } catch (IllegalArgumentException e) {
+            LOGGER.debug("Node with ID \"" + id + "\" unexpectedly doesn't need an update.", e);
+            needsUpdate = false;
+        }
+        return needsUpdate;
     }
 
     /** @return the newIDs */

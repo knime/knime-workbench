@@ -47,6 +47,7 @@
  */
 package org.knime.workbench.editor2.commands;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -130,12 +131,13 @@ public class UpdateMetaNodeLinkCommand extends AbstractKNIMECommand {
             m_newIDs = updateRunner.getNewIDs();
             m_undoPersistors = updateRunner.getUndoPersistors();
             assert m_newIDs.size() == m_undoPersistors.size();
-        } catch (Exception ex) {
+        } catch (InvocationTargetException | InterruptedException ex) {
             // if fails notify the user
             LOGGER.debug("Node cannot be created.", ex);
+            var message = ex instanceof InvocationTargetException
+                    ? ((InvocationTargetException)ex).getTargetException().getMessage() : ex.getMessage();
             MessageDialog.openWarning(SWTUtilities.getActiveShell(), "Node cannot be created.",
-                "The selected node could not be created " + "due to the following reason:\n" + ex.getMessage());
-            return;
+                "The selected node could not be created " + "due to the following reason:\n" + message);
         } finally {
             if (updateRunner != null) {
                 updateRunner.discard();
