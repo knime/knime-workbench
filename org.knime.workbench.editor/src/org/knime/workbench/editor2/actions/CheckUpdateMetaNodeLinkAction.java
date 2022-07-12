@@ -184,15 +184,12 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         return list;
     }
 
-    private List<NodeID> getNCTemplatesToCheck(final NodeContainerTemplate template) {
+    private static List<NodeID> getNCTemplatesToCheck(final NodeContainerTemplate template) {
         List<NodeID> list = new ArrayList<NodeID>();
         for (NodeContainer nc : template.getNodeContainers()) {
             if (nc instanceof NodeContainerTemplate) {
                 NodeContainerTemplate tnc = (NodeContainerTemplate)nc;
                 if (tnc.getTemplateInformation().getRole().equals(Role.Link)) {
-                    if (!getManager().canUpdateMetaNodeLink(tnc.getID())) {
-                        return Collections.emptyList();
-                    }
                     list.add(tnc.getID());
                 }
                 list.addAll(getNCTemplatesToCheck(tnc));
@@ -226,21 +223,21 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
             return;
         }
         List<NodeID> updateList = runner.getUpdateList();
-        Status status = runner.getStatus();
+        var status = runner.getStatus();
         if (status.getSeverity() == IStatus.ERROR
                 || status.getSeverity() == IStatus.WARNING) {
             ErrorDialog.openError(SWTUtilities.getActiveShell(), null,
                 "Errors while checking for updates on node links", status);
-            if (candidateList.size() == 1) {
-                /* As only one node is selected and its update failed,
+            if (updateList.isEmpty()) {
+                /* As there are only nodes which have no updates or an error,
                  * there is nothing else to do. */
                 return;
             }
         }
 
         // find nodes that will be reset as part of the update
-        int nodesToResetCount = 0;
-        boolean hasOnlySelectedSubnodes = true;
+        var nodesToResetCount = 0;
+        var hasOnlySelectedSubnodes = true;
         for (NodeID id : updateList) {
             NodeContainerTemplate templateNode =
                 (NodeContainerTemplate)getManager().findNodeContainer(id);
@@ -309,7 +306,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 final List<NodeID> candidateList) {
             m_hostWFM = hostWFM;
             m_candidateList = candidateList;
-            m_updateList = new ArrayList<NodeID>();
+            m_updateList = new ArrayList<>();
         }
 
         /** {@inheritDoc} */
@@ -416,12 +413,12 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         private void verifyMultiStatus() throws InterruptedException {
             var updateError = false;
             try {
-                if (!m_updateList.isEmpty()) {
-                    m_hostWFM.checkUpdateMetaNodeLink(m_updateList.get(0),
+                if (!m_candidateList.isEmpty()) {
+                    m_hostWFM.checkUpdateMetaNodeLink(m_candidateList.get(0),
                         new WorkflowLoadHelper(true, m_hostWFM.getContext()));
                 }
             } catch (IOException e) {
-                LOGGER.warn("Could not update node " + m_updateList.get(0) + ": ", e);
+                LOGGER.warn("Could not update node " + m_candidateList.get(0) + ": ", e);
                 updateError = true;
             }
 
