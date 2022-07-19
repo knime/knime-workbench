@@ -54,6 +54,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -163,36 +165,66 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         if (getManager().isWriteProtected()) {
             return false;
         }
-        return !getMetaNodesToCheck().isEmpty();
+        return !getMetaNodesToCheck(true).isEmpty();
     }
 
+    /**
+     * Default implementation of getMetaNodeToCheck
+     * @return NodeIDs
+     */
     protected List<NodeID> getMetaNodesToCheck() {
-        List<NodeID> list = new ArrayList<NodeID>();
+        return getMetaNodesToCheck(true);
+    }
+
+    /**
+     * Based on the selection in the workflow, retrieves the NodeIDs to check for updates. Does two things:
+     *  1. Scanning templates for updateable nodes (and in consequence enabling "Update Link" context menu entry)
+     *  2. Recursively retrieving all candidates for checking for available updates (upon clicking "Update Link")
+     *
+     * @param updateableOnly Determines whether a pre-check on collected templates should be made, see
+     *            {@link WorkflowManager#canUpdateMetaNodeLink(NodeID)}
+     * @return List of candidate NodeIDs
+     */
+    protected List<NodeID> getMetaNodesToCheck(final boolean updateableOnly) {
+        List<NodeID> list = new ArrayList<>();
         for (NodeContainerEditPart p : getSelectedParts(NodeContainerEditPart.class)) {
             NodeContainerUI model = p.getNodeContainer();
             if (Wrapper.wraps(model, NodeContainerTemplate.class)) {
                 NodeContainerTemplate tnc = Wrapper.unwrap(model, NodeContainerTemplate.class);
-                if (tnc.getTemplateInformation().getRole().equals(Role.Link)) {
-                    if (!getManager().canUpdateMetaNodeLink(tnc.getID())) {
-                        return Collections.emptyList();
-                    }
+                var isLink = tnc.getTemplateInformation().getRole() == Role.Link;
+
+                if (isLink && updateableOnly && !getManager().canUpdateMetaNodeLink(tnc.getID())) {
+                    return Collections.emptyList();
+                } else if (isLink) {
                     list.add(tnc.getID());
                 }
-                list.addAll(getNCTemplatesToCheck(tnc));
+                list.addAll(getNCTemplatesToCheck(tnc, updateableOnly));
             }
         }
         return list;
     }
 
-    private static List<NodeID> getNCTemplatesToCheck(final NodeContainerTemplate template) {
-        List<NodeID> list = new ArrayList<NodeID>();
+    /**
+     * Does the recursive calling of {@link CheckUpdateMetaNodeLinkAction#getMetaNodesToCheck(boolean)}
+     * for a selected NodeContainerTemplate.
+     *
+     * @param template NodeContainerTemplate
+     * @param updateableOnly should only directly updateable templates be collected?
+     * @return List of candidate NodeIDs
+     */
+    private List<NodeID> getNCTemplatesToCheck(final NodeContainerTemplate template, final boolean updateableOnly) {
+        List<NodeID> list = new ArrayList<>();
         for (NodeContainer nc : template.getNodeContainers()) {
             if (nc instanceof NodeContainerTemplate) {
                 NodeContainerTemplate tnc = (NodeContainerTemplate)nc;
-                if (tnc.getTemplateInformation().getRole().equals(Role.Link)) {
+                var isLink = tnc.getTemplateInformation().getRole() == Role.Link;
+
+                if (isLink && updateableOnly && !getManager().canUpdateMetaNodeLink(tnc.getID())) {
+                    return Collections.emptyList();
+                } else if (isLink) {
                     list.add(tnc.getID());
                 }
-                list.addAll(getNCTemplatesToCheck(tnc));
+                list.addAll(getNCTemplatesToCheck(tnc, updateableOnly));
             }
         }
         return list;
@@ -207,7 +239,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
     /** {@inheritDoc} */
     @Override
     public void runInSWT() {
-        List<NodeID> candidateList = getMetaNodesToCheck();
+        List<NodeID> candidateList = getMetaNodesToCheck(false);
         final Shell shell = SWTUtilities.getActiveShell();
         IWorkbench wb = PlatformUI.getWorkbench();
         IProgressService ps = wb.getProgressService();
@@ -385,7 +417,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 case Error:
                     // if an update for a parent was found, ignore the child's error
                     if (!updateableParentExists(id)) {
-                        return new Status(IStatus.WARNING, idName, "Unable to check for update on node " + tncName, null);
+                        return new Status(IStatus.WARNING, idName, "Unable to check for update on node \"" + tncName + "\": Can't read metanode/template directory " + tnc.getTemplateInformation().getSourceURI(), null);
                     } else {
                         return new Status(IStatus.OK, idName, "Update error exists, but could be resolved by parent update for " + tncName);
                     }
@@ -413,9 +445,24 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         private void verifyMultiStatus() throws InterruptedException {
             var updateError = false;
             try {
-                if (!m_candidateList.isEmpty()) {
-                    m_hostWFM.checkUpdateMetaNodeLink(m_candidateList.get(0),
-                        new WorkflowLoadHelper(true, m_hostWFM.getContext()));
+                // retrieves all top-level NodeIDs, works because of the recursive scan of the candidates,
+                // i.e. the first node to set m_topLevelPrefix will always be on the top level
+                var topLevelCandidates = m_candidateList.stream().filter(new Predicate<NodeID>() {
+                    private NodeID m_topLevelPrefix = null;
+
+                    @Override
+                    public boolean test(final NodeID t) {
+                        if (m_topLevelPrefix == null) {
+                            m_topLevelPrefix = t.getPrefix();
+                            return true;
+                        }
+                        return t.getPrefix().equals(m_topLevelPrefix);
+                    }
+                }).collect(Collectors.toList());
+
+                // for each of the top level templates nodes, invoke a recursive update check
+                for (NodeID tlc : topLevelCandidates) {
+                    m_hostWFM.checkUpdateMetaNodeLink(tlc, new WorkflowLoadHelper(true, m_hostWFM.getContext()));
                 }
             } catch (IOException e) {
                 LOGGER.warn("Could not update node " + m_candidateList.get(0) + ": ", e);
