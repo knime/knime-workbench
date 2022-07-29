@@ -854,10 +854,10 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
      */
     public static void openNodeDialog(final NodeContainerUI container) {
         if (OpenDialogAction.hasNodeDialog(container)) {
-            var nnc = Wrapper.unwrap(container, NativeNodeContainer.class);
-            OpenNodeViewAction.openNodeView(nnc,
-                OpenNodeViewAction.createNodeView(nnc, true, OpenNodeViewAction.hasNodeView(container)),
-                "Dialog - " + nnc.getDisplayLabel());
+            NodeContainer nc = Wrapper.unwrapNC(container);
+            OpenNodeViewAction.openNodeView(nc,
+                OpenNodeViewAction.createNodeView(nc, true, OpenNodeViewAction.hasNodeView(container)),
+                "Dialog - " + nc.getDisplayLabel());
         } else {
             openDialog(container, null);
         }

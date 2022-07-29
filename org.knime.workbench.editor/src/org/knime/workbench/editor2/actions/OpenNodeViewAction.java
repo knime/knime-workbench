@@ -73,6 +73,7 @@ import org.knime.core.node.Node;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.NativeNodeContainer;
+import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.util.SWTUtilities;
@@ -95,19 +96,21 @@ public class OpenNodeViewAction extends Action {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(OpenNodeViewAction.class);
 
     private NativeNodeContainer m_nnc;
+    private NodeContainer m_nc;
 
     OpenNodeViewAction(final NodeContainerUI nc) {
         m_nnc = Wrapper.unwrap(nc, NativeNodeContainer.class);
+        m_nc = Wrapper.unwrapNC(nc);
     }
 
     @Override
     public boolean isEnabled() {
-        return m_nnc.getNodeContainerState().isExecuted();
+        return m_nc.getNodeContainerState().isExecuted();
     }
 
     @Override
     public void run() {
-        openNodeView(m_nnc, createNodeView(m_nnc, false, true), getText());
+        openNodeView(m_nc, createNodeView(m_nc, false, true), getText());
     }
 
     @Override
@@ -133,27 +136,27 @@ public class OpenNodeViewAction extends Action {
     /**
      * Opens a {@link AbstractNodeView}.
      *
-     * @param nnc the node to open the view for
+     * @param nc the node to open the view for
      * @param view the view to open
      * @param viewName
      */
-    public static void openNodeView(final NativeNodeContainer nnc, final AbstractNodeView<?> view,
+    public static void openNodeView(final NodeContainer nc, final AbstractNodeView<?> view,
         final String viewName) {
         try {
             Node.invokeOpenView(view, viewName, OpenViewAction.getAppBoundsAsAWTRec());
         } catch (Exception t) { // NOSONAR
-            showWarningDialog(nnc, t);
+            showWarningDialog(nc, t);
         }
 
     }
 
-    private static void showWarningDialog(final NativeNodeContainer nnc, final Throwable t) {
+    private static void showWarningDialog(final NodeContainer nc, final Throwable t) {
         final MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_ERROR | SWT.OK);
         mb.setText("Node View cannot be opened");
         mb.setMessage("The node view cannot be opened for the following reason:\n" + t.getMessage());
         mb.open();
         StringBuilder sb = new StringBuilder("The view for node '");
-        sb.append(nnc.getNameWithID());
+        sb.append(nc.getNameWithID());
         sb.append("' has thrown a '");
         sb.append(t.getClass().getSimpleName());
         sb.append("'.");
@@ -164,12 +167,12 @@ public class OpenNodeViewAction extends Action {
      * Creates a new {@link AbstractNodeView} instance provided by the extension with id
      * {@link #NODE_VIEW_EXTENSION_ID}.
      *
-     * @param nnc the node to create the view instance for
+     * @param nc the node to create the view instance for
      * @param isDialog whether the view instance is used to actually display a dialog
      * @param isView  whether the view instance is used to actually display a view
      * @return the new view instance
      */
-    public static AbstractNodeView<?> createNodeView(final NativeNodeContainer nnc, final boolean isDialog, final boolean isView) {
+    public static AbstractNodeView<?> createNodeView(final NodeContainer nc, final boolean isDialog, final boolean isView) {
         IExtensionRegistry registry = Platform.getExtensionRegistry();
         IExtensionPoint point = registry.getExtensionPoint(NODE_VIEW_EXTENSION_ID);
         CheckUtils.checkState(point != null, "Invalid extension point: %s", NODE_VIEW_EXTENSION_ID);
@@ -180,13 +183,14 @@ public class OpenNodeViewAction extends Action {
             showNoNodeViewAvailableDialog();
         }
         var el = iterator.next();
-        NodeContext.pushContext(nnc);
+
+        NodeContext.pushContext(nc);
         try {
             Class<?> nodeViewClass = Platform.getBundle(el.getDeclaringExtension().getContributor().getName())
                 .loadClass(el.getAttribute("class"));
             return (AbstractNodeView<?>)nodeViewClass
-                .getConstructor(NativeNodeContainer.class, boolean.class, boolean.class)
-                .newInstance(nnc, isDialog, isView);
+                .getConstructor(nc.getClass(), boolean.class, boolean.class)
+                .newInstance(nc, isDialog, isView);
         } catch (ClassNotFoundException | InvalidRegistryObjectException | InstantiationException
                 | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
                 | SecurityException e) {
