@@ -364,6 +364,34 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /* ---------------- drag and drop methods ----------------------- */
 
     /**
+     * Drag and drop selection objects and target directories should not be the same.
+     * This method cleans the selected fileStores to only drag and drop objects to other locations.
+     * Does two checks:
+     *   1. selected directories should not equal the target directory
+     *   2. the parent directory of selected files/directories should not equal the target directory
+     *
+     * @param fileStores list of selected files/directories to drop
+     * @param target drop target directory
+     * @return list of cleaned file stores
+     */
+    protected static List<AbstractExplorerFileStore> cleanSelectedFileStores(
+        final List<AbstractExplorerFileStore> fileStores, final AbstractExplorerFileStore target) {
+
+        if (fileStores == null) {
+            return Collections.emptyList();
+        }
+        var cleanedSelection = new LinkedList<AbstractExplorerFileStore>();
+        for (AbstractExplorerFileStore sel : fileStores) {
+            // if selection is a directory, it should not be the same as the target
+            // and the selection's parent directory should not equal the target
+            if (!(sel.fetchInfo().isDirectory() && sel.equals(target)) && !sel.getParent().equals(target)) {
+                cleanedSelection.add(sel);
+            }
+        }
+        return cleanedSelection;
+    }
+
+    /**
      * @param target the target the data is dropped on
      * @param operation the operation to be performed
      * @param transferType the transfer type

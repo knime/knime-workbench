@@ -477,12 +477,17 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
                     + targetDir.getMountIDWithFullPath() + "\" is no "
                     + "LocalExplorerFileStore.");
         }
+        // removing all file stores which would be moved to their current location
+        var cleanedFileStores = cleanSelectedFileStores(fileStores, targetDir);
+        if (cleanedFileStores.isEmpty()) {
+            return false;
+        }
         AbstractCopyMoveAction action;
         if (performMove) {
-            action = new GlobalMoveAction(view, fileStores,
+            action = new GlobalMoveAction(view, cleanedFileStores,
                     targetDir);
         } else {
-            action = new GlobalCopyAction(view, fileStores,
+            action = new GlobalCopyAction(view, cleanedFileStores,
                     targetDir);
         }
         action.run();
