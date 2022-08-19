@@ -150,7 +150,6 @@ import org.knime.core.ui.node.workflow.async.AsyncWorkflowManagerUI;
 import org.knime.core.ui.node.workflow.lazy.LazyWorkflowManagerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.webui.node.dialog.SubNodeContainerDialogFactory;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.EditorModeParticipant;
@@ -159,6 +158,7 @@ import org.knime.workbench.editor2.WorkflowEditorMode;
 import org.knime.workbench.editor2.WorkflowManagerInput;
 import org.knime.workbench.editor2.WorkflowSelectionDragEditPartsTracker;
 import org.knime.workbench.editor2.actions.OpenDialogAction;
+import org.knime.workbench.editor2.actions.OpenDialogAction.DialogType;
 import org.knime.workbench.editor2.actions.OpenNodeViewAction;
 import org.knime.workbench.editor2.commands.CreateConnectionCommand;
 import org.knime.workbench.editor2.commands.ReplaceNodePortCommand;
@@ -854,25 +854,14 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
      * @since 4.6
      */
     public static void openNodeDialog(final NodeContainerUI container) {
-        boolean shouldUseNodeDialog = false;
-
-        if (Wrapper.wraps(container, NodeContainer.class)) {
-            NodeContainer nc = Wrapper.unwrapNC(container);
-            if (nc instanceof SubNodeContainer && SubNodeContainerDialogFactory.isSubNodeContainerNodeDialogEnabled()) {
-                // If we have explicitly enabled JS-based NodeDialogs for Components, we do not want to fall back to
-                // swing dialogs.
-                shouldUseNodeDialog = true;
-            }
-        }
-
-        final boolean hasNodeDialog = OpenDialogAction.hasNodeDialog(container);
-        if (!shouldUseNodeDialog && !hasNodeDialog) {
-            openDialog(container, null);
-        } else if (hasNodeDialog) {
+        var dialogType = OpenDialogAction.getDialogType(container);
+        if (dialogType == DialogType.MODERN) {
             NodeContainer nc = Wrapper.unwrapNC(container);
             OpenNodeViewAction.openNodeView(nc,
                 OpenNodeViewAction.createNodeView(nc, true, OpenNodeViewAction.hasNodeView(container)),
                 "Dialog - " + nc.getDisplayLabel());
+        } else if (dialogType == DialogType.SWING) {
+            openDialog(container, null);
         }
     }
 

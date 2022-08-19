@@ -45,14 +45,13 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import static org.knime.core.ui.wrapper.Wrapper.unwrapNC;
-import static org.knime.core.ui.wrapper.Wrapper.wraps;
-
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.NativeNodeContainer;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
-import org.knime.core.webui.node.dialog.NodeDialog;
+import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.webui.node.dialog.NodeDialogManager;
+import org.knime.core.webui.node.dialog.SubNodeContainerDialogFactory;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -64,6 +63,24 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  * @author Florian Georg, University of Konstanz
  */
 public class OpenDialogAction extends AbstractNodeAction {
+
+    /**
+     * The dialog type that is available for a specific node
+     */
+    public enum DialogType {
+            /**
+             * A modern JS-based dialog is available
+             */
+            MODERN,
+            /**
+            * A "classic" swing-based dialog is available
+            */
+            SWING,
+            /**
+            * No dialog is available at all
+            */
+            NONE
+    }
 
     /** unique ID for this action. * */
     public static final String ID = "knime.action.openDialog";
@@ -109,32 +126,40 @@ public class OpenDialogAction extends AbstractNodeAction {
     }
 
     /**
-     * @return <code>true</code> if at we have a single node which has a
-     *         dialog
+     * @return <code>true</code> if at we have a single node which has a dialog
      * @see org.eclipse.gef.ui.actions.WorkbenchPartAction#calculateEnabled()
      */
     @Override
     protected boolean internalCalculateEnabled() {
-        NodeContainerEditPart[] selected =
-            getSelectedParts(NodeContainerEditPart.class);
+        NodeContainerEditPart[] selected = getSelectedParts(NodeContainerEditPart.class);
         if (selected.length != 1) {
             return false;
         }
 
         NodeContainerEditPart part = selected[0];
-
         var nc = part.getNodeContainer();
-        return nc.hasDialog() || hasNodeDialog(nc);
+        return getDialogType(nc) != DialogType.NONE;
     }
 
     /**
-     * Checks whether a node has a {@link NodeDialog}.
+     * Get the {@link DialogType} that is provided by a given {@link NodeContainerUI}.
      *
-     * @param nc the node to check
-     * @return <code>true</code> if the node has a {@link NodeDialog}
+     * @param nc The wrapped node container
+     * @return The {@link DialogType} that is provided by this node container
      */
-    public static boolean hasNodeDialog(final NodeContainerUI nc) {
-        return wraps(nc, NodeContainer.class) && NodeDialogManager.hasNodeDialog(unwrapNC(nc));
+    public static DialogType getDialogType(final NodeContainerUI nc) {
+        if (Wrapper.wraps(nc, SubNodeContainer.class)
+            && SubNodeContainerDialogFactory.isSubNodeContainerNodeDialogEnabled()) {
+            if (NodeDialogManager.hasNodeDialog(Wrapper.unwrapNC(nc))) {
+                return DialogType.MODERN;
+            } else {
+                return DialogType.NONE;
+            }
+        } else if (Wrapper.wraps(nc, NativeNodeContainer.class)
+            && NodeDialogManager.hasNodeDialog(Wrapper.unwrapNC(nc))) {
+            return DialogType.MODERN;
+        }
+        return nc.hasDialog() ? DialogType.SWING : DialogType.NONE;
     }
 
     /**
