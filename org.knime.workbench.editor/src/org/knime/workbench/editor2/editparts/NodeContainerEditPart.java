@@ -150,6 +150,7 @@ import org.knime.core.ui.node.workflow.async.AsyncWorkflowManagerUI;
 import org.knime.core.ui.node.workflow.lazy.LazyWorkflowManagerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.webui.node.dialog.SubNodeContainerDialogFactory;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.EditorModeParticipant;
@@ -853,13 +854,25 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
      * @since 4.6
      */
     public static void openNodeDialog(final NodeContainerUI container) {
-        if (OpenDialogAction.hasNodeDialog(container)) {
+        boolean shouldUseNodeDialog = false;
+
+        if (Wrapper.wraps(container, NodeContainer.class)) {
+            NodeContainer nc = Wrapper.unwrapNC(container);
+            if (nc instanceof SubNodeContainer && SubNodeContainerDialogFactory.isSubNodeContainerNodeDialogEnabled()) {
+                // If we have explicitly enabled JS-based NodeDialogs for Components, we do not want to fall back to
+                // swing dialogs.
+                shouldUseNodeDialog = true;
+            }
+        }
+
+        final boolean hasNodeDialog = OpenDialogAction.hasNodeDialog(container);
+        if (!shouldUseNodeDialog && !hasNodeDialog) {
+            openDialog(container, null);
+        } else if (hasNodeDialog) {
             NodeContainer nc = Wrapper.unwrapNC(container);
             OpenNodeViewAction.openNodeView(nc,
                 OpenNodeViewAction.createNodeView(nc, true, OpenNodeViewAction.hasNodeView(container)),
                 "Dialog - " + nc.getDisplayLabel());
-        } else {
-            openDialog(container, null);
         }
     }
 
