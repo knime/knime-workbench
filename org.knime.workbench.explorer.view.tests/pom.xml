@@ -12,6 +12,8 @@
 	<properties>
 		<revision>8.7.0</revision>
 		<changelist>-SNAPSHOT</changelist>
+		<sonar.sources></sonar.sources>
+		<sonar.tests>src</sonar.tests>
     </properties>
 
 	<build>
