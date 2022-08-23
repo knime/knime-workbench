@@ -48,12 +48,9 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -71,7 +68,6 @@ import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.NodeContainer;
-import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -80,6 +76,7 @@ import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.commands.BulkChangeMetaNodeLinksCommand;
 import org.knime.workbench.editor2.commands.ChangeSubNodeLinkCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -197,17 +194,8 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
         if (Role.Link.equals(subNode.getTemplateInformation().getRole())) {
             WorkflowManager wfm = subNode.getParent();
             URI targetURI = subNode.getTemplateInformation().getSourceURI();
-            LinkType linkType = LinkType.None;
-            try {
-                if (ResolverUtil.isMountpointRelativeURL(targetURI)) {
-                    linkType = LinkType.MountpointRelative;
-                } else if (ResolverUtil.isWorkflowRelativeURL(targetURI)) {
-                    linkType = LinkType.WorkflowRelative;
-                } else {
-                    linkType = LinkType.Absolute;
-                }
-            } catch (IOException e) {
-                LOGGER.error("Unable to resolve current link to template " + targetURI + ": " + e.getMessage(), e);
+            var linkType = BulkChangeMetaNodeLinksCommand.resolveLinkType(targetURI);
+            if (linkType == LinkType.None) {
                 return;
             }
 
@@ -220,39 +208,24 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
             if (dlg.getReturnCode() == Window.CANCEL) {
                 return;
             }
-            LinkType newLinkType = dlg.getLinkType();
-            if (linkType.equals(newLinkType)) {
+            var newLinkType = dlg.getLinkType();
+            if (linkType == newLinkType) {
                 LOGGER.info("Link type not changes as selected type equals existing type " + targetURI);
                 return;
             }
             // as the workflow is local and the template in the same mountID, it should resolve to a file
-            URI newURI = null;
-            NodeContext.pushContext(subNode);
-            try {
-                File targetFile = ResolverUtil.resolveURItoLocalFile(targetURI);
-                LocalExplorerFileStore targetfs = ExplorerFileSystem.INSTANCE.fromLocalFile(targetFile);
-                newURI = AbstractContentProvider.createMetanodeLinkUri(subNode, targetfs, newLinkType);
-            } catch (IOException e) {
-                LOGGER.error("Unable to resolve shared component URI " + targetURI + ": " + e.getMessage(), e);
-                return;
-            } catch (URISyntaxException e) {
-                LOGGER.error("Unable to resolve shared component URI " + targetURI + ": " + e.getMessage(), e);
-                return;
-            } catch (CoreException e) {
-                LOGGER.error("Unable to resolve shared component URI " + targetURI + ": " + e.getMessage(), e);
-                return;
-            } finally {
-                NodeContext.removeLastContext();
+            var newURI = BulkChangeMetaNodeLinksCommand.changeLinkType(subNode, targetURI, newLinkType);
+            if (newURI != null) {
+                var cmd = new ChangeSubNodeLinkCommand(wfm, subNode, targetURI, newURI);
+                getCommandStack().execute(cmd);
             }
-            ChangeSubNodeLinkCommand cmd = new ChangeSubNodeLinkCommand(wfm, subNode, targetURI, newURI);
-            getCommandStack().execute(cmd);
         } else {
             throw new IllegalStateException(
                 "Can only change the link type of if the component is actually linked - " + subNode + " is not.");
         }
     }
 
-    private final class LinkPrompt extends MessageDialog {
+    static class LinkPrompt extends MessageDialog {
         private Button m_absoluteLink;
 
         private Button m_mountpointRelativeLink;
