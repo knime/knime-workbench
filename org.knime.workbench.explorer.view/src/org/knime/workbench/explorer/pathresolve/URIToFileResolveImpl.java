@@ -270,4 +270,17 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
             && ExplorerURLStreamHandler.NODE_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Optional<KNIMEURIDescription> toDescription(final URI uri, final IProgressMonitor monitor) {
+        var s = ExplorerFileSystem.INSTANCE.getStore(uri);
+        var mountId = s.getMountID();
+        // TODO: work-in-progress as of right now, only HubExplorerFileStore#getMountIDWithFullPath will resolve ID to path.
+        // This will change according to outcome of AP-19371.
+        var path = s.getMountIDWithFullPath().split(":", 2)[1];
+        return Optional.of(new KNIMEURIDescription(mountId, path));
+    }
 }

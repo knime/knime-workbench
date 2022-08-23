@@ -162,6 +162,11 @@
             name="Update Links"/>
       <command
             categoryId="knime.command.category"
+            description="Allows for bulk changing component and metanode links"
+            id="knime.commands.bulkChangeMetaNodeLinks"
+            name="Change Links..."/>
+      <command
+            categoryId="knime.command.category"
             description="Do one loop step"
             id="knime.commands.steploop"
             name="Step Loop Execution"/>
@@ -316,6 +321,16 @@
                menubarPath="org.knime.workbench.editor.menu/group1"
                style="push"
                tooltip="Check and update metanode and component links"/>
+         <action
+               class="org.knime.workbench.editor2.actions.delegates.BulkChangeMetaNodeLinksEditorAction"    
+               definitionId="knime.commands.bulkChangeMetaNodeLinks"
+               disabledIcon="icons/meta/metanode_link_change.png"
+               icon="icons/meta/metanode_link_change.png"
+               id="knime.action.meta_node_bulk_change_links"
+               label="Change Links..."
+               menubarPath="org.knime.workbench.editor.menu/group1"
+               style="push"
+               tooltip="Allows for bulk changing component and metanode links"/>
          <action
                class="org.knime.workbench.editor2.actions.delegates.FindNextNodeEditorAction"
                definitionId="knime.commands.findnextnode"
@@ -576,6 +591,11 @@
             contextId="org.knime.workbench.editor.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+ALT+U"/>
+      <key
+            commandId="knime.commands.bulkChangeMetaNodeLinks"
+            contextId="org.knime.workbench.editor.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+ALT+C"/>
       <key
             commandId="knime.commands.findnode"
             contextId="org.knime.workbench.editor.context"
