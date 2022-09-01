@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -59,8 +60,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.commons.lang3.StringUtils;
-import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.JFaceResources;
@@ -75,6 +78,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
@@ -116,10 +120,14 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  *
  * @author Leon Wenzler, KNIME AG, Konstanz, Germany
  */
-public class BulkChangeMetaNodeLinksDialog extends Dialog {
+public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(BulkChangeMetaNodeLinksDialog.class);
 
+    /**
+     * Maps a URI, e.g., "knime://My-KNIME-Hub/*rrIiQeA0ZLlrJzCf" to the node containers in the currently edited
+     * workflow that have been created from that source.
+     */
     private final Map<URI, List<NodeContainerTemplate>> m_metaNodeGroups;
 
     private Map<String, URI> m_displayNamesToGroupKeys = new HashMap<>();
@@ -130,14 +138,13 @@ public class BulkChangeMetaNodeLinksDialog extends Dialog {
 
     private LinkType m_selectedLinkType = LinkType.None;
 
-    private URI m_oldLinkURI = null;
+    private URI m_oldLinkURI;
 
-    private URI m_selectedLinkURI = null;
+    private URI m_selectedLinkURI;
 
-    private boolean m_uriInputViaText = false;
+    private boolean m_uriInputViaText;
 
-    // instance attributes for global access, mainly enabling/disabling
-    private Label m_oldLinkLabel;
+    private Text m_linkDescriptionTextField;
 
     private Text m_uriTextField;
 
@@ -145,11 +152,14 @@ public class BulkChangeMetaNodeLinksDialog extends Dialog {
 
     private final WorkflowManager m_manager;
 
+    /** Fetching URI information (resolving knime://) requires remote API calls. */
+    private Job m_uriDescriptionJob;
+
     /**
      * Creates a dialog.
      *
      * @param parent the parent shell
-     * @param metaNodes
+     * @param metaNodes components and metanodes in the currently edited workflow
      * @param manager The manager (used for resolution of 'knime://' URLs)
      */
     BulkChangeMetaNodeLinksDialog(final Shell parent, final List<NodeContainerTemplate> metaNodes,
@@ -242,20 +252,14 @@ public class BulkChangeMetaNodeLinksDialog extends Dialog {
             @Override
             public void widgetSelected(final SelectionEvent event) {
                 m_oldLinkURI = m_displayNamesToGroupKeys.get(((Combo)event.getSource()).getText());
+                // the combo box usually only uses a component's name but sometimes with URL (if duplicated), e.g.
+                //   "Foo Bar (knime://KNIME-Community-Hub/*AR8XsII1jufnF0PA)"
+                // be sure to use the real name...:
+                String componentName = m_metaNodeGroups.get(m_oldLinkURI).get(0).getName();
                 m_oldLinkType = BulkChangeMetaNodeLinksCommand.resolveLinkType(m_oldLinkURI);
-                // in the future, the hub will use IDs in the URI which is not human readable
-                // this call to `ResolverUtil.toDescription` will still resolve the path for display purposes
-                String desc;
-                NodeContext.pushContext(m_manager);
-                try {
-                    desc = ResolverUtil.toDescription(m_oldLinkURI, new NullProgressMonitor())
-                            .map(KNIMEURIDescription::toDisplayString).orElse(m_oldLinkURI.toString());
-                } finally {
-                    NodeContext.removeLastContext();
-                }
 
-                m_oldLinkLabel.setText(desc);
-                m_oldLinkLabel.setToolTipText(desc);
+                scheduleURIDescriptionJob(m_oldLinkURI, componentName, content.getDisplay());
+
                 // selected properties can be changed multiple times, but will be compared to old ones for change detection
                 m_selectedLinkURI = m_oldLinkURI;
                 m_selectedLinkType = m_oldLinkType;
@@ -265,14 +269,19 @@ public class BulkChangeMetaNodeLinksDialog extends Dialog {
                 m_uriTextField.setToolTipText(m_oldLinkURI.toString());
                 m_uriTextField.setText(m_oldLinkURI.toString());
             }
+
         });
 
         var oldLinkLabel = new Label(content, SWT.LEFT);
         oldLinkLabel.setText("The current link is:");
-        m_oldLinkLabel = new Label(content, SWT.WRAP | SWT.BORDER);
-        m_oldLinkLabel.setFont(JFaceResources.getFontRegistry().getItalic(JFaceResources.DEFAULT_FONT));
-        m_oldLinkLabel.setText("<Select an item above>");
-        m_oldLinkLabel.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+        m_linkDescriptionTextField = new Text(content, SWT.WRAP | SWT.BORDER);
+        m_linkDescriptionTextField.setFont(JFaceResources.getFontRegistry().getItalic(JFaceResources.DEFAULT_FONT));
+        m_linkDescriptionTextField.setText("<Select an item above>");
+        m_linkDescriptionTextField.setEditable(false);
+        GridData oldLinkLabelLayoutData = new GridData(GridData.FILL_HORIZONTAL);
+        // 5? the rough number of lines in #toSummaryText
+        oldLinkLabelLayoutData.heightHint = 5 * m_linkDescriptionTextField.getLineHeight();
+        m_linkDescriptionTextField.setLayoutData(oldLinkLabelLayoutData);
 
         // vertical space
         new Label(content, SWT.NONE);
@@ -362,6 +371,17 @@ public class BulkChangeMetaNodeLinksDialog extends Dialog {
         return content;
     }
 
+    /** Determines the text content of {@link #m_linkDescriptionTextField} based on the URI etc. */
+    private static String toSummaryText(final URI linkURI, final String componentName, final String mountID,
+        final String path) {
+        StringBuilder strBuilder = new StringBuilder();
+        strBuilder.append("Name: \t\t").append(componentName).append("\n");
+        strBuilder.append("URI: \t\t").append(linkURI.toString()).append("\n");
+        strBuilder.append("Mount ID: \t").append(mountID).append("\n");
+        strBuilder.append("Path: \t\t").append(path);
+        return strBuilder.toString();
+    }
+
     @Override
     protected void okPressed() {
         if (getLinkChangeAction() != LinkChangeAction.URI_CHANGE || verifyURI()) {
@@ -376,29 +396,31 @@ public class BulkChangeMetaNodeLinksDialog extends Dialog {
      * @return String array of unique display names
      */
     private String[] getUniqueGroupNames() {
-        var uriArray = m_metaNodeGroups.keySet().toArray(new URI[0]);
+        var uriArray = m_metaNodeGroups.keySet().toArray(URI[]::new);
         var namesArray = new String[uriArray.length];
         var duplicateNames = new LinkedList<>();
 
         for (var i = 0; i < uriArray.length; i++) {
-            // assigning the last URI part as name
-            namesArray[i] = StringUtils.substringAfterLast(uriArray[i].toString(), "/");
+            final var uri = uriArray[i];
+            final String name = m_metaNodeGroups.get(uri).get(0).getName();
+            namesArray[i] = name;
 
             // making sure that names does not collide with others or is already a duplicate name
             for (var j = 0; j < i; j++) {
-                if (namesArray[i].equals(namesArray[j])) {
-                    duplicateNames.add(namesArray[i]);
-                    namesArray[i] = uriArray[i].toString();
-                    namesArray[j] = uriArray[j].toString();
+                if (name.equals(namesArray[j])) {
+                    duplicateNames.add(name);
+                    namesArray[i] = name + " (" + uriArray[i].toString() + ")";
+                    namesArray[j] = name + " (" + uriArray[j].toString() + ")";
                     m_displayNamesToGroupKeys.put(namesArray[j], uriArray[j]);
                 }
             }
-            if (duplicateNames.contains(namesArray[i])) {
-                namesArray[i] = uriArray[i].toString();
+            if (duplicateNames.contains(name)) {
+                namesArray[i] = name + " (" + uriArray[i].toString() + ")";
             }
             // store the association between display name and group identifier
             m_displayNamesToGroupKeys.put(namesArray[i], uriArray[i]);
         }
+        Arrays.sort(namesArray);
         return namesArray;
     }
 
@@ -593,6 +615,74 @@ public class BulkChangeMetaNodeLinksDialog extends Dialog {
                 }
             });
             setFilter(new MessageJobFilter());
+        }
+    }
+
+    /**
+     * Schedules a {@link Job} to retrieve {@link KNIMEURIDescription} for the selected component and populates the info
+     * text field.
+     */
+    private void scheduleURIDescriptionJob(final URI linkURI, final String name, final Display display) {
+        if (m_uriDescriptionJob != null) {
+            m_uriDescriptionJob.cancel();
+        }
+        m_uriDescriptionJob = new URIDescriptionJob(linkURI, name, display);
+        m_uriDescriptionJob.schedule();
+    }
+
+    /**
+     * Calls {@link ResolverUtil#toDescription(URI, IProgressMonitor)} and updates
+     * {@link BulkChangeMetaNodeLinksDialog#m_linkDescriptionTextField}.
+     */
+    private final class URIDescriptionJob extends Job {
+
+        private final URI m_linkURI;
+        private final String m_componentName;
+        private final Display m_display;
+
+        URIDescriptionJob(final URI linkURI, final String componentName, final Display display) {
+            super("Retrieving URI Info for " + linkURI.toString());
+            m_linkURI = linkURI;
+            m_componentName = componentName;
+            m_display = display;
+            String resolveText = "<Resolving ...>";
+            m_linkDescriptionTextField.setText(toSummaryText(linkURI, componentName, resolveText, resolveText));
+            m_linkDescriptionTextField.setToolTipText(linkURI.toString());
+            setPriority(Job.INTERACTIVE);
+        }
+
+        @Override
+        protected IStatus run(final IProgressMonitor monitor) {
+            Optional<KNIMEURIDescription> descrOptional = resolve(monitor);
+            IStatus status;
+            String text;
+            if (descrOptional.isPresent()) {
+                KNIMEURIDescription uriDesc = descrOptional.get();
+                text = toSummaryText(m_linkURI, m_componentName, uriDesc.getMountpointName(), descrOptional.get().getPath());
+                status = Status.OK_STATUS;
+            } else {
+                var errorText = "<Errors resolving details>";
+                text = toSummaryText(m_linkURI, m_componentName, errorText, errorText);
+                status = Status.warning("Unable to resolve details to " + m_linkURI.toString());
+            }
+            m_display.asyncExec(() -> {
+                if (!m_display.isDisposed() && !monitor.isCanceled()) {
+                    m_linkDescriptionTextField.setText(text);
+                }
+            });
+            return status;
+        }
+
+        private Optional<KNIMEURIDescription> resolve(final IProgressMonitor monitor) {
+            if (monitor.isCanceled()) {
+                return Optional.empty();
+            }
+            NodeContext.pushContext(m_manager);
+            try {
+                return ResolverUtil.toDescription(m_linkURI, monitor);
+            } finally {
+                NodeContext.removeLastContext();
+            }
         }
     }
 }
