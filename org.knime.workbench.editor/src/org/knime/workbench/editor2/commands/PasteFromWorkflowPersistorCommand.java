@@ -59,6 +59,7 @@ import java.util.Set;
 
 import org.eclipse.gef.EditPartViewer;
 import org.eclipse.swt.widgets.Display;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.ConnectionID;
 import org.knime.core.node.workflow.ConnectionUIInformation;
 import org.knime.core.node.workflow.NodeID;
@@ -156,6 +157,7 @@ public final class PasteFromWorkflowPersistorCommand
         } else {
             if (wraps(getHostWFMUI(), WorkflowManager.class)) {
                 //cross copies from WorkflowManager to WorkflowManagerUI not possible, yet
+                NodeLogger.getLogger("Copy & Paste").warn("Cannot paste content that was copied from remote workflow editor.");
                 return false;
             }
             return true;

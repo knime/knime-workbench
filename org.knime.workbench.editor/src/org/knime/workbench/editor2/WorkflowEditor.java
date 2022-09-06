@@ -469,7 +469,7 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     /**
-     * Returns the clipboard content for this editor.
+     * Returns the clipboard content shared between all {@link WorkflowEditor} instances.
      *
      * @return the clipboard for this editor
      */

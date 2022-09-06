@@ -162,6 +162,8 @@ public class CopyAction extends AbstractClipboardAction {
             try {
                 var serializedContent = mapper.writeValueAsString(defClipboardContent);
                 copyToSystemClipboard(serializedContent);
+                // null legacy clipboard in order for it not to take precedence with now outdated content
+                getEditor().setClipboardContent(null);
             } catch (JsonProcessingException e) {
                   LOGGER.error("Cannot copy to system clipboard: ", e);
             }
