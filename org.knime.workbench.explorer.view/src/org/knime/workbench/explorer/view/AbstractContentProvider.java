@@ -603,8 +603,9 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public static URI createMetanodeLinkUri(final NodeContainerParent node,
         final AbstractExplorerFileStore templateLocation, final LinkType linkType) throws CoreException,
-        URISyntaxException, UnsupportedEncodingException {
-        URI originalUri = templateLocation.toURI();
+        URISyntaxException {
+        URI originalUri = templateLocation instanceof RemoteExplorerFileStore
+            ? ((RemoteExplorerFileStore)templateLocation).toIdURI() : templateLocation.toURI();
         if (linkType.equals(LinkType.Absolute)) {
             return originalUri;
         } else {

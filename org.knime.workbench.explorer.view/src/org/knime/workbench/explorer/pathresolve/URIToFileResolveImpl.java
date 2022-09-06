@@ -60,6 +60,7 @@ import java.util.Base64;
 import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -276,11 +277,15 @@ public class URIToFileResolveImpl implements URIToFileResolve {
      */
     @Override
     public Optional<KNIMEURIDescription> toDescription(final URI uri, final IProgressMonitor monitor) {
+        if (uri.getScheme().equals("file")) {
+            return Optional.of(new KNIMEURIDescription(uri.getHost(), uri.getPath()));
+        }
         var s = ExplorerFileSystem.INSTANCE.getStore(uri);
+        if (s == null) {
+            return Optional.empty();
+        }
         var mountId = s.getMountID();
-        // TODO: work-in-progress as of right now, only HubExplorerFileStore#getMountIDWithFullPath will resolve ID to path.
-        // This will change according to outcome of AP-19371.
-        var path = s.getMountIDWithFullPath().split(":", 2)[1];
+        var path = StringUtils.substringAfterLast(s.getMountIDWithFullPath(), ":");
         return Optional.of(new KNIMEURIDescription(mountId, path));
     }
 }

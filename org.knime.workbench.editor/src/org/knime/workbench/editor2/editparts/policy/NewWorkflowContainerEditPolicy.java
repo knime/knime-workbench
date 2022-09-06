@@ -113,7 +113,7 @@ import org.knime.workbench.editor2.commands.CreateMetaNodeTemplateCommand;
 import org.knime.workbench.editor2.commands.CreateNodeCommand;
 import org.knime.workbench.editor2.commands.CreateReaderNodeCommand;
 import org.knime.workbench.editor2.commands.InsertMetaNodeCommand;
-import org.knime.workbench.editor2.commands.InsertMetaNodeTempalteCommand;
+import org.knime.workbench.editor2.commands.InsertMetaNodeTemplateCommand;
 import org.knime.workbench.editor2.commands.InsertNodeCommand;
 import org.knime.workbench.editor2.commands.InsertReaderNodeCommand;
 import org.knime.workbench.editor2.commands.ReplaceMetaNodeCommand;
@@ -183,8 +183,9 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             if (obj instanceof AbstractExplorerFileStore) {
                 final AbstractExplorerFileStore fs = (AbstractExplorerFileStore)obj;
                 if (AbstractExplorerFileStore.isWorkflowTemplate(fs)) {
-                    return handleMetaNodeTemplateDrop(manager, cdr, fs.toURI(),
-                        fs instanceof RemoteExplorerFileStore);
+                    var uri =
+                        fs instanceof RemoteExplorerFileStore ? ((RemoteExplorerFileStore)fs).toIdURI() : fs.toURI();
+                    return handleMetaNodeTemplateDrop(manager, cdr, uri, fs instanceof RemoteExplorerFileStore);
                 }
             } else if (obj instanceof WorkflowPersistor) {
                 return handleMetaNodeDrop(manager, (WorkflowPersistor)obj, cdr);
@@ -296,7 +297,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
 
             if (RequestType.INSERT.equals(requestType)) {
                 // insert metanode from template into connection
-                final InsertMetaNodeTempalteCommand insertCommand = new InsertMetaNodeTempalteCommand(manager,
+                final InsertMetaNodeTemplateCommand insertCommand = new InsertMetaNodeTemplateCommand(manager,
                     templateURI, location, snapToGrid, (ConnectionContainerEditPart)dropTarget, isRemoteLocation);
 
                 return potentiallyAugmentCommandForSpacing(insertCommand, request);

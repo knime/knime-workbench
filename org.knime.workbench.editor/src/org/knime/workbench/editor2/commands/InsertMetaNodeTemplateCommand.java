@@ -63,7 +63,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
  *
  * @author Tim-Oliver Buchholz, KNIME AG, Zurich, Switzerland
  */
-public class InsertMetaNodeTempalteCommand extends CreateMetaNodeTemplateCommand {
+public class InsertMetaNodeTemplateCommand extends CreateMetaNodeTemplateCommand {
 
     private ConnectionContainer m_edge;
 
@@ -81,7 +81,7 @@ public class InsertMetaNodeTempalteCommand extends CreateMetaNodeTemplateCommand
      * @param edge on which the metanode should be inserted
      * @throws IllegalArgumentException if the passed file store doesn't represent a workflow template
      */
-    public InsertMetaNodeTempalteCommand(final WorkflowManager manager, final AbstractExplorerFileStore templateFolder,
+    public InsertMetaNodeTemplateCommand(final WorkflowManager manager, final AbstractExplorerFileStore templateFolder,
         final Point location, final boolean snapToGrid, final ConnectionContainerEditPart edge) {
         super(manager, templateFolder, location, snapToGrid);
         m_edge = Wrapper.unwrapCC(edge.getModel());
@@ -101,7 +101,7 @@ public class InsertMetaNodeTempalteCommand extends CreateMetaNodeTemplateCommand
      * @param isRemoteLocation if the workflow template needs to be downloaded first (determines whether to show a busy
      *            cursor on command execution)
      */
-    public InsertMetaNodeTempalteCommand(final WorkflowManager manager, final URI templateURI, final Point location,
+    public InsertMetaNodeTemplateCommand(final WorkflowManager manager, final URI templateURI, final Point location,
         final boolean snapToGrid, final ConnectionContainerEditPart edge, final boolean isRemoteLocation) {
         super(manager, templateURI, location, snapToGrid, isRemoteLocation);
         m_edge = Wrapper.unwrapCC(edge.getModel());

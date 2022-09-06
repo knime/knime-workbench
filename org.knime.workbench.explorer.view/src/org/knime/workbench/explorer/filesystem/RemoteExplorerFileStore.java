@@ -49,6 +49,7 @@
 package org.knime.workbench.explorer.filesystem;
 
 import java.io.File;
+import java.net.URI;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 
@@ -100,6 +101,17 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
 
     @Override
     public abstract RemoteExplorerFileStore getParent(); // overridden, narrows return type
+
+    /**
+     * Constructs a {@link URI} from either the full path or the id of the item.
+     * <li>knime://(mountId)/(fullPath)
+     * <li>knime://(mountId)/(itemId)
+     *
+     * @return a KNIME specific {@link URI}
+     */
+    public URI toIdURI(){
+        return toURI();
+    }
 
     /**
      * If this store represents a workflow return an open stream that sends the
