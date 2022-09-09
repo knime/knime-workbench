@@ -59,6 +59,8 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.shared.workflow.storage.clipboard.DefClipboardContent;
 import org.knime.shared.workflow.storage.clipboard.InvalidDefClipboardContentVersionException;
+import org.knime.shared.workflow.storage.clipboard.SystemClipboardFormat;
+import org.knime.shared.workflow.storage.clipboard.SystemClipboardFormat.ObfuscatorException;
 import org.knime.workbench.editor2.ClipboardObject;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.PasteFromWorkflowDefCommand;
@@ -137,11 +139,12 @@ public class PasteAction extends AbstractClipboardAction {
      */
     private static Optional<DefClipboardContent> getSystemClipboardAsDef() {
         var optContent = getSystemClipboardContentAsString();
+
         if (optContent.isPresent()) {
             try {
-                return DefClipboardContent.valueOf(optContent.get());
-            } catch (InvalidDefClipboardContentVersionException idccve) {
-                LOGGER.warn(idccve.getMessage(), idccve);
+                return Optional.of(SystemClipboardFormat.deserialize(optContent.get()));
+            } catch (ObfuscatorException | IllegalArgumentException | InvalidDefClipboardContentVersionException e) {
+                LOGGER.warn(e.getMessage(), e);
             }
         }
         return Optional.empty();

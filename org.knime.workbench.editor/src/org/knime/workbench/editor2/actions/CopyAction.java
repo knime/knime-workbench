@@ -63,7 +63,8 @@ import org.knime.core.node.workflow.WorkflowAnnotationID;
 import org.knime.core.node.workflow.WorkflowCopyContent;
 import org.knime.core.ui.node.workflow.WorkflowCopyUI;
 import org.knime.core.ui.wrapper.WorkflowDefWrapper;
-import org.knime.shared.workflow.storage.text.util.ObjectMapperUtil;
+import org.knime.shared.workflow.storage.clipboard.SystemClipboardFormat;
+import org.knime.shared.workflow.storage.clipboard.SystemClipboardFormat.ObfuscatorException;
 import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.ClipboardObject;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -158,16 +159,15 @@ public class CopyAction extends AbstractClipboardAction {
 
         if (wfCopy instanceof WorkflowDefWrapper) {
             var defClipboardContent = ((WorkflowDefWrapper)wfCopy).unwrap();
-            var mapper = ObjectMapperUtil.getInstance().getObjectMapper();
             try {
-                var serializedContent = mapper.writeValueAsString(defClipboardContent);
-                copyToSystemClipboard(serializedContent);
+                // obfuscated string that protects for instance locked metanode/component contents
+                var systemClipboardContent = SystemClipboardFormat.serialize(defClipboardContent);
+                copyToSystemClipboard(systemClipboardContent);
                 // null legacy clipboard in order for it not to take precedence with now outdated content
                 getEditor().setClipboardContent(null);
-            } catch (JsonProcessingException e) {
-                  LOGGER.error("Cannot copy to system clipboard: ", e);
+            } catch (JsonProcessingException | ObfuscatorException e) {
+                LOGGER.error("Cannot copy to system clipboard: ", e);
             }
-
         } else {
             // TODO use eclipse clipboard for copy & paste from remote to remote
             // the information about the nodes is stored in the config XML format
