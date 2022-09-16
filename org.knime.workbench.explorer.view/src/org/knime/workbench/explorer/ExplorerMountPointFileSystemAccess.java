@@ -56,7 +56,6 @@ import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
 import org.knime.filehandling.core.connections.base.attributes.BaseFileAttributes;
@@ -74,20 +73,28 @@ import org.knime.workbench.explorer.filesystem.TmpLocalExplorerFile;
  */
 public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemAccess {
 
+    private static final Set<String> SERVER_PROVIDER_FACTORY_IDS = Set.of("com.knime.explorer.server");
+
+    private static final Set<String> HUB_PROVIDER_FACTORY_IDS = Set.of(
+        "com.knime.explorer.server.knime_hub", "com.knime.explorer.server.workflow_hub");
+
     private static String getProviderFactoryId(final String mountId) {
         return ExplorerMountTable.getMountPoint(mountId).getProviderFactory().getID();
     }
 
     @Override
-    public List<String> getMountedIDs() {
-        return ExplorerMountTable.getAllMountedIDs();
+    public boolean isHubMountPoint(final String mountId) {
+        return HUB_PROVIDER_FACTORY_IDS.contains(getProviderFactoryId(mountId));
     }
 
     @Override
-    public List<String> getMountedIDs(final Set<String> providerFactoryIDs) {
-        return getMountedIDs().stream() //
-                .filter(mountId -> providerFactoryIDs.contains(getProviderFactoryId(mountId))) //
-                .collect(Collectors.toUnmodifiableList());
+    public boolean isServerMountPoint(final String mountId) {
+        return SERVER_PROVIDER_FACTORY_IDS.contains(getProviderFactoryId(mountId));
+    }
+
+    @Override
+    public List<String> getMountedIDs() {
+        return ExplorerMountTable.getAllMountedIDs();
     }
 
     @Override
