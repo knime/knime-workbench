@@ -316,6 +316,10 @@ public final class ImageRepository {
         HubSpacePublicBig("icons/server_space/public_space_32.png"),
         /** Icon for private hub spaces */
         HubSpacePrivate("icons/server_space/private_space.png"),
+        /** Icon for users */
+        HubUser("icons/server_space/hub_user.png"),
+        /** Icon for teams */
+        HubTeam("icons/server_space/hub_team.png"),
 
         /** Reset workflow icon. */
         ResetWorkflow("icons/server_space/reset_workflow.png"),
