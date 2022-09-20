@@ -107,7 +107,7 @@ public class ChangeMetaNodeLinkCommand extends AbstractKNIMECommand {
         MetaNodeTemplateInformation templateInfo = ((WorkflowManager)metaNode).getTemplateInformation();
         MetaNodeTemplateInformation newInfo;
         try {
-            newInfo = templateInfo.createLinkWithUpdatedSource(m_newLink);
+            newInfo = templateInfo.createLinkWithUpdatedSource(link);
         } catch (InvalidSettingsException e1) {
             // will not happen.
             LOGGER.error("Command failed: Specified node is not a metanode with a link." + e1.getMessage(), e1);
