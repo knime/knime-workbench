@@ -51,7 +51,6 @@ package org.knime.workbench.editor2.actions;
 import static org.knime.core.ui.wrapper.Wrapper.unwrap;
 import static org.knime.core.ui.wrapper.Wrapper.wraps;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,7 +72,6 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerView;
 
@@ -132,8 +130,7 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
      */
     @Override
     protected boolean internalCalculateEnabled() {
-        NodeContainerEditPart[] nodes =
-            getSelectedParts(NodeContainerEditPart.class);
+        NodeContainerEditPart[] nodes = getSelectedParts(NodeContainerEditPart.class);
         if (nodes == null) {
             return false;
         }
@@ -141,38 +138,10 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
             Object model = p.getModel();
             if (wraps(model, SubNodeContainer.class)) {
                 SubNodeContainer snc = unwrap((UI)model, SubNodeContainer.class);
-                MetaNodeTemplateInformation templateInfo = snc.getTemplateInformation();
-
-                final URI uri = templateInfo.getSourceURI();
-
-                if (uri == null) {
-                    return false;
-                }
-
-                final AbstractContentProvider provider = ExplorerMountTable.getMountedContent().get(uri.getHost());
-
-                if (provider == null) {
-                    return false;
-                }
-
-                final AbstractExplorerFileStore fileStore = provider.getFileStore(uri);
-                final AbstractExplorerFileStore rootStore = provider.getRootStore();
-                final String rootPath =
-                    rootStore.getFullName().endsWith("/") ? rootStore.getFullName() : rootStore.getFullName() + "/";
-
-                /* To check if this action is enabled firstly check if the component exists, the mount point is connected,
-                 * and if it's actually part of the mount point. This can be easily tested by getting the root of the mount
-                 * point and check if the Component is a descendant of the root, which is reflected by the full name. */
-                boolean exists = false;
-                try {
-                    // this can throw a runtime exception (javax.ws.rs.ForbiddenException) if p is a component stored on
-                    // a user's private hub space and the user is not logged in
-                    exists = fileStore.fetchInfo().exists();
-                } catch (Exception e) {
-                    // assume exists = false
-                }
-                if (templateInfo.getRole().equals(Role.Link) && fileStore.getFullName().startsWith(rootPath)
-                    && exists && AbstractExplorerFileStore.isWorkflowGroup(rootStore)) {
+                var templateInfo = snc.getTemplateInformation();
+                var host = templateInfo.getSourceURI() != null ? templateInfo.getSourceURI().getHost() : null;
+                var provider = ExplorerMountTable.getMountedContent().get(host);
+                if (templateInfo.getRole() == Role.Link && provider != null) {
                     return true;
                 }
             }

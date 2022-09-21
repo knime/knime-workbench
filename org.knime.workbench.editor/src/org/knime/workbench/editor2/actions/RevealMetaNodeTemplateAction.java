@@ -66,6 +66,7 @@ import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.view.ContentDelegator;
@@ -126,16 +127,18 @@ public class RevealMetaNodeTemplateAction extends AbstractNodeAction {
      */
     @Override
     protected boolean internalCalculateEnabled() {
-        NodeContainerEditPart[] nodes =
-            getSelectedParts(NodeContainerEditPart.class);
+        NodeContainerEditPart[] nodes = getSelectedParts(NodeContainerEditPart.class);
         if (nodes == null) {
             return false;
         }
         for (NodeContainerEditPart p : nodes) {
             Object model = p.getModel();
             if (model instanceof WorkflowManagerUI) {
-                WorkflowManagerUI wm = (WorkflowManagerUI)model;
-                if (Wrapper.unwrapWFM(wm).getTemplateInformation().getRole().equals(Role.Link)) {
+                WorkflowManager wm = Wrapper.unwrapWFM((WorkflowManagerUI)model);
+                var templateInfo = wm.getTemplateInformation();
+                var host = templateInfo.getSourceURI() != null ? templateInfo.getSourceURI().getHost() : null;
+                var provider = ExplorerMountTable.getMountedContent().get(host);
+                if (templateInfo.getRole() == Role.Link && provider != null) {
                     return true;
                 }
             }
