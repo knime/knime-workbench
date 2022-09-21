@@ -346,7 +346,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         public void run(final IProgressMonitor monitor)
                 throws InvocationTargetException, InterruptedException {
             monitor.beginTask("Checking Link Updates", m_candidateList.size());
-            var lH = new WorkflowLoadHelper(true, m_hostWFM.getContext());
+            var lH = new WorkflowLoadHelper(true, m_hostWFM.getContextV2());
 
             var stats = new Status[m_candidateList.size()];
             int overallStatus = IStatus.OK;
@@ -462,7 +462,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
 
                 // for each of the top level templates nodes, invoke a recursive update check
                 for (NodeID tlc : topLevelCandidates) {
-                    m_hostWFM.checkUpdateMetaNodeLink(tlc, new WorkflowLoadHelper(true, m_hostWFM.getContext()));
+                    m_hostWFM.checkUpdateMetaNodeLink(tlc, new WorkflowLoadHelper(true, m_hostWFM.getContextV2()));
                 }
             } catch (IOException e) {
                 LOGGER.warn("Could not update node " + m_candidateList.get(0) + ": ", e);

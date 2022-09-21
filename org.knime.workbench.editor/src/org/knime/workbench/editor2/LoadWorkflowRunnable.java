@@ -50,7 +50,6 @@ package org.knime.workbench.editor2;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -78,18 +77,18 @@ import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.KNIMEComponentInformation;
 import org.knime.core.node.NodeAndBundleInformationPersistor;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.UnsupportedWorkflowVersionException;
-import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResult;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResultEntry.LoadResultEntryType;
 import org.knime.core.node.workflow.WorkflowPersistor.WorkflowLoadResult;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.util.LockFailedException;
-import org.knime.workbench.editor2.WorkflowEditorEventListener.ActiveWorkflowEditorEvent;
 import org.knime.workbench.editor2.actions.CheckUpdateMetaNodeLinkAllAction;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.p2.actions.AbstractP2Action;
@@ -118,11 +117,7 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
 
     private File m_workflowFile;
 
-    private File m_mountpointRoot;
-
-    private URI m_mountpointURI;
-
-    private boolean m_isTemporaryCopy;
+    private WorkflowContextV2 m_workflowContext;
 
     private Throwable m_throwable = null;
 
@@ -133,19 +128,14 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
      * Creates a new runnable that load a workflow.
      *
      * @param editor the {@link WorkflowEditor} for which the workflow should be loaded
-     * @param uri the URI from the explorer
      * @param workflowFile the workflow file from which the workflow should be loaded (or created = empty workflow file)
-     * @param mountpointRoot the root directory of the mountpoint in which the workflow is contained
-     * @param isTemporaryCopy <code>true</code> if the workflow is a temporary copy of a workflow that lives somewhere
-     *            else, e.g. on a server, <code>false</code> if the workflow is in its original location
+     * @param workflowContext context of the workflow to be loaded (not null)
      */
-    public LoadWorkflowRunnable(final WorkflowEditor editor, final URI uri, final File workflowFile,
-        final File mountpointRoot, final boolean isTemporaryCopy) {
+    public LoadWorkflowRunnable(final WorkflowEditor editor, final File workflowFile,
+            final WorkflowContextV2 workflowContext) {
         m_editor = editor;
-        m_mountpointURI = uri;
         m_workflowFile = workflowFile;
-        m_mountpointRoot = mountpointRoot;
-        m_isTemporaryCopy = isTemporaryCopy;
+        m_workflowContext = CheckUtils.checkArgumentNotNull(workflowContext);
     }
 
     /**
@@ -156,10 +146,6 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
         return m_throwable;
     }
 
-    /**
-     *
-     * {@inheritDoc}
-     */
     @Override
     public void run(final IProgressMonitor pm) {
         // indicates whether to create an empty workflow
@@ -173,21 +159,21 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
 
         try {
             // create progress monitor
-            ProgressHandler progressHandler = new ProgressHandler(pm, 101, "Loading workflow...");
-            final CheckCancelNodeProgressMonitor progressMonitor = new CheckCancelNodeProgressMonitor(pm);
+            final var progressHandler = new ProgressHandler(pm, 101, "Loading workflow...");
+            final var progressMonitor = new CheckCancelNodeProgressMonitor(pm);
             progressMonitor.addProgressListener(progressHandler);
 
-            File workflowDirectory = m_workflowFile.getParentFile();
-            Display d = Display.getDefault();
-            GUIWorkflowLoadHelper loadHelper = new GUIWorkflowLoadHelper(d, workflowDirectory.getName(),
-                m_mountpointURI, workflowDirectory, m_mountpointRoot, m_isTemporaryCopy);
+            final var workflowDirectory = m_workflowFile.getParentFile();
+            final var display = Display.getDefault();
+            final var loadHelper =
+                    GUIWorkflowLoadHelper.forProject(display, workflowDirectory.getName(), m_workflowContext);
             final WorkflowLoadResult result =
-                WorkflowManager.loadProject(workflowDirectory, new ExecutionMonitor(progressMonitor), loadHelper);
-            final WorkflowManager wm = result.getWorkflowManager();
-            m_editor.setWorkflowManager(wm);
+                    WorkflowManager.loadProject(workflowDirectory, new ExecutionMonitor(progressMonitor), loadHelper);
+            final var wfm = result.getWorkflowManager();
+            m_editor.setWorkflowManager(wfm);
             pm.subTask("Finished.");
             pm.done();
-            if (wm.isDirty()) {
+            if (wfm.isDirty()) {
                 m_editor.markDirty();
             }
 
@@ -210,23 +196,17 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
             if (!status.isOK()) {
                 showLoadErrorDialog(result, status, message, true);
             }
-            final List<NodeID> linkedMNs = wm.getLinkedMetaNodes(true);
+            final List<NodeID> linkedMNs = wfm.getLinkedMetaNodes(true);
             if (!linkedMNs.isEmpty()) {
                 final WorkflowEditor editor = m_editor;
-                m_editor.addAfterOpenRunnable(new Runnable() {
-                    @Override
-                    public void run() {
-                        postLoadCheckForMetaNodeUpdates(editor, wm, linkedMNs);
-                    }
-                });
+                m_editor.addAfterOpenRunnable(() -> postLoadCheckForMetaNodeUpdates(editor, wfm, linkedMNs));
             }
             final Collection<WorkflowEditorEventListener> workflowEditorEventListeners =
                 WorkflowEditorEventListeners.getListeners();
             if (!workflowEditorEventListeners.isEmpty()) {
                 final WorkflowEditor editor = m_editor;
                 editor.addAfterOpenRunnable(() -> {
-                    final ActiveWorkflowEditorEvent event =
-                        WorkflowEditorEventListeners.createActiveWorkflowEditorEvent(editor);
+                    final var event = WorkflowEditorEventListeners.createActiveWorkflowEditorEvent(editor);
                     for (final WorkflowEditorEventListener listener : workflowEditorEventListeners) {
                         try {
                             listener.workflowLoaded(event);
@@ -263,8 +243,7 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
             LOGGER.info(m_loadingCanceledMessage, cee);
             m_editor.setWorkflowManager(null);
         } catch (LockFailedException lfe) {
-            StringBuilder error = new StringBuilder();
-            error.append("Unable to load workflow \"");
+            final var error = new StringBuilder("Unable to load workflow \"");
             error.append(m_workflowFile.getParentFile().getName());
             if (m_workflowFile.getParentFile().exists()) {
                 error.append("\"\nIt is in use by another user/instance.");
@@ -282,22 +261,13 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
             // create empty WFM if a new workflow is created
             // (empty workflow file)
             if (createEmptyWorkflow) {
-                WorkflowCreationHelper creationHelper = new WorkflowCreationHelper();
-                WorkflowContext.Factory fac = new WorkflowContext.Factory(m_workflowFile.getParentFile());
-                fac.setMountpointRoot(m_mountpointRoot);
-                fac.setMountpointURI(m_mountpointURI);
-                creationHelper.setWorkflowContext(fac.createContext());
+                m_editor.setWorkflowManager(
+                    WorkflowManager.ROOT.createAndAddProject(name, new WorkflowCreationHelper(m_workflowContext)));
 
-                m_editor.setWorkflowManager(WorkflowManager.ROOT.createAndAddProject(name, creationHelper));
                 // save empty project immediately
                 // bugfix 1341 -> see WorkflowEditor line 1294
                 // (resource delta visitor movedTo)
-                Display.getDefault().syncExec(new Runnable() {
-                    @Override
-                    public void run() {
-                        m_editor.doSave(new NullProgressMonitor());
-                    }
-                });
+                Display.getDefault().syncExec(() -> m_editor.doSave(new NullProgressMonitor()));
                 m_editor.setIsDirty(false);
 
             }
@@ -305,7 +275,7 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
             // editor!!! Otherwise the memory cannot be freed later
             m_editor = null;
             m_workflowFile = null;
-            m_mountpointRoot = null;
+            m_workflowContext = null;
         }
     }
 

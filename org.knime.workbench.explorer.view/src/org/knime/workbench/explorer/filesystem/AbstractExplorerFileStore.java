@@ -54,6 +54,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Optional;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -62,6 +63,7 @@ import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.filesystem.provider.FileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.knime.core.node.workflow.contextv2.LocationInfo;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -78,16 +80,14 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     private final String m_fullPath;
 
     /**
-     * Creates a new local explorer file store with the specified mount id and
-     * full path.
+     * Creates a new local explorer file store with the specified mount id and full path.
+     *
      * @param mountID the id of the mount point
      * @param fullPath the full path
      */
-    public AbstractExplorerFileStore(final String mountID,
-            final String fullPath) {
+    public AbstractExplorerFileStore(final String mountID, final String fullPath) {
         if (fullPath == null) {
-            throw new NullPointerException("Path can't be null (mountID = "
-                    + getMountID() + ")");
+            throw new NullPointerException("Path can't be null (mountID = " + getMountID() + ")");
         }
         String temp = fullPath;
         while ((temp.length() > 1) && (temp.endsWith("/"))) {
@@ -97,69 +97,43 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         m_mountID = mountID;
     }
 
-
-
     /**
-     * {@inheritDoc}
+     * Creates an optional LocationInfo that is used to instantiate workflows (WorkflowManager) from "this object".
+     * It will use different classes to represent local vs. remote locations. Return value must be present for
+     * workflows and component templates.
+     * @return Such an optional location info.
      */
-    @Override
-    public abstract String[] childNames(final int options,
-            final IProgressMonitor monitor) throws CoreException;
+    public abstract Optional<? extends LocationInfo> locationInfo();
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public AbstractExplorerFileInfo fetchInfo(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public abstract String[] childNames(final int options, final IProgressMonitor monitor) throws CoreException;
+
+    @Override
+    public AbstractExplorerFileInfo fetchInfo(final int options, final IProgressMonitor monitor) throws CoreException {
         return fetchInfo();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public abstract AbstractExplorerFileInfo fetchInfo();
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public abstract AbstractExplorerFileStore getChild(final String name);
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public abstract AbstractExplorerFileStore getParent();
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public abstract InputStream openInputStream(final int options,
-            final IProgressMonitor monitor) throws CoreException;
+    public abstract InputStream openInputStream(final int options, final IProgressMonitor monitor) throws CoreException;
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public abstract AbstractExplorerFileStore mkdir(int options,
-            IProgressMonitor monitor) throws CoreException;
+    public abstract AbstractExplorerFileStore mkdir(int options, IProgressMonitor monitor) throws CoreException;
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public abstract OutputStream openOutputStream(int options,
-            IProgressMonitor monitor) throws CoreException;
+    public abstract OutputStream openOutputStream(int options, IProgressMonitor monitor) throws CoreException;
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public abstract void copy(final IFileStore destination, final int options,
-            final IProgressMonitor monitor) throws CoreException;
+    public abstract void copy(final IFileStore destination, final int options, final IProgressMonitor monitor)
+            throws CoreException;
 
     /**
      * The default implementation calls {@link AbstractExplorerFileStore#copy(IFileStore, int, IProgressMonitor)}.
@@ -178,12 +152,9 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         copy(destination, options, monitor);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public abstract void move(final IFileStore destination, final int options,
-            final IProgressMonitor monitor) throws CoreException;
+    public abstract void move(final IFileStore destination, final int options, final IProgressMonitor monitor)
+            throws CoreException;
 
     /**
      * The default implementation calls {@link AbstractExplorerFileStore#move(IFileStore, int, IProgressMonitor)}.
@@ -192,7 +163,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * @param destination The destination of the copy.
      * @param options bit-wise or of option flag constants ( {@link EFS#OVERWRITE} or {@link EFS#SHALLOW}).
      * @param monitor a progress monitor, or <code>null</code> if progress reporting and cancellation are not desired
-     * @param keepHistory {@code true} if the snaposhot history of the existing target should be kept, {@code false} if
+     * @param keepHistory {@code true} if the snapshot history of the existing target should be kept, {@code false} if
      *            the target history should be overwritten by the snapshot history of the source.
      * @exception CoreException if this method fails.
      * @since 8.6
@@ -202,12 +173,8 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         move(destination, options, monitor);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public abstract void delete(int options, IProgressMonitor monitor)
-            throws CoreException;
+    public abstract void delete(int options, IProgressMonitor monitor) throws CoreException;
 
     /**
      * Called after an interactive user deletion. The object passed contains the result of the confirmation dialog that
@@ -254,12 +221,12 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      *
      * @since 3.0
      */
-    protected void cleanupDestination(final IFileStore destination,
-            final int options, final IProgressMonitor monitor)
+    protected void cleanupDestination(final IFileStore destination, final int options, final IProgressMonitor monitor)
             throws CoreException {
-        /* Delete workflows and metanode templates if they exist at the
-         * destination. Otherwise we may end up with somehow merged workflows
-         * containing obsolete node folders, reports etc. */
+        /*
+         * Delete workflows and metanode templates if they exist at the destination. Otherwise we may end up with
+         * somehow merged workflows containing obsolete node folders, reports etc.
+         */
         if (destination instanceof AbstractExplorerFileStore) {
             AbstractExplorerFileStore dest
                     = (AbstractExplorerFileStore)destination;
@@ -271,15 +238,9 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public abstract boolean equals(Object obj);
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public abstract int hashCode();
 
@@ -352,9 +313,6 @@ public abstract class AbstractExplorerFileStore extends FileStore {
     }
 
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public ExplorerFileSystem getFileSystem() {
         return ExplorerMountTable.getFileSystem();
@@ -374,9 +332,6 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         return m_fullPath;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getName() {
         String lastSegment = FilenameUtils.getName(m_fullPath);
@@ -388,14 +343,10 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         return getMountID() + ":" + getFullName();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public URI toURI() {
         try {
-            return new URI(ExplorerFileSystem.SCHEME, m_mountID, m_fullPath,
-                    null);
+            return new URI(ExplorerFileSystem.SCHEME, m_mountID, m_fullPath, null);
         } catch (URISyntaxException e) {
             return null;
         }
@@ -420,8 +371,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a workflow
      * @return true if the file is a workflow template, false otherwise
      */
-    public static boolean isWorkflowTemplate(
-            final AbstractExplorerFileStore file) {
+    public static boolean isWorkflowTemplate(final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
@@ -467,8 +417,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      * @param file the file to check if it represents a workflow group
      * @return true if the file is a workflow group, false otherwise
      */
-    public static boolean isWorkflowGroup(
-            final AbstractExplorerFileStore file) {
+    public static boolean isWorkflowGroup(final AbstractExplorerFileStore file) {
         if (file == null || !file.fetchInfo().exists()) {
             return false;
         }
@@ -541,14 +490,12 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         return file.fetchInfo().isSnapshot();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public AbstractExplorerFileStore[] childStores(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public AbstractExplorerFileStore[] childStores(final int options, final IProgressMonitor monitor)
+            throws CoreException {
         return Arrays.stream(super.childStores(options, monitor))
-                .map(i -> (AbstractExplorerFileStore)i).toArray(AbstractExplorerFileStore[]::new);
+                .map(AbstractExplorerFileStore.class::cast)
+                .toArray(AbstractExplorerFileStore[]::new);
     }
 
     /**

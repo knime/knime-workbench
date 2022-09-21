@@ -47,9 +47,6 @@
  */
 package org.knime.workbench.explorer;
 
-import static org.knime.core.ui.wrapper.Wrapper.unwrap;
-import static org.knime.core.ui.wrapper.Wrapper.wraps;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -69,6 +66,8 @@ import org.eclipse.core.runtime.URIUtil;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowContext;
+import org.knime.core.node.workflow.contextv2.RestLocationInfo;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
 import org.knime.core.ui.node.workflow.WorkflowContextUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
@@ -220,8 +219,10 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         if (workflowContext instanceof RemoteWorkflowContext) {
             return Optional.of(((RemoteWorkflowContext)workflowContext).getMountId());
         } else {
-            return Wrapper.unwrapOptional(workflowContext, WorkflowContext.class)
-                .map(c -> c.getRemoteMountId().orElse(null));
+            return Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
+                    .map(WorkflowContextV2::getLocationInfo)
+                    .filter(RestLocationInfo.class::isInstance)
+                    .map(loc -> ((RestLocationInfo) loc).getDefaultMountId());
         }
     }
 
@@ -229,8 +230,10 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         if (workflowContext instanceof RemoteWorkflowContext) {
             return Optional.of(((RemoteWorkflowContext)workflowContext).getRepositoryAddress());
         } else {
-            return Wrapper.unwrapOptional(workflowContext, WorkflowContext.class)
-                .map(c -> c.getRemoteRepositoryAddress().orElse(null));
+            return Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
+                    .map(WorkflowContextV2::getLocationInfo)
+                    .filter(RestLocationInfo.class::isInstance)
+                    .map(loc -> ((RestLocationInfo) loc).getRepositoryAddress());
         }
     }
 
@@ -240,8 +243,10 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         if (workflowContext instanceof RemoteWorkflowContext) {
             authenticator = ((RemoteWorkflowContext)workflowContext).getServerAuthenticator();
         } else {
-            var unwrappedAuthenticator = Wrapper.unwrapOptional(workflowContext, WorkflowContext.class)
-                .map(c -> c.getServerAuthenticator().orElse(null));
+            var unwrappedAuthenticator = Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
+                    .map(WorkflowContextV2::getLocationInfo)
+                    .filter(RestLocationInfo.class::isInstance)
+                    .map(loc -> ((RestLocationInfo) loc).getAuthenticator());
 
             authenticator = unwrappedAuthenticator.orElse(null);
         }
@@ -257,8 +262,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
     private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
         throws IOException {
-        if (wraps(workflowContext, WorkflowContext.class)) {
-            return resolveWorkflowRelativeUrl(origUrl, unwrap(workflowContext, WorkflowContext.class));
+        if (Wrapper.wraps(workflowContext, WorkflowContextV2.class)) {
+            return resolveWorkflowRelativeUrl(origUrl, Wrapper.unwrap(workflowContext, WorkflowContextV2.class).toLegacyWorkflowContext());
         } else {
             assert workflowContext instanceof RemoteWorkflowContext;
             RemoteWorkflowContext rwc = (RemoteWorkflowContext)workflowContext;
@@ -324,8 +329,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
     private static URL resolveMountpointRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
         throws IOException {
-        if (wraps(workflowContext, WorkflowContext.class)) {
-            return resolveMountpointRelativeUrl(origUrl, unwrap(workflowContext, WorkflowContext.class));
+        if (Wrapper.wraps(workflowContext, WorkflowContextV2.class)) {
+            return resolveMountpointRelativeUrl(origUrl, Wrapper.unwrap(workflowContext, WorkflowContextV2.class).toLegacyWorkflowContext());
         } else {
             assert workflowContext instanceof RemoteWorkflowContext;
             RemoteWorkflowContext rwc = (RemoteWorkflowContext)workflowContext;
@@ -375,8 +380,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
     private static URL resolveNodeRelativeUrl(final URL origUrl, final NodeContext nodeContext,
         final WorkflowContextUI workflowContext) throws IOException {
-        if (wraps(workflowContext, WorkflowContext.class)) {
-            return resolveNodeRelativeUrl(origUrl, nodeContext, unwrap(workflowContext, WorkflowContext.class));
+        if (Wrapper.wraps(workflowContext, WorkflowContextV2.class)) {
+            return resolveNodeRelativeUrl(origUrl, nodeContext, Wrapper.unwrap(workflowContext, WorkflowContextV2.class).toLegacyWorkflowContext());
         } else {
             throw new IllegalArgumentException(
                 "Node relative URLs cannot be resolved from within purely remote workflows.");

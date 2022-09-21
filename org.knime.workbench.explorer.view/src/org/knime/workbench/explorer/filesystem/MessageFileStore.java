@@ -48,6 +48,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.util.Optional;
 
 import org.eclipse.core.filesystem.IFileInfo;
 import org.eclipse.core.filesystem.IFileStore;
@@ -55,6 +56,8 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.swt.graphics.Image;
+import org.knime.core.node.util.CheckUtils;
+import org.knime.core.node.workflow.contextv2.LocationInfo;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 
@@ -64,13 +67,13 @@ import org.knime.workbench.core.util.ImageRepository.SharedImages;
  * @author ohl, University of Konstanz
  */
 public final class MessageFileStore extends AbstractExplorerFileStore {
+    private static final String NOT_SUPPORTED = "Not supported in message file store.";
     private final String m_msg;
     private final Image m_image;
     private AbstractExplorerFileStore m_parent = null;
 
     /**
-     * Creates a new message file store with the specified mount id, message,
-     * and parent.
+     * Creates a new message file store with the specified mount id, message, and parent.
      * @param mountID the id of the mount point
      * @param message the message to display
      * @param parent the parent file store
@@ -84,8 +87,7 @@ public final class MessageFileStore extends AbstractExplorerFileStore {
     }
 
     /**
-     * Creates a new message file store with the specified mount id and
-     * message.
+     * Creates a new message file store with the specified mount id and message.
      * @param mountID the id of the mount point
      * @param message the message to display
      *
@@ -96,264 +98,158 @@ public final class MessageFileStore extends AbstractExplorerFileStore {
     }
 
     /**
-     * Creates a new message file store with the specified mount id, message
-     * and icon.
+     * Creates a new message file store with the specified mount id, message and icon.
      * @param mountID the id of the mount point
      * @param message the message to display
      * @param image the image for the icon to display
      */
-    public MessageFileStore(final String mountID, final String message,
-            final Image image) {
+    public MessageFileStore(final String mountID, final String message, final Image image) {
         super(mountID, "");
-        if (message == null) {
-            throw new NullPointerException(
-                    "Message to display must no be null");
-        }
-        m_msg = message;
-
-        if (image == null) {
-            throw new NullPointerException("Image to display must not be null");
-        }
-        m_image = image;
+        m_msg = CheckUtils.checkNotNull(message, "Message to display must no be null");
+        m_image = CheckUtils.checkNotNull(image, "Image to display must not be null");
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
+    public Optional<LocationInfo> locationInfo() {
+        return Optional.empty();
+    }
+
     @Override
     public String getName() {
-        return m_msg;
+        return getFullName();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getFullName() {
         return m_msg;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public URI toURI() {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean equals(final Object obj) {
         return obj == this;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public AbstractExplorerFileStore getMessageFileStore(final String msg) {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public IFileInfo[] childInfos(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public IFileInfo[] childInfos(final int options, final IProgressMonitor monitor) throws CoreException {
         return EMPTY_FILE_INFO_ARRAY;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public String[] childNames(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public String[] childNames(final int options, final IProgressMonitor monitor) throws CoreException {
         return EMPTY_STRING_ARRAY;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public AbstractExplorerFileStore[] childStores(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public AbstractExplorerFileStore[] childStores(final int options, final IProgressMonitor monitor)
+            throws CoreException {
         return new AbstractExplorerFileStore[0];
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void copy(final IFileStore destination, final int options,
-            final IProgressMonitor monitor) throws CoreException {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void copyDirectory(final IFileInfo sourceInfo,
-            final IFileStore destination, final int options,
-            final IProgressMonitor monitor) throws CoreException {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void copyFile(final IFileInfo sourceInfo,
-            final IFileStore destination, final int options,
-            final IProgressMonitor monitor) throws CoreException {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void delete(final int options, final IProgressMonitor monitor)
+    public void copy(final IFileStore destination, final int options, final IProgressMonitor monitor)
             throws CoreException {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
+    protected void copyDirectory(final IFileInfo sourceInfo, final IFileStore destination, final int options,
+            final IProgressMonitor monitor) throws CoreException {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
+    }
+
+    @Override
+    protected void copyFile(final IFileInfo sourceInfo, final IFileStore destination, final int options,
+            final IProgressMonitor monitor) throws CoreException {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
+    }
+
+    @Override
+    public void delete(final int options, final IProgressMonitor monitor) throws CoreException {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
+    }
+
     @Override
     public MessageFileInfo fetchInfo() {
         return MessageFileInfo.getInstance();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @SuppressWarnings("deprecation")
     @Override
     public IFileStore getChild(final IPath path) {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public IFileStore getFileStore(final IPath path) {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public AbstractExplorerFileStore getChild(final String name) {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public AbstractExplorerFileStore getParent() {
         return m_parent;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isParentOf(final IFileStore other) {
         return false;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public AbstractExplorerFileStore mkdir(final int options,
-            final IProgressMonitor monitor) throws CoreException {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
+    public AbstractExplorerFileStore mkdir(final int options, final IProgressMonitor monitor) throws CoreException {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void move(final IFileStore destination, final int options,
-            final IProgressMonitor monitor) throws CoreException {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public InputStream openInputStream(final int options,
-            final IProgressMonitor monitor) throws CoreException {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public OutputStream openOutputStream(final int options,
-            final IProgressMonitor monitor) throws CoreException {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void putInfo(final IFileInfo info, final int options,
-            final IProgressMonitor monitor) throws CoreException {
-        throw new UnsupportedOperationException(
-                "Not supported in message file store.");
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public File toLocalFile(final int options, final IProgressMonitor monitor)
+    public void move(final IFileStore destination, final int options, final IProgressMonitor monitor)
             throws CoreException {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
+    }
+
+    @Override
+    public InputStream openInputStream(final int options, final IProgressMonitor monitor) throws CoreException {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
+    }
+
+    @Override
+    public OutputStream openOutputStream(final int options, final IProgressMonitor monitor) throws CoreException {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
+    }
+
+    @Override
+    public void putInfo(final IFileInfo info, final int options, final IProgressMonitor monitor) throws CoreException {
+        throw new UnsupportedOperationException(NOT_SUPPORTED);
+    }
+
+    @Override
+    public File toLocalFile(final int options, final IProgressMonitor monitor) throws CoreException {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void refresh() {
         // no-op
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         return m_msg;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int hashCode() {
         return m_msg.hashCode();
@@ -368,25 +264,16 @@ public final class MessageFileStore extends AbstractExplorerFileStore {
         return m_image;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public File toLocalFile() throws CoreException {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public File resolveToLocalFile() throws CoreException {
         return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public IFileStore getNativeFilestore() {
         return this;

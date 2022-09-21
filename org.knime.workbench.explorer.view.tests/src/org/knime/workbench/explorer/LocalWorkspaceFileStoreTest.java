@@ -52,7 +52,6 @@ import static org.junit.Assert.assertTrue;
 import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isComponentTemplate;
 import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isMetaNodeTemplate;
 
-import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.function.Consumer;
@@ -64,10 +63,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
-import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
@@ -177,20 +175,21 @@ public class LocalWorkspaceFileStoreTest {
         return createTemplate(parent, name, wrap, null);
     }
 
-    private static WorkflowCreationHelper createWorkflowCreationHelper(final AbstractExplorerFileStore parent,
+    private static WorkflowCreationHelper createWorkflowCreationHelper(final LocalExplorerFileStore parent,
         final String name) {
         try {
-            WorkflowCreationHelper workflowCreation = new WorkflowCreationHelper();
-            File currentLocation;
-            if (name != null) {
-                currentLocation = new File(parent.toLocalFile(), name);
-            } else {
-                currentLocation = parent.toLocalFile();
-            }
-            WorkflowContext.Factory workflowContextFactory = new WorkflowContext.Factory(currentLocation);
-            workflowContextFactory.setMountpointRoot(parent.getContentProvider().getRootStore().toLocalFile());
-            workflowCreation.setWorkflowContext(workflowContextFactory.createContext());
-            return workflowCreation;
+            final var contentProvider = parent.getContentProvider();
+            final var wfStore = name == null ? parent : parent.getChild(name);
+            final var rootPath = contentProvider.getRootStore().toLocalFile().toPath();
+            final var localPath = wfStore.toLocalFile().toPath();
+            final var workflowContext = WorkflowContextV2.builder()
+                .withAnalyticsPlatformExecutor(exec -> exec
+                    .withCurrentUserAsUserId()
+                    .withLocalWorkflowPath(localPath)
+                    .withMountpoint(wfStore.getMountID(), rootPath))
+                .withLocalLocation()
+                .build();
+            return new WorkflowCreationHelper(workflowContext);
         } catch (CoreException e) {
             throw new RuntimeException(e);
         }

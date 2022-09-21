@@ -56,12 +56,13 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.jface.action.Action;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.IEditorDescriptor;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.node.workflow.contextv2.RestLocationInfo;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.RemoteWorkflowInput;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -95,12 +96,9 @@ public class DownloadAndOpenWorkflowAction extends Action {
             m_source = filestore;
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         protected IStatus run(final IProgressMonitor monitor) {
-            SubMonitor progress = SubMonitor.convert(monitor, 1);
+            final var progress = SubMonitor.convert(monitor, 1);
             progress.beginTask("Downloading " + m_source.getName(), 1);
             LocalExplorerFileStore tmpDestDir;
             try {
@@ -114,7 +112,7 @@ public class DownloadAndOpenWorkflowAction extends Action {
                     new WorkflowDownload(m_source, tmpDestDir, /*deleteSource=*/false, null, progress);
             try {
                 downloadAction.runSync(monitor);
-            } catch (CoreException e) {
+            } catch (final CoreException e) {
                 LOGGER.info("The (possibly partially) downloaded file is not deleted and might be still available: "
                     + tmpDestDir);
                 return e.getStatus();
@@ -142,7 +140,7 @@ public class DownloadAndOpenWorkflowAction extends Action {
             }
 
             if (tmpDestDir.fetchInfo().isDirectory()) {
-                LocalExplorerFileStore wf = tmpDestDir.getChild(WorkflowPersistor.WORKFLOW_FILE);
+                final LocalExplorerFileStore wf = tmpDestDir.getChild(WorkflowPersistor.WORKFLOW_FILE);
                 if (wf.fetchInfo().exists()) {
                     tmpDestDir = wf;
                 } else {
@@ -154,20 +152,19 @@ public class DownloadAndOpenWorkflowAction extends Action {
             }
 
             final LocalExplorerFileStore editorInput = tmpDestDir;
-            final AtomicReference<IStatus> returnStatus = new AtomicReference<IStatus>(Status.OK_STATUS);
-            Display.getDefault().syncExec(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        IEditorDescriptor editorDescriptor = IDE.getEditorDescriptor(editorInput.getName());
-                        m_page.openEditor(new RemoteWorkflowInput(editorInput, m_source.toURI()),
-                            editorDescriptor.getId());
-                    } catch (PartInitException ex) {
-                        LOGGER.info("Cannot open editor for the downloaded content. "
-                            + "It is not deleted and is still available: " + downloadAction.getTargetDir());
-                        returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID, 1,
-                            "Cannot open the editor for downloaded " + editorInput.getName(), null));
-                    }
+            final String mountId = m_source.getMountID();
+            final RestLocationInfo info = CheckUtils.checkNotNull(m_source.locationInfo().orElse(null),
+                "Location info could not be determined for " + m_source);
+            final var rwi = new RemoteWorkflowInput(editorInput, mountId, info, m_source.toURI());
+            final AtomicReference<IStatus> returnStatus = new AtomicReference<>(Status.OK_STATUS);
+            Display.getDefault().syncExec(() -> {
+                try {
+                    m_page.openEditor(rwi, IDE.getEditorDescriptor(editorInput.getName()).getId());
+                } catch (final PartInitException ex) {
+                    LOGGER.info("Cannot open editor for the downloaded content. "
+                        + "It is not deleted and is still available: " + downloadAction.getTargetDir());
+                    returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID, 1,
+                        "Cannot open the editor for downloaded " + editorInput.getName(), null));
                 }
             });
 
@@ -192,12 +189,9 @@ public class DownloadAndOpenWorkflowAction extends Action {
         setDescription("Downloads and opens the the workflow");
         setToolTipText(getDescription());
         m_page = page;
-        m_sources = new LinkedList<RemoteExplorerFileStore>(sources);
+        m_sources = new LinkedList<>(sources);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void run() {
         for (RemoteExplorerFileStore s : m_sources) {

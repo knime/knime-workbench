@@ -51,6 +51,9 @@ package org.knime.workbench.core.imports;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.util.Optional;
+
+import org.knime.core.node.workflow.contextv2.LocationInfo;
 
 /**
  * Holds the information required to import a repository object (workflow, component, file etc.) in to the AP (e.g., a
@@ -107,6 +110,13 @@ public interface RepoObjectImport extends EntityImport {
      * @return an URI to download/get the object
      */
     URI getDataURI();
+
+    /**
+     * Returns the location info for the workflow being downloaded.
+     *
+     * @return location info
+     */
+    Optional<? extends LocationInfo> locationInfo();
 
     /**
      * @return the connection to download the object

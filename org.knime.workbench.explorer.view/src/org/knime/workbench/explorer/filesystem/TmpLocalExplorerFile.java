@@ -52,12 +52,14 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Optional;
 
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+import org.knime.core.node.workflow.contextv2.LocalLocationInfo;
 import org.knime.workbench.explorer.ExplorerActivator;
 
 /**
@@ -94,58 +96,42 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
         m_mimicFlowOrTemplate = mimicFlowOrTemplate;
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
+    public Optional<LocalLocationInfo> locationInfo() {
+        return Optional.empty();
+    }
+
     @Override
     public File toLocalFile() throws CoreException {
         return m_wrappedFile;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public File toLocalFile(final int options, final IProgressMonitor monitor) throws CoreException {
         return toLocalFile();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getName() {
         return m_wrappedFile.getName();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public LocalExplorerFileStore getChild(final String name) {
         return new TmpLocalExplorerFile(new File(m_wrappedFile, name));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public LocalExplorerFileStore getParent() {
         return new TmpLocalExplorerFile(m_wrappedFile.getParentFile());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String[] childNames(final int options, final IProgressMonitor monitor) throws CoreException {
         return m_wrappedFile.list();
 
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public AbstractExplorerFileInfo fetchInfo() {
         if (m_info == null) {
@@ -200,9 +186,6 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
                     return m_wrappedFile.exists();
                 }
 
-                /**
-                 * {@inheritDoc}
-                 */
                 @Override
                 public boolean isReservedSystemItem() {
                     return false;
@@ -217,9 +200,6 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
         return m_info;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public InputStream openInputStream(final int options, final IProgressMonitor monitor) throws CoreException {
         try {
@@ -229,17 +209,11 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public AbstractExplorerFileStore mkdir(final int options, final IProgressMonitor monitor) throws CoreException {
         throw new UnsupportedOperationException("Not available for temp upload files.");
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public OutputStream openOutputStream(final int options, final IProgressMonitor monitor) throws CoreException {
         try {
@@ -249,58 +223,37 @@ public class TmpLocalExplorerFile extends LocalExplorerFileStore {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void move(final IFileStore destination, final int options, final IProgressMonitor monitor)
             throws CoreException {
         throw new UnsupportedOperationException("Not available for temp upload files.");
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void delete(final int options, final IProgressMonitor monitor) throws CoreException {
         throw new UnsupportedOperationException("Not available for temp upload files.");
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean equals(final Object obj) {
         return m_wrappedFile.equals(obj);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int hashCode() {
         return m_wrappedFile.hashCode();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void refresh() {
         throw new UnsupportedOperationException("Not available for temp upload files.");
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         return m_wrappedFile.getAbsolutePath();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public IFileStore getNativeFilestore() {
         return this;

@@ -79,8 +79,9 @@ class TestContentProvider extends AbstractContentProvider {
     TestContentProvider(final AbstractContentProviderFactory myCreator, final String id, final String content) {
         super(myCreator, id);
         if (!content.isEmpty()) {
-            m_address = content.split(";")[0];
-            m_user = content.split(";")[1];
+            final var parts = content.split(";");
+            m_address = parts[0];
+            m_user = parts[1];
         }
     }
 

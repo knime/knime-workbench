@@ -46,10 +46,11 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.lang3.tuple.Triple;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -58,7 +59,6 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.jface.action.Action;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.IEditorDescriptor;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
@@ -66,6 +66,8 @@ import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.node.workflow.contextv2.LocalLocationInfo;
+import org.knime.core.node.workflow.contextv2.LocationInfo;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -95,10 +97,17 @@ public class OpenKNIMEArchiveFileAction extends Action {
 
         private final File m_source;
 
-        ExtractInTempAndOpenJob(final IWorkbenchPage page, final File file) {
+        private final String m_mountId;
+
+        private final LocationInfo m_locationInfo;
+
+        ExtractInTempAndOpenJob(final IWorkbenchPage page, final File file, final String mountId,
+                final LocationInfo locationInfo) {
             super("Extract and open items from KNIME archive file");
             m_page = page;
             m_source = file;
+            m_mountId = mountId;
+            m_locationInfo = locationInfo;
         }
 
         /**
@@ -139,7 +148,6 @@ public class OpenKNIMEArchiveFileAction extends Action {
                 content = tmpDestDir.childNames(EFS.NONE, monitor);
             } catch (CoreException e) {
                 return new Status(e.getStatus().getSeverity(), PLUGIN_ID, e.getMessage(), e);
-
             }
             if (content == null || content.length == 0) {
                 try {
@@ -168,20 +176,16 @@ public class OpenKNIMEArchiveFileAction extends Action {
             }
 
             final LocalExplorerFileStore editorInput = tmpDestDir;
+            final var rwi = new RemoteWorkflowInput(editorInput, m_mountId, m_locationInfo, m_source.toURI());
             final AtomicReference<IStatus> returnStatus = new AtomicReference<IStatus>(Status.OK_STATUS);
-            Display.getDefault().syncExec(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        IEditorDescriptor editorDescriptor = IDE.getEditorDescriptor(editorInput.getName());
-                        m_page.openEditor(new RemoteWorkflowInput(editorInput, m_source.toURI()),
-                            editorDescriptor.getId());
-                    } catch (PartInitException ex) {
-                        LOGGER.info("Cannot open editor for the downloaded content. "
-                            + "It is not deleted and is still available: " + extractAction.getTargetDir());
-                        returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID, 1,
-                            "Cannot open the editor for downloaded " + editorInput.getName(), null));
-                    }
+            Display.getDefault().syncExec(() -> {
+                try {
+                    m_page.openEditor(rwi, IDE.getEditorDescriptor(editorInput.getName()).getId());
+                } catch (PartInitException ex) {
+                    LOGGER.info("Cannot open editor for the downloaded content. "
+                        + "It is not deleted and is still available: " + extractAction.getTargetDir());
+                    returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID, 1,
+                        "Cannot open the editor for downloaded " + editorInput.getName(), null));
                 }
             });
 
@@ -191,7 +195,7 @@ public class OpenKNIMEArchiveFileAction extends Action {
 
     /* --- end of inner job class -----------------------------------------------------------------------------------*/
 
-    private final List<File> m_sources;
+    private final List<Triple<File, String, LocationInfo>> m_sources;
 
     private final IWorkbenchPage m_page;
 
@@ -206,24 +210,43 @@ public class OpenKNIMEArchiveFileAction extends Action {
         setToolTipText(getDescription());
         setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.ServerDownload));
         m_page = page;
-        m_sources = new LinkedList<File>(sources);
+        m_sources = new ArrayList<>(sources.size());
+        for (final var source : sources) {
+            m_sources.add(Triple.of(source, null, LocalLocationInfo.getInstance(source.toPath())));
+        }
     }
 
     /**
-     * {@inheritDoc}
+     * Downloads a remote item to a temp location and opens it in an editor.
+     *
+     * @param page the current workbench page
+     * @param source things to open
      */
+    public OpenKNIMEArchiveFileAction(final IWorkbenchPage page, final File source, final String mountId,
+            final LocationInfo optLocationInfo) {
+        setDescription("Download and open");
+        setToolTipText(getDescription());
+        setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.ServerDownload));
+        m_page = page;
+        m_sources = List.of(Triple.of(source, mountId, optLocationInfo!= null ? optLocationInfo
+            : LocalLocationInfo.getInstance(source.toPath())));
+    }
+
     @Override
     public void run() {
-        for (File f : m_sources) {
+        for (var p : m_sources) {
+            final var localDir = p.getLeft();
+            final var mountId = p.getMiddle();
+            final var location = p.getRight();
             String fileID;
             try {
-                fileID = f.getCanonicalPath();
+                fileID = localDir.getCanonicalPath();
             } catch (IOException | SecurityException e) {
-                fileID = f.getPath();
+                fileID = localDir.getPath();
             }
-            if (f.getName().endsWith("." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION)) {
+            if (localDir.getName().endsWith("." + KNIMEConstants.KNIME_WORKFLOW_FILE_EXTENSION)) {
                 LOGGER.info("Opening file " + fileID + ", extracting it first into the temp mount point");
-                ExtractInTempAndOpenJob job = new ExtractInTempAndOpenJob(m_page, f);
+                ExtractInTempAndOpenJob job = new ExtractInTempAndOpenJob(m_page, localDir, mountId, location);
                 job.schedule();
             } else {
                 IViewPart part = m_page.findView("org.knime.workbench.explorer.view");

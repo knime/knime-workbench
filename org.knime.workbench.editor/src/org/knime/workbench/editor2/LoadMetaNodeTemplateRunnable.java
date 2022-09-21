@@ -48,7 +48,6 @@
 package org.knime.workbench.editor2;
 
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -64,13 +63,12 @@ import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodePropertyChangedEvent.NodeProperty;
 import org.knime.core.node.workflow.SubNodeContainer;
-import org.knime.core.node.workflow.TemplateNodeContainerPersistor;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.node.workflow.WorkflowPersistor.MetaNodeLinkUpdateResult;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.pathresolve.ResolverUtil;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 
 /**
  * A runnable which is used by the {@link WorkflowEditor} to load a workflow
@@ -83,6 +81,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
  * @author Fabian Dill, University of Konstanz
  */
 public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
+
     private WorkflowManager m_parentWFM;
 
     private final URI m_templateURI;
@@ -91,21 +90,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
     private MetaNodeLinkUpdateResult m_result;
 
-    private final File m_mountpointRoot;
-
-    /**
-     *
-     * @param wfm target workflow (where to insert)
-     * @param templateKNIMEFolder the workflow dir from which the template
-     *            should be loaded
-     */
-    public LoadMetaNodeTemplateRunnable(final WorkflowManager wfm,
-        final AbstractExplorerFileStore templateKNIMEFolder) {
-        m_parentWFM = wfm;
-        m_templateURI = templateKNIMEFolder.toURI();
-        m_editor = null;
-        m_mountpointRoot = null;
-    }
+    private final WorkflowContextV2 m_context;
 
     /**
      * @param wfm the target workflow (where to insert)
@@ -115,7 +100,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
         m_parentWFM = wfm;
         m_templateURI = templateURI;
         m_editor = null;
-        m_mountpointRoot = null;
+        m_context = null;
     }
 
     /**
@@ -124,9 +109,10 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
      *
      * @param editor the editor to open the component with
      * @param templateURI URI to the workflow directory or file from which the template should be loaded
-     * @param mountpointRoot the root directory of the mountpoint in which the workflow is contained
+     * @param context The context (for component template editors)
      */
-    public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI, final File mountpointRoot) {
+    public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI,
+        final WorkflowContextV2 context) {
         m_parentWFM = WorkflowManager.ROOT;
 
         //strip "workflow.knime" from the URI which is append if
@@ -143,28 +129,24 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             m_templateURI = templateURI;
         }
         m_editor = editor;
-        m_mountpointRoot = mountpointRoot;
+        m_context = context;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void run(final IProgressMonitor pm) {
         try {
             // create progress monitor
-            ProgressHandler progressHandler = new ProgressHandler(pm, 101, "Loading instance...");
-            final CheckCancelNodeProgressMonitor progressMonitor = new CheckCancelNodeProgressMonitor(pm);
+            final var progressHandler = new ProgressHandler(pm, 101, "Loading instance...");
+            final var progressMonitor = new CheckCancelNodeProgressMonitor(pm);
             progressMonitor.addProgressListener(progressHandler);
 
-            File parentFile = ResolverUtil
-                .resolveURItoLocalOrTempFile(m_templateURI, pm);
+            var parentFile = ResolverUtil.resolveURItoLocalOrTempFile(m_templateURI, pm);
             if (parentFile.isFile()) {
                 //unzip
-                File tempDir = FileUtil.createTempDir("template-workflow");
+                final var tempDir = FileUtil.createTempDir("template-workflow");
                 FileUtil.unzip(parentFile, tempDir);
                 Files.delete(parentFile.toPath());
-                File[] extractedFiles = tempDir.listFiles();
+                final var extractedFiles = tempDir.listFiles();
                 if (extractedFiles.length == 0) {
                     throw new IOException("Unzipping of file '" + parentFile + "' failed");
                 }
@@ -174,14 +156,11 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 throw new InterruptedException();
             }
 
-            Display d = Display.getDefault();
-
-            GUIWorkflowLoadHelper loadHelper = new GUIWorkflowLoadHelper(d, parentFile.getName(), m_templateURI,
-                parentFile, m_mountpointRoot, false, true, m_editor != null);
-            TemplateNodeContainerPersistor loadPersistor =
-                    loadHelper.createTemplateLoadPersistor(parentFile, m_templateURI);
-            MetaNodeLinkUpdateResult loadResult =
-                    new MetaNodeLinkUpdateResult("Shared instance from \"" + m_templateURI + "\"");
+            final var d = Display.getDefault();
+            final var loadHelper =
+                GUIWorkflowLoadHelper.forTemplate(d, parentFile.getName(), m_context, m_editor != null);
+            final var loadPersistor = loadHelper.createTemplateLoadPersistor(parentFile, m_templateURI);
+            final var loadResult = new MetaNodeLinkUpdateResult("Shared instance from \"" + m_templateURI + "\"");
             m_parentWFM.load(loadPersistor, loadResult, new ExecutionMonitor(progressMonitor), false);
 
             m_result = loadResult;
@@ -208,20 +187,16 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             }
             if (isComponentProject() && m_result.getLoadedInstance() instanceof SubNodeContainer) {
                 SubNodeContainer snc = (SubNodeContainer)m_result.getLoadedInstance();
-                WorkflowManager wm = snc.getWorkflowManager();
-                m_editor.setWorkflowManager(wm);
+                final var wfm = snc.getWorkflowManager();
+                m_editor.setWorkflowManager(wfm);
                 if (!status.isOK()) {
                     LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);
                 }
-                final List<NodeID> linkedMNs = wm.getLinkedMetaNodes(true);
+                final List<NodeID> linkedMNs = wfm.getLinkedMetaNodes(true);
                 if (!linkedMNs.isEmpty()) {
                     final WorkflowEditor editor = m_editor;
-                    m_editor.addAfterOpenRunnable(new Runnable() {
-                        @Override
-                        public void run() {
-                            LoadWorkflowRunnable.postLoadCheckForMetaNodeUpdates(editor, wm, linkedMNs);
-                        }
-                    });
+                    m_editor.addAfterOpenRunnable(
+                        () -> LoadWorkflowRunnable.postLoadCheckForMetaNodeUpdates(editor, wfm, linkedMNs));
                 }
                 snc.addNodePropertyChangedListener(l -> {
                     if (l.getProperty() == NodeProperty.ComponentMetadata) {

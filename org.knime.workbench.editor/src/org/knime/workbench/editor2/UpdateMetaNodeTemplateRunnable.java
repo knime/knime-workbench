@@ -67,7 +67,6 @@ import org.knime.core.node.workflow.WorkflowPersistor.NodeContainerTemplateLinkU
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.workbench.KNIMEEditorPlugin;
 
-
 /**
  * Runnable used to update a single metanode template link.
  *
@@ -92,22 +91,18 @@ public class UpdateMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
      * @param wfm target workflow (where to insert)
      * @param ids The ID of the metanode to update
      */
-    public UpdateMetaNodeTemplateRunnable(final WorkflowManager wfm,
-            final NodeID[] ids) {
+    public UpdateMetaNodeTemplateRunnable(final WorkflowManager wfm, final NodeID[] ids) {
         m_parentWFM = wfm;
         m_ids = ids.clone();
     }
 
-    /** {@inheritDoc} */
     @Override
     public void run(final IProgressMonitor pm) throws InterruptedException {
         m_newIDs = new ArrayList<NodeID>();
         m_undoPersistors = new ArrayList<WorkflowPersistor>();
         // create progress monitor
-        ProgressHandler progressHandler =
-            new ProgressHandler(pm, 101, "Updating node links...");
-        final CheckCancelNodeProgressMonitor progressMonitor
-        = new CheckCancelNodeProgressMonitor(pm);
+        ProgressHandler progressHandler = new ProgressHandler(pm, 101, "Updating node links...");
+        final CheckCancelNodeProgressMonitor progressMonitor = new CheckCancelNodeProgressMonitor(pm);
         progressMonitor.addProgressListener(progressHandler);
         final Display d = Display.getDefault();
         ExecutionMonitor exec = new ExecutionMonitor(progressMonitor);
@@ -119,20 +114,16 @@ public class UpdateMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                     "Node with ID \"" + id + "\" already has been updated.", null);
                 continue;
             }
-            NodeContainerTemplate tnc =
-                (NodeContainerTemplate)m_parentWFM.findNodeContainer(id);
-            LOGGER.debug("Updating " + tnc.getNameWithID() + " from "
-                    + tnc.getTemplateInformation().getSourceURI());
-            ExecutionMonitor subExec =
-                exec.createSubProgress(1.0 / m_ids.length);
+            NodeContainerTemplate tnc = (NodeContainerTemplate)m_parentWFM.findNodeContainer(id);
+            LOGGER.debug("Updating " + tnc.getNameWithID() + " from " + tnc.getTemplateInformation().getSourceURI());
+            ExecutionMonitor subExec = exec.createSubProgress(1.0 / m_ids.length);
             String progMsg = "Node Link \"" + tnc.getNameWithID() + "\"";
             exec.setMessage(progMsg);
-            GUIWorkflowLoadHelper loadHelper =
-                new GUIWorkflowLoadHelper(d, progMsg, null, null, null, false, true, false);
+
+            final var loadHelper = GUIWorkflowLoadHelper.forTemplate(d, progMsg, null, false);
             NodeContainerTemplateLinkUpdateResult updateMetaNodeLinkResult;
             try {
-                updateMetaNodeLinkResult =
-                    tnc.getParent().updateMetaNodeLink(id, subExec, loadHelper);
+                updateMetaNodeLinkResult = tnc.getParent().updateMetaNodeLink(id, subExec, loadHelper);
             } catch (CanceledExecutionException e) {
                 String message = "Node update canceled";
                 LOGGER.warn(message, e);
@@ -152,19 +143,16 @@ public class UpdateMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 break;
             case IStatus.WARNING:
                 logPreseveLineBreaks("Warnings during load: "
-                        + updateMetaNodeLinkResult.getFilteredError(
-                                "", LoadResultEntryType.Warning), false);
+                        + updateMetaNodeLinkResult.getFilteredError("", LoadResultEntryType.Warning), false);
                 break;
             default:
                 logPreseveLineBreaks("Errors during load: "
-                        + updateMetaNodeLinkResult.getFilteredError(
-                                "", LoadResultEntryType.Warning), true);
+                        + updateMetaNodeLinkResult.getFilteredError("", LoadResultEntryType.Warning), true);
             }
             stats[i] = status;
         }
         pm.done();
-        final IStatus status =
-            createMultiStatus("Update node links", stats);
+        final IStatus status = createMultiStatus("Update node links", stats);
         final String message;
         switch (status.getSeverity()) {
         case IStatus.OK:

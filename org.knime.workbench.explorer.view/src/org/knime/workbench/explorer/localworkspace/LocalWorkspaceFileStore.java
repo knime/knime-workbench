@@ -54,6 +54,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
@@ -65,6 +66,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
 import org.knime.core.internal.KNIMEPath;
+import org.knime.core.node.workflow.contextv2.LocalLocationInfo;
 import org.knime.core.util.PathUtils;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -94,9 +96,11 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
         m_file = EFS.getLocalFileSystem().getStore(filePath);
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    @Override
+    public Optional<LocalLocationInfo> locationInfo() {
+        return Optional.of(LocalLocationInfo.getInstance(null));
+    }
+
     @Override
     public boolean equals(final Object obj) {
         if (!(obj instanceof LocalWorkspaceFileStore)) {

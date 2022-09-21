@@ -56,7 +56,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -268,10 +267,12 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             @Override
             protected IStatus run(final IProgressMonitor monitor) {
                 try {
-                    File tmpDir = FileUtil.createTempDir("knime_download");
-                    File file = URIImporterUtil.fetchFile(uriImport, tmpDir);
-                    OpenKNIMEArchiveFileAction a =
-                        new OpenKNIMEArchiveFileAction(activePage, Collections.singletonList(file));
+                    final File tmpDir = FileUtil.createTempDir("knime_download");
+                    final File file = URIImporterUtil.fetchFile(uriImport, tmpDir);
+                    // will always be non-null - imports are only allowed if D&D from a "known" hub (#handleURLDrop)
+                    final String mountId = uriImport.getKnimeURI().getAuthority();
+                    final var locationInfo = uriImport.locationInfo().orElse(null);
+                    final var a = new OpenKNIMEArchiveFileAction(activePage, file, mountId, locationInfo);
                     Display.getDefault().asyncExec(a::run);
                 } catch (IOException e) {
                     LOGGER.error("Problem downloading and importing repository object '" + uriImport.getName()

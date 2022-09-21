@@ -56,6 +56,7 @@ import java.util.Optional;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.knime.core.node.workflow.contextv2.RestLocationInfo;
 
 /**
  *
@@ -71,6 +72,9 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
             final String fullPath) {
         super(mountID, fullPath);
     }
+
+    @Override
+    public abstract Optional<? extends RestLocationInfo> locationInfo();
 
     /**
      * File stores representing files on the same remote host should return
@@ -133,8 +137,7 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * @throws CoreException
      * @since 4.0
      */
-    public abstract RemoteUploadStream openWorkflowUploadStream()
-            throws CoreException;
+    public abstract RemoteUploadStream openWorkflowUploadStream() throws CoreException;
 
     /**
      * A zipped workflow or workflow group sent through the stream is stored on the server as workflow represented by

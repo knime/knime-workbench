@@ -45,8 +45,6 @@
  */
 package org.knime.workbench.editor2;
 
-import java.io.File;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,9 +60,10 @@ import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.KNIMEConstants;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.Credentials;
-import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowLoadHelper;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.util.CoreConstants;
 import org.knime.core.util.LoadVersion;
@@ -77,7 +76,7 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  *
  * @author Bernd Wiswedel, KNIME AG, Zurich, Switzerland
  */
-class GUIWorkflowLoadHelper extends WorkflowLoadHelper {
+final class GUIWorkflowLoadHelper extends WorkflowLoadHelper {
 
     private static final Version CURRENT_VERSION = new Version(KNIMEConstants.VERSION);
 
@@ -94,20 +93,6 @@ class GUIWorkflowLoadHelper extends WorkflowLoadHelper {
      */
     private final Map<String, Credentials> m_promptedCredentials = new HashMap<>();
 
-
-    private static WorkflowContext createWorkflowContext(final URI uri, final File workflowDirectory,
-        final File mountpointRoot, final boolean isTemporaryCopy) {
-        if (workflowDirectory == null) {
-            return null;
-        } else {
-            return new WorkflowContext.Factory(workflowDirectory)
-                .setMountpointRoot(mountpointRoot)
-                .setMountpointURI(uri)
-                .setTemporaryCopy(isTemporaryCopy)
-                .createContext();
-        }
-    }
-
     /**
      * @param display Display host.
      * @param workflowName Name of the workflow (dialog title)
@@ -118,29 +103,38 @@ class GUIWorkflowLoadHelper extends WorkflowLoadHelper {
      * @param isTemporaryCopy <code>true</code> if the workflow is a temporary copy of a workflow that lives somewhere
      *            else, e.g. on a server, <code>false</code> if the workflow is in its original location
      */
-    GUIWorkflowLoadHelper(final Display display, final String workflowName, final URI uri, final File workflowFile,
-        final File mountpointRoot, final boolean isTemporaryCopy) {
-        this(display, workflowName, uri, workflowFile, mountpointRoot, isTemporaryCopy, false, false);
+    static GUIWorkflowLoadHelper forProject(final Display display, final String workflowName,
+            final WorkflowContextV2 context) {
+        return new GUIWorkflowLoadHelper(display, workflowName, CheckUtils.checkArgumentNotNull(context), false, false);
     }
 
     /**
      * @param display Display host.
      * @param workflowName Name of the workflow (dialog title)
-     * @param uri the workflow's URI from the explorer
-     * @param workflowDirectory directory of the workflow that should be loaded; maybe <code>null</code> if not known
-     * @param mountpointRoot root directory of the mount point in which the workflow to the loaded is contained; maybe
-     *            <code>null</code> if not known
-     * @param isTemporaryCopy <code>true</code> if the workflow is a temporary copy of a workflow that lives somewhere
-     *            else, e.g. on a server, <code>false</code> if the workflow is in its original location
+     * @param context Context used for component templates
+     * @param isTemplateProject Whether the loaded workflow is a template which is not embedded in a workflow (keep
+     *            location information from where it's loaded)
+     * @param context Context used for project workflows, <code>null</code> for templates.
+     * @param isTemplate Whether the loaded workflow is a reference to a template (don't load data)
+     */
+    static GUIWorkflowLoadHelper forTemplate(final Display display, final String workflowName,
+            final WorkflowContextV2 context, final boolean isTemplateProject) {
+        return new GUIWorkflowLoadHelper(display, workflowName, context, true, isTemplateProject);
+    }
+
+    /**
+     * @param display Display host.
+     * @param workflowName Name of the workflow (dialog title)
+     * @param context Context used for project workflows, <code>null</code> for templates.
      * @param isTemplate Whether the loaded workflow is a reference to a template (don't load data)
      * @param isTemplateProject Whether the loaded workflow is a template which is not embedded in a workflow (keep
      *            location information from where it's loaded)
      */
-    GUIWorkflowLoadHelper(final Display display, final String workflowName, final URI uri, final File workflowDirectory,
-        final File mountpointRoot, final boolean isTemporaryCopy, final boolean isTemplate, final boolean isTemplateProject) {
-        super(isTemplate, isTemplateProject, createWorkflowContext(uri, workflowDirectory, mountpointRoot, isTemporaryCopy));
-        m_display = display;
-        m_workflowName = workflowName;
+    private GUIWorkflowLoadHelper(final Display display, final String workflowName, final WorkflowContextV2 context,
+            final boolean isTemplate, final boolean isTemplateProject) {
+        super(isTemplate, isTemplateProject, context);
+        m_display = CheckUtils.checkArgumentNotNull(display);
+        m_workflowName = CheckUtils.checkArgumentNotNull(workflowName);
     }
 
     /** @return the display */
@@ -152,8 +146,8 @@ class GUIWorkflowLoadHelper extends WorkflowLoadHelper {
     @Override
     public List<Credentials> loadCredentials(final List<Credentials> credentialsList) {
         // set the ones that were already prompted for into the result list ... don't prompt them again
-        final List<Credentials> newCredentialsList = new ArrayList<Credentials>();
-        final List<Credentials> credentialsToBePromptedList = new ArrayList<Credentials>();
+        final List<Credentials> newCredentialsList = new ArrayList<>();
+        final List<Credentials> credentialsToBePromptedList = new ArrayList<>();
         for (Credentials c : credentialsList) {
             // see AP-11261: (API) Add hook to workflow loading routine to populate "knime.system.credentials"
             // if the system 'default' credentials is set/defined don't prompt for it when opening the workflow

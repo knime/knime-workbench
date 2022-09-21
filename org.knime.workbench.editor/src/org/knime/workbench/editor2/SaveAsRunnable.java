@@ -54,8 +54,8 @@ import java.io.IOException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionMonitor;
-import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.util.LockFailedException;
 
 /**
@@ -64,10 +64,10 @@ import org.knime.core.util.LockFailedException;
  * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
  */
 class SaveAsRunnable extends AbstractSaveRunnable {
-    private final WorkflowContext m_newContext;
+    private final WorkflowContextV2 m_newContext;
 
     SaveAsRunnable(final WorkflowEditor editor, final StringBuilder exceptionMessage, final IProgressMonitor monitor,
-        final WorkflowContext newContext) {
+        final WorkflowContextV2 newContext) {
         super(editor, exceptionMessage, monitor);
         m_newContext = newContext;
     }
@@ -77,7 +77,7 @@ class SaveAsRunnable extends AbstractSaveRunnable {
      */
     @Override
     protected File getSaveLocation() {
-        return m_newContext.getCurrentLocation();
+        return m_newContext.getExecutorInfo().getLocalWorkflowPath().toFile();
     }
 
     /**

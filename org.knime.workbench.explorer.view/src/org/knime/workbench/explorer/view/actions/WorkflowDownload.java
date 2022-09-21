@@ -61,6 +61,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.Status;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -82,6 +83,8 @@ public class WorkflowDownload extends TempExtractArchive {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowDownload.class);
 
     private final RemoteExplorerFileStore m_source;
+
+    private WorkflowContextV2 m_workflowContext;
 
     /**
      * Creates a action with the source and parent directory.
@@ -142,8 +145,7 @@ public class WorkflowDownload extends TempExtractArchive {
     /**
      *
      */
-    protected void extractDownloadToTarget(final File downloadedFile)
-            throws Exception {
+    protected void extractDownloadToTarget(final File downloadedFile) throws Exception {
         AbstractExplorerFileStore source = getSourceFile();
 
         AbstractExplorerFileInfo info = source.fetchInfo();
@@ -170,15 +172,11 @@ public class WorkflowDownload extends TempExtractArchive {
     protected void runSyncInternal(final IProgressMonitor monitor) throws CoreException {
         String srcIdentifier = getSourceFile().getMountIDWithFullPath();
         if (!isSourceSupported()) {
-            throw new IllegalArgumentException("Type of download source '"
-                    + srcIdentifier
-                    + "' is not supported.");
+            throw new IllegalArgumentException("Type of download source '" + srcIdentifier + "' is not supported.");
         }
-        LOGGER.debug("Downloading '" + srcIdentifier
-                + "' into local destination '" + getTargetIdentifier() + "'");
+        LOGGER.debug("Downloading '" + srcIdentifier + "' into local destination '" + getTargetIdentifier() + "'");
 
-        final DownloadRunnable dwnLoader = new DownloadRunnable(
-                getSourceFile());
+        final DownloadRunnable dwnLoader = new DownloadRunnable(getSourceFile());
         dwnLoader.run(monitor);
 
         // now wait for the download to finish
@@ -201,8 +199,7 @@ public class WorkflowDownload extends TempExtractArchive {
                 LOGGER.warn(msg);
             }
             if (getTargetDir().fetchInfo().exists()) {
-                LOGGER.info("Existing destination not modified ("
-                        + getTargetIdentifier() + ") ");
+                LOGGER.info("Existing destination not modified (" + getTargetIdentifier() + ") ");
             }
             throw new CoreException(new Status(status, ExplorerActivator.PLUGIN_ID, msg));
         }
@@ -315,11 +312,9 @@ public class WorkflowDownload extends TempExtractArchive {
                     monitor.setTaskName(progMsg.toString());
                     // we progress over kilobytes in case people download
                     // flows larger than 4GB. Have fun.
-                    monitor.beginTask(progMsg.toString(),
-                            IProgressMonitor.UNKNOWN);
+                    monitor.beginTask(progMsg.toString(), IProgressMonitor.UNKNOWN);
                 }
-                RemoteDownloadStream in =
-                        m_source.openDownloadStream();
+                RemoteDownloadStream in = m_source.openDownloadStream();
                 // wait for the server to finish zipping
                 while (!in.readyForDownload()) {
                     if (monitor != null && monitor.isCanceled()) {

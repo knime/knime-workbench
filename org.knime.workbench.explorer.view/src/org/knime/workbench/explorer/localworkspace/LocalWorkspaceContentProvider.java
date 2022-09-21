@@ -117,6 +117,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     /*
      * ------------ Content Provider Methods --------------------
      */
+
     /**
      * {@inheritDoc}
      */
