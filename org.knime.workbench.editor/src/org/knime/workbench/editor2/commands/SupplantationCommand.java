@@ -48,9 +48,7 @@
  */
 package org.knime.workbench.editor2.commands;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import org.knime.core.node.NodeLogger;
@@ -222,6 +220,7 @@ public class SupplantationCommand extends AbstractKNIMECommand {
             NodeTimer.GLOBAL_TIMER.addConnectionCreation(dragNode, destinationNode);
         } else {
             final NodeContainer toRemoveNode = Wrapper.unwrapNC(m_nodeTarget.getNodeContainer());
+            final NodeContainer draggedNode = Wrapper.unwrapNC(m_supplantingNode.getNodeContainer());
             final NodeID[] removeIds = new NodeID[1];
             final Set<ScheduledConnection> pendingConnections = new HashSet<>();
 
@@ -233,18 +232,17 @@ public class SupplantationCommand extends AbstractKNIMECommand {
                 for (final ConnectionContainer cc : wm.getIncomingConnectionsFor(removeIds[0])) {
                     try {
                         pendingConnections
-                            .add(new ScheduledConnection(toRemoveNode, cc, true, inportManifest, null));
+                            .add(new ScheduledConnection(toRemoveNode, draggedNode, cc, true, inportManifest));
                     } catch (IllegalStateException e) { } // NOPMD  acceptable for no ports on drag node available
 
                     m_originalEdges.add(cc);
                 }
 
-                final HashMap<Integer, Integer> outportMap = new HashMap<>();
                 final ConnectionManifest outportManifest = m_supplantingNodeOutportManifest.clone();
                 for (final ConnectionContainer cc : wm.getOutgoingConnectionsFor(removeIds[0])) {
                     try {
                         pendingConnections
-                            .add(new ScheduledConnection(toRemoveNode, cc, false, outportManifest, outportMap));
+                            .add(new ScheduledConnection(toRemoveNode, draggedNode, cc, false, outportManifest));
                     } catch (IllegalStateException e) { } // NOPMD  acceptable for no ports on drag node available
 
                     m_originalEdges.add(cc);
@@ -256,7 +254,7 @@ public class SupplantationCommand extends AbstractKNIMECommand {
                 return;
             }
 
-            final NodeID dragNodeId = m_supplantingNode.getNodeContainer().getID();
+            final NodeID dragNodeId = draggedNode.getID();
             for (final ConnectionContainer cc : wm.getIncomingConnectionsFor(dragNodeId)) {
                 wm.removeConnection(cc);
                 m_originalEdges.add(cc);
@@ -374,7 +372,8 @@ public class SupplantationCommand extends AbstractKNIMECommand {
         private final boolean m_inputConnection;
 
         /**
-         * @param node this should be the node being targetted, not the node in drag
+         * @param origNode this should be the node being targeted, not the node in drag
+         * @param replNode node dragged into the origNode to replace it
          * @param wm the workflow manager
          * @param connection this should be a connection which is being replaced
          * @param input this should be <code>true</code> if the connection is an input
@@ -387,43 +386,26 @@ public class SupplantationCommand extends AbstractKNIMECommand {
          * @throws IllegalArgumentException if <code>input == false</code> and <code>outportMap == null</code>, or
          *             <code>input == true</code> and <code>outportMap != null</code>
          */
-        private ScheduledConnection(final NodeContainer node, final ConnectionContainer connection, final boolean input,
-            final ConnectionManifest nidConnectionManifest, final Map<Integer, Integer> outportMap) {
-            if ((!input) && (outportMap == null)) {
-                throw new IllegalArgumentException("outportMap cannot be null if input is false.");
-            }
-            if (input && (outportMap != null)) {
-                throw new IllegalArgumentException("outportMap cannot be non-null if input is true.");
-            }
+        private ScheduledConnection(final NodeContainer origNode, final NodeContainer replNode,
+            final ConnectionContainer connection, final boolean input, final ConnectionManifest nidConnectionManifest) {
+            final Integer origPort = Integer.valueOf(input ? connection.getDestPort() : connection.getSourcePort());
+            final Integer nodePort = determineNewPortIndex(origNode, replNode, origPort);
 
-            final Integer nodePort = new Integer(input ? connection.getDestPort() : connection.getSourcePort());
-            final PortType portType = input ? node.getInPort(nodePort.intValue()).getPortType()
-                : node.getOutPort(nodePort.intValue()).getPortType();
+            final PortType portType = input ? origNode.getInPort(origPort).getPortType()
+                : origNode.getOutPort(origPort).getPortType();
             final int port;
 
             if (portType.equals(FlowVariablePortObject.TYPE) || input) {
                 port = nodePort.intValue();
-            } else if (outportMap != null) {
+            } else {
                 // The purpose of this whole thing is to address the scenario in which the targetted node has
                 //      an outport with, for example, 2 connections on it and the node-in-drag has 2 port-type
                 //      compatible outports where each of them gets assigned one of the connections.
-                final Integer portI = outportMap.get(nodePort);
-
-                if (portI == null) {
-                    if (nidConnectionManifest.portSupportsPortType(nodePort.intValue(), portType)) {
-                        port = nodePort.intValue();
-                    } else {
-                        port = nidConnectionManifest.consumePortForPortType(portType, false);
-                    }
-
-                    if (port != -1) {
-                        outportMap.put(nodePort, new Integer(port));
-                    }
+                if (nidConnectionManifest.portSupportsPortType(nodePort.intValue(), portType)) {
+                    port = nodePort.intValue();
                 } else {
-                    port = portI.intValue();
+                    port = nidConnectionManifest.consumePortForPortType(portType, false);
                 }
-            } else {
-                port = nidConnectionManifest.consumePortForPortType(portType, true);
             }
 
             if (port == -1) {
@@ -439,6 +421,33 @@ public class SupplantationCommand extends AbstractKNIMECommand {
             m_nodeInDragPort = port;
 
             m_inputConnection = input;
+        }
+
+        /**
+         * Adjusts for the different starting indexes of ports on SingleNodeContainers and WorkflowManagers, fixes AP-18985.
+         * The non-FlowVariable ports start at index 1 for SNCs and at index 0 for WFMs.
+         * Therefore, we need to perform a shift to match the supplantation action.
+         *
+         * @param removed Node that was replaced by drag-and-drop
+         * @param dragged Node that was dragged onto
+         * @param port index of the removed node
+         * @return port index of the dragged node
+         */
+        private static Integer determineNewPortIndex(final NodeContainer remove, final NodeContainer replace,
+            final int port) {
+            var removedIsWFM = remove instanceof WorkflowManager;
+            var draggedIsWFM = replace instanceof WorkflowManager;
+
+            // only removed is WFM, need to shift port index up by 1
+            if (removedIsWFM && !draggedIsWFM) {
+                return port + 1;
+            }
+            // only replaced is WFM, need to shift port index down by 1
+            if (!removedIsWFM && draggedIsWFM) {
+                return port - 1;
+            }
+            // nothing to do, both nodes are either a SNC or WFM
+            return port;
         }
 
         /**
