@@ -124,8 +124,11 @@ public class PortActionCreator {
             .map(ModifiablePortsConfiguration::getExtendablePorts)//
             .map(Map::keySet)//
             .map(s -> {
-                final boolean requiresPrefix = s.size() < 2;
+                final var modifiablePortsConfiguration = m_creationConfig.getPortConfig().get();
+                final boolean requiresPrefix = s.stream()//
+                    .filter(modifiablePortsConfiguration::isInteractive).count() < 2;
                 return s.stream()//
+                    .filter(modifiablePortsConfiguration::isInteractive)//
                     .map(grpName -> new NativeNodeAddPortAction(m_editPart, m_creationConfig, grpName,
                         requiresPrefix ? "Add " + grpName + " port" : grpName))//
                     .collect(Collectors.toList());
@@ -142,8 +145,11 @@ public class PortActionCreator {
             .map(ModifiablePortsConfiguration::getExtendablePorts)//
             .map(Map::keySet)//
             .map(s -> {
-                final boolean requiresPrefix = s.size() < 2;
+                final var modifiablePortsConfiguration = m_creationConfig.getPortConfig().get();
+                final boolean requiresPrefix = s.stream()//
+                    .filter(modifiablePortsConfiguration::isInteractive).count() < 2;
                 return s.stream()//
+                    .filter(modifiablePortsConfiguration::isInteractive)//
                     .map(grpName -> new NativeNodeRemovePortAction(m_editPart, m_creationConfig, grpName,
                         requiresPrefix ? "Remove " + grpName + " port" : grpName))//
                     .collect(Collectors.toList());
