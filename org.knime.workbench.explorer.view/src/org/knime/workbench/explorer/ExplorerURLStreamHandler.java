@@ -66,6 +66,7 @@ import org.eclipse.core.runtime.URIUtil;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowContext;
+import org.knime.core.node.workflow.contextv2.HubSpaceLocationInfo;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
@@ -115,6 +116,15 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      * @since 6.4
      */
     public static final String NODE_RELATIVE = "knime.node";
+
+    /**
+     * The magic hostname for space-relative URLs.
+     *
+     * @since 8.9
+     */
+    public static final String SPACE_RELATIVE = "knime.space";
+
+    private static final String SPACE_VERSION = "spaceVersion";
 
     private static final URIPathEncoder UTF8_ENCODER = new URIPathEncoder(StandardCharsets.UTF_8);
 
@@ -193,7 +203,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
 
         if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost()) || MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())
-                || NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
+                || NODE_RELATIVE.equalsIgnoreCase(url.getHost()) || SPACE_RELATIVE.equalsIgnoreCase(url.getHost())) {
             if (nodeContext == null) {
                 throw new IOException("No context for relative URL available");
             } else if (workflowContext == null) {
@@ -210,6 +220,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         } else if (NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
             return UTF8_ENCODER
                 .encodePathSegments(resolveNodeRelativeUrl(url, NodeContext.getContext(), workflowContext));
+        } else if (SPACE_RELATIVE.equalsIgnoreCase(url.getHost())) {
+            return UTF8_ENCODER.encodePathSegments(resolveSpaceRelativeUrl(url, workflowContext));
         } else {
             return UTF8_ENCODER.encodePathSegments(url);
         }
@@ -405,6 +417,53 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                 + resolvedPath.getCanonicalPath() + " is not in " + currentLocation.getCanonicalPath());
         }
         return resolvedPath.toURI().toURL();
+    }
+
+    private static URL resolveSpaceRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
+            throws IOException {
+
+        if (wraps(workflowContext, WorkflowContext.class)) {
+            return resolveSpaceRelativeUrl(origUrl, unwrap(workflowContext, WorkflowContext.class));
+        } else {
+            throw new IllegalArgumentException(
+                    "Space relative URLs cannot be resolved from within purely remote workflows.");
+        }
+    }
+
+    private static URL resolveSpaceRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
+        throws IOException {
+        String decodedPath = decodePath(origUrl);
+
+        final var workflowContext2 = WorkflowContextV2.fromLegacyWorkflowContext(workflowContext);
+        final var locationInfo = workflowContext2.getLocationInfo();
+
+        if (locationInfo instanceof HubSpaceLocationInfo) {
+            final var hubInfo = (HubSpaceLocationInfo) locationInfo;
+            final var repoAddress = hubInfo.getRepositoryAddress();
+            final var query = hubInfo.getSpaceVersion().isPresent() ?
+                (SPACE_VERSION + "=" + hubInfo.getSpaceVersion().get()) : null;
+            final var path = "/repository" + hubInfo.getSpacePath() + decodedPath + ":data";
+
+            URI uri;
+            try {
+                uri = new URI(repoAddress.getScheme(), null,
+                    repoAddress.getHost(), repoAddress.getPort(), path, query, null);
+            } catch (URISyntaxException e) {
+                throw new IOException(e);
+            }
+
+            final var normalizedPath = uri.normalize().getPath();
+            final var repoSpacePath = "/repository" + hubInfo.getSpacePath();
+
+            if (!normalizedPath.startsWith(repoSpacePath)) {
+                throw new IOException("Leaving the Hub space is not allowed for space relative URLs: "
+                    + decodedPath + " is not in " + hubInfo.getSpacePath());
+            }
+            return uri.normalize().toURL();
+        }
+        final var mountpointRelUrl = URI.create("knime://knime.mountpoint" + decodedPath).toURL();
+
+        return resolveMountpointRelativeUrl(mountpointRelUrl, workflowContext);
     }
 
     private URLConnection openExternalMountConnection(final URL url) throws IOException {
