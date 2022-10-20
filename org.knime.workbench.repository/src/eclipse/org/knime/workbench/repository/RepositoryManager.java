@@ -56,6 +56,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -69,6 +70,8 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Platform;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeFactory.NodeType;
+import org.knime.core.node.NodeInfo;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.extension.CategoryExtension;
@@ -78,6 +81,7 @@ import org.knime.core.node.extension.NodeFactoryExtension;
 import org.knime.core.node.extension.NodeFactoryExtensionManager;
 import org.knime.core.node.extension.NodeSetFactoryExtension;
 import org.knime.core.node.workflow.FileNativeNodeContainerPersistor;
+import org.knime.core.ui.workflowcoach.NodeRecommendationManager;
 import org.knime.core.util.Pair;
 import org.knime.workbench.repository.model.AbstractContainerObject;
 import org.knime.workbench.repository.model.Category;
@@ -99,6 +103,7 @@ import org.osgi.framework.Bundle;
  *
  * @author Florian Georg, University of Konstanz
  * @author Thorsten Meinl, University of Konstanz
+ * @author Kai Franze, KNIME GmbH
  */
 public final class RepositoryManager {
     /**
@@ -148,13 +153,11 @@ public final class RepositoryManager {
 
     private static final String ID_CATEGORY_SET  = "org.knime.workbench.repository.categorysets";
 
-    private final List<Listener> m_loadListeners =
-            new CopyOnWriteArrayList<Listener>();
+    private final List<Listener> m_loadListeners = new CopyOnWriteArrayList<>();
 
     private final Root m_root = new Root();
 
-    private final Map<String, NodeTemplate> m_nodesById =
-            new HashMap<String, NodeTemplate>();
+    private final Map<String, NodeTemplate> m_nodesById = new HashMap<>();
 
     private final Root m_completeRoot = new Root();
 
@@ -167,6 +170,7 @@ public final class RepositoryManager {
     }
 
     private void readRepository(final IProgressMonitor monitor) {
+        // Read in all node templates available
         assert !m_root.hasChildren();
         readCategories(monitor, m_root);
         if (monitor.isCanceled()) {
@@ -187,10 +191,28 @@ public final class RepositoryManager {
         }
         removeEmptyCategories(m_root);
         m_loadListeners.clear();
+
+        // Initialize node recommendation manager in new thread
+        setupNodeRecommendationManager();
+    }
+
+    private void setupNodeRecommendationManager() {
+        Predicate<NodeInfo> isSourceNodePredicate = nodeInfo -> {
+            var nt = getNodeTemplate(nodeInfo);
+            try {
+                return nt != null && nt.createFactoryInstance().getType() == NodeType.Source;
+            } catch (Exception e) {
+                LOGGER.warn(String.format("Could not create a factory instance for <%s>", nodeInfo), e);
+                return false;
+            }
+        };
+        Predicate<NodeInfo> existsInRepositoryPredicate = nodeInfo -> getNodeTemplate(nodeInfo) != null;
+        NodeRecommendationManager.getInstance().setup(isSourceNodePredicate, existsInRepositoryPredicate);
     }
 
     private void readCompleteRepository(final IProgressMonitor monitor) {
         assert !m_completeRoot.hasChildren();
+        // Read in all node templates available
         readCategories(monitor, m_completeRoot);
         if (monitor.isCanceled()) {
             return;
@@ -209,6 +231,9 @@ public final class RepositoryManager {
         }
         removeEmptyCategories(m_completeRoot);
         m_loadListeners.clear();
+
+        // Initialize node recommendation manager in new thread
+        setupNodeRecommendationManager();
     }
 
     private void readMetanodes(final IProgressMonitor monitor, final Root root) {
@@ -216,66 +241,50 @@ public final class RepositoryManager {
         // and create meta node templates
         IExtension[] metanodeExtensions = getExtensions(ID_META_NODE);
         for (IExtension mnExt : metanodeExtensions) {
-            IConfigurationElement[] mnConfigElems =
-                    mnExt.getConfigurationElements();
+            IConfigurationElement[] mnConfigElems = mnExt.getConfigurationElements();
             for (IConfigurationElement mnConfig : mnConfigElems) {
                 if (monitor.isCanceled()) {
                     return;
                 }
-
                 try {
-                    MetaNodeTemplate metaNode =
-                            RepositoryFactory.createMetaNode(mnConfig);
-                    LOGGER.debug("Found meta node definition '"
-                        + metaNode.getID() + "': " + metaNode.getName());
-                    for (Listener l : m_loadListeners) {
-                        l.newMetanode(root, metaNode);
-                    }
-
-                    IContainerObject parentContainer =
-                            root.findContainer(metaNode.getCategoryPath());
-                    // If parent category is illegal, log an error and
-                    // append the node to the repository root.
-                    if (parentContainer == null) {
-                        LOGGER.warn("Invalid category-path for node "
-                                + "contribution: '"
-                                + metaNode.getCategoryPath()
-                                + "' - adding to root instead");
-                        root.addChild(metaNode);
-                    } else {
-                        // everything is fine, add the node to its parent
-                        // category
-                        parentContainer.addChild(metaNode);
-                    }
+                    processConfigurationElements(mnConfig, root);
                 } catch (Throwable t) {
-                    String message =
-                            "MetaNode " + mnConfig.getAttribute("id")
-                                    + "' from plugin '"
-                                    + mnConfig.getNamespaceIdentifier()
-                                    + "' could not be created: "
-                                    + t.getMessage();
-                    Bundle bundle =
-                            Platform.getBundle(mnConfig
-                                    .getNamespaceIdentifier());
-
-                    if ((bundle == null)
-                            || (bundle.getState() != Bundle.ACTIVE)) {
+                    String message = "MetaNode " + mnConfig.getAttribute("id") + "' from plugin '"
+                        + mnConfig.getNamespaceIdentifier() + "' could not be created: " + t.getMessage();
+                    var bundle = Platform.getBundle(mnConfig.getNamespaceIdentifier());
+                    if ((bundle == null) || (bundle.getState() != Bundle.ACTIVE)) {
                         // if the plugin is null, the plugin could not
                         // be activated maybe due to a not
                         // activateable plugin
                         // (plugin class cannot be found)
-                        message =
-                                message + " The corresponding plugin "
-                                        + "bundle could not be activated!";
+                        message = message + " The corresponding plugin bundle could not be activated!";
                     }
-
                     LOGGER.error(message, t);
                 }
             }
         }
     }
 
-    private Stream<CategoryExtension> extractDeclarationsFromSet(final IExtension categorySetExtension) {
+    private void processConfigurationElements(final IConfigurationElement mnConfig, final Root root) throws Throwable {
+        MetaNodeTemplate metaNode = RepositoryFactory.createMetaNode(mnConfig);
+        LOGGER.debug("Found meta node definition '" + metaNode.getID() + "': " + metaNode.getName());
+        m_loadListeners.forEach(l -> l.newMetanode(root, metaNode));
+        IContainerObject parentContainer = root.findContainer(metaNode.getCategoryPath());
+
+        // If parent category is illegal, log an error and
+        // append the node to the repository root.
+        if (parentContainer == null) {
+            LOGGER.warn("Invalid category-path for node " + "contribution: '" + metaNode.getCategoryPath()
+                + "' - adding to root instead");
+            root.addChild(metaNode);
+        } else {
+            // everything is fine, add the node to its parent
+            // category
+            parentContainer.addChild(metaNode);
+        }
+    }
+
+    private Stream<CategoryExtension> extractDeclarationsFromSet(final IExtension categorySetExtension) { // NOSONAR: Method can't be static
         var pluginId = categorySetExtension.getNamespaceIdentifier();
         return Stream.of(categorySetExtension.getConfigurationElements())//
             .map(RepositoryManager::createFactory)//
@@ -325,7 +334,7 @@ public final class RepositoryManager {
                 return;
             }
             try {
-                Category category = RepositoryFactory.createCategory(root, cat);
+                var category = RepositoryFactory.createCategory(root, cat);
                 LOGGER.debugWithFormat("Found category extension '%s' on path '%s'", category.getID(),
                     category.getPath());
                 for (Listener l : m_loadListeners) {
@@ -345,7 +354,7 @@ public final class RepositoryManager {
             .flatMap(e -> Stream.of(e.getConfigurationElements()))//
             .map(CategoryExtension::fromConfigurationElement);
 
-        // cateogorysets extension point
+        // category sets extension point
         IExtension[] categorySetExtensions = getExtensions(ID_CATEGORY_SET);
         Stream<CategoryExtension> categorySetFactoryExtPointEntries = Stream.of(categorySetExtensions)//
             .flatMap(this::extractDeclarationsFromSet);
@@ -367,14 +376,18 @@ public final class RepositoryManager {
         } else if (element2 == null) {
             return 1;
         } else {
-            int countSlashes1 = 0;
-            for (int i = 0; i < element1.length(); i++) {
-                if (element1.charAt(i) == '/') { countSlashes1++; }
+            var countSlashes1 = 0;
+            for (var i = 0; i < element1.length(); i++) {
+                if (element1.charAt(i) == '/') {
+                    countSlashes1++;
+                }
             }
 
-            int countSlashes2 = 0;
-            for (int i = 0; i < element2.length(); i++) {
-                if (element2.charAt(i) == '/') { countSlashes2++; }
+            var countSlashes2 = 0;
+            for (var i = 0; i < element2.length(); i++) {
+                if (element2.charAt(i) == '/') {
+                    countSlashes2++;
+                }
             }
             return countSlashes1 - countSlashes2;
         }
@@ -405,10 +418,8 @@ public final class RepositoryManager {
             }
 
             try {
-                if (nodeFactoryExtension.isDeprecated() && !isIncludeDeprecated) { // deprecate nodes are hidden
-                    continue;
-                }
-                if (nodeFactoryExtension.isHidden()) {
+                if ((nodeFactoryExtension.isDeprecated() && !isIncludeDeprecated) || nodeFactoryExtension.isHidden()) {
+                    // deprecate nodes are hidden, hidden ones are ignored too
                     continue;
                 }
 
@@ -436,10 +447,7 @@ public final class RepositoryManager {
                 for (Listener l : m_loadListeners) {
                     l.newNode(root, node);
                 }
-
                 m_nodesById.put(node.getID(), node);
-                String nodeName = node.getID();
-                nodeName = nodeName.substring(nodeName.lastIndexOf('.') + 1);
 
                 // Ask the root to lookup the category-container located at
                 // the given path
@@ -508,10 +516,7 @@ public final class RepositoryManager {
                 for (Listener l : m_loadListeners) {
                     l.newNode(root, node);
                 }
-
                 m_nodesById.put(node.getID(), node);
-                String nodeName = node.getID();
-                nodeName = nodeName.substring(nodeName.lastIndexOf('.') + 1);
 
                 // Ask the root to lookup the category-container located at the given path
                 IContainerObject parentContainer = root.findContainer(node.getCategoryPath());
@@ -634,7 +639,7 @@ public final class RepositoryManager {
      * @param listener a listener
      */
     public void addLoadListener(final Listener listener) {
-        m_loadListeners.add(listener);
+        m_loadListeners.add(listener); // NOSONAR: This collection will never be large
     }
 
     /**
@@ -654,6 +659,20 @@ public final class RepositoryManager {
     }
 
     /**
+     * @param nodeInfo The node info object to return a node template for
+     * @return A node template or <code>null</code>
+     */
+    private NodeTemplate getNodeTemplate(final NodeInfo nodeInfo) {
+        NodeTemplate nt;
+        nt = getNodeTemplate(nodeInfo.getFactory());
+        if (nt == null) {
+            nt = getNodeTemplate(
+                NodeRecommendationManager.getNodeTemplateId(nodeInfo.getFactory(), nodeInfo.getName()));
+        }
+        return nt;
+    }
+
+    /**
      * Creates the node factory instance for the given fully-qualified factory class name.
      * Otherwise a respective exception will be thrown.
      * @param factoryClassName
@@ -665,7 +684,7 @@ public final class RepositoryManager {
      *
      * @since 3.5
      */
-    public synchronized final static NodeFactory<NodeModel> loadNodeFactory(final String factoryClassName)
+    public static final synchronized NodeFactory<NodeModel> loadNodeFactory(final String factoryClassName)
         throws InvalidSettingsException, InstantiationException, IllegalAccessException,
         InvalidNodeFactoryExtensionException {
         return FileNativeNodeContainerPersistor.loadNodeFactory(factoryClassName);

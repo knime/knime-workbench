@@ -51,7 +51,7 @@ package org.knime.workbench.workflowcoach.ui;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.swt.graphics.Image;
-import org.knime.workbench.workflowcoach.NodeRecommendationManager.NodeRecommendation;
+import org.knime.core.ui.workflowcoach.NodeRecommendationManager.NodeRecommendation;
 
 /**
  * Label provider for the table of recommended nodes in the {@link WorkflowCoachView}. It provides the node's icon, the
@@ -68,7 +68,7 @@ public class WorkflowCoachLabelProvider extends LabelProvider implements ITableL
     public Image getColumnImage(final Object element, final int columnIndex) {
         if (element instanceof NodeRecommendation[] && columnIndex == 0) {
             NodeRecommendation[] nps = (NodeRecommendation[])element;
-            return WorkflowCoachView.getNonNullEntry(nps).getNodeTemplate().getIcon();
+            return WorkflowCoachView.getNodeTemplateFromNodeRecommendations(nps).getIcon();
         }
         return super.getImage(element);
     }
@@ -81,8 +81,7 @@ public class WorkflowCoachLabelProvider extends LabelProvider implements ITableL
         if (element instanceof NodeRecommendation[]) {
             NodeRecommendation[] nrs = (NodeRecommendation[])element;
             if (columnIndex == 0) {
-                int idx = WorkflowCoachView.getNonNullIdx(nrs);
-                return nrs[idx].getNodeTemplate().getName();
+                return WorkflowCoachView.getNodeTemplateFromNodeRecommendations(nrs).getName();
             } else {
                 int idx = columnIndex - 1;
                 if (nrs[idx] != null) {

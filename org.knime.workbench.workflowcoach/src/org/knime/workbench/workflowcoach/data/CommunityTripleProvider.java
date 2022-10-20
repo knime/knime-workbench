@@ -53,6 +53,8 @@ import java.util.List;
 
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
+import org.knime.core.ui.workflowcoach.data.NodeTripleProvider;
+import org.knime.core.ui.workflowcoach.data.NodeTripleProviderFactory;
 import org.knime.workbench.workflowcoach.prefs.WorkflowCoachPreferenceInitializer;
 import org.knime.workbench.workflowcoach.prefs.WorkflowCoachPreferencePage;
 import org.osgi.framework.FrameworkUtil;

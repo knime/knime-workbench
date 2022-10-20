@@ -67,12 +67,12 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
+import org.knime.core.ui.workflowcoach.NodeRecommendationManager;
+import org.knime.core.ui.workflowcoach.data.NodeTripleProvider;
+import org.knime.core.ui.workflowcoach.data.UpdatableNodeTripleProvider;
 import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.core.preferences.HeadlessPreferencesConstants;
-import org.knime.workbench.workflowcoach.NodeRecommendationManager;
 import org.knime.workbench.workflowcoach.data.CommunityTripleProvider;
-import org.knime.workbench.workflowcoach.data.NodeTripleProvider;
-import org.knime.workbench.workflowcoach.data.UpdatableNodeTripleProvider;
 import org.osgi.framework.FrameworkUtil;
 
 /**

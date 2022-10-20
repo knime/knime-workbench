@@ -50,19 +50,14 @@ package org.knime.workbench.workflowcoach.ui;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import org.apache.commons.math3.util.CombinatoricsUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
@@ -103,6 +98,11 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
+import org.knime.core.ui.workflowcoach.NodeRecommendationManager;
+import org.knime.core.ui.workflowcoach.NodeRecommendationManager.IUpdateListener;
+import org.knime.core.ui.workflowcoach.NodeRecommendationManager.NodeRecommendation;
+import org.knime.core.ui.workflowcoach.data.NodeTripleProvider;
+import org.knime.core.ui.workflowcoach.data.UpdatableNodeTripleProvider;
 import org.knime.core.util.KNIMEJob;
 import org.knime.core.util.Pair;
 import org.knime.workbench.core.KNIMECorePlugin;
@@ -112,11 +112,7 @@ import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.NodeTemplate;
-import org.knime.workbench.workflowcoach.NodeRecommendationManager;
-import org.knime.workbench.workflowcoach.NodeRecommendationManager.IUpdateListener;
-import org.knime.workbench.workflowcoach.NodeRecommendationManager.NodeRecommendation;
 import org.knime.workbench.workflowcoach.data.CommunityTripleProvider;
-import org.knime.workbench.workflowcoach.data.UpdatableNodeTripleProvider;
 import org.knime.workbench.workflowcoach.prefs.UpdateJob;
 import org.knime.workbench.workflowcoach.prefs.UpdateJob.UpdateListener;
 import org.knime.workbench.workflowcoach.prefs.WorkflowCoachPreferenceInitializer;
@@ -145,9 +141,11 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
     private static final int DEFAULT_FIRST_COLUMN_WIDTH = 200;
     private static final int DEFAULT_OTHER_COLUMNS_WIDTH = 100;
 
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowCoachView.class);
+
 
     /** Whether nodes are being loaded, loaded, being updated, disposed, etc. */
-    private AtomicReference<LoadState> m_loadState = new AtomicReference<>(LoadState.LoadingNodes);
+    private AtomicReference<LoadState> m_loadState = new AtomicReference<>(LoadState.LOADING_NODES);
 
     /**
      * Indicates whether recommendations are available (i.e. properly configured etc.).
@@ -186,11 +184,11 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
     /** Load state of the view, added to address AP-6822 (deadlocks when disposing while loading repository). */
     private enum LoadState {
         /** While picking up repository content. */
-        LoadingNodes,
+        LOADING_NODES,
         /** 'normal' operation. */
-        Initizalized,
+        INITIALIZED,
         /** during dispose or after dispose. */
-        Disposed
+        DISPOSED
     }
 
     private MouseListener m_openPrefPageMouseListener = new MouseAdapter() {
@@ -218,9 +216,10 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                     IStructuredSelection ss = (IStructuredSelection)sel;
 
                     if (ss.getFirstElement() instanceof NodeRecommendation[]) {
-                        //turn node recommendation selection into a node template selection
-                        NodeRecommendation[] nps = (NodeRecommendation[])ss.getFirstElement();
-                        return new StructuredSelection(new Object[]{getNonNullEntry(nps).getNodeTemplate()});
+                        // Turn node recommendation selection into a node template selection
+                        NodeRecommendation[] nodeRecommendations = (NodeRecommendation[])ss.getFirstElement();
+                        var nodeTemplate = getNodeTemplateFromNodeRecommendations(nodeRecommendations);
+                        return new StructuredSelection(new Object[]{nodeTemplate});
                     }
                 }
                 return sel;
@@ -228,17 +227,17 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         };
         getSite().setSelectionProvider(m_viewer);
         m_viewer.setComparator(new TableColumnSorter(m_viewer));
-        Table table = m_viewer.getTable();
+        var table = m_viewer.getTable();
 
         m_tableLayout = new TableColumnLayout();
         table.getParent().setLayout(m_tableLayout);
 
         //drag & drop
-        Transfer[] transfers = new Transfer[]{LocalSelectionTransfer.getTransfer()};
+        var transfers = new Transfer[]{LocalSelectionTransfer.getTransfer()};
         m_viewer.addDragSupport(DND.DROP_COPY | DND.DROP_MOVE, transfers, new WorkflowCoachDragSource(this));
 
         //column configuration
-        TableColumn column = new TableColumn(table, SWT.LEFT, 0);
+        var column = new TableColumn(table, SWT.LEFT, 0);
         column.setText("Recommended Nodes");
         column.setToolTipText("Nodes recommended to use next (e.g. based on the currently selected node).");
         column.setWidth(DEFAULT_FIRST_COLUMN_WIDTH);
@@ -261,25 +260,25 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         toolbarMGR.add(new ConfigureAction(m_viewer));
 
         updateInput("Waiting for node repository to be loaded ...");
-        m_loadState.set(LoadState.LoadingNodes);
+        m_loadState.set(LoadState.LOADING_NODES);
         Job nodesLoader = new KNIMEJob("Workflow Coach loader", FrameworkUtil.getBundle(getClass())) {
             @Override
             protected IStatus run(final IProgressMonitor monitor) {
                 RepositoryManager.INSTANCE.getRoot(); // wait until the repository is fully loaded
 
-                if (m_loadState.get() == LoadState.Disposed) {
+                if (m_loadState.get() == LoadState.DISPOSED) {
                     return Status.CANCEL_STATUS;
                 } else if (monitor.isCanceled()) {
-                    m_loadState.set(LoadState.Initizalized);
+                    m_loadState.set(LoadState.INITIALIZED);
                     return Status.CANCEL_STATUS;
                 } else {
                     // check for update if necessary
                     updateInput(LOADING_MESSAGE);
                     checkForStatisticUpdates();
                 }
-                if (m_loadState.get() != LoadState.Disposed) {
+                if (m_loadState.get() != LoadState.DISPOSED) {
                     // Prevent state transition if already disposed. In that case, the Part can no longer be used.
-                    m_loadState.set(LoadState.Initizalized);
+                    m_loadState.set(LoadState.INITIALIZED);
                 }
                 NodeRecommendationManager.getInstance().addUpdateListener(WorkflowCoachView.this);
                 updateFrequencyColumnHeadersAndToolTips();
@@ -292,8 +291,8 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
 
         //if the 'send anonymous statistics'-property has been changed, try updating the workflow coach
         KNIMECorePlugin.getDefault().getPreferenceStore().addPropertyChangeListener(e -> {
-            if(e.getProperty().equals(HeadlessPreferencesConstants.P_SEND_ANONYMOUS_STATISTICS)) {
-                if(e.getNewValue().equals(Boolean.TRUE)) {
+            if (e.getProperty().equals(HeadlessPreferencesConstants.P_SEND_ANONYMOUS_STATISTICS)) {
+                if (e.getNewValue().equals(Boolean.TRUE)) {
                     //enable the community recommendations
                     PREFS.setValue(WorkflowCoachPreferenceInitializer.P_COMMUNITY_NODE_TRIPLE_PROVIDER, true);
                     try {
@@ -305,6 +304,35 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                 }
             }
         });
+    }
+
+    static NodeTemplate getNodeTemplateFromNodeRecommendations(final NodeRecommendation[] nodeRecommendations) {
+        var nodeRecommendation = getNonNullEntry(nodeRecommendations);
+        // First try factory's class name in case of a {@link NodeTemplate}
+        var id = nodeRecommendation.getNodeFactoryClassName();
+        var nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(id);
+        if (nodeTemplate == null) {
+            // Second try <node factory-class name><separator><node name> in case of a {@link DynamicNodeTemplate}
+            id = nodeRecommendation.getId();
+            nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(id);
+        }
+        if (nodeTemplate == null) {
+            LOGGER.debug(String.format("Could not find node template for <%s>", nodeRecommendation));
+        }
+        return nodeTemplate;
+    }
+
+    private static final <T> T getNonNullEntry(final T[] arr) {
+        return arr[getNonNullIdx(arr)];
+    }
+
+    private static final <T> int getNonNullIdx(final T[] arr) {
+        for (var i = 0; i < arr.length; i++) {
+            if (arr[i] != null) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -321,10 +349,10 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
     @Override
     public void dispose() {
         //unregister selection listener, dispose objects etc.
-        if (m_loadState.get() != LoadState.LoadingNodes) {
+        if (m_loadState.get() != LoadState.LOADING_NODES) {
             NodeRecommendationManager.getInstance().removeUpdateListener(this);
         }
-        m_loadState.set(LoadState.Disposed);
+        m_loadState.set(LoadState.DISPOSED);
         this.getSite().setSelectionProvider(null);
         getViewSite().getPage().removeSelectionListener(this);
         m_viewer.getTable().dispose();
@@ -342,8 +370,8 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
             //if no workflow is opened and the workflow coach is configured properly, show according message
             updateInput(NO_WORKFLOW_OPENED_MESSAGE);
         }
-        LoadState loadState = m_loadState.get();
-        if (part instanceof WorkflowCoachView || loadState.equals(LoadState.LoadingNodes)) {
+        var loadState = m_loadState.get();
+        if (part instanceof WorkflowCoachView || loadState == LoadState.LOADING_NODES) {
             // If source of the selection is this view itself, or the nodes or statistics are still loading, do nothing
             return;
         }
@@ -357,20 +385,21 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
 
     private void updateInput(final ISelection selection) {
         if (NodeRecommendationManager.getInstance().getNumLoadedProviders() == 0) {
+            NodeRecommendationManager.getInstance().init(); // TODO: Is this needed here?
             //if there is at least one enabled triple provider then the statistics might need to be download first
-            if (NodeRecommendationManager.getInstance().getNodeTripleProviders().stream()
-                .anyMatch(ntp -> ntp.isEnabled())) {
+            if (NodeRecommendationManager.getNodeTripleProviders().stream()
+                .anyMatch(NodeTripleProvider::isEnabled)) {
 
-                if (m_loadState.get() == LoadState.Disposed) {
+                if (m_loadState.get() == LoadState.DISPOSED) {
                     return;
                 }
 
-                m_loadState.set(LoadState.LoadingNodes);
+                m_loadState.set(LoadState.LOADING_NODES);
                 updateInput(LOADING_MESSAGE);
 
                 //try updating the triple provider that are enabled and require an update
                 updateTripleProviders(e -> {
-                    m_loadState.set(LoadState.Initizalized);
+                    m_loadState.set(LoadState.INITIALIZED);
                     if (e.isPresent()) {
                         updateInputNoProvider();
                     } else {
@@ -416,7 +445,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
 
         //check whether it's just the same selection as the previous one (e.g. when a node has been reset etc.)
         //-> in that case no redraw is required
-        if (nodeSelected) {
+        if (nodeSelected && nc != null) {
             if (m_lastSelection.equals(nc.getNameWithID())) {
                 return;
             } else {
@@ -440,7 +469,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
             recommendations = NodeRecommendationManager.getInstance().getNodeRecommendationFor();
         } else {
             Display.getDefault().syncExec(() -> {
-                if (m_loadState.get() == LoadState.Disposed) {
+                if (m_loadState.get() == LoadState.DISPOSED) {
                     return;
                 }
                 m_viewer.setInput("");
@@ -456,36 +485,19 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         }
 
         //TODO: cache node recommendations??
-        int maxSize = 0;
-        for (List<NodeRecommendation> l : recommendations) {
-            maxSize = Math.max(maxSize, l.size());
-        }
-        List<NodeRecommendation[]> recommendationsJoined = joinRecommendations(recommendations, maxSize);
-
-        //remove duplicates from list
-        Set<String> duplicates = new HashSet<>();
-
-        List<NodeRecommendation[]> recommendationsWithoutDups = new ArrayList<>(recommendationsJoined.size());
-        for (NodeRecommendation[] nrs : recommendationsJoined) {
-            int idx = getNonNullIdx(nrs);
-            if (duplicates.add(nrs[idx].toString())) {
-                recommendationsWithoutDups.add(nrs);
-            }
-        }
+        var recommendationsWithoutDups = NodeRecommendationManager.joinRecommendationsWithoutDuplications(recommendations);
 
         //update viewer
         changeViewerStateTo(ViewerState.RECOMMENDATIONS);
         Display.getDefault().syncExec(() -> {
-            if (m_loadState.get() == LoadState.Disposed) {
-                return;
-            }
-            m_viewer.setInput(recommendationsWithoutDups);
-            m_viewer.refresh();
-            m_recommendationsAvailable = true;
-
-            //scroll to the very top
-            if (!recommendationsWithoutDups.isEmpty()) {
-                m_viewer.getTable().setTopIndex(0);
+            if (m_loadState.get() != LoadState.DISPOSED) {
+                m_viewer.setInput(recommendationsWithoutDups);
+                m_viewer.refresh();
+                m_recommendationsAvailable = true;
+                //scroll to the very top
+                if (!recommendationsWithoutDups.isEmpty()) {
+                    m_viewer.getTable().setTopIndex(0);
+                }
             }
         });
     }
@@ -502,12 +514,13 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      * Updates the names and tooltips of the frequency column headers.
      */
     private void updateFrequencyColumnHeadersAndToolTips() {
-        if (m_loadState.get() == LoadState.Disposed) {
+        if (m_loadState.get() == LoadState.DISPOSED) {
             return;
         }
 
+        NodeRecommendationManager.getInstance().init(); // TODO: Is this needed here?
         m_namesAndToolTips  =
-            NodeRecommendationManager.getInstance().getNodeTripleProviders().stream().filter(p -> p.isEnabled())
+            NodeRecommendationManager.getNodeTripleProviders().stream().filter(NodeTripleProvider::isEnabled)
                 .map(p -> new Pair<>(p.getName(), p.getDescription())).collect(Collectors.toList());
         if (m_namesAndToolTips == null || m_namesAndToolTips.isEmpty()) {
             updateInputNoProvider();
@@ -516,7 +529,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
 
         //reset table sorter
         IElementComparer sorter = m_viewer.getComparer();
-        if (sorter != null && sorter instanceof TableColumnSorter) {
+        if (sorter instanceof TableColumnSorter) {
             ((TableColumnSorter)sorter).setColumn(null);
         }
 
@@ -536,7 +549,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                 ISelectionProvider selectionProvider = site.getSelectionProvider();
                 if (selectionProvider != null) {
                     ISelection selection = selectionProvider.getSelection();
-                    if (selection != null && selection instanceof IStructuredSelection) {
+                    if (selection instanceof IStructuredSelection) {
                         updateInput(selection);
                         return;
                     }
@@ -544,105 +557,6 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
             }
             updateInput(StructuredSelection.EMPTY);
         }
-    }
-
-    /**
-     * Helper method to retrieve the first non-null entry.
-     *
-     * @param arr the array to be checked
-     * @return a non-null entry if existent, otherwise <code>null</code>
-     */
-    static final <T> T getNonNullEntry(final T[] arr) {
-        return arr[getNonNullIdx(arr)];
-    }
-
-    /**
-     * Helper method to get the index of the first non-null entry.
-     *
-     * @param arr the array to check
-     * @return the index, -1 if no non-null entry exists
-     */
-    static final <T> int getNonNullIdx(final T[] arr) {
-        for (int i = 0; i < arr.length; i++) {
-            if (arr[i] != null) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Joins the elements of the recommendation lists by their element ranks, yet taking the possible equality of
-     * elements into account.
-     *
-     * The joining is done as follows:
-     *
-     * Assume two lists of recommendations, {a1,a2,a3,...} and {b1,b2,b3,...} and, e.g., a2==b2 (i.e. these are the same
-     * recommendations) the joined list of arrays is then [a1, null], [null, b1], [a2, b2], [a3, null], [b3, null]
-     *
-     * @param recommendations n lists of recommendations of possibly different sizes
-     * @param maxSize the size of the longest list
-     *
-     * @return a list of recommendation arrays (the array potentially with <code>null</code>-entries) accordingly sorted
-     */
-    private static List<NodeRecommendation[]> joinRecommendations(final List<NodeRecommendation>[] recommendations,
-        final int maxSize) {
-        List<NodeRecommendation[]> recommendationsJoined = new ArrayList<>();
-        for (int i = 0; i < maxSize; i++) {
-            if (recommendations.length == 1) {
-                recommendationsJoined.add(new NodeRecommendation[]{recommendations[0].get(i)});
-            } else {
-                NodeRecommendation[] tuple = new NodeRecommendation[recommendations.length];
-                for (int j = 0; j < tuple.length; j++) {
-                    if (i < recommendations[j].size()) {
-                        tuple[j] = recommendations[j].get(i);
-                    }
-                }
-                NodeRecommendation[] same;
-                while ((same = getMaxSameElements(tuple)) != null) {
-                    recommendationsJoined.add(same);
-                }
-            }
-        }
-        return recommendationsJoined;
-    }
-
-    /**
-     * Determines the maximum number of same elements and returns them as a new array where all other elements are set
-     * to <code>null</code>. The found elements are also removed from the array passed as parameter (i.e. set to
-     * <code>null</code>).
-     *
-     * @param ar the array to check, it will be manipulated as well!
-     * @return array of same length as <code>ar</code>, with the found elements non-null. <code>null</code> will be
-     *         returned if <code>ar</code> only consists of <code>null</code>-entries
-     */
-    private static <T> T[] getMaxSameElements(final T[] ar) {
-        T[] res = ar.clone();
-        for (int i = ar.length; i > 0; i--) {
-            Iterator<int[]> it = CombinatoricsUtils.combinationsIterator(ar.length, i);
-            while (it.hasNext()) {
-                int[] indices = it.next();
-                T el = ar[indices[0]];
-                if (el == null) {
-                    continue;
-                }
-                for (int j = 1; j < indices.length; j++) {
-                    if (ar[indices[j]] == null || !el.equals(ar[indices[j]])) {
-                        el = null;
-                        break;
-                    }
-                }
-                if (el != null) {
-                    Arrays.fill(res, null);
-                    for (int j = 0; j < indices.length; j++) {
-                        res[indices[j]] = ar[indices[j]];
-                        ar[indices[j]] = null;
-                    }
-                    return res;
-                }
-            }
-        }
-        return null;
     }
 
     /**
@@ -694,17 +608,14 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      * @param state the state to change to
      */
     private void changeViewerStateTo(final ViewerState state) {
-        if (m_viewerState != null && state == m_viewerState) {
-            //nothing to change
-            return;
-        } else {
+        if (m_viewerState == null || state != m_viewerState) {
             m_viewerState = state;
             Display.getDefault().syncExec(() -> {
                 if (m_viewer == null) {
                     return; // already disposed
                 }
 
-                Table table = m_viewer.getTable();
+                var table = m_viewer.getTable();
                 table.setRedraw(false);
                 switch (state) {
                     case MESSAGE:
@@ -723,14 +634,14 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                         m_viewer.setLabelProvider(new WorkflowCoachLabelProvider());
                         pruneTableColumns(table, true);
 
-                        for (int i = 0; i < m_namesAndToolTips.size(); i++) {
-                            TableColumn column = new TableColumn(table, SWT.LEFT, i + 1);
+                        for (var i = 0; i < m_namesAndToolTips.size(); i++) {
+                            var column = new TableColumn(table, SWT.LEFT, i + 1);
                             column.setText(m_namesAndToolTips.get(i).getFirst());
                             column.setToolTipText(m_namesAndToolTips.get(i).getSecond());
                             column.addSelectionListener((TableColumnSorter) m_viewer.getComparator());
                         }
 
-                        for (int i = 0; i <= m_namesAndToolTips.size(); i++) {
+                        for (var i = 0; i <= m_namesAndToolTips.size(); i++) {
                             final int weight = (i == 0) ? 40 : otherColumnsWeighting;
                             final int width = (i == 0) ? DEFAULT_FIRST_COLUMN_WIDTH
                                                        : DEFAULT_OTHER_COLUMNS_WIDTH;
@@ -759,19 +670,19 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         m_viewer.addDoubleClickListener(event -> {
             Object o = ((IStructuredSelection)event.getSelection()).getFirstElement();
             if (o instanceof NodeRecommendation[]) {
-                NodeRecommendation[] nrs = (NodeRecommendation[])o;
-                NodeTemplate tmplt = getNonNullEntry(nrs).getNodeTemplate();
+                NodeRecommendation[] nodeRecommendations = (NodeRecommendation[])o;
+                var nodeTemplate = getNodeTemplateFromNodeRecommendations(nodeRecommendations);
                 NodeFactory<? extends NodeModel> nodeFact;
                 try {
-                    nodeFact = tmplt.createFactoryInstance();
+                    nodeFact = nodeTemplate.createFactoryInstance();
                 } catch (Exception e) {
                     NodeLogger.getLogger(WorkflowCoachView.class)
-                        .error("Unable to instantiate the selected node " + tmplt.getFactory().getName(), e);
+                        .error("Unable to instantiate the selected node " + nodeTemplate.getFactory().getName(), e);
                     return;
                 }
                 boolean added = NodeProvider.INSTANCE.addNode(nodeFact);
                 if (added) {
-                    Display.getDefault().asyncExec(() -> setFocus());
+                    Display.getDefault().asyncExec(this::setFocus);
                 }
             }
         });
@@ -783,23 +694,21 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      * performed.
      */
     private static void checkForStatisticUpdates() {
-        int updateSchedule = PREFS.getInt(WorkflowCoachPreferenceInitializer.P_AUTO_UPDATE_SCHEDULE);
+        var updateSchedule = PREFS.getInt(WorkflowCoachPreferenceInitializer.P_AUTO_UPDATE_SCHEDULE);
         if (updateSchedule == WorkflowCoachPreferenceInitializer.NO_AUTO_UPDATE) {
             return;
         }
 
-        Optional<LocalDateTime> oldest = NodeRecommendationManager.getInstance().getNodeTripleProviders().stream()
-            .map(p -> p.getLastUpdate())
-            .filter(o -> o.isPresent())
-            .map(o -> o.get())
+        NodeRecommendationManager.getInstance().init(); // TODO: Is this needed here?
+        Optional<LocalDateTime> oldest = NodeRecommendationManager.getNodeTripleProviders().stream()
+            .map(NodeTripleProvider::getLastUpdate).filter(Optional::isPresent).map(Optional::get)
             .min(Comparator.naturalOrder());
 
         if (oldest.isPresent()) {
             //check whether an automatic update is necessary
             long weeksDiff = ChronoUnit.WEEKS.between(oldest.get(), LocalDateTime.now());
-            if ((updateSchedule == WorkflowCoachPreferenceInitializer.WEEKLY_UPDATE) && (weeksDiff == 0)) {
-                return;
-            } else if ((updateSchedule == WorkflowCoachPreferenceInitializer.MONTHLY_UPDATE) && (weeksDiff < 4)) {
+            if ((updateSchedule == WorkflowCoachPreferenceInitializer.WEEKLY_UPDATE && weeksDiff == 0)
+                || (updateSchedule == WorkflowCoachPreferenceInitializer.MONTHLY_UPDATE && weeksDiff < 4)) {
                 return;
             }
         }
@@ -823,15 +732,16 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      *            immediately after triggering the update job
      */
     private static void updateTripleProviders(final UpdateListener updateListener, final boolean requiredOnly, final boolean block) {
+        NodeRecommendationManager.getInstance().init(); // TODO: Is this needed here?
         List<UpdatableNodeTripleProvider> toUpdate =
-            NodeRecommendationManager.getInstance().getNodeTripleProviders().stream().filter(ntp -> {
+            NodeRecommendationManager.getNodeTripleProviders().stream().filter(ntp -> {
                 if (!(ntp instanceof UpdatableNodeTripleProvider)) {
                     return false;
                 } else {
                     UpdatableNodeTripleProvider untp = (UpdatableNodeTripleProvider)ntp;
                     return ntp.isEnabled() && (!requiredOnly || untp.updateRequired());
                 }
-            }).map(ntp -> (UpdatableNodeTripleProvider)ntp).collect(Collectors.toList());
+            }).map(UpdatableNodeTripleProvider.class::cast).collect(Collectors.toList());
         UpdateJob.schedule(updateListener, toUpdate, block);
     }
 
@@ -841,6 +751,6 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
     @Override
     public void updated() {
         updateFrequencyColumnHeadersAndToolTips();
-        m_loadState.set(LoadState.Initizalized);
+        m_loadState.set(LoadState.INITIALIZED);
     }
 }

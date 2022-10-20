@@ -55,7 +55,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
-import org.knime.workbench.workflowcoach.data.UpdatableNodeTripleProvider;
+import org.knime.core.ui.workflowcoach.data.UpdatableNodeTripleProvider;
 import org.osgi.framework.FrameworkUtil;
 
 /**

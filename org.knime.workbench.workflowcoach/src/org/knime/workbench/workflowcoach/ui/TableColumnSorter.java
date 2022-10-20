@@ -56,7 +56,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
-import org.knime.workbench.workflowcoach.NodeRecommendationManager.NodeRecommendation;
+import org.knime.core.ui.workflowcoach.NodeRecommendationManager.NodeRecommendation;
 
 /**
  * Sorter for the workflow coach view.

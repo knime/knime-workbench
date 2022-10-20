@@ -38,7 +38,7 @@
                   
                </documentation>
                <appInfo>
-                  <meta.attribute kind="java" basedOn=":org.knime.workbench.workflowcoach.data.NodeTripleProviderFactory"/>
+                  <meta.attribute kind="java" basedOn=":org.knime.core.ui.workflowcoach.data.NodeTripleProviderFactory"/>
                </appInfo>
             </annotation>
          </attribute>

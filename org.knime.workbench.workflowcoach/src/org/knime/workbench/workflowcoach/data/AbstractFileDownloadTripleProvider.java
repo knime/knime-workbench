@@ -83,6 +83,7 @@ import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeFrequencies;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeTriple;
+import org.knime.core.ui.workflowcoach.data.UpdatableNodeTripleProvider;
 
 /**
  * A node triple provider that downloads the nodes triples from a url and stores it to a file.

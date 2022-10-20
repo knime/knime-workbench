@@ -51,10 +51,10 @@ import org.eclipse.jface.action.Action;
 import org.eclipse.jface.preference.PreferenceDialog;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.ui.dialogs.PreferencesUtil;
+import org.knime.core.ui.workflowcoach.NodeRecommendationManager;
+import org.knime.core.ui.workflowcoach.data.NodeTripleProviderFactory;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
-import org.knime.workbench.workflowcoach.NodeRecommendationManager;
-import org.knime.workbench.workflowcoach.data.NodeTripleProviderFactory;
 import org.knime.workbench.workflowcoach.prefs.WorkflowCoachPreferencePage;
 
 /**
