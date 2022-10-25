@@ -91,7 +91,7 @@ public class ConfigureAction extends Action {
     @Override
     public void run() {
         List<NodeTripleProviderFactory> nodeTripleProviderFactories =
-            NodeRecommendationManager.getInstance().getNodeTripleProviderFactories();
+            NodeRecommendationManager.getNodeTripleProviderFactories();
         String[] prefPageIDs = new String[nodeTripleProviderFactories.size()];
         for (int i = 0; i < prefPageIDs.length; i++) {
             prefPageIDs[i] = nodeTripleProviderFactories.get(i).getPreferencePageID();

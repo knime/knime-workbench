@@ -56,6 +56,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -94,10 +95,13 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
 import org.knime.core.node.NodeFactory;
+import org.knime.core.node.NodeFactory.NodeType;
+import org.knime.core.node.NodeInfo;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
+import org.knime.core.ui.util.NodeTemplateId;
 import org.knime.core.ui.workflowcoach.NodeRecommendationManager;
 import org.knime.core.ui.workflowcoach.NodeRecommendationManager.IUpdateListener;
 import org.knime.core.ui.workflowcoach.NodeRecommendationManager.NodeRecommendation;
@@ -261,11 +265,52 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
 
         updateInput("Waiting for node repository to be loaded ...");
         m_loadState.set(LoadState.LOADING_NODES);
-        Job nodesLoader = new KNIMEJob("Workflow Coach loader", FrameworkUtil.getBundle(getClass())) {
+        Job nodesLoader = createWorkflowCoachLoader();
+        nodesLoader.setSystem(true);
+        nodesLoader.schedule();
+
+        //if the 'send anonymous statistics'-property has been changed, try updating the workflow coach
+        KNIMECorePlugin.getDefault().getPreferenceStore().addPropertyChangeListener(e -> {
+            if (e.getProperty().equals(HeadlessPreferencesConstants.P_SEND_ANONYMOUS_STATISTICS)
+                && e.getNewValue().equals(Boolean.TRUE)) {
+                //enable the community recommendations
+                PREFS.setValue(WorkflowCoachPreferenceInitializer.P_COMMUNITY_NODE_TRIPLE_PROVIDER, true);
+                try {
+                    PREFS.save();
+                } catch (Exception e1) {
+                    throw new RuntimeException(e1);
+                }
+                updateInput(StructuredSelection.EMPTY);
+            }
+        });
+    }
+
+    /**
+     * Initializes the {@link NodeRecommendationManager} building the predicates needed
+     *
+     */
+    private static void initializeNodeRecommendationManager() {
+        Predicate<NodeInfo> isSourceNode = nodeInfo -> {
+            var nt = getNodeTemplate(nodeInfo);
+            try {
+                return nt != null && nt.createFactoryInstance().getType() == NodeType.Source;
+            } catch (Exception e) {
+                LOGGER.warn(String.format("Could not create a factory instance for <%s>", nodeInfo), e);
+                return false;
+            }
+        };
+        Predicate<NodeInfo> existsInRepository = nodeInfo -> getNodeTemplate(nodeInfo) != null;
+        NodeRecommendationManager.getInstance().initialize(isSourceNode, existsInRepository);
+    }
+
+    /**
+     * @return A {@link KNIMEJob} loading the workflow coach
+     */
+    private Job createWorkflowCoachLoader() {
+        return new KNIMEJob("Workflow Coach loader", FrameworkUtil.getBundle(getClass())) { // NOSONAR: Legacy code
             @Override
             protected IStatus run(final IProgressMonitor monitor) {
                 RepositoryManager.INSTANCE.getRoot(); // wait until the repository is fully loaded
-
                 if (m_loadState.get() == LoadState.DISPOSED) {
                     return Status.CANCEL_STATUS;
                 } else if (monitor.isCanceled()) {
@@ -280,42 +325,28 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                     // Prevent state transition if already disposed. In that case, the Part can no longer be used.
                     m_loadState.set(LoadState.INITIALIZED);
                 }
+                initializeNodeRecommendationManager(); // Initialize the recommendation manager here
                 NodeRecommendationManager.getInstance().addUpdateListener(WorkflowCoachView.this);
                 updateFrequencyColumnHeadersAndToolTips();
                 updateInput(StructuredSelection.EMPTY);
                 return Status.OK_STATUS;
             }
         };
-        nodesLoader.setSystem(true);
-        nodesLoader.schedule();
+    }
 
-        //if the 'send anonymous statistics'-property has been changed, try updating the workflow coach
-        KNIMECorePlugin.getDefault().getPreferenceStore().addPropertyChangeListener(e -> {
-            if (e.getProperty().equals(HeadlessPreferencesConstants.P_SEND_ANONYMOUS_STATISTICS)) {
-                if (e.getNewValue().equals(Boolean.TRUE)) {
-                    //enable the community recommendations
-                    PREFS.setValue(WorkflowCoachPreferenceInitializer.P_COMMUNITY_NODE_TRIPLE_PROVIDER, true);
-                    try {
-                        PREFS.save();
-                    } catch (Exception e1) {
-                        throw new RuntimeException(e1);
-                    }
-                    updateInput(StructuredSelection.EMPTY);
-                }
-            }
-        });
+    /**
+     * @param nodeInfo The node info object to return a node template for
+     * @return A node template or <code>null</code>
+     */
+    private static NodeTemplate getNodeTemplate(final NodeInfo nodeInfo) {
+        return NodeTemplateId.callWithNodeTemplateIdVariants(nodeInfo.getFactory(), nodeInfo.getName(),
+            RepositoryManager.INSTANCE::getNodeTemplate);
     }
 
     static NodeTemplate getNodeTemplateFromNodeRecommendations(final NodeRecommendation[] nodeRecommendations) {
         var nodeRecommendation = getNonNullEntry(nodeRecommendations);
-        // First try factory's class name in case of a {@link NodeTemplate}
-        var id = nodeRecommendation.getNodeFactoryClassName();
-        var nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(id);
-        if (nodeTemplate == null) {
-            // Second try <node factory-class name><separator><node name> in case of a {@link DynamicNodeTemplate}
-            id = nodeRecommendation.getId();
-            nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(id);
-        }
+        var nodeTemplate = NodeTemplateId.callWithNodeTemplateIdVariants(nodeRecommendation.getNodeFactoryClassName(),
+            nodeRecommendation.getNodeName(), RepositoryManager.INSTANCE::getNodeTemplate);
         if (nodeTemplate == null) {
             LOGGER.debug(String.format("Could not find node template for <%s>", nodeRecommendation));
         }
@@ -384,8 +415,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
     }
 
     private void updateInput(final ISelection selection) {
-        if (NodeRecommendationManager.getInstance().getNumLoadedProviders() == 0) {
-            NodeRecommendationManager.getInstance().init(); // TODO: Is this needed here?
+        if (NodeRecommendationManager.getNumLoadedProviders() == 0) {
             //if there is at least one enabled triple provider then the statistics might need to be download first
             if (NodeRecommendationManager.getNodeTripleProviders().stream()
                 .anyMatch(NodeTripleProvider::isEnabled)) {
@@ -405,7 +435,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                     } else {
                         try {
                             NodeRecommendationManager.getInstance().loadRecommendations();
-                            if (NodeRecommendationManager.getInstance().getNumLoadedProviders() == 0) {
+                            if (NodeRecommendationManager.getNumLoadedProviders() == 0) {
                                 //if there are still no triple provider, show link
                                 updateInputNoProvider();
                             } else {
@@ -518,7 +548,6 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
             return;
         }
 
-        NodeRecommendationManager.getInstance().init(); // TODO: Is this needed here?
         m_namesAndToolTips  =
             NodeRecommendationManager.getNodeTripleProviders().stream().filter(NodeTripleProvider::isEnabled)
                 .map(p -> new Pair<>(p.getName(), p.getDescription())).collect(Collectors.toList());
@@ -699,7 +728,6 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
             return;
         }
 
-        NodeRecommendationManager.getInstance().init(); // TODO: Is this needed here?
         Optional<LocalDateTime> oldest = NodeRecommendationManager.getNodeTripleProviders().stream()
             .map(NodeTripleProvider::getLastUpdate).filter(Optional::isPresent).map(Optional::get)
             .min(Comparator.naturalOrder());
@@ -732,7 +760,6 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      *            immediately after triggering the update job
      */
     private static void updateTripleProviders(final UpdateListener updateListener, final boolean requiredOnly, final boolean block) {
-        NodeRecommendationManager.getInstance().init(); // TODO: Is this needed here?
         List<UpdatableNodeTripleProvider> toUpdate =
             NodeRecommendationManager.getNodeTripleProviders().stream().filter(ntp -> {
                 if (!(ntp instanceof UpdatableNodeTripleProvider)) {

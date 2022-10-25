@@ -56,7 +56,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -70,8 +69,6 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Platform;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
-import org.knime.core.node.NodeFactory.NodeType;
-import org.knime.core.node.NodeInfo;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.extension.CategoryExtension;
@@ -81,7 +78,6 @@ import org.knime.core.node.extension.NodeFactoryExtension;
 import org.knime.core.node.extension.NodeFactoryExtensionManager;
 import org.knime.core.node.extension.NodeSetFactoryExtension;
 import org.knime.core.node.workflow.FileNativeNodeContainerPersistor;
-import org.knime.core.ui.workflowcoach.NodeRecommendationManager;
 import org.knime.core.util.Pair;
 import org.knime.workbench.repository.model.AbstractContainerObject;
 import org.knime.workbench.repository.model.Category;
@@ -191,23 +187,6 @@ public final class RepositoryManager {
         }
         removeEmptyCategories(m_root);
         m_loadListeners.clear();
-
-        // Initialize node recommendation manager in new thread
-        setupNodeRecommendationManager();
-    }
-
-    private void setupNodeRecommendationManager() {
-        Predicate<NodeInfo> isSourceNodePredicate = nodeInfo -> {
-            var nt = getNodeTemplate(nodeInfo);
-            try {
-                return nt != null && nt.createFactoryInstance().getType() == NodeType.Source;
-            } catch (Exception e) {
-                LOGGER.warn(String.format("Could not create a factory instance for <%s>", nodeInfo), e);
-                return false;
-            }
-        };
-        Predicate<NodeInfo> existsInRepositoryPredicate = nodeInfo -> getNodeTemplate(nodeInfo) != null;
-        NodeRecommendationManager.getInstance().setup(isSourceNodePredicate, existsInRepositoryPredicate);
     }
 
     private void readCompleteRepository(final IProgressMonitor monitor) {
@@ -231,9 +210,6 @@ public final class RepositoryManager {
         }
         removeEmptyCategories(m_completeRoot);
         m_loadListeners.clear();
-
-        // Initialize node recommendation manager in new thread
-        setupNodeRecommendationManager();
     }
 
     private void readMetanodes(final IProgressMonitor monitor, final Root root) {
@@ -656,20 +632,6 @@ public final class RepositoryManager {
             readRepository(new NullProgressMonitor());
         }
         return m_nodesById.get(id);
-    }
-
-    /**
-     * @param nodeInfo The node info object to return a node template for
-     * @return A node template or <code>null</code>
-     */
-    private NodeTemplate getNodeTemplate(final NodeInfo nodeInfo) {
-        NodeTemplate nt;
-        nt = getNodeTemplate(nodeInfo.getFactory());
-        if (nt == null) {
-            nt = getNodeTemplate(
-                NodeRecommendationManager.getNodeTemplateId(nodeInfo.getFactory(), nodeInfo.getName()));
-        }
-        return nt;
     }
 
     /**

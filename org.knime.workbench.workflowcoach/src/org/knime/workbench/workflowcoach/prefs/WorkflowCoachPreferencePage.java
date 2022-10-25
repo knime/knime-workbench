@@ -209,7 +209,7 @@ public class WorkflowCoachPreferencePage extends PreferencePage implements IWork
 
         //update the currently enabled providers
         List<UpdatableNodeTripleProvider> toUpdate = new ArrayList<>();
-        for (NodeTripleProvider ntp : NodeRecommendationManager.getInstance().getNodeTripleProviders()) {
+        for (NodeTripleProvider ntp : NodeRecommendationManager.getNodeTripleProviders()) {
             if (m_checkCommunityProvider.getSelection() && (ntp instanceof CommunityTripleProvider)) {
                 toUpdate.add((CommunityTripleProvider)ntp);
             }
@@ -270,7 +270,7 @@ public class WorkflowCoachPreferencePage extends PreferencePage implements IWork
      *         statistic file doesn't exist)
      */
     private Optional<LocalDateTime> getLastUpdate() {
-        Optional<Optional<LocalDateTime>> lastUpdate = NodeRecommendationManager.getInstance().getNodeTripleProviders()
+        Optional<Optional<LocalDateTime>> lastUpdate = NodeRecommendationManager.getNodeTripleProviders()
             .stream().filter(p -> p instanceof CommunityTripleProvider).map(p -> p.getLastUpdate()).findFirst();
         if (lastUpdate.isPresent()) {
             return lastUpdate.get();
@@ -285,7 +285,7 @@ public class WorkflowCoachPreferencePage extends PreferencePage implements IWork
     @Override
     public boolean performOk() {
         IPreferenceStore prefStore = getPreferenceStore();
-        List<NodeTripleProvider> providers = NodeRecommendationManager.getInstance().getNodeTripleProviders();
+        List<NodeTripleProvider> providers = NodeRecommendationManager.getNodeTripleProviders();
 
         //check whether the selected providers need an update
         for (NodeTripleProvider ntp : providers) {
