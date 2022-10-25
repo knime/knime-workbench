@@ -614,12 +614,12 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
         action = OpenNodeViewAction.createActionIfApplicable(container).orElse(null);
         if (action != null) {
             menuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
-            return;
         }
+        int numUIExtNodeViews = action != null ? 1 : 0;
 
         // add for node views option if applicable
         int numNodeViews = container.getNrViews();
-        for (int i = 0; i < numNodeViews; i++) {
+        for (int i = numUIExtNodeViews; i < numNodeViews; i++) {
             action = new OpenViewAction(Wrapper.unwrapNC(container), i);
             menuManager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, action);
         }
