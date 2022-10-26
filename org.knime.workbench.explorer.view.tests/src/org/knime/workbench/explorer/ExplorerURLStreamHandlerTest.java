@@ -52,6 +52,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,6 +61,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -75,9 +78,11 @@ import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.contextv2.HubSpaceLocationInfo;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.util.auth.SimpleTokenAuthenticator;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler.ExplorerURLConnection;
+import org.mockito.Mockito;
 
 /**
  * Testcases for {@link ExplorerURLStreamHandler}.
@@ -580,7 +585,78 @@ public class ExplorerURLStreamHandlerTest {
     }
 
     /**
-     * Checks if German special characters in a local workflow relative URL are UTF-8 encoded.
+     * Checks if space-relative knime-URLs are resolved correctly with version.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveSpaceRelativeUrlWithVersion() throws Exception {
+
+        String repoAddress = "https://api.hub.knime.com:443/knime/rest/v4/repository";
+
+        HubSpaceLocationInfo hubInfo = Mockito.mock(HubSpaceLocationInfo.class);
+        when(hubInfo.getRepositoryAddress()).thenReturn(URI.create(repoAddress));
+        when(hubInfo.getSpacePath()).thenReturn("/Users/john/Private");
+        when(hubInfo.getSpaceVersion()).thenReturn(Optional.of("4"));
+
+        URL url = new URL("knime://knime.space/test%20small.txt");
+        URL result = ExplorerURLStreamHandler.resolveSpaceRelativeUrl(url, hubInfo);
+
+        URL expectedURL = new URL(repoAddress
+            + "/Users/john/Private/test%20small.txt:data?spaceVersion=4");
+        assertEquals(expectedURL, result);
+    }
+
+    /**
+     * Checks if space-relative knime-URLs are resolved correctly without version.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveSpaceRelativeUrlWithoutVersion() throws Exception {
+
+        String repoAddress = "https://api.hub.knime.com:443/knime/rest/v4/repository";
+
+        HubSpaceLocationInfo hubInfo = Mockito.mock(HubSpaceLocationInfo.class);
+        when(hubInfo.getRepositoryAddress()).thenReturn(URI.create(repoAddress));
+        when(hubInfo.getSpacePath()).thenReturn("/Users/john/Private");
+        when(hubInfo.getSpaceVersion()).thenReturn(Optional.empty());
+
+        URL url = new URL("knime://knime.space/test%20small.txt");
+        URL result = ExplorerURLStreamHandler.resolveSpaceRelativeUrl(url, hubInfo);
+
+        URL expectedURL = new URL(repoAddress
+            + "/Users/john/Private/test%20small.txt:data");
+        assertEquals(expectedURL, result);
+    }
+
+    /**
+     * Checks if space-relative knime-URLs do not leave the space.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveSpaceRelativeUrlDontLeaveSpace() throws Exception {
+
+        String repoAddress = "https://api.hub.knime.com:443/knime/rest/v4/repository";
+
+        HubSpaceLocationInfo hubInfo = Mockito.mock(HubSpaceLocationInfo.class);
+        when(hubInfo.getRepositoryAddress()).thenReturn(URI.create(repoAddress));
+        when(hubInfo.getSpacePath()).thenReturn("/Users/john/Private");
+        when(hubInfo.getSpaceVersion()).thenReturn(Optional.of(""));
+
+        URL url = new URL("knime://knime.space/../test.txt");
+
+        try {
+            ExplorerURLStreamHandler.resolveSpaceRelativeUrl(url, hubInfo);
+            fail();
+        } catch (IOException e) {
+            assertTrue(e.getMessage().contains("Leaving the Hub space is not allowed for space relative URLs:"));
+        }
+    }
+
+    /**
+     * Checks if German special characters in a local work flow relative URL are UTF-8 encoded.
      *
      * @throws Exception
      */

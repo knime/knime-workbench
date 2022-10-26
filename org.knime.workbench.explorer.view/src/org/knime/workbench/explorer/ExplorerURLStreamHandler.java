@@ -124,7 +124,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      */
     public static final String SPACE_RELATIVE = "knime.space";
 
-    private static final String SPACE_VERSION = "spaceVersion";
+    private static final String SPACE_VERSION_FORMAT = "spaceVersion=%s";
 
     private static final URIPathEncoder UTF8_ENCODER = new URIPathEncoder(StandardCharsets.UTF_8);
 
@@ -422,48 +422,45 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     private static URL resolveSpaceRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
             throws IOException {
 
-        if (wraps(workflowContext, WorkflowContext.class)) {
-            return resolveSpaceRelativeUrl(origUrl, unwrap(workflowContext, WorkflowContext.class));
-        } else {
-            throw new IllegalArgumentException(
-                    "Space relative URLs cannot be resolved from within purely remote workflows.");
-        }
-    }
-
-    private static URL resolveSpaceRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
-        throws IOException {
-        String decodedPath = decodePath(origUrl);
-
-        final var workflowContext2 = WorkflowContextV2.fromLegacyWorkflowContext(workflowContext);
+        final var workflowContext2 = NodeContext.getContext().getWorkflowManager().getContextV2();
         final var locationInfo = workflowContext2.getLocationInfo();
 
         if (locationInfo instanceof HubSpaceLocationInfo) {
-            final var hubInfo = (HubSpaceLocationInfo) locationInfo;
-            final var repoAddress = hubInfo.getRepositoryAddress();
-            final var query = hubInfo.getSpaceVersion().isPresent() ?
-                (SPACE_VERSION + "=" + hubInfo.getSpaceVersion().get()) : null;
-            final var path = "/repository" + hubInfo.getSpacePath() + decodedPath + ":data";
-
-            URI uri;
-            try {
-                uri = new URI(repoAddress.getScheme(), null,
-                    repoAddress.getHost(), repoAddress.getPort(), path, query, null);
-            } catch (URISyntaxException e) {
-                throw new IOException(e);
-            }
-
-            final var normalizedPath = uri.normalize().getPath();
-            final var repoSpacePath = "/repository" + hubInfo.getSpacePath();
-
-            if (!normalizedPath.startsWith(repoSpacePath)) {
-                throw new IOException("Leaving the Hub space is not allowed for space relative URLs: "
-                    + decodedPath + " is not in " + hubInfo.getSpacePath());
-            }
-            return uri.normalize().toURL();
+            resolveSpaceRelativeUrl(origUrl, (HubSpaceLocationInfo) locationInfo);
         }
+
+        final var decodedPath = decodePath(origUrl);
         final var mountpointRelUrl = URI.create("knime://knime.mountpoint" + decodedPath).toURL();
 
         return resolveMountpointRelativeUrl(mountpointRelUrl, workflowContext);
+    }
+
+    static URL resolveSpaceRelativeUrl(final URL origUrl, final HubSpaceLocationInfo hubInfo)
+        throws IOException {
+
+        final var repoAddress = hubInfo.getRepositoryAddress();
+        final var repoSpacePath = repoAddress.getPath() + hubInfo.getSpacePath();
+        final var decodedPath = decodePath(origUrl);
+        final var fullPath = repoSpacePath + decodedPath + ":data";
+
+        final var query = hubInfo.getSpaceVersion().isPresent() ?
+            String.format(SPACE_VERSION_FORMAT, hubInfo.getSpaceVersion().get()) : null; //NOSONAR
+
+        try {
+            final var normalizedUri = new URI(repoAddress.getScheme(), null,
+                repoAddress.getHost(), repoAddress.getPort(), fullPath, query, null).normalize();
+
+            final var normalizedFullPath = normalizedUri.getPath();
+
+            if (!normalizedFullPath.startsWith(repoSpacePath)) {
+                throw new IOException("Leaving the Hub space is not allowed for space relative URLs: "
+                    + decodedPath + " is not in " + hubInfo.getSpacePath());
+            }
+
+            return normalizedUri.toURL();
+        } catch (URISyntaxException e) {
+            throw new IOException(e);
+        }
     }
 
     private URLConnection openExternalMountConnection(final URL url) throws IOException {
