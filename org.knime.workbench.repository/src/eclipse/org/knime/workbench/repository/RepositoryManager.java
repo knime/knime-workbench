@@ -172,11 +172,12 @@ public final class RepositoryManager {
         if (monitor.isCanceled()) {
             return;
         }
-        readNodes(monitor, m_root, false);
+        var isIncludeDeprecated = Boolean.getBoolean("knime.repository.deprecated.show"); // false in production code
+        readNodes(monitor, m_root, isIncludeDeprecated);
         if (monitor.isCanceled()) {
             return;
         }
-        readNodeSets(monitor, m_root, false);
+        readNodeSets(monitor, m_root, isIncludeDeprecated);
         if (monitor.isCanceled()) {
             return;
         }
