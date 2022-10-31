@@ -293,7 +293,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         Predicate<NodeInfo> isSourceNode = nodeInfo -> {
             var nt = getNodeTemplate(nodeInfo);
             try {
-                return nt != null && nt.createFactoryInstance().getType() == NodeType.Source;
+                return nt != null && nt.getType() == NodeType.Source;
             } catch (Exception e) {
                 LOGGER.warn(String.format("Could not create a factory instance for <%s>", nodeInfo), e);
                 return false;
@@ -325,7 +325,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                     // Prevent state transition if already disposed. In that case, the Part can no longer be used.
                     m_loadState.set(LoadState.INITIALIZED);
                 }
-                initializeNodeRecommendationManager(); // Initialize the recommendation manager here
+                initializeNodeRecommendationManager();
                 NodeRecommendationManager.getInstance().addUpdateListener(WorkflowCoachView.this);
                 updateFrequencyColumnHeadersAndToolTips();
                 updateInput(StructuredSelection.EMPTY);
@@ -515,7 +515,8 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         }
 
         //TODO: cache node recommendations??
-        var recommendationsWithoutDups = NodeRecommendationManager.joinRecommendationsWithoutDuplications(recommendations);
+        var recommendationsWithoutDups =
+            NodeRecommendationManager.joinRecommendationsWithoutDuplications(recommendations);
 
         //update viewer
         changeViewerStateTo(ViewerState.RECOMMENDATIONS);
