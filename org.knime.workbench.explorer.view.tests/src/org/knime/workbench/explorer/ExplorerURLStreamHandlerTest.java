@@ -588,7 +588,7 @@ public class ExplorerURLStreamHandlerTest {
      * @throws Exception if an error occurs
      */
     @Test
-    public void testResolveSpaceRelativeURLWithVersion() throws Exception { // NOSONAR
+    public void testResolveSpaceRelativeURLWithVersion() throws Exception { // NOSONAR rewrite tests using @ParameterizedTest in JUnit 5
         final var repoAddressUri = URI.create("https://api.hub.knime.com:443/knime/rest/v4/repository");
         final var currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
 
