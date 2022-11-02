@@ -52,8 +52,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,7 +59,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -78,11 +75,12 @@ import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.contextv2.HubSpaceLocationInfo;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
+import org.knime.core.util.auth.Authenticator;
 import org.knime.core.util.auth.SimpleTokenAuthenticator;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler.ExplorerURLConnection;
 import org.mockito.Mockito;
+
 
 /**
  * Testcases for {@link ExplorerURLStreamHandler}.
@@ -590,21 +588,34 @@ public class ExplorerURLStreamHandlerTest {
      * @throws Exception if an error occurs
      */
     @Test
-    public void testResolveSpaceRelativeUrlWithVersion() throws Exception {
+    public void testResolveSpaceRelativeURLWithVersion() throws Exception { // NOSONAR
+        final var repoAddressUri = URI.create("https://api.hub.knime.com:443/knime/rest/v4/repository");
+        final var currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
 
-        String repoAddress = "https://api.hub.knime.com:443/knime/rest/v4/repository";
+        final var context = WorkflowContextV2.builder()
+                .withHubJobExecutor(exec -> exec
+                    .withCurrentUserAsUserId()
+                    .withLocalWorkflowPath(currentLocation)
+                    .withJobId(UUID.randomUUID())
+                    .withScope("test", "test")
+                    .withJobCreator("test"))
+                .withHubSpaceLocation(loc -> loc
+                    .withRepositoryAddress(repoAddressUri)
+                    .withWorkflowPath("/Users/john/Private")
+                    .withAuthenticator(Mockito.mock(Authenticator.class))
+                    .withDefaultMountId("My-Knime-Hub")
+                    .withSpace("/Users/john/Private", "*11", "4")
+                    .withWorkflowItemId("*12"))
+                .build();
 
-        HubSpaceLocationInfo hubInfo = Mockito.mock(HubSpaceLocationInfo.class);
-        when(hubInfo.getRepositoryAddress()).thenReturn(URI.create(repoAddress));
-        when(hubInfo.getSpacePath()).thenReturn("/Users/john/Private");
-        when(hubInfo.getSpaceVersion()).thenReturn(Optional.of("4"));
+        final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
+            new WorkflowCreationHelper(context));
+        wfm.save(currentLocation.toFile(), new ExecutionMonitor(), false);
+        NodeContext.pushContext(wfm);
 
-        URL url = new URL("knime://knime.space/test%20small.txt");
-        URL result = ExplorerURLStreamHandler.resolveSpaceRelativeUrl(url, hubInfo);
-
-        URL expectedURL = new URL(repoAddress
-            + "/Users/john/Private/test%20small.txt:data?spaceVersion=4");
-        assertEquals(expectedURL, result);
+        assertResolvedURIEquals("Unexpected resolved URL",
+            URI.create(repoAddressUri.toString() + "/Users/john/Private/boss/test%20small.txt:data?spaceVersion=4"),
+            new URL("knime://knime.space/boss/test%20small.txt"));
     }
 
     /**
@@ -613,21 +624,70 @@ public class ExplorerURLStreamHandlerTest {
      * @throws Exception if an error occurs
      */
     @Test
-    public void testResolveSpaceRelativeUrlWithoutVersion() throws Exception {
+    public void testResolveSpaceRelativeURLWithoutVersion() throws Exception {
+        final var repoAddressUri = URI.create("https://api.hub.knime.com:443/knime/rest/v4/repository");
+        final var currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
 
-        String repoAddress = "https://api.hub.knime.com:443/knime/rest/v4/repository";
+        final var context = WorkflowContextV2.builder()
+                .withHubJobExecutor(exec -> exec
+                    .withCurrentUserAsUserId()
+                    .withLocalWorkflowPath(currentLocation)
+                    .withJobId(UUID.randomUUID())
+                    .withScope("test", "test")
+                    .withJobCreator("test"))
+                .withHubSpaceLocation(loc -> loc
+                    .withRepositoryAddress(repoAddressUri)
+                    .withWorkflowPath("/Users/john/Private")
+                    .withAuthenticator(Mockito.mock(Authenticator.class))
+                    .withDefaultMountId("My-Knime-Hub")
+                    .withSpace("/Users/john/Private", "*11", null)
+                    .withWorkflowItemId("*12"))
+                .build();
 
-        HubSpaceLocationInfo hubInfo = Mockito.mock(HubSpaceLocationInfo.class);
-        when(hubInfo.getRepositoryAddress()).thenReturn(URI.create(repoAddress));
-        when(hubInfo.getSpacePath()).thenReturn("/Users/john/Private");
-        when(hubInfo.getSpaceVersion()).thenReturn(Optional.empty());
+        final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
+            new WorkflowCreationHelper(context));
+        wfm.save(currentLocation.toFile(), new ExecutionMonitor(), false);
+        NodeContext.pushContext(wfm);
 
-        URL url = new URL("knime://knime.space/test%20small.txt");
-        URL result = ExplorerURLStreamHandler.resolveSpaceRelativeUrl(url, hubInfo);
+        assertResolvedURIEquals("Unexpected resolved URL",
+            URI.create(repoAddressUri.toString() + "/Users/john/Private/boss/test%20small.txt:data"),
+            new URL("knime://knime.space/boss/test%20small.txt"));
+    }
 
-        URL expectedURL = new URL(repoAddress
-            + "/Users/john/Private/test%20small.txt:data");
-        assertEquals(expectedURL, result);
+    /**
+     * Checks if space-relative knime-URLs are resolved correctly with empty version.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveSpaceRelativeURLWithEmptyVersion() throws Exception {
+        final var repoAddressUri = URI.create("https://api.hub.knime.com:443/knime/rest/v4/repository");
+        final var currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
+
+        final var context = WorkflowContextV2.builder()
+                .withHubJobExecutor(exec -> exec
+                    .withCurrentUserAsUserId()
+                    .withLocalWorkflowPath(currentLocation)
+                    .withJobId(UUID.randomUUID())
+                    .withScope("test", "test")
+                    .withJobCreator("test"))
+                .withHubSpaceLocation(loc -> loc
+                    .withRepositoryAddress(repoAddressUri)
+                    .withWorkflowPath("/Users/john/Private")
+                    .withAuthenticator(Mockito.mock(Authenticator.class))
+                    .withDefaultMountId("My-Knime-Hub")
+                    .withSpace("/Users/john/Private", "*11", "")
+                    .withWorkflowItemId("*12"))
+                .build();
+
+        final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
+            new WorkflowCreationHelper(context));
+        wfm.save(currentLocation.toFile(), new ExecutionMonitor(), false);
+        NodeContext.pushContext(wfm);
+
+        assertResolvedURIEquals("Unexpected resolved URL",
+            URI.create(repoAddressUri.toString() + "/Users/john/Private/boss/test%20small.txt:data?spaceVersion="),
+            new URL("knime://knime.space/boss/test%20small.txt"));
     }
 
     /**
@@ -636,23 +696,60 @@ public class ExplorerURLStreamHandlerTest {
      * @throws Exception if an error occurs
      */
     @Test
-    public void testResolveSpaceRelativeUrlDontLeaveSpace() throws Exception {
+    public void testResolveSpaceRelativeURLDontLeaveSpace() throws Exception {
+        final var repoAddressUri = URI.create("https://api.hub.knime.com:443/knime/rest/v4/repository");
+        final var currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
 
-        String repoAddress = "https://api.hub.knime.com:443/knime/rest/v4/repository";
+        final var context = WorkflowContextV2.builder()
+                .withHubJobExecutor(exec -> exec
+                    .withCurrentUserAsUserId()
+                    .withLocalWorkflowPath(currentLocation)
+                    .withJobId(UUID.randomUUID())
+                    .withScope("test", "test")
+                    .withJobCreator("test"))
+                .withHubSpaceLocation(loc -> loc
+                    .withRepositoryAddress(repoAddressUri)
+                    .withWorkflowPath("/Users/john/Private")
+                    .withAuthenticator(Mockito.mock(Authenticator.class))
+                    .withDefaultMountId("My-Knime-Hub")
+                    .withSpace("/Users/john/Private", "*11", "4")
+                    .withWorkflowItemId("*12"))
+                .build();
 
-        HubSpaceLocationInfo hubInfo = Mockito.mock(HubSpaceLocationInfo.class);
-        when(hubInfo.getRepositoryAddress()).thenReturn(URI.create(repoAddress));
-        when(hubInfo.getSpacePath()).thenReturn("/Users/john/Private");
-        when(hubInfo.getSpaceVersion()).thenReturn(Optional.of(""));
+        final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
+            new WorkflowCreationHelper(context));
+        wfm.save(currentLocation.toFile(), new ExecutionMonitor(), false);
+        NodeContext.pushContext(wfm);
 
-        URL url = new URL("knime://knime.space/../test.txt");
+        final var url = new URL("knime://knime.space/../test%20small.txt");
+        final var e = assertThrows(IOException.class, () -> m_handler.openConnection(url));
+        assertTrue("Error should indicate that leaving the Hub space is not allowed.",
+            e.getMessage().contains("Leaving the Hub space is not allowed for space relative URLs:"));
+    }
 
-        try {
-            ExplorerURLStreamHandler.resolveSpaceRelativeUrl(url, hubInfo);
-            fail();
-        } catch (IOException e) {
-            assertTrue(e.getMessage().contains("Leaving the Hub space is not allowed for space relative URLs:"));
-        }
+    /**
+     * Checks if space-relative get redirected to mountpoint-relative knime-URLs.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveSpaceRelativeURLToMountPointRelativeLocal() throws Exception {
+        final var currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
+        final var context = WorkflowContextV2.builder()
+                .withAnalyticsPlatformExecutor(exec -> exec
+                    .withCurrentUserAsUserId()
+                    .withLocalWorkflowPath(currentLocation)
+                    .withMountpoint("LOCAL", currentLocation.getParent()))
+                .withLocalLocation()
+                .build();
+
+        final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
+            new WorkflowCreationHelper(context));
+        NodeContext.pushContext(wfm);
+
+        assertResolvedURIEquals("Unexpected resolved URL",
+            currentLocation.getParent().resolve("test.txt").toUri(),
+            new URL("knime://knime.space/test.txt"));
     }
 
     /**

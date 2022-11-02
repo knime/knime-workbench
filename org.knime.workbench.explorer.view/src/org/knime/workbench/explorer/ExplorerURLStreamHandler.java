@@ -124,6 +124,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      */
     public static final String SPACE_RELATIVE = "knime.space";
 
+    private static final String SPACE_PATH_FORMAT = "%s%s:data";
+
     private static final String SPACE_VERSION_FORMAT = "spaceVersion=%s";
 
     private static final URIPathEncoder UTF8_ENCODER = new URIPathEncoder(StandardCharsets.UTF_8);
@@ -221,7 +223,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             return UTF8_ENCODER
                 .encodePathSegments(resolveNodeRelativeUrl(url, NodeContext.getContext(), workflowContext));
         } else if (SPACE_RELATIVE.equalsIgnoreCase(url.getHost())) {
-            return UTF8_ENCODER.encodePathSegments(resolveSpaceRelativeUrl(url, workflowContext));
+            return UTF8_ENCODER.encodePathSegments(resolveSpaceRelativeUrl(url));
         } else {
             return UTF8_ENCODER.encodePathSegments(url);
         }
@@ -419,29 +421,31 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         return resolvedPath.toURI().toURL();
     }
 
-    private static URL resolveSpaceRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
+    private static URL resolveSpaceRelativeUrl(final URL origUrl)
             throws IOException {
 
-        final var workflowContext2 = NodeContext.getContext().getWorkflowManager().getContextV2();
-        final var locationInfo = workflowContext2.getLocationInfo();
+        final var nodeContext = NodeContext.getContext();
+        final var locationInfo = nodeContext.getWorkflowManager().getContextV2().getLocationInfo();
 
         if (locationInfo instanceof HubSpaceLocationInfo) {
-            resolveSpaceRelativeUrl(origUrl, (HubSpaceLocationInfo) locationInfo);
+            return resolveSpaceRelativeUrl(origUrl, (HubSpaceLocationInfo) locationInfo);
         }
-
         final var decodedPath = decodePath(origUrl);
-        final var mountpointRelUrl = URI.create("knime://knime.mountpoint" + decodedPath).toURL();
+        final var mountpointRelUrl = URI.create(
+            String.format("knime://%s%s", MOUNTPOINT_RELATIVE, decodedPath)).toURL();
 
-        return resolveMountpointRelativeUrl(mountpointRelUrl, workflowContext);
+        return resolveMountpointRelativeUrl(mountpointRelUrl,
+            nodeContext.getContextObjectForClass(WorkflowManagerUI.class)
+            .map(WorkflowManagerUI::getContext).orElse(null));
     }
 
-    static URL resolveSpaceRelativeUrl(final URL origUrl, final HubSpaceLocationInfo hubInfo)
+    private static URL resolveSpaceRelativeUrl(final URL origUrl, final HubSpaceLocationInfo hubInfo)
         throws IOException {
 
         final var repoAddress = hubInfo.getRepositoryAddress();
         final var repoSpacePath = repoAddress.getPath() + hubInfo.getSpacePath();
         final var decodedPath = decodePath(origUrl);
-        final var fullPath = repoSpacePath + decodedPath + ":data";
+        final var fullPath = String.format(SPACE_PATH_FORMAT, repoSpacePath, decodedPath);
 
         final var query = hubInfo.getSpaceVersion().isPresent() ?
             String.format(SPACE_VERSION_FORMAT, hubInfo.getSpaceVersion().get()) : null; //NOSONAR
@@ -456,7 +460,6 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                 throw new IOException("Leaving the Hub space is not allowed for space relative URLs: "
                     + decodedPath + " is not in " + hubInfo.getSpacePath());
             }
-
             return normalizedUri.toURL();
         } catch (URISyntaxException e) {
             throw new IOException(e);
