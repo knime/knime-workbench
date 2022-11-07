@@ -64,8 +64,10 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.URIUtil;
 import org.knime.core.internal.ReferencedFile;
+import org.knime.core.node.util.ClassUtils;
 import org.knime.core.node.workflow.NodeContext;
-import org.knime.core.node.workflow.WorkflowContext;
+import org.knime.core.node.workflow.contextv2.AnalyticsPlatformExecutorInfo;
+import org.knime.core.node.workflow.contextv2.JobExecutorInfo;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
@@ -73,12 +75,12 @@ import org.knime.core.ui.node.workflow.WorkflowContextUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.KNIMEServerHostnameVerifier;
+import org.knime.core.util.KnimeUrlType;
+import org.knime.core.util.Pair;
 import org.knime.core.util.auth.Authenticator;
 import org.knime.core.util.auth.CouldNotAuthorizeException;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.url.AbstractURLStreamHandlerService;
@@ -100,21 +102,21 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      *
      * @since 5.0
      */
-    public static final String WORKFLOW_RELATIVE = "knime.workflow";
+    public static final String WORKFLOW_RELATIVE = KnimeUrlType.WORKFLOW_RELATIVE.getAuthority();
 
     /**
      * The magic hostname for mountpoint-relative URLs.
      *
      * @since 5.0
      */
-    public static final String MOUNTPOINT_RELATIVE = "knime.mountpoint";
+    public static final String MOUNTPOINT_RELATIVE = KnimeUrlType.MOUNTPOINT_RELATIVE.getAuthority();
 
     /**
      * The magic hostname for node-relative URLs.
      *
      * @since 6.4
      */
-    public static final String NODE_RELATIVE = "knime.node";
+    public static final String NODE_RELATIVE = KnimeUrlType.NODE_RELATIVE.getAuthority();
 
     private static final URIPathEncoder UTF8_ENCODER = new URIPathEncoder(StandardCharsets.UTF_8);
 
@@ -124,10 +126,10 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      * Creates a new URL stream handler.
      */
     public ExplorerURLStreamHandler() {
-        Bundle myself = FrameworkUtil.getBundle(getClass());
+        final var myself = FrameworkUtil.getBundle(getClass());
         if (myself != null) {
-            BundleContext ctx = myself.getBundleContext();
-            ServiceReference<ServerRequestModifier> ser = ctx.getServiceReference(ServerRequestModifier.class);
+            final var ctx = myself.getBundleContext();
+            final ServiceReference<ServerRequestModifier> ser = ctx.getServiceReference(ServerRequestModifier.class);
             if (ser != null) {
                 try {
                     m_requestModifier = ctx.getService(ser);
@@ -142,19 +144,16 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public URLConnection openConnection(final URL url) throws IOException {
-        URL resolvedUrl = resolveKNIMEURL(url);
+        final var resolvedUrl = resolveKNIMEURL(url);
         if (ExplorerFileSystem.SCHEME.equals(resolvedUrl.getProtocol())) {
             return openExternalMountConnection(resolvedUrl);
         } else if ("http".equals(resolvedUrl.getProtocol()) || "https".equals(resolvedUrl.getProtocol())) {
             // neither the node context nor the workflow context can be null here, otherwise resolveKNIMEURL would have
             // already failed
-            WorkflowContextUI workflowContext =
-                NodeContext.getContext().getContextObjectForClass(WorkflowManagerUI.class).get().getContext();
+            final var workflowContext =
+                NodeContext.getContext().getContextObjectForClass(WorkflowManagerUI.class).orElseThrow().getContext();
             URLConnection conn = resolvedUrl.openConnection();
             authorizeClient(workflowContext, conn);
 
@@ -179,40 +178,39 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      * @throws IOException if an error occurs while resolving the URL
      */
     public static URL resolveKNIMEURL(final URL url) throws IOException {
-        if (!ExplorerFileSystem.SCHEME.equalsIgnoreCase(url.getProtocol())) {
-            throw new IOException("Unexpected protocol: " + url.getProtocol() + ". Only " + ExplorerFileSystem.SCHEME
+        if (!KnimeUrlType.SCHEME.equalsIgnoreCase(url.getProtocol())) {
+            throw new IOException("Unexpected protocol: " + url.getProtocol() + ". Only " + KnimeUrlType.SCHEME
                 + " is supported by this handler.");
         }
-        NodeContext nodeContext = NodeContext.getContext();
-        WorkflowContextUI workflowContext;
-        if (nodeContext != null) {
-            workflowContext =
-                nodeContext.getContextObjectForClass(WorkflowManagerUI.class).map(wfm -> wfm.getContext()).orElse(null);
-        } else {
-            workflowContext = null;
-        }
 
-        if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost()) || MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost())
-                || NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
-            if (nodeContext == null) {
+        final var nodeContext = Optional.ofNullable(NodeContext.getContext());
+        final var wfmUI = nodeContext.flatMap(ctx -> ctx.getContextObjectForClass(WorkflowManagerUI.class));
+        final var workflowContext = wfmUI.map(WorkflowManagerUI::getContext).orElse(null);
+
+        final var host = url.getHost();
+        final var isWorkflowRel = WORKFLOW_RELATIVE.equalsIgnoreCase(host);
+        final var isMountpointRel = MOUNTPOINT_RELATIVE.equalsIgnoreCase(host);
+        final var isNodeRel = NODE_RELATIVE.equalsIgnoreCase(host);
+        if (isWorkflowRel || isMountpointRel || isNodeRel) {
+            if (nodeContext.isEmpty()) {
                 throw new IOException("No context for relative URL available");
             } else if (workflowContext == null) {
-                throw new IOException("Workflow " + nodeContext.getContextObjectForClass(WorkflowManagerUI.class)
-                    + " does not have a context");
+                throw new IOException("Workflow " + wfmUI + " does not have a context");
             }
         }
 
-        if (WORKFLOW_RELATIVE.equalsIgnoreCase(url.getHost())) {
-            return UTF8_ENCODER.encodePathSegments(resolveWorkflowRelativeUrl(url, workflowContext));
-        } else if (MOUNTPOINT_RELATIVE.equalsIgnoreCase(url.getHost()) || ((workflowContext != null)
-            && url.getHost().equalsIgnoreCase(getRemoteMountId(workflowContext).orElse(null)))) {
-            return UTF8_ENCODER.encodePathSegments(resolveMountpointRelativeUrl(url, workflowContext));
-        } else if (NODE_RELATIVE.equalsIgnoreCase(url.getHost())) {
-            return UTF8_ENCODER
-                .encodePathSegments(resolveNodeRelativeUrl(url, NodeContext.getContext(), workflowContext));
+        final URL result;
+        if (isWorkflowRel) {
+            result = resolveWorkflowRelativeUrl(url, workflowContext);
+        } else if (isMountpointRel || (workflowContext != null
+                && host.equalsIgnoreCase(getRemoteMountId(workflowContext).orElse(null)))) {
+            result = resolveMountpointRelativeUrl(url, workflowContext);
+        } else if (isNodeRel) {
+            result = resolveNodeRelativeUrl(url, nodeContext.orElseThrow(), workflowContext);
         } else {
-            return UTF8_ENCODER.encodePathSegments(url);
+            result = url;
         }
+        return UTF8_ENCODER.encodePathSegments(result);
     }
 
     private static Optional<String> getRemoteMountId(final WorkflowContextUI workflowContext) {
@@ -220,40 +218,40 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             return Optional.of(((RemoteWorkflowContext)workflowContext).getMountId());
         } else {
             return Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
-                    .map(WorkflowContextV2::getLocationInfo)
-                    .filter(RestLocationInfo.class::isInstance)
-                    .map(loc -> ((RestLocationInfo) loc).getDefaultMountId());
+                    .filter(ctx -> ctx.getExecutorInfo() instanceof JobExecutorInfo)
+                    .flatMap(ctx -> ClassUtils.castOptional(RestLocationInfo.class, ctx.getLocationInfo()))
+                    .map(RestLocationInfo::getDefaultMountId);
         }
     }
 
     private static Optional<URI> getRemoteRepositoryAddress(final WorkflowContextUI workflowContext) {
         if (workflowContext instanceof RemoteWorkflowContext) {
-            return Optional.of(((RemoteWorkflowContext)workflowContext).getRepositoryAddress());
+            return Optional.of(((RemoteWorkflowContext) workflowContext).getRepositoryAddress());
         } else {
             return Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
-                    .map(WorkflowContextV2::getLocationInfo)
-                    .filter(RestLocationInfo.class::isInstance)
-                    .map(loc -> ((RestLocationInfo) loc).getRepositoryAddress());
+                    .filter(ctx -> ctx.getExecutorInfo() instanceof JobExecutorInfo)
+                    .flatMap(ctx -> ClassUtils.castOptional(RestLocationInfo.class, ctx.getLocationInfo()))
+                    .map(RestLocationInfo::getRepositoryAddress);
+        }
+    }
+
+    private static Optional<Authenticator> getServerAuthenticator(final WorkflowContextUI workflowContext) {
+        if (workflowContext instanceof RemoteWorkflowContext) {
+            return Optional.of(((RemoteWorkflowContext) workflowContext).getServerAuthenticator());
+        } else {
+            return Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
+                    .filter(ctx -> ctx.getExecutorInfo() instanceof JobExecutorInfo)
+                    .flatMap(ctx -> ClassUtils.castOptional(RestLocationInfo.class, ctx.getLocationInfo()))
+                    .map(RestLocationInfo::getAuthenticator);
         }
     }
 
     private static void authorizeClient(final WorkflowContextUI workflowContext, final URLConnection conn)
         throws IOException {
-        Authenticator authenticator = null;
-        if (workflowContext instanceof RemoteWorkflowContext) {
-            authenticator = ((RemoteWorkflowContext)workflowContext).getServerAuthenticator();
-        } else {
-            var unwrappedAuthenticator = Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
-                    .map(WorkflowContextV2::getLocationInfo)
-                    .filter(RestLocationInfo.class::isInstance)
-                    .map(loc -> ((RestLocationInfo) loc).getAuthenticator());
-
-            authenticator = unwrappedAuthenticator.orElse(null);
-        }
-
-        if (authenticator != null) {
+        final Optional<Authenticator> authenticator = getServerAuthenticator(workflowContext);
+        if (authenticator.isPresent()) {
             try {
-                authenticator.authorizeClient(conn);
+                authenticator.get().authorizeClient(conn);
             } catch (CouldNotAuthorizeException e) {
                 throw new IOException("Error while authenticating the client: " + e.getMessage(), e);
             }
@@ -263,125 +261,137 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
         throws IOException {
         if (Wrapper.wraps(workflowContext, WorkflowContextV2.class)) {
-            return resolveWorkflowRelativeUrl(origUrl, Wrapper.unwrap(workflowContext, WorkflowContextV2.class).toLegacyWorkflowContext());
-        } else {
-            assert workflowContext instanceof RemoteWorkflowContext;
-            RemoteWorkflowContext rwc = (RemoteWorkflowContext)workflowContext;
-            String decodedPath = decodePath(origUrl);
-            if (!leavesWorkflow(decodedPath)) {
-                throw new IllegalArgumentException(
-                    "Workflow relative URL points to a resource within a workflow. Not accessible.");
-            }
-            URI mpURI = rwc.getMountpointURI();
-            URI mpURIWithoutQueryAndFragment;
-            try {
-                mpURIWithoutQueryAndFragment =
-                    new URI(mpURI.getScheme(), null, mpURI.getHost(), mpURI.getPort(), mpURI.getPath(), null, null);
-            } catch (URISyntaxException e) {
-                throw new IOException(e);
-            }
-            URI uri = URIUtil.append(mpURIWithoutQueryAndFragment, decodedPath);
-            return uri.normalize().toURL();
+            return resolveWorkflowRelativeUrl(origUrl, Wrapper.unwrap(workflowContext, WorkflowContextV2.class));
         }
+
+        assert workflowContext instanceof RemoteWorkflowContext;
+        RemoteWorkflowContext rwc = (RemoteWorkflowContext) workflowContext;
+        final var decodedPath = decodePath(origUrl);
+        if (!leavesWorkflow(decodedPath)) {
+            throw new IllegalArgumentException(
+                "Workflow relative URL points to a resource within a workflow. Not accessible.");
+        }
+        final var mpURI = rwc.getMountpointURI();
+        final URI mpURIWithoutQueryAndFragment;
+        try {
+            mpURIWithoutQueryAndFragment =
+                new URI(mpURI.getScheme(), null, mpURI.getHost(), mpURI.getPort(), mpURI.getPath(), null, null);
+        } catch (URISyntaxException e) {
+            throw new IOException(e);
+        }
+        final var uri = URIUtil.append(mpURIWithoutQueryAndFragment, decodedPath);
+        return uri.normalize().toURL();
    }
 
-    private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
-        throws IOException {
-        String decodedPath = decodePath(origUrl);
+    private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContextV2 workflowContext2)
+            throws IOException {
+        final var decodedPath = decodePath(origUrl);
 
-        boolean leavesWorkflow = leavesWorkflow(decodedPath);
+        final boolean leavesWorkflow = leavesWorkflow(decodedPath);
 
-        if (leavesWorkflow && workflowContext.getRemoteRepositoryAddress().isPresent()
-            && workflowContext.getServerAuthenticator().isPresent()) {
-            URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(),
-                workflowContext.getRelativeRemotePath().get() + "/" + decodedPath + ":data");
+        final var executor = workflowContext2.getExecutorInfo();
+        final var restLocation = ClassUtils.castOptional(RestLocationInfo.class, workflowContext2.getLocationInfo());
+        if (leavesWorkflow && executor instanceof JobExecutorInfo && restLocation.isPresent()) {
+            // we're on a server of hub executor, resolve against the repository
+            final var restLocationInfo = restLocation.get();
+            final var uri = URIUtil.append(restLocationInfo.getRepositoryAddress(),
+                restLocationInfo.getWorkflowPath() + "/" + decodedPath + ":data");
             return uri.normalize().toURL();
-        } else if (leavesWorkflow && workflowContext.isTemporaryCopy() && workflowContext.getMountpointURI().isPresent()) {
-            URI uri = URIUtil.append(workflowContext.getMountpointURI().get(), decodedPath);
-            return uri.normalize().toURL();
-        } else {
-            // in local application, an executor controlled by a pre-4.4 server, an old job without a token, or
-            // a file inside the workflow
-            File currentLocation = workflowContext.getCurrentLocation();
-            File resolvedPath = new File(currentLocation, decodedPath);
-            if ((workflowContext.getOriginalLocation() != null)
-                && !currentLocation.equals(workflowContext.getOriginalLocation())
-                && !resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())) {
-                // we are outside the current workflow directory => use the original location in the server repository
-                resolvedPath = new File(workflowContext.getOriginalLocation(), decodedPath);
-            }
-
-            // if resolved path is outside the workflow, check whether it is still inside the mountpoint
-            if (!resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())
-                && (workflowContext.getMountpointRoot() != null)) {
-                URI normalizedRoot = workflowContext.getMountpointRoot().toPath().normalize().toUri();
-                URI normalizedPath = resolvedPath.toPath().normalize().toUri();
-
-                if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
-                    throw new IOException("Leaving the mount point is not allowed for workflow relative URLs: "
-                        + resolvedPath.getAbsolutePath() + " is not in "
-                        + workflowContext.getMountpointRoot().getAbsolutePath());
-                }
-            }
-            return resolvedPath.toURI().toURL();
         }
+
+        final var mountpointURI = workflowContext2.getMountpointURI();
+        if (leavesWorkflow && workflowContext2.isTemporyWorkflowCopyMode() && mountpointURI.isPresent()) {
+            // remote REST location, access via mountpoint-absolute URL
+            final var uri = URIUtil.append(mountpointURI.get(), decodedPath);
+            return uri.normalize().toURL();
+        }
+
+        // in local application, an executor controlled by a pre-4.4 server, an old job without a token,
+        // or a file inside the workflow
+        final var currentLocation = workflowContext2.getExecutorInfo().getLocalWorkflowPath();
+        final var resolvedFile = new File(currentLocation.toFile(), decodedPath);
+
+        // if resolved path is outside the workflow, check whether it is still inside the mountpoint
+        final var mountpoint = ClassUtils.castOptional(AnalyticsPlatformExecutorInfo.class, executor)
+                .flatMap(AnalyticsPlatformExecutorInfo::getMountpoint);
+
+        if (!resolvedFile.getCanonicalPath().startsWith(currentLocation.toFile().getCanonicalPath())
+                && mountpoint.isPresent()) {
+            final var mountpointRoot = mountpoint.get().getSecond();
+            final var normalizedRoot = mountpointRoot.normalize().toUri();
+            final var normalizedPath = resolvedFile.toPath().normalize().toUri();
+
+            if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
+                throw new IOException("Leaving the mount point is not allowed for workflow relative URLs: "
+                    + resolvedFile.getAbsolutePath() + " is not in " + mountpointRoot.toAbsolutePath());
+            }
+        }
+        return resolvedFile.toURI().toURL();
     }
 
     private static URL resolveMountpointRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
         throws IOException {
         if (Wrapper.wraps(workflowContext, WorkflowContextV2.class)) {
-            return resolveMountpointRelativeUrl(origUrl, Wrapper.unwrap(workflowContext, WorkflowContextV2.class).toLegacyWorkflowContext());
-        } else {
-            assert workflowContext instanceof RemoteWorkflowContext;
-            RemoteWorkflowContext rwc = (RemoteWorkflowContext)workflowContext;
-            String decodedPath = decodePath(origUrl);
-            URI mpUri = rwc.getMountpointURI();
-            URI uri;
-            try {
-                uri = new URI(mpUri.getScheme(), mpUri.getHost(), decodedPath, null);
-            } catch (URISyntaxException e) {
-                throw new IOException(e);
-            }
-            return uri.normalize().toURL();
+            return resolveMountpointRelativeUrl(origUrl, Wrapper.unwrap(workflowContext, WorkflowContextV2.class));
         }
+        assert workflowContext instanceof RemoteWorkflowContext;
+        RemoteWorkflowContext rwc = (RemoteWorkflowContext)workflowContext;
+        String decodedPath = decodePath(origUrl);
+        final var mpUri = rwc.getMountpointURI();
+        final URI uri;
+        try {
+            uri = new URI(mpUri.getScheme(), mpUri.getHost(), decodedPath, null);
+        } catch (URISyntaxException e) {
+            throw new IOException(e);
+        }
+        return uri.normalize().toURL();
     }
 
-    private static URL resolveMountpointRelativeUrl(final URL origUrl, final WorkflowContext workflowContext)
-        throws IOException {
-        String decodedPath = decodePath(origUrl);
+    private static URL resolveMountpointRelativeUrl(final URL origUrl, final WorkflowContextV2 workflowContext)
+            throws IOException {
+        final var decodedPath = decodePath(origUrl);
 
-        if (workflowContext.getRemoteRepositoryAddress().isPresent()
-            && workflowContext.getServerAuthenticator().isPresent()) {
-            URI uri = URIUtil.append(workflowContext.getRemoteRepositoryAddress().get(), decodedPath + ":data");
+        final var executorInfo = workflowContext.getExecutorInfo();
+        final var restLocationInfo = ClassUtils.castOptional(RestLocationInfo.class, workflowContext.getLocationInfo());
+        if (executorInfo instanceof JobExecutorInfo && restLocationInfo.isPresent()) {
+            // we're in a server or hub executor, access the repository
+            final var uri = URIUtil.append(restLocationInfo.get().getRepositoryAddress(), decodedPath + ":data");
             return uri.normalize().toURL();
-        } else if (workflowContext.isTemporaryCopy() && workflowContext.getMountpointURI().isPresent()) {
+        }
+
+        final var mountpointURI = workflowContext.getMountpointURI();
+        if (workflowContext.isTemporyWorkflowCopyMode() && mountpointURI.isPresent()) {
             try {
-                URI mpUri = workflowContext.getMountpointURI().get();
-                URI uri = new URI(mpUri.getScheme(), mpUri.getHost(), decodedPath, null);
+                // remote REST location, access via mountpoint-absolute URL
+                final var mpUri = mountpointURI.get();
+                final var uri = new URI(mpUri.getScheme(), mpUri.getHost(), decodedPath, null);
                 return uri.normalize().toURL();
             } catch (URISyntaxException ex) {
                 throw new IOException(ex);
             }
-        } else {
-            // in local application, an executor controlled by a pre-4.4 server, or an old job without a token
-            File mountpointRoot = workflowContext.getMountpointRoot();
-            File resolvedPath = new File(mountpointRoot, decodedPath);
-
-            URI normalizedPath = resolvedPath.toPath().normalize().toUri();
-            URI normalizedRoot = mountpointRoot.toPath().normalize().toUri();
-
-            if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
-                throw new IOException("Leaving the mount point is not allowed for mount point relative URLs: "
-                    + resolvedPath.getAbsolutePath() + " is not in " + mountpointRoot.getAbsolutePath());
-            }
-            return resolvedPath.toURI().toURL();
         }
+
+        // in local application, an executor controlled by a pre-4.4 server, or an old job without a token
+        final var mountpointRoot = ClassUtils.castOptional(AnalyticsPlatformExecutorInfo.class, executorInfo)
+                .flatMap(AnalyticsPlatformExecutorInfo::getMountpoint)
+                .map(Pair::getSecond)
+                .orElseThrow(() -> new IllegalStateException("Mountpoint-relative URL without a mountpoint."));
+        final var resolvedFile = new File(mountpointRoot.toFile(), decodedPath);
+        final var normalizedPath = resolvedFile.toPath().normalize().toUri();
+        final var normalizedRoot = mountpointRoot.normalize().toUri();
+
+        if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
+            throw new IOException("Leaving the mount point is not allowed for mount point relative URLs: "
+                + resolvedFile.getAbsolutePath() + " is not in " + mountpointRoot.toFile().getAbsolutePath());
+        }
+        return resolvedFile.toURI().toURL();
     }
 
     private static URL resolveNodeRelativeUrl(final URL origUrl, final NodeContext nodeContext,
         final WorkflowContextUI workflowContext) throws IOException {
         if (Wrapper.wraps(workflowContext, WorkflowContextV2.class)) {
-            return resolveNodeRelativeUrl(origUrl, nodeContext, Wrapper.unwrap(workflowContext, WorkflowContextV2.class).toLegacyWorkflowContext());
+            return resolveNodeRelativeUrl(origUrl, nodeContext,
+                Wrapper.unwrap(workflowContext, WorkflowContextV2.class));
         } else {
             throw new IllegalArgumentException(
                 "Node relative URLs cannot be resolved from within purely remote workflows.");
@@ -389,28 +399,28 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     }
 
     private static URL resolveNodeRelativeUrl(final URL origUrl, final NodeContext nodeContext,
-        final WorkflowContext workflowContext) throws IOException {
+        final WorkflowContextV2 workflowContext) throws IOException {
         ReferencedFile nodeDirectoryRef = nodeContext.getNodeContainer().getNodeContainerDirectory();
         if (nodeDirectoryRef == null) {
             throw new IOException("Workflow must be saved before node-relative URLs can be used");
         }
-        String decodedPath = decodePath(origUrl);
-        File resolvedPath = new File(nodeDirectoryRef.getFile().getAbsolutePath(), decodedPath);
 
-        File currentLocation = workflowContext.getCurrentLocation();
+        final var resolvedPath = new File(nodeDirectoryRef.getFile().getAbsolutePath(), decodePath(origUrl));
 
         // check if resolved path leaves the workflow
-        if (!resolvedPath.getCanonicalPath().startsWith(currentLocation.getCanonicalPath())) {
+        final var currentLocation = workflowContext.getExecutorInfo().getLocalWorkflowPath().toFile();
+        final var resolved = resolvedPath.getCanonicalPath();
+        final var workflow = currentLocation.getCanonicalPath();
+        if (!resolved.startsWith(workflow)) {
             throw new IOException("Leaving the workflow is not allowed for node-relative URLs: "
-                + resolvedPath.getCanonicalPath() + " is not in " + currentLocation.getCanonicalPath());
+                + resolved + " is not in " + workflow);
         }
         return resolvedPath.toURI().toURL();
     }
 
-    private URLConnection openExternalMountConnection(final URL url) throws IOException {
-        AbstractExplorerFileStore efs;
+    private static URLConnection openExternalMountConnection(final URL url) throws IOException {
         try {
-            efs = ExplorerMountTable.getFileSystem().getStore(url.toURI());
+            final var efs = ExplorerMountTable.getFileSystem().getStore(url.toURI());
             return new ExplorerURLConnection(url, efs);
         } catch (URISyntaxException e) {
             throw new IOException(e.getMessage(), e);
@@ -463,17 +473,11 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             m_file = file;
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public void connect() throws IOException {
             // nothing to do
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public InputStream getInputStream() throws IOException {
             if (m_file == null) {
@@ -486,9 +490,6 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             }
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public OutputStream getOutputStream() throws IOException {
             if (m_file == null) {
@@ -501,9 +502,6 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             }
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public int getContentLength() {
             if (m_file == null) {

@@ -98,11 +98,7 @@ final class URIPathEncoder {
 
     private static boolean hasUNCPath(final URI uri) {
         String path = uri.getPath();
-        boolean hasUNCPath = false;
-        if(path != null){
-            hasUNCPath = path.startsWith(UNC_PREFIX);
-        }
-        return hasUNCPath;
+        return path != null && path.startsWith(UNC_PREFIX);
     }
 
     /**
@@ -131,7 +127,7 @@ final class URIPathEncoder {
      * @return a string representation of the encoded UNC path
      */
     private String encodeUNCPath(final URI uri) {
-        URI uriEncoded = encodeURI(uri);
+        final var uriEncoded = encodeURI(uri);
         return "////" + uriEncoded.getHost() + uriEncoded.getPath();
     }
 
