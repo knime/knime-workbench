@@ -8,7 +8,6 @@ Bundle-Activator: org.knime.workbench.ui.KNIMEUIPlugin
 Bundle-Vendor: KNIME AG, Zurich, Switzerland
 Export-Package: org.knime.workbench.ui,
  org.knime.workbench.ui.async,
- org.knime.workbench.ui.database,
  org.knime.workbench.ui.favorites,
  org.knime.workbench.ui.favorites.actions,
  org.knime.workbench.ui.hub,

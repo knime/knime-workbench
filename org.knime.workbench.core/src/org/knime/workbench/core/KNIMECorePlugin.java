@@ -225,12 +225,11 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
                             return;
                         }
                         setLogLevel(newName);
-                    } else if (HeadlessPreferencesConstants.P_DATABASE_DRIVERS.equals(propertyName)) {
-                        String dbDrivers = (String)event.getNewValue();
-                        initDatabaseDriver(dbDrivers);
                     } else if (HeadlessPreferencesConstants.P_DATABASE_TIMEOUT.equals(propertyName)) {
+                        //setting is still exposed in the new db preference page and stored in this preference store!!!
                         DatabaseConnectionSettings.setDatabaseTimeout(Integer.parseInt(event.getNewValue().toString()));
                     } else if (WorkflowMigrationSettings.P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED.contentEquals(propertyName)) {
+                        //setting is still exposed in the new db preference page and stored in this preference store!!!
                         final Object newValue = event.getNewValue();
                         if (newValue instanceof Boolean) {
                             WorkflowMigrationSettings.setNotificationEnabled((Boolean)newValue);
@@ -263,14 +262,15 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             KnimeEncryption.setEncryptionKeySupplier(
                     new EclipseEncryptionKeySupplier());
 
-            // load database driver files from core preference page
+            // continue to load deprecated database driver files from this preferences store even though they are no
+            //longer exposed anywhere in the UI
             String dbDrivers = pStore.getString(
                     HeadlessPreferencesConstants.P_DATABASE_DRIVERS);
             initDatabaseDriver(dbDrivers);
-
+            //setting is still exposed in the new db preference page and handled here!!!
             DatabaseConnectionSettings.setDatabaseTimeout(pStore
                 .getInt(HeadlessPreferencesConstants.P_DATABASE_TIMEOUT));
-
+            //setting is still exposed in the new db preference page and handled here!!!
             WorkflowMigrationSettings.setNotificationEnabled(pStore
                 .getBoolean(WorkflowMigrationSettings.P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED));
         } catch (Throwable e) {
@@ -280,7 +280,7 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
         }
     }
 
-    private void initDatabaseDriver(final String dbDrivers) {
+    private static void initDatabaseDriver(final String dbDrivers) {
         if (dbDrivers != null && !dbDrivers.trim().isEmpty()) {
             for (String d : dbDrivers.split(";")) {
                 try {

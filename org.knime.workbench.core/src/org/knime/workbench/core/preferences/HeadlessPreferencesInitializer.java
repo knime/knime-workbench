@@ -85,9 +85,11 @@ public class HeadlessPreferencesInitializer extends AbstractPreferenceInitialize
 
         store.setDefault(P_SEND_ANONYMOUS_STATISTICS, false);
 
+        //Since the deprecation of the legacy database framework the following two settings are migrated
+        //to the new database preference page defined in the DBPreferencePage class which still stores the values
+        //in the KNIMECorePlugin preferences store!!!
         int syspropTimeout = DatabaseConnectionSettings.getSystemPropertyDatabaseTimeout();
         store.setDefault(P_DATABASE_TIMEOUT, syspropTimeout >= 0 ? syspropTimeout : 15);
-
         store.setDefault(P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED, true);
     }
 

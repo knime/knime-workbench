@@ -120,12 +120,6 @@
             name="Master Key">
       </page>
       <page
-            category="org.knime.workbench.ui.preferences"
-            class="org.knime.workbench.ui.database.DatabasePreferencePage"
-            id="org.knime.workbench.ui.preferences.database"
-            name="Databases (legacy)">
-      </page>
-      <page
             class="org.knime.workbench.ui.preferences.HeadlessPreferencePage"
             id="org.knime.workbench.ui.preferences"
             name="KNIME">
