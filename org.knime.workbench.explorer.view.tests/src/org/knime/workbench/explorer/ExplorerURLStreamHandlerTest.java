@@ -84,6 +84,7 @@ import org.knime.workbench.explorer.ExplorerURLStreamHandler.ExplorerURLConnecti
  * Testcases for {@link ExplorerURLStreamHandler}.
  *
  * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
+ * @author Leonard Wörteler, KNIME GmbH, Konstanz, Germany
  */
 public class ExplorerURLStreamHandlerTest {
 
@@ -96,8 +97,9 @@ public class ExplorerURLStreamHandlerTest {
      */
     @Before
     public void indexWFMsBefore() {
-        m_staticWFMs =
-                WorkflowManager.ROOT.getNodeContainers().stream().map(NodeContainer::getID).collect(Collectors.toSet());
+        m_staticWFMs = WorkflowManager.ROOT.getNodeContainers().stream()
+                .map(NodeContainer::getID)
+                .collect(Collectors.toSet());
     }
 
     /**

@@ -51,11 +51,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -78,6 +78,7 @@ import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.KNIMEServerHostnameVerifier;
 import org.knime.core.util.KnimeUrlType;
 import org.knime.core.util.Pair;
+import org.knime.core.util.URIPathEncoder;
 import org.knime.core.util.auth.Authenticator;
 import org.knime.core.util.auth.CouldNotAuthorizeException;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -130,7 +131,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
     private static final String SPACE_VERSION_FORMAT = "spaceVersion=%s";
 
-    private static final URIPathEncoder UTF8_ENCODER = new URIPathEncoder(StandardCharsets.UTF_8);
+    private static final URIPathEncoder UTF8_ENCODER = URIPathEncoder.UTF_8;
 
     private final ServerRequestModifier m_requestModifier;
 
@@ -190,21 +191,14 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      * @throws IOException if an error occurs while resolving the URL
      */
     public static URL resolveKNIMEURL(final URL url) throws IOException {
-        if (!KnimeUrlType.SCHEME.equalsIgnoreCase(url.getProtocol())) {
-            throw new IOException("Unexpected protocol: " + url.getProtocol() + ". Only " + KnimeUrlType.SCHEME
-                + " is supported by this handler.");
-        }
+        final var urlType = KnimeUrlType.getType(url).orElseThrow(
+            () -> new IOException("Unexpected protocol: " + url.getProtocol() + ". Only "
+                        + KnimeUrlType.SCHEME + " is supported by this handler."));
 
         final var nodeContext = Optional.ofNullable(NodeContext.getContext());
         final var wfmUI = nodeContext.flatMap(ctx -> ctx.getContextObjectForClass(WorkflowManagerUI.class));
         final var workflowContext = wfmUI.map(WorkflowManagerUI::getContext).orElse(null);
-
-        final var host = url.getHost();
-        final var isMountpointRel = MOUNTPOINT_RELATIVE.equalsIgnoreCase(host);
-        final var isSpaceRel = SPACE_RELATIVE.equalsIgnoreCase(host);
-        final var isWorkflowRel = WORKFLOW_RELATIVE.equalsIgnoreCase(host);
-        final var isNodeRel = NODE_RELATIVE.equalsIgnoreCase(host);
-        if (isMountpointRel || isSpaceRel || isWorkflowRel || isNodeRel) {
+        if (urlType.isRelative()) {
             if (nodeContext.isEmpty()) {
                 throw new IOException("No context for relative URL available");
             } else if (workflowContext == null) {
@@ -213,30 +207,54 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
 
         final URL result;
-        if (isWorkflowRel) {
-            result = resolveWorkflowRelativeUrl(url, workflowContext);
-        } else if (isMountpointRel || (workflowContext != null
-                && host.equalsIgnoreCase(getRemoteMountId(workflowContext).orElse(null)))) {
-            result = resolveMountpointRelativeUrl(url, workflowContext);
-        } else if (isNodeRel) {
-            result = resolveNodeRelativeUrl(url, nodeContext.orElseThrow(), workflowContext);
-        } else if (isSpaceRel) {
-            result = resolveSpaceRelativeUrl(url, workflowContext);
-        } else {
-            result = url;
+        switch (urlType) {
+            case HUB_SPACE_RELATIVE:
+                result = resolveSpaceRelativeUrl(url, workflowContext);
+                break;
+            case MOUNTPOINT_RELATIVE:
+                result = resolveMountpointRelativeUrl(url, workflowContext);
+                break;
+            case NODE_RELATIVE:
+                result = resolveNodeRelativeUrl(url, nodeContext.orElseThrow(), workflowContext);
+                break;
+            case WORKFLOW_RELATIVE:
+                result = resolveWorkflowRelativeUrl(url, workflowContext);
+                break;
+            case MOUNTPOINT_ABSOLUTE:
+                if (matchesDefaultMountIdOnExecutor(workflowContext, url.getHost())) {
+                    // resolve mountpoint-absolute URLs on job executors as relative if mount IDs match
+                    result = resolveMountpointRelativeUrl(url, workflowContext);
+                } else {
+                    result = url;
+                }
+                break;
+            default:
+                throw new IllegalStateException("Unhandled KNIME URL type: " + urlType);
         }
+
         return UTF8_ENCODER.encodePathSegments(result);
     }
 
-    private static Optional<String> getRemoteMountId(final WorkflowContextUI workflowContext) {
+    /**
+     * Checks whether mount ID of a mountpoint-absolute URL is resolved by the Job Executor of a Server or Hub which
+     * has a matching default mount ID. In this case the URL is resolved locally in the repository.
+     *
+     * @param workflowContext workflow context
+     * @param mountId mount ID of the mountpoint-absolute URL
+     * @return {@code true} if the mount ID matches the default mount ID of the executor, {@code false} otherwise
+     */
+    private static boolean matchesDefaultMountIdOnExecutor(final WorkflowContextUI workflowContext,
+            final String mountId) {
+        final Optional<String> defaultMountId;
         if (workflowContext instanceof RemoteWorkflowContext) {
-            return Optional.of(((RemoteWorkflowContext)workflowContext).getMountId());
+            defaultMountId = Optional.of(((RemoteWorkflowContext)workflowContext).getMountId());
         } else {
-            return Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
+            defaultMountId = Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
                     .filter(ctx -> ctx.getExecutorInfo() instanceof JobExecutorInfo)
                     .flatMap(ctx -> ClassUtils.castOptional(RestLocationInfo.class, ctx.getLocationInfo()))
                     .map(RestLocationInfo::getDefaultMountId);
         }
+        return defaultMountId.map(defMountId -> defMountId.equalsIgnoreCase(mountId)).orElse(false);
     }
 
     private static Optional<URI> getRemoteRepositoryAddress(final WorkflowContextUI workflowContext) {
@@ -270,6 +288,35 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             } catch (CouldNotAuthorizeException e) {
                 throw new IOException("Error while authenticating the client: " + e.getMessage(), e);
             }
+        }
+    }
+
+    /**
+     * Extract, decode and return the path part of a given URL. If the path part is not valid according to the spec,
+     * assume it is already decoded and return it unchanged.
+     * @param url The URL to extract the decoded path part from.
+     * @return The decoded path part of the given URL, i.e. any escaped hex sequences in the shape of "% hex hex"
+     *         (potentially repeated) are decoded into their respective Unicode characters.
+     * @see URI#getPath()
+     */
+    private static String decodePath(final URL url) {
+        try {
+            // Obtain the decoded path part using java.net.URI. Note that using java.net.URLDecoder follows a different
+            //    spec and is not correct (see AP-17103).
+            // We must not use something like `new URI( input.getPath() )` here because inputs
+            //    containing double slashes at the beginning of the path part (e.g. knime://knime.workflow//Files;
+            //    these are indeed technically valid) will lead the `URI` constructor to incorrectly interpret this as a
+            //    scheme part.
+            // Instead, we can rely on converting the entire `URL` to `URI`. `URI#getPath` will decode its path part.
+            return url.toURI().getPath();
+        } catch (URISyntaxException e) {  // NOSONAR: Exception is handled.
+            // In this case, we assume there are disallowed characters in the path string, although
+            //   there are other instances that also trigger a parse error. This means this method does not enforce
+            //   or ensure that the given and returned paths are actually valid.
+            // Assuming there are disallowed characters, we conclude that the string is already decoded and return it as-is.
+            // (Checking for encoded-ness is not trivial because of ambiguous instances such as "per%cent" which may be
+            //   taken literally or interpret %ce as a byte pair representing an encoded character.)
+            return url.getPath();
         }
     }
 
@@ -437,7 +484,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             throws IOException {
         if (!Wrapper.wraps(workflowContextUI, WorkflowContextV2.class)) {
             throw new IllegalArgumentException(
-                    "Node relative URLs cannot be resolved from within purely remote workflows.");
+                "Node relative URLs cannot be resolved from within purely remote workflows.");
         }
 
         final var locationInfo = Wrapper.unwrap(workflowContextUI, WorkflowContextV2.class).getLocationInfo();
@@ -446,10 +493,12 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
 
         final var decodedPath = decodePath(origUrl);
-        final var mountpointRelUrl = URI.create(
-            String.format("knime://%s%s", MOUNTPOINT_RELATIVE, decodedPath)).toURL();
-
-        return resolveMountpointRelativeUrl(mountpointRelUrl, workflowContextUI);
+        try {
+            final var mountpointRelUrl = new URL(KnimeUrlType.SCHEME, MOUNTPOINT_RELATIVE, decodedPath);
+            return resolveMountpointRelativeUrl(mountpointRelUrl, workflowContextUI);
+        } catch (MalformedURLException e) {
+            throw new IOException(e);
+        }
     }
 
     private static URL resolveSpaceRelativeUrl(final URL origUrl, final HubSpaceLocationInfo hubInfo)
@@ -460,9 +509,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         final var decodedPath = decodePath(origUrl);
         final var fullPath = String.format(SPACE_PATH_FORMAT, repoSpacePath, decodedPath);
 
-        final var query = hubInfo.getSpaceVersion().isPresent() ?
-            String.format(SPACE_VERSION_FORMAT, hubInfo.getSpaceVersion().get()) : null; //NOSONAR
-
+        final var query = hubInfo.getSpaceVersion().map(v -> String.format(SPACE_VERSION_FORMAT, v)).orElse(null);
         try {
             final var normalizedUri = new URI(repoAddress.getScheme(), null,
                 repoAddress.getHost(), repoAddress.getPort(), fullPath, query, null).normalize();
@@ -485,35 +532,6 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             return new ExplorerURLConnection(url, efs);
         } catch (URISyntaxException e) {
             throw new IOException(e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Extract, decode and return the path part of a given URL. If the path part is not valid according to the spec,
-     * assume it is already decoded and return it unchanged.
-     * @param url The URL to extract the decoded path part from.
-     * @return The decoded path part of the given URL, i.e. any escaped hex sequences in the shape of "% hex hex"
-     *         (potentially repeated) are decoded into their respective Unicode characters.
-     * @see URI#getPath()
-     */
-    private static String decodePath(final URL url) {
-        try {
-            // Obtain the decoded path part using java.net.URI. Note that using java.net.URLDecoder follows a different
-            //    spec and is not correct (see AP-17103).
-            // We must not use something like `new URI( input.getPath() )` here because inputs
-            //    containing double slashes at the beginning of the path part (e.g. knime://knime.workflow//Files;
-            //    these are indeed technically valid) will lead the `URI` constructor to incorrectly interpret this as a
-            //    scheme part.
-            // Instead, we can rely on converting the entire `URL` to `URI`. `URI#getPath` will decode its path part.
-            return url.toURI().getPath();
-        } catch (URISyntaxException e) {  // NOSONAR: Exception is handled.
-            // In this case, we assume there are disallowed characters in the path string, although
-            //   there are other instances that also trigger a parse error. This means this method does not enforce
-            //   or ensure that the given and returned paths are actually valid.
-            // Assuming there are disallowed characters, we conclude that the string is already decoded and return it as-is.
-            // (Checking for encoded-ness is not trivial because of ambiguous instances such as "per%cent" which may be
-            //   taken literally or interpret %ce as a byte pair representing an encoded character.)
-            return url.getPath();
         }
     }
 
