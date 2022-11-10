@@ -277,6 +277,15 @@ public class URIToFileResolveImpl implements URIToFileResolve {
      * {@inheritDoc}
      */
     @Override
+    public boolean isSpaceRelative(final URI uri) {
+        return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
+                && ExplorerURLStreamHandler.SPACE_RELATIVE.equalsIgnoreCase(uri.getHost());
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public Optional<KNIMEURIDescription> toDescription(final URI uri, final IProgressMonitor monitor) {
         if (uri.getScheme().equals("file")) {
             return Optional.of(new KNIMEURIDescription(uri.getHost(), uri.getPath()));
