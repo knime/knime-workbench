@@ -112,7 +112,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
      * @param context The context (for component template editors)
      */
     public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI,
-        final WorkflowContextV2 context) {
+            final WorkflowContextV2 context) {
         m_parentWFM = WorkflowManager.ROOT;
 
         //strip "workflow.knime" from the URI which is append if
@@ -214,8 +214,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             }
             throw new RuntimeException(ex);
         } finally {
-            // IMPORTANT: Remove the reference to the file and the
-            // editor!!! Otherwise the memory cannot be freed later
+            // IMPORTANT: Remove the reference to the file and the editor!!! Otherwise the memory cannot be freed later
             m_parentWFM = null;
         }
     }

@@ -44,13 +44,10 @@
  */
 package org.knime.workbench.explorer;
 
-import java.net.URI;
-import java.util.Optional;
-
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.ui.IPersistableElement;
 import org.eclipse.ui.ide.FileStoreEditorInput;
-import org.knime.core.node.workflow.contextv2.LocationInfo;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 
 /**
  *
@@ -58,47 +55,27 @@ import org.knime.core.node.workflow.contextv2.LocationInfo;
  * @since 6.4
  */
 public class RemoteWorkflowInput extends FileStoreEditorInput {
-    private final String m_mountId;
-    private final LocationInfo m_locationInfo;
-    private final URI m_remoteLocation;
+
+    private final WorkflowContextV2 m_workflowContext;
 
     /**
      * Used to open an editor with a workflow downloaded from a remote location.
      *
      * @param localTempLocation the temp local location
-     * @param mountId ID of the mountpoint if the workflow is mounted, {@code null} otherwise
-     * @param locationInfo location info of the remote workflow location
-     * @param remoteOrigLocation the flow was downloaded from
+     * @param workflowContext workflow context inside the AP
      */
-    public RemoteWorkflowInput(final IFileStore localTempLocation, final String mountId,
-            final LocationInfo locationInfo, final URI remoteOrigLocation) {
+    public RemoteWorkflowInput(final IFileStore localTempLocation,final WorkflowContextV2 workflowContext) {
         super(localTempLocation);
-        m_mountId = mountId;
-        m_locationInfo = locationInfo;
-        m_remoteLocation = remoteOrigLocation;
+        m_workflowContext = workflowContext;
     }
 
     /**
-     * @return mount ID of the mountpoint the workflow is mounted under, if available
+     * Context of the workflow.
+     *
+     * @return the workflow context
      */
-    public Optional<String> getMountId() {
-        return Optional.of(m_mountId);
-    }
-
-    /**
-     * Location info of the workflow.
-     *s
-     * @return the location info
-     */
-    public LocationInfo getLocationInfo() {
-        return m_locationInfo;
-    }
-
-    /**
-     * @return URI of the location the flow was downloaded from
-     */
-    public URI getRemoteOriginalLocation() {
-        return m_remoteLocation;
+    public WorkflowContextV2 getWorkflowContext() {
+        return m_workflowContext;
     }
 
     /**

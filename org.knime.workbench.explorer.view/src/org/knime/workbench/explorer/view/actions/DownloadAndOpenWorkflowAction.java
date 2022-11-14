@@ -44,6 +44,7 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
+import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -63,6 +64,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.RemoteWorkflowInput;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -153,10 +155,28 @@ public class DownloadAndOpenWorkflowAction extends Action {
 
             final LocalExplorerFileStore editorInput = tmpDestDir;
             final String mountId = m_source.getMountID();
-            final RestLocationInfo info = CheckUtils.checkNotNull(m_source.locationInfo().orElse(null),
+            final Path localWorkflowPath;
+            final Path mountpointRoot;
+            try {
+                localWorkflowPath = tmpDestDir.toLocalFile().toPath();
+                mountpointRoot = tmpDestDir.getContentProvider().getRootStore().toLocalFile().toPath();
+            } catch (CoreException e) {
+                LOGGER.info("Unable to determine location of temporary directory: " + tmpDestDir);
+                return new Status(IStatus.ERROR, PLUGIN_ID, 1,
+                    "Cannot open downloaded content: Local directory can't be resolved", e);
+            }
+
+            final RestLocationInfo locationInfo = CheckUtils.checkNotNull(m_source.locationInfo().orElse(null),
                 "Location info could not be determined for " + m_source);
-            final var rwi = new RemoteWorkflowInput(editorInput, mountId, info, m_source.toURI());
-            final AtomicReference<IStatus> returnStatus = new AtomicReference<>(Status.OK_STATUS);
+            final var context = WorkflowContextV2.builder()
+                    .withAnalyticsPlatformExecutor(builder ->
+                        builder.withCurrentUserAsUserId()
+                                .withLocalWorkflowPath(localWorkflowPath)
+                                .withMountpoint(mountId, mountpointRoot))
+                    .withLocation(locationInfo)
+                    .build();
+            final var rwi = new RemoteWorkflowInput(editorInput, context);
+            final var returnStatus = new AtomicReference<>(Status.OK_STATUS);
             Display.getDefault().syncExec(() -> {
                 try {
                     m_page.openEditor(rwi, IDE.getEditorDescriptor(editorInput.getName()).getId());

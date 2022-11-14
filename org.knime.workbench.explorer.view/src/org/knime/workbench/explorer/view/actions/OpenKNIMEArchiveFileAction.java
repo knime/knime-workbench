@@ -46,6 +46,7 @@ package org.knime.workbench.explorer.view.actions;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -68,6 +69,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.node.workflow.contextv2.LocalLocationInfo;
 import org.knime.core.node.workflow.contextv2.LocationInfo;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -110,9 +112,6 @@ public class OpenKNIMEArchiveFileAction extends Action {
             m_locationInfo = locationInfo;
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         protected IStatus run(final IProgressMonitor monitor) {
             String fileId;
@@ -176,8 +175,31 @@ public class OpenKNIMEArchiveFileAction extends Action {
             }
 
             final LocalExplorerFileStore editorInput = tmpDestDir;
-            final var rwi = new RemoteWorkflowInput(editorInput, m_mountId, m_locationInfo, m_source.toURI());
-            final AtomicReference<IStatus> returnStatus = new AtomicReference<IStatus>(Status.OK_STATUS);
+            final Path localWorkflowPath;
+            final Path mountpointRoot;
+            try {
+                localWorkflowPath = tmpDestDir.toLocalFile().toPath();
+                mountpointRoot = tmpDestDir.getContentProvider().getRootStore().toLocalFile().toPath();
+            } catch (CoreException e) {
+                LOGGER.info("Unable to determine location of temporary directory: " + tmpDestDir);
+                return new Status(IStatus.ERROR, PLUGIN_ID, 1,
+                    "Cannot open downloaded content: Local directory can't be resolved", e);
+            }
+
+            final var context = WorkflowContextV2.builder()
+                    .withAnalyticsPlatformExecutor(builder -> {
+                        final var builder2 = builder
+                                .withCurrentUserAsUserId()
+                                .withLocalWorkflowPath(localWorkflowPath);
+                        if (m_mountId != null) {
+                            builder2.withMountpoint(m_mountId, mountpointRoot);
+                        }
+                        return builder2;
+                    })
+                    .withLocation(m_locationInfo)
+                    .build();
+            final var rwi = new RemoteWorkflowInput(editorInput, context);
+            final AtomicReference<IStatus> returnStatus = new AtomicReference<>(Status.OK_STATUS);
             Display.getDefault().syncExec(() -> {
                 try {
                     m_page.openEditor(rwi, IDE.getEditorDescriptor(editorInput.getName()).getId());
@@ -221,6 +243,8 @@ public class OpenKNIMEArchiveFileAction extends Action {
      *
      * @param page the current workbench page
      * @param source things to open
+     * @param mountId mount ID of the mointpoint containing the orkflow if available, {@code null} otherwise
+     * @param optLocationInfo location info for the workflow if available, {@code null} means {@code .knwf} archive
      */
     public OpenKNIMEArchiveFileAction(final IWorkbenchPage page, final File source, final String mountId,
             final LocationInfo optLocationInfo) {

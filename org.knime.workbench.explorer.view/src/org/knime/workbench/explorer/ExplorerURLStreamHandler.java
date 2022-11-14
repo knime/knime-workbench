@@ -291,35 +291,6 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
     }
 
-    /**
-     * Extract, decode and return the path part of a given URL. If the path part is not valid according to the spec,
-     * assume it is already decoded and return it unchanged.
-     * @param url The URL to extract the decoded path part from.
-     * @return The decoded path part of the given URL, i.e. any escaped hex sequences in the shape of "% hex hex"
-     *         (potentially repeated) are decoded into their respective Unicode characters.
-     * @see URI#getPath()
-     */
-    private static String decodePath(final URL url) {
-        try {
-            // Obtain the decoded path part using java.net.URI. Note that using java.net.URLDecoder follows a different
-            //    spec and is not correct (see AP-17103).
-            // We must not use something like `new URI( input.getPath() )` here because inputs
-            //    containing double slashes at the beginning of the path part (e.g. knime://knime.workflow//Files;
-            //    these are indeed technically valid) will lead the `URI` constructor to incorrectly interpret this as a
-            //    scheme part.
-            // Instead, we can rely on converting the entire `URL` to `URI`. `URI#getPath` will decode its path part.
-            return url.toURI().getPath();
-        } catch (URISyntaxException e) {  // NOSONAR: Exception is handled.
-            // In this case, we assume there are disallowed characters in the path string, although
-            //   there are other instances that also trigger a parse error. This means this method does not enforce
-            //   or ensure that the given and returned paths are actually valid.
-            // Assuming there are disallowed characters, we conclude that the string is already decoded and return it as-is.
-            // (Checking for encoded-ness is not trivial because of ambiguous instances such as "per%cent" which may be
-            //   taken literally or interpret %ce as a byte pair representing an encoded character.)
-            return url.getPath();
-        }
-    }
-
     private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
         throws IOException {
         if (Wrapper.wraps(workflowContext, WorkflowContextV2.class)) {
@@ -328,7 +299,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
         assert workflowContext instanceof RemoteWorkflowContext;
         RemoteWorkflowContext rwc = (RemoteWorkflowContext) workflowContext;
-        final var decodedPath = decodePath(origUrl);
+        final var decodedPath = URIPathEncoder.decodePath(origUrl);
         if (!leavesWorkflow(decodedPath)) {
             throw new IllegalArgumentException(
                 "Workflow relative URL points to a resource within a workflow. Not accessible.");
@@ -347,7 +318,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
     private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContextV2 workflowContext2)
             throws IOException {
-        final var decodedPath = decodePath(origUrl);
+        final var decodedPath = URIPathEncoder.decodePath(origUrl);
 
         final boolean leavesWorkflow = leavesWorkflow(decodedPath);
 
@@ -398,7 +369,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
         assert workflowContext instanceof RemoteWorkflowContext;
         RemoteWorkflowContext rwc = (RemoteWorkflowContext)workflowContext;
-        String decodedPath = decodePath(origUrl);
+        String decodedPath = URIPathEncoder.decodePath(origUrl);
         final var mpUri = rwc.getMountpointURI();
         final URI uri;
         try {
@@ -411,7 +382,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
     private static URL resolveMountpointRelativeUrl(final URL origUrl, final WorkflowContextV2 workflowContext)
             throws IOException {
-        final var decodedPath = decodePath(origUrl);
+        final var decodedPath = URIPathEncoder.decodePath(origUrl);
 
         final var executorInfo = workflowContext.getExecutorInfo();
         final var restLocationInfo = ClassUtils.castOptional(RestLocationInfo.class, workflowContext.getLocationInfo());
@@ -467,7 +438,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             throw new IOException("Workflow must be saved before node-relative URLs can be used");
         }
 
-        final var resolvedPath = new File(nodeDirectoryRef.getFile().getAbsolutePath(), decodePath(origUrl));
+        final var resolvedPath = new File(nodeDirectoryRef.getFile().getAbsolutePath(),
+            URIPathEncoder.decodePath(origUrl));
 
         // check if resolved path leaves the workflow
         final var currentLocation = workflowContext.getExecutorInfo().getLocalWorkflowPath().toFile();
@@ -492,7 +464,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             return resolveSpaceRelativeUrl(origUrl, (HubSpaceLocationInfo) locationInfo);
         }
 
-        final var decodedPath = decodePath(origUrl);
+        final var decodedPath = URIPathEncoder.decodePath(origUrl);
         try {
             final var mountpointRelUrl = new URL(KnimeUrlType.SCHEME, MOUNTPOINT_RELATIVE, decodedPath);
             return resolveMountpointRelativeUrl(mountpointRelUrl, workflowContextUI);
@@ -506,7 +478,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
         final var repoAddress = hubInfo.getRepositoryAddress();
         final var repoSpacePath = repoAddress.getPath() + hubInfo.getSpacePath();
-        final var decodedPath = decodePath(origUrl);
+        final var decodedPath = URIPathEncoder.decodePath(origUrl);
         final var fullPath = String.format(SPACE_PATH_FORMAT, repoSpacePath, decodedPath);
 
         final var query = hubInfo.getSpaceVersion().map(v -> String.format(SPACE_VERSION_FORMAT, v)).orElse(null);
