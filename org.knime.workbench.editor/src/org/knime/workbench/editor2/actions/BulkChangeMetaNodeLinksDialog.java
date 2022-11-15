@@ -60,6 +60,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.cxf.jaxrs.impl.UriBuilderImpl;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -140,6 +141,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
     private URI m_oldLinkURI;
 
+    /** Updated when the user types in the {@link #m_uriTextField} or selects a hub space version from the dialog. */
     private URI m_selectedLinkURI;
 
     private boolean m_uriInputViaText;
@@ -148,6 +150,10 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
     private Text m_uriTextField;
 
+    /**
+     * Multi-purpose button that opens either a dialog to change the link type, a dialog to change the link destination,
+     * or a dialog to select the Hub space version.
+     */
     private Button m_linkChangeButton;
 
     private final WorkflowManager m_manager;
@@ -181,7 +187,9 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         divideInDistinctGroups(final List<NodeContainerTemplate> metaNodes) {
         Map<URI, List<NodeContainerTemplate>> metaNodeGroups = new HashMap<>();
         for (NodeContainerTemplate template : metaNodes) {
-            var key = template.getTemplateInformation().getSourceURI();
+            final URI sourceURI = template.getTemplateInformation().getSourceURI();
+            // remove the space version query parameter in order to group components/metanodes in different versions together
+            var key = new UriBuilderImpl(sourceURI).replaceQueryParam("spaceVersion", (Object[])null).build();
             metaNodeGroups.putIfAbsent(key, new LinkedList<>());
             metaNodeGroups.get(key).add(template);
         }
@@ -325,10 +333,31 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
                 if (((Button)e.getSource()).getSelection()) {
                     m_linkChangeAction = LinkChangeAction.URI_CHANGE;
                     m_linkChangeButton.setText("Browse...");
-                    // only if both the action and group has been selected, the button is enabled
                     var groupSelected = m_oldLinkURI != null;
                     m_linkChangeButton.setEnabled(groupSelected);
                     m_uriTextField.setEditable(groupSelected);
+                }
+            }
+        });
+
+        // Hub Space version (also maps to link URI) radio button
+        var versionButton = new Button(propertiesGroup, SWT.RADIO);
+        versionButton.setText("KNIME Hub Space Version");
+        versionButton.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                if (((Button)e.getSource()).getSelection()) {
+                    m_linkChangeAction = LinkChangeAction.VERSION_CHANGE;
+                    m_linkChangeButton.setText("Select Version...");
+                    // only if both the action and group has been selected, the button is enabled
+                    var isComponentOnHub =
+                        isSelectedSubNode() && ChangeComponentSpaceVersionAction.isHubUri(m_oldLinkURI);
+                    m_linkChangeButton.setEnabled(isComponentOnHub);
+                    m_linkChangeButton.setToolTipText(isComponentOnHub ? ""
+                        : "Versioning is available only for linked Components stored on a KNIME Hub.");
+                    if (!isComponentOnHub) {
+                        m_uriTextField.setEditable(false);
+                    }
                 }
             }
         });
@@ -358,10 +387,18 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         m_linkChangeButton.addSelectionListener(new SelectionAdapter() {
             @Override
             public void widgetSelected(final SelectionEvent e) {
-                if (m_linkChangeAction == LinkChangeAction.TYPE_CHANGE) {
-                    openTypeChangeDialog();
-                } else if (m_linkChangeAction == LinkChangeAction.URI_CHANGE) {
-                    openURIChangeDialog();
+                switch (m_linkChangeAction) {
+                    case TYPE_CHANGE:
+                        openTypeChangeDialog();
+                        break;
+                    case URI_CHANGE:
+                        openURIChangeDialog();
+                        break;
+                    case VERSION_CHANGE:
+                        openVersionChangeDialog();
+                        break;
+                    default:
+                        // do nothing
                 }
             }
         });
@@ -479,6 +516,29 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
     }
 
     /**
+     * Opens the dialog for changing the KNIME Hub Space Version for the linked component.
+     */
+    private void openVersionChangeDialog() {
+        final var shell = SWTUtilities.getActiveShell();
+        final Optional<NodeContainerTemplate> representative = getRepresentativeFromSelected();
+        if (representative.isEmpty()) {
+            return;
+        }
+        SubNodeContainer componentRepresentative = (SubNodeContainer)representative.get();
+
+        var dialog = new ChangeComponentSpaceVersionDialog(shell, componentRepresentative, null, m_manager);
+        if (dialog.open() != 0) {
+            // dialog has been cancelled - no changes
+            return;
+        }
+        var targetVersion = dialog.getSelectedVersion();
+        var newUri = new UriBuilderImpl(m_selectedLinkURI).replaceQueryParam("spaceVersion", targetVersion).build();
+        m_selectedLinkURI = newUri;
+        m_uriTextField.setText(newUri.toString());
+        m_uriInputViaText = false;
+    }
+
+    /**
      * Upon pressing OK, the dialog verifies the input by resolving it to a KNIME URI and trying to load the template
      * located at the URI. The verification passes, if the loading completes with no errors and the template types
      * match. This procedure is only invoked if the URI was inputted via the textfield. Selecting the URI via the
@@ -495,9 +555,11 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             var result = new LoadResult("Link Change Verification");
             NodeContext.pushContext(m_manager);
             try {
-                var template = TemplateUpdateUtil.loadMetaNodeTemplate(m_selectedLinkURI, new WorkflowLoadHelper(true), result);
+                var template =
+                    TemplateUpdateUtil.loadMetaNodeTemplate(m_selectedLinkURI, new WorkflowLoadHelper(true), result);
                 if (result.hasErrors()) {
-                    errorMessage = "Could not load the template at URI \"" + m_selectedLinkURI + "\":\n" + result.getMessage();
+                    errorMessage =
+                        "Could not load the template at URI \"" + m_selectedLinkURI + "\":\n" + result.getMessage();
                 } else if (isSelectedSubNode() && !(template instanceof SubNodeContainer)) {
                     errorMessage = "You selected a component but the URI does not point to one!";
                 } else if (isSelectedMetaNode() && !(template instanceof WorkflowManager)) {
@@ -658,7 +720,8 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             String text;
             if (descrOptional.isPresent()) {
                 KNIMEURIDescription uriDesc = descrOptional.get();
-                text = toSummaryText(m_linkURI, m_componentName, uriDesc.getMountpointName(), descrOptional.get().getPath());
+                text = toSummaryText(m_linkURI, m_componentName, uriDesc.getMountpointName(),
+                    descrOptional.get().getPath());
                 status = Status.OK_STATUS;
             } else {
                 var errorText = "<Errors resolving details>";

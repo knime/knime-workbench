@@ -217,6 +217,7 @@ import org.knime.workbench.editor2.actions.BringAnnotationForwardAction;
 import org.knime.workbench.editor2.actions.BringAnnotationToFrontAction;
 import org.knime.workbench.editor2.actions.CancelAction;
 import org.knime.workbench.editor2.actions.CancelAllAction;
+import org.knime.workbench.editor2.actions.ChangeComponentSpaceVersionAction;
 import org.knime.workbench.editor2.actions.ChangeMetaNodeLinkAction;
 import org.knime.workbench.editor2.actions.ChangeSubNodeLinkAction;
 import org.knime.workbench.editor2.actions.CheckUpdateMetaNodeLinkAction;
@@ -822,6 +823,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         final AbstractNodeAction subNodeChangeLink = new ChangeSubNodeLinkAction(this);
         final AbstractNodeAction defineSubNodeTemplate = new SaveAsSubNodeTemplateAction(this);
         final AbstractNodeAction checkUpdateSubNodeLink = new CheckUpdateMetaNodeLinkAction(this);
+        final AbstractNodeAction changeComponentSpaceVersion = new ChangeComponentSpaceVersionAction(this);
         final AbstractNodeAction revealSubNodeTemplate = new RevealSubNodeTemplateAction(this);
         final AbstractNodeAction disconnectSubNodeLink = new DisconnectSubNodeLinkAction(this);
         final AbstractNodeAction lockSubLink = new LockSubNodeAction(this);
@@ -899,6 +901,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         m_actionRegistry.registerAction(subNodeChangeLink);
         m_actionRegistry.registerAction(defineSubNodeTemplate);
         m_actionRegistry.registerAction(checkUpdateSubNodeLink);
+        m_actionRegistry.registerAction(changeComponentSpaceVersion);
         m_actionRegistry.registerAction(revealSubNodeTemplate);
         m_actionRegistry.registerAction(disconnectSubNodeLink);
         m_actionRegistry.registerAction(lockSubLink);

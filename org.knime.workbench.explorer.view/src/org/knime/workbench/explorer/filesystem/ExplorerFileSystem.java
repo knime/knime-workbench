@@ -91,6 +91,8 @@ public class ExplorerFileSystem extends FileSystem {
     }
 
     /**
+     * TODO this is an expensive operation, notably slowing down the user interface. Can we add an internal cache here?
+     * ChangeSubNodeLinkAction and ChangeComponentSpaceVersionAction use it to determine if they are enabled or not.
      * {@inheritDoc}
      */
     @Override

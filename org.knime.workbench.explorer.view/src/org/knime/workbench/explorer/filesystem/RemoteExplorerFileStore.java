@@ -51,12 +51,15 @@ package org.knime.workbench.explorer.filesystem;
 import java.io.File;
 import java.net.URI;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
+import org.knime.core.util.pathresolve.SpaceVersion;
 
 /**
  *
@@ -68,8 +71,7 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * @param mountID the id of the mount point
      * @param fullPath the full path
      */
-    protected RemoteExplorerFileStore(final String mountID,
-            final String fullPath) {
+    protected RemoteExplorerFileStore(final String mountID, final String fullPath) {
         super(mountID, fullPath);
     }
 
@@ -77,9 +79,8 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
     public abstract Optional<? extends RestLocationInfo> locationInfo();
 
     /**
-     * File stores representing files on the same remote host should return
-     * equal IDs. To enable smart "remote copy" (i.e. copying files directly on
-     * the host avoiding download with a subsequent upload to the same host)
+     * File stores representing files on the same remote host should return equal IDs. To enable smart "remote copy"
+     * (i.e. copying files directly on the host avoiding download with a subsequent upload to the same host)
      *
      * @return an ID unique to the host the underlying file is located
      */
@@ -88,12 +89,11 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
     /**
      * {@inheritDoc}
      * <p>
-     * Note: Implementations should do a smart "remote copy" if the destination
-     * is on the same remote host than this (see {@link #getRemoteHostID()}).
+     * Note: Implementations should do a smart "remote copy" if the destination is on the same remote host than this
+     * (see {@link #getRemoteHostID()}).
      */
     @Override
-    public abstract void copy(IFileStore destination, int options,
-            IProgressMonitor monitor) throws CoreException;
+    public abstract void copy(IFileStore destination, int options, IProgressMonitor monitor) throws CoreException;
 
     /**
      * {@inheritDoc}
@@ -113,27 +113,34 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      *
      * @return a KNIME specific {@link URI}
      */
-    public URI toIdURI(){
+    public URI toIdURI() {
         return toURI();
     }
 
     /**
-     * If this store represents a workflow return an open stream that sends the
-     * zipped flow. If it is a file, the unzipped content is streamed.
+     * Returns the space versions for the HubExplorerFileStore KNIME URI.
+     *
+     * @return a list of space versions.
+     * @throws Exception
+     */
+    public List<SpaceVersion> getSpaceVersions() throws Exception {
+        return new ArrayList<>();
+    }
+
+    /**
+     * If this store represents a workflow return an open stream that sends the zipped flow. If it is a file, the
+     * unzipped content is streamed.
      *
      * @return a stream containing the zipped workflow or unzipped file content.
      * @throws CoreException if this doesn't exist
      * @since 4.0
      */
-    public abstract RemoteDownloadStream openDownloadStream()
-            throws CoreException;
+    public abstract RemoteDownloadStream openDownloadStream() throws CoreException;
 
     /**
-     * A zipped workflow sent through the stream is stored on the server as
-     * workflow represented by this.
+     * A zipped workflow sent through the stream is stored on the server as workflow represented by this.
      *
-     * @return an open stream, that stores the content as a workflow on the
-     *         server.
+     * @return an open stream, that stores the content as a workflow on the server.
      * @throws CoreException
      * @since 4.0
      */
@@ -155,19 +162,18 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
 
     /**
      * Stores the content send through the stream as file on the server (doesn't unzip it).
+     *
      * @return an open stream that stores the content (unzipped) in a file on the server.
      * @throws CoreException
      * @since 4.0
      */
-    public abstract RemoteUploadStream openFileUploadStream()
-            throws CoreException;
+    public abstract RemoteUploadStream openFileUploadStream() throws CoreException;
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public RemoteExplorerFileInfo fetchInfo(final int options,
-            final IProgressMonitor monitor) throws CoreException {
+    public RemoteExplorerFileInfo fetchInfo(final int options, final IProgressMonitor monitor) throws CoreException {
         return fetchInfo();
     }
 
@@ -187,7 +193,6 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * @since 6.0
      */
     public abstract String createSnapshot(String comment) throws CoreException;
-
 
     /**
      * Replaces this item (a workflow, template, or file) with one of its snapshots.

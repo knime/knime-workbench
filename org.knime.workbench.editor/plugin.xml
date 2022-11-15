@@ -162,6 +162,11 @@
             name="Update Links"/>
       <command
             categoryId="knime.command.category"
+            description="Select a Hub Space version for a Component"
+            id="knime.commands.changeComponentSpaceVersion"
+            name="Select Hub Space Version"/>
+      <command
+            categoryId="knime.command.category"
             description="Allows for bulk changing component and metanode links"
             id="knime.commands.bulkChangeMetaNodeLinks"
             name="Change Links..."/>
@@ -591,6 +596,12 @@
             contextId="org.knime.workbench.editor.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+ALT+U"/>
+<!--            TODO: adding the short cut here isn't enough, doesn't work out of the box-->
+<!--      <key-->
+<!--            commandId="knime.commands.changeComponentSpaceVersion"-->
+<!--            contextId="org.knime.workbench.editor.context"-->
+<!--            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"-->
+<!--            sequence="M1+ALT+V"/>-->
       <key
             commandId="knime.commands.bulkChangeMetaNodeLinks"
             contextId="org.knime.workbench.editor.context"

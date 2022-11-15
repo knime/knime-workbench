@@ -57,6 +57,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
@@ -67,6 +68,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.FileUtil;
+import org.knime.core.util.pathresolve.SpaceVersion;
 import org.knime.core.util.pathresolve.URIToFileResolve;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -143,7 +145,6 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     public File resolveToLocalOrTempFile(final URI uri, final IProgressMonitor monitor) throws IOException {
         return resolveToLocalOrTempFileInternal(uri, monitor, null);
     }
-
 
     private static File resolveToLocalOrTempFileInternal(final URI uri, final IProgressMonitor monitor,
         final ZonedDateTime ifModifiedSince) throws IOException {
@@ -287,5 +288,23 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         var mountId = s.getMountID();
         var path = StringUtils.substringAfterLast(s.getMountIDWithFullPath(), ":");
         return Optional.of(new KNIMEURIDescription(mountId, path));
+    }
+
+    /**
+     * {@inheritDoc}
+     * @throws Exception
+     */
+    @Override
+    public Optional<List<SpaceVersion>> getSpaceVersions(final URI uri) throws Exception {
+        if (uri.getScheme().equals("file")) {
+            return Optional.empty();
+        }
+
+        var s = ExplorerFileSystem.INSTANCE.getStore(uri);
+        if (s instanceof RemoteExplorerFileStore) {
+            var remoteFileStore = (RemoteExplorerFileStore)s;
+            return Optional.of(remoteFileStore.getSpaceVersions());
+        }
+        return Optional.empty();
     }
 }
