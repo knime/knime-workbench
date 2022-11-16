@@ -124,33 +124,33 @@ public class OpenKNIMEArchiveFileAction extends Action {
             fileId = fileId.replace("\\", "/").replaceFirst(":", "/");
             SubMonitor progress = SubMonitor.convert(monitor, 1);
             progress.beginTask("Extracting " + fileId, 1);
-            LocalExplorerFileStore tmpDestDir;
+            LocalExplorerFileStore tempLocation;
             try {
-                tmpDestDir = ExplorerMountTable.createExplorerTempDir(fileId);
-                tmpDestDir = tmpDestDir.getChild(fileId);
-                tmpDestDir.mkdir(EFS.NONE, progress);
+                tempLocation = ExplorerMountTable.createExplorerTempDir(fileId);
+                tempLocation = tempLocation.getChild(fileId);
+                tempLocation.mkdir(EFS.NONE, progress);
             } catch (CoreException e1) {
                 return new Status(e1.getStatus().getSeverity(), PLUGIN_ID, e1.getMessage(), e1);
             }
             final TempExtractArchive extractAction =
-                new TempExtractArchive(m_source, tmpDestDir, /*deleteSource=*/false, null, progress);
+                new TempExtractArchive(m_source, tempLocation, /*deleteSource=*/false, null, progress);
             try {
                 extractAction.runSync(monitor);
             } catch (CoreException e) {
                 LOGGER.info("The (possibly partially) downloaded file is not deleted and might be still available: "
-                    + tmpDestDir);
+                    + tempLocation);
                 return e.getStatus();
             }
 
             String[] content;
             try {
-                content = tmpDestDir.childNames(EFS.NONE, monitor);
+                content = tempLocation.childNames(EFS.NONE, monitor);
             } catch (CoreException e) {
                 return new Status(e.getStatus().getSeverity(), PLUGIN_ID, e.getMessage(), e);
             }
             if (content == null || content.length == 0) {
                 try {
-                    tmpDestDir.delete(EFS.NONE, monitor);
+                    tempLocation.delete(EFS.NONE, monitor);
                 } catch (CoreException e) {
                     LOGGER.error("Unable to delete the empty temporary download directory: " + e.getMessage(), e);
                     // ignore the deletion error
@@ -159,29 +159,30 @@ public class OpenKNIMEArchiveFileAction extends Action {
             }
             if (content.length == 1) {
                 // it is weird if the length is not 1 (because we downloaded one item)
-                tmpDestDir = tmpDestDir.getChild(content[0]);
+                tempLocation = tempLocation.getChild(content[0]);
             }
 
-            if (tmpDestDir.fetchInfo().isDirectory()) {
-                LocalExplorerFileStore wf = tmpDestDir.getChild(WorkflowPersistor.WORKFLOW_FILE);
+            if (tempLocation.fetchInfo().isDirectory()) {
+                LocalExplorerFileStore wf = tempLocation.getChild(WorkflowPersistor.WORKFLOW_FILE);
                 if (wf.fetchInfo().exists()) {
-                    tmpDestDir = wf;
+                    tempLocation = wf;
                 } else {
                     // directories that are not workflows cannot be opened
-                    LOGGER.info("The downloaded content is not deleted and is still available: " + tmpDestDir);
+                    LOGGER.info("The downloaded content is not deleted and is still available: " + tempLocation);
                     return new Status(IStatus.ERROR, PLUGIN_ID, 1,
                         "Cannot open downloaded content: Directory doesn't contain a workflow", null);
                 }
             }
 
-            final LocalExplorerFileStore editorInput = tmpDestDir;
+            final LocalExplorerFileStore editorInput = tempLocation;
             final Path localWorkflowPath;
             final Path mountpointRoot;
             try {
-                localWorkflowPath = tmpDestDir.toLocalFile().toPath();
-                mountpointRoot = tmpDestDir.getContentProvider().getRootStore().toLocalFile().toPath();
+                // `tempLocation` always references the `workflow.knime` file
+                localWorkflowPath = tempLocation.getParent().toLocalFile().toPath();
+                mountpointRoot = tempLocation.getContentProvider().getRootStore().toLocalFile().toPath();
             } catch (CoreException e) {
-                LOGGER.info("Unable to determine location of temporary directory: " + tmpDestDir);
+                LOGGER.info("Unable to determine location of temporary directory: " + tempLocation);
                 return new Status(IStatus.ERROR, PLUGIN_ID, 1,
                     "Cannot open downloaded content: Local directory can't be resolved", e);
             }

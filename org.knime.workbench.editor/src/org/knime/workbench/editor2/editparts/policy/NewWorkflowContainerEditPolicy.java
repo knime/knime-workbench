@@ -56,6 +56,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -126,6 +127,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.explorer.view.actions.OpenKNIMEArchiveFileAction;
+import org.knime.workbench.explorer.view.actions.OpenKnimeUrlAction;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.ui.p2.actions.AbstractP2Action;
@@ -262,26 +264,30 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
      */
     public static void downloadAndOpenRepoObject(final RepoObjectImport uriImport) {
         IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-        ExplorerJob job = new ExplorerJob("Downloading " + uriImport.getName()) {
-
-            @Override
-            protected IStatus run(final IProgressMonitor monitor) {
-                try {
-                    final File tmpDir = FileUtil.createTempDir("knime_download");
-                    final File file = URIImporterUtil.fetchFile(uriImport, tmpDir);
-                    // will always be non-null - imports are only allowed if D&D from a "known" hub (#handleURLDrop)
-                    final String mountId = uriImport.getKnimeURI().getAuthority();
-                    final var locationInfo = uriImport.locationInfo().orElse(null);
-                    final var a = new OpenKNIMEArchiveFileAction(activePage, file, mountId, locationInfo);
-                    Display.getDefault().asyncExec(a::run);
-                } catch (IOException e) {
-                    LOGGER.error("Problem downloading and importing repository object '" + uriImport.getName()
-                        + "' from '" + uriImport.getDataURI() + "'", e);
+        final var knimeUrl = uriImport.getKnimeURI();
+        if (knimeUrl != null) {
+            new OpenKnimeUrlAction(activePage, List.of(knimeUrl.toString())).run();
+        } else {
+            ExplorerJob job = new ExplorerJob("Downloading " + uriImport.getName()) {
+                @Override
+                protected IStatus run(final IProgressMonitor monitor) {
+                    try {
+                        final File tmpDir = FileUtil.createTempDir("knime_download");
+                        final File file = URIImporterUtil.fetchFile(uriImport, tmpDir);
+                        // will always be non-null - imports are only allowed if D&D from a "known" hub (#handleURLDrop)
+                        final String mountId = uriImport.getKnimeURI().getAuthority();
+                        final var locationInfo = uriImport.locationInfo().orElse(null);
+                        final var a = new OpenKNIMEArchiveFileAction(activePage, file, mountId, locationInfo);
+                        Display.getDefault().asyncExec(a::run);
+                    } catch (IOException e) {
+                        LOGGER.error("Problem downloading and importing repository object '" + uriImport.getName()
+                            + "' from '" + uriImport.getDataURI() + "'", e);
+                    }
+                    return Status.OK_STATUS;
                 }
-                return Status.OK_STATUS;
-            }
-        };
-        job.schedule();
+            };
+            job.schedule();
+        }
     }
 
     private Command handleMetaNodeTemplateDrop(final WorkflowManager manager, final CreateDropRequest request,

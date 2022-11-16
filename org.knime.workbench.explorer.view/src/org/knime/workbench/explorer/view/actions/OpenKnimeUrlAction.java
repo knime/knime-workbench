@@ -237,7 +237,7 @@ public class OpenKnimeUrlAction extends Action {
         setToolTipText(getDescription());
         setImageDescriptor(ImageRepository.getIconDescriptor(SharedImages.Workflow));
         m_page = page;
-        m_urls = new LinkedList<String>(urls);
+        m_urls = new LinkedList<>(urls);
     }
 
     /**

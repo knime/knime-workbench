@@ -158,7 +158,7 @@ public class DownloadAndOpenWorkflowAction extends Action {
             final Path localWorkflowPath;
             final Path mountpointRoot;
             try {
-                localWorkflowPath = tmpDestDir.toLocalFile().toPath();
+                localWorkflowPath = tmpDestDir.getParent().toLocalFile().toPath();
                 mountpointRoot = tmpDestDir.getContentProvider().getRootStore().toLocalFile().toPath();
             } catch (CoreException e) {
                 LOGGER.info("Unable to determine location of temporary directory: " + tmpDestDir);
