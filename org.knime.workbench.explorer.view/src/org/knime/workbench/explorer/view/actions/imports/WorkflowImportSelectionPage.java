@@ -109,6 +109,7 @@ import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
 import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -204,7 +205,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
     public WorkflowImportSelectionPage() {
         super(NAME);
         setTitle("Workflow Import Selection");
-        setDescription("Select the items to import.");
+        setDescription("Select the elements to import.");
         setImageDescriptor(ImageRepository.getImageDescriptor(SharedImages.ImportBig));
         m_btnData = new GridData();
         m_btnData.widthHint = 70;
@@ -1082,7 +1083,7 @@ public class WorkflowImportSelectionPage extends WizardPage {
 
     /**
      * Sets the invalid flag of the import element to true if the a resource with the same name already exists in the
-     * destination location.
+     * destination location or the elements last segment contains an invalid character.
      *
      * @param destination the destination path
      * @param element the workflow import element to check
@@ -1108,6 +1109,10 @@ public class WorkflowImportSelectionPage extends WizardPage {
                             element.setInvalid(true);
                         }
                         break;
+                    } else {
+                        if (ExplorerFileSystem.validateFilename(element.getRenamedPath().lastSegment()) != null) {
+                            element.setInvalid(true);
+                        }
                     }
                 }
             }
@@ -1156,8 +1161,8 @@ public class WorkflowImportSelectionPage extends WizardPage {
      */
     protected void updateMessages() {
         if (containsInvalidAndCheckedImports()) {
-            setErrorMessage("Some of the elements already exists in the "
-                + "target destination!\nChange the target destination or rename them by clicking \"Next\".");
+            setErrorMessage("Some of the elements have ambiguous or invalid names!\n"
+                + "Rename them by clicking \"Next\" or change the target destination.");
         } else {
             setErrorMessage(null);
         }

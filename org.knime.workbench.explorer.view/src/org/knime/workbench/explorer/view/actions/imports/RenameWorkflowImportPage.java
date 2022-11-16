@@ -66,7 +66,7 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 /**
  * A page where workflows and workflow groups which should be imported can be
  * renamed. This is necessary if a resource with the same name already exists in
- * the target destination.
+ * the target destination or the name is invalid.
  *
  * @author Fabian Dill, KNIME AG, Zurich, Switzerland
  */
@@ -95,7 +95,7 @@ public class RenameWorkflowImportPage extends WizardPage {
         super(NAME);
         m_previousPage = previousPage;
         m_invalids = invalids;
-        setTitle("Rename Page");
+        setTitle("Rename Elements");
         setDescription("Rename the elements to import");
     }
 
@@ -109,11 +109,11 @@ public class RenameWorkflowImportPage extends WizardPage {
         overall.setLayout(new GridLayout(1, false));
         GridData gridData = new GridData(SWT.FILL, SWT.FILL, true, true);
         overall.setLayoutData(gridData);
-        overall.setText("Duplicate items:");
+        overall.setText("Elements with ambiguous or invalid names:");
 
         if (m_invalids == null || m_invalids.isEmpty()) {
             Label ok = new Label(overall, SWT.NONE);
-            ok.setText("No duplicate elements found!");
+            ok.setText("No invalid elements found!");
             setControl(overall);
             return;
         } // else
