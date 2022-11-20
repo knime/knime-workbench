@@ -50,12 +50,10 @@ package org.knime.workbench.workflowcoach.data;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -64,21 +62,20 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.commons.httpclient.DefaultHttpMethodRetryHandler;
-import org.apache.commons.httpclient.Header;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpException;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpException;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeFrequencies;
 import org.knime.core.node.NodeLogger;
@@ -140,29 +137,38 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
      */
     @Override
     public void update() throws Exception {
-        HttpClient client = new HttpClient();
-        applyProxySettings(client, new URI(m_url));
-        client.getHttpConnectionManager().getParams().setConnectionTimeout(TIMEOUT);
-        GetMethod method = new GetMethod(m_url);
-        method.getParams().setParameter(HttpMethodParams.RETRY_HANDLER, new DefaultHttpMethodRetryHandler(3, false));
+
+        // default of 3 retries is what we want
+        final var request = new HttpGet(m_url);
         if (Files.exists(m_file)) {
             String lastModified = getHttpDateFormat().format(Date.from(Files.getLastModifiedTime(m_file).toInstant()));
-            method.setRequestHeader("If-Modified-Since", lastModified);
+            request.setHeader("If-Modified-Since", lastModified);
         }
-        method.setRequestHeader("Accept-Encoding", "gzip");
-        int statusCode = client.executeMethod(method);
-        if (statusCode == HttpStatus.SC_NOT_MODIFIED) {
-            return;
-        }
-        if (statusCode != HttpStatus.SC_OK) {
-            throw new HttpException("Cannot access server node recommendation file: " + method.getStatusLine());
-        }
+        request.setHeader("Accept-Encoding", "gzip");
 
-        //download and store the file
-        try (InputStream in = getInputStream(method); OutputStream out = Files.newOutputStream(m_tmpFile)) {
-            IOUtils.copy(in, out);
-        } finally {
-            method.releaseConnection();
+        final var configBuilder = RequestConfig.custom().setConnectTimeout(TIMEOUT);
+        ProxySelector.getDefault().select(URI.create(m_url)).stream()
+                .map(Proxy::address)
+                .filter(InetSocketAddress.class::isInstance) // also takes care of `null`
+                .map(InetSocketAddress.class::cast)
+                .findFirst()
+                .ifPresent(addr -> configBuilder.setProxy(new HttpHost(addr.getHostString(), addr.getPort())));
+
+        try (final var client = HttpClientBuilder.create().setDefaultRequestConfig(configBuilder.build()).build();
+                final var response = client.execute(request)) {
+            final var statusLine = response.getStatusLine();
+            final var statusCode = statusLine.getStatusCode();
+            if (statusCode == HttpStatus.SC_NOT_MODIFIED) {
+                return;
+            }
+            if (statusCode != HttpStatus.SC_OK) {
+                throw new HttpException("Cannot access server node recommendation file: " + statusLine);
+            }
+
+            //download and store the file
+            try (final var in = getInputStream(response); final var out = Files.newOutputStream(m_tmpFile)) {
+                IOUtils.copy(in, out);
+            }
         }
 
         //check the download and rename the file
@@ -185,8 +191,8 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
      *             downloaded file
      */
     protected void checkDownloadedFile(final Path file) throws IOException {
-        try {
-            NodeFrequencies.from(Files.newInputStream(file));
+        try (final var in = Files.newInputStream(file)) {
+            NodeFrequencies.from(in);
         } catch (IOException e) {
             throw new IOException("Downloaded file doesn't contain node recommendation data.", e);
         }
@@ -211,30 +217,16 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
         }
     }
 
-    private static InputStream getInputStream(final GetMethod method) throws IOException {
-        InputStream in = method.getResponseBodyAsStream();
-        Header encoding = method.getResponseHeader("Content-Encoding");
-        if (encoding != null && encoding.getValue().equals("gzip")) {
-            in = new GZIPInputStream(in);
-        }
-        return in;
+    private static InputStream getInputStream(final CloseableHttpResponse response) throws IOException {
+        final var stream = response.getEntity().getContent();
+        final var encoding = response.getFirstHeader("Content-Encoding");
+        return encoding != null && encoding.getValue().equals("gzip") ? new GZIPInputStream(stream) : stream;
     }
 
     private static SimpleDateFormat getHttpDateFormat() {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
-        TimeZone tZone = TimeZone.getTimeZone("GMT");
+        final var dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
+        final var tZone = TimeZone.getTimeZone("GMT");
         dateFormat.setTimeZone(tZone);
         return dateFormat;
-    }
-
-    private static void applyProxySettings(final HttpClient webClient, final URI uri) throws URISyntaxException {
-        List<Proxy> l = ProxySelector.getDefault().select(uri);
-        for (Proxy proxy : l) {
-            final InetSocketAddress addr = (InetSocketAddress) proxy.address();
-            if (addr != null) {
-                webClient.getHostConfiguration().setProxy(addr.getHostString(), addr.getPort());
-                return;
-            }
-        }
     }
 }
