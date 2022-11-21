@@ -188,10 +188,9 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         Map<URI, List<NodeContainerTemplate>> metaNodeGroups = new HashMap<>();
         for (NodeContainerTemplate template : metaNodes) {
             final URI sourceURI = template.getTemplateInformation().getSourceURI();
-            // remove the space version query parameter in order to group components/metanodes in different versions together
-            var key = new UriBuilderImpl(sourceURI).replaceQueryParam("spaceVersion", (Object[])null).build();
-            metaNodeGroups.putIfAbsent(key, new LinkedList<>());
-            metaNodeGroups.get(key).add(template);
+
+            metaNodeGroups.putIfAbsent(sourceURI, new LinkedList<>());
+            metaNodeGroups.get(sourceURI).add(template);
         }
         return metaNodeGroups;
     }

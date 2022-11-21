@@ -50,12 +50,10 @@ import java.net.URI;
 
 import org.apache.cxf.jaxrs.impl.UriBuilderImpl;
 import org.eclipse.gef.commands.CompoundCommand;
-import org.eclipse.jface.dialogs.MessageDialog;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.ui.util.SWTUtilities;
 
 /**
  * A compound command that first changes the link (source URI) of a linked Component and then performs an update.
@@ -97,18 +95,10 @@ public class ChangeComponentSpaceVersionCommand extends AbstractKNIMECommand {
 
     @Override
     public void execute() {
-        try {
-            doLinkURIChange();
-            var updateComponentCommand = new UpdateMetaNodeLinkCommand(getHostWFM(), new NodeID[]{m_component.getID()});
-            updateComponentCommand.execute();
-            m_commandRegistry.add(updateComponentCommand);
-            MessageDialog.openInformation(SWTUtilities.getActiveShell(), "Version update",
-                "The component has been updated to the version " + m_targetVersion);
-        } catch (Exception e) {
-            String error = "Changing the Component's Hub Space version failed: " + e.getMessage();
-            LOGGER.error(error, e);
-            MessageDialog.openError(SWTUtilities.getActiveShell(), "Change version failed", error);
-        }
+        doLinkURIChange();
+        var updateComponentCommand = new UpdateMetaNodeLinkCommand(getHostWFM(), new NodeID[]{m_component.getID()});
+        updateComponentCommand.execute();
+        m_commandRegistry.add(updateComponentCommand);
     }
 
     private void doLinkURIChange() {
