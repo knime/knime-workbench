@@ -170,4 +170,22 @@ public abstract class RemoteExplorerFileInfo extends AbstractExplorerFileInfo {
     public boolean isUnknownType() {
         return false;
     }
+
+    /**
+     * Checks whether the item is a user root in the Hub, i.e. <code>/Users/user:&#60id&#62</code>
+     *
+     * @return <code>true</code> if it's a user root, <code>false</code> otherwise
+     */
+    public boolean isUserRoot() {
+        return false;
+    }
+
+    /**
+     * Checks whether the item is a team root in the Hub, i.e. <code>/Users/team:&#60id&#62</code>
+     *
+     * @return <code>true</code> if it's a team root, <code>false</code> otherwise
+     */
+    public boolean isTeamRoot() {
+        return false;
+    }
 }

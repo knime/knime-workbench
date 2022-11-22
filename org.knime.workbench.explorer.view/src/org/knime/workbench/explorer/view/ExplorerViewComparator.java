@@ -50,6 +50,7 @@ package org.knime.workbench.explorer.view;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerComparator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 
 /**
  *
@@ -79,7 +80,16 @@ public class ExplorerViewComparator extends ViewerComparator {
     private int rank(final AbstractExplorerFileStore f) {
         // we want to see message at the top
         if (AbstractExplorerFileStore.isMessage(f)) {
-            return 6;
+            return 8;
+        }
+        if (f instanceof RemoteExplorerFileStore) {
+            // For Hub we want to show teams first then users.
+            final var info = ((RemoteExplorerFileStore)f).fetchInfo();
+            if (info.isTeamRoot()) {
+                return 7;
+            } else if (info.isUserRoot()) {
+                return 6;
+            }
         }
         // then workflow groups
         if (AbstractExplorerFileStore.isWorkflowGroup(f)) {
