@@ -320,6 +320,8 @@ public final class ImageRepository {
         HubUser("icons/server_space/hub_user.png"),
         /** Icon for teams */
         HubTeam("icons/server_space/hub_team.png"),
+        /** Icon for teams */
+        HubSpaceDisabled("icons/server_space/disabled_space.png"),
 
         /** Reset workflow icon. */
         ResetWorkflow("icons/server_space/reset_workflow.png"),
