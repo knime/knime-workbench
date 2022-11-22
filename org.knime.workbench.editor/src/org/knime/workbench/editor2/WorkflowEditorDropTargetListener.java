@@ -48,6 +48,8 @@ package org.knime.workbench.editor2;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.draw2d.geometry.Rectangle;
@@ -444,19 +446,19 @@ public abstract class WorkflowEditorDropTargetListener<T extends CreationFactory
      *
      * @see #clearTransferSelection()
      */
-    @SuppressWarnings("unchecked") // generics casting...
     @Override
     protected void handleDrop() {
         updateTargetRequest();
         updateTargetEditPart();
 
+        final var request = getTargetRequest();
+
         if (getTargetEditPart() != null) {
             final WorkflowManagerUI wmUI = getWorkflowManager();
             final WorkflowManager wm;
             if ((wmUI != null) && ((wm = Wrapper.unwrapWFMOptional(wmUI).orElse(null)) != null)) {
-                final Request r = getTargetRequest();
-                if (r instanceof CreateDropRequest) {
-                    final EditPart ep = ((CreateDropRequest)r).getEditPart();
+                if (request instanceof CreateDropRequest) {
+                    final EditPart ep = ((CreateDropRequest) request).getEditPart();
 
                     if (ep != null) {
                         final boolean connection = (ep instanceof ConnectionContainerEditPart);
@@ -480,56 +482,62 @@ public abstract class WorkflowEditorDropTargetListener<T extends CreationFactory
                 }
             }
 
-            final WorkflowEditor we =
-                (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
-            if ((we != null) && (!WorkflowEditorMode.NODE_EDIT.equals(we.getEditorMode()))) {
-                performEditModeToggleAction(we);
-            }
+            Optional.ofNullable(PlatformUI.getWorkbench().getActiveWorkbenchWindow())
+                    .map(IWorkbenchWindow::getActivePage)
+                    .map(IWorkbenchPage::getActiveEditor)
+                    .map(WorkflowEditor.class::cast)
+                    .filter(we -> we.getEditorMode() != WorkflowEditorMode.NODE_EDIT)
+                    .ifPresent(this::performEditModeToggleAction);
 
-            final Command command = getCommand();
-            if (command instanceof CompoundCommand) {
-                // If the command is a compound command the drop request also needs to
-                // create space for the new node and therefore moves other nodes.
-                // The commands are executed one after another so the user can undo
-                // the move if wanted but still has the new node inserted.
-                final List<?> commands = ((CompoundCommand)command).getCommands();
-                if (commands instanceof ArrayList<?>) {
-                    for (final Command c : (ArrayList<Command>)commands) {
-
-                        final Command before = getViewer().getEditDomain().getCommandStack().getUndoCommand();
-                        getViewer().getEditDomain().getCommandStack().execute(c);
-                        final Command after = getViewer().getEditDomain().getCommandStack().getUndoCommand();
-                        if ((before == null) && (after == null)) {
-                            break;
-                        } else if ((before != null) && before.equals(after)) {
-                            break;
-                        }
-                    }
-                    getViewer().getSelectionManager().deselectAll();
-                }
-            } else {
-                getViewer().getEditDomain().getCommandStack().execute(command);
-            }
-
-            // after adding a node the editor should get the focus
-            // this is issued asynchronously, in order to avoid bug #3029
-            Display.getDefault().asyncExec(() -> {
-                final IWorkbenchWindow w = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-                if (w != null) {
-                    final IWorkbenchPage p = w.getActivePage();
-                    if (p != null) {
-                        final IEditorPart e = p.getActiveEditor();
-                        if (e != null) {
-                            e.setFocus();
-                        }
-                    }
-                }
-            });
+            // this gets cleared on exit, we have to save it for `handleDropDetached(...)`
+            final var targetEditPart = getTargetEditPart();
+            Display.getDefault().asyncExec(() -> handleDropAsync(targetEditPart, request));
         } else {
             getCurrentEvent().detail = DND.DROP_NONE;
         }
 
         clearTransferSelection();
+    }
+
+    /**
+     * Part of the drag&drop handling which runs detached from the browser (see AP-19733).
+     */
+    @SuppressWarnings("unchecked")
+    private void handleDropAsync(final EditPart targetEditPart, final Request targetRequest) {
+        // AP-19733: Attention! This call can open a pop-up window for Hub authentication, so we have to detach from
+        //           the drag&drop action to avoid a deadlock between browser and AP. This is the last point at
+        //           which we can do that conveniently.
+        final var command = targetEditPart.getCommand(targetRequest);
+
+        final var commandStack = getViewer().getEditDomain().getCommandStack();
+        if (command instanceof CompoundCommand) {
+            // If the command is a compound command the drop request also needs to
+            // create space for the new node and therefore moves other nodes.
+            // The commands are executed one after another so the user can undo
+            // the move if wanted but still has the new node inserted.
+            final List<?> commands = ((CompoundCommand)command).getCommands();
+            if (commands instanceof ArrayList<?>) {
+                for (final Command c : (ArrayList<Command>) commands) {
+                    final var before = commandStack.getUndoCommand();
+                    commandStack.execute(c);
+                    final var after = commandStack.getUndoCommand();
+                    if (Objects.equals(before, after)) {
+                        break;
+                    }
+                }
+                getViewer().getSelectionManager().deselectAll();
+            }
+        } else {
+            commandStack.execute(command);
+        }
+
+        // after adding a node the editor should get the focus
+        // this is issued asynchronously, in order to avoid bug #3029
+        Display.getDefault().asyncExec(() ->
+            Optional.ofNullable(PlatformUI.getWorkbench().getActiveWorkbenchWindow())
+                    .map(IWorkbenchWindow::getActivePage)
+                    .map(IWorkbenchPage::getActiveEditor)
+                    .ifPresent(IEditorPart::setFocus));
     }
 
     /**
