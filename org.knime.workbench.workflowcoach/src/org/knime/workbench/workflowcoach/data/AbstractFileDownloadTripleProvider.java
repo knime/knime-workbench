@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.workflowcoach.data;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -66,14 +67,12 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.stream.Stream;
-import java.util.zip.GZIPInputStream;
 
-import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.knime.core.node.KNIMEConstants;
@@ -89,7 +88,7 @@ import org.knime.core.ui.workflowcoach.data.UpdatableNodeTripleProvider;
  */
 public abstract class AbstractFileDownloadTripleProvider implements UpdatableNodeTripleProvider {
 
-    private static final int TIMEOUT = 10000; //10 seconds
+    private static final int TIMEOUT = 10_000; //10 seconds
 
     /**
      * Name of the temporary file the download file is stored into before it is checked and renamed to the desired file
@@ -116,25 +115,18 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
         m_tmpFile = Paths.get(KNIMEConstants.getKNIMEHomeDir(), TMP_FILE_NAME);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Stream<NodeTriple> getNodeTriples() throws IOException {
-        return NodeFrequencies.from(Files.newInputStream(m_file)).getFrequencies().stream();
+        try (final var inStream = Files.newInputStream(m_file)) {
+            return NodeFrequencies.from(inStream).getFrequencies().stream();
+        }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean updateRequired() {
         return !Files.exists(m_file);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void update() throws Exception {
 
@@ -161,13 +153,15 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
             if (statusCode == HttpStatus.SC_NOT_MODIFIED) {
                 return;
             }
+
             if (statusCode != HttpStatus.SC_OK) {
                 throw new HttpException("Cannot access server node recommendation file: " + statusLine);
             }
 
             //download and store the file
-            try (final var in = getInputStream(response); final var out = Files.newOutputStream(m_tmpFile)) {
-                IOUtils.copy(in, out);
+            final HttpEntity entity = response.getEntity();
+            try (final var in = entity.getContent()) {
+                Files.copy(in, m_tmpFile);
             }
         }
 
@@ -191,7 +185,7 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
      *             downloaded file
      */
     protected void checkDownloadedFile(final Path file) throws IOException {
-        try (final var in = Files.newInputStream(file)) {
+        try (final var in = new BufferedInputStream(Files.newInputStream(file))) {
             NodeFrequencies.from(in);
         } catch (IOException e) {
             throw new IOException("Downloaded file doesn't contain node recommendation data.", e);
@@ -215,12 +209,6 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
                 .warn("Could not determine last update of '" + m_file + "': " + ex.getMessage(), ex);
             return Optional.empty();
         }
-    }
-
-    private static InputStream getInputStream(final CloseableHttpResponse response) throws IOException {
-        final var stream = response.getEntity().getContent();
-        final var encoding = response.getFirstHeader("Content-Encoding");
-        return encoding != null && encoding.getValue().equals("gzip") ? new GZIPInputStream(stream) : stream;
     }
 
     private static SimpleDateFormat getHttpDateFormat() {
