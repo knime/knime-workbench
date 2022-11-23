@@ -107,30 +107,28 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      *
      * @since 5.0
      */
-    public static final String WORKFLOW_RELATIVE = KnimeUrlType.WORKFLOW_RELATIVE.getAuthority();
+    public static final String WORKFLOW_RELATIVE = "knime.workflow";
 
     /**
      * The magic hostname for mountpoint-relative URLs.
      *
      * @since 5.0
      */
-    public static final String MOUNTPOINT_RELATIVE = KnimeUrlType.MOUNTPOINT_RELATIVE.getAuthority();
+    public static final String MOUNTPOINT_RELATIVE = "knime.mountpoint";
 
     /**
      * The magic hostname for node-relative URLs.
      *
      * @since 6.4
      */
-    public static final String NODE_RELATIVE = KnimeUrlType.NODE_RELATIVE.getAuthority();
+    public static final String NODE_RELATIVE = "knime.node";
 
     /**
      * The magic hostname for space-relative URLs.
      *
      * @since 8.9
      */
-    public static final String SPACE_RELATIVE = KnimeUrlType.HUB_SPACE_RELATIVE.getAuthority();
-
-    private static final URIPathEncoder UTF8_ENCODER = URIPathEncoder.UTF_8;
+    public static final String SPACE_RELATIVE = "knime.space";
 
     private final ServerRequestModifier m_requestModifier;
 
@@ -231,7 +229,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                 throw new IllegalStateException("Unhandled KNIME URL type: " + urlType);
         }
 
-        return UTF8_ENCODER.encodePathSegments(result);
+        return URIPathEncoder.UTF_8.encodePathSegments(result);
     }
 
     /**
