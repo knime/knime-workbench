@@ -156,7 +156,11 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
         // TODO getting the explorer file store can take in the order of ~100ms, so pretty expensive
         // inspecting the mount ID won't be enough, since for custom mounted hub instances the user can select an
         // arbitrary mount ID
-        final String fileStoreClassName = ExplorerFileSystem.INSTANCE.getStore(uri).getClass().getName();
+        final var explorerFileStore = ExplorerFileSystem.INSTANCE.getStore(uri);
+        if (explorerFileStore == null) {
+            return false;
+        }
+        var fileStoreClassName = explorerFileStore.getClass().getName();
         // NOSONAR I don't want instanceof because it would force me to introduce a dependency to commercial code
         return fileStoreClassName.equals("com.knime.explorer.server.hub.HubExplorerFileStore"); // NOSONAR
     }
