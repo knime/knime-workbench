@@ -173,7 +173,7 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
         m_tableViewer = createTableViewer(tableComp);
         m_tableViewer.addDoubleClickListener(this::versionTableDoubleClicked);
         m_useMostRecentSpaceVersionCheckBox = new Button(content, SWT.CHECK);
-        m_useMostRecentSpaceVersionCheckBox.setText("Always use most recent version");
+        m_useMostRecentSpaceVersionCheckBox.setText("Use the latest state");
         m_useMostRecentSpaceVersionCheckBox.setSelection(!sourceUriContainsSpaceVersion());
         m_useMostRecentSpaceVersionCheckBox.addListener(SWT.Selection, l -> syncEnableTableViewer());
         syncEnableTableViewer();
@@ -198,9 +198,11 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
      */
     private void versionTableDoubleClicked(final DoubleClickEvent event) {
         var table = m_tableViewer.getTable();
-        int index = table.getSelectionIndex();
-        // the table is not sortable, the i-th row always corresponds to the i-th space version
-        m_selectedSpaceVersion = m_spaceVersions.get(index).getVersion();
+        if (table.getSelectionIndex() != -1) {
+            int index = table.getSelectionIndex();
+            // the table is not sortable, the i-th row always corresponds to the i-th space version
+            m_selectedSpaceVersion = m_spaceVersions.get(index).getVersion();
+        }
         super.okPressed();
     }
 
