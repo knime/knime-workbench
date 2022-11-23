@@ -601,7 +601,7 @@ public class ExplorerURLStreamHandlerTest {
                     .withJobCreator("test"))
                 .withHubSpaceLocation(loc -> loc
                     .withRepositoryAddress(repoAddressUri)
-                    .withWorkflowPath("/Users/john/Private")
+                    .withWorkflowPath("/Users/john/Private/workflow")
                     .withAuthenticator(new SimpleTokenAuthenticator("token"))
                     .withDefaultMountId("My-Knime-Hub")
                     .withSpace("/Users/john/Private", "*11", "4")
@@ -637,7 +637,7 @@ public class ExplorerURLStreamHandlerTest {
                     .withJobCreator("test"))
                 .withHubSpaceLocation(loc -> loc
                     .withRepositoryAddress(repoAddressUri)
-                    .withWorkflowPath("/Users/john/Private")
+                    .withWorkflowPath("/Users/john/Private/workflow")
                     .withAuthenticator(new SimpleTokenAuthenticator("token"))
                     .withDefaultMountId("My-Knime-Hub")
                     .withSpace("/Users/john/Private", "*11", null)
@@ -673,7 +673,7 @@ public class ExplorerURLStreamHandlerTest {
                     .withJobCreator("test"))
                 .withHubSpaceLocation(loc -> loc
                     .withRepositoryAddress(repoAddressUri)
-                    .withWorkflowPath("/Users/john/Private")
+                    .withWorkflowPath("/Users/john/Private/workflow")
                     .withAuthenticator(new SimpleTokenAuthenticator("token"))
                     .withDefaultMountId("My-Knime-Hub")
                     .withSpace("/Users/john/Private", "*11", "")
@@ -750,6 +750,46 @@ public class ExplorerURLStreamHandlerTest {
         assertResolvedURIEquals("Unexpected resolved URL",
             currentLocation.getParent().resolve("test.txt").toUri(),
             new URL("knime://knime.space/test.txt"));
+    }
+
+    /**
+     * Checks if space-relative get redirected to mountpoint-relative knime-URLs.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveSpaceRelativeURLInTempCopy() throws Exception {
+        final var localMountId = "My-Knime-Hub";
+        final var currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
+        final var context = WorkflowContextV2.builder()
+                .withAnalyticsPlatformExecutor(exec -> exec
+                    .withCurrentUserAsUserId()
+                    .withLocalWorkflowPath(currentLocation)
+                    .withMountpoint(localMountId, currentLocation.getParent()))
+                .withHubSpaceLocation(loc -> loc
+                    .withRepositoryAddress(URI.create("https://api.hub.knime.com:443/knime/rest/v4/repository"))
+                    .withWorkflowPath("/Users/john doe/Private/workflow")
+                    .withAuthenticator(new SimpleTokenAuthenticator("token"))
+                    .withDefaultMountId("KNIME-Community-Hub")
+                    .withSpace("/Users/john doe/Private", "*11", "4")
+                    .withWorkflowItemId("*12"))
+                .build();
+
+        final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
+            new WorkflowCreationHelper(context));
+        NodeContext.pushContext(wfm);
+
+        assertResolvedURIEquals("Unexpected resolved URL",
+            URI.create("knime://" + localMountId + "/Users/john%20doe/Private/Foo/test.txt?spaceVersion=4"),
+            new URL("knime://knime.space/Foo/test.txt"));
+
+        final var url1 = new URL("knime://knime.space/workflow/data/test.txt");
+        final var ex1 = assertThrows(IOException.class, () -> m_handler.openConnection(url1));
+        assertTrue(ex1.getMessage().contains("Accessing the workflow contents is not allowed for space relative URLs"));
+
+        final var url2 = new URL("knime://knime.space/Foo/../../OtherSpace/Bar/test.txt");
+        final var ex2 = assertThrows(IOException.class, () -> m_handler.openConnection(url2));
+        assertTrue(ex2.getMessage().contains("Leaving the Hub space is not allowed for space relative URLs"));
     }
 
     /**

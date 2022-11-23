@@ -74,6 +74,7 @@ import org.knime.core.node.workflow.contextv2.HubSpaceLocationInfo;
 import org.knime.core.node.workflow.contextv2.JobExecutorInfo;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2.LocationType;
 import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
 import org.knime.core.ui.node.workflow.WorkflowContextUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
@@ -457,13 +458,19 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         if (!StringUtils.isBlank(origUrl.getQuery())) {
             // Since we stay in the same space, the version shouldn't change either. We reject all query parameters here
             // because we would understand none of them, this may change in the future.
-            throw new IllegalArgumentException("Space relative URLs don't support query parameters: " + origUrl);
+            throw new IOException("Space relative URLs don't support query parameters: " + origUrl);
         }
 
         if (context.getLocationInfo() instanceof HubSpaceLocationInfo) {
             // resolve against the actual Hub space
             final var hubInfo = (HubSpaceLocationInfo) context.getLocationInfo();
             return resolveSpaceRelativeUrlAgainstHub(origUrl, context, hubInfo);
+        }
+
+        if (context.getLocationType() != LocationType.LOCAL) {
+            // there are no space on Server
+            throw new IOException("Space relative URLs can only be resolved on a Hub or locally, found " +
+                    context.getLocationType());
         }
 
         try {
@@ -488,20 +495,17 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             final var builder = new URIBuilder(URIUtil.append(spaceRepoUri, decodedPath + ":data"));
             hubInfo.getSpaceVersion().ifPresent(v -> builder.addParameter("spaceVersion", v));
             try {
-                final var normalizedUrl = builder.build().normalize().toURL();
-                final var fullPath = URIPathEncoder.decodePath(normalizedUrl);
-                if (fullPath.startsWith(hubInfo.getWorkflowPath())) {
+                final var normalizedUri = builder.build().normalize();
+                if (isContainedIn(normalizedUri, hubInfo.getWorkflowAddress())) {
                     // we could allow this at some point and resolve the URL in the local file system
                     throw new IOException("Accessing the workflow contents is not allowed for space relative URLs: "
                             + origUrl + " points into current workflow " + hubInfo.getWorkflowPath());
                 }
-
-                final var repoSpacePath = URIPathEncoder.decodePath(spaceRepoUri.toURL());
-                if (!fullPath.startsWith(repoSpacePath)) {
+                if (!isContainedIn(normalizedUri, spaceRepoUri)) {
                     throw new IOException("Leaving the Hub space is not allowed for space relative URLs: "
                             + decodedPath + " is not in " + hubInfo.getSpacePath());
                 }
-                return normalizedUrl;
+                return normalizedUri.toURL();
             } catch (URISyntaxException e) {
                 throw new IOException(e);
             }
@@ -511,13 +515,27 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
                 new IOException("Cannot resolve space relative URLs outside of Hub or mountpoint: '" + origUrl + "'"));
 
         // we are mounted in the Analytics Platform, make the ExplorerMountTable sort it out
-        final var spaceUri = URIUtil.append(mountpointURI, hubInfo.getSpacePath()).normalize();
+        final URI spaceUri;
+        try {
+            spaceUri = new URIBuilder(mountpointURI).setPath(hubInfo.getSpacePath()).build().normalize();
+        } catch (URISyntaxException e) {
+            throw new IOException(e);
+        }
         final var resolvedUri = URIUtil.append(spaceUri, decodedPath).normalize();
-        if (!resolvedUri.toString().startsWith(spaceUri.toString())) {
+        if (isContainedIn(resolvedUri, mountpointURI)) {
+            // we could allow this at some point and resolve the URL in the local file system
+            throw new IOException("Accessing the workflow contents is not allowed for space relative URLs: "
+                    + origUrl + " points into current workflow " + hubInfo.getWorkflowPath());
+        }
+        if (!isContainedIn(resolvedUri, spaceUri)) {
             throw new IOException("Leaving the Hub space is not allowed for space relative URLs: "
                     + resolvedUri + " is not in " + spaceUri);
         }
         return resolvedUri.toURL();
+    }
+
+    private static boolean isContainedIn(final URI inner, final URI outer) {
+        return !outer.relativize(inner).isAbsolute();
     }
 
     private static URLConnection openExternalMountConnection(final URL url) throws IOException {
