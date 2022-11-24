@@ -62,7 +62,7 @@ public interface URIImporter {
     /**
      * Normal priority value.
      */
-    final static int NORMAL_PRIORITY = 0;
+    static final int NORMAL_PRIORITY = 0;
 
     /**
      * Helper to create the correct entity import instance.
@@ -102,7 +102,7 @@ public interface URIImporter {
         throws ImportForbiddenException {
         Optional<Class<? extends EntityImport>> entityImportClass = importer.getEntityImportClass(uri);
         if (entityImportClass.isPresent()) {
-            return (Optional<I>)createEntityImport(uri, importer, importer.getEntityImportClass(uri).get());
+            return (Optional<I>)createEntityImport(uri, importer, entityImportClass.get());
         } else {
             return Optional.empty();
         }

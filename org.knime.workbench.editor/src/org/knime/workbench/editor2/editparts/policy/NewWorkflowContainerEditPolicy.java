@@ -231,7 +231,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                     return handleExtensionDropFromURI((ExtensionImport)entityImport.get());
                 }
             }
-            showPopup("Unknown URL dropped!", "URL can't be dropped to KNIME workbench!\n\nUnknown URL:\n" + uri,
+            showPopup("Unknown URL dropped!", "URL can't be dropped to KNIME workbench! Corresponding Hub not mounted?\n\nUnknown URL:\n" + uri,
                 SWT.ICON_WARNING);
             LOGGER.debug("Unknown URL dropped: " + uri);
         }
