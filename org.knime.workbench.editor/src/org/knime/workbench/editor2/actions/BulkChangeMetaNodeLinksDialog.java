@@ -123,6 +123,9 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  */
 public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
+    /** Secret system property added as part of AP-19804: Hub Version switches disabled in 4.7.0. */
+    public static final String SYS_PROPERTY_ENABLE_VERSION_FEATURES = "knime.workbench.hub.versioning";
+
     private static final NodeLogger LOGGER = NodeLogger.getLogger(BulkChangeMetaNodeLinksDialog.class);
 
     /**
@@ -339,27 +342,29 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             }
         });
 
-        // Hub Space version (also maps to link URI) radio button
-        var versionButton = new Button(propertiesGroup, SWT.RADIO);
-        versionButton.setText("KNIME Hub Space Version");
-        versionButton.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(final SelectionEvent e) {
-                if (((Button)e.getSource()).getSelection()) {
-                    m_linkChangeAction = LinkChangeAction.VERSION_CHANGE;
-                    m_linkChangeButton.setText("Select Version...");
-                    // only if both the action and group has been selected, the button is enabled
-                    var isComponentOnHub =
-                        isSelectedSubNode() && ChangeComponentSpaceVersionAction.isHubUri(m_oldLinkURI);
-                    m_linkChangeButton.setEnabled(isComponentOnHub);
-                    m_linkChangeButton.setToolTipText(isComponentOnHub ? ""
-                        : "Versioning is available only for linked Components stored on a KNIME Hub.");
-                    if (!isComponentOnHub) {
-                        m_uriTextField.setEditable(false);
+        if (Boolean.getBoolean(SYS_PROPERTY_ENABLE_VERSION_FEATURES)) {
+            // Hub Space version (also maps to link URI) radio button
+            var versionButton = new Button(propertiesGroup, SWT.RADIO);
+            versionButton.setText("KNIME Hub Space Version");
+            versionButton.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(final SelectionEvent e) {
+                    if (((Button)e.getSource()).getSelection()) {
+                        m_linkChangeAction = LinkChangeAction.VERSION_CHANGE;
+                        m_linkChangeButton.setText("Select Version...");
+                        // only if both the action and group has been selected, the button is enabled
+                        var isComponentOnHub =
+                            isSelectedSubNode() && ChangeComponentSpaceVersionAction.isHubUri(m_oldLinkURI);
+                        m_linkChangeButton.setEnabled(isComponentOnHub);
+                        m_linkChangeButton.setToolTipText(isComponentOnHub ? ""
+                            : "Versioning is available only for linked Components stored on a KNIME Hub.");
+                        if (!isComponentOnHub) {
+                            m_uriTextField.setEditable(false);
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
         // text field for display and URI editing
         m_uriTextField = new Text(content, SWT.BORDER);
