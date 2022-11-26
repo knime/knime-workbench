@@ -73,6 +73,7 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
 import org.knime.core.ui.node.workflow.WorkflowContextUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
+import org.knime.core.util.auth.SimpleTokenAuthenticator;
 
 /**
  * Testcases for {@link ExplorerURLStreamHandler} if used on the context of {@link WorkflowContextUI} and therewith
@@ -149,8 +150,8 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
         URI mountpointUri = new URI(
             "knime://knime-server-mountpoint/test?exec=8443aad7-e59e-4be1-b31b-4b287f5bf466&name=test%2B2019-01-02%2B09.57.19");
 
-        RemoteWorkflowContext ctx =
-            new RemoteWorkflowContext(null, "path", "token", "mount id", mountpointUri, null, null);
+        RemoteWorkflowContext ctx = new RemoteWorkflowContext(null, null, "path", new SimpleTokenAuthenticator("token"),
+            "mount id", mountpointUri, null, null);
         NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
 
         URLConnection conn = m_handler.openConnection(url);
@@ -169,8 +170,8 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
         URI mountpointUri = new URI(
             "knime://knime-server-mountpoint/test?exec=8443aad7-e59e-4be1-b31b-4b287f5bf466&name=test%2B2019-01-02%2B09.57.19");
 
-        RemoteWorkflowContext ctx =
-            new RemoteWorkflowContext(null, "path", "token", "mount id", mountpointUri, null, null);
+        RemoteWorkflowContext ctx = new RemoteWorkflowContext(null, null, "path", new SimpleTokenAuthenticator("token"),
+            "mount id", mountpointUri, null, null);
         NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
 
         URLConnection conn = m_handler.openConnection(url);
@@ -189,8 +190,8 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
         URI mountpointUri = new URI(
             "knime://knime-server-mountpoint/test?exec=8443aad7-e59e-4be1-b31b-4b287f5bf466&name=test%2B2019-01-02%2B09.57.19");
 
-        RemoteWorkflowContext ctx =
-            new RemoteWorkflowContext(null, "path", "token", "mount id", mountpointUri, null, null);
+        RemoteWorkflowContext ctx = new RemoteWorkflowContext(null, null, "path", new SimpleTokenAuthenticator("token"),
+            "mount id", mountpointUri, null, null);
         NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
 
         m_expectedException.expect(IllegalArgumentException.class);
