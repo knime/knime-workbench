@@ -785,7 +785,8 @@ public class ExplorerURLStreamHandlerTest {
 
         final var url1 = new URL("knime://knime.space/workflow/data/test.txt");
         final var ex1 = assertThrows(IOException.class, () -> m_handler.openConnection(url1));
-        assertTrue(ex1.getMessage().contains("Accessing the workflow contents is not allowed for space relative URLs"));
+        assertTrue("'" + ex1.getMessage() + "' should talk about diallowing access.",
+            ex1.getMessage().contains("Accessing the current workflow's contents is not allowed"));
 
         final var url2 = new URL("knime://knime.space/Foo/../../OtherSpace/Bar/test.txt");
         final var ex2 = assertThrows(IOException.class, () -> m_handler.openConnection(url2));

@@ -56,12 +56,14 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 import javax.net.ssl.HttpsURLConnection;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.URIUtil;
@@ -87,6 +89,7 @@ import org.knime.core.util.auth.Authenticator;
 import org.knime.core.util.auth.CouldNotAuthorizeException;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.urlresolve.KnimeUrlResolver;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.url.AbstractURLStreamHandlerService;
@@ -204,6 +207,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             }
         }
 
+        return KnimeUrlResolver.getResolver(workflowContext).resolve(url);
+        /*
         final URL result;
         switch (urlType) {
             case HUB_SPACE_RELATIVE:
@@ -231,6 +236,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
 
         return URIPathEncoder.UTF_8.encodePathSegments(result);
+        */
     }
 
     /**
@@ -290,19 +296,35 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     }
 
     private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContextUI workflowContext)
-        throws IOException {
-        if (Wrapper.wraps(workflowContext, WorkflowContextV2.class)) {
-            return resolveWorkflowRelativeUrl(origUrl, Wrapper.unwrap(workflowContext, WorkflowContextV2.class));
+            throws IOException {
+        final var query = URLEncodedUtils.parse(origUrl.getQuery(), StandardCharsets.UTF_8);
+        if (query.stream().anyMatch(p -> "spaceVersion".equals(p.getName()))) {
+            throw new IOException("Relative KNIME URLs cannot specify space versions: " + origUrl);
         }
 
-        assert workflowContext instanceof RemoteWorkflowContext;
-        RemoteWorkflowContext rwc = (RemoteWorkflowContext) workflowContext;
         final var decodedPath = URIPathEncoder.decodePath(origUrl);
+        if (Wrapper.wraps(workflowContext, WorkflowContextV2.class)) {
+            final var localContext = Wrapper.unwrap(workflowContext, WorkflowContextV2.class);
+            return resolveWorkflowRelativeUrlLocal(decodedPath, localContext);
+        } else {
+            final var remoteContext = (RemoteWorkflowContext) workflowContext;
+            return resolveWorkflowRelativeUrlRemote(decodedPath, remoteContext);
+        }
+   }
+
+    private static URL resolveWorkflowRelativeUrlRemote(final String decodedPath,
+        final RemoteWorkflowContext remoteContext) throws IOException {
         if (!leavesWorkflow(decodedPath)) {
             throw new IllegalArgumentException(
                 "Workflow relative URL points to a resource within a workflow. Not accessible.");
         }
-        final var mpURI = rwc.getMountpointURI();
+
+        final var optContextV2 = remoteContext.getWorkflowContextV2();
+        if (optContextV2.isPresent()) {
+            final var contextV2 = optContextV2.get();
+
+        }
+        final var mpURI = remoteContext.getMountpointURI();
         final URI mpURIWithoutQueryAndFragment;
         try {
             mpURIWithoutQueryAndFragment =
@@ -312,12 +334,10 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
         final var uri = URIUtil.append(mpURIWithoutQueryAndFragment, decodedPath);
         return uri.normalize().toURL();
-   }
+    }
 
-    private static URL resolveWorkflowRelativeUrl(final URL origUrl, final WorkflowContextV2 workflowContext2)
-            throws IOException {
-        final var decodedPath = URIPathEncoder.decodePath(origUrl);
-
+    private static URL resolveWorkflowRelativeUrlLocal(final String decodedPath,
+            final WorkflowContextV2 workflowContext2) throws IOException {
         final boolean leavesWorkflow = leavesWorkflow(decodedPath);
 
         final var executor = workflowContext2.getExecutorInfo();

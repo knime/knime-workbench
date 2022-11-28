@@ -194,7 +194,7 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
             "mount id", mountpointUri, null, null);
         NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
 
-        m_expectedException.expect(IllegalArgumentException.class);
+        m_expectedException.expect(IOException.class);
         m_expectedException.expectMessage(
             containsString("Workflow relative URL points to a resource within a workflow. Not accessible."));
         m_handler.openConnection(url);

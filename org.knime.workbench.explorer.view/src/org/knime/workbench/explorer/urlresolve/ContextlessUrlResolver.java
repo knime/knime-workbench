@@ -44,29 +44,42 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   May 31, 2021 (wiswedel): created
+ *   Nov 28, 2022 (leonard.woerteler): created
  */
-package org.knime.workbench.explorer.serverinfo;
+package org.knime.workbench.explorer.urlresolve;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.ui.util.IRegisteredServerInfoService;
+import java.io.IOException;
+import java.net.URI;
 
 /**
- * Implementation of {@link IRegisteredServerInfoService} that collects info from {@link ExplorerMountTable}.
+ * KNIME URL Resolver for a workflow with no workflow context at all (should not happen in normal operation).
  *
- * @author wiswedel
+ * @author Leonard Wörteler, KNIME GmbH, Konstanz, Germany
  */
-public final class RegisteredServerInfoService implements IRegisteredServerInfoService {
+final class ContextlessUrlResolver extends KnimeUrlResolver {
 
-    @Override
-    public List<ServerAndExecutorVersions> getServerAndVersionInfos() {
-        return ExplorerMountTable.getAllMountedIDs().stream()
-            .map(id -> ExplorerMountTable.getMountPoint(id).getProvider())
-            .flatMap(provider -> provider.getServerAndExecutorVersions().stream())
-            .collect(Collectors.toList());
+    static final ContextlessUrlResolver INSTANCE = new ContextlessUrlResolver();
+
+    private ContextlessUrlResolver() {
     }
 
+    @Override
+    URI resolveMountpointRelative(final String decodedPath) throws IOException {
+        throw new IOException("No context for relative URL available");
+    }
+
+    @Override
+    URI resolveSpaceRelative(final String decodedPath) throws IOException {
+        throw new IOException("No context for relative URL available");
+    }
+
+    @Override
+    URI resolveWorkflowRelative(final String decodedPath) throws IOException {
+        throw new IOException("No context for relative URL available");
+    }
+
+    @Override
+    URI resolveNodeRelative(final String decodedPath) throws IOException {
+        throw new IOException("No context for relative URL available");
+    }
 }
