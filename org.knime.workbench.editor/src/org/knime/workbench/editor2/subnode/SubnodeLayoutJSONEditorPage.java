@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.swing.BoxLayout;
 import javax.swing.JApplet;
@@ -130,6 +131,7 @@ import org.knime.core.node.workflow.SubnodeContainerConfigurationStringProvider;
 import org.knime.core.node.workflow.SubnodeContainerLayoutStringProvider;
 import org.knime.core.node.workflow.WorkflowLock;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.webui.node.view.NodeViewManager;
 import org.knime.js.core.JavaScriptViewCreator;
 import org.knime.js.core.layout.DefaultConfigurationCreatorImpl;
 import org.knime.js.core.layout.DefaultLayoutCreatorImpl;
@@ -201,7 +203,9 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
 
         TabItem usageTab = new TabItem(tabs, SWT.NONE);
         usageTab.setText("Node Usage");
-        m_nodeUsageComposite = new NodeUsageComposite(tabs, m_viewNodes, m_subNodeContainer);
+        var legacyViewNodes = m_viewNodes.entrySet().stream().filter(e -> !NodeViewManager.hasNodeView(e.getValue()))
+            .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+        m_nodeUsageComposite = new NodeUsageComposite(tabs, legacyViewNodes, m_subNodeContainer);
         usageTab.setControl(m_nodeUsageComposite);
 
         TabItem visualTab = new TabItem(tabs, SWT.NONE);
