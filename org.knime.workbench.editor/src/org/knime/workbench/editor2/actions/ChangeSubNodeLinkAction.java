@@ -48,8 +48,8 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -66,23 +66,24 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.util.ClassUtils;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.SubNodeContainer;
-import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.contextv2.AnalyticsPlatformExecutorInfo;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.util.pathresolve.ResolverUtil;
+import org.knime.core.util.Pair;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.BulkChangeMetaNodeLinksCommand;
 import org.knime.workbench.editor2.commands.ChangeSubNodeLinkCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProvider.LinkType;
 
 /**
@@ -151,36 +152,17 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
             return false;
         }
         SubNodeContainer subNode = (SubNodeContainer)nc;
-        if (!Role.Link.equals(subNode.getTemplateInformation().getRole()) || subNode.getParent().isWriteProtected()) {
-            // sub node must be linked and parent must not forbid the change
+        if (subNode.getParent().isWriteProtected()) {
+            // the subnode's parent must not forbid the change
             return false;
         }
-        // we can reconfigure the template link - but only if template and flow are in the same mountpoint
-        URI targetURI = subNode.getTemplateInformation().getSourceURI();
-        try {
-            if (ResolverUtil.isMountpointRelativeURL(targetURI)
-                || ResolverUtil.isWorkflowRelativeURL(targetURI)) {
-                return true;
-            }
-        } catch (IOException e) {
-            return false;
-        }
-        // we can change absolute links if the mount points of flow and template are the same
-        AbstractContentProvider workflowMountPoint = null;
-        WorkflowContext wfc = subNode.getProjectWFM().getContext();
-        LocalExplorerFileStore fs =
-            ExplorerFileSystem.INSTANCE.fromLocalFile(wfc.getMountpointRoot());
-        if (fs != null) {
-            workflowMountPoint = fs.getContentProvider();
-        }
-        if (workflowMountPoint == null) {
-            return false;
-        }
-        AbstractExplorerFileStore targetfs = ExplorerFileSystem.INSTANCE.getStore(targetURI);
-        if (targetfs == null) {
-            return false;
-        }
-        return workflowMountPoint.equals(targetfs.getContentProvider());
+
+        var templateInfo = subNode.getTemplateInformation();
+        var host = templateInfo.getSourceURI() != null ? templateInfo.getSourceURI().getHost() : null;
+        var provider = ExplorerMountTable.getMountedContent().get(host);
+
+        // the subnode must be linked and the contentprovider must be non-null
+        return templateInfo.getRole() == Role.Link && provider != null;
     }
 
     /** {@inheritDoc} */
@@ -191,12 +173,31 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
         }
 
         SubNodeContainer subNode = Wrapper.unwrap(nodeParts[0].getNodeContainer(), SubNodeContainer.class);
-        if (Role.Link.equals(subNode.getTemplateInformation().getRole())) {
+        if (subNode.getTemplateInformation().getRole() == Role.Link) {
             WorkflowManager wfm = subNode.getParent();
-            URI targetURI = subNode.getTemplateInformation().getSourceURI();
+            var targetURI = subNode.getTemplateInformation().getSourceURI();
+
+            /**
+             * Do all further API calls to check if the URI has ONE of the following attributes:
+             * - is a mountpoint-relative URI
+             * - is a workflow-relative URI
+             * - is a absolute URI and the local mountpoint's contentprovider equals the one of the target filestore
+             */
             var linkType = BulkChangeMetaNodeLinksCommand.resolveLinkType(targetURI);
-            if (linkType == LinkType.None) {
-                return;
+            switch (linkType) {
+                case MountpointRelative:
+                case WorkflowRelative:
+                    // continue to change link
+                    break;
+                case Absolute:
+                    if (!checkAbsoluteURIValidity(subNode, targetURI)) {
+                        return;
+                    }
+                    break;
+                case None:
+                default:
+                    // abort changing link without message - existing behavior
+                    return;
             }
 
             String msg = "This is a linked (read-only) component. Only the link type can be changed.\n";
@@ -223,6 +224,34 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
             throw new IllegalStateException(
                 "Can only change the link type of if the component is actually linked - " + subNode + " is not.");
         }
+    }
+
+    /**
+     * Checks the validity of an absolute URI for changing the link (aka performing the action).
+     * @param targetURI the subnode's source URI
+     * @return is valid?
+     */
+    private boolean checkAbsoluteURIValidity(final SubNodeContainer subNode, final URI targetURI) {
+        // check if the contentproviders match and if the filestore is resolvable
+        final var wfc = subNode.getProjectWFM().getContextV2();
+        final var mountpointRoot = ClassUtils.castOptional(AnalyticsPlatformExecutorInfo.class, wfc.getExecutorInfo())
+                .flatMap(AnalyticsPlatformExecutorInfo::getMountpoint)
+                .map(Pair::getSecond)
+                .map(Path::toFile)
+                .orElse(null);
+        LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE.fromLocalFile(mountpointRoot);
+        var localProvider = fs != null ? fs.getContentProvider() : null;
+
+        AbstractExplorerFileStore targetFs = ExplorerFileSystem.INSTANCE.getStore(targetURI);
+        var targetProvider = targetFs != null ? targetFs.getContentProvider() : null;
+
+        if (localProvider == null || targetProvider == null || !localProvider.equals(targetProvider)) {
+            String message = "Cannot change component link of node: " + subNode.getNameWithID() + ".\n"
+                + "You can only change the link for a component source on a local mountpoint.";
+            MessageDialog.openError(getEditor().getSite().getShell(), "Change Component Link", message);
+            return false;
+        }
+        return true;
     }
 
     static class LinkPrompt extends MessageDialog {

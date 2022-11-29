@@ -50,8 +50,8 @@ package org.knime.workbench.editor2.actions;
 import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
 import static org.knime.core.ui.wrapper.Wrapper.wraps;
 
-import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Path;
 
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -68,23 +68,24 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.util.ClassUtils;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
-import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.contextv2.AnalyticsPlatformExecutorInfo;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.util.pathresolve.ResolverUtil;
+import org.knime.core.util.Pair;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.BulkChangeMetaNodeLinksCommand;
 import org.knime.workbench.editor2.commands.ChangeMetaNodeLinkCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProvider.LinkType;
 
 /**
@@ -157,36 +158,17 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
             return false;
         }
         WorkflowManagerUI metaNode = (WorkflowManagerUI)nc;
-        if (!Role.Link.equals(unwrapWFM(metaNode).getTemplateInformation().getRole()) || metaNode.getParent().isWriteProtected()) {
-            // metanode must be linked and parent must not forbid the change
+        if (metaNode.getParent().isWriteProtected()) {
+            // the metanode's parent must not forbid the change
             return false;
         }
-        // we can reconfigure the template link - but only if template and flow are in the same mountpoint
-        URI targetURI = unwrapWFM(metaNode).getTemplateInformation().getSourceURI();
-        try {
-            if (ResolverUtil.isMountpointRelativeURL(targetURI)
-                || ResolverUtil.isWorkflowRelativeURL(targetURI)) {
-                return true;
-            }
-        } catch (IOException e) {
-            return false;
-        }
-        // we can change absolute links if the mount points of flow and template are the same
-        AbstractContentProvider workflowMountPoint = null;
-        WorkflowContext wfc = unwrapWFM(metaNode).getProjectWFM().getContext();
-        LocalExplorerFileStore fs =
-            ExplorerFileSystem.INSTANCE.fromLocalFile(wfc.getMountpointRoot());
-        if (fs != null) {
-            workflowMountPoint = fs.getContentProvider();
-        }
-        if (workflowMountPoint == null) {
-            return false;
-        }
-        AbstractExplorerFileStore targetfs = ExplorerFileSystem.INSTANCE.getStore(targetURI);
-        if (targetfs == null) {
-            return false;
-        }
-        return workflowMountPoint.equals(targetfs.getContentProvider());
+
+        var templateInfo = unwrapWFM(metaNode).getTemplateInformation();
+        var host = templateInfo.getSourceURI() != null ? templateInfo.getSourceURI().getHost() : null;
+        var provider = ExplorerMountTable.getMountedContent().get(host);
+
+        // the metanode must be linked and the contentprovider must be non-null
+        return templateInfo.getRole() == Role.Link && provider != null;
     }
 
     /** {@inheritDoc} */
@@ -197,12 +179,31 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
         }
 
         WorkflowManager metaNode = Wrapper.unwrapWFM(nodeParts[0].getNodeContainer());
-        if (Role.Link.equals(metaNode.getTemplateInformation().getRole())) {
+        if (metaNode.getTemplateInformation().getRole() == Role.Link) {
             final WorkflowManager wfm = metaNode.getParent();
-            URI targetURI = metaNode.getTemplateInformation().getSourceURI();
+            var targetURI = metaNode.getTemplateInformation().getSourceURI();
+
+            /**
+             * Do all further API calls to check if the URI has ONE of the following attributes:
+             * - is a mountpoint-relative URI
+             * - is a workflow-relative URI
+             * - is a absolute URI and the local mountpoint's contentprovider equals the one of the target filestore
+             */
             var linkType = BulkChangeMetaNodeLinksCommand.resolveLinkType(targetURI);
-            if (linkType == LinkType.None) {
-                return;
+            switch (linkType) {
+                case MountpointRelative:
+                case WorkflowRelative:
+                    // continue to change link
+                    break;
+                case Absolute:
+                    if (!checkAbsoluteURIValidity(metaNode, targetURI)) {
+                        return;
+                    }
+                    break;
+                case None:
+                default:
+                    // abort changing link without message - existing behavior
+                    return;
             }
 
             String msg = "This is a linked (read-only) Metanode. Only the link type can be changed.\n";
@@ -230,6 +231,34 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
                 "Can only change the type of a template link if the metanode is actually linked to a template - "
                     + metaNode + " is not.");
         }
+    }
+
+    /**
+     * Checks the validity of an absolute URI for changing the link (aka performing the action).
+     * @param targetURI the metanode's source URI
+     * @return is valid?
+     */
+    private boolean checkAbsoluteURIValidity(final WorkflowManager metaNode, final URI targetURI) {
+        // check if the contentproviders match and if the filestore is resolvable
+        final var wfc = metaNode.getProjectWFM().getContextV2();
+        final var mountpointRoot = ClassUtils.castOptional(AnalyticsPlatformExecutorInfo.class, wfc.getExecutorInfo())
+                .flatMap(AnalyticsPlatformExecutorInfo::getMountpoint)
+                .map(Pair::getSecond)
+                .map(Path::toFile)
+                .orElse(null);
+        LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE.fromLocalFile(mountpointRoot);
+        var localProvider = fs != null ? fs.getContentProvider() : null;
+
+        AbstractExplorerFileStore targetFs = ExplorerFileSystem.INSTANCE.getStore(targetURI);
+        var targetProvider = targetFs != null ? targetFs.getContentProvider() : null;
+
+        if (localProvider == null || targetProvider == null || !localProvider.equals(targetProvider)) {
+            String message = "Cannot change metanode link of node: " + metaNode.getNameWithID() + ".\n"
+                + "You can only change the link for a metanode source on a local mountpoint.";
+            MessageDialog.openError(getEditor().getSite().getShell(), "Change Metanode Link", message);
+            return false;
+        }
+        return true;
     }
 
     static class LinkPrompt extends MessageDialog {

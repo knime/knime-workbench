@@ -141,12 +141,7 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
         // Component must be linked and parent must allow modification
         var isLinked = Role.Link == component.getTemplateInformation().getRole();
         var isChangeable = component.getParent().isWriteProtected();
-        if (!isLinked || isChangeable) {
-            return false;
-        }
-
-        // currently, the only sources that support versioning are hub instances
-        return isHubUri(component.getTemplateInformation().getSourceURI());
+        return isLinked && !isChangeable;
     }
 
     static boolean isHubUri(final URI uri) {
@@ -206,6 +201,13 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
             return;
         }
         var component = optComponent.get();
+        // currently, the only sources that support versioning are hub instances
+        if (!isHubUri(component.getTemplateInformation().getSourceURI())) {
+            String message = "Changing the space version is only supported on KNIME Hub instances.\n"
+                + "The source of this node is located either on a local mountpoint or on a KNIME Server.";
+            MessageDialog.openWarning(shell, "Change Space Version", message);
+            return;
+        }
 
         final Integer currentVersion = spaceVersionNumber(component.getTemplateInformation().getSourceURI());
 
