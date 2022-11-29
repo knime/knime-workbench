@@ -52,7 +52,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 
+import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.core.runtime.URIUtil;
 import org.knime.core.node.util.ClassUtils;
 import org.knime.core.node.workflow.contextv2.HubSpaceLocationInfo;
@@ -93,14 +95,18 @@ final class RemoteExecutorUrlResolver extends KnimeUrlResolver {
         final var spaceVersion = getSpaceVersion(url);
 
         // since the version in absolute URLs is fixed, we get the correct item via the repository
-        final var hubInfo = hubLocationInfo.get();
-        final var spacePath = hubInfo.getSpacePath();
-        final var spaceRepoUri = URIUtil.append(hubInfo.getRepositoryAddress(), spacePath);
-        final var workflowAddress = hubInfo.getWorkflowAddress();
-        final var workflowPath = hubInfo.getWorkflowPath();
-        final var resolvedUri = HubExecutorUrlResolver.createSpaceRelativeRepoUri(workflowAddress, workflowPath,
-            decodedPath, spacePath, spaceRepoUri, spaceVersion);
-        return URIPathEncoder.UTF_8.encodePathSegments(resolvedUri.toURL());
+        try {
+            final var repoUriBuilder = new URIBuilder(hubLocationInfo.get().getRepositoryAddress());
+            final var segments = new ArrayList<>(repoUriBuilder.getPathSegments());
+            segments.addAll(new URIBuilder().setPath(decodedPath + ":data").getPathSegments());
+            repoUriBuilder.setPathSegments(segments);
+            if (spaceVersion != null) {
+                repoUriBuilder.addParameter("spaceVersion", spaceVersion);
+            }
+            return URIPathEncoder.UTF_8.encodePathSegments(repoUriBuilder.build().normalize().toURL());
+        } catch (URISyntaxException e) {
+            throw new IOException(e);
+        }
     }
 
     @Override
@@ -129,11 +135,11 @@ final class RemoteExecutorUrlResolver extends KnimeUrlResolver {
         final var hubInfo = hubLocationInfo.get();
         final var spaceVersion =  hubInfo.getSpaceVersion().orElse(null);
         final var spacePath = hubInfo.getSpacePath();
-        final var spaceRepoUri = URIUtil.append(hubInfo.getRepositoryAddress(), spacePath);
         final var workflowAddress = hubInfo.getWorkflowAddress();
         final var workflowPath = hubInfo.getWorkflowPath();
+        final var repositoryAddress = hubInfo.getRepositoryAddress();
         return HubExecutorUrlResolver.createSpaceRelativeRepoUri(workflowAddress, workflowPath,
-            decodedPath, spacePath, spaceRepoUri, spaceVersion);
+            decodedPath, repositoryAddress, spacePath, spaceVersion);
     }
 
     @Override

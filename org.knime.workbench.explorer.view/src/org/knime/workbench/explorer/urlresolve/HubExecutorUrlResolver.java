@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.core.runtime.URIUtil;
@@ -87,13 +88,18 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
         final var decodedPath = URIPathEncoder.decodePath(url);
         final var spaceVersion = getSpaceVersion(url);
 
-        final var spacePath = m_locationInfo.getSpacePath();
-        final var spaceRepoUri = URIUtil.append(m_locationInfo.getRepositoryAddress(), spacePath);
-        final var workflowPath = m_locationInfo.getWorkflowPath();
-        final var workflowAddress = m_locationInfo.getWorkflowAddress();
-        final var resolvedUri = createSpaceRelativeRepoUri(workflowAddress, workflowPath, decodedPath, spacePath,
-            spaceRepoUri, spaceVersion);
-        return URIPathEncoder.UTF_8.encodePathSegments(resolvedUri.toURL());
+        try {
+            final var repoUriBuilder = new URIBuilder(m_locationInfo.getRepositoryAddress());
+            final var segments = new ArrayList<>(repoUriBuilder.getPathSegments());
+            segments.addAll(new URIBuilder().setPath(decodedPath + ":data").getPathSegments());
+            repoUriBuilder.setPathSegments(segments);
+            if (spaceVersion != null) {
+                repoUriBuilder.addParameter("spaceVersion", spaceVersion);
+            }
+            return URIPathEncoder.UTF_8.encodePathSegments(repoUriBuilder.build().normalize().toURL());
+        } catch (URISyntaxException e) {
+            throw new IOException(e);
+        }
     }
 
     @Override
@@ -106,10 +112,10 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
         // we're on a Hub executor, resolve workflow locally via the repository
         final var spacePath = m_locationInfo.getSpacePath();
         final var spaceVersion = m_locationInfo.getSpaceVersion().orElse(null);
-        final var spaceRepoUri = URIUtil.append(m_locationInfo.getRepositoryAddress(), spacePath);
+        final var repositoryAddress = m_locationInfo.getRepositoryAddress();
         final var workflowPath = m_locationInfo.getWorkflowPath();
         final var workflowAddress = m_locationInfo.getWorkflowAddress();
-        return createSpaceRelativeRepoUri(workflowAddress, workflowPath, decodedPath, spacePath, spaceRepoUri,
+        return createSpaceRelativeRepoUri(workflowAddress, workflowPath, decodedPath, repositoryAddress, spacePath,
             spaceVersion);
     }
 
@@ -118,7 +124,7 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
         if (leavesScope(decodedPath)) {
             // we're on a server of hub executor, resolve against the repository
             final var spacePath = m_locationInfo.getSpacePath();
-            final var workflowAddress = m_locationInfo.getWorkflowAddress();
+            final var workflowAddress = m_locationInfo.getWorkflowAddress().normalize();
             final var plainUri = URIUtil.append(workflowAddress, decodedPath).normalize();
             final var spaceUri = URIUtil.append(workflowAddress, spacePath).normalize();
             if (!isContainedIn(plainUri, spaceUri)) {
@@ -163,11 +169,19 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
      * @throws IOException if the URI doesn't stay in its lane
      */
     static URI createSpaceRelativeRepoUri(final URI workflowAddress, final String workflowPath,
-            final String decodedPath, final String spacePath, final URI spaceRepoUri, final String spaceVersion)
+            final String decodedPath, final URI repositoryAddress, final String spacePath, final String spaceVersion)
                     throws IOException {
         final URI normalizedUri;
         final URI plainUri;
+        final URI spaceRepoUri;
         try {
+            // this URI does not have a trailing slash because of normalization, safe to append to
+            final var spaceRepoUriBuilder = new URIBuilder(repositoryAddress);
+            final var segments = new ArrayList<>(spaceRepoUriBuilder.getPathSegments());
+            segments.addAll(new URIBuilder().setPath(spacePath).getPathSegments());
+            spaceRepoUriBuilder.setPathSegments(segments);
+            spaceRepoUri = spaceRepoUriBuilder.build().normalize();
+
             // omit `:data` and query parameter for the checks below
             plainUri = new URIBuilder(URIUtil.append(spaceRepoUri, decodedPath)).build().normalize();
             final var builder = new URIBuilder(URIUtil.append(spaceRepoUri, decodedPath + ":data"));

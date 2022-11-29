@@ -87,7 +87,8 @@ final class ServerExecutorUrlResolver extends KnimeUrlResolver {
     @Override
     URI resolveMountpointRelative(final String decodedPath) throws IOException {
         // legacy Servers don't have spaces, resolve directly against repo root
-        return URIUtil.append(m_locationInfo.getRepositoryAddress(), decodedPath + ":data").normalize();
+        final var repositoryAddress = m_locationInfo.getRepositoryAddress().normalize();
+        return URIUtil.append(repositoryAddress, decodedPath + ":data").normalize();
     }
 
     @Override
@@ -99,7 +100,8 @@ final class ServerExecutorUrlResolver extends KnimeUrlResolver {
     URI resolveWorkflowRelative(final String decodedPath) throws IOException {
         if (leavesScope(decodedPath)) {
             // we're on a server executor, resolve against the repository
-            final var uri = URIUtil.append(m_locationInfo.getRepositoryAddress(),
+            final var repositoryAddress = m_locationInfo.getRepositoryAddress().normalize();
+            final var uri = URIUtil.append(repositoryAddress,
                 m_locationInfo.getWorkflowPath() + "/" + decodedPath + ":data");
             return uri.normalize();
         }
