@@ -82,13 +82,7 @@ final class AnalyticsPlatformTempCopyUrlResolver extends KnimeUrlResolver {
 
     @Override
     URI resolveMountpointRelative(final String decodedPath) throws IOException {
-        try {
-            // access via mountpoint-absolute URL
-            final var uri = new URIBuilder(m_mountpointURI).setPath(decodedPath).build();
-            return uri.normalize();
-        } catch (URISyntaxException ex) {
-            throw new IOException(ex);
-        }
+        return resolveSpaceRelative(decodedPath);
     }
 
     @Override
