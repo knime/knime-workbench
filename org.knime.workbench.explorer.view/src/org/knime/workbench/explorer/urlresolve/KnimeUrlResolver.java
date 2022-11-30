@@ -54,6 +54,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.regex.Pattern;
 
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.knime.core.internal.ReferencedFile;
@@ -78,6 +79,9 @@ import org.knime.core.util.URIPathEncoder;
  * @author Leonard Wörteler, KNIME GmbH, Konstanz, Germany
  */
 public abstract class KnimeUrlResolver {
+
+    /** Regular expression pattern matching either the string {@code /..} or any string starting with {@code "/../"}. */
+    private static final Pattern LEAVING_SCOPE_PATTERN = Pattern.compile("^/\\.\\.(?:/.*|$)");
 
     /**
      * Creates a KNIME URL resolver for the given context.
@@ -288,7 +292,7 @@ public abstract class KnimeUrlResolver {
      * @return {@code true} if the path signals that it leaves the scope, {@code false} otherwise
      */
     static final boolean leavesScope(final String decodedPath) {
-        return decodedPath.startsWith("/../");
+        return LEAVING_SCOPE_PATTERN.matcher(decodedPath).matches();
     }
 
     /**
