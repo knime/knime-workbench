@@ -246,16 +246,19 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         LOGGER.debug("Checking for updates for " + candidateList.size() + " node link(s)...");
         CheckUpdateRunnableWithProgress runner =
             new CheckUpdateRunnableWithProgress(getManager(), candidateList);
+        Status status;
         try {
             ps.busyCursorWhile(runner);
-        } catch (InvocationTargetException e) {
-            LOGGER.warn("Failed to check for updates: " + e.getMessage(), e);
-            return;
+            status = runner.getStatus();
+        } catch (InvocationTargetException | IllegalStateException e) {
+            var message = e instanceof InvocationTargetException
+                ? ((InvocationTargetException)e).getTargetException().getMessage() : e.getMessage();
+            LOGGER.warn("Failed to check for updates: " + message, e);
+            status = new Status(IStatus.WARNING, KNIMEEditorPlugin.PLUGIN_ID, message);
         } catch (InterruptedException e) {
             return;
         }
         List<NodeID> updateList = runner.getUpdateList();
-        var status = runner.getStatus();
         if (status.getSeverity() == IStatus.ERROR
                 || status.getSeverity() == IStatus.WARNING) {
             ErrorDialog.openError(SWTUtilities.getActiveShell(), null,
@@ -344,7 +347,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         /** {@inheritDoc} */
         @Override
         public void run(final IProgressMonitor monitor)
-                throws InvocationTargetException, InterruptedException {
+                throws InvocationTargetException, InterruptedException, IllegalStateException {
             monitor.beginTask("Checking Link Updates", m_candidateList.size());
             var lH = new WorkflowLoadHelper(true, m_hostWFM.getContextV2());
 
@@ -442,35 +445,35 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
          * As a side effect, correctly sets the internal update state per NodeTemplate iff all went well.
          * @throws InterruptedException
          */
-        private void verifyMultiStatus() throws InterruptedException {
-            var updateError = false;
-            try {
-                // retrieves all top-level NodeIDs, works because of the recursive scan of the candidates,
-                // i.e. the first node to set m_topLevelPrefix will always be on the top level
-                var topLevelCandidates = m_candidateList.stream().filter(new Predicate<NodeID>() {
-                    private NodeID m_topLevelPrefix = null;
+        private void verifyMultiStatus() throws IllegalStateException {
+            // retrieves all top-level NodeIDs, works because of the recursive scan of the candidates,
+            // i.e. the first node to set m_topLevelPrefix will always be on the top level
+            var topLevelCandidates = m_candidateList.stream().filter(new Predicate<NodeID>() {
+                private NodeID m_topLevelPrefix = null;
 
-                    @Override
-                    public boolean test(final NodeID t) {
-                        if (m_topLevelPrefix == null) {
-                            m_topLevelPrefix = t.getPrefix();
-                            return true;
-                        }
-                        return t.getPrefix().equals(m_topLevelPrefix);
+                @Override
+                public boolean test(final NodeID t) {
+                    if (m_topLevelPrefix == null) {
+                        m_topLevelPrefix = t.getPrefix();
+                        return true;
                     }
-                }).collect(Collectors.toList());
-
-                // for each of the top level templates nodes, invoke a recursive update check
-                for (NodeID tlc : topLevelCandidates) {
-                    m_hostWFM.checkUpdateMetaNodeLink(tlc, new WorkflowLoadHelper(true, m_hostWFM.getContextV2()));
+                    return t.getPrefix().equals(m_topLevelPrefix);
                 }
-            } catch (IOException e) {
-                LOGGER.warn("Could not update node " + m_candidateList.get(0) + ": ", e);
-                updateError = true;
+            }).collect(Collectors.toList());
+
+            var updateError = false;
+            // for each of the top level templates nodes, invoke a recursive update check
+            for (NodeID tlc : topLevelCandidates) {
+                try {
+                    m_hostWFM.checkUpdateMetaNodeLink(tlc, new WorkflowLoadHelper(true, m_hostWFM.getContextV2()));
+                } catch (IOException e) {
+                    LOGGER.warn("Could not update node " + tlc + ": ", e);
+                    updateError = true;
+                }
             }
 
             if ((m_status.getSeverity() == IStatus.WARNING) != updateError) {
-                throw new InterruptedException("Inconsistent update states, something went wrong");
+                throw new IllegalStateException("Inconsistent update states, something went wrong");
             }
         }
 
