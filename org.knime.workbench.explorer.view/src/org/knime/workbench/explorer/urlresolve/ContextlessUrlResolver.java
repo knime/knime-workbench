@@ -48,8 +48,9 @@
  */
 package org.knime.workbench.explorer.urlresolve;
 
-import java.io.IOException;
 import java.net.URI;
+
+import org.knime.core.util.exception.ResourceAccessException;
 
 /**
  * KNIME URL Resolver for a workflow with no workflow context at all (should not happen in normal operation).
@@ -64,22 +65,22 @@ final class ContextlessUrlResolver extends KnimeUrlResolver {
     }
 
     @Override
-    URI resolveMountpointRelative(final String decodedPath) throws IOException {
-        throw new IOException("No context for relative URL available");
+    URI resolveMountpointRelative(final String decodedPath) throws ResourceAccessException {
+        throw new ResourceAccessException("No context for relative URL available");
     }
 
     @Override
-    URI resolveSpaceRelative(final String decodedPath) throws IOException {
-        throw new IOException("No context for relative URL available");
+    URI resolveSpaceRelative(final String decodedPath) throws ResourceAccessException {
+        throw new ResourceAccessException("No context for relative URL available");
     }
 
     @Override
-    URI resolveWorkflowRelative(final String decodedPath) throws IOException {
-        throw new IOException("No context for relative URL available");
+    URI resolveWorkflowRelative(final String decodedPath) throws ResourceAccessException {
+        throw new ResourceAccessException("No context for relative URL available");
     }
 
     @Override
-    URI resolveNodeRelative(final String decodedPath) throws IOException {
-        throw new IOException("No context for relative URL available");
+    URI resolveNodeRelative(final String decodedPath) throws ResourceAccessException {
+        throw new ResourceAccessException("No context for relative URL available");
     }
 }

@@ -49,11 +49,11 @@
 package org.knime.workbench.explorer.urlresolve;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 
 import org.knime.core.node.workflow.contextv2.AnalyticsPlatformExecutorInfo;
 import org.knime.core.util.Pair;
+import org.knime.core.util.exception.ResourceAccessException;
 
 /**
  * KNIME URL Resolver for an Analytics Platform with a workflow that comes from the local file system.
@@ -69,27 +69,26 @@ final class AnalyticsPlatformLocalUrlResolver extends KnimeUrlResolver {
     }
 
     @Override
-    URI resolveMountpointRelative(final String decodedPath) throws IOException {
-        final var mountpointRoot = m_executorInfo.getMountpoint()
-                .map(Pair::getSecond)
-                .orElseThrow(() -> new IOException("Mountpoint or space relative URL needs a mountpoint."));
+    URI resolveMountpointRelative(final String decodedPath) throws ResourceAccessException {
+        final var mountpointRoot = m_executorInfo.getMountpoint().map(Pair::getSecond)
+            .orElseThrow(() -> new ResourceAccessException("Mountpoint or space relative URL needs a mountpoint."));
         final var resolvedFile = new File(mountpointRoot.toFile(), decodedPath);
         final var normalizedPath = resolvedFile.toPath().normalize().toUri();
         final var normalizedRoot = mountpointRoot.normalize().toUri();
         if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
-            throw new IOException("Leaving the mount point is not allowed for relative URLs: "
+            throw new ResourceAccessException("Leaving the mount point is not allowed for relative URLs: "
                 + resolvedFile.getAbsolutePath() + " is not in " + mountpointRoot.toFile().getAbsolutePath());
         }
         return resolvedFile.toURI();
     }
 
     @Override
-    URI resolveSpaceRelative(final String decodedPath) throws IOException {
+    URI resolveSpaceRelative(final String decodedPath) throws ResourceAccessException {
         return resolveMountpointRelative(decodedPath);
     }
 
     @Override
-    URI resolveWorkflowRelative(final String decodedPath) throws IOException {
+    URI resolveWorkflowRelative(final String decodedPath) throws ResourceAccessException {
         // in local application or a file inside the workflow
         final var currentLocation = m_executorInfo.getLocalWorkflowPath();
         final var resolvedFile = new File(currentLocation.toFile(), decodedPath);
@@ -97,14 +96,14 @@ final class AnalyticsPlatformLocalUrlResolver extends KnimeUrlResolver {
         // if resolved path is outside the workflow, check whether it is still inside the mountpoint
         final var mountpoint = m_executorInfo.getMountpoint();
 
-        if (!resolvedFile.getCanonicalPath().startsWith(currentLocation.toFile().getCanonicalPath())
-                && mountpoint.isPresent()) {
+        if (!URLResolverUtil.getCanonicalPath(resolvedFile)
+            .startsWith(URLResolverUtil.getCanonicalPath(currentLocation.toFile())) && mountpoint.isPresent()) {
             final var mountpointRoot = mountpoint.get().getSecond();
             final var normalizedRoot = mountpointRoot.normalize().toUri();
             final var normalizedPath = resolvedFile.toPath().normalize().toUri();
 
             if (!normalizedPath.toString().startsWith(normalizedRoot.toString())) {
-                throw new IOException("Leaving the mount point is not allowed for workflow relative URLs: "
+                throw new ResourceAccessException("Leaving the mount point is not allowed for workflow relative URLs: "
                     + resolvedFile.getAbsolutePath() + " is not in " + mountpointRoot.toAbsolutePath());
             }
         }
@@ -112,7 +111,7 @@ final class AnalyticsPlatformLocalUrlResolver extends KnimeUrlResolver {
     }
 
     @Override
-    URI resolveNodeRelative(final String decodedPath) throws IOException {
+    URI resolveNodeRelative(final String decodedPath) throws ResourceAccessException {
         return defaultResolveNodeRelative(decodedPath, m_executorInfo.getLocalWorkflowPath());
     }
 }

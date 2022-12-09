@@ -49,14 +49,11 @@
 package org.knime.workbench.explorer.urlresolve;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 
-import org.apache.http.client.utils.URLEncodedUtils;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.contextv2.AnalyticsPlatformExecutorInfo;
@@ -71,7 +68,7 @@ import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
 import org.knime.core.ui.node.workflow.WorkflowContextUI;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.KnimeUrlType;
-import org.knime.core.util.URIPathEncoder;
+import org.knime.core.util.exception.ResourceAccessException;
 
 /**
  * Resolves a KNIME URL in a specified environment specified by a {@link WorkflowContextUI}.
@@ -98,29 +95,29 @@ public abstract class KnimeUrlResolver {
             final var locationInfo = workflowContext.getLocationInfo();
             switch (executorInfo.getType()) {
                 case ANALYTICS_PLATFORM:
-                    final var apExecInfo = (AnalyticsPlatformExecutorInfo) executorInfo;
+                    final var apExecInfo = (AnalyticsPlatformExecutorInfo)executorInfo;
                     return locationInfo.getType() == LocationType.LOCAL
-                            ? new AnalyticsPlatformLocalUrlResolver(apExecInfo)
-                            : new AnalyticsPlatformTempCopyUrlResolver(apExecInfo, (RestLocationInfo) locationInfo,
-                                workflowContext.getMountpointURI().orElseThrow());
+                        ? new AnalyticsPlatformLocalUrlResolver(apExecInfo)
+                        : new AnalyticsPlatformTempCopyUrlResolver(apExecInfo, (RestLocationInfo)locationInfo,
+                            workflowContext.getMountpointURI().orElseThrow());
                 case HUB_EXECUTOR:
-                    return new HubExecutorUrlResolver((HubJobExecutorInfo) executorInfo,
-                        (HubSpaceLocationInfo) locationInfo);
+                    return new HubExecutorUrlResolver((HubJobExecutorInfo)executorInfo,
+                        (HubSpaceLocationInfo)locationInfo);
                 case SERVER_EXECUTOR:
-                    return new ServerExecutorUrlResolver((ServerJobExecutorInfo) executorInfo,
-                        (ServerLocationInfo) locationInfo);
+                    return new ServerExecutorUrlResolver((ServerJobExecutorInfo)executorInfo,
+                        (ServerLocationInfo)locationInfo);
                 default:
                     throw new IllegalStateException("Unknown executor for URL resolution: " + executorInfo.getType());
             }
         } else {
-            final var remoteContext = (RemoteWorkflowContext) contextUI;
+            final var remoteContext = (RemoteWorkflowContext)contextUI;
             return new RemoteExecutorUrlResolver(remoteContext);
         }
     }
 
     /**
-     * Resolves a given KNIME URL to a URL than can be used by the executor to access the referenced resources.
-     * This method may return
+     * Resolves a given KNIME URL to a URL than can be used by the executor to access the referenced resources. This
+     * method may return
      * <ul>
      *     <li>mountpoint-absolute {@code knime://} URLs that can be opened in AP via the mount table,</li>
      *     <li>local {@code file://} URLs accessing the executor's file system, and</li>
@@ -129,10 +126,11 @@ public abstract class KnimeUrlResolver {
      *
      * @param url URL to resolve
      * @return resolved URL
-     * @throws IOException if the URL could not be resolved
+     * @throws ResourceAccessException if the URL could not be resolved
      */
-    public URL resolve(final URL url) throws IOException {
-        switch (KnimeUrlType.getType(url).orElseThrow()) {
+    public URL resolve(final URL url) throws ResourceAccessException {
+        switch (KnimeUrlType.getType(url)
+            .orElseThrow(() -> new ResourceAccessException("Failed to resolve URL, is not present"))) {
             case MOUNTPOINT_ABSOLUTE:
                 return resolveMountpointAbsolute(url);
             case MOUNTPOINT_RELATIVE:
@@ -153,9 +151,9 @@ public abstract class KnimeUrlResolver {
      *
      * @param url URL to resolve
      * @return resolved URL
-     * @throws IOException if resolution was not possible
+     * @throws ResourceAccessException if resolution was not possible
      */
-    URL resolveMountpointAbsolute(final URL url) throws IOException {
+    URL resolveMountpointAbsolute(final URL url) throws ResourceAccessException {
         return url;
     }
 
@@ -164,11 +162,11 @@ public abstract class KnimeUrlResolver {
      *
      * @param url URL to resolve
      * @return resolved URL
-     * @throws IOException if resolution was not possible
+     * @throws ResourceAccessException if resolution was not possible
      */
-    final URL resolveMountpointRelative(final URL url) throws IOException {
-        final var resolvedUri = resolveMountpointRelative(pathForRelative(url));
-        return URIPathEncoder.UTF_8.encodePathSegments(resolvedUri.toURL());
+    final URL resolveMountpointRelative(final URL url) throws ResourceAccessException {
+        final var resolvedUri = resolveMountpointRelative(URLResolverUtil.pathForRelative(url));
+        return URLResolverUtil.toURL(resolvedUri);
     }
 
     /**
@@ -176,11 +174,11 @@ public abstract class KnimeUrlResolver {
      *
      * @param url URL to resolve
      * @return resolved URL
-     * @throws IOException if resolution was not possible
+     * @throws ResourceAccessException if resolution was not possible
      */
-    final URL resolveSpaceRelative(final URL url) throws IOException {
-        final var resolvedUri = resolveSpaceRelative(pathForRelative(url));
-        return URIPathEncoder.UTF_8.encodePathSegments(resolvedUri.toURL());
+    final URL resolveSpaceRelative(final URL url) throws ResourceAccessException {
+        final var resolvedUri = resolveSpaceRelative(URLResolverUtil.pathForRelative(url));
+        return URLResolverUtil.toURL(resolvedUri);
     }
 
     /**
@@ -188,11 +186,11 @@ public abstract class KnimeUrlResolver {
      *
      * @param url URL to resolve
      * @return resolved URL
-     * @throws IOException if resolution was not possible
+     * @throws ResourceAccessException if resolution was not possible
      */
-    final URL resolveWorkflowRelative(final URL url) throws IOException {
-        final var resolvedUri = resolveWorkflowRelative(pathForRelative(url));
-        return URIPathEncoder.UTF_8.encodePathSegments(resolvedUri.toURL());
+    final URL resolveWorkflowRelative(final URL url) throws ResourceAccessException {
+        final var resolvedUri = resolveWorkflowRelative(URLResolverUtil.pathForRelative(url));
+        return URLResolverUtil.toURL(resolvedUri);
     }
 
     /**
@@ -200,11 +198,11 @@ public abstract class KnimeUrlResolver {
      *
      * @param url URL to resolve
      * @return resolved URL
-     * @throws IOException if resolution was not possible
+     * @throws ResourceAccessException if resolution was not possible
      */
-    final URL resolveNodeRelative(final URL url) throws IOException {
-        final var resolvedUri = resolveNodeRelative(pathForRelative(url));
-        return URIPathEncoder.UTF_8.encodePathSegments(resolvedUri.toURL());
+    final URL resolveNodeRelative(final URL url) throws ResourceAccessException {
+        final var resolvedUri = resolveNodeRelative(URLResolverUtil.pathForRelative(url));
+        return URLResolverUtil.toURL(resolvedUri);
     }
 
     /**
@@ -213,63 +211,64 @@ public abstract class KnimeUrlResolver {
      * @param decodedPath decoded URL path component
      * @param localWorkflowPath local workflow path
      * @return resolved URI
-     * @throws IOException if the URL could not be resolved
+     * @throws ResourceAccessException if the URL could not be resolved
      */
     URI defaultResolveNodeRelative(final String decodedPath, final Path localWorkflowPath)
-            throws IOException {
+        throws ResourceAccessException {
         ReferencedFile nodeDirectoryRef = NodeContext.getContext().getNodeContainer().getNodeContainerDirectory();
         if (nodeDirectoryRef == null) {
-            throw new IOException("Workflow must be saved before node-relative URLs can be used");
+            throw new ResourceAccessException("Workflow must be saved before node-relative URLs can be used");
         }
 
         // check if resolved path leaves the workflow
         final var resolvedPath = new File(nodeDirectoryRef.getFile().getAbsolutePath(), decodedPath);
-        final var resolved = resolvedPath.getCanonicalPath();
+
         final var currentLocation = localWorkflowPath.toFile();
-        final var workflow = currentLocation.getCanonicalPath();
+        String resolved = URLResolverUtil.getCanonicalPath(resolvedPath);
+        String workflow = URLResolverUtil.getCanonicalPath(currentLocation);
+
         if (!resolved.startsWith(workflow)) {
-            throw new IOException("Leaving the workflow is not allowed for node-relative URLs: "
-                + resolved + " is not in " + workflow);
+            throw new ResourceAccessException(
+                "Leaving the workflow is not allowed for node-relative URLs: " + resolved + " is not in " + workflow);
         }
         return resolvedPath.toURI();
     }
-
 
     /**
      * Resolves a mountpoint relative URL in this resolver's scope.
      *
      * @param decodedPath URI's decoded path component
      * @return resolved URI
-     * @throws IOException if the URL could not be resolved
+     * @throws ResourceAccessException if the URL could not be resolved
      */
-    abstract URI resolveMountpointRelative(String decodedPath) throws IOException;
+    abstract URI resolveMountpointRelative(String decodedPath) throws ResourceAccessException;
 
     /**
      * Resolves a space relative URL in this resolver's scope.
      *
      * @param decodedPath URI's decoded path component
      * @return resolved URI
-     * @throws IOException if the URL could not be resolved
+     * @throws ResourceAccessException if the URL could not be resolved
      */
-    abstract URI resolveSpaceRelative(String decodedPath) throws IOException;
+    abstract URI resolveSpaceRelative(String decodedPath) throws ResourceAccessException;
 
     /**
      * Resolves a workflow relative URL in this resolver's scope.
      *
      * @param decodedPath URI's decoded path component
      * @return resolved URI
-     * @throws IOException if the URL could not be resolved
+     * @throws ResourceAccessException if the URL could not be resolved
      */
-    abstract URI resolveWorkflowRelative(String decodedPath) throws IOException;
+    abstract URI resolveWorkflowRelative(String decodedPath) throws ResourceAccessException;
 
     /**
      * Resolves a node relative URL in this resolver's scope.
      *
      * @param decodedPath URI's decoded path component
      * @return resolved URI
-     * @throws IOException if the URL could not be resolved
+     * @throws ResourceAccessException if the URL could not be resolved
      */
-    abstract URI resolveNodeRelative(String decodedPath) throws IOException;
+    abstract URI resolveNodeRelative(String decodedPath) throws ResourceAccessException;
 
     /**
      * Checks if the first given URI if contained in the second one, more specifically that it can be addressed via a
@@ -293,43 +292,5 @@ public abstract class KnimeUrlResolver {
      */
     static final boolean leavesScope(final String decodedPath) {
         return LEAVING_SCOPE_PATTERN.matcher(decodedPath).matches();
-    }
-
-    /**
-     * Extracts the space version from the given URL's query parameters.
-     *
-     * @param url URL to extract the space version from
-     * @return extracted space version (or {@code null} if absent)
-     * @throws IOException if empty of conflicting spaceVersion parameters are found
-     */
-    static final String getSpaceVersion(final URL url) throws IOException {
-        String version = null;
-        for (final var nv : URLEncodedUtils.parse(url.getQuery(), StandardCharsets.UTF_8)) {
-            if ("spaceVersion".equals(nv.getName())) {
-                final var value = nv.getValue();
-                if (value == null) {
-                    throw new IOException("spaceVersion parameter can't be empty in URL " + url);
-                }
-                if (version != null && !version.equals(value)) {
-                    throw new IOException("Conflicting spaceVersion parameters in URL " + url);
-                }
-                version = value;
-            }
-        }
-        return version;
-    }
-
-    /**
-     * Checks that the relative URL doesn't specify a space version and extracts its path component.
-     *
-     * @param url URL to extract the path from
-     * @return extracted and decoded path
-     * @throws IOException if a space version was specified
-     */
-    private static String pathForRelative(final URL url) throws IOException {
-        if (getSpaceVersion(url) != null) {
-            throw new IOException("Relative KNIME URLs cannot specify a space version: " + url);
-        }
-        return URIPathEncoder.decodePath(url);
     }
 }

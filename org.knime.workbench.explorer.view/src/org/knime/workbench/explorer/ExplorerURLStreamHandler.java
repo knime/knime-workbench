@@ -87,6 +87,7 @@ import org.knime.core.util.Pair;
 import org.knime.core.util.URIPathEncoder;
 import org.knime.core.util.auth.Authenticator;
 import org.knime.core.util.auth.CouldNotAuthorizeException;
+import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.urlresolve.KnimeUrlResolver;
@@ -191,9 +192,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      * @return the resolved URL
      * @throws IOException if an error occurs while resolving the URL
      */
-    public static URL resolveKNIMEURL(final URL url) throws IOException {
+    public static URL resolveKNIMEURL(final URL url) throws ResourceAccessException {
         final var urlType = KnimeUrlType.getType(url).orElseThrow(
-            () -> new IOException("Unexpected protocol: " + url.getProtocol() + ". Only "
+            () -> new ResourceAccessException("Unexpected protocol: " + url.getProtocol() + ". Only "
                         + KnimeUrlType.SCHEME + " is supported by this handler."));
 
         final var nodeContext = Optional.ofNullable(NodeContext.getContext());
@@ -201,9 +202,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         final var workflowContext = wfmUI.map(WorkflowManagerUI::getContext).orElse(null);
         if (urlType.isRelative()) {
             if (nodeContext.isEmpty()) {
-                throw new IOException("No context for relative URL available");
+                throw new ResourceAccessException("No context for relative URL available");
             } else if (workflowContext == null) {
-                throw new IOException("Workflow " + wfmUI + " does not have a context");
+                throw new ResourceAccessException("Workflow " + wfmUI + " does not have a context");
             }
         }
 

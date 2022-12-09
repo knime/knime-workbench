@@ -48,7 +48,6 @@
  */
 package org.knime.workbench.editor2.commands;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -66,6 +65,7 @@ import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.util.SWTUtilities;
+import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.workbench.editor2.actions.BulkChangeMetaNodeLinksAction.LinkChangeAction;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
@@ -136,7 +136,7 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
             } else {
                 linkType = LinkType.Absolute;
             }
-        } catch (IOException e) {
+        } catch (ResourceAccessException e) {
             LOGGER.error("Unable to resolve current link to template " + link + ": " + e.getMessage(), e);
         }
         return linkType;
@@ -159,7 +159,7 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
             var targetFile = ResolverUtil.resolveURItoLocalFile(oldURI);
             var targetfs = ExplorerFileSystem.INSTANCE.fromLocalFile(targetFile);
             newURI = AbstractContentProvider.createMetanodeLinkUri(contextNode, targetfs, newLinkType);
-        } catch (IOException | URISyntaxException | CoreException e) {
+        } catch (ResourceAccessException | URISyntaxException | CoreException e) {
             LOGGER.error("Unable to resolve shared component URI " + oldURI + ": " + e.getMessage(), e);
         } finally {
             NodeContext.removeLastContext();

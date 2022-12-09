@@ -48,7 +48,6 @@
  */
 package org.knime.workbench.explorer.urlresolve;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -61,6 +60,7 @@ import org.knime.core.node.workflow.contextv2.HubSpaceLocationInfo;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
 import org.knime.core.util.URIPathEncoder;
+import org.knime.core.util.exception.ResourceAccessException;
 
 /**
  * KNIME URL Resolver for a remote executor in the Remote Workflow Editor.
@@ -76,15 +76,14 @@ final class RemoteExecutorUrlResolver extends KnimeUrlResolver {
     }
 
     @Override
-    URL resolveMountpointAbsolute(final URL url) throws IOException {
+    URL resolveMountpointAbsolute(final URL url) throws ResourceAccessException {
         final var mountId = url.getAuthority();
         if (!m_remoteContext.getMountId().equals(mountId)) {
-            throw new IOException("Unknown Mount ID on Remote Executor in URL '" + url + "'.");
+            throw new ResourceAccessException("Unknown Mount ID on Remote Executor in URL '" + url + "'.");
         }
 
-        final var hubLocationInfo = m_remoteContext.getWorkflowContextV2()
-                .map(WorkflowContextV2::getLocationInfo)
-                .flatMap(loc -> ClassUtils.castOptional(HubSpaceLocationInfo.class, loc));
+        final var hubLocationInfo = m_remoteContext.getWorkflowContextV2().map(WorkflowContextV2::getLocationInfo)
+            .flatMap(loc -> ClassUtils.castOptional(HubSpaceLocationInfo.class, loc));
         if (hubLocationInfo.isEmpty()) {
             // the rest is done by the ExplorerFileStore instance from the ExplorerMountTable
             return url;
@@ -92,33 +91,28 @@ final class RemoteExecutorUrlResolver extends KnimeUrlResolver {
 
         // preserve space version of the absolute URL
         final var decodedPath = URIPathEncoder.decodePath(url);
-        final var spaceVersion = getSpaceVersion(url);
+        final var spaceVersion = URLResolverUtil.getSpaceVersion(url);
 
         // since the version in absolute URLs is fixed, we get the correct item via the repository
-        try {
-            final var repoUriBuilder = new URIBuilder(hubLocationInfo.get().getRepositoryAddress());
-            final var segments = new ArrayList<>(repoUriBuilder.getPathSegments());
-            segments.addAll(new URIBuilder().setPath(decodedPath + ":data").getPathSegments());
-            repoUriBuilder.setPathSegments(segments);
-            if (spaceVersion != null) {
-                repoUriBuilder.addParameter("spaceVersion", spaceVersion);
-            }
-            return URIPathEncoder.UTF_8.encodePathSegments(repoUriBuilder.build().normalize().toURL());
-        } catch (URISyntaxException e) {
-            throw new IOException(e);
+        final var repoUriBuilder = new URIBuilder(hubLocationInfo.get().getRepositoryAddress());
+        final var segments = new ArrayList<>(repoUriBuilder.getPathSegments());
+        segments.addAll(new URIBuilder().setPath(decodedPath + ":data").getPathSegments());
+        repoUriBuilder.setPathSegments(segments);
+        if (spaceVersion != null) {
+            repoUriBuilder.addParameter("spaceVersion", spaceVersion);
         }
+        return URLResolverUtil.toURL(repoUriBuilder);
     }
 
     @Override
-    URI resolveMountpointRelative(final String decodedPath) throws IOException {
+    URI resolveMountpointRelative(final String decodedPath) throws ResourceAccessException {
         return resolveSpaceRelative(decodedPath);
     }
 
     @Override
-    URI resolveSpaceRelative(final String decodedPath) throws IOException {
-        final var hubLocationInfo = m_remoteContext.getWorkflowContextV2()
-                .map(WorkflowContextV2::getLocationInfo)
-                .flatMap(loc -> ClassUtils.castOptional(HubSpaceLocationInfo.class, loc));
+    URI resolveSpaceRelative(final String decodedPath) throws ResourceAccessException {
+        final var hubLocationInfo = m_remoteContext.getWorkflowContextV2().map(WorkflowContextV2::getLocationInfo)
+            .flatMap(loc -> ClassUtils.castOptional(HubSpaceLocationInfo.class, loc));
         if (hubLocationInfo.isEmpty()) {
             // server executor, Space == Mountpoint Root and no versions
             final var mpUri = m_remoteContext.getMountpointURI();
@@ -126,26 +120,27 @@ final class RemoteExecutorUrlResolver extends KnimeUrlResolver {
             try {
                 uri = new URI(mpUri.getScheme(), mpUri.getHost(), decodedPath, null);
             } catch (URISyntaxException e) {
-                throw new IOException(e);
+                throw new ResourceAccessException("Could not build space URI: " + e.getMessage(), e);
             }
             return uri.normalize();
         }
 
         // Hub executor, resolve via the repository
         final var hubInfo = hubLocationInfo.get();
-        final var spaceVersion =  hubInfo.getSpaceVersion().orElse(null);
+        final var spaceVersion = hubInfo.getSpaceVersion().orElse(null);
         final var spacePath = hubInfo.getSpacePath();
         final var workflowAddress = hubInfo.getWorkflowAddress();
         final var workflowPath = hubInfo.getWorkflowPath();
         final var repositoryAddress = hubInfo.getRepositoryAddress();
-        return HubExecutorUrlResolver.createSpaceRelativeRepoUri(workflowAddress, workflowPath,
-            decodedPath, repositoryAddress, spacePath, spaceVersion);
+        return HubExecutorUrlResolver.createSpaceRelativeRepoUri(workflowAddress, workflowPath, decodedPath,
+            repositoryAddress, spacePath, spaceVersion);
     }
 
     @Override
-    URI resolveWorkflowRelative(final String decodedPath) throws IOException {
+    URI resolveWorkflowRelative(final String decodedPath) throws ResourceAccessException {
         if (!leavesScope(decodedPath)) {
-            throw new IOException("Workflow relative URL points to a resource within a workflow. Not accessible.");
+            throw new ResourceAccessException(
+                "Workflow relative URL points to a resource within a workflow. Not accessible.");
         }
 
         final var mpURI = m_remoteContext.getMountpointURI();
@@ -154,13 +149,13 @@ final class RemoteExecutorUrlResolver extends KnimeUrlResolver {
             mpURIWithoutQueryAndFragment =
                 new URI(mpURI.getScheme(), null, mpURI.getHost(), mpURI.getPort(), mpURI.getPath(), null, null);
         } catch (URISyntaxException e) {
-            throw new IOException(e);
+            throw new ResourceAccessException("Could not build space URI: " + e.getMessage(), e);
         }
         return URIUtil.append(mpURIWithoutQueryAndFragment, decodedPath).normalize();
     }
 
     @Override
-    URI resolveNodeRelative(final String decodedPath) throws IOException {
-        throw new IOException("Node relative URLs cannot be resolved from within purely remote workflows.");
+    URI resolveNodeRelative(final String decodedPath) throws ResourceAccessException {
+        throw new ResourceAccessException("Node relative URLs cannot be resolved from within purely remote workflows.");
     }
 }

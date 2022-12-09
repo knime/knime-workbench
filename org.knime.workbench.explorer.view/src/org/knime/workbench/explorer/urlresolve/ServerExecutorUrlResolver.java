@@ -49,7 +49,6 @@
 package org.knime.workbench.explorer.urlresolve;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 
@@ -57,6 +56,7 @@ import org.eclipse.core.runtime.URIUtil;
 import org.knime.core.node.workflow.contextv2.ServerJobExecutorInfo;
 import org.knime.core.node.workflow.contextv2.ServerLocationInfo;
 import org.knime.core.util.URIPathEncoder;
+import org.knime.core.util.exception.ResourceAccessException;
 
 /**
  * KNIME URL Resolver for a Server executor.
@@ -75,49 +75,51 @@ final class ServerExecutorUrlResolver extends KnimeUrlResolver {
     }
 
     @Override
-    URL resolveMountpointAbsolute(final URL url) throws IOException {
+    URL resolveMountpointAbsolute(final URL url) throws ResourceAccessException {
         final var mountId = url.getAuthority();
         if (!m_locationInfo.getDefaultMountId().equals(mountId)) {
-            throw new IOException("Unknown Mount ID on Server Executor in URL '" + url + "'.");
+            throw new ResourceAccessException("Unknown Mount ID on Server Executor in URL '" + url + "'.");
         }
         final var uri = resolveMountpointRelative(URIPathEncoder.decodePath(url));
-        return URIPathEncoder.UTF_8.encodePathSegments(uri.toURL());
+        return URIPathEncoder.UTF_8.encodePathSegments(URLResolverUtil.toURL(uri));
     }
 
     @Override
-    URI resolveMountpointRelative(final String decodedPath) throws IOException {
+    URI resolveMountpointRelative(final String decodedPath) throws ResourceAccessException {
         // legacy Servers don't have spaces, resolve directly against repo root
         final var repositoryAddress = m_locationInfo.getRepositoryAddress().normalize();
         return URIUtil.append(repositoryAddress, decodedPath + ":data").normalize();
     }
 
     @Override
-    URI resolveSpaceRelative(final String decodedPath) throws IOException {
+    URI resolveSpaceRelative(final String decodedPath) throws ResourceAccessException {
         return resolveMountpointRelative(decodedPath);
     }
 
     @Override
-    URI resolveWorkflowRelative(final String decodedPath) throws IOException {
+    URI resolveWorkflowRelative(final String decodedPath) throws ResourceAccessException {
         if (leavesScope(decodedPath)) {
             // we're on a server executor, resolve against the repository
             final var repositoryAddress = m_locationInfo.getRepositoryAddress().normalize();
-            final var uri = URIUtil.append(repositoryAddress,
-                m_locationInfo.getWorkflowPath() + "/" + decodedPath + ":data");
+            final var uri =
+                URIUtil.append(repositoryAddress, m_locationInfo.getWorkflowPath() + "/" + decodedPath + ":data");
             return uri.normalize();
         }
 
         // file inside the workflow
         final var currentLocation = m_executorInfo.getLocalWorkflowPath();
         final var resolvedFile = new File(currentLocation.toFile(), decodedPath);
-        if (!resolvedFile.getCanonicalPath().startsWith(currentLocation.toFile().getCanonicalPath())) {
-                throw new IOException("Path component of workflow relative URLs leaving the workflow must start with "
-                    + "'/..', found '" + decodedPath + "'.");
+        if (!URLResolverUtil.getCanonicalPath(resolvedFile)
+            .startsWith(URLResolverUtil.getCanonicalPath(currentLocation.toFile()))) {
+            throw new ResourceAccessException(
+                "Path component of workflow relative URLs leaving the workflow must start with " + "'/..', found '"
+                    + decodedPath + "'.");
         }
         return resolvedFile.toURI();
     }
 
     @Override
-    URI resolveNodeRelative(final String decodedPath) throws IOException {
+    URI resolveNodeRelative(final String decodedPath) throws ResourceAccessException {
         return defaultResolveNodeRelative(decodedPath, m_executorInfo.getLocalWorkflowPath());
     }
 }
