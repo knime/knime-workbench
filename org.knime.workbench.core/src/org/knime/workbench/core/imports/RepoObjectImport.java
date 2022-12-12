@@ -112,6 +112,14 @@ public interface RepoObjectImport extends EntityImport {
     URI getDataURI();
 
     /**
+     * The ETag of the repository object.
+     *
+     * @return ETag of the repo item if available, {@link Optional#empty()} otherwise
+     * @since 4.7.1
+     */
+    Optional<String> getRepositoryETag();
+
+    /**
      * Returns the location info for the workflow being downloaded.
      *
      * @return location info

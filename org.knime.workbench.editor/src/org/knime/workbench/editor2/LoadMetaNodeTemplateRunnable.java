@@ -48,6 +48,7 @@
 package org.knime.workbench.editor2;
 
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -140,7 +141,9 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             final var progressMonitor = new CheckCancelNodeProgressMonitor(pm);
             progressMonitor.addProgressListener(progressHandler);
 
-            var parentFile = ResolverUtil.resolveURItoLocalOrTempFile(m_templateURI, pm);
+            var response = ResolverUtil.resolveURItoLocalOrTempFileConditional(m_templateURI, pm, null, null);
+            File parentFile = response.getEntity()
+                .orElseThrow(() -> new IllegalStateException("Empty response after resolving " + m_templateURI));
             if (parentFile.isFile()) {
                 //unzip
                 final var tempDir = FileUtil.createTempDir("template-workflow");
@@ -159,7 +162,8 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             final var d = Display.getDefault();
             final var loadHelper =
                 GUIWorkflowLoadHelper.forTemplate(d, parentFile.getName(), m_context, m_editor != null);
-            final var loadPersistor = loadHelper.createTemplateLoadPersistor(parentFile, m_templateURI);
+            final var loadPersistor = loadHelper.createTemplateLoadPersistor(parentFile, m_templateURI,
+                response.getETag().orElse(null), response.getLastModified().orElse(null));
             final var loadResult = new MetaNodeLinkUpdateResult("Shared instance from \"" + m_templateURI + "\"");
             m_parentWFM.load(loadPersistor, loadResult, new ExecutionMonitor(progressMonitor), false);
 

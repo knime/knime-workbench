@@ -49,15 +49,16 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
@@ -67,6 +68,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.Response;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.pathresolve.SpaceVersion;
@@ -83,23 +85,16 @@ import org.knime.workbench.explorer.urlresolve.URLResolverUtil;
  * @author Bernd Wiswedel, KNIME AG, Zurich, Switzerland
  */
 public class URIToFileResolveImpl implements URIToFileResolve {
-    /** {@inheritDoc} */
     @Override
     public File resolveToFile(final URI uri) throws ResourceAccessException {
         return resolveToFile(uri, new NullProgressMonitor());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public File resolveToLocalOrTempFile(final URI uri) throws ResourceAccessException {
         return resolveToLocalOrTempFile(uri, new NullProgressMonitor());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public File resolveToFile(final URI uri, final IProgressMonitor monitor) throws ResourceAccessException {
         if (uri == null) {
@@ -128,106 +123,113 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     }
 
     private static File resolveStandardUri(final URI uri, final IProgressMonitor monitor)
-        throws ResourceAccessException {
+            throws ResourceAccessException {
         try {
-            AbstractExplorerFileStore s = ExplorerFileSystem.INSTANCE.getStore(uri);
-            if (s == null) {
+            final var fileStore = ExplorerFileSystem.INSTANCE.getStore(uri);
+            if (fileStore == null) {
                 throw new ResourceAccessException(
                     "Can't resolve file to URI \"" + uri + "\"; the corresponding mount point is probably "
                         + "not defined or the resource has been (re)moved");
             }
-            return s.toLocalFile(EFS.NONE, monitor);
-        } catch (Exception e) {
+            return fileStore.toLocalFile(EFS.NONE, monitor);
+        } catch (final Exception e) {
             throw new ResourceAccessException("Can't resolve knime URI \"" + uri + "\" to file", e);
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public File resolveToLocalOrTempFile(final URI uri, final IProgressMonitor monitor) throws ResourceAccessException {
-        return resolveToLocalOrTempFileInternal(uri, monitor, null);
+        return resolveToLocalOrTempFileInternal(uri, monitor, null, null).getEntity().orElse(null);
     }
 
-    private static File resolveToLocalOrTempFileInternal(final URI uri, final IProgressMonitor monitor,
-        final ZonedDateTime ifModifiedSince) throws ResourceAccessException {
+    private static Response<File> resolveToLocalOrTempFileInternal(final URI uri,
+            final IProgressMonitor monitor, final String entityTag, final ZonedDateTime ifModifiedSince)
+                    throws ResourceAccessException {
         if (uri == null) {
             throw new IllegalArgumentException("Can't resolve null URI to file");
         }
         String scheme = uri.getScheme();
         if ("file".equalsIgnoreCase(scheme)) {
             try {
-                return new File(uri);
+                return Response.from(new File(uri), null, null);
             } catch (IllegalArgumentException e) {
                 throw new ResourceAccessException("Can't resolve file URI \"" + uri + "\" to file", e);
             }
         } else if (ExplorerFileSystem.SCHEME.equalsIgnoreCase(scheme)) {
-            return resolveKnimeUriToLocalOrTempFile(uri, monitor, ifModifiedSince);
+            return resolveKnimeUriToLocalOrTempFile(uri, monitor, entityTag, ifModifiedSince);
         } else if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
-            return fetchRemoteFile(URLResolverUtil.toURL(uri), ifModifiedSince);
+            return fetchRemoteFile(URLResolverUtil.toURL(uri), entityTag, ifModifiedSince);
         } else {
             throw new ResourceAccessException("Unable to resolve URI \"" + uri + "\" to local file, unknown scheme");
         }
     }
 
-    private static File resolveKnimeUriToLocalOrTempFile(final URI uri, final IProgressMonitor monitor,
-        final ZonedDateTime ifModifiedSince) throws ResourceAccessException {
+    private static Response<File> resolveKnimeUriToLocalOrTempFile(final URI uri, final IProgressMonitor monitor,
+            final String entityTag, final ZonedDateTime ifModifiedSince) throws ResourceAccessException {
         var url = ExplorerURLStreamHandler.resolveKNIMEURL(URLResolverUtil.toURL(uri));
         if ("file".equals(url.getProtocol())) {
-            return FileUtil.getFileFromURL(url);
+            return Response.from(FileUtil.getFileFromURL(url), null, null);
         } else if (ExplorerFileSystem.SCHEME.equals(url.getProtocol())) {
             AbstractExplorerFileStore fs = ExplorerFileSystem.INSTANCE.getStore(uri);
             if (fs instanceof LocalExplorerFileStore) {
-                return resolveStandardUri(uri, monitor);
+                return Response.from(resolveStandardUri(uri, monitor), null, null);
             } else if (fs instanceof RemoteExplorerFileStore) {
-                return fetchRemoteFileStore((RemoteExplorerFileStore)fs, monitor, ifModifiedSince);
+                return fetchRemoteFileStore((RemoteExplorerFileStore)fs, monitor, entityTag, ifModifiedSince);
             } else {
                 throw new ResourceAccessException("Unsupported file store type: " + fs.getClass());
             }
         } else {
             // use the original URL because otherwise the handler may not be invoked correctly
-            return fetchRemoteFile(URLResolverUtil.toURL(uri), ifModifiedSince);
+            return fetchRemoteFile(URLResolverUtil.toURL(uri), entityTag, ifModifiedSince);
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<File> resolveToLocalOrTempFileConditional(final URI uri, final IProgressMonitor monitor,
-        final ZonedDateTime ifModifiedSince) throws ResourceAccessException {
-        return Optional.ofNullable(resolveToLocalOrTempFileInternal(uri, monitor, ifModifiedSince));
+            final ZonedDateTime ifModifiedSince) throws ResourceAccessException {
+        return resolveToLocalOrTempFileConditional(uri, monitor, null, ifModifiedSince).getEntity();
     }
 
-    private static File fetchRemoteFileStore(final RemoteExplorerFileStore source, final IProgressMonitor monitor,
-        final ZonedDateTime ifModifiedSince) throws ResourceAccessException {
+    @Override
+    public final Response<File> resolveToLocalOrTempFileConditional(final URI uri, final IProgressMonitor monitor,
+            final String entityTag, final ZonedDateTime ifModifiedSince)
+                    throws ResourceAccessException {
+        return resolveToLocalOrTempFileInternal(uri, monitor, entityTag, ifModifiedSince);
+    }
+
+    private static Response<File> fetchRemoteFileStore(final RemoteExplorerFileStore source,
+            final IProgressMonitor monitor, final String entityTag, final ZonedDateTime ifModifiedSince)
+                    throws ResourceAccessException {
         try {
-            return source.resolveToLocalFileConditional(monitor, ifModifiedSince).orElse(null);
+            return source.resolveToLocalFileConditional(monitor, entityTag, ifModifiedSince);
         } catch (CoreException e) {
             throw new ResourceAccessException(e);
         }
     }
 
-    private static File fetchRemoteFile(final URL url, final ZonedDateTime ifModifiedSince)
-        throws ResourceAccessException {
-        InputStream inputStream = addAuthHeaderAndOpenStream(url, ifModifiedSince);
-        File f = null;
-        if (inputStream != null) {
-            try {
-                f = FileUtil.createTempFile("download", ".bin");
-                try (InputStream is = inputStream; OutputStream os = new FileOutputStream(f)) {
-                    IOUtils.copy(is, os);
-                }
-            } catch (IOException e) {
-                throw new ResourceAccessException(e);
-            }
+    private static Response<File> fetchRemoteFile(final URL url, final String entityTag,
+            final ZonedDateTime ifModifiedSince) throws ResourceAccessException {
+        final var res = addAuthHeaderAndOpenStream(url, entityTag, ifModifiedSince);
+        final var contents = res.getEntity();
+        final var resultETag = res.getETag().orElse(null);
+        final var lastModified = res.getLastModified().orElse(null);
+        if (contents.isEmpty()) {
+            return Response.from(null, resultETag, lastModified);
         }
-        return f;
+        try (final var inStream = contents.get()) {
+            final var tempFile = FileUtil.createTempFile("download", ".bin");
+            try (final var tempFileStream = new FileOutputStream(tempFile)) {
+                IOUtils.copy(inStream, tempFileStream);
+            }
+            return Response.from(tempFile, resultETag, lastModified);
+        } catch (final IOException e) {
+            throw new ResourceAccessException(e);
+        }
     }
 
-    private static InputStream addAuthHeaderAndOpenStream(final URL url, final ZonedDateTime ifModifiedSince)
-        throws ResourceAccessException {
+    @SuppressWarnings("resource")
+    private static Response<InputStream> addAuthHeaderAndOpenStream(final URL url, final String entityTag,
+            final ZonedDateTime ifModifiedSince) throws ResourceAccessException {
         try {
             HttpURLConnection uc = (HttpURLConnection)url.openConnection();
             String userInfo = url.getUserInfo();
@@ -238,16 +240,24 @@ public class URIToFileResolveImpl implements URIToFileResolve {
                         StandardCharsets.UTF_8);
                 uc.setRequestProperty("Authorization", basicAuth);
             }
-            if (ifModifiedSince != null) {
-                uc.setIfModifiedSince(ifModifiedSince.toInstant().toEpochMilli());
-                uc.connect();
-                if (uc.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
-                    NodeLogger.getLogger(URIToFileResolveImpl.class)
-                        .debug("Download of resource at '" + url + "' skipped. Resource not modified.");
-                    return null;
-                }
+            if (entityTag != null) {
+                uc.setRequestProperty("If-None-Match", entityTag);
+            } else if (ifModifiedSince != null) {
+                uc.setIfModifiedSince(Objects.requireNonNull(ifModifiedSince).toInstant().toEpochMilli());
             }
-            return uc.getInputStream();
+
+            uc.connect();
+            final var timestamp = uc.getLastModified();
+            final var lastModified = timestamp <= 0 ? null : Instant.ofEpochMilli(timestamp);
+            final var eTag = uc.getHeaderField("ETag");
+            final var code = uc.getResponseCode();
+
+            if ((entityTag != null || ifModifiedSince != null) && code == HttpURLConnection.HTTP_NOT_MODIFIED) {
+                NodeLogger.getLogger(URIToFileResolveImpl.class)
+                    .debug("Download of resource at '" + url + "' skipped. Resource not modified.");
+                return Response.from(null, eTag, lastModified);
+            }
+            return Response.from(uc.getInputStream(), eTag, lastModified);
         } catch (IOException e) {
             throw new ResourceAccessException("Failed to open stream: " + e.getMessage(), e);
         }
@@ -286,18 +296,12 @@ public class URIToFileResolveImpl implements URIToFileResolve {
             && ExplorerURLStreamHandler.NODE_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isSpaceRelative(final URI uri) {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
                 && ExplorerURLStreamHandler.SPACE_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<KNIMEURIDescription> toDescription(final URI uri, final IProgressMonitor monitor) {
         if (uri.getScheme().equals("file")) {
@@ -312,10 +316,6 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         return Optional.of(new KNIMEURIDescription(mountId, path));
     }
 
-    /**
-     * {@inheritDoc}
-     * @throws Exception
-     */
     @Override
     public Optional<List<SpaceVersion>> getSpaceVersions(final URI uri) throws Exception {
         if (uri.getScheme().equals("file")) {

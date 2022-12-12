@@ -58,6 +58,7 @@ import java.util.Optional;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.knime.core.node.workflow.Response;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
 import org.knime.core.util.pathresolve.SpaceVersion;
 
@@ -239,5 +240,30 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * @since 4.3
      */
     public abstract Optional<File> resolveToLocalFileConditional(IProgressMonitor pm, ZonedDateTime ifModifiedSince)
-        throws CoreException;
+            throws CoreException;
+
+    /**
+     * Returns the local file corresponding to the file store. In contrast to {@link #toLocalFile()} implementors cannot
+     * only return the local file when implementing {@link LocalExplorerFileStore}, but also return a temporary copy of
+     * remote files.<br/>
+     * If a an ETag is provided, it will only return a file if the file on the server/Hub has a different ETag. <br/>
+     * If a 'modified-since' date is provided, it will only return a file if the file on the server is newer than this
+     * date (i.e. has been modified meanwhile). <br/>
+     * <b>Please note: The returned file should be treated read only! It can be only a copy of the file stores content
+     * and there is no guarantee that changes are propagated.</b>
+     *
+     * @param pm a progress monitor, must not be <code>null</code>
+     * @param entityTag eTag for the {@code If-None-Match} header, may  be {@code null}
+     * @param ifModifiedSince the if-modified-since date for a conditional request; can be <code>null</code> to not
+     *            request it conditionally
+     * @return TODO the local or the temporary remote file paired with its (nullable) ETag, of {@link Optional#empty()}
+     *         if not supported or the user canceled the operation or if a 'modified-since' date is provided and the
+     *         file on the server has been modified since then
+     * @throws CoreException if this method fails
+     * @since 4.7.1
+     */
+    public Response<File> resolveToLocalFileConditional(final IProgressMonitor pm, final String entityTag,
+            final ZonedDateTime ifModifiedSince) throws CoreException {
+        return Response.from(resolveToLocalFileConditional(pm, ifModifiedSince).orElse(null), null, null);
+    }
 }
