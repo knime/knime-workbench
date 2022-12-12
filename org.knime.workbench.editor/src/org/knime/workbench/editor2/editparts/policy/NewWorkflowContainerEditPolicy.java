@@ -174,8 +174,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             }
 
             if (manager == null) {
-                //drops of the objects below are not yet supported
-                //for WorkflowManagerUI-implementations
+                // drops of the objects below are not yet supported for WorkflowManagerUI-implementations
                 return null;
             }
             if (obj instanceof AbstractExplorerFileStore) {

@@ -54,6 +54,7 @@ import org.eclipse.gef.ui.actions.ActionRegistry;
 import org.eclipse.gef.ui.parts.GraphicalViewerKeyHandler;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IEditorSite;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.workbench.editor2.viewport.ViewportPinningGraphicalViewer;
 
 /**
@@ -82,10 +83,8 @@ public class WorkflowGraphicalViewerCreator {
      * @param actionRegistry The action registry to use
      */
     public WorkflowGraphicalViewerCreator(final IEditorSite editorSite, final ActionRegistry actionRegistry) {
-
-        assert editorSite != null;
-        this.m_editorSite = editorSite;
-        this.m_actionRegistry = actionRegistry;
+        m_editorSite = CheckUtils.checkArgumentNotNull(editorSite);
+        m_actionRegistry = actionRegistry;
     }
 
     /**

@@ -95,8 +95,7 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  */
 public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
 
-    private static final NodeLogger LOGGER =
-        NodeLogger.getLogger(CheckUpdateMetaNodeLinkAction.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(CheckUpdateMetaNodeLinkAction.class);
 
     private final boolean m_showInfoMsgIfNoUpdateAvail;
 
@@ -115,8 +114,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
      * updates are available, true if this is a manually triggered command,
      * false if is run as automatic procedure after load (no user interaction)
      */
-    public CheckUpdateMetaNodeLinkAction(final WorkflowEditor editor,
-            final boolean showInfoMsgIfNoUpdateAvail) {
+    public CheckUpdateMetaNodeLinkAction(final WorkflowEditor editor, final boolean showInfoMsgIfNoUpdateAvail) {
         super(editor);
         m_showInfoMsgIfNoUpdateAvail = showInfoMsgIfNoUpdateAvail;
     }
@@ -230,13 +228,11 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         return list;
     }
 
-    /** {@inheritDoc} */
     @Override
     public void runOnNodes(final NodeContainerEditPart[] nodes) {
         throw new IllegalStateException("Not to be called");
     }
 
-    /** {@inheritDoc} */
     @Override
     public void runInSWT() {
         List<NodeID> candidateList = getMetaNodesToCheck(false);
@@ -360,7 +356,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 nodeIdToTemplate.put(id, (NodeContainerTemplate)m_hostWFM.findNodeContainer(id));
             }
 
-            // retrie ving the update status per node template
+            // retrieving the update status per node template
             final var loadResult = new LoadResult("ignored");
             Map<NodeID, UpdateStatus> nodeIdToUpdateStatus;
             try {
@@ -422,7 +418,8 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                     if (!updateableParentExists(id)) {
                         return new Status(IStatus.WARNING, idName, "Unable to check for update on node \"" + tncName + "\": Can't read metanode/template directory " + tnc.getTemplateInformation().getSourceURI(), null);
                     } else {
-                        return new Status(IStatus.OK, idName, "Update error exists, but could be resolved by parent update for " + tncName);
+                        return new Status(IStatus.OK, idName,
+                            "Update error exists, but could be resolved by parent update for " + tncName);
                     }
                 default:
                     return new Status(IStatus.WARNING , idName, "Could not resolve update status for " + tncName, null);

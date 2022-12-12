@@ -49,6 +49,8 @@
 package org.knime.workbench.editor2.actions;
 
 import java.net.URI;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -60,6 +62,8 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.Dialog;
+import org.eclipse.jface.dialogs.IDialogConstants;
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.viewers.ArrayContentProvider;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.ITableLabelProvider;
@@ -72,6 +76,7 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
@@ -81,11 +86,16 @@ import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.node.workflow.TemplateUpdateUtil;
+import org.knime.core.node.workflow.TemplateUpdateUtil.LinkType;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.ui.util.SWTUtilities;
+import org.knime.core.util.Pair;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.core.util.pathresolve.SpaceVersion;
 import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
 import org.knime.workbench.ui.KNIMEUIPlugin;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
  * Dialog for selecting a space version for a component.
@@ -104,13 +114,14 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
     /** The component to change version of. */
     private final SubNodeContainer m_component;
 
+    private TemplateUpdateUtil.LinkType m_linkType;
+
     /**
      * The currently selected space version number. Initialized as the current space version of the Component to change.
-     * Can be null to indicate latest changes.
+     * Can be null to indicate latest version/state.
      */
     private Integer m_selectedSpaceVersion;
 
-    private boolean m_useMostRecentVersion;
 
     /** Fetched using a {@link FetchVersionListJob} */
     private List<SpaceVersion> m_spaceVersions;
@@ -119,7 +130,9 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
     /** Shows the available hub space versions */
     private TableViewer m_tableViewer;
 
-    private Button m_useMostRecentSpaceVersionCheckBox;
+    private Button m_useLatestStateCheckBox;
+
+    private Button m_useLatestVersionCheckBox;
 
     /** The strings that appear in the header column of the version table. */
     private static final List<String> COLUMN_NAMES = List.of("Version", "Name", "Author", "Created On");
@@ -171,24 +184,53 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
         tableComp.setLayoutData(gridData);
 
         m_tableViewer = createTableViewer(tableComp);
+        m_tableViewer.addSelectionChangedListener(l -> {
+            final var okButton = getButton(IDialogConstants.OK_ID);
+            if (m_linkType == LinkType.FIXED_VERSION && okButton != null) {
+                okButton.setEnabled(!l.getSelection().isEmpty());
+            }
+        });
         m_tableViewer.addDoubleClickListener(this::versionTableDoubleClicked);
-        m_useMostRecentSpaceVersionCheckBox = new Button(content, SWT.CHECK);
-        m_useMostRecentSpaceVersionCheckBox.setText("Use the latest state");
-        m_useMostRecentSpaceVersionCheckBox.setSelection(!sourceUriContainsSpaceVersion());
-        m_useMostRecentSpaceVersionCheckBox.addListener(SWT.Selection, l -> syncEnableTableViewer());
+
+        final var link = ChangeComponentSpaceVersionAction.spaceVersion(
+            m_component.getTemplateInformation().getSourceURI());
+
+        final var buttonGroup = new Composite(content, SWT.NONE);
+        buttonGroup.setLayout(new RowLayout());
+
+        final var specificVersion = new Button(buttonGroup, SWT.RADIO);
+        specificVersion.setText("Use specific version");
+        specificVersion.setSelection(link.getFirst() == LinkType.FIXED_VERSION);
+        specificVersion.addListener(SWT.Selection, l -> syncEnableTableViewer());
+
+        m_useLatestVersionCheckBox = new Button(buttonGroup, SWT.RADIO);
+        m_useLatestVersionCheckBox.setText("Use latest version");
+        m_useLatestVersionCheckBox.setSelection(link.getFirst() == LinkType.LATEST_VERSION);
+        m_useLatestVersionCheckBox.addListener(SWT.Selection, l -> syncEnableTableViewer());
+
+        m_useLatestStateCheckBox = new Button(buttonGroup, SWT.RADIO);
+        m_useLatestStateCheckBox.setText("Use current state (unversioned)");
+        m_useLatestStateCheckBox.setSelection(link.getFirst() == LinkType.LATEST_STATE);
+        m_useLatestStateCheckBox.addListener(SWT.Selection, l -> syncEnableTableViewer());
+
         syncEnableTableViewer();
         scheduleFetchVersionListJob(content.getDisplay());
         return content;
     }
 
-    private boolean sourceUriContainsSpaceVersion() {
-        var sourceUri = m_component.getTemplateInformation().getSourceURI();
-        return sourceUri.getQuery() != null && sourceUri.getQuery().contains("spaceVersion");
-    }
-
     private void syncEnableTableViewer() {
-        m_useMostRecentVersion = m_useMostRecentSpaceVersionCheckBox.getSelection();
-        m_tableViewer.getTable().setEnabled(!m_useMostRecentVersion);
+        if (m_useLatestStateCheckBox.getSelection()) {
+            m_linkType = LinkType.LATEST_STATE;
+        } else if (m_useLatestVersionCheckBox.getSelection()) {
+            m_linkType = LinkType.LATEST_VERSION;
+        } else {
+            m_linkType = LinkType.FIXED_VERSION;
+        }
+        m_tableViewer.getTable().setEnabled(m_linkType == LinkType.FIXED_VERSION);
+        final var okButton = getButton(IDialogConstants.OK_ID);
+        if (okButton != null) {
+            okButton.setEnabled(m_linkType != LinkType.FIXED_VERSION || !m_tableViewer.getSelection().isEmpty());
+        }
     }
 
     /**
@@ -234,15 +276,10 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
     }
 
     /**
-     * @return empty if the selected version is the same as the current version of the component, the selected version
-     *         otherwise
+     * @return selected link space version
      */
-    Integer getSelectedVersion() {
-        return m_selectedSpaceVersion;
-    }
-
-    boolean useMostRecentVersion() {
-        return m_useMostRecentVersion;
+    Pair<LinkType, Integer> getSelectedVersion() {
+        return Pair.create(m_linkType, m_linkType == LinkType.FIXED_VERSION ? m_selectedSpaceVersion : null);
     }
 
     @Override
@@ -286,9 +323,6 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void okPressed() {
         versionTableDoubleClicked(null);
@@ -366,7 +400,8 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
 
         /** Display the fetched versions in the dialog's table viewer component. */
         private void setSpaceVersionList(final List<SpaceVersion> list) {
-            m_spaceVersions = list;
+            // incoming list is immutable, copy before sorting
+            m_spaceVersions = new ArrayList<>(list);
             m_spaceVersions.sort(Comparator.comparing(SpaceVersion::getVersion).reversed());
 
             syncEnableTableViewer();
@@ -386,6 +421,32 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
                 m_spaceVersions.stream().map(SpaceVersion::getVersion).collect(Collectors.toList());
             int idx = versions.indexOf(version);
             return Optional.ofNullable(idx == -1 ? null : idx);
+        }
+    }
+
+    /**
+     * Shows a warning about template links to <i>Current State</i> being unstable.
+     * The warning can be suppressed, utilizing the {@link PreferenceConstants#P_CONFIRM_LINK_CURRENT_STATE} key.
+     *
+     * @param link template link URL
+     */
+    @SuppressWarnings({ "deprecation", "restriction" })
+    public static void warnLinkToCurrentState(final URL link) {
+        final var uiPlugin = KNIMEUIPlugin.getDefault();
+        final var prefStore = uiPlugin.getPreferenceStore();
+        final var confirmLinkCurrentState = PreferenceConstants.P_CONFIRM_LINK_CURRENT_STATE;
+        if (!prefStore.contains(confirmLinkCurrentState) || prefStore.getBoolean(confirmLinkCurrentState)) {
+            final var dialog = MessageDialogWithToggle.openInformation(SWTUtilities.getActiveShell(),
+                "Template Link references Current State on Hub...",
+                "The link URL '" + link + "' points to the current state of the Template on the Hub.\n\n"
+                        + "If the referenced template is not maintained by you, it is recommended to reference a "
+                        + "*versioned* state (either a specific version or 'Latest Version') instead. "
+                        + "The 'Current State' of the template may not always be fully working or tested.",
+                        "Do not show again", false, prefStore, confirmLinkCurrentState);
+            if (dialog.getToggleState()) {
+                prefStore.setValue(confirmLinkCurrentState, false);
+                uiPlugin.savePluginPreferences();
+            }
         }
     }
 }

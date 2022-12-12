@@ -123,9 +123,6 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  */
 public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
-    /** Secret system property added as part of AP-19804: Hub Version switches disabled in 4.7.0. */
-    public static final String SYS_PROPERTY_ENABLE_VERSION_FEATURES = "knime.workbench.hub.versioning";
-
     private static final NodeLogger LOGGER = NodeLogger.getLogger(BulkChangeMetaNodeLinksDialog.class);
 
     /**
@@ -186,14 +183,13 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
      * @param metaNodes
      * @return
      */
-    private static Map<URI, List<NodeContainerTemplate>>
-        divideInDistinctGroups(final List<NodeContainerTemplate> metaNodes) {
-        Map<URI, List<NodeContainerTemplate>> metaNodeGroups = new HashMap<>();
+    private static Map<URI, List<NodeContainerTemplate>> divideInDistinctGroups(
+            final List<NodeContainerTemplate> metaNodes) {
+        final Map<URI, List<NodeContainerTemplate>> metaNodeGroups = new HashMap<>();
         for (NodeContainerTemplate template : metaNodes) {
-            final URI sourceURI = template.getTemplateInformation().getSourceURI();
-
-            metaNodeGroups.putIfAbsent(sourceURI, new LinkedList<>());
-            metaNodeGroups.get(sourceURI).add(template);
+            final var sourceUri = template.getTemplateInformation().getSourceURI();
+            metaNodeGroups.putIfAbsent(sourceUri, new LinkedList<>());
+            metaNodeGroups.get(sourceUri).add(template);
         }
         return metaNodeGroups;
     }
@@ -214,7 +210,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             // TODO: should be changed, right now does an API call in the main thread on selecting the metanode group.
             // The KNIME URI resolving will should changed according to the outcome of AP-19371, so that the
             // returned URI here does not contain an ID but a path.
-            var importObject = URIImporterFinder.getInstance().createEntityImportFor(uri);
+            final var importObject = URIImporterFinder.getInstance().createEntityImportFor(uri);
             if (importObject.isPresent() && importObject.get() instanceof RepoObjectImport) {
                 return Optional.of(((RepoObjectImport)importObject.get()).getKnimeURI());
             }
@@ -235,10 +231,10 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
     @Override
     protected Control createDialogArea(final Composite parent) {
-        var content = new Composite(parent, SWT.NONE);
-        var fillBoth = new GridData(GridData.FILL_BOTH);
+        final var content = new Composite(parent, SWT.NONE);
+        final var fillBoth = new GridData(GridData.FILL_BOTH);
         content.setLayoutData(fillBoth);
-        var gridLayout = new GridLayout();
+        final var gridLayout = new GridLayout();
         gridLayout.numColumns = 1;
         gridLayout.verticalSpacing = 8;
         gridLayout.marginWidth = 15;
@@ -246,10 +242,10 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
         // -- metanode group selection --
 
-        var selectorLabel = new Label(content, SWT.LEFT);
+        final var selectorLabel = new Label(content, SWT.LEFT);
         selectorLabel.setText("Change links of:");
 
-        var metaNodeGroupSelector = new Combo(content, SWT.DROP_DOWN | SWT.READ_ONLY);
+        final var metaNodeGroupSelector = new Combo(content, SWT.DROP_DOWN | SWT.READ_ONLY);
         metaNodeGroupSelector.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
         metaNodeGroupSelector.setItems(getUniqueGroupNames());
         metaNodeGroupSelector.addSelectionListener(new SelectionAdapter() {
@@ -265,7 +261,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
                 // the combo box usually only uses a component's name but sometimes with URL (if duplicated), e.g.
                 //   "Foo Bar (knime://KNIME-Community-Hub/*AR8XsII1jufnF0PA)"
                 // be sure to use the real name...:
-                String componentName = m_metaNodeGroups.get(m_oldLinkURI).get(0).getName();
+                final var componentName = m_metaNodeGroups.get(m_oldLinkURI).get(0).getName();
                 m_oldLinkType = BulkChangeMetaNodeLinksCommand.resolveLinkType(m_oldLinkURI);
 
                 scheduleURIDescriptionJob(m_oldLinkURI, componentName, content.getDisplay());
@@ -282,33 +278,33 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
         });
 
-        var oldLinkLabel = new Label(content, SWT.LEFT);
+        final var oldLinkLabel = new Label(content, SWT.LEFT);
         oldLinkLabel.setText("The current link is:");
         m_linkDescriptionTextField = new Text(content, SWT.WRAP | SWT.BORDER);
         m_linkDescriptionTextField.setFont(JFaceResources.getFontRegistry().getItalic(JFaceResources.DEFAULT_FONT));
         m_linkDescriptionTextField.setText("<Select an item above>");
         m_linkDescriptionTextField.setEditable(false);
-        GridData oldLinkLabelLayoutData = new GridData(GridData.FILL_HORIZONTAL);
+        final var oldLinkLabelLayoutData = new GridData(GridData.FILL_HORIZONTAL);
         // 5? the rough number of lines in #toSummaryText
         oldLinkLabelLayoutData.heightHint = 5 * m_linkDescriptionTextField.getLineHeight();
         m_linkDescriptionTextField.setLayoutData(oldLinkLabelLayoutData);
 
-        // vertical space
-        new Label(content, SWT.NONE);
-        new Label(content, SWT.NONE);
+
+        @SuppressWarnings("unused") // only used for vertical space
+        final Label spacer0 = new Label(content, SWT.NONE), spacer1 = new Label(content, SWT.NONE); //  NOSONAR
 
         // -- link properties changing --
 
-        var propertiesLabel = new Label(content, SWT.LEFT);
+        final var propertiesLabel = new Label(content, SWT.LEFT);
         propertiesLabel.setText("Change:");
 
-        var propertiesGroup = new Group(content, SWT.NONE);
+        final var propertiesGroup = new Group(content, SWT.NONE);
         propertiesGroup.setLayout(new RowLayout(SWT.HORIZONTAL));
 
         // link type radio button
-        var linkTypeButton = new Button(propertiesGroup, SWT.RADIO);
+        final var linkTypeButton = new Button(propertiesGroup, SWT.RADIO);
         linkTypeButton.setText("Link Type");
-        Runnable onLinkTypeSelected = () -> {
+        final Runnable onLinkTypeSelected = () -> {
             m_linkChangeAction = LinkChangeAction.TYPE_CHANGE;
             m_linkChangeButton.setText("Change...");
             // only if both the action and group has been selected, the button is enabled
@@ -327,7 +323,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         });
 
         // link uri radio button
-        var uriButton = new Button(propertiesGroup, SWT.RADIO);
+        final var uriButton = new Button(propertiesGroup, SWT.RADIO);
         uriButton.setText("Link URL");
         uriButton.addSelectionListener(new SelectionAdapter() {
             @Override
@@ -335,40 +331,38 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
                 if (((Button)e.getSource()).getSelection()) {
                     m_linkChangeAction = LinkChangeAction.URI_CHANGE;
                     m_linkChangeButton.setText("Browse...");
-                    var groupSelected = m_oldLinkURI != null;
+                    final var groupSelected = m_oldLinkURI != null;
                     m_linkChangeButton.setEnabled(groupSelected);
                     m_uriTextField.setEditable(groupSelected);
                 }
             }
         });
 
-        if (Boolean.getBoolean(SYS_PROPERTY_ENABLE_VERSION_FEATURES)) {
-            // Hub Space version (also maps to link URI) radio button
-            var versionButton = new Button(propertiesGroup, SWT.RADIO);
-            versionButton.setText("KNIME Hub Space Version");
-            versionButton.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    if (((Button)e.getSource()).getSelection()) {
-                        m_linkChangeAction = LinkChangeAction.VERSION_CHANGE;
-                        m_linkChangeButton.setText("Select Version...");
-                        // only if both the action and group has been selected, the button is enabled
-                        var isComponentOnHub =
-                            isSelectedSubNode() && ChangeComponentSpaceVersionAction.isHubUri(m_oldLinkURI);
-                        m_linkChangeButton.setEnabled(isComponentOnHub);
-                        m_linkChangeButton.setToolTipText(isComponentOnHub ? ""
-                            : "Versioning is available only for linked Components stored on a KNIME Hub.");
-                        if (!isComponentOnHub) {
-                            m_uriTextField.setEditable(false);
-                        }
+        // Hub Space version (also maps to link URI) radio button
+        final var versionButton = new Button(propertiesGroup, SWT.RADIO);
+        versionButton.setText("KNIME Hub Space Version");
+        versionButton.addSelectionListener(new SelectionAdapter() {
+            @Override
+            public void widgetSelected(final SelectionEvent e) {
+                if (((Button)e.getSource()).getSelection()) {
+                    m_linkChangeAction = LinkChangeAction.VERSION_CHANGE;
+                    m_linkChangeButton.setText("Select Version...");
+                    // only if both the action and group has been selected, the button is enabled
+                    final var isComponentOnHub =
+                        isSelectedSubNode() && ChangeComponentSpaceVersionAction.isHubUri(m_oldLinkURI);
+                    m_linkChangeButton.setEnabled(isComponentOnHub);
+                    m_linkChangeButton.setToolTipText(isComponentOnHub ? ""
+                        : "Versioning is available only for linked Components stored on a KNIME Hub.");
+                    if (!isComponentOnHub) {
+                        m_uriTextField.setEditable(false);
                     }
                 }
-            });
-        }
+            }
+        });
 
         // text field for display and URI editing
         m_uriTextField = new Text(content, SWT.BORDER);
-        var gridData = new GridData(GridData.FILL_HORIZONTAL);
+        final var gridData = new GridData(GridData.FILL_HORIZONTAL);
         m_uriTextField.setLayoutData(gridData);
         m_uriTextField.setEditable(false);
         m_uriTextField.addModifyListener(event -> {
@@ -382,7 +376,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
         // change properties push button
         m_linkChangeButton = new Button(content, SWT.PUSH);
-        var buttonRightGridData = new GridData();
+        final var buttonRightGridData = new GridData();
         buttonRightGridData.widthHint = 120;
         buttonRightGridData.horizontalAlignment = SWT.RIGHT;
         m_linkChangeButton.setLayoutData(buttonRightGridData);
@@ -414,8 +408,8 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
     /** Determines the text content of {@link #m_linkDescriptionTextField} based on the URI etc. */
     private static String toSummaryText(final URI linkURI, final String componentName, final String mountID,
-        final String path) {
-        StringBuilder strBuilder = new StringBuilder();
+            final String path) {
+        final var strBuilder = new StringBuilder();
         strBuilder.append("Name: \t\t").append(componentName).append("\n");
         strBuilder.append("URI: \t\t").append(linkURI.toString()).append("\n");
         strBuilder.append("Mount ID: \t").append(mountID).append("\n");
@@ -437,9 +431,9 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
      * @return String array of unique display names
      */
     private String[] getUniqueGroupNames() {
-        var uriArray = m_metaNodeGroups.keySet().toArray(URI[]::new);
-        var namesArray = new String[uriArray.length];
-        var duplicateNames = new LinkedList<>();
+        final var uriArray = m_metaNodeGroups.keySet().toArray(URI[]::new);
+        final var namesArray = new String[uriArray.length];
+        final var duplicateNames = new LinkedList<>();
 
         for (var i = 0; i < uriArray.length; i++) {
             final var uri = uriArray[i];
@@ -475,13 +469,13 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         var message =
             "Please select a new link type for the " + (isSelectedSubNode() ? "component" : "metanode") + "s.";
         if (isSelectedSubNode()) {
-            var prompt = new ChangeSubNodeLinkAction.LinkPrompt(shell, message, m_selectedLinkType);
+            final var prompt = new ChangeSubNodeLinkAction.LinkPrompt(shell, message, m_selectedLinkType);
             if (prompt.open() != Window.OK) {
                 return;
             }
             m_selectedLinkType = prompt.getLinkType();
         } else if (isSelectedMetaNode()) {
-            var prompt = new ChangeMetaNodeLinkAction.LinkPrompt(shell, message, m_selectedLinkType);
+            final var prompt = new ChangeMetaNodeLinkAction.LinkPrompt(shell, message, m_selectedLinkType);
             if (prompt.open() != Window.OK) {
                 return;
             }
@@ -505,12 +499,12 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         }
         ContentObject defaultSelection = null;
         if (ExplorerFileSystem.SCHEME.equals(m_selectedLinkURI.getScheme())) {
-            var fileStore = ExplorerFileSystem.INSTANCE.getStore(m_selectedLinkURI);
-           defaultSelection = ContentObject.forFile(fileStore == null ? null : fileStore.getParent());
+            final var fileStore = ExplorerFileSystem.INSTANCE.getStore(m_selectedLinkURI);
+            defaultSelection = ContentObject.forFile(fileStore == null ? null : fileStore.getParent());
         }
-        var templateType = isSelectedSubNode() ? TemplateType.SubNode : TemplateType.MetaNode;
-        var prompt = new DestinationSelectionDialog(shell, validMountPointList.toArray(new String[0]), defaultSelection,
-            templateType);
+        final var templateType = isSelectedSubNode() ? TemplateType.SubNode : TemplateType.MetaNode;
+        final var prompt = new DestinationSelectionDialog(shell, validMountPointList.toArray(new String[0]),
+            defaultSelection, templateType);
         if (prompt.open() != Window.OK) {
             return;
         }
@@ -528,18 +522,23 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         if (representative.isEmpty()) {
             return;
         }
-        SubNodeContainer componentRepresentative = (SubNodeContainer)representative.get();
+        final var componentRepresentative = (SubNodeContainer)representative.get();
 
-        final Integer currentVersion = ChangeComponentSpaceVersionAction
-            .spaceVersionNumber(componentRepresentative.getTemplateInformation().getSourceURI());
+        final var currentVersion = ChangeComponentSpaceVersionAction.spaceVersion(
+            componentRepresentative.getTemplateInformation().getSourceURI());
 
-        var dialog = new ChangeComponentSpaceVersionDialog(shell, componentRepresentative, currentVersion, m_manager);
+        final var selected = currentVersion.getFirst() == TemplateUpdateUtil.LinkType.FIXED_VERSION
+                ? currentVersion.getSecond() : null;
+        var dialog = new ChangeComponentSpaceVersionDialog(shell, componentRepresentative, selected, m_manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
             return;
         }
-        var targetVersion = dialog.getSelectedVersion();
-        var newUri = new UriBuilderImpl(m_selectedLinkURI).replaceQueryParam("spaceVersion", targetVersion).build();
+        final var targetVersion = dialog.getSelectedVersion();
+        final var paramValue = targetVersion.getFirst().getParameterString(targetVersion.getSecond());
+        final var newUri = new UriBuilderImpl(m_selectedLinkURI) //
+                .replaceQueryParam("spaceVersion", paramValue) //
+                .build();
         m_selectedLinkURI = newUri;
         m_uriTextField.setText(newUri.toString());
         m_uriInputViaText = false;
@@ -554,15 +553,15 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
      * @return is the inputted URI valid?
      */
     private boolean verifyURI() {
-        var repr = getRepresentativeFromSelected();
+        final var repr = getRepresentativeFromSelected();
         if (repr.isPresent() && m_uriInputViaText) {
             m_selectedLinkURI = resolveToKnimeURI(m_selectedLinkURI).orElse(m_selectedLinkURI);
             var validURI = false;
             var errorMessage = "";
-            var result = new LoadResult("Link Change Verification");
+            final var result = new LoadResult("Link Change Verification");
             NodeContext.pushContext(m_manager);
             try {
-                var template =
+                final var template =
                     TemplateUpdateUtil.loadMetaNodeTemplate(m_selectedLinkURI, new WorkflowLoadHelper(true), result);
                 if (result.hasErrors()) {
                     errorMessage =
@@ -597,7 +596,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
      * @return Optional of the representative NodeContainerTemplate
      */
     private Optional<NodeContainerTemplate> getRepresentativeFromSelected() {
-        var group = m_metaNodeGroups.get(m_oldLinkURI);
+        final var group = m_metaNodeGroups.get(m_oldLinkURI);
         if (group != null && !group.isEmpty()) {
             return Optional.of(group.get(0));
         }
@@ -667,9 +666,9 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
          * @param templateType
          */
         public DestinationSelectionDialog(final Shell parentShell, final String[] mountIDs,
-            final ContentObject initialSelection, final TemplateType templateType) {
+                final ContentObject initialSelection, final TemplateType templateType) {
             super(parentShell, mountIDs, initialSelection);
-            var templateName = templateType == TemplateType.SubNode ? "Component" : "Metanode";
+            final var templateName = templateType == TemplateType.SubNode ? "Component" : "Metanode";
             setTitle("Save As " + templateName + " Template");
             setHeader("Select destination workflow group for " + templateName.toLowerCase() + " template");
             setValidator(new Validator() {
@@ -677,7 +676,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
                 public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {
                     final AbstractExplorerFileInfo info = selection.fetchInfo();
                     if ((templateType == TemplateType.SubNode && info.isComponentTemplate())
-                        || (templateType == TemplateType.MetaNode && info.isMetaNodeTemplate())) {
+                            || (templateType == TemplateType.MetaNode && info.isMetaNodeTemplate())) {
                         return null;
                     }
                     return "Only " + templateName.toLowerCase() + " templates can be selected as target.";
@@ -714,7 +713,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             m_linkURI = linkURI;
             m_componentName = componentName;
             m_display = display;
-            String resolveText = "<Resolving ...>";
+            final var resolveText = "<Resolving ...>";
             m_linkDescriptionTextField.setText(toSummaryText(linkURI, componentName, resolveText, resolveText));
             m_linkDescriptionTextField.setToolTipText(linkURI.toString());
             setPriority(Job.INTERACTIVE);
@@ -722,16 +721,16 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
         @Override
         protected IStatus run(final IProgressMonitor monitor) {
-            Optional<KNIMEURIDescription> descrOptional = resolve(monitor);
-            IStatus status;
-            String text;
+            final Optional<KNIMEURIDescription> descrOptional = resolve(monitor);
+            final IStatus status;
+            final String text;
             if (descrOptional.isPresent()) {
                 KNIMEURIDescription uriDesc = descrOptional.get();
                 text = toSummaryText(m_linkURI, m_componentName, uriDesc.getMountpointName(),
                     descrOptional.get().getPath());
                 status = Status.OK_STATUS;
             } else {
-                var errorText = "<Errors resolving details>";
+                final var errorText = "<Errors resolving details>";
                 text = toSummaryText(m_linkURI, m_componentName, errorText, errorText);
                 status = Status.warning("Unable to resolve details to " + m_linkURI.toString());
             }
