@@ -64,9 +64,7 @@ public class ChangeComponentSpaceVersionCommand extends AbstractKNIMECommand {
 
     private final SubNodeContainer m_component;
 
-    private final Integer m_targetVersion;
-
-    private final Integer m_previousVersion;
+    private final String m_targetVersion;
 
     /** To achieve a version change, the source URI is modified and then an update is performed. */
     private final CompoundCommand m_commandRegistry = new CompoundCommand();
@@ -74,19 +72,17 @@ public class ChangeComponentSpaceVersionCommand extends AbstractKNIMECommand {
     /**
      * @param manager
      * @param component
-     * @param currentVersion
      * @param targetVersion
      */
     public ChangeComponentSpaceVersionCommand(final WorkflowManager manager, final SubNodeContainer component,
-        final Integer currentVersion, final Integer targetVersion) {
+            final String targetVersion) {
         super(manager);
 
         m_component = component;
-        m_previousVersion = currentVersion;
         m_targetVersion = targetVersion;
     }
 
-    static URI setSpaceVersion(final URI oldUri, final Integer spaceVersion) {
+    static URI setSpaceVersion(final URI oldUri, final String spaceVersion) {
         // this removes the parameter if spaceVersion is null
         return new UriBuilderImpl(oldUri)//
             .replaceQueryParam("spaceVersion", spaceVersion)//
@@ -102,9 +98,9 @@ public class ChangeComponentSpaceVersionCommand extends AbstractKNIMECommand {
     }
 
     private void doLinkURIChange() {
-        var oldUri = m_component.getTemplateInformation().getSourceURI();
-        var targetUri = setSpaceVersion(oldUri, m_targetVersion);
-        var changeCommand = new ChangeSubNodeLinkCommand(getHostWFM(), m_component, oldUri, targetUri);
+        final var oldUri = m_component.getTemplateInformation().getSourceURI();
+        final var targetUri = setSpaceVersion(oldUri, m_targetVersion);
+        final var changeCommand = new ChangeSubNodeLinkCommand(getHostWFM(), m_component, oldUri, targetUri);
         if (changeCommand.canExecute()) {
             changeCommand.execute();
             m_commandRegistry.add(changeCommand);

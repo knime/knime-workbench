@@ -239,5 +239,5 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * @since 4.3
      */
     public abstract Optional<File> resolveToLocalFileConditional(IProgressMonitor pm, ZonedDateTime ifModifiedSince)
-        throws CoreException;
+            throws CoreException;
 }

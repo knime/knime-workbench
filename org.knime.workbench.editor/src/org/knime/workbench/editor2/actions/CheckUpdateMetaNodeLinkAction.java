@@ -49,7 +49,6 @@ package org.knime.workbench.editor2.actions;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -102,8 +101,7 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  */
 public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
 
-    private static final NodeLogger LOGGER =
-        NodeLogger.getLogger(CheckUpdateMetaNodeLinkAction.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(CheckUpdateMetaNodeLinkAction.class);
 
     private final boolean m_showInfoMsgIfNoUpdateAvail;
 
@@ -122,8 +120,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
      * updates are available, true if this is a manually triggered command,
      * false if is run as automatic procedure after load (no user interaction)
      */
-    public CheckUpdateMetaNodeLinkAction(final WorkflowEditor editor,
-            final boolean showInfoMsgIfNoUpdateAvail) {
+    public CheckUpdateMetaNodeLinkAction(final WorkflowEditor editor, final boolean showInfoMsgIfNoUpdateAvail) {
         super(editor);
         m_showInfoMsgIfNoUpdateAvail = showInfoMsgIfNoUpdateAvail;
     }
@@ -237,13 +234,11 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         return list;
     }
 
-    /** {@inheritDoc} */
     @Override
     public void runOnNodes(final NodeContainerEditPart[] nodes) {
         throw new IllegalStateException("Not to be called");
     }
 
-    /** {@inheritDoc} */
     @Override
     public void runInSWT() {
         List<NodeID> candidateList = getMetaNodesToCheck(false);
@@ -377,7 +372,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 nodeIdToTemplate.put(id, (NodeContainerTemplate)m_hostWFM.findNodeContainer(id));
             }
 
-            // retrie ving the update status per node template
+            // retrieving the update status per node template
             final var loadResult = new LoadResult("ignored");
             Map<NodeID, UpdateStatus> nodeIdToUpdateStatus;
             try {
@@ -437,14 +432,15 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 case Error:
                     // if an update for a parent was found, ignore the child's error
                     if (!updateableParentExists(id)) {
-                        URI sourceURI = tnc.getTemplateInformation().getSourceURI();
-                        Optional<KNIMEURIDescription> d = ResolverUtil.toDescription(sourceURI, new NullProgressMonitor());
+                        final var sourceURI = tnc.getTemplateInformation().getSourceURI();
+                        Optional<KNIMEURIDescription> d =
+                                ResolverUtil.toDescription(sourceURI, new NullProgressMonitor());
                         var s = d.map(KNIMEURIDescription::toDisplayString).orElse(Objects.toString(sourceURI));
-                        return new Status(
-                            IStatus.WARNING, idName,
+                        return new Status(IStatus.WARNING, idName,
                             "Unable to check for update of \"" + tncName + "\"; can't read " + s, null);
                     } else {
-                        return new Status(IStatus.OK, idName, "Update error exists, but could be resolved by parent update for " + tncName);
+                        return new Status(IStatus.OK, idName,
+                            "Update error exists, but could be resolved by parent update for " + tncName);
                     }
                 default:
                     return new Status(IStatus.WARNING , idName, "Could not resolve update status for " + tncName, null);

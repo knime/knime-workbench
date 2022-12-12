@@ -52,17 +52,15 @@ import java.net.URI;
 import java.util.Objects;
 import java.util.Optional;
 
-import javax.ws.rs.core.MultivaluedMap;
-
 import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.SubNodeContainer;
-import org.knime.core.ui.node.workflow.SubNodeContainerUI;
+import org.knime.core.node.workflow.TemplateUpdateUtil.LinkType;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.util.Pair;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -79,8 +77,6 @@ import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
  * @author Carl Witt, KNIME AG, Zurich, Switzerland
  */
 public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
-
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(ChangeComponentSpaceVersionAction.class);
 
     /** The action ID is in snake case while in the plugin.xml, the definition ID is in camel case. */
     public static final String ID = "knime.action.change_component_space_version";
@@ -132,15 +128,15 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
      */
     @Override
     protected boolean internalCalculateEnabled() {
-        var optComponent = getSingleSelectedComponent();
+        final var optComponent = getSingleSelectedComponent();
         if (optComponent.isEmpty()) {
             return false;
         }
-        var component = optComponent.get();
+        final var component = optComponent.get();
 
         // Component must be linked and parent must allow modification
-        var isLinked = Role.Link == component.getTemplateInformation().getRole();
-        var isChangeable = component.getParent().isWriteProtected();
+        final var isLinked = Role.Link == component.getTemplateInformation().getRole();
+        final var isChangeable = component.getParent().isWriteProtected();
         return isLinked && !isChangeable;
     }
 
@@ -155,7 +151,7 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
         if (explorerFileStore == null) {
             return false;
         }
-        var fileStoreClassName = explorerFileStore.getClass().getName();
+        final var fileStoreClassName = explorerFileStore.getClass().getName();
         // NOSONAR I don't want instanceof because it would force me to introduce a dependency to commercial code
         return fileStoreClassName.equals("com.knime.explorer.server.hub.HubExplorerFileStore"); // NOSONAR
     }
@@ -165,16 +161,9 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
      *         types are selected.
      */
     private Optional<SubNodeContainer> getSingleSelectedComponent() {
-        NodeContainerEditPart[] parts = getSelectedParts(NodeContainerEditPart.class);
-        if (parts.length != 1) {
-            return Optional.empty();
-        }
-        var isComponent = Wrapper.wraps(parts[0].getNodeContainer(), SubNodeContainer.class);
-        if (isComponent) {
-            SubNodeContainerUI subnode = (SubNodeContainerUI)parts[0].getNodeContainer();
-            return Optional.of(Wrapper.unwrap(subnode, SubNodeContainer.class));
-        }
-        return Optional.empty();
+        final NodeContainerEditPart[] parts = getSelectedParts(NodeContainerEditPart.class);
+        return parts.length == 1 ? Wrapper.unwrapOptional(parts[0].getNodeContainer(), SubNodeContainer.class)
+            : Optional.empty();
     }
 
     /**
@@ -185,8 +174,8 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
      */
     @Override
     public void runInSWT() {
-        var shell = SWTUtilities.getActiveShell();
-        var manager = getEditor().getWorkflowManager().orElse(null);
+        final var shell = SWTUtilities.getActiveShell();
+        final var manager = getEditor().getWorkflowManager().orElse(null);
 
         // abort in remote workflow editor
         if (manager == null) {
@@ -195,12 +184,12 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
             return;
         }
 
-        var optComponent = getSingleSelectedComponent();
+        final var optComponent = getSingleSelectedComponent();
         // just in the unlikely case that the selection has changed after the last calculate enabled and now
         if (optComponent.isEmpty()) {
             return;
         }
-        var component = optComponent.get();
+        final var component = optComponent.get();
         // currently, the only sources that support versioning are hub instances
         if (!isHubUri(component.getTemplateInformation().getSourceURI())) {
             String message = "Changing the space version is only supported on KNIME Hub instances.\n"
@@ -209,40 +198,49 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
             return;
         }
 
-        final Integer currentVersion = spaceVersionNumber(component.getTemplateInformation().getSourceURI());
+        final Pair<LinkType, Integer> previous = spaceVersion(component.getTemplateInformation().getSourceURI());
+        final var prevVersion = previous.getSecond();
 
         // prompt for target version
-        final var dialog = new ChangeComponentSpaceVersionDialog(shell, component, currentVersion, manager);
+        final var dialog = new ChangeComponentSpaceVersionDialog(shell, component, prevVersion, manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
             return;
         }
-        var targetVersion = dialog.useMostRecentVersion() ? null : dialog.getSelectedVersion();
 
         // only do something if versions differ
-        if (!Objects.equals(targetVersion, currentVersion)) {
-            var changeCommand =
-                new ChangeComponentSpaceVersionCommand(getManager(), optComponent.get(), currentVersion, targetVersion);
-            execute(changeCommand);
+        final var target = dialog.getSelectedVersion();
+        final var targetType = target.getFirst();
+        final var targetVersion = target.getSecond();
+        if (targetType != previous.getFirst()
+                || (targetType == LinkType.FIXED_VERSION && !Objects.equals(prevVersion, targetVersion))) {
+            execute(new ChangeComponentSpaceVersionCommand(getManager(), optComponent.get(),
+                targetType.getParameterString(targetVersion)));
         }
     }
 
     /**
-     * For instance "knime://My-KNIME-Hub/*Rllck6Bn2-EaOR6d?spaceVersion=3" -> 3
+     * For instance "knime://My-KNIME-Hub/*Rllck6Bn2-EaOR6d?spaceVersion=3" -> "3"
      *
-     * @param knimeUri
-     * @return the hub space version number from a URI or null ("latest") if the query parameter is not present
+     * @param knimeUri KNIME URI
+     * @return the link space version
      */
-    static Integer spaceVersionNumber(final URI knimeUri) {
-        MultivaluedMap<String, String> queryParams =
-            JAXRSUtils.getStructuredParams(knimeUri.getRawQuery(), "&", false, true);
+    static Pair<LinkType, Integer> spaceVersion(final URI knimeUri) {
+        final var queryParams = JAXRSUtils.getStructuredParams(knimeUri.getRawQuery(), "&", false, true);
         if (queryParams.containsKey("spaceVersion")) {
             // getFirst: technically, the URI could have the form someprefix?spaceVersion=1,2
             // however, this URI comes from the core so we expect it to either contain no spaceVersion or exactly one
-            return Integer.parseInt(queryParams.getFirst("spaceVersion"));
+            final var spaceVersion = queryParams.getFirst("spaceVersion");
+            switch (spaceVersion) {
+                case "-1":
+                    return Pair.create(LinkType.LATEST_STATE, null);
+                case "latest":
+                    return Pair.create(LinkType.LATEST_VERSION, null);
+                default:
+                    return Pair.create(LinkType.FIXED_VERSION, Integer.parseInt(spaceVersion));
+            }
         } else {
-            return null;
+            return Pair.create(LinkType.LATEST_STATE, -1);
         }
     }
-
 }

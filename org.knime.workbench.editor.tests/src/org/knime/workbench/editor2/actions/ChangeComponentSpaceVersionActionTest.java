@@ -64,17 +64,17 @@ public class ChangeComponentSpaceVersionActionTest {
 
     /**
      * Test method for
-     * {@link org.knime.workbench.editor2.actions.ChangeComponentSpaceVersionAction#spaceVersionNumber(java.net.URI)}.
+     * {@link org.knime.workbench.editor2.actions.ChangeComponentSpaceVersionAction#spaceVersion(java.net.URI)}.
      *
      * @throws URISyntaxException
      */
     @Test
     public void testSpaceVersionNumber() throws URISyntaxException {
         URI withoutSpaceVersion = new URI("knime://SomeMountPoint/some/path?someParameter=12,2");
-        assertNull(ChangeComponentSpaceVersionAction.spaceVersionNumber(withoutSpaceVersion));
+        assertNull(ChangeComponentSpaceVersionAction.spaceVersion(withoutSpaceVersion));
 
         URI withSpaceVersion3 = new URI("knime://My-KNIME-Hub/*02j3f023j?someParameter=12,2&spaceVersion=3&param=4");
-        assertEquals((Integer)3, ChangeComponentSpaceVersionAction.spaceVersionNumber(withSpaceVersion3));
+        assertEquals((Integer)3, ChangeComponentSpaceVersionAction.spaceVersion(withSpaceVersion3));
     }
 
 }

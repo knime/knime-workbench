@@ -79,12 +79,12 @@ public class ChangeComponentSpaceVersionCommandTest {
 
         // update
         assertEquals(new URI("knime://My-KNIME-Hub/*02j3f023j?someParameter=12,2&spaceVersion=4&param=4"),
-            ChangeComponentSpaceVersionCommand.setSpaceVersion(withSpaceVersion3, 4));
+            ChangeComponentSpaceVersionCommand.setSpaceVersion(withSpaceVersion3, "4"));
 
         // add
         URI simple = new URI("knime://SomeMountPoint/some/path");
         assertEquals(new URI("knime://SomeMountPoint/some/path?spaceVersion=100"),
-            ChangeComponentSpaceVersionCommand.setSpaceVersion(simple, 100));
+            ChangeComponentSpaceVersionCommand.setSpaceVersion(simple, "100"));
     }
 
 }

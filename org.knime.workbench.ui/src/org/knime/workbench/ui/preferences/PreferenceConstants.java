@@ -84,6 +84,9 @@ public interface PreferenceConstants {
      * {@link org.knime.core.node.KNIMEConstants#PROPERTY_WEAK_PASSWORDS_IN_SETTINGS_FORBIDDEN} is set. */
     public static final String P_CONFIRM_PASSWORDS_IN_SETTINGS = "knime.confirm.passwords_in_settings";
 
+    /** Preference constant to (not) warn when creating a template link to "Current State" on Hub. */
+    public static final String P_CONFIRM_LINK_CURRENT_STATE = "knime.confirm.link_current_state";
+
     /** Preference constant for the size of the favorite nodes frequency
      * history size.
      */
