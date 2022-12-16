@@ -54,6 +54,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -103,7 +104,7 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
  * @author Christoph Sieb, University of Konstanz
  * @author Fabian Dill, University of Konstanz
  */
-class LoadWorkflowRunnable extends PersistWorkflowRunnable {
+public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
 
     /**
      * Message returned by {@link #getLoadingCanceledMessage()} in case the loading has been canceled due to a (future)
@@ -124,6 +125,23 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
     /** Message, which is non-null if the user canceled to the load. */
     private String m_loadingCanceledMessage;
 
+    private Consumer<WorkflowManager> m_wfmLoadedCallback;
+
+    /**
+     *
+     * Creates a new runnable that load a workflow.
+     *
+     * @param wfmLoadedCallback call as soon as the workflow has been loaded successfully
+     * @param workflowFile the workflow file from which the workflow should be loaded (or created = empty workflow file)
+     * @param workflowContext context of the workflow to be loaded (not null)
+     */
+    public LoadWorkflowRunnable(final Consumer<WorkflowManager> wfmLoadedCallback, final File workflowFile,
+        final WorkflowContextV2 workflowContext) {
+        m_wfmLoadedCallback = wfmLoadedCallback;
+        m_workflowFile = workflowFile;
+        m_workflowContext = CheckUtils.checkArgumentNotNull(workflowContext);
+    }
+
     /**
      * Creates a new runnable that load a workflow.
      *
@@ -131,7 +149,7 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
      * @param workflowFile the workflow file from which the workflow should be loaded (or created = empty workflow file)
      * @param workflowContext context of the workflow to be loaded (not null)
      */
-    public LoadWorkflowRunnable(final WorkflowEditor editor, final File workflowFile,
+    LoadWorkflowRunnable(final WorkflowEditor editor, final File workflowFile,
             final WorkflowContextV2 workflowContext) {
         m_editor = editor;
         m_workflowFile = workflowFile;
@@ -170,12 +188,15 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
             final WorkflowLoadResult result =
                     WorkflowManager.loadProject(workflowDirectory, new ExecutionMonitor(progressMonitor), loadHelper);
             final var wfm = result.getWorkflowManager();
-            m_editor.setWorkflowManager(wfm);
+            callOnWorkflowEditor(e -> e.setWorkflowManager(wfm));
+            callWfmLoadedCallback(wfm);
             pm.subTask("Finished.");
             pm.done();
-            if (wfm.isDirty()) {
-                m_editor.markDirty();
-            }
+            callOnWorkflowEditor(e -> {
+                if (wfm.isDirty()) {
+                    e.markDirty();
+                }
+            });
 
             final IStatus status = createStatus(result, !result.getGUIMustReportDataLoadErrors(), false);
             String message;
@@ -196,26 +217,27 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
             if (!status.isOK()) {
                 showLoadErrorDialog(result, status, message, true);
             }
-            final List<NodeID> linkedMNs = wfm.getLinkedMetaNodes(true);
-            if (!linkedMNs.isEmpty()) {
-                final WorkflowEditor editor = m_editor;
-                m_editor.addAfterOpenRunnable(() -> postLoadCheckForMetaNodeUpdates(editor, wfm, linkedMNs));
-            }
-            final Collection<WorkflowEditorEventListener> workflowEditorEventListeners =
-                WorkflowEditorEventListeners.getListeners();
-            if (!workflowEditorEventListeners.isEmpty()) {
-                final WorkflowEditor editor = m_editor;
-                editor.addAfterOpenRunnable(() -> {
-                    final var event = WorkflowEditorEventListeners.createActiveWorkflowEditorEvent(editor);
-                    for (final WorkflowEditorEventListener listener : workflowEditorEventListeners) {
-                        try {
-                            listener.workflowLoaded(event);
-                        } catch (final Throwable throwable) {
-                            LOGGER.error("Workflow editor listener error.", throwable);
+
+            callOnWorkflowEditor(e -> {
+                final List<NodeID> linkedMNs = wfm.getLinkedMetaNodes(true);
+                if (!linkedMNs.isEmpty()) {
+                    e.addAfterOpenRunnable(() -> postLoadCheckForMetaNodeUpdates(e, wfm, linkedMNs));
+                }
+                final Collection<WorkflowEditorEventListener> workflowEditorEventListeners =
+                    WorkflowEditorEventListeners.getListeners();
+                if (!workflowEditorEventListeners.isEmpty()) {
+                    e.addAfterOpenRunnable(() -> {
+                        final var event = WorkflowEditorEventListeners.createActiveWorkflowEditorEvent(e);
+                        for (final WorkflowEditorEventListener listener : workflowEditorEventListeners) {
+                            try {
+                                listener.workflowLoaded(event);
+                            } catch (final Throwable throwable) {
+                                LOGGER.error("Workflow editor listener error.", throwable);
+                            }
                         }
-                    }
-                });
-            }
+                    });
+                }
+            });
         } catch (FileNotFoundException fnfe) {
             m_throwable = fnfe;
             LOGGER.fatal("File not found", fnfe);
@@ -237,11 +259,11 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
         } catch (UnsupportedWorkflowVersionException uve) {
             m_loadingCanceledMessage = INCOMPATIBLE_VERSION_MSG;
             LOGGER.info(m_loadingCanceledMessage, uve);
-            m_editor.setWorkflowManager(null);
+            clearWorkflowManagerFromWorkflowEditor();
         } catch (CanceledExecutionException cee) {
             m_loadingCanceledMessage = "Canceled loading workflow: " + m_workflowFile.getParentFile().getName();
             LOGGER.info(m_loadingCanceledMessage, cee);
-            m_editor.setWorkflowManager(null);
+            clearWorkflowManagerFromWorkflowEditor();
         } catch (LockFailedException lfe) {
             final var error = new StringBuilder("Unable to load workflow \"");
             error.append(m_workflowFile.getParentFile().getName());
@@ -252,28 +274,31 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
             }
             m_loadingCanceledMessage = error.toString();
             LOGGER.info(m_loadingCanceledMessage, lfe);
-            m_editor.setWorkflowManager(null);
+            clearWorkflowManagerFromWorkflowEditor();
         } catch (Throwable e) {
             m_throwable = e;
             LOGGER.error("Workflow could not be loaded. " + e.getMessage(), e);
-            m_editor.setWorkflowManager(null);
+            clearWorkflowManagerFromWorkflowEditor();
         } finally {
             // create empty WFM if a new workflow is created
             // (empty workflow file)
             if (createEmptyWorkflow) {
-                m_editor.setWorkflowManager(
-                    WorkflowManager.ROOT.createAndAddProject(name, new WorkflowCreationHelper(m_workflowContext)));
+                callOnWorkflowEditor(e -> {
+                    e.setWorkflowManager(
+                        WorkflowManager.ROOT.createAndAddProject(name, new WorkflowCreationHelper(m_workflowContext)));
 
-                // save empty project immediately
-                // bugfix 1341 -> see WorkflowEditor line 1294
-                // (resource delta visitor movedTo)
-                Display.getDefault().syncExec(() -> m_editor.doSave(new NullProgressMonitor()));
-                m_editor.setIsDirty(false);
+                    // save empty project immediately
+                    // bugfix 1341 -> see WorkflowEditor line 1294
+                    // (resource delta visitor movedTo)
+                    Display.getDefault().syncExec(() -> e.doSave(new NullProgressMonitor()));
+                    e.setIsDirty(false);
 
+                });
             }
             // IMPORTANT: Remove the reference to the file and the
             // editor!!! Otherwise the memory cannot be freed later
             m_editor = null;
+            m_wfmLoadedCallback = null;
             m_workflowFile = null;
             m_workflowContext = null;
         }
@@ -418,6 +443,22 @@ class LoadWorkflowRunnable extends PersistWorkflowRunnable {
         if (result.get()) {
             new CheckUpdateMetaNodeLinkAllAction(editor, showInfoMsg).run();
         }
+    }
+
+    private void callOnWorkflowEditor(final Consumer<WorkflowEditor> call) {
+        if (m_editor != null) {
+            call.accept(m_editor);
+        }
+    }
+
+    private void callWfmLoadedCallback(final WorkflowManager wfm) {
+        if (m_wfmLoadedCallback != null) {
+            m_wfmLoadedCallback.accept(wfm);
+        }
+    }
+
+    private void clearWorkflowManagerFromWorkflowEditor() {
+        callOnWorkflowEditor(e -> e.setWorkflowManager(null));
     }
 
 }
