@@ -467,7 +467,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 try {
                     m_hostWFM.checkUpdateMetaNodeLink(tlc, new WorkflowLoadHelper(true, m_hostWFM.getContextV2()));
                 } catch (IOException e) {
-                    LOGGER.warn("Could not update node " + tlc + ": ", e);
+                    LOGGER.warn("Could not update node " + tlc + ": " + e.getMessage(), e);
                     updateError = true;
                 }
             }
