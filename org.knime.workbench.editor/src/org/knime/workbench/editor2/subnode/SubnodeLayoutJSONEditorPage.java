@@ -68,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.swing.BoxLayout;
@@ -143,6 +144,7 @@ import org.knime.js.core.layout.bs.JSONNestedLayout;
 import org.knime.js.core.webtemplate.WebTemplateUtil;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
+import org.knime.workbench.editor2.subnode.LayoutEditorBrowser.LayoutEditorBrowserFunction;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonLocation;
@@ -174,10 +176,10 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
     private Text m_text;
     private List<Integer> m_documentNodeIDs = new ArrayList<Integer>();
     private NodeUsageComposite m_nodeUsageComposite;
-    private Browser m_browser;
-    private Browser m_configurationBrowser;
-    private BrowserFunction m_visualLayoutUpdate;
-    private BrowserFunction m_configurationLayoutUpdate;
+    private LayoutEditorBrowser m_browser;
+    private LayoutEditorBrowser m_configurationBrowser;
+    private LayoutEditorBrowserFunction m_visualLayoutUpdate;
+    private LayoutEditorBrowserFunction m_configurationLayoutUpdate;
 
     /**
      * Crates a new page instance with a given page name
@@ -314,7 +316,7 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
 
         // Create browser
-        m_browser = Browser.createBrowser(composite);
+        m_browser = LayoutEditorBrowserFactory.createBrowser(composite);
 
         try {
             m_browser.setUrl(new File(html).toURI().toURL().toString());
@@ -349,7 +351,7 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
                 m_browser.evaluate("setLayout(\'" + jsonLayoutConst + "\');");
             }
         });
-        m_visualLayoutUpdate = new UpdateLayoutFunction(m_browser, "pushLayout");
+        m_visualLayoutUpdate = m_browser.registerBrowserFunction("pushLayout", new UpdateLayoutFunction());
         return composite;
     }
 
@@ -372,7 +374,7 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
 
         // Create browser
-        m_configurationBrowser = Browser.createBrowser(composite);
+        m_configurationBrowser = LayoutEditorBrowserFactory.createBrowser(composite);
 
         try {
             m_configurationBrowser.setUrl(new File(html).toURI().toURL().toString());
@@ -407,7 +409,8 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
                 m_configurationBrowser.evaluate("setLayout(\'" + jsonLayoutConst + "\');");
             }
         });
-        m_configurationLayoutUpdate = new UpdateConfigurationFunction(m_configurationBrowser, "pushLayout");
+        m_configurationLayoutUpdate =
+            m_configurationBrowser.registerBrowserFunction("pushLayout", new UpdateConfigurationFunction());
         return composite;
     }
 
@@ -1122,21 +1125,13 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
         }
     }
 
-    private class UpdateLayoutFunction extends BrowserFunction {
-
-        /**
-         * @param browser
-         * @param name
-         */
-        public UpdateLayoutFunction(final Browser browser, final String name) {
-            super(browser, name);
-        }
+    private class UpdateLayoutFunction implements Function<Object[], Object> {
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public Object function(final Object[] arguments) {
+        public Object apply(final Object[] arguments) {
             if (arguments == null || arguments.length < 1) {
                 return false;
             }
@@ -1161,24 +1156,15 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
 
             return true;
         }
-
     }
 
-    private class UpdateConfigurationFunction extends BrowserFunction {
-
-        /**
-         * @param browser
-         * @param name
-         */
-        public UpdateConfigurationFunction(final Browser browser, final String name) {
-            super(browser, name);
-        }
+    private class UpdateConfigurationFunction implements Function<Object[], Object> {
 
         /**
          * {@inheritDoc}
          */
         @Override
-        public Object function(final Object[] arguments) {
+        public Object apply(final Object[] arguments) {
             if (arguments == null || arguments.length < 1) {
                 return false;
             }

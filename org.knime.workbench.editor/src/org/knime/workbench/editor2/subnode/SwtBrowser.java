@@ -20,7 +20,10 @@
  */
 package org.knime.workbench.editor2.subnode;
 
+import java.util.function.Function;
+
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.browser.BrowserFunction;
 import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
@@ -30,7 +33,7 @@ import org.eclipse.swt.widgets.Composite;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class SwtBrowser implements Browser {
+class SwtBrowser implements LayoutEditorBrowser {
 
     private final org.eclipse.swt.browser.Browser m_b;
 
@@ -69,8 +72,29 @@ class SwtBrowser implements Browser {
     }
 
     @Override
-    public Object getBrowser() {
-        return m_b;
+    public LayoutEditorBrowserFunction registerBrowserFunction(final String name,
+        final Function<Object[], Object> function) {
+        var bf = new BrowserFunction(m_b, name) {
+
+            @Override
+            public Object function(final Object[] arguments) {
+                return function.apply(arguments);
+            }
+
+        };
+
+        return new LayoutEditorBrowserFunction() {
+
+            @Override
+            public boolean isDisposed() {
+                return bf.isDisposed();
+            }
+
+            @Override
+            public void dispose() {
+                bf.dispose();
+            }
+        };
     }
 
 }
