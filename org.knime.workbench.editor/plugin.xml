@@ -4,6 +4,7 @@
     <extension-point id="metanode_porttype" name="Port Type for Metanode Wizard" schema="schema/metanode_portype.exsd"/>
     <extension-point id="WorkflowEditorEventListener" name="Workflow Editor Event Listener" schema="schema/WorkflowEditorEventListener.exsd"/>
     <extension-point id="NodeView" name="Node View" schema="schema/NodeView.exsd"/>
+    <extension-point id="LayoutEditorBrowser" name="Layout Editor Browser" schema="schema/LayoutEditorBrowser.exsd"/>
     <extension
          point="org.eclipse.ui.commands">
       <category

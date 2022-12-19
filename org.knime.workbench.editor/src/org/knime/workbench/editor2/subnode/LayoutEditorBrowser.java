@@ -20,9 +20,10 @@
  */
 package org.knime.workbench.editor2.subnode;
 
+import java.util.function.Function;
+
 import org.eclipse.swt.browser.ProgressListener;
 import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.widgets.Composite;
 
 /**
  * A browser abstraction for the layout editor which allows one to provide different browser implementations depending
@@ -30,20 +31,8 @@ import org.eclipse.swt.widgets.Composite;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-interface Browser { // NOSONAR
-
-    /**
-     * @param parent
-     * @return a new browser instance
-     */
-    static Browser createBrowser(final Composite parent) {
-        String browserProp = System.getProperty("knime.layout_editor.browser");
-        if ("cef".equals(browserProp)) {
-            return new CefBrowser(parent);
-        } else {
-            return new SwtBrowser(parent);
-        }
-    }
+@SuppressWarnings("javadoc")
+public interface LayoutEditorBrowser { // NOSONAR
 
     void setUrl(String string);
 
@@ -57,6 +46,14 @@ interface Browser { // NOSONAR
 
     void dispose();
 
-    Object getBrowser();
+    LayoutEditorBrowserFunction registerBrowserFunction(String name, Function<Object[], Object> function);
+
+    interface LayoutEditorBrowserFunction {
+
+        void dispose();
+
+        boolean isDisposed();
+
+    }
 
 }
