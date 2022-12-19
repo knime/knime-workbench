@@ -80,7 +80,7 @@ final class LayoutEditorBrowserFactory {
     static LayoutEditorBrowser createBrowser(final Composite parent) {
         String browserProp = System.getProperty(LAYOUT_EDITOR_BROWSER_SYSTEM_PROPERTY_KEY);
         var layoutEditorBrowserClass = getLayoutEditorBrowserFromExtensionPoint();
-        if (browserProp != null && !"swt".equals(browserProp) && layoutEditorBrowserClass != null) {
+        if (!"swt".equals(browserProp) && layoutEditorBrowserClass != null) {
             var layoutEditorBrowser = createLayoutEditorBrowserInstance(layoutEditorBrowserClass, parent);
             if (layoutEditorBrowser != null) {
                 LOGGER.info("Browser used for the layout editor: " + layoutEditorBrowser);
