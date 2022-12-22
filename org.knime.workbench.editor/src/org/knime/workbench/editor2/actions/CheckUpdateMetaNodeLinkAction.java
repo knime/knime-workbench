@@ -49,17 +49,21 @@ package org.knime.workbench.editor2.actions;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.MultiStatus;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -74,6 +78,7 @@ import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.UpdateStatus;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerTemplate;
+import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.TemplateUpdateUtil;
@@ -83,6 +88,8 @@ import org.knime.core.node.workflow.WorkflowPersistor.LoadResult;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.util.pathresolve.ResolverUtil;
+import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -348,6 +355,16 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         @Override
         public void run(final IProgressMonitor monitor)
                 throws InvocationTargetException, InterruptedException, IllegalStateException {
+            NodeContext.pushContext(m_hostWFM);
+            try {
+                runWithContext(monitor);
+            } finally {
+                NodeContext.removeLastContext();
+            }
+        }
+
+        private void runWithContext(final IProgressMonitor monitor)
+                throws InvocationTargetException, InterruptedException, IllegalStateException {
             monitor.beginTask("Checking Link Updates", m_candidateList.size());
             var lH = new WorkflowLoadHelper(true, m_hostWFM.getContextV2());
 
@@ -420,7 +437,12 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 case Error:
                     // if an update for a parent was found, ignore the child's error
                     if (!updateableParentExists(id)) {
-                        return new Status(IStatus.WARNING, idName, "Unable to check for update on node \"" + tncName + "\": Can't read metanode/template directory " + tnc.getTemplateInformation().getSourceURI(), null);
+                        URI sourceURI = tnc.getTemplateInformation().getSourceURI();
+                        Optional<KNIMEURIDescription> d = ResolverUtil.toDescription(sourceURI, new NullProgressMonitor());
+                        var s = d.map(KNIMEURIDescription::toDisplayString).orElse(Objects.toString(sourceURI));
+                        return new Status(
+                            IStatus.WARNING, idName,
+                            "Unable to check for update of \"" + tncName + "\"; can't read " + s, null);
                     } else {
                         return new Status(IStatus.OK, idName, "Update error exists, but could be resolved by parent update for " + tncName);
                     }
