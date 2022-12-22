@@ -84,11 +84,8 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.workflow.NodeContext;
-import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.TemplateUpdateUtil;
 import org.knime.core.node.workflow.TemplateUpdateUtil.LinkType;
-import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.util.Pair;
 import org.knime.core.util.pathresolve.ResolverUtil;
@@ -98,21 +95,22 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
- * Dialog for selecting a space version for a component.
+ * Dialog for selecting a space version for a Hub space.
  *
  * Shows the metadata, e.g., author, date, and description for each version.
  *
  * @author Carl Witt, KNIME AG, Zurich, Switzerland
  */
-public final class ChangeComponentSpaceVersionDialog extends Dialog {
+public final class ChangeSpaceVersionDialog extends Dialog {
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(ChangeComponentSpaceVersionDialog.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(ChangeSpaceVersionDialog.class);
 
     // ============ state ============ //
-    private final WorkflowManager m_manager;
+    private final Function<IProgressMonitor, Optional<List<SpaceVersion>>> m_spaceVersionFetcher;
 
-    /** The component to change version of. */
-    private final SubNodeContainer m_component;
+    private final URI m_itemURI;
+
+    private final String m_description;
 
     private TemplateUpdateUtil.LinkType m_linkType;
 
@@ -121,7 +119,6 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
      * Can be null to indicate latest version/state.
      */
     private Integer m_selectedSpaceVersion;
-
 
     /** Fetched using a {@link FetchVersionListJob} */
     private List<SpaceVersion> m_spaceVersions;
@@ -147,16 +144,19 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
      * Creates a dialog.
      *
      * @param parent the parent shell
+     * @param itemURI URL of the item to choose a version for
+     * @param description descriptino of the item
      * @param currentSpaceVersion the hub space version to pre-select in the version list. null represents the latest
      *            version.
-     * @param metaNodes components and metanodes in the currently edited workflow
-     * @param manager The manager (used for resolution of 'knime://' URLs)
+     * @param spaceVersionFetcher fetcher for available space versions
      */
-    ChangeComponentSpaceVersionDialog(final Shell parent, final SubNodeContainer subNodeContainer,
-        final Integer currentSpaceVersion, final WorkflowManager manager) {
+    public ChangeSpaceVersionDialog(final Shell parent, final URI itemURI, final String description,
+            final Integer currentSpaceVersion,
+            final Function<IProgressMonitor, Optional<List<SpaceVersion>>> spaceVersionFetcher) {
         super(parent);
-        m_manager = manager;
-        m_component = subNodeContainer;
+        m_spaceVersionFetcher = spaceVersionFetcher;
+        m_itemURI = itemURI;
+        m_description = description;
         m_selectedSpaceVersion = currentSpaceVersion;
     }
 
@@ -192,8 +192,7 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
         });
         m_tableViewer.addDoubleClickListener(this::versionTableDoubleClicked);
 
-        final var link = ChangeComponentSpaceVersionAction.spaceVersion(
-            m_component.getTemplateInformation().getSourceURI());
+        final var link = ChangeComponentSpaceVersionAction.spaceVersion(m_itemURI);
 
         final var buttonGroup = new Composite(content, SWT.NONE);
         buttonGroup.setLayout(new RowLayout());
@@ -275,10 +274,7 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
         return viewer;
     }
 
-    /**
-     * @return selected link space version
-     */
-    Pair<LinkType, Integer> getSelectedVersion() {
+    public Pair<LinkType, Integer> getSelectedVersion() {
         return Pair.create(m_linkType, m_linkType == LinkType.FIXED_VERSION ? m_selectedSpaceVersion : null);
     }
 
@@ -360,18 +356,16 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
 
         @Override
         protected IStatus run(final IProgressMonitor monitor) {
-            Optional<List<SpaceVersion>> optList = fetch(monitor);
-            List<SpaceVersion> list;
+            final var optList = m_spaceVersionFetcher.apply(monitor);
 
-            IStatus status;
+            final List<SpaceVersion> list;
+            final IStatus status;
             if (optList.isPresent()) {
                 list = optList.get();
                 status = Status.OK_STATUS;
             } else {
                 list = List.of();
-                status = Status.warning(
-                    String.format("Unable to fetch available Hub Space versions for Component %s with name \"%s\"",
-                        m_component.getID(), m_component.getName()));
+                status = Status.warning("Unable to fetch available Hub Space versions for " + m_description);
             }
 
             m_display.asyncExec(() -> {
@@ -381,21 +375,6 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
             });
 
             return status;
-        }
-
-        private Optional<List<SpaceVersion>> fetch(final IProgressMonitor monitor) {
-            if (monitor.isCanceled()) {
-                return Optional.empty();
-            }
-            NodeContext.pushContext(m_manager);
-            try {
-                return ResolverUtil.getSpaceVersions(m_component.getTemplateInformation().getSourceURI(), monitor);
-            } catch (Exception e) {
-                NodeLogger.getLogger(getClass()).error(e);
-                return Optional.empty();
-            } finally {
-                NodeContext.removeLastContext();
-            }
         }
 
         /** Display the fetched versions in the dialog's table viewer component. */

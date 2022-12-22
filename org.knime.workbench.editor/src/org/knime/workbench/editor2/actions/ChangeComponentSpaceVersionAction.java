@@ -49,18 +49,25 @@
 package org.knime.workbench.editor2.actions;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
 import org.apache.cxf.jaxrs.utils.JAXRSUtils;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
+import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.TemplateUpdateUtil.LinkType;
+import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.Pair;
+import org.knime.core.util.pathresolve.ResolverUtil;
+import org.knime.core.util.pathresolve.SpaceVersion;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -80,6 +87,8 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
 
     /** The action ID is in snake case while in the plugin.xml, the definition ID is in camel case. */
     public static final String ID = "knime.action.change_component_space_version";
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(ChangeComponentSpaceVersionAction.class);
 
     /** @param editor The host editor. */
     public ChangeComponentSpaceVersionAction(final WorkflowEditor editor) {
@@ -191,7 +200,8 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
         }
         final var component = optComponent.get();
         // currently, the only sources that support versioning are hub instances
-        if (!isHubUri(component.getTemplateInformation().getSourceURI())) {
+        final var templateURI = component.getTemplateInformation().getSourceURI();
+        if (!isHubUri(templateURI)) {
             String message = "Changing the space version is only supported on KNIME Hub instances.\n"
                 + "The source of this node is located either on a local mountpoint or on a KNIME Server.";
             MessageDialog.openWarning(shell, "Change Space Version", message);
@@ -202,7 +212,9 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
         final var prevVersion = previous.getSecond();
 
         // prompt for target version
-        final var dialog = new ChangeComponentSpaceVersionDialog(shell, component, prevVersion, manager);
+        final var desc = String.format("Component %s with name \"%s\"", component.getID(), component.getName());
+        final var dialog = new ChangeSpaceVersionDialog(shell, templateURI, desc, prevVersion,
+            monitor -> fetchSpaceVersions(manager, templateURI, monitor, LOGGER));
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
             return;
@@ -220,7 +232,32 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
     }
 
     /**
-     * For instance "knime://My-KNIME-Hub/*Rllck6Bn2-EaOR6d?spaceVersion=3" -> "3"
+     * Fetches the space versions of the given template URI.
+     *
+     * @param manager workflow manager, used as context for {@link ResolverUtil}
+     * @param templateURI URI to fetch space versions for
+     * @param monitor progress monitor
+     * @param logger node logger
+     * @return space versions if successful, {@link Optional#empty()} otherwise
+     */
+    static Optional<List<SpaceVersion>> fetchSpaceVersions(final WorkflowManager manager,
+            final URI templateURI, final IProgressMonitor monitor, final NodeLogger logger) {
+        if (monitor.isCanceled()) {
+            return Optional.empty();
+        }
+        NodeContext.pushContext(manager);
+        try {
+            return ResolverUtil.getSpaceVersions(templateURI, monitor);
+        } catch (Exception e) {
+            logger.error(e);
+            return Optional.empty();
+        } finally {
+            NodeContext.removeLastContext();
+        }
+    }
+
+    /**
+     * For instance "knime://My-KNIME-Hub/*Rllck6Bn2-EaOR6d?spaceVersion=3" -> (FIXED_VERSION, 3)
      *
      * @param knimeUri KNIME URI
      * @return the link space version

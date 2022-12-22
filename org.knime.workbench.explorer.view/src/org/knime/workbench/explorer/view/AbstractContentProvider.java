@@ -168,13 +168,12 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * Files not displayed if contained in a workflow group.
      * @since 4.0
      */
-    protected static final Collection<String> HIDDEN_FILENAMES = new ArrayList<String>();
+    protected static final Collection<String> HIDDEN_FILENAMES = new ArrayList<>();
     static {
         HIDDEN_FILENAMES.add("workflowset.meta");
     }
 
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(AbstractContentProvider.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(AbstractContentProvider.class);
 
     private final AbstractContentProviderFactory m_creator;
 
@@ -185,15 +184,12 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param id mount id of this content provider
      *
      */
-    public AbstractContentProvider(
-            final AbstractContentProviderFactory myCreator, final String id) {
+    public AbstractContentProvider(final AbstractContentProviderFactory myCreator, final String id) {
         if (myCreator == null) {
-            throw new NullPointerException(
-                    "The factory creating this object must be set");
+            throw new NullPointerException("The factory creating this object must be set");
         }
         if (id == null || id.isEmpty()) {
-            throw new NullPointerException(
-                    "The mount id can't be null nor empty");
+            throw new NullPointerException("The mount id can't be null nor empty");
         }
         m_creator = myCreator;
         m_id = id;
@@ -235,8 +231,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     }
 
     public final void refresh(final AbstractExplorerFileStore changedChild) {
-        fireLabelProviderChanged(new LabelProviderChangedEvent(this,
-                changedChild));
+        fireLabelProviderChanged(new LabelProviderChangedEvent(this, changedChild));
     }
 
     /**
@@ -397,8 +392,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param transferType the transfer type
      * @return true if the drop is valid, false otherwise
      */
-    public abstract boolean validateDrop(
-            final AbstractExplorerFileStore target, final int operation,
+    public abstract boolean validateDrop(final AbstractExplorerFileStore target, final int operation,
             TransferData transferType);
 
     /**
@@ -415,8 +409,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @return true if the drop was successful, false otherwise
      * @see ViewerDropAdapter#getCurrentOperation()
      */
-    public abstract boolean performDrop(final ExplorerView view,
-            Object data, final AbstractExplorerFileStore target, int operation);
+    public abstract boolean performDrop(final ExplorerView view, Object data, final AbstractExplorerFileStore target,
+        int operation);
 
     /**
      * @param fileStores the dragged file stores of the content provider
@@ -434,10 +428,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * @param target the target for the template
      * @return <code>true</code> if the operation was successful, <code>false</code> otherwise
      */
-    @SuppressWarnings("unchecked")
-    public boolean saveMetaNodeTemplate(final WorkflowManager metaNode,
-            final AbstractExplorerFileStore target) {
-
+    public boolean saveMetaNodeTemplate(final WorkflowManager metaNode, final AbstractExplorerFileStore target) {
         if (!AbstractExplorerFileStore.isWorkflowGroup(target)) {
             return false;
         }
@@ -448,10 +439,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         String uniqueName = originalName;
         if (new FileStoreNameValidator().isValid(uniqueName) != null) {
             InputDialog dialog = new InputDialog(Display.getDefault().getActiveShell(), "Metanode rename",
-                    "The name \"" + uniqueName + "\" is not a valid "
-                    + "shared metanode name.\n\nChoose a new name under which "
-                    + "it will be saved.", uniqueName,
-                    new FileStoreNameValidator());
+                    "The name \"" + uniqueName + "\" is not a valid shared metanode name.\n\n"
+                        + "Choose a new name under which it will be saved.", uniqueName, new FileStoreNameValidator());
             dialog.setBlockOnOpen(true);
             if (dialog.open() == Window.CANCEL) {
                 return false;
@@ -462,22 +451,18 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         final AbstractExplorerFileInfo destInfo = templateLoc.fetchInfo();
         final boolean doesTargetExist = destInfo.exists();
         // don't allow to overwrite existing workflow groups nor workflows with a template
-        final boolean overwriteOK =
-            doesTargetExist && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate());
+        final boolean overwriteOK = doesTargetExist && (destInfo.isMetaNode() || destInfo.isWorkflowTemplate());
         boolean isOverwrite = false;
 
         OverwriteAndMergeInfo info = null;
         if (doesTargetExist) {
-            DestinationChecker<AbstractExplorerFileStore,
-                AbstractExplorerFileStore> dc = new DestinationChecker
-                    <AbstractExplorerFileStore, AbstractExplorerFileStore>(
-                            Display.getDefault().getActiveShell(), "create template", false, false);
+            DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore> dc =
+                new DestinationChecker<>(Display.getDefault().getActiveShell(), "create template", false, false);
             dc.setIsOverwriteEnabled(overwriteOK);
             dc.setIsOverwriteDefault(overwriteOK);
 
             AbstractExplorerFileStore old = templateLoc;
-            templateLoc = dc.openOverwriteDialog(
-                    templateLoc, overwriteOK, Collections.EMPTY_SET);
+            templateLoc = dc.openOverwriteDialog(templateLoc, overwriteOK, Collections.emptySet());
             if (templateLoc == null) { // canceled
                 return false;
             }
@@ -493,7 +478,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         if (fs != null) {
             workflowMountPoint = fs.getContentProvider();
         }
-        Collection<LinkType> allowedLinkTypes = new ArrayList<LinkType>();
+        Collection<LinkType> allowedLinkTypes = new ArrayList<>();
         allowedLinkTypes.add(LinkType.None);
         allowedLinkTypes.add(LinkType.Absolute);
         if (target.getContentProvider().equals(workflowMountPoint)) {
@@ -511,21 +496,18 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
         try {
             if (directory == null) {
-                LOGGER.error("Unable to convert \"" + templateLoc
-                        + "\" to local path " + "(mount provider \""
+                LOGGER.error("Unable to convert \"" + templateLoc + "\" to local path " + "(mount provider \""
                         + toString() + "\"");
                 return false;
             }
             if (directory.exists()) {
                 if (!directory.isDirectory()) {
-                    LOGGER.error("Implementation error: Provided storage path"
-                            + " doesn't denote a directory!");
+                    LOGGER.error("Implementation error: Provided storage path doesn't denote a directory!");
                     return false;
                 }
                 if (!directory.canWrite()) {
                     MessageDialog.openWarning(Display.getDefault().getActiveShell(), "No write permission",
-                            "You don't have sufficient privileges to write "
-                                    + "to the target directory \""
+                            "You don't have sufficient privileges to write to the target directory \""
                                     + mountIDWithFullPath + "\"");
                     return false;
                 }
@@ -536,20 +518,16 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 return false;
             }
             try {
-                MetaNodeTemplateInformation template =
-                        metaNode.saveAsTemplate(directory,
-                                new ExecutionMonitor());
+                MetaNodeTemplateInformation template = metaNode.saveAsTemplate(directory, new ExecutionMonitor());
                 if (!linkType.equals(LinkType.None)) {
-                    // TODO this needs to be done via the command stack,
-                    // the rename can currently not be undone.
+                    // TODO this needs to be done via the command stack, the rename can currently not be undone.
                     if (!originalName.equals(newName)) {
                         metaNode.setName(newName);
                     }
 
                     URI uri = createMetanodeLinkUri(metaNode, templateLoc, linkType);
                     MetaNodeTemplateInformation link = template.createLink(uri);
-                    metaNode.getParent().setTemplateInformation(
-                            metaNode.getID(), link);
+                    metaNode.getParent().setTemplateInformation(metaNode.getID(), link);
                 }
                 if ((info != null) && (templateLoc instanceof RemoteExplorerFileStore) && info.createSnapshot()) {
                     ((RemoteExplorerFileStore)templateLoc).createSnapshot(info.getComment());
@@ -557,8 +535,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             } catch (Exception e) {
                 String error = "Unable to save shared metanode: " + e.getMessage();
                 LOGGER.warn(error, e);
-                MessageDialog.openError(Display.getDefault().getActiveShell(), "Error while writing shared metanode",
-                        error);
+                MessageDialog.openError(Display.getDefault().getActiveShell(),
+                    "Error while writing shared metanode", error);
             }
 
             metaTemplateDropFinish(templateLoc, directory);
