@@ -45,13 +45,19 @@
  */
 package org.knime.workbench.editor2.figures;
 
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.draw2d.Border;
 import org.eclipse.draw2d.Figure;
 import org.eclipse.draw2d.Label;
 import org.eclipse.draw2d.MarginBorder;
 import org.eclipse.draw2d.ToolbarLayout;
+import org.eclipse.draw2d.geometry.Dimension;
 import org.eclipse.jface.resource.JFaceResources;
+import org.knime.core.node.workflow.NodeMessage;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 
@@ -60,7 +66,7 @@ import org.knime.workbench.core.util.ImageRepository;
  *
  * @author Christoph Sieb, University of Konstanz
  */
-public class WarnErrorToolTip extends Figure {
+final class WarnErrorToolTip extends Figure {
     /**
      * The constant to define a warning tool tip.
      */
@@ -73,41 +79,47 @@ public class WarnErrorToolTip extends Figure {
 
     private static final Border TOOL_TIP_BORDER = new MarginBorder(0, 2, 0, 2);
 
-    private Label m_tooltip;
-
     /**
      * Creates a new ToolTip.
-     *
-     * @param text The text to display
+     * @param message The message to dispay
      * @param type The type of the tool tip to create (warning/error)
      */
-    public WarnErrorToolTip(final String text, final int type) {
+    WarnErrorToolTip(final NodeMessage message, final int type) {
+        setLayoutManager(new ToolbarLayout(false));
 
-        this.setLayoutManager(new ToolbarLayout(true));
-
-        m_tooltip = new Label("???");
+        String text = message.getMessage();
+        Optional<String> issue = message.getIssue();
+        Label tooltip = new Label(StringUtils.left(text, 300)); // too long strings may crash Mac, AP-8430
 
         if (type == WARNING) {
-            m_tooltip.setIcon(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/warning.gif"));
+            tooltip.setIcon(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/warning.gif"));
         } else {
-            m_tooltip.setIcon(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/error.png"));
+            tooltip.setIcon(ImageRepository.getIconImage(KNIMEEditorPlugin.PLUGIN_ID, "icons/error.png"));
         }
-        m_tooltip.setBorder(TOOL_TIP_BORDER);
-        m_tooltip.setFont(JFaceResources.getDefaultFont());
-        this.add(m_tooltip);
 
-        this.setText(text);
+        setBorder(TOOL_TIP_BORDER);
+        tooltip.setFont(JFaceResources.getDefaultFont());
+        tooltip.setSize(tooltip.getPreferredSize().expand(10, 10));
+        add(tooltip);
 
+        Dimension dim = tooltip.getSize().expand(5, 7);
+        Dimension newDim = new Dimension(dim);
+
+        if (issue.isPresent()) {
+            Label issueLabel = new Label(indent(issue.get()));
+            issueLabel.setFont(JFaceResources.getTextFont());
+            add(issueLabel);
+            final var issueDim = issueLabel.getSize();
+            newDim.setHeight(newDim.height() + issueDim.height());
+            newDim.setWidth(Math.max(newDim.width(), issueDim.width()));
+        }
+        setSize(newDim);
     }
 
-    /**
-     * Sets the text to be shown as a tooltip.
-     *
-     * @param text The text to show
-     */
-    public void setText(final String text) {
-        m_tooltip.setText(StringUtils.left(text, 300)); // too long strings may crash Mac, AP-8430
-        m_tooltip.setSize(m_tooltip.getPreferredSize().expand(10, 10));
-        this.setSize(m_tooltip.getSize().expand(5, 7));
+    private static String indent(final String str) {
+        var indent = "\n    ";
+        return Arrays.stream(StringUtils.split(str, '\n')) //
+                .collect(Collectors.joining(indent, indent, ""));
     }
+
 }

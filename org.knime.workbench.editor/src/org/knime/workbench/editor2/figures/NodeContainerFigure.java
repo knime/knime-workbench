@@ -49,6 +49,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.draw2d.DelegatingLayout;
@@ -753,10 +754,10 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                 case RESET:
                     break;
                 case WARNING:
-                    m_infoWarnErrorPanel.setWarning(msg.getMessage());
+                    m_infoWarnErrorPanel.setWarning(msg);
                     break;
                 case ERROR:
-                    m_infoWarnErrorPanel.setError(msg.getMessage());
+                    m_infoWarnErrorPanel.setError(msg);
                     break;
                 default:
                     throw new AssertionError("Unhandled switch case: " + msg.getMessageType());
@@ -1293,7 +1294,7 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
          * @param message the message to set
          */
         @SuppressWarnings("unchecked")
-        public void setWarning(final String message) {
+        void setWarning(final NodeMessage message) {
 
             // as the warning sign should always be before the error sign
             // but after the info sign, it must be checked in the case there
@@ -1330,12 +1331,11 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                 }
             }
 
-            if (message != null && !message.trim().equals("")) {
-                m_warningFigure.setToolTip(message, WarnErrorToolTip.WARNING);
-            } else {
-                m_warningFigure.setToolTip("Warning occurred: no details.",
-                        WarnErrorToolTip.WARNING);
+            NodeMessage msg = message;
+            if (StringUtils.isBlank(message.getMessage())) {
+                msg = NodeMessage.newWarning("Warning occurred: no details.");
             }
+            m_warningFigure.setToolTip(msg, WarnErrorToolTip.WARNING);
 
             repaint();
         }
@@ -1345,17 +1345,16 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
          *
          * @param message the message to set
          */
-        public void setError(final String message) {
+        void setError(final NodeMessage message) {
 
             // the error sign is always the last sign.
             add(m_errorFigure);
 
-            if (message != null && !message.trim().equals("")) {
-                m_errorFigure.setToolTip(message, WarnErrorToolTip.ERROR);
-            } else {
-                m_errorFigure.setToolTip("Error occurred: no details.",
-                        WarnErrorToolTip.ERROR);
+            NodeMessage msg = message;
+            if (StringUtils.isBlank(message.getMessage())) {
+                msg = NodeMessage.newWarning("Error occurred: no details.");
             }
+            m_errorFigure.setToolTip(msg, WarnErrorToolTip.ERROR);
 
             repaint();
         }
@@ -1462,7 +1461,7 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
          *
          * @param message The status message for the tool tip
          */
-        private void setToolTip(final String message, final int type) {
+        private void setToolTip(final NodeMessage message, final int type) {
             m_figureLabel.setToolTip(new WarnErrorToolTip(message, type));
             revalidate();
         }
