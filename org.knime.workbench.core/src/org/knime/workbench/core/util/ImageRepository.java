@@ -668,7 +668,8 @@ public final class ImageRepository {
              return null;
          }
         final String key = resourceURL.toString() + ICONIFIED_KEY;
-        Image img = KNIMECorePlugin.getDefault().getImageRegistry().get(key);
+        final var imageRegistry = KNIMECorePlugin.getDefault().getImageRegistry();
+        Image img = imageRegistry.get(key);
         if (img != null) {
             return img;
         }
@@ -680,8 +681,18 @@ public final class ImageRepository {
 //            return getIconImage(SharedImages.DefaultNodeIcon);
             return null;
         }
-        KNIMECorePlugin.getDefault().getImageRegistry().put(key, img);
-        return img;
+        // AP-20006 - race condition while creating and adding the image.
+        // NB: The image registry used in KNIMECorePlugin is a ThreadsafeImageRegistry - apparently not thread safe..
+        synchronized (imageRegistry) {
+            var img2 = imageRegistry.get(key);
+            if (img2 == null) {
+                imageRegistry.put(key, img);
+            } else {
+                img.dispose();
+                img = img2;
+            }
+            return img;
+        }
      }
 
      public static ImageDescriptor getIconDescriptor(final URL resourceURL) {
