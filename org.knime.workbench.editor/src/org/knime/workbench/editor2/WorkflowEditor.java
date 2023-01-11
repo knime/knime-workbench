@@ -198,8 +198,10 @@ import org.knime.core.node.workflow.contextv2.LocalLocationInfo;
 import org.knime.core.node.workflow.contextv2.LocationInfo;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2.LocationType;
 import org.knime.core.ui.UI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
+import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.node.workflow.async.AsyncWorkflowManagerUI;
@@ -2729,13 +2731,15 @@ public class WorkflowEditor extends GraphicalEditor implements
                 new String[] { "Save as..." }, new Runnable[] { this::doSaveAs });
         } else if (getWorkflowManagerUI() instanceof AsyncWorkflowManagerUI) {
             // if the underlying workflow manager is a AsyncWorkflowManagerUI instance
+            final var serverType = isHubJob() ? "KNIME Hub" : "KNIME Server";
+
             assert m_refresher != null;
             if ((m_fileResource != null) && (m_parentEditor == null)) {
                 //root workflow
-                sb.append("This is a job running on KNIME Server (" + m_fileResource.getAuthority() + ").");
+                sb.append("This is a job running on ").append(serverType + " (" + m_fileResource.getAuthority() + ").");
             } else {
                 //metanode editor
-                sb.append("This is a metanode of a job running on KNIME Server.");
+                sb.append("This is a metanode of a job running on " + serverType + ".");
             }
             if (!m_refresher.isAutoRefreshEnabled()) {
                 sb.append("\nIt just represents a static snapshot of the job and won't get updated automatically. Use "
@@ -4212,5 +4216,11 @@ public class WorkflowEditor extends GraphicalEditor implements
                 }
             });
         }
+    }
+
+    private final boolean isHubJob() {
+        final var executionContext = getWorkflowManagerUI().getContext();
+        return executionContext instanceof RemoteWorkflowContext && ((RemoteWorkflowContext)executionContext)
+            .getWorkflowContextV2().map(context -> context.getLocationType() == LocationType.HUB_SPACE).orElse(false);
     }
 }
