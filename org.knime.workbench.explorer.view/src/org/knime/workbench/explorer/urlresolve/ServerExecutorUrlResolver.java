@@ -77,11 +77,12 @@ final class ServerExecutorUrlResolver extends KnimeUrlResolver {
     @Override
     URL resolveMountpointAbsolute(final URL url) throws ResourceAccessException {
         final var mountId = url.getAuthority();
-        if (!m_locationInfo.getDefaultMountId().equals(mountId)) {
-            throw new ResourceAccessException("Unknown Mount ID on Server Executor in URL '" + url + "'.");
+        if (m_locationInfo.getDefaultMountId().equals(mountId)) {
+            final var uri = resolveMountpointRelative(URIPathEncoder.decodePath(url));
+            return URIPathEncoder.UTF_8.encodePathSegments(URLResolverUtil.toURL(uri));
         }
-        final var uri = resolveMountpointRelative(URIPathEncoder.decodePath(url));
-        return URIPathEncoder.UTF_8.encodePathSegments(URLResolverUtil.toURL(uri));
+        // possibly a MountTable is present, which will then resolve the URL (AP-19986)
+        return url;
     }
 
     @Override
