@@ -2769,10 +2769,15 @@ public class WorkflowEditor extends GraphicalEditor implements
 
             if (getWorkflowManagerUI().isInWizardExecution()) {
                 viewer.removeMessage(m_lastDisplayedWarningMessageId);
-                m_lastDisplayedWarningMessageId = viewer.displayMessage(
-                    "Job started by WebPortal. Edit operations are not allowed. "
-                        + "Nodes following the currently active component (WebPortal page) are not executed.",
-                    MessageAppearance.WARNING);
+                final var dataAppType = isHubJob() ? "Data App" : "WebPortal";
+                m_lastDisplayedWarningMessageId = viewer.displayMessage(String.format(
+                    "Job started by %s. Edit operations are not allowed. "
+                        + "Nodes following the currently active component ($s page) are not executed.",
+                    dataAppType, dataAppType), MessageAppearance.WARNING);
+            } else if (getWorkflowManagerUI().isWriteProtected() && isHubJob()) {
+                viewer.removeMessage(m_lastDisplayedWarningMessageId);
+                m_lastDisplayedWarningMessageId =
+                    viewer.displayMessage("No permissions to edit the job.", MessageAppearance.WARNING);
             }
         } else {
             viewer.removeMessage(m_lastDisplayedInfoMessageId);
