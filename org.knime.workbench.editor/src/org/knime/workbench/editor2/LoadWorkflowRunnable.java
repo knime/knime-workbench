@@ -54,6 +54,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -125,17 +126,19 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
     /** Message, which is non-null if the user canceled to the load. */
     private String m_loadingCanceledMessage;
 
-    private Consumer<WorkflowManager> m_wfmLoadedCallback;
+    private BiConsumer<WorkflowManager, Boolean> m_wfmLoadedCallback;
 
     /**
      *
      * Creates a new runnable that load a workflow.
      *
-     * @param wfmLoadedCallback call as soon as the workflow has been loaded successfully
+     * @param wfmLoadedCallback call as soon as the workflow has been loaded successfully; is called with another
+     *            parameter (boolean) which instructs the callback to save or not the save the workflow manager directly
+     *            after it's called
      * @param workflowFile the workflow file from which the workflow should be loaded (or created = empty workflow file)
      * @param workflowContext context of the workflow to be loaded (not null)
      */
-    public LoadWorkflowRunnable(final Consumer<WorkflowManager> wfmLoadedCallback, final File workflowFile,
+    public LoadWorkflowRunnable(final BiConsumer<WorkflowManager, Boolean> wfmLoadedCallback, final File workflowFile,
         final WorkflowContextV2 workflowContext) {
         m_wfmLoadedCallback = wfmLoadedCallback;
         m_workflowFile = workflowFile;
@@ -189,7 +192,6 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                     WorkflowManager.loadProject(workflowDirectory, new ExecutionMonitor(progressMonitor), loadHelper);
             final var wfm = result.getWorkflowManager();
             callOnWorkflowEditor(e -> e.setWorkflowManager(wfm));
-            callWfmLoadedCallback(wfm);
             pm.subTask("Finished.");
             pm.done();
             callOnWorkflowEditor(e -> {
@@ -238,6 +240,7 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                     });
                 }
             });
+            callWfmLoadedCallback(wfm, false);
         } catch (FileNotFoundException fnfe) {
             m_throwable = fnfe;
             LOGGER.fatal("File not found", fnfe);
@@ -283,9 +286,9 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
             // create empty WFM if a new workflow is created
             // (empty workflow file)
             if (createEmptyWorkflow) {
+                var wfm = WorkflowManager.ROOT.createAndAddProject(name, new WorkflowCreationHelper(m_workflowContext));
                 callOnWorkflowEditor(e -> {
-                    e.setWorkflowManager(
-                        WorkflowManager.ROOT.createAndAddProject(name, new WorkflowCreationHelper(m_workflowContext)));
+                    e.setWorkflowManager(wfm);
 
                     // save empty project immediately
                     // bugfix 1341 -> see WorkflowEditor line 1294
@@ -294,6 +297,7 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                     e.setIsDirty(false);
 
                 });
+                callWfmLoadedCallback(wfm, true);
             }
             // IMPORTANT: Remove the reference to the file and the
             // editor!!! Otherwise the memory cannot be freed later
@@ -451,9 +455,9 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
         }
     }
 
-    private void callWfmLoadedCallback(final WorkflowManager wfm) {
+    private void callWfmLoadedCallback(final WorkflowManager wfm, final Boolean doSave) {
         if (m_wfmLoadedCallback != null) {
-            m_wfmLoadedCallback.accept(wfm);
+            m_wfmLoadedCallback.accept(wfm, doSave);
         }
     }
 
