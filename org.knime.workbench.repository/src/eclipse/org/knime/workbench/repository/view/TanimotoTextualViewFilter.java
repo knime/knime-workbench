@@ -45,9 +45,9 @@
 
 package org.knime.workbench.repository.view;
 
+import static org.knime.core.ui.util.FuzzySearchable.computeTanimotoBiGramDistance;
+
 import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.eclipse.jface.viewers.Viewer;
 import org.knime.workbench.repository.model.AbstractNodeTemplate;
@@ -152,60 +152,6 @@ final class TanimotoTextualViewFilter extends TextualViewFilter {
         } else {
             return true;
         }
-    }
-
-
-    /**
-     * Copied from the Tanimoto BiGram distance from the distmatrix package.
-     */
-    private static double computeTanimotoBiGramDistance(final String textA, final String textB) {
-
-        String a = textA.toUpperCase();
-        String b = textB.toUpperCase();
-
-        Set<String> gramsA = split(a, 2);
-        Set<String> gramsB = split(b, 2);
-
-        int nominator = cardinalityOfIntersection(gramsA, gramsB);
-        int inAButNotInB = cardinalityOfRelativeComplement(gramsA, gramsB);
-        int inBButNotInA = cardinalityOfRelativeComplement(gramsB, gramsA);
-
-        double denominator = nominator + inAButNotInB + inBButNotInA;
-
-        if (denominator > 0) {
-            return 1.0 - nominator / denominator;
-        } else {
-            return 1.0;
-        }
-    }
-
-    private static int cardinalityOfIntersection(final Set<String> a, final Set<String> b) {
-        int toReturn = 0;
-        for (String gram : a) {
-            if (b.contains(gram)) {
-                toReturn++;
-            }
-        }
-        return toReturn;
-    }
-
-    private static int cardinalityOfRelativeComplement(final Set<String> a, final Set<String> b) {
-        int toReturn = 0;
-        for (String gram : a) {
-            if (!b.contains(gram)) {
-                toReturn++;
-            }
-        }
-        return toReturn;
-    }
-
-    private static Set<String> split(final String a, final int count) {
-        Set<String> toReturn = new HashSet<String>(a.length() > 1 ? a.length() - 1 : 12);
-
-        for (int i = 0; i < a.length() - count + 1; i++) {
-            toReturn.add(a.substring(i, i + count));
-        }
-        return toReturn;
     }
 
     /**
