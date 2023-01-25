@@ -726,8 +726,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             final String text;
             if (descrOptional.isPresent()) {
                 KNIMEURIDescription uriDesc = descrOptional.get();
-                text = toSummaryText(m_linkURI, m_componentName, uriDesc.getMountpointName(),
-                    descrOptional.get().getPath());
+                text = toSummaryText(m_linkURI, m_componentName, uriDesc.getMountpointName(), uriDesc.getPathOrId());
                 status = Status.OK_STATUS;
             } else {
                 final var errorText = "<Errors resolving details>";

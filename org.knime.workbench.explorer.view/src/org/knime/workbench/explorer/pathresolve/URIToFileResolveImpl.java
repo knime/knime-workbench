@@ -288,15 +288,23 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     @Override
     public Optional<KNIMEURIDescription> toDescription(final URI uri, final IProgressMonitor monitor) {
         if (uri.getScheme().equals("file")) {
-            return Optional.of(new KNIMEURIDescription(uri.getHost(), uri.getPath()));
+            final var file = new File(uri);
+            return Optional.of(new KNIMEURIDescription(uri.getHost(), file.getAbsolutePath(), file.getName()));
         }
-        var s = ExplorerFileSystem.INSTANCE.getStore(uri);
-        if (s == null) {
+
+        var filestore = ExplorerFileSystem.INSTANCE.getStore(uri);
+        if (filestore == null) {
             return Optional.empty();
         }
-        var mountId = s.getMountID();
-        var path = StringUtils.substringAfterLast(s.getMountIDWithFullPath(), ":");
-        return Optional.of(new KNIMEURIDescription(mountId, path));
+
+        final var mountId = filestore.getMountID();
+        final var info = filestore.fetchInfo();
+        if (!info.exists()) {
+            return Optional.empty();
+        }
+
+        var path = StringUtils.substringAfterLast(filestore.getMountIDWithFullPath(), ":");
+        return Optional.of(new KNIMEURIDescription(mountId, path, info.getName()));
     }
 
     /**
