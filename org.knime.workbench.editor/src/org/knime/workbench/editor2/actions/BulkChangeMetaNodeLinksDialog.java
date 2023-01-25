@@ -524,12 +524,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         }
         final var componentRepresentative = (SubNodeContainer)representative.get();
 
-        final var currentVersion = ChangeComponentSpaceVersionAction.spaceVersion(
-            componentRepresentative.getTemplateInformation().getSourceURI());
-
-        final var selected = currentVersion.getFirst() == TemplateUpdateUtil.LinkType.FIXED_VERSION
-                ? currentVersion.getSecond() : null;
-        var dialog = new ChangeComponentSpaceVersionDialog(shell, componentRepresentative, selected, m_manager);
+        var dialog = new ChangeComponentSpaceVersionDialog(shell, componentRepresentative, m_manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
             return;

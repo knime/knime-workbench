@@ -202,7 +202,8 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
         final var prevVersion = previous.getSecond();
 
         // prompt for target version
-        final var dialog = new ChangeComponentSpaceVersionDialog(shell, component, prevVersion, manager);
+        final var dialog =
+            new ChangeComponentSpaceVersionDialog(shell, component, manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
             return;
