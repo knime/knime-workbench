@@ -524,12 +524,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         }
         final var componentRepresentative = (SubNodeContainer)representative.get();
 
-        final var currentVersion = ChangeComponentSpaceVersionAction.spaceVersion(
-            componentRepresentative.getTemplateInformation().getSourceURI());
-
-        final var selected = currentVersion.getFirst() == TemplateUpdateUtil.LinkType.FIXED_VERSION
-                ? currentVersion.getSecond() : null;
-        var dialog = new ChangeComponentSpaceVersionDialog(shell, componentRepresentative, selected, m_manager);
+        var dialog = new ChangeComponentSpaceVersionDialog(shell, componentRepresentative, m_manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
             return;
@@ -727,7 +722,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             if (descrOptional.isPresent()) {
                 KNIMEURIDescription uriDesc = descrOptional.get();
                 text = toSummaryText(m_linkURI, m_componentName, uriDesc.getMountpointName(),
-                    descrOptional.get().getPath());
+                    descrOptional.get().getPathOrId());
                 status = Status.OK_STATUS;
             } else {
                 final var errorText = "<Errors resolving details>";
