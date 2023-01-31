@@ -57,28 +57,17 @@ import org.eclipse.core.runtime.MultiStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.layout.FillLayout;
-import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
-import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.util.CheckUtils;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.dialogs.MessageJobFilter;
-import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
-import org.knime.workbench.explorer.dialogs.Validator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystemUtils;
@@ -87,7 +76,8 @@ import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.DestinationChecker;
 import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.explorer.view.actions.CopyMove.CopyMoveResult;
+import org.knime.workbench.explorer.view.dialogs.UploadDestinationSelectionDialog;
+import org.knime.workbench.explorer.view.dialogs.UploadDestinationSelectionDialog.SelectedDestination;
 
 /**
  * Deploys a selected workflow or workflow group (single selection) to a KNIME Server.
@@ -96,6 +86,7 @@ import org.knime.workbench.explorer.view.actions.CopyMove.CopyMoveResult;
  * @since 7.4
  */
 public class GlobalDeploytoServerAction extends ExplorerAction {
+
     private static final NodeLogger LOGGER = NodeLogger.getLogger(GlobalDeploytoServerAction.class);
 
     /** ID of the global rename action in the explorer menu. */
@@ -115,34 +106,27 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         setImageDescriptor(ICON);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getId() {
         return DEPLOY_TO_SERVER_ACTION_ID;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void run() {
-        AbstractExplorerFileStore srcFileStore = getSingleSelectedElement()
+        final var srcFileStore = getSingleSelectedElement()
                 .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
-        String dialogTitle = "Upload " + srcFileStore.getName();
+        final var dialogTitle = "Upload " + srcFileStore.getName();
 
-        String lockableMessage = ExplorerFileSystemUtils.isLockable(Collections.singletonList(srcFileStore), true);
+        final var lockableMessage = ExplorerFileSystemUtils.isLockable(Collections.singletonList(srcFileStore), true);
         if (lockableMessage != null) {
-            MessageBox mb =
-                new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
-            mb.setText("Can't Upload All Selected Items");
-            mb.setMessage(lockableMessage);
-            mb.open();
+            final var messageBox = new MessageBox(getParentShell(), SWT.ICON_ERROR | SWT.OK);
+            messageBox.setText("Can't Upload All Selected Items");
+            messageBox.setMessage(lockableMessage);
+            messageBox.open();
             return;
         }
 
-        Optional<SelectedDestination> destInfoOptional = promptForTargetLocation(srcFileStore);
+        final var destInfoOptional = promptForTargetLocation();
         if (!destInfoOptional.isPresent()) {
             LOGGER.debug(getText() + "canceled");
             return;
@@ -151,8 +135,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         AbstractExplorerFileStore destination = destInfo.getDestination();
 
         final DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore> destChecker =
-                new DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore>(
-                        getParentShell(), "Copy", false, true);
+                new DestinationChecker<>(getParentShell(), "Copy", false, true);
         destChecker.setIsOverwriteEnabled(true);
         destChecker.setIsOverwriteDefault(true);
         destChecker.getAndCheckDestinationFlow(srcFileStore, destination);
@@ -160,7 +143,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
             return;
         }
 
-        CopyMove copyMove = new CopyMove(getView(), destination, destChecker, false);
+        final var copyMove = new CopyMove(getView(), destination, destChecker, false);
         copyMove.setExcludeDataInWorkflows(destInfo.isExcludeData());
         final List<IStatus> statusList = new LinkedList<>();
         try {
@@ -168,7 +151,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
             PlatformUI.getWorkbench().getProgressService().busyCursorWhile(new IRunnableWithProgress() {
                 @Override
                 public void run(final IProgressMonitor monitor) throws InvocationTargetException, InterruptedException {
-                    CopyMoveResult copyMoveResult = copyMove.run(monitor);
+                    final var copyMoveResult = copyMove.run(monitor);
                     statusList.addAll(copyMoveResult.getStatusList());
                 }
             });
@@ -182,7 +165,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
                 "interrupted: " + e.getMessage(), e));
         }
         if (statusList.size() > 1) {
-            IStatus multiStatus = new MultiStatus(ExplorerActivator.PLUGIN_ID, IStatus.ERROR,
+            final var multiStatus = new MultiStatus(ExplorerActivator.PLUGIN_ID, IStatus.ERROR,
                 statusList.toArray(new IStatus[0]), "Could not upload all elements.", null);
             ErrorDialog.openError(Display.getDefault().getActiveShell(), dialogTitle,
                 "Some problems occurred during the operation.", multiStatus);
@@ -193,16 +176,19 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         lastUsedLocation = destination;
     }
 
-    /** Opens the selection prompt and lets the user choose a remote workflow group.
-     * @return An empty if the prompt was cancelled, otherwise the selected target. */
-    Optional<SelectedDestination> promptForTargetLocation(final AbstractExplorerFileStore srcFileStore) {
+    /**
+     * Opens the selection prompt and lets the user choose a remote workflow group.
+     *
+     * @return An empty if the prompt was cancelled, otherwise the selected target.
+     */
+    private static Optional<SelectedDestination> promptForTargetLocation() {
         String[] validMountIDs = getValidTargets().map(c -> c.getMountID()).toArray(String[]::new);
-        Shell shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
+        final var shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
 
-        DestinationSelectionDialog destinationDialog =
-                new DestinationSelectionDialog(shell, validMountIDs, ContentObject.forFile(lastUsedLocation));
+        final var destinationDialog =
+                new UploadDestinationSelectionDialog(shell, validMountIDs, ContentObject.forFile(lastUsedLocation));
         while (destinationDialog.open() == Window.OK) {
-            SelectedDestination destGroup = destinationDialog.getSelectedDestination();
+            final var destGroup = destinationDialog.getSelectedDestination();
             AbstractExplorerFileInfo destGroupInfo = destGroup.getDestination().fetchInfo();
             if (!destGroupInfo.isWriteable()) {
                 boolean chooseNew = MessageDialog.openConfirm(shell, "Not writable",
@@ -218,16 +204,10 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         return Optional.empty();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isEnabled() {
-        if (!getSingleSelectedElement().isPresent()
-            || getSingleSelectedElement().get() instanceof RemoteExplorerFileStore) {
-            return false;
-        }
-        return getValidTargets().findAny().isPresent();
+        return getSingleSelectedElement().filter(RemoteExplorerFileStore.class::isInstance).isEmpty()
+                && getValidTargets().findAny().isPresent();
     }
 
     private Optional<AbstractExplorerFileStore> getSingleSelectedElement() {
@@ -239,104 +219,4 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
     private static Stream<AbstractContentProvider> getValidTargets() {
         return ExplorerMountTable.getMountedContent().values().stream().filter(c -> c.isRemote() && c.isWritable());
     }
-
-
-    /** Dialog to select the server + destination folder. Also contains a checkbox whether to exclude the data. */
-    static final class DestinationSelectionDialog extends SpaceResourceSelectionDialog {
-
-        private Button m_excludeDataButton;
-        private boolean m_isExcludeData;
-        private Composite m_tooltipContainer;
-
-        private AbstractContentProvider m_currentContentProvider;
-
-        /**
-         * @param parentShell
-         * @param mountIDs
-         * @param initialSelection
-         */
-        public DestinationSelectionDialog(final Shell parentShell, final String[] mountIDs,
-            final ContentObject initialSelection) {
-            super(parentShell, mountIDs, initialSelection);
-            setValidator(new Validator() {
-                @Override
-                public String validateSelectionValue(final AbstractExplorerFileStore sel, final String currentName) {
-                    if (!AbstractExplorerFileStore.isWorkflowGroup(sel)) {
-                        return "Select the destination group to which the selected element will be uploaded";
-                    }
-                    return null;
-                }
-            });
-            setFilter(new MessageJobFilter());
-            setTitle("Destination");
-            setHeader("Upload to...");
-            setDescription("Select the destination workflow group.");
-
-            m_currentContentProvider = initialSelection == null || initialSelection.getFileStore() == null ? null
-                : initialSelection.getFileStore().getContentProvider();
-        }
-
-        @Override
-        protected void createCustomFooterField(final Composite parent) {
-            // Create marginless composite to show tooltip since a disabled checkbox can not trigger any events
-            m_tooltipContainer = new Composite(parent, SWT.NONE);
-            m_tooltipContainer.setLayout(new FillLayout());
-            GridDataFactory.fillDefaults().applyTo(m_tooltipContainer);
-            m_excludeDataButton = new Button(m_tooltipContainer, SWT.CHECK);
-            m_isExcludeData =
-                m_currentContentProvider != null && m_currentContentProvider.isForceResetOnUpload();
-            m_excludeDataButton.setSelection(m_isExcludeData);
-            m_excludeDataButton.setText("Reset Workflow(s) before upload");
-            m_excludeDataButton.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    Button b = (Button)e.widget;
-                    m_isExcludeData = b.getSelection();
-                }
-            });
-        }
-
-        @Override
-        protected void validateSelectionValue() {
-            super.validateSelectionValue();
-            final AbstractContentProvider ct = getSelection().getContentProvider();
-            final boolean changedContentProvider = !ct.equals(m_currentContentProvider);
-            m_currentContentProvider = ct;
-
-            m_excludeDataButton.setSelection(
-                (changedContentProvider && ct.isForceResetOnUpload()) || m_excludeDataButton.getSelection());
-            m_excludeDataButton.setEnabled(!ct.isForceResetOnUpload() || ct.isEnableResetOnUploadCheckbox());
-            m_isExcludeData = m_excludeDataButton.getSelection();
-            m_tooltipContainer.setToolTipText(m_excludeDataButton.getEnabled() ? ""
-                : "This option is selected by default as set by the server administrator.");
-        }
-
-        SelectedDestination getSelectedDestination() {
-            return new SelectedDestination(getSelection(), m_isExcludeData);
-        }
-    }
-
-    /** Represents a selected destination folder and the property whether the data is to be excluded before upload. */
-    static final class SelectedDestination {
-        private final AbstractExplorerFileStore m_destination;
-        private final boolean m_isExcludeData;
-
-        SelectedDestination(final AbstractExplorerFileStore destination, final boolean isExcludeData) {
-            m_destination = CheckUtils.checkArgumentNotNull(destination, "Destination must not be null");
-            m_isExcludeData = isExcludeData;
-        }
-
-        /** @return the destination, not null. */
-        AbstractExplorerFileStore getDestination() {
-            return m_destination;
-        }
-
-        /** @return the isExcludeData checkbox property. */
-        boolean isExcludeData() {
-            return m_isExcludeData;
-        }
-
-
-    }
-
 }
