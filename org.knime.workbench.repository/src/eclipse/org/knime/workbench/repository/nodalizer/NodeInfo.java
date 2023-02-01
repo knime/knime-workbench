@@ -72,25 +72,48 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 public class NodeInfo {
 
     private String m_title;
+
     private List<String> m_path;
+
     private String m_factoryName;
+
     private BundleInformation m_bundleInformation;
+
     private SiteInfo m_additionalSiteInformation;
+
     private String m_description;
+
     private List<DialogOptionGroup> m_dialog;
+
     private List<NamedField> m_views;
+
     private NamedField m_interactiveView;
+
     private LinkInformation[] m_links;
+
     private String m_icon;
+
     private String m_nodeType;
+
     private boolean m_deprecated;
+
     private boolean m_streamable;
+
     private List<String> m_tags;
+
     private PortInfo[] m_inPorts;
+
     private PortInfo[] m_outPorts;
+
     private String m_owner;
+
     private List<DynamicPortGroup> m_dynInPorts;
+
     private List<DynamicPortGroup> m_dynOutPorts;
+
+    private String[] m_keywords;
+
+    private String m_shortDescription;
 
     /**
      * Returns the title of this node.
@@ -288,6 +311,24 @@ public class NodeInfo {
      */
     public List<DynamicPortGroup> getDynOutPorts() {
         return m_dynOutPorts == null ? Collections.emptyList() : m_dynOutPorts;
+    }
+
+    /**
+     * Returns the list of keywords for this node.
+     *
+     * @return the list of keywords
+     */
+    public String[] getKeywords() {
+        return m_keywords == null ? new String[0] : m_keywords;
+    }
+
+    /**
+     * Returns the short description for this node.
+     *
+     * @return the short description
+     */
+    public String getShortDescription() {
+        return m_shortDescription;
     }
 
     /**
@@ -497,12 +538,31 @@ public class NodeInfo {
         m_dynOutPorts = dynOutPorts;
     }
 
+    /**
+     * Sets the keywords for this node.
+     *
+     * @param keywords the list of keywords to set
+     */
+    public void setKeywords(final String[] keywords) {
+        m_keywords = keywords;
+    }
+
+    /**
+     * Sets the short description for this node.
+     *
+     * @param shortDescription the short description to set
+     */
+    public void setShortDescription(final String shortDescription) {
+        m_shortDescription = shortDescription;
+    }
+
     // -- Helper Classes --
 
     @JsonAutoDetect(getterVisibility = Visibility.NON_PRIVATE)
     static final class BundleInformation {
 
         private final NodeAndBundleInformation m_nabi;
+
         private final String m_extensionId;
 
         private BundleInformation(final NodeAndBundleInformation nabi, final String extensionId) {
@@ -562,6 +622,7 @@ public class NodeInfo {
     public static final class LinkInformation {
 
         private final String m_url;
+
         private final String m_text;
 
         LinkInformation(final String url, final String text) {

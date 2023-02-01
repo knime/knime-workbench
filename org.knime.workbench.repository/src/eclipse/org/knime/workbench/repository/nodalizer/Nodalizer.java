@@ -88,7 +88,9 @@ import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.DynamicNodeFactory;
+import org.knime.core.node.Node;
 import org.knime.core.node.NodeAndBundleInformationPersistor;
+import org.knime.core.node.NodeDescription;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
@@ -463,10 +465,10 @@ public class Nodalizer implements IApplication {
         }
     }
 
-    private static void parseNodeAndPrint(final NodeFactory<?> fac, final String factoryString, final List<String> path,
-        final String categoryPath, final String name, final NodeAndBundleInformation nodeAndBundleInfo,
-        final boolean isDeprecated, final File directory, final Map<String, ExtensionInfo> extensions,
-        final List<String> bundles) throws Exception {
+    private static void parseNodeAndPrint(final NodeFactory<? extends NodeModel> fac, final String factoryString,
+        final List<String> path, final String categoryPath, final String name,
+        final NodeAndBundleInformation nodeAndBundleInfo, final boolean isDeprecated, final File directory,
+        final Map<String, ExtensionInfo> extensions, final List<String> bundles) throws Exception {
         // Read update site info
         // Do this early to prevent instantiating unnecessary nodes.
         String extensionId = null;
@@ -638,6 +640,13 @@ public class Nodalizer implements IApplication {
             nInfo.setDynInPorts(dynInports);
             nInfo.setDynOutPorts(dynOutports);
         }
+
+        // read fields from new NodeDescription API
+        @SuppressWarnings("unchecked")
+        Node knimeNode = new Node((NodeFactory<NodeModel>)fac);
+        NodeDescription nodeDescription = knimeNode.invokeGetNodeDescription();
+        nInfo.setShortDescription(NodalizerUtil.trimWhiteSpace(nodeDescription.getShortDescription().orElse(null)));
+        nInfo.setKeywords(nodeDescription.getKeywords());
 
         // Write to file
         NodalizerUtil.writeFile(directory, categoryPath + "/" + name + "_" + nInfo.getId().substring(1), nInfo);

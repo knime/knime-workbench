@@ -63,6 +63,7 @@ import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonWriter;
 
+import org.apache.commons.lang3.CharUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.equinox.p2.repository.metadata.IMetadataRepository;
 import org.knime.core.node.MapNodeFactoryClassMapper;
@@ -309,6 +310,37 @@ public final class NodalizerUtil {
                 writer.writeArray(nodeMappings);
             }
         }
+    }
+
+    /**
+     * Remove leading and trailing non-printing characters (i.e. ' ', \n, \t, etc.) from the given String.
+     *
+     * @param value the String to trim
+     * @return the trimmed String
+     */
+    public static String trimWhiteSpace(final String value) {
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        int startIndex = 0;
+        int endIndex = value.length();
+        // remove leading whitespace characters i.e. \n, \t, \r, ' ', etc.
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (CharUtils.isAsciiPrintable(c) && c != ' ') {
+                startIndex = i;
+                break;
+            }
+        }
+        // remove trailing whitespace characters i.e. \n, \t, \r, ' ', etc.
+        for (int i = value.length() - 1; i >= 0; i--) {
+            char c = value.charAt(i);
+            if (CharUtils.isAsciiPrintable(c) && c != ' ') {
+                endIndex = i + 1;
+                break;
+            }
+        }
+        return value.substring(startIndex, endIndex);
     }
 
     // -- Helper methods --
