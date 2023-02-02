@@ -54,6 +54,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
@@ -107,7 +108,7 @@ public final class CopyMove {
     public CopyMove(final ExplorerView view, final AbstractExplorerFileStore target,
         final DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore> destChecker,
         final boolean performMove) {
-        m_view = CheckUtils.checkArgumentNotNull(view);
+        m_view = view;
         m_target = CheckUtils.checkArgumentNotNull(target);
         m_destChecker = CheckUtils.checkArgumentNotNull(destChecker);
         m_performMove = performMove;
@@ -132,14 +133,40 @@ public final class CopyMove {
     }
 
     /**
-     * @param monitor
-     * @return
+     * Runs this copy or move.
+     *
+     * @param monitor progress monitor
+     * @return copy/move result
      */
     public CopyMoveResult run(final IProgressMonitor monitor) {
+        CheckUtils.checkArgumentNotNull(m_view);
+        return run(monitor, (srcFS, processedTargets) -> {
+            m_view.setNextSelection(processedTargets);
+
+            // update source folder as we removed an item from it.
+            if (!srcFS.equals(m_target) && m_performMove) {
+                srcFS.getParent().refresh();
+            }
+
+            m_target.refresh();
+        });
+     }
+
+    /**
+     * Runs this copy or move using refresh callbacks supplied by the given function.
+     *
+     * @param monitor progress monitor
+     * @param refresherCallback callback for refreshing the KNIME Explorer, consuming the current source file store
+     *        and all processed target file stores
+     * @return copy/move result
+     * @since 8.9
+     */
+    public CopyMoveResult run(final IProgressMonitor monitor,
+            final BiConsumer<AbstractExplorerFileStore, List<AbstractExplorerFileStore>> refresherCallback) {
         final String cmd = cmdAsTextual();
 
         Map<AbstractExplorerFileStore, AbstractExplorerFileStore> destCheckerMappings = m_destChecker.getMappings();
-        List<IStatus> statusList = new LinkedList<IStatus>();
+        List<IStatus> statusList = new LinkedList<>();
         boolean success = true;
 
         // calculating the number of file transactions (copy/move/down/uploads)
@@ -178,10 +205,10 @@ public final class CopyMove {
                     String msg = null;
                     if (srcFSInfo.isWorkflowGroup()) {
                         msg = "Cannot override \"" + destFS.getFullName() + "\". Workflows and MetaNode Templates"
-                            + " cannot be overwritten by a Workflow" + " Group.";
+                            + " cannot be overwritten by a Workflow Group.";
                     } else {
                         msg = "Cannot override \"" + destFS.getFullName() + "\". Workflow Groups can only be "
-                            + "overwritten by other Workflow" + " Groups.";
+                            + "overwritten by other Workflow Groups.";
                     }
                     throw new UnsupportedOperationException(msg);
                 }
@@ -200,16 +227,7 @@ public final class CopyMove {
 
                 AfterRunCallback callback = null; // for async operations
                 if (--iterationCount == 0) {
-                    callback = t -> {
-                        m_view.setNextSelection(processedTargets);
-
-                        // update source folder as we removed an item from it.
-                        if (!srcFS.equals(m_target) && m_performMove) {
-                            srcFS.getParent().refresh();
-                        }
-
-                        m_target.refresh();
-                    };
+                    callback = t -> refresherCallback.accept(srcFS, processedTargets);
                 }
                 if (!isSrcRemote && isDstRemote) { // upload
                     AbstractExplorerFileStore destParentFS = ((RemoteExplorerFileStore)destFS).getParent();
