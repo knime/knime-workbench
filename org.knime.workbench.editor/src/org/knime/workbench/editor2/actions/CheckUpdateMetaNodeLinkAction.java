@@ -379,7 +379,11 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 nodeIdToUpdateStatus = TemplateUpdateUtil.fillNodeUpdateStates(nodeIdToTemplate.values(), lH,
                     loadResult, new LinkedHashMap<>());
             } catch (IOException e) {
-                LOGGER.warn(e.getCause(), e);
+                final var ex = e.getCause() != null ? e.getCause() : e;
+                LOGGER.warn(ex);
+                m_status = new MultiStatus(KNIMEEditorPlugin.PLUGIN_ID, IStatus.ERROR, new IStatus[]{Status.error("")},
+                    "Some Node Link Updates failed", ex);
+                verifyMultiStatus();
                 monitor.done();
                 return;
             }
@@ -485,12 +489,11 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 try {
                     m_hostWFM.checkUpdateMetaNodeLink(tlc, new WorkflowLoadHelper(true, m_hostWFM.getContextV2()));
                 } catch (IOException e) {
-                    LOGGER.warn("Could not update node " + tlc + ": " + e.getMessage(), e);
                     updateError = true;
                 }
             }
 
-            if ((m_status.getSeverity() == IStatus.WARNING) != updateError) {
+            if ((m_status.getSeverity() == IStatus.WARNING || m_status.getSeverity() == IStatus.ERROR) != updateError) {
                 throw new IllegalStateException("Inconsistent update states, something went wrong");
             }
         }
