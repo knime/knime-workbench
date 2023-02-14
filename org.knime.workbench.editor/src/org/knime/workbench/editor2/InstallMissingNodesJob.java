@@ -149,7 +149,7 @@ public final class InstallMissingNodesJob extends Job {
     }
 
     @Override
-    protected IStatus run(final IProgressMonitor monitor) {
+    public IStatus run(final IProgressMonitor monitor) {
         return doRun(monitor, false);
     }
 
