@@ -62,6 +62,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -149,11 +150,22 @@ public final class InstallMissingNodesJob extends Job {
     }
 
     @Override
-    public IStatus run(final IProgressMonitor monitor) {
-        return doRun(monitor, false);
+    protected IStatus run(final IProgressMonitor monitor) {
+        return doRun(monitor, false, featuresToInstall -> getInstallJob(featuresToInstall).schedule());
     }
 
-    private IStatus doRun(final IProgressMonitor monitor, final boolean newUpdateSiteAdded) {
+    /**
+     * Runs the job in the current thread.
+     *
+     * @param monitor
+     * @return indicates the result of the operation
+     */
+    public IStatus runModal(final IProgressMonitor monitor) {
+        return doRun(monitor, false, featuresToInstall -> getInstallJob(featuresToInstall).runModal(monitor));
+    }
+
+    private IStatus doRun(final IProgressMonitor monitor, final boolean newUpdateSiteAdded,
+        final Consumer<Set<IInstallableUnit>> startInstallJob) {
         Set<IInstallableUnit> featuresToInstall = new HashSet<>();
         IStatus status = findExtensions(monitor, m_missingComponents, featuresToInstall);
         if (!status.isOK()) {
@@ -161,7 +173,7 @@ public final class InstallMissingNodesJob extends Job {
         } else if (featuresToInstall.isEmpty()) {
             if (!newUpdateSiteAdded && checkAndAddUpdateSite(m_updateSiteInfo)) {
                 // try again with new a update site available
-                return doRun(monitor, true);
+                return doRun(monitor, true, startInstallJob);
             } else {
                 StringBuilder message =
                     new StringBuilder("Could not find any extension(s) that provides the missing node(s).");
@@ -178,7 +190,7 @@ public final class InstallMissingNodesJob extends Job {
             if (!m_missingComponents.isEmpty()) {
                 if (!newUpdateSiteAdded && checkAndAddUpdateSite(m_updateSiteInfo)) {
                     // try again with a new update site available
-                    return doRun(monitor, true);
+                    return doRun(monitor, true, startInstallJob);
                 } else {
                     StringBuilder message =
                         new StringBuilder("No extensions for the following nodes were found: " + m_missingComponents
@@ -193,12 +205,12 @@ public final class InstallMissingNodesJob extends Job {
                     });
                 }
             }
-            startInstallJob(featuresToInstall);
+            startInstallJob.accept(featuresToInstall);
             return Status.OK_STATUS;
         }
     }
 
-    private static void startInstallJob(final Set<IInstallableUnit> featuresToInstall) {
+    private static LoadMetadataRepositoryJob getInstallJob(final Set<IInstallableUnit> featuresToInstall) {
         final ProvisioningUI provUI = ProvisioningUI.getDefaultUI();
         Job.getJobManager().cancel(LoadMetadataRepositoryJob.LOAD_FAMILY);
         final LoadMetadataRepositoryJob loadJob = new LoadMetadataRepositoryJob(provUI);
@@ -222,7 +234,7 @@ public final class InstallMissingNodesJob extends Job {
             }
         });
         loadJob.setUser(true);
-        loadJob.schedule();
+        return loadJob;
     }
 
     private IStatus findExtensions(final IProgressMonitor monitor,
