@@ -60,6 +60,7 @@ import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeTimer;
+import org.knime.core.node.workflow.NodeTimer.GlobalNodeStats.NodeCreationType;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.NodeUIInformation.Builder;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -189,6 +190,7 @@ public class CreateNodeCommand extends AbstractKNIMECommand {
             if (wraps(m_container, NodeContainer.class)) {
                 NodeContainer nc = Wrapper.unwrapNC(m_container);
                 NodeTimer.GLOBAL_TIMER.addNodeCreation(nc);
+                NodeTimer.GLOBAL_TIMER.incNodeCreatedVia(NodeCreationType.JAVA_UI);
                 if (nc instanceof NativeNodeContainer) {
                     NodeUsageRegistry.addNode(((NativeNodeContainer)nc).getNode().getFactory());
                 }

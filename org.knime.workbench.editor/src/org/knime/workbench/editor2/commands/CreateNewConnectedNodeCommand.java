@@ -58,6 +58,7 @@ import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodeTimer;
+import org.knime.core.node.workflow.NodeTimer.GlobalNodeStats.NodeCreationType;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
@@ -119,6 +120,7 @@ public class CreateNewConnectedNodeCommand extends AbstractCreateNewConnectedNod
             if (Wrapper.wraps(hostWFM, WorkflowManager.class)) {
                 NodeContainer nc = Wrapper.unwrapWFM(hostWFM).getNodeContainer(newID);
                 NodeTimer.GLOBAL_TIMER.addNodeCreation(nc);
+                NodeTimer.GLOBAL_TIMER.incNodeCreatedVia(NodeCreationType.JAVA_UI);
                 if (nc instanceof NativeNodeContainer) {
                     NodeUsageRegistry.addNode(((NativeNodeContainer)nc).getNode().getFactory());
                 }

@@ -85,6 +85,8 @@ import org.knime.core.node.NodeCreationContext;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.workflow.NodeTimer;
+import org.knime.core.node.workflow.NodeTimer.GlobalNodeStats.NodeCreationType;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
@@ -225,6 +227,9 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 if (entityImport.get() instanceof RepoObjectImport) {
                     return handleObjectDropFromURI(manager, cdr, (RepoObjectImport)entityImport.get());
                 } else if (entityImport.get() instanceof NodeImport) {
+                    if (url.getProtocol().startsWith("http")) {
+                        NodeTimer.GLOBAL_TIMER.incNodeCreatedVia(NodeCreationType.JAVA_UI_HUB);
+                    }
                     return handleNodeDropFromURI(managerUI, (NodeImport)entityImport.get(), cdr);
                 } else if (entityImport.get() instanceof ExtensionImport) {
                     return handleExtensionDropFromURI((ExtensionImport)entityImport.get());
