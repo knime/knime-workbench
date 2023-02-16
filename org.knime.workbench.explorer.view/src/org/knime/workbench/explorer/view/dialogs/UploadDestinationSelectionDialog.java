@@ -85,20 +85,37 @@ public final class UploadDestinationSelectionDialog extends SpaceResourceSelecti
      */
     public UploadDestinationSelectionDialog(final Shell parentShell, final String[] mountIDs,
         final ContentObject initialSelection) {
+        this(parentShell, mountIDs, initialSelection, "Destination", "Upload to...",
+            "Select the destination workflow group.",
+            "Select the destination group to which the selected element will be uploaded");
+    }
+
+        /**
+         * @param parentShell parent shell
+         * @param mountIDs mount IDs to be included
+         * @param initialSelection initial selection, may be {@code null}
+         * @param title dialog title
+         * @param header dialog header
+         * @param description dialog description
+         * @param selectWorkflowGroupPrompt prompt which is shown if the user selected something other than a gruop
+         */
+        public UploadDestinationSelectionDialog(final Shell parentShell, final String[] mountIDs,
+            final ContentObject initialSelection, final String title, final String header, final String description,
+            final String selectWorkflowGroupPrompt) {
         super(parentShell, mountIDs, initialSelection);
         setValidator(new Validator() {
             @Override
             public String validateSelectionValue(final AbstractExplorerFileStore sel, final String currentName) {
                 if (!AbstractExplorerFileStore.isWorkflowGroup(sel)) {
-                    return "Select the destination group to which the selected element will be uploaded";
+                    return selectWorkflowGroupPrompt;
                 }
                 return null;
             }
         });
         setFilter(new MessageJobFilter());
-        setTitle("Destination");
-        setHeader("Upload to...");
-        setDescription("Select the destination workflow group.");
+        setTitle(title);
+        setHeader(header);
+        setDescription(description);
 
         m_currentContentProvider = initialSelection == null || initialSelection.getFileStore() == null ? null
             : initialSelection.getFileStore().getContentProvider();
