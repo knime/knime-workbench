@@ -967,7 +967,10 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
         } finally {
             shell.setEnabled(true);
             // set the (keyboard) focus to the current workflow editor
-            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor().setFocus();
+            Optional.ofNullable(PlatformUI.getWorkbench().getActiveWorkbenchWindow()) //
+                .map(w -> w.getActivePage()) //
+                .map(p -> p.getActiveEditor()) //
+                .ifPresent(e -> e.setFocus());
         }
     }
 
