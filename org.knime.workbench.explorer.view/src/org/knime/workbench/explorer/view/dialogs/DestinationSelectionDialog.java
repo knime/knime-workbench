@@ -70,7 +70,9 @@ import org.knime.workbench.explorer.view.ContentObject;
  * @author Leonard Wörteler, KNIME GmbH, Konstanz, Germany
  * @since 8.9
  */
-public final class UploadDestinationSelectionDialog extends SpaceResourceSelectionDialog {
+public final class DestinationSelectionDialog extends SpaceResourceSelectionDialog {
+
+    private boolean m_showExcludeData;
 
     private Button m_excludeDataButton;
     private boolean m_isExcludeData;
@@ -83,7 +85,7 @@ public final class UploadDestinationSelectionDialog extends SpaceResourceSelecti
      * @param mountIDs mount IDs to be included
      * @param initialSelection initial selection, may be {@code null}
      */
-    public UploadDestinationSelectionDialog(final Shell parentShell, final String[] mountIDs,
+    public DestinationSelectionDialog(final Shell parentShell, final String[] mountIDs,
         final ContentObject initialSelection) {
         this(parentShell, mountIDs, initialSelection, "Destination", "Upload to...",
             "Select the destination workflow group.",
@@ -99,7 +101,7 @@ public final class UploadDestinationSelectionDialog extends SpaceResourceSelecti
          * @param description dialog description
          * @param selectWorkflowGroupPrompt prompt which is shown if the user selected something other than a gruop
          */
-        public UploadDestinationSelectionDialog(final Shell parentShell, final String[] mountIDs,
+        public DestinationSelectionDialog(final Shell parentShell, final String[] mountIDs,
             final ContentObject initialSelection, final String title, final String header, final String description,
             final String selectWorkflowGroupPrompt) {
         super(parentShell, mountIDs, initialSelection);
@@ -121,23 +123,34 @@ public final class UploadDestinationSelectionDialog extends SpaceResourceSelecti
             : initialSelection.getFileStore().getContentProvider();
     }
 
+    /**
+     * Whether or not the "Reset Workflows(s) before upload" option should be shown (default is {@code true}).
+     *
+     * @param showExcludeData new setting
+     */
+    public void setShowExcludeDataOption(final boolean showExcludeData) {
+        m_showExcludeData = showExcludeData;
+    }
+
     @Override
     protected void createCustomFooterField(final Composite parent) {
-        // Create marginless composite to show tooltip since a disabled checkbox can not trigger any events
-        m_tooltipContainer = new Composite(parent, SWT.NONE);
-        m_tooltipContainer.setLayout(new FillLayout());
-        GridDataFactory.fillDefaults().applyTo(m_tooltipContainer);
-        m_excludeDataButton = new Button(m_tooltipContainer, SWT.CHECK);
-        m_isExcludeData = m_currentContentProvider != null && m_currentContentProvider.isForceResetOnUpload();
-        m_excludeDataButton.setSelection(m_isExcludeData);
-        m_excludeDataButton.setText("Reset Workflow(s) before upload");
-        m_excludeDataButton.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(final SelectionEvent e) {
-                Button b = (Button)e.widget;
-                m_isExcludeData = b.getSelection();
-            }
-        });
+        if (m_showExcludeData) {
+            // Create marginless composite to show tooltip since a disabled checkbox can not trigger any events
+            m_tooltipContainer = new Composite(parent, SWT.NONE);
+            m_tooltipContainer.setLayout(new FillLayout());
+            GridDataFactory.fillDefaults().applyTo(m_tooltipContainer);
+            m_excludeDataButton = new Button(m_tooltipContainer, SWT.CHECK);
+            m_isExcludeData = m_currentContentProvider != null && m_currentContentProvider.isForceResetOnUpload();
+            m_excludeDataButton.setSelection(m_isExcludeData);
+            m_excludeDataButton.setText("Reset Workflow(s) before upload");
+            m_excludeDataButton.addSelectionListener(new SelectionAdapter() {
+                @Override
+                public void widgetSelected(final SelectionEvent e) {
+                    Button b = (Button)e.widget;
+                    m_isExcludeData = b.getSelection();
+                }
+            });
+        }
     }
 
     @Override
@@ -147,12 +160,14 @@ public final class UploadDestinationSelectionDialog extends SpaceResourceSelecti
         final boolean changedContentProvider = !ct.equals(m_currentContentProvider);
         m_currentContentProvider = ct;
 
-        m_excludeDataButton.setSelection(
-            (changedContentProvider && ct.isForceResetOnUpload()) || m_excludeDataButton.getSelection());
-        m_excludeDataButton.setEnabled(!ct.isForceResetOnUpload() || ct.isEnableResetOnUploadCheckbox());
-        m_isExcludeData = m_excludeDataButton.getSelection();
-        m_tooltipContainer.setToolTipText(m_excludeDataButton.getEnabled() ? ""
-            : "This option is selected by default as set by the server administrator.");
+        if (m_showExcludeData) {
+            m_excludeDataButton.setSelection(
+                (changedContentProvider && ct.isForceResetOnUpload()) || m_excludeDataButton.getSelection());
+            m_excludeDataButton.setEnabled(!ct.isForceResetOnUpload() || ct.isEnableResetOnUploadCheckbox());
+            m_isExcludeData = m_excludeDataButton.getSelection();
+            m_tooltipContainer.setToolTipText(m_excludeDataButton.getEnabled() ? ""
+                : "This option is selected by default as set by the Hub administrator.");
+        }
     }
 
     /**

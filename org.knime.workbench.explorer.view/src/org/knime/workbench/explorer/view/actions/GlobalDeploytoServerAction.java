@@ -76,8 +76,8 @@ import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.DestinationChecker;
 import org.knime.workbench.explorer.view.ExplorerView;
-import org.knime.workbench.explorer.view.dialogs.UploadDestinationSelectionDialog;
-import org.knime.workbench.explorer.view.dialogs.UploadDestinationSelectionDialog.SelectedDestination;
+import org.knime.workbench.explorer.view.dialogs.DestinationSelectionDialog;
+import org.knime.workbench.explorer.view.dialogs.DestinationSelectionDialog.SelectedDestination;
 
 /**
  * Deploys a selected workflow or workflow group (single selection) to a KNIME Server.
@@ -186,7 +186,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         final var shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
 
         final var destinationDialog =
-                new UploadDestinationSelectionDialog(shell, validMountIDs, ContentObject.forFile(lastUsedLocation));
+                new DestinationSelectionDialog(shell, validMountIDs, ContentObject.forFile(lastUsedLocation));
         while (destinationDialog.open() == Window.OK) {
             final var destGroup = destinationDialog.getSelectedDestination();
             AbstractExplorerFileInfo destGroupInfo = destGroup.getDestination().fetchInfo();
