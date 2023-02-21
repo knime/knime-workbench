@@ -92,6 +92,24 @@ public class OpenKnimeUrlAction extends Action {
 
     private static final String PATH_START = "/Users/knime/Examples/";
 
+    private static boolean eventHandlingActive;
+
+    /**
+     * @param active whether the URLs and KNWF/KNAR from OS events should be processed
+     * @since 8.9
+     */
+    public static void setEventHandlingActive(final boolean active) {
+        eventHandlingActive = active;
+    }
+
+    /**
+     * @return whether the URLs and KNWF/KNAR from OS events should be processed
+     * @since 8.9
+     */
+    public static boolean isEventHandlingActive() {
+        return eventHandlingActive;
+    }
+
     /*--------- inner job class -------------------------------------------------------------------------*/
     private static class OpenURLJob extends ExplorerJob {
 
