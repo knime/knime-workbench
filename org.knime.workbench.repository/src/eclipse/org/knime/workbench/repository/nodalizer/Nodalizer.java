@@ -647,6 +647,7 @@ public class Nodalizer implements IApplication {
         NodeDescription nodeDescription = knimeNode.invokeGetNodeDescription();
         nInfo.setShortDescription(NodalizerUtil.trimWhiteSpace(nodeDescription.getShortDescription().orElse(null)));
         nInfo.setKeywords(nodeDescription.getKeywords());
+        nInfo.setSinceVersion(nodeDescription.getSinceVersion().orElse(null));
 
         // Write to file
         NodalizerUtil.writeFile(directory, categoryPath + "/" + name + "_" + nInfo.getId().substring(1), nInfo);

@@ -58,10 +58,13 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.knime.core.util.Version;
 import org.knime.core.util.workflowalizer.NodeAndBundleInformation;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * POJO for KNIME Node information.
@@ -114,6 +117,8 @@ public class NodeInfo {
     private String[] m_keywords;
 
     private String m_shortDescription;
+
+    private Version m_sinceVersion;
 
     /**
      * Returns the title of this node.
@@ -329,6 +334,16 @@ public class NodeInfo {
      */
     public String getShortDescription() {
         return m_shortDescription;
+    }
+
+    /**
+     * Returns the first Analytics Platform {@link Version} this node existed in.
+     *
+     * @return the version
+     */
+    @JsonIgnore
+    public Version getSinceVersion() {
+        return m_sinceVersion;
     }
 
     /**
@@ -554,6 +569,29 @@ public class NodeInfo {
      */
     public void setShortDescription(final String shortDescription) {
         m_shortDescription = shortDescription;
+    }
+
+    /**
+     * Sets the first Analytics Platform {@link Version} this node existed in.
+     *
+     * @param sinceVersion the version to set
+     */
+    public void setSinceVersion(final Version sinceVersion) {
+        m_sinceVersion = sinceVersion;
+    }
+
+    /**
+     * Returns the "since version" of this node as a String.
+     *
+     * <p>
+     * This getter is used by jackson for serialization.
+     * <p>
+     *
+     * @return the version as a string
+     */
+    @JsonProperty(value = "sinceVersion")
+    String getSinceVersionString() {
+        return m_sinceVersion == null ? null : m_sinceVersion.toString();
     }
 
     // -- Helper Classes --
