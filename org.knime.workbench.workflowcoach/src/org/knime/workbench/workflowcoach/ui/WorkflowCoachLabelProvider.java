@@ -84,7 +84,7 @@ public class WorkflowCoachLabelProvider extends LabelProvider implements ITableL
                 return WorkflowCoachView.getNodeTemplateFromNodeRecommendations(nrs).getName();
             } else {
                 int idx = columnIndex - 1;
-                if (nrs[idx] != null) {
+                if (idx < nrs.length && nrs[idx] != null) {
                     double perc = (nrs[idx].getFrequency() / (double)nrs[idx].getTotalFrequency() * 100);
                     if (perc < 1.0) {
                         return "<1%";
