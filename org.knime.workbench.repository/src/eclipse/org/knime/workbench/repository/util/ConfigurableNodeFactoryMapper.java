@@ -44,6 +44,7 @@
  */
 package org.knime.workbench.repository.util;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -119,7 +120,14 @@ public final class ConfigurableNodeFactoryMapper {
      * @return a map from file extension to node factory
      */
     public static Map<String, String> getAllNodeFactoriesForFileExtensions() {
-        return Map.of(".csv", "org.knime.base.node.io.filehandling.csv.reader.CSVTableReaderNodeFactory");
+        final var fileExtToNodeFact = new HashMap<String, String>();
+        final var iterator = EXTENSION_REGISTRY.keySet().iterator();
+        while (iterator.hasNext()) {
+            String key = iterator.next();
+            String factory = EXTENSION_REGISTRY.get(key).getFirst().getCanonicalName();
+            fileExtToNodeFact.put(key, factory);
+        }
+        return fileExtToNodeFact;
     }
 
     /**
