@@ -114,6 +114,15 @@ public final class ConfigurableNodeFactoryMapper {
     }
 
     /**
+     * Determines node factories for all supported file extensions.
+     *
+     * @return a map from file extension to node factory
+     */
+    public static Map<String, String> getAllNodeFactoriesForFileExtensions() {
+        return Map.of(".csv", "org.knime.base.node.io.filehandling.csv.reader.CSVTableReaderNodeFactory");
+    }
+
+    /**
      * @param url the url for which a node factory should be returned
      * @return the node factory registered for this extension, or null if the extension is not registered.
      */
