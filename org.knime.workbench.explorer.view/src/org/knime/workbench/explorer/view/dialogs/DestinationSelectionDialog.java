@@ -72,7 +72,7 @@ import org.knime.workbench.explorer.view.ContentObject;
  */
 public final class DestinationSelectionDialog extends SpaceResourceSelectionDialog {
 
-    private boolean m_showExcludeData;
+    private boolean m_showExcludeData = true;
 
     private Button m_excludeDataButton;
     private boolean m_isExcludeData;
