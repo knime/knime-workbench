@@ -68,8 +68,8 @@ import org.knime.core.node.workflow.NodeUIInformationListener;
 import org.knime.core.node.workflow.WorkflowAnnotation;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.workbench.editor2.WorkflowCanvasClickListener;
 import org.knime.workbench.editor2.EditorModeParticipant;
+import org.knime.workbench.editor2.WorkflowCanvasClickListener;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.WorkflowEditorMode;
 import org.knime.workbench.editor2.WorkflowSelectionDragEditPartsTracker;
@@ -160,16 +160,17 @@ public class AnnotationEditPart extends AbstractWorkflowEditPart
      */
     @Override
     public void nodeUIInformationChanged(final NodeUIInformationEvent evt) {
-        ((NodeAnnotationFigure)getFigure()).computeDisplay();
+        Display.getDefault().asyncExec(() -> {
+            ((NodeAnnotationFigure)getFigure()).computeDisplay();
 
-        final WorkflowRootEditPart parent = (WorkflowRootEditPart)getParent();
-        final Annotation anno = getModel();
-        final Rectangle constraint = new Rectangle(anno.getX(), anno.getY(), anno.getWidth(), anno.getHeight());
-        parent.setLayoutConstraint(this, getFigure(), constraint);
-        refreshVisuals();
-        parent.refresh();
+            final WorkflowRootEditPart parent = (WorkflowRootEditPart)getParent();
+            final Annotation anno = getModel();
+            final Rectangle constraint = new Rectangle(anno.getX(), anno.getY(), anno.getWidth(), anno.getHeight());
+            parent.setLayoutConstraint(this, getFigure(), constraint);
+            refreshVisuals();
+            parent.refresh();
+        });
     }
-
 
     /** {@inheritDoc} */
     @Override
