@@ -56,6 +56,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -299,8 +300,11 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                 return false;
             }
         };
-        Predicate<NodeInfo> existsInRepository = nodeInfo -> getNodeTemplate(nodeInfo) != null;
-        NodeRecommendationManager.getInstance().initialize(isSourceNode, existsInRepository);
+        Function<NodeInfo, Optional<String>> getNameFromRepository = nodeInfo -> {
+            var nodeTemplate = getNodeTemplate(nodeInfo);
+            return nodeTemplate == null ? Optional.empty() : Optional.of(nodeTemplate.getName());
+        };
+        NodeRecommendationManager.getInstance().initialize(isSourceNode, getNameFromRepository);
     }
 
     /**
