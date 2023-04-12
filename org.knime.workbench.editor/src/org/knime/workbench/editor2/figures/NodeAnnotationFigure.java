@@ -175,7 +175,7 @@ public class NodeAnnotationFigure extends Figure implements EditorModeParticipan
             text = AnnotationUtilities.getAnnotationText(m_annotation);
             sr = new AnnotationData.StyleRange[0];
         } else {
-            text = m_annotation.getText();
+            text = AnnotationUtilities.getPlainAnnotationText(m_annotation);
             if (m_annotation.getStyleRanges() != null) {
                 sr = Arrays.copyOf(m_annotation.getStyleRanges(), m_annotation.getStyleRanges().length);
             } else {

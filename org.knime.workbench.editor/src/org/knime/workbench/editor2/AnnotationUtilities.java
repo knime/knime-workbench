@@ -59,6 +59,7 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.RGB;
+import org.jsoup.Jsoup;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
 import org.knime.core.node.workflow.NodeAnnotation;
@@ -208,7 +209,7 @@ public class AnnotationUtilities {
      */
     public static String getAnnotationText(final Annotation t) {
         if (!isDefaultNodeAnnotation(t)) {
-            return t.getText();
+            return getPlainAnnotationText(t);
         }
         if (((NodeAnnotation)t).getNodeID() == null) {
             return "";
@@ -300,10 +301,24 @@ public class AnnotationUtilities {
      */
     public static WorkflowAnnotationID[] extractWorkflowAnnotationIDs(final AnnotationEditPart[] annoParts) {
         return Arrays.stream(annoParts) //
-                .map(AnnotationEditPart::getModel) //
-                .filter(WorkflowAnnotation.class::isInstance) //
-                .map(WorkflowAnnotation.class::cast) //
-                .map(WorkflowAnnotation::getID) //
-                .toArray(WorkflowAnnotationID[]::new);
+            .map(AnnotationEditPart::getModel) //
+            .filter(WorkflowAnnotation.class::isInstance) //
+            .map(WorkflowAnnotation.class::cast) //
+            .map(WorkflowAnnotation::getID) //
+            .toArray(WorkflowAnnotationID[]::new);
+    }
+
+    /**
+     * Strips HTML tags from annotation text.
+     *
+     * @param annotation The annotation
+     * @return The plain text
+     */
+    public static String getPlainAnnotationText(final Annotation annotation) {
+        if (annotation.getVersion() < AnnotationData.VERSION_20230412) {
+            return annotation.getText();
+        } else {
+            return Jsoup.parse(annotation.getText()).text();
+        }
     }
 }

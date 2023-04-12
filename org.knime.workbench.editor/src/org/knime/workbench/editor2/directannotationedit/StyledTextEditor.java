@@ -94,8 +94,8 @@ import org.knime.core.node.workflow.NodeAnnotation;
 import org.knime.core.util.ColorUtilities;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
-import org.knime.workbench.editor2.WorkflowCanvasClickListener;
 import org.knime.workbench.editor2.AnnotationUtilities;
+import org.knime.workbench.editor2.WorkflowCanvasClickListener;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.FontStore;
 
@@ -1050,10 +1050,10 @@ public class StyledTextEditor extends CellEditor implements WorkflowCanvasClickL
                 text = AnnotationUtilities.getAnnotationText(wa);
                 m_selectAllUponFocusGain = true;
             } else {
-                text = wa.getText();
+                text = AnnotationUtilities.getPlainAnnotationText(wa);
             }
         } else {
-            text = wa.getText();
+            text = AnnotationUtilities.getPlainAnnotationText(wa);
 
             final int annotationBorderSize = wa.getBorderSize();
             // set margins as borders
