@@ -318,7 +318,10 @@ public class AnnotationUtilities {
         if (annotation.getVersion() < AnnotationData.VERSION_20230412) {
             return annotation.getText();
         } else {
-            return Jsoup.parse(annotation.getText()).text();
+            return switch (annotation.getContentType()) {
+                case TEXT_PLAIN -> annotation.getText();
+                case TEXT_HTML -> Jsoup.parse(annotation.getText()).text();
+            };
         }
     }
 }
