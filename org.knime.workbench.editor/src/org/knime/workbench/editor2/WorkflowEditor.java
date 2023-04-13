@@ -2032,7 +2032,7 @@ public class WorkflowEditor extends GraphicalEditor implements
 
         } catch (Exception e) {
             boolean isWfm = !isComponentProjectWFM();
-            LOGGER.error("Could not save  + " + (isWfm ? "workflow" : "component") + ": " + exceptionMessage, e);
+            LOGGER.error("Could not save " + (isWfm ? "workflow" : "component") + ": " + exceptionMessage, e);
 
             // inform the user
             if (exceptionMessage.length() > 0) {
