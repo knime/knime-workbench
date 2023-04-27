@@ -50,6 +50,7 @@ package org.knime.workbench.editor2;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.draw2d.TextUtilities;
@@ -60,6 +61,8 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.RGB;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.safety.Whitelist;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
 import org.knime.core.node.workflow.NodeAnnotation;
@@ -320,8 +323,19 @@ public class AnnotationUtilities {
         } else {
             return switch (annotation.getContentType()) {
                 case TEXT_PLAIN -> annotation.getText();
-                case TEXT_HTML -> Jsoup.parse(annotation.getText()).text();
+                case TEXT_HTML -> stripHtmlFromTextPreservingLineBreaks(annotation.getText());
             };
         }
+    }
+
+    private static String stripHtmlFromTextPreservingLineBreaks(final String text) {
+        var jsoupDoc = Jsoup.parse(text);
+        var outputSettings = new Document.OutputSettings();
+        var tagsToPreserveLineBreaksFrom = List.of("br", "p", "h1", "h2", "h3", "h4", "h5", "h6");
+        outputSettings.prettyPrint(false);
+        jsoupDoc.outputSettings(outputSettings);
+        tagsToPreserveLineBreaksFrom.forEach(tag -> jsoupDoc.select(tag).after("\\n"));
+        var replaced = jsoupDoc.html().replace("\\n", "\n");
+        return Jsoup.clean(replaced, "", Whitelist.none(), outputSettings);
     }
 }
