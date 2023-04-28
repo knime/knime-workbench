@@ -139,7 +139,7 @@ public class AnnotationEditManager extends DirectEditManager {
             defaultFont = AnnotationUtilities.getWorkflowAnnotationDefaultFont();
             if (annotation.getVersion() >= AnnotationData.VERSION_20230412
                 && annotation.getContentType() == ContentType.TEXT_HTML) {
-                warnUserToContinueOrCancel(this::bringDown);
+                warnAndAskToContinueOrCancel(this::bringDown);
             }
         }
         editor.setDefaultFont(defaultFont);
@@ -157,8 +157,7 @@ public class AnnotationEditManager extends DirectEditManager {
         m_actionBars.updateActionBars();
     }
 
-    private static void warnUserToContinueOrCancel(final Runnable cancelMethodToCall) {
-        // User must confirm to overwrite modern annotation format
+    private static void warnAndAskToContinueOrCancel(final Runnable cancelMethodToCall) {
         Display.getDefault().syncExec(() -> {
             @SuppressWarnings("restriction")
             final var sh = SWTUtilities.getActiveShell();
