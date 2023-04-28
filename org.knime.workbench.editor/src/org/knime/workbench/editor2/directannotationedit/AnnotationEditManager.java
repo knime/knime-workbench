@@ -52,6 +52,7 @@ import org.eclipse.gef.GraphicalEditPart;
 import org.eclipse.gef.tools.CellEditorLocator;
 import org.eclipse.gef.tools.DirectEditManager;
 import org.eclipse.jface.action.IAction;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Display;
@@ -61,6 +62,8 @@ import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.part.CellEditorActionHandler;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
+import org.knime.core.node.workflow.AnnotationData.ContentType;
+import org.knime.core.ui.util.SWTUtilities;
 import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.FontStore;
@@ -134,6 +137,10 @@ public class AnnotationEditManager extends DirectEditManager {
             defaultFont = FontStore.INSTANCE.getSystemDefaultFont();
         } else {
             defaultFont = AnnotationUtilities.getWorkflowAnnotationDefaultFont();
+            if (annotation.getVersion() >= AnnotationData.VERSION_20230412
+                && annotation.getContentType() == ContentType.TEXT_HTML) {
+                warnUserToContinueOrCancel(this::bringDown);
+            }
         }
         editor.setDefaultFont(defaultFont);
         editor.setValue(annotation);
@@ -142,13 +149,26 @@ public class AnnotationEditManager extends DirectEditManager {
         // Hook the cell editor's copy/paste actions to the actionBars so that
         // they can
         // be invoked via keyboard shortcuts.
-        m_actionBars = PlatformUI.getWorkbench().getActiveWorkbenchWindow()
-                .getActivePage().getActiveEditor().getEditorSite()
-                .getActionBars();
+        m_actionBars = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor()
+            .getEditorSite().getActionBars();
         saveCurrentActions(m_actionBars);
         m_actionHandler = new CellEditorActionHandler(m_actionBars);
         m_actionHandler.addCellEditor(getCellEditor());
         m_actionBars.updateActionBars();
+    }
+
+    private static void warnUserToContinueOrCancel(final Runnable cancelMethodToCall) {
+        // User must confirm to overwrite modern annotation format
+        Display.getDefault().syncExec(() -> {
+            @SuppressWarnings("restriction")
+            final var sh = SWTUtilities.getActiveShell();
+            final var title = "Warning";
+            final var message = "Previous text format will be lost. Do you want to continue?";
+            var userConfirmsToContinue = MessageDialog.openConfirm(sh, title, message);
+            if (!userConfirmsToContinue) {
+                cancelMethodToCall.run();
+            }
+        });
     }
 
     /**
