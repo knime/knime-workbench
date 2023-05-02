@@ -322,8 +322,8 @@ public class AnnotationUtilities {
             return annotation.getText();
         } else {
             return switch (annotation.getContentType()) {
-                case TEXT_PLAIN -> annotation.getText();
-                case TEXT_HTML -> stripHtmlFromTextPreservingLineBreaks(annotation.getText());
+                case PLAIN -> annotation.getText();
+                case HTML -> stripHtmlFromTextPreservingLineBreaks(annotation.getText());
             };
         }
     }

@@ -62,8 +62,8 @@ import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.part.CellEditorActionHandler;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
-import org.knime.core.node.workflow.AnnotationData.ContentType;
 import org.knime.core.ui.util.SWTUtilities;
+import org.knime.shared.workflow.def.AnnotationDataDef.ContentTypeEnum;
 import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.editparts.AnnotationEditPart;
 import org.knime.workbench.editor2.editparts.FontStore;
@@ -138,7 +138,7 @@ public class AnnotationEditManager extends DirectEditManager {
         } else {
             defaultFont = AnnotationUtilities.getWorkflowAnnotationDefaultFont();
             if (annotation.getVersion() >= AnnotationData.VERSION_20230412
-                && annotation.getContentType() == ContentType.TEXT_HTML) {
+                && annotation.getContentType() == ContentTypeEnum.HTML) {
                 warnAndAskToContinueOrCancel(this::bringDown);
             }
         }
