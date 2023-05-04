@@ -158,11 +158,14 @@ public class AnnotationEditManager extends DirectEditManager {
     }
 
     private static void warnAndAskToContinueOrCancel(final Runnable cancelMethodToCall) {
-        Display.getDefault().syncExec(() -> {
+        Display.getDefault().syncExec(() -> { // NOSONAR: The multi-line string is fine
             @SuppressWarnings("restriction")
             final var sh = SWTUtilities.getActiveShell();
             final var title = "Warning";
-            final var message = "Previous text format will be lost. Do you want to continue?";
+            final var message = """
+                    You will loose the formatting in Modern UI if you edit this annotation here.
+                    Do you want to continue?
+                    """;
             var userConfirmsToContinue = MessageDialog.openConfirm(sh, title, message);
             if (!userConfirmsToContinue) {
                 cancelMethodToCall.run();
