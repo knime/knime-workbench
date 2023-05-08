@@ -163,7 +163,7 @@ public class AnnotationEditManager extends DirectEditManager {
             final var sh = SWTUtilities.getActiveShell();
             final var title = "Warning";
             final var message = """
-                    You will loose the formatting in Modern UI if you edit this annotation here.
+                    You will lose the formatting in Modern UI if you edit this annotation here.
                     Do you want to continue?
                     """;
             var userConfirmsToContinue = MessageDialog.openConfirm(sh, title, message);
