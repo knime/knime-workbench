@@ -57,12 +57,6 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonArrayBuilder;
-import javax.json.JsonObject;
-import javax.json.JsonWriter;
-
 import org.apache.commons.lang3.CharUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.equinox.p2.repository.metadata.IMetadataRepository;
@@ -70,12 +64,18 @@ import org.knime.core.node.MapNodeFactoryClassMapper;
 import org.knime.core.node.NodeFactoryClassMapper;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.RegexNodeFactoryClassMapper;
+import org.knime.core.util.JsonUtil;
 import org.knime.core.util.Pair;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+
+import jakarta.json.JsonArray;
+import jakarta.json.JsonArrayBuilder;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonWriter;
 
 /**
  * Utility functions around {@link Nodalizer} functionality.
@@ -270,14 +270,14 @@ public final class NodalizerUtil {
             nodeMappingsDir.mkdir();
         }
 
-        JsonArrayBuilder nodeMappingsBuilder = Json.createArrayBuilder();
+        JsonArrayBuilder nodeMappingsBuilder = JsonUtil.getProvider().createArrayBuilder();
 
         List<NodeFactoryClassMapper> classMapperList = NodeFactoryClassMapper.getRegisteredMappers();
         for (NodeFactoryClassMapper nodeFactoryClassMapper : classMapperList) {
             if (nodeFactoryClassMapper instanceof MapNodeFactoryClassMapper) {
                 MapNodeFactoryClassMapper nodeFactoryMapper = (MapNodeFactoryClassMapper)nodeFactoryClassMapper;
                 nodeFactoryMapper.getMap().forEach((key, value) -> {
-                    JsonObject nodeFactoryMapping = Json.createObjectBuilder()
+                    JsonObject nodeFactoryMapping = JsonUtil.getProvider().createObjectBuilder()
                             .add("type", "FACTORY_NAME")
                             .add("source", key)
                             .add("target", value.getName())
@@ -287,7 +287,7 @@ public final class NodalizerUtil {
             } else if (nodeFactoryClassMapper instanceof RegexNodeFactoryClassMapper) {
                 RegexNodeFactoryClassMapper regexMapper = (RegexNodeFactoryClassMapper)nodeFactoryClassMapper;
                 regexMapper.getRegexRules().forEach((key, value) -> {
-                    JsonObject regexMapping = Json.createObjectBuilder()
+                    JsonObject regexMapping = JsonUtil.getProvider().createObjectBuilder()
                             .add("type", "REGEX")
                             .add("matchPattern", key)
                             .add("replacePattern", value.getFirst())
@@ -306,7 +306,7 @@ public final class NodalizerUtil {
 
         File nodeMappingsJson = new File(nodeMappingsDir, "nodeMappings.json");
         try (FileOutputStream fileOutputStream = new FileOutputStream(nodeMappingsJson)) {
-            try (JsonWriter writer = Json.createWriter(fileOutputStream)) {
+            try (JsonWriter writer = JsonUtil.getProvider().createWriter(fileOutputStream)) {
                 writer.writeArray(nodeMappings);
             }
         }
