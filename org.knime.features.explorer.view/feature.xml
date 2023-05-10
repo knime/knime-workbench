@@ -2,7 +2,7 @@
 <feature
       id="org.knime.features.explorer.view"
       label="KNIME Explorer view (do not install!)"
-      version="4.7.1.qualifier"
+      version="4.7.3.qualifier"
       provider-name="KNIME AG, Zurich, Switzerland">
 
    <description>
