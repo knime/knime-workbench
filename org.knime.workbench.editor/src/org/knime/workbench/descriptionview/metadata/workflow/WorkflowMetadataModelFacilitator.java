@@ -48,25 +48,13 @@
  */
 package org.knime.workbench.descriptionview.metadata.workflow;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.net.MalformedURLException;
-import java.util.Calendar;
+import java.time.ZonedDateTime;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.sax.SAXTransformerFactory;
-import javax.xml.transform.sax.TransformerHandler;
-import javax.xml.transform.stream.StreamResult;
-
+import org.knime.core.node.workflow.WorkflowMetadata;
 import org.knime.core.node.workflow.metadata.MetadataXML;
 import org.knime.workbench.descriptionview.metadata.AbstractMetadataModelFacilitator;
 import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
@@ -76,10 +64,7 @@ import org.knime.workbench.descriptionview.metadata.atoms.MetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TagMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextFieldMetaInfoAtom;
-import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.AttributesImpl;
 
 /**
  * This class provides a UI supported form of the metadata representation, as a wrapper with augmented functionality.
@@ -90,7 +75,7 @@ import org.xml.sax.helpers.AttributesImpl;
  *
  * @author loki der quaeler
  */
-class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
+class WorkflowMetadataModelFacilitator extends AbstractMetadataModelFacilitator {
     // I've seen both "TAG:" and "TAGS:" - we write out the latter
     private static final String LEGACY_METADATA_TAG_KEYWORD = "TAG";
     private static final String LEGACY_METADATA_TAGS_KEYWORD = "TAGS";
@@ -109,18 +94,17 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
         LEGACY_KEYWORDS.add(LEGACY_METADATA_LICENSE_KEYWORD);
     }
 
-
-    private int m_metadataVersion;
-
-    MetadataModelFacilitator() {
+    WorkflowMetadataModelFacilitator() {
         this(null, null, null);
     }
 
-    MetadataModelFacilitator(final String author, final String legacyDescription, final Calendar creationDate) {
+    WorkflowMetadataModelFacilitator(final String author, final String legacyDescription,
+            final ZonedDateTime creationDate) {
         super();
 
         if (author != null) {
-            m_authorAtom = new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, MetadataXML.AUTHOR_LABEL, author, false);
+            m_authorAtom = new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, MetadataXML.AUTHOR_LABEL,
+                author, false);
             m_authorAtom.addChangeListener(this);
         }
 
@@ -133,34 +117,13 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
         }
 
         if (creationDate != null) {
-            m_creationDateAtom = new DateMetaInfoAtom(MetadataXML.CREATION_DATE_LABEL, creationDate, false);
+            m_creationDateAtom = new DateMetaInfoAtom(MetadataXML.CREATION_DATE_LABEL, creationDate);
             m_creationDateAtom.addChangeListener(this);
         }
     }
 
-    /**
-     * This will be invoked prior to any invocations of {@link #processElement(String, String, String, boolean, Map)}.
-     *
-     * @param version a version which can be compared against the version constants defined in MetaInfoFile
-     */
-    void setMetadataVersion(final int version) {
-        m_metadataVersion = version;
-    }
-
-    /**
-     * @param label the display label preferencing the UI widget
-     * @param type this will be null for historical (pre-3.8.0) metadata in which case it we consult the label; if the
-     *            label is Author or Comments, then we keep, however we discard anything else (which consists of only
-     *            creation date.)
-     * @param value the content of the metadata (e.g type == AUTHOR_TYPE, value == "Albert Camus")
-     * @param isReadOnly this has never been observed, and we don't currently have a use case in which we allow the user
-     *            to mark something as read-only, so consider this future-proofing.
-     * @param otherAttributes key-value pairs of non-universal attributes of the metadata element
-     * @throws SAXException if something gets throw in an anticipatable location, we'll wrap it in a SAXException and
-     *             re-throw it.
-     */
     void processElement(final String label, final String type, final String value, final boolean isReadOnly,
-        final Map<String, String> otherAttributes) throws SAXException {
+        final Map<String, String> otherAttributes) {
         final MetadataItemType typeToUse;
         if (type == null) {
             // we've read in metadata created in a version prior to 3.8.0 (and which has not been resaved since.)
@@ -190,9 +153,7 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
                         mia = new LinkMetaInfoAtom(label, value, isReadOnly, otherAttributes);
                         m_linkAtoms.add((LinkMetaInfoAtom)mia);
                     } catch (final MalformedURLException e) {
-                        final String url =
-                            ((otherAttributes != null) ? otherAttributes.get(MetadataXML.URL_URL_ATTRIBUTE) : null);
-                        m_logger.error("Could not parse incoming URL [" + url + "]", e);
+                        m_logger.error("Could not parse incoming URL", e);
                     }
                     break;
                 case AUTHOR:
@@ -200,22 +161,16 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
                     mia = m_authorAtom;
                     break;
                 case CREATION_DATE:
-                    m_creationDateAtom = new DateMetaInfoAtom(label, value, isReadOnly);
+                    m_creationDateAtom = new DateMetaInfoAtom(label, value);
                     mia = m_creationDateAtom;
                     break;
                 case TITLE:
-                    m_titleAtom = new TextFieldMetaInfoAtom(MetadataItemType.TITLE, label, value, isReadOnly);
-                    mia = m_titleAtom;
-                    break;
+                    throw new IllegalArgumentException("Title not supported any more as of workflow format 5.1");
                 case DESCRIPTION:
-                    final String description;
-                    if (m_metadataVersion < MetaInfoFile.METADATA_VERSION_NG_STORAGE) {
-                        description = potentiallyParseOldStyleDescription(value);
-                    } else {
-                        description = value;
-                    }
-                    m_descriptionAtom =
-                        new TextAreaMetaInfoAtom(label, ((description.trim().length() == 0) ? null : description), isReadOnly);
+                    final String description = otherAttributes.containsKey("newStyle") ? value
+                        : potentiallyParseOldStyleDescription(value);
+                    m_descriptionAtom = new TextAreaMetaInfoAtom(label,
+                        ((description.trim().length() == 0) ? null : description), isReadOnly);
                     mia = m_descriptionAtom;
                     break;
                 case LICENSE:
@@ -227,84 +182,6 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
             if (mia != null) {
                 mia.addChangeListener(this);
             }
-        }
-    }
-
-    /**
-     * This is preserved so that when me move to the new style XML format file, we can switch to invoking this
-     * from WorkflowMetaView.performSave().
-     */
-    void writeMetadata(final File metadataFile) throws IOException {
-        try (final OutputStream os = new FileOutputStream(metadataFile)) {
-            final SAXTransformerFactory fac = (SAXTransformerFactory)TransformerFactory.newInstance();
-            final TransformerHandler handler = fac.newTransformerHandler();
-            final Transformer t = handler.getTransformer();
-            t.setOutputProperty(OutputKeys.METHOD, "xml");
-            t.setOutputProperty(OutputKeys.INDENT, "yes");
-
-            handler.setResult(new StreamResult(os));
-
-            MetaInfoFile.startMetadataDocument(handler);
-
-            m_authorAtom.save(handler);
-            m_descriptionAtom.save(handler);
-            m_licenseAtom.save(handler);
-            m_titleAtom.save(handler);
-            m_creationDateAtom.save(handler);
-            for (final MetaInfoAtom mia : m_tagAtoms) {
-                mia.save(handler);
-            }
-            for (final MetaInfoAtom mia : m_linkAtoms) {
-                mia.save(handler);
-            }
-
-            MetaInfoFile.endMetadataDocument(handler);
-        } catch (final SAXException | TransformerConfigurationException e) {
-            throw new IOException("Caught exception while writing metadata.", e);
-        }
-    }
-
-    /**
-     * This returns the original description-holds-everything-glommed-together format of this instance's metadata
-     *  state.
-     */
-    String metadataSavedInLegacyFormat() throws IOException {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        writeLegacyStyleMetadataToStream(baos);
-        return baos.toString("UTF-8");
-    }
-
-    private void writeLegacyStyleMetadataToStream(final OutputStream os) throws IOException {
-        try {
-            final SAXTransformerFactory fac = (SAXTransformerFactory)TransformerFactory.newInstance();
-            final TransformerHandler handler = fac.newTransformerHandler();
-            final Transformer t = handler.getTransformer();
-            t.setOutputProperty(OutputKeys.METHOD, "xml");
-            t.setOutputProperty(OutputKeys.INDENT, "yes");
-
-            handler.setResult(new StreamResult(os));
-
-            MetaInfoFile.startMetadataDocument(handler);
-
-            m_authorAtom.save(handler);
-            m_creationDateAtom.save(handler);
-
-            final AttributesImpl attributes = new AttributesImpl();
-            attributes.addAttribute(null, null, MetadataXML.FORM, "CDATA", MetadataXML.MULTILINE);
-            attributes.addAttribute(null, null, MetadataXML.READ_ONLY, "CDATA", Boolean.toString(false));
-            attributes.addAttribute(null, null, MetadataXML.NAME, "CDATA", MetadataXML.DESCRIPTION_LABEL);
-
-            // TODO including a type will break the server parsing of the metadata - 4.0.0
-//            attributes.addAttribute(null, null, MetadataXML.TYPE, "CDATA", m_descriptionAtom.getType().getType());
-
-            handler.startElement(null, null, MetadataXML.ATOM_WRITE_ELEMENT, attributes);
-            final char[] value = createOldStyleDescriptionBlock().toCharArray();
-            handler.characters(value, 0, value.length);
-            handler.endElement(null, null, MetadataXML.ATOM_WRITE_ELEMENT);
-
-            MetaInfoFile.endMetadataDocument(handler);
-        } catch (final SAXException | TransformerConfigurationException e) {
-            throw new IOException("Caught exception while writing metadata.", e);
         }
     }
 
@@ -333,7 +210,7 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
 
             final String titleLine;
             int lineIndex = 0;
-            if (MetaInfoFile.NO_TITLE_PLACEHOLDER_TEXT.equals(lines[lineIndex])) {
+            if (MetadataXML.NO_TITLE_PLACEHOLDER_TEXT.equals(lines[lineIndex])) {
                 titleLine = null;
                 lineIndex++;
             } else {
@@ -349,10 +226,7 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
             }
             lineIndex++;
 
-            m_titleAtom = new TextFieldMetaInfoAtom(MetadataItemType.TITLE, "legacy-title", titleLine, false);
-            m_titleAtom.addChangeListener(this);
-
-            if (!MetaInfoFile.NO_DESCRIPTION_PLACEHOLDER_TEXT.equals(lines[lineIndex])) {
+            if (!MetadataXML.NO_DESCRIPTION_PLACEHOLDER_TEXT.equals(lines[lineIndex])) {
                 actualDescription.append(lines[lineIndex]);
             }
             lineIndex++;
@@ -381,7 +255,6 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
                                 line.substring(index + 1).trim(), false);
                             m_licenseAtom.addChangeListener(this);
                         } else {
-                            final String type = LinkMetaInfoAtom.getDisplayLinkTypeForKeyword(initialText);
                             final String lowercaseLine = line.toLowerCase(Locale.ROOT);
                             int urlStart = lowercaseLine.indexOf("http:");
                             if (urlStart == -1) {
@@ -389,14 +262,13 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
                             }
 
                             if (urlStart == -1) {
-                                m_logger.warn("Could not find URL in legacy metadata link citation [" + line
-                                                    + "]");
+                                m_logger.warn("Could not find URL in legacy metadata link citation [" + line + "]");
                             } else {
                                 final String url = line.substring(urlStart);
                                 final String title = line.substring((index + 1), urlStart).trim();
 
                                 try {
-                                    addLink(url, title, type);
+                                    addLink(url, title);
                                 } catch (final MalformedURLException e) {
                                     m_logger.error("Could not parse incoming URL [" + url + "]", e);
                                 }
@@ -427,17 +299,13 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
     private String createOldStyleDescriptionBlock() {
         final StringBuilder sb = new StringBuilder();
 
-        if (m_titleAtom.hasContent()) {
-            sb.append(m_titleAtom.getValue());
-        } else {
-            sb.append(MetaInfoFile.NO_TITLE_PLACEHOLDER_TEXT);
-        }
+        sb.append(MetadataXML.NO_TITLE_PLACEHOLDER_TEXT);
         sb.append("\n\n");
 
         if (m_descriptionAtom.hasContent()) {
             sb.append(m_descriptionAtom.getValue());
         } else {
-            sb.append(MetaInfoFile.NO_DESCRIPTION_PLACEHOLDER_TEXT);
+            sb.append(MetadataXML.NO_DESCRIPTION_PLACEHOLDER_TEXT);
         }
         sb.append("\n\n");
 
@@ -466,5 +334,17 @@ class MetadataModelFacilitator extends AbstractMetadataModelFacilitator {
 
         // old style does not include a trailing \n
         return sb.toString().trim();
+    }
+
+    public WorkflowMetadata getMetadata() {
+        final var builder = WorkflowMetadata.fluentBuilder() //
+                .withPlainContent() //
+                .withLastModifiedNow() //
+                .withDescription(m_descriptionAtom.getValue()) //
+                .withAuthor(m_authorAtom.getValue()) //
+                .withCreated(m_creationDateAtom.getDateTime());
+        m_tagAtoms.forEach(tagAtom -> builder.addTag(tagAtom.getValue()));
+        m_linkAtoms.forEach(linkAtom -> builder.addLink(linkAtom.getURL(), linkAtom.getValue()));
+        return builder.build();
     }
 }

@@ -56,15 +56,10 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.JFaceResources;
-import org.eclipse.jface.viewers.ArrayContentProvider;
-import org.eclipse.jface.viewers.ComboViewer;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.events.KeyAdapter;
@@ -91,7 +86,6 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
-import org.knime.workbench.descriptionview.metadata.atoms.LinkMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.MetaInfoAtom;
 import org.knime.workbench.editor2.directannotationedit.FlatButton;
 import org.knime.workbench.repository.util.NodeUtil;
@@ -133,8 +127,6 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
      * Subclasses can use this to describe what sections of the view should not be displayed to the user.
      */
     protected enum HiddenSection {
-            /** The title section **/
-            TITLE,
             /** The description section **/
             DESCRIPTION,
             /**
@@ -346,7 +338,6 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     private final Composite m_noUsableMetadataNotificationPane;
 
     private final Composite m_titleSection;
-    private final Composite m_titleNoDataPane;
     private final Composite m_titleContentPane;
 
     private final Composite m_descriptionSection;
@@ -376,7 +367,6 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     private final Composite m_linksLinksContentPane;
     private Text m_linksAddURLTextField;
     private Text m_linksAddTitleTextField;
-    private ComboViewer m_linksAddTypeComboViewer;
     private Button m_linksAddButton;
 
     private final Composite m_licenseSection;
@@ -580,7 +570,6 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
 
         Composite[] sectionAndContentPane = createHorizontalSection("Title", NO_TITLE_TEXT);
         m_titleSection = sectionAndContentPane[0];
-        m_titleNoDataPane = sectionAndContentPane[1];
         m_titleContentPane = sectionAndContentPane[2];
 
 
@@ -790,7 +779,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
      * @param shouldSave if true, then the model state is committed, otherwise restored.
      */
     public void endEditMode(final boolean shouldSave) {
-        if (m_inEditMode.getAndSet(false)) {
+        if (changeEditMode(false)) {
             if (shouldSave) {
                 performSave();
             } else {
@@ -853,27 +842,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
             SWTUtilities.spaceReclaimingSetVisible(m_lowerSection, !m_hiddenSections.contains(HiddenSection.LOWER));
 
 
-            if (m_hiddenSections.contains(HiddenSection.TITLE)) {
-                SWTUtilities.spaceReclaimingSetVisible(m_titleSection, false);
-            } else {
-                SWTUtilities.spaceReclaimingSetVisible(m_titleSection, true);
-                SWTUtilities.removeAllChildren(m_titleContentPane);
-
-                final MetaInfoAtom mia = m_modelFacilitator.getTitle();
-                if (editMode || mia.hasContent()) {
-                    if (editMode) {
-                        mia.populateContainerForEdit(m_titleContentPane);
-                    } else {
-                        mia.populateContainerForDisplay(m_titleContentPane);
-                    }
-
-                    SWTUtilities.spaceReclaimingSetVisible(m_titleNoDataPane, false);
-                    SWTUtilities.spaceReclaimingSetVisible(m_titleContentPane, true);
-                } else {
-                    SWTUtilities.spaceReclaimingSetVisible(m_titleContentPane, false);
-                    SWTUtilities.spaceReclaimingSetVisible(m_titleNoDataPane, true);
-                }
-            }
+            SWTUtilities.spaceReclaimingSetVisible(m_titleSection, false);
 
             if (m_hiddenSections.contains(HiddenSection.DESCRIPTION)) {
                 SWTUtilities.spaceReclaimingSetVisible(m_descriptionSection, false);
@@ -1020,11 +989,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         updateMinimumSizes();
 
         if (focusFirstEditElement) {
-            if (!m_hiddenSections.contains(HiddenSection.TITLE)) {
-                m_modelFacilitator.getTitle().focus();
-            } else if (!m_hiddenSections.contains(HiddenSection.DESCRIPTION)) {
-                m_modelFacilitator.getDescription().focus();
-            }
+            m_modelFacilitator.getDescription().focus();
         }
     }
 
@@ -1043,7 +1008,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     protected abstract void completeSave();
 
     private void performSave() {
-        m_inEditMode.set(false);
+        changeEditMode(false);
 
         // we must commit prior to updating display, else atoms may not longer have their UI elements
         //      available to query
@@ -1055,7 +1020,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     }
 
     private void performDiscard() {
-        m_inEditMode.set(false);
+        changeEditMode(false);
 
         // must restore state before updating display to have a display synced to the restored model
         m_modelFacilitator.restoreState();
@@ -1075,7 +1040,6 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
 
         m_linksAddURLTextField = null;
         m_linksAddTitleTextField = null;
-        m_linksAddTypeComboViewer = null;
         m_linksAddButton = null;
     }
 
@@ -1083,13 +1047,15 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
      * Subclasses can invoke this to update the floating head bar's position and content.
      */
     protected void currentAssetNameHasChanged() {
-        getDisplay().asyncExec(() -> {
-            m_headerText = m_currentAssetName;
-            m_assetNameHasChanged.set(true);
-            if (!isDisposed()) {
-                updateFloatingHeaderBar();
-            }
-        });
+        if (!isDisposed()) {
+            getDisplay().asyncExec(() -> {
+                m_headerText = m_currentAssetName;
+                m_assetNameHasChanged.set(true);
+                if (!isDisposed()) {
+                    updateFloatingHeaderBar();
+                }
+            });
+        }
     }
 
     /**
@@ -1128,7 +1094,12 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
                 gd.verticalIndent += 3;
                 fb.setLayoutData(gd);
                 fb.addClickListener((source) -> {
-                    m_inEditMode.set(true);
+                    if (!isEditorAvailable()) {
+                        m_metadataCanBeEdited.set(false);
+                        configureFloatingHeaderBarButtons();
+                        return;
+                    }
+                    changeEditMode(true);
 
                     m_modelFacilitator.storeStateForEdit();
 
@@ -1145,6 +1116,15 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
 
         m_headerBar.layout(true, true);
     }
+
+    private boolean changeEditMode(final boolean active) {
+        editModeChanged(active);
+        return m_inEditMode.getAndSet(active);
+    }
+
+    protected abstract void editModeChanged(boolean active);
+
+    protected abstract boolean isEditorAvailable();
 
     private void updateEditSaveButton() {
         if (m_inEditMode.get()) {
@@ -1363,41 +1343,6 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
                 }
             }
         });
-        final Label l = new Label(m_linksAddContentPane, SWT.LEFT);
-        l.setText("Type:");
-        GridData gd = new GridData();
-        gd.horizontalAlignment = SWT.LEFT;
-        l.setLayoutData(gd);
-        m_linksAddTypeComboViewer = new ComboViewer(m_linksAddContentPane, SWT.READ_ONLY);
-        gd = new GridData();
-        gd.horizontalAlignment = SWT.LEFT;
-        gd.grabExcessHorizontalSpace = true;
-        m_linksAddTypeComboViewer.getCombo().setLayoutData(gd);
-        m_linksAddTypeComboViewer.setContentProvider(ArrayContentProvider.getInstance());
-        m_linksAddTypeComboViewer.setInput(LinkMetaInfoAtom.LEGACY_LINK_TYPES);
-        m_linksAddTypeComboViewer.setLabelProvider(new LabelProvider() {
-            /**
-             * {@inheritDoc}
-             */
-            @Override
-            @SuppressWarnings("unchecked")  // generic casting...
-            public String getText(final Object o) {
-                if (o instanceof Pair) {
-                    return ((Pair<String, String>)o).getLeft();
-                }
-
-                return null;
-            }
-        });
-        m_linksAddTypeComboViewer.getCombo().addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(final KeyEvent ke) {
-                if ((ke.character == SWT.CR) && m_linksAddButton.isEnabled()) {
-                    processLinkAdd();
-                }
-            }
-        });
-        m_linksAddTypeComboViewer.getCombo().select(0);
 
         m_linksAddButton = new Button(m_linksAddContentPane, SWT.PUSH);
         m_linksAddButton.setText("Add");
@@ -1407,7 +1352,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
                 processLinkAdd();
             }
         });
-        gd = new GridData();
+        final var gd = new GridData();
         gd.horizontalAlignment = SWT.RIGHT;
         gd.horizontalSpan = 2;
         m_linksAddButton.setLayoutData(gd);
@@ -1418,12 +1363,9 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
     private void processLinkAdd() {
         final String url = m_linksAddURLTextField.getText();
         final String title = m_linksAddTitleTextField.getText();
-        final StructuredSelection selection = (StructuredSelection)m_linksAddTypeComboViewer.getSelection();
-        final Pair<String, String> selectedType = (Pair<String, String>)selection.getFirstElement();
-        final String type = selectedType.getLeft();
 
         try {
-            final MetaInfoAtom link = m_modelFacilitator.addLink(url, title, type);
+            final MetaInfoAtom link = m_modelFacilitator.addLink(url, title);
             m_linksAddURLTextField.setText("");
             m_linksAddTitleTextField.setText("");
             m_linksAddButton.setEnabled(false);

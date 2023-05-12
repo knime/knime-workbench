@@ -48,48 +48,43 @@
  */
 package org.knime.workbench.descriptionview.metadata.workflow;
 
-import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isWorkflowGroup;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.resources.WorkspaceJob;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
-import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeSettings;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.WorkflowMetadata;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.node.workflow.metadata.MetaInfoFile;
+import org.knime.core.node.workflow.metadata.MetadataVersion;
+import org.knime.core.node.workflow.metadata.MetadataXML;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.workbench.KNIMEEditorPlugin;
+import org.knime.core.util.workflowalizer.WorkflowSetMeta;
+import org.knime.core.util.workflowalizer.Workflowalizer;
 import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
@@ -98,6 +93,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileInfo;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileInfo;
 import org.knime.workbench.explorer.view.ContentObject;
+import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 
 /**
  * This is the view reponsible for displaying, and potentially allowing the editing of, the meta-information associated
@@ -117,16 +113,30 @@ import org.knime.workbench.explorer.view.ContentObject;
  * @author loki der quaeler
  */
 public class WorkflowMetaView extends AbstractMetaView {
+
+    private static final DateTimeFormatter AUTHORED_WHEN_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z");
+
     private static final NodeLogger LOGGER = NodeLogger.getLogger(WorkflowMetaView.class);
 
+    private WeakReference<WorkflowManager> m_editWorkflowManager;
 
-    private File m_metadataFile;
+    private boolean m_reportedDirty;
+
 
     /**
      * @param parent
      */
     public WorkflowMetaView(final Composite parent) {
         super(parent, EnumSet.of(HiddenSection.UPPER, HiddenSection.LOWER));
+    }
+
+    /**
+     * @param manager workflow manager to look for, not {@code null}
+     * @return {@code true} if this editor is currently editing the given workflow manager's metadata,
+     * {@code false} otherwise
+     */
+    public boolean isDirtyEditing(final WorkflowManager manager) {
+        return Optional.ofNullable(m_editWorkflowManager).map(WeakReference::get).filter(manager::equals).isPresent();
     }
 
     /**
@@ -144,10 +154,10 @@ public class WorkflowMetaView extends AbstractMetaView {
      * @param shouldShowCCBY40License if true, the CC-BY-4.0 license will be shown in the UI
      */
     public void handleAsynchronousRemoteMetadataPopulation(final String author, final String legacyDescription,
-        final Calendar creationDate, final boolean shouldShowCCBY40License) {
-        m_modelFacilitator = new MetadataModelFacilitator(author, legacyDescription, creationDate);
+        final ZonedDateTime creationDate, final boolean shouldShowCCBY40License) {
+        m_modelFacilitator = new WorkflowMetadataModelFacilitator(author, legacyDescription, creationDate);
         m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName,
-            () -> creationDate == null ? Calendar.getInstance() : creationDate);
+            () -> creationDate == null ? ZonedDateTime.now() : creationDate);
         m_modelFacilitator.setModelObserver(this);
 
         if (m_metadataCanBeEdited.get()) {
@@ -155,28 +165,21 @@ public class WorkflowMetaView extends AbstractMetaView {
             configureFloatingHeaderBarButtons();
         }
 
-        m_metadataFile = null;
-
         m_waitingForAsynchronousMetadata.set(false);
         m_asynchronousMetadataFetchFailed
             .set((author == null) && (legacyDescription == null) && (creationDate == null));
         m_assetRepresentsATemplate.set(false);
         m_assetRepresentsAJob.set(false);
         m_shouldDisplayLicenseSection.set(shouldShowCCBY40License);
-        getDisplay().asyncExec(() -> {
-            updateDisplay();
-        });
+        getDisplay().asyncExec(this::updateDisplay);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void selectionChanged(final IStructuredSelection selection) {
-        final Object o = selection.getFirstElement();
-        final boolean knimeExplorerItem = (o instanceof ContentObject);
-
-        final File metadataFile;
+    public void selectionChanged(final IStructuredSelection selection) { // NOSONAR
+        final Object selected = selection.getFirstElement();
         final boolean canEditMetadata;
 
         m_waitingForAsynchronousMetadata.set(false);
@@ -185,9 +188,14 @@ public class WorkflowMetaView extends AbstractMetaView {
         m_assetRepresentsAJob.set(false);
         m_shouldDisplayLicenseSection.set(!SHOW_LICENSE_ONLY_FOR_HUB);
         m_assetIsReadable.set(true);
-        final Supplier<Calendar> defaultCreationDateSupplier;
-        if (knimeExplorerItem) {
-            final AbstractExplorerFileStore fs = ((ContentObject) o).getFileStore();
+        m_editWorkflowManager = null;
+
+        final Supplier<ZonedDateTime> defaultCreationDateSupplier;
+        File legacyMetadataFile = null;
+        File metadataFile = null;
+        WorkflowManager projectWM = null;
+        if (selected instanceof ContentObject contentObject) {
+            final AbstractExplorerFileStore fs = contentObject.getFileStore();
             final AbstractExplorerFileInfo fileInfo = fs.fetchInfo();
             if (!(fileInfo instanceof RemoteExplorerFileInfo) && !(fileInfo instanceof LocalWorkspaceFileInfo)) {
                 LOGGER.debug("Received unexpected file info type: " + fileInfo.getClass());
@@ -197,37 +205,44 @@ public class WorkflowMetaView extends AbstractMetaView {
             final boolean isWorkflow = AbstractExplorerFileStore.isWorkflow(fs);
             final boolean isTemplate = AbstractExplorerFileStore.isWorkflowTemplate(fs);
             final boolean isRemote = fs.getContentProvider().isRemote();
-            final boolean isJob = isRemote ? ((RemoteExplorerFileInfo)fileInfo).isWorkflowJob() : false;
+            final boolean isJob = fileInfo instanceof RemoteExplorerFileInfo remoteInfo && remoteInfo.isWorkflowJob();
             final boolean isReadable = fs.fetchInfo().isReadable();
-            final boolean validFS =
-                (isWorkflow || AbstractExplorerFileStore.isWorkflowGroup(fs) || isTemplate || isJob);
+            final boolean validFS = (isWorkflow || isTemplate || isJob);
             if (!validFS) {
                 return;
             }
 
             m_currentAssetName = fs.getName();
-            if (isRemote || isTemplate || isJob) {
-                m_waitingForAsynchronousMetadata.set(isRemote && !isTemplate && !isJob);
-                m_assetRepresentsATemplate.set(isTemplate);
+            if (isTemplate) {
+                m_waitingForAsynchronousMetadata.set(false);
+                m_assetRepresentsATemplate.set(true);
                 m_assetRepresentsAJob.set(isJob);
                 m_assetIsReadable.set(isReadable);
 
-                metadataFile = null;
+                canEditMetadata = false;
+            } else if (isRemote) {
+                m_waitingForAsynchronousMetadata.set(isRemote && !isTemplate && !isJob);
+                m_assetRepresentsATemplate.set(false);
+                m_assetRepresentsAJob.set(isJob);
+                m_assetIsReadable.set(isReadable);
+
                 canEditMetadata = false;
             } else {
                 final AbstractExplorerFileStore metaInfo = fs.getChild(WorkflowPersistor.METAINFO_FILE);
+                final AbstractExplorerFileStore metadata = fs.getChild(WorkflowPersistor.WORKFLOW_METADATA_FILE_NAME);
                 try {
-                    metadataFile = metaInfo.toLocalFile(EFS.NONE, null);
+                    legacyMetadataFile = metaInfo.toLocalFile(EFS.NONE, null);
+                    metadataFile = metadata.toLocalFile(EFS.NONE, null);
                 } catch (final CoreException ce) {
                     LOGGER.error("Unable to convert EFS to local file.", ce);
 
                     return;
                 }
-                canEditMetadata = true;
+                canEditMetadata = false;
             }
             defaultCreationDateSupplier = createDefaultCreationDateSupplier(() -> {
                 try {
-                    if (!isRemote && !isWorkflowGroup(fs)) {
+                    if (!isRemote) {
                         return fs.toLocalFile().toPath();
                     }
                 } catch (CoreException e) {
@@ -236,64 +251,58 @@ public class WorkflowMetaView extends AbstractMetaView {
                 return null;
             });
         } else {
-            final WorkflowRootEditPart wrep = (WorkflowRootEditPart)o;
+            final WorkflowRootEditPart wrep = (WorkflowRootEditPart)selected;
             final WorkflowManagerUI wmUI = wrep.getWorkflowManager();
             final Optional<WorkflowManager> wm = Wrapper.unwrapWFMOptional(wmUI);
             if (wm.isPresent()) {
-                if (wm.get().isComponentProjectWFM()) {
+                final var workflowManager = wm.get();
+                if (workflowManager.isComponentProjectWFM()) {
                     m_assetRepresentsAJob.set(false);
-                    metadataFile = null;
                     canEditMetadata = false;
                 } else {
-                    final WorkflowManager projectWM = wm.get().getProjectWFM();
-                    final ReferencedFile rf = projectWM.getWorkingDir();
-
-                    metadataFile = new File(rf.getFile(), WorkflowPersistor.METAINFO_FILE);
+                    projectWM = workflowManager.getProjectWFM();
                     m_currentAssetName = projectWM.getName();
 
                     final WorkflowEditor editor = (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow()
                         .getActivePage().getActiveEditor();
                     canEditMetadata = (!editor.isTempRemoteWorkflowEditor() && !editor.isTempLocalWorkflowEditor());
+                    if (canEditMetadata) {
+                        m_editWorkflowManager = new WeakReference<>(projectWM);
+                        m_reportedDirty = false;
+                    }
                 }
                 defaultCreationDateSupplier =
-                    createDefaultCreationDateSupplier(() -> wm.get().getContext().getCurrentLocation().toPath());
+                    createDefaultCreationDateSupplier(() -> workflowManager.getContext().getCurrentLocation().toPath());
             } else {
                 m_assetRepresentsAJob.set(true);
-                metadataFile = null;
                 canEditMetadata = false;
-                defaultCreationDateSupplier = Calendar::getInstance;
+                defaultCreationDateSupplier = ZonedDateTime::now;
             }
-        }
-
-        if ((m_metadataFile != null) && m_metadataFile.equals(metadataFile)) {
-            return;
         }
 
         currentAssetNameHasChanged();
 
-        if ((metadataFile != null) && metadataFile.exists()) {
-            final SAXInputHandler handler = new SAXInputHandler();
+        final var facilitator = new WorkflowMetadataModelFacilitator();
+        if (projectWM != null) {
+            loadMetadata(facilitator, CheckUtils.checkNotNull(projectWM.getMetadata()));
+        } else if ((metadataFile != null) && metadataFile.exists()) {
             try {
-                final SAXParserFactory parserFactory = SAXParserFactory.newInstance();
-
-                // completely disable DOCTYPE declaration to prevent XXE attacks
-                // see https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html
-                parserFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-
-                parserFactory.setNamespaceAware(true);
-
-                final SAXParser parser = parserFactory.newSAXParser();
-                parser.parse(metadataFile, handler);
+                loadMetadata(facilitator, CheckUtils.checkNotNull(
+                    WorkflowMetadata.fromXML(metadataFile.toPath(), MetadataVersion.V1_0)));
             } catch (Exception e) {
                 LOGGER.error("Failed to parse the workflow metadata file.", e);
-
                 return;
             }
-
-            m_modelFacilitator = handler.getModelFacilitator();
-        } else {
-            m_modelFacilitator = new MetadataModelFacilitator();
+        } else if ((legacyMetadataFile != null) && legacyMetadataFile.exists()) {
+            try {
+                loadMetadata(facilitator, Workflowalizer.readWorkflowSetMeta(legacyMetadataFile.toPath()));
+            } catch (Exception e) {
+                LOGGER.error("Failed to parse the workflow metadata file.", e);
+                return;
+            }
         }
+
+        m_modelFacilitator = facilitator;
         m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName, defaultCreationDateSupplier);
         m_modelFacilitator.setModelObserver(this);
 
@@ -302,27 +311,77 @@ public class WorkflowMetaView extends AbstractMetaView {
             configureFloatingHeaderBarButtons();
         }
 
-        m_metadataFile = metadataFile;
+        if (!isDisposed()) {
+            getDisplay().asyncExec(() -> {
+                if (!isDisposed()) {
+                    updateDisplay();
+                }
+            });
+        }
+    }
 
-        getDisplay().asyncExec(() -> {
-            if (!isDisposed()) {
-                updateDisplay();
-            }
+    private static void loadMetadata(final WorkflowMetadataModelFacilitator facilitator,
+        final WorkflowMetadata workflowMetadata) {
+        facilitator.processElement(null, MetadataItemType.DESCRIPTION.getType(),
+            workflowMetadata.getDescription().orElse(""), false, Map.of("newStyle", "true"));
+
+        workflowMetadata.getAuthor().ifPresent(author -> {
+            facilitator.processElement(null, MetadataItemType.AUTHOR.getType(), author, false, null);
+        });
+
+        workflowMetadata.getCreated().ifPresent(created -> {
+            final var dateString = MetaInfoFile.dateToStorageString(created.getDayOfMonth(),
+                created.getMonthValue(), created.getYear());
+            facilitator.processElement(null, MetadataItemType.CREATION_DATE.getType(), dateString, false, null);
+        });
+
+        workflowMetadata.getTags().forEach(tag -> {
+            facilitator.processElement(null, MetadataItemType.TAG.getType(), tag, false, null);
+        });
+
+        workflowMetadata.getLinks().forEach(link -> {
+            facilitator.processElement(null, MetadataItemType.LINK.getType(), link.text(), false,
+                Map.of(MetadataXML.URL_TYPE_ATTRIBUTE, MetadataXML.URL_LEGACY_KEYWORD_TYPE_NAME,
+                    MetadataXML.URL_URL_ATTRIBUTE, link.url()));
         });
     }
 
-    private static Supplier<Calendar> createDefaultCreationDateSupplier(final Supplier<Path> workflowPath) {
+    private static void loadMetadata(final WorkflowMetadataModelFacilitator facilitator,
+        final WorkflowSetMeta workflowMetadata) {
+        facilitator.processElement(null, MetadataItemType.DESCRIPTION.getType(),
+            workflowMetadata.getDescription().orElse(""), false, Map.of("newStyle", "true"));
+
+        workflowMetadata.getAuthor().ifPresent(author -> {
+            facilitator.processElement(null, MetadataItemType.AUTHOR.getType(), author, false, null);
+        });
+
+        workflowMetadata.getCreated().ifPresent(created -> {
+            final var dateString = MetaInfoFile.dateToStorageString(created.getDayOfMonth(),
+                created.getMonthValue(), created.getYear());
+            facilitator.processElement(null, MetadataItemType.CREATION_DATE.getType(), dateString, false, null);
+        });
+
+        workflowMetadata.getTags().orElse(List.of()).forEach(tag -> {
+            facilitator.processElement(null, MetadataItemType.TAG.getType(), tag, false, null);
+        });
+
+        workflowMetadata.getLinks().orElse(List.of()).forEach(link -> {
+            facilitator.processElement(null, MetadataItemType.LINK.getType(), link.getText(), false,
+                Map.of(MetadataXML.URL_TYPE_ATTRIBUTE, MetadataXML.URL_LEGACY_KEYWORD_TYPE_NAME,
+                    MetadataXML.URL_URL_ATTRIBUTE, link.getUrl()));
+        });
+    }
+
+    private static Supplier<ZonedDateTime> createDefaultCreationDateSupplier(final Supplier<Path> workflowPath) {
         return () -> {
-            Calendar calendar = Calendar.getInstance();
+            final var dateTime = ZonedDateTime.now();
             try {
-                Path path = workflowPath.get();
-                if (path != null) {
-                    setFallbackCreationDateFromWorkflowFile(calendar, workflowPath.get());
-                }
+                final var path = workflowPath.get();
+                return path == null ? dateTime : setFallbackCreationDateFromWorkflowFile(dateTime, workflowPath.get());
             } catch (IOException | InvalidSettingsException | ParseException e) {
                 LOGGER.error("The creation date couldn't be extracted from the workflow.", e);
             }
-            return calendar;
+            return dateTime;
         };
     }
 
@@ -331,31 +390,55 @@ public class WorkflowMetaView extends AbstractMetaView {
      */
     @Override
     protected void completeSave() {
-        try {
-            final Path metadata = Paths.get(m_metadataFile.getAbsolutePath());
-            final String metadataXML = ((MetadataModelFacilitator)m_modelFacilitator).metadataSavedInLegacyFormat();
-            final Job job = new WorkspaceJob("Saving workflow metadata...") {
-                /**
-                 * {@inheritDoc}
-                 */
-                @Override
-                public IStatus runInWorkspace(final IProgressMonitor monitor) throws CoreException {
-                    try {
-                        Files.write(metadata, metadataXML.getBytes("UTF-8"), StandardOpenOption.CREATE,
-                            StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
-                    } catch (final IOException e) {
-                        throw new CoreException(new Status(IStatus.ERROR, KNIMEEditorPlugin.PLUGIN_ID, -1,
-                            "Failed to save the metadata to file.", e));
-                    }
-                    return Status.OK_STATUS;
-                }
-            };
-            job.setRule(ResourcesPlugin.getWorkspace().getRoot());
-            job.setUser(true);
-            job.schedule();
-        } catch (final IOException e) {
-            LOGGER.error("Failed to save metadata.", e);
+        final var oldWFM = Optional.ofNullable(m_editWorkflowManager).map(WeakReference::get).orElse(null);
+        if (oldWFM == null) {
+            throw new IllegalStateException("Can't save metadata because the containing workflow was closed.");
         }
+        oldWFM.setContainerMetadata(((WorkflowMetadataModelFacilitator)m_modelFacilitator).getMetadata());
+    }
+
+    @Override
+    protected void editModeChanged(final boolean dirty) {
+        if (m_reportedDirty == dirty) {
+            return;
+        }
+        m_reportedDirty = dirty;
+
+        // notify the editor that we are done
+        final var oldWFM = m_editWorkflowManager == null ? null : m_editWorkflowManager.get();
+        if (oldWFM == null) {
+            return;
+        }
+
+        Optional.of(PlatformUI.getWorkbench()) //
+                .map(IWorkbench::getActiveWorkbenchWindow) //
+                .map(IWorkbenchWindow::getActivePage) //
+                .stream() //
+                .flatMap(page -> Arrays.stream(page.getEditorReferences())) //
+                .map(ref -> ref.getEditor(false)) //
+                .filter(WorkflowEditor.class::isInstance) //
+                .map(WorkflowEditor.class::cast) //
+                .filter(editor -> editor.getWorkflowManager().filter(wfm -> wfm.equals(oldWFM)).isPresent()) //
+                .findAny() //
+                .ifPresent(editor -> editor.setMetadataEditorDirty(dirty));
+    }
+
+    @Override
+    protected boolean isEditorAvailable() {
+        final var oldWFM = m_editWorkflowManager == null ? null : m_editWorkflowManager.get();
+        if (oldWFM == null) {
+            return false;
+        }
+
+        return Optional.of(PlatformUI.getWorkbench()) //
+                .map(IWorkbench::getActiveWorkbenchWindow) //
+                .map(IWorkbenchWindow::getActivePage) //
+                .stream() //
+                .flatMap(page -> Arrays.stream(page.getEditorReferences())) //
+                .map(ref -> ref.getEditor(false)) //
+                .filter(WorkflowEditor.class::isInstance) //
+                .map(WorkflowEditor.class::cast) //
+                .anyMatch(editor -> editor.getWorkflowManager().filter(wfm -> wfm.equals(oldWFM)).isPresent());
     }
 
     /**
@@ -363,33 +446,30 @@ public class WorkflowMetaView extends AbstractMetaView {
      * time of the provided calendar. Usually used as a fallback when, e.g., no <code>workflowset.meta</code> file is
      * given.
      *
-     * @param calendar the calendar to set the new creation date into
+     * @param dateTime the calendar to set the new creation date into
      * @param workflowPath the workflow directory
      * @throws IOException
      * @throws InvalidSettingsException
      * @throws ParseException
      */
-    public static void setFallbackCreationDateFromWorkflowFile(final Calendar calendar, final Path workflowPath)
-        throws IOException, InvalidSettingsException, ParseException {
-        Date creationDateFromWorkflowFile = getCreationDateFromWorkflowFile(workflowPath);
-        if (creationDateFromWorkflowFile != null) {
-            calendar.setTime(creationDateFromWorkflowFile);
-        }
+    private static ZonedDateTime setFallbackCreationDateFromWorkflowFile(final ZonedDateTime dateTime,
+            final Path workflowPath) throws IOException, InvalidSettingsException, ParseException {
+        final var creationDateFromWorkflowFile = getCreationDateFromWorkflowFile(workflowPath);
+        return creationDateFromWorkflowFile == null ? dateTime : creationDateFromWorkflowFile;
     }
 
-    private static Date getCreationDateFromWorkflowFile(final Path workflowPath)
-        throws IOException, InvalidSettingsException, ParseException {
-        Path workflowFile = workflowPath.resolve(WorkflowPersistor.WORKFLOW_FILE);
+    private static ZonedDateTime getCreationDateFromWorkflowFile(final Path workflowPath)
+        throws IOException, InvalidSettingsException {
+        final var workflowFile = workflowPath.resolve(WorkflowPersistor.WORKFLOW_FILE);
         if (Files.exists(workflowFile)) {
-            NodeSettings ns = new NodeSettings("ignored");
-            try (final InputStream is = Files.newInputStream(workflowFile)) {
-                ns.load(is);
-                if (!ns.containsKey("authorInformation")) {
+            final var settings = new NodeSettings("ignored");
+            try (final var inStream = Files.newInputStream(workflowFile)) {
+                settings.load(inStream);
+                if (!settings.containsKey("authorInformation")) {
                     return null;
                 }
-                final String s = ns.getConfigBase("authorInformation").getString("authored-when");
-                final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z");
-                return df.parse(s);
+                final var authoredWhen = settings.getConfigBase("authorInformation").getString("authored-when");
+                return ZonedDateTime.parse(authoredWhen, AUTHORED_WHEN_FORMAT);
             }
         } else {
             throw new FileNotFoundException(

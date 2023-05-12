@@ -214,6 +214,7 @@ import org.knime.workbench.core.nodeprovider.NodeProvider;
 import org.knime.workbench.core.nodeprovider.NodeProvider.EventListener;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
+import org.knime.workbench.descriptionview.DescriptionView;
 import org.knime.workbench.editor2.WorkflowEditorEventListener.ActiveWorkflowEditorEvent;
 import org.knime.workbench.editor2.WorkflowEditorEventListener.WorkflowEditorEvent;
 import org.knime.workbench.editor2.actions.AbstractNodeAction;
@@ -351,6 +352,9 @@ public class WorkflowEditor extends GraphicalEditor implements
 
     /** the dirty state. */
     private boolean m_isDirty;
+
+    /** the metadata editor dirty state. */
+    private boolean m_isMetadataEditorDirty;
 
     /** List with the action ids that are associated to this editor. * */
     private List<String> m_editorActions;
@@ -566,11 +570,10 @@ public class WorkflowEditor extends GraphicalEditor implements
      * after-open method has already been called. */
     public void addAfterOpenRunnable(final Runnable action) {
         if (m_hasAfterOpenRun) {
-            throw new IllegalStateException("Can't queue afterOpen-runner - "
-                    + "method has already been run");
+            throw new IllegalStateException("Can't queue afterOpen-runner - method has already been run");
         }
         if (m_afterOpenRunnables == null) {
-            m_afterOpenRunnables = new ArrayList<Runnable>();
+            m_afterOpenRunnables = new ArrayList<>();
         }
         m_afterOpenRunnables.add(action);
     }
@@ -1878,6 +1881,28 @@ public class WorkflowEditor extends GraphicalEditor implements
      */
     @Override
     public int promptToSaveOnClose() {
+
+        if (m_isMetadataEditorDirty) {
+            final var views = Optional.of(PlatformUI.getWorkbench()) //
+                    .map(IWorkbench::getActiveWorkbenchWindow) //
+                    .map(IWorkbenchWindow::getActivePage) //
+                    .map(IWorkbenchPage::getViewReferences) //
+                    .map(Arrays::asList) //
+                    .orElse(List.of());
+            for (final var view : views) {
+                if (view.getPart(false) instanceof DescriptionView descriptionView
+                        && Wrapper.unwrapWFMOptional(m_manager) //
+                                .filter(wfm -> descriptionView.isDirtyEditing(wfm)).isPresent()) { // NOSONAR
+                    final var sh = SWTUtilities.getActiveShell();
+                    MessageDialog.openInformation(sh, "Pending Metadata Changes",
+                        "There are unsaved changes in the metadata view. "
+                        + "Save or discard them before closing the workflow.");
+                    m_isClosing = false;
+                    return ISaveablePart2.CANCEL;
+                }
+            }
+        }
+
         /*
          * Ideally we would just set the m_isClosing flag and return
          * ISaveablePart2.DEFAULT which will bring up a separate dialog. This
@@ -2652,7 +2677,32 @@ public class WorkflowEditor extends GraphicalEditor implements
         if (m_parentEditor != null) {
             return m_parentEditor.isDirty();
         }
-        return m_isDirty;
+        return m_isDirty || m_isMetadataEditorDirty;
+    }
+
+    /**
+     * Updates the metadata editor dirty status.
+     *
+     * @param dirty flag
+     */
+    public void setMetadataEditorDirty(final boolean dirty) {
+        if (m_parentEditor != null) {
+            // delegate to parent
+            m_parentEditor.setMetadataEditorDirty(dirty);
+            return;
+        }
+
+        if (m_isMetadataEditorDirty == dirty) {
+            // nothing to do
+            return;
+        }
+
+        boolean oldDirty = isDirty();
+        m_isMetadataEditorDirty = dirty;
+        if (isDirty() ^ oldDirty) {
+            // state has changed
+            firePropertyChange(IEditorPart.PROP_DIRTY);
+        }
     }
 
     /**

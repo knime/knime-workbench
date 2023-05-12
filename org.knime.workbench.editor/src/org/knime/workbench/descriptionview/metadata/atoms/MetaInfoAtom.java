@@ -316,8 +316,7 @@ public abstract class MetaInfoAtom {
      * @throws SAXException
      * @see #save(TransformerHandler)
      */
-    protected void save(final TransformerHandler parentElement, final String form)
-        throws SAXException {
+    protected void save(final TransformerHandler parentElement, final String form) throws SAXException {
         save(parentElement, form, m_value);
     }
 

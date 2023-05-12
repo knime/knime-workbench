@@ -49,8 +49,8 @@
 package org.knime.workbench.descriptionview.metadata;
 
 import java.net.MalformedURLException;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -64,7 +64,6 @@ import org.knime.workbench.descriptionview.metadata.atoms.MetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TagMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextFieldMetaInfoAtom;
-import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 
 /**
@@ -106,13 +105,12 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
     protected final ArrayList<LinkMetaInfoAtom> m_linkAtoms;   // 1-N
     /** the license atom **/
     protected ComboBoxMetaInfoAtom m_licenseAtom;              // 1
-    /** the title atom **/
-    protected TextFieldMetaInfoAtom m_titleAtom;               // 1
 
     /** a NodeLogger available for subclasses **/
     protected final NodeLogger m_logger;
 
-    private ModelObserver m_modelObserver;
+    /** Model observer. */
+    protected ModelObserver m_modelObserver;
 
                     // for edit state store
     private final ArrayList<TagMetaInfoAtom> m_savedTagAtoms;
@@ -142,28 +140,21 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
      * This will be called when the consumption of the metadata has finished.
      *
      * @param defaultTitleName the default name for the title field if none has been defined in the source metadata
-     * @param defaultCreationDate the default creation date (e.g. retrieved from the workflow.knime file) for the
+     * @param defaultCreationDateSupplier the default creation date (e.g. retrieved from the workflow.knime file) for the
      *            creation-date field if none is defined in the source metadata - supplied in a lazy manner
      */
     public void parsingHasFinishedWithDefaultTitleName(final String defaultTitleName,
-        final Supplier<Calendar> defaultCreationDate) {
+        final Supplier<ZonedDateTime> defaultCreationDateSupplier) {
         if (m_authorAtom == null) {
             m_authorAtom = new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, MetadataXML.AUTHOR_LABEL,
                 System.getProperty("user.name"), false);
             m_authorAtom.addChangeListener(this);
         }
 
-        if (m_titleAtom == null) {
-            m_titleAtom = new TextFieldMetaInfoAtom(MetadataItemType.TITLE, "legacy-title", defaultTitleName, false);
-            m_titleAtom.addChangeListener(this);
-        } else if (MetaInfoFile.NO_TITLE_PLACEHOLDER_TEXT.equals(m_titleAtom.getValue())) {
-            m_titleAtom.setValue(null);
-        }
-
         if (m_descriptionAtom == null) {
             m_descriptionAtom = new TextAreaMetaInfoAtom(MetadataXML.DESCRIPTION_LABEL, null, false);
             m_descriptionAtom.addChangeListener(this);
-        } else if (MetaInfoFile.NO_DESCRIPTION_PLACEHOLDER_TEXT.equals(m_descriptionAtom.getValue())) {
+        } else if (MetadataXML.NO_DESCRIPTION_PLACEHOLDER_TEXT.equals(m_descriptionAtom.getValue())) {
             m_descriptionAtom.setValue(null);
         }
 
@@ -175,7 +166,7 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
 
         if (m_creationDateAtom == null) {
             m_creationDateAtom =
-                new DateMetaInfoAtom(MetadataXML.CREATION_DATE_LABEL, defaultCreationDate.get(), false);
+                new DateMetaInfoAtom(MetadataXML.CREATION_DATE_LABEL, defaultCreationDateSupplier.get());
             m_creationDateAtom.addChangeListener(this);
         }
     }
@@ -194,16 +185,11 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
         m_savedTagAtoms.addAll(m_tagAtoms);
         m_savedLinkAtoms.addAll(m_linkAtoms);
 
-        m_titleAtom.storeStateForEdit();
         m_descriptionAtom.storeStateForEdit();
         m_authorAtom.storeStateForEdit();
         m_licenseAtom.storeStateForEdit();
-        m_tagAtoms.stream().forEach((tag) -> {
-            tag.storeStateForEdit();
-        });
-        m_linkAtoms.stream().forEach((link) -> {
-            link.storeStateForEdit();
-        });
+        m_tagAtoms.stream().forEach(TagMetaInfoAtom::storeStateForEdit);
+        m_linkAtoms.stream().forEach(LinkMetaInfoAtom::storeStateForEdit);
         m_creationDateAtom.storeStateForEdit();
 
         m_tagWasDeletedDuringEdit.set(false);
@@ -223,16 +209,11 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
         m_savedTagAtoms.clear();
         m_savedLinkAtoms.clear();
 
-        m_titleAtom.restoreState();
         m_descriptionAtom.restoreState();
         m_authorAtom.restoreState();
         m_licenseAtom.restoreState();
-        m_tagAtoms.stream().forEach((tag) -> {
-            tag.restoreState();
-        });
-        m_linkAtoms.stream().forEach((link) -> {
-            link.restoreState();
-        });
+        m_tagAtoms.stream().forEach(TagMetaInfoAtom::restoreState);
+        m_linkAtoms.stream().forEach(LinkMetaInfoAtom::restoreState);
         m_creationDateAtom.restoreState();
     }
 
@@ -244,16 +225,11 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
         m_savedTagAtoms.clear();
         m_savedLinkAtoms.clear();
 
-        m_titleAtom.commitEdit();
         m_descriptionAtom.commitEdit();
         m_authorAtom.commitEdit();
         m_licenseAtom.commitEdit();
-        m_tagAtoms.stream().forEach((tag) -> {
-            tag.commitEdit();
-        });
-        m_linkAtoms.stream().forEach((link) -> {
-            link.commitEdit();
-        });
+        m_tagAtoms.stream().forEach(TagMetaInfoAtom::commitEdit);
+        m_linkAtoms.stream().forEach(LinkMetaInfoAtom::commitEdit);
         m_creationDateAtom.commitEdit();
     }
 
@@ -317,13 +293,11 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
     /**
      * @param url the fully formed URL for the link
      * @param title the display text for the link
-     * @param type the type for the link
      * @return the created instance which was added to the internal store
      * @throws MalformedURLException if the URL is null or is invalid
      */
-    public MetaInfoAtom addLink(final String url, final String title, final String type)
-            throws MalformedURLException {
-        final LinkMetaInfoAtom mia = new LinkMetaInfoAtom("legacy", title, type, url, false);
+    public MetaInfoAtom addLink(final String url, final String title) throws MalformedURLException {
+        final LinkMetaInfoAtom mia = new LinkMetaInfoAtom("legacy", title, url, false);
 
         mia.addChangeListener(this);
         m_linkAtoms.add(mia);
@@ -338,13 +312,6 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
      */
     public MetaInfoAtom getLicense() {
         return m_licenseAtom;
-    }
-
-    /**
-     * @return the atom representing the title
-     */
-    public MetaInfoAtom getTitle() {
-        return m_titleAtom;
     }
 
     /**
@@ -394,7 +361,6 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
 
             if (m_modelObserver != null) {
                 m_modelObserver.modelCardinalityChanged(false);
-                m_modelObserver.modelDirtyStateChanged();
             }
         }
     }
@@ -404,9 +370,6 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
      */
     @Override
     public void metaInfoAtomBecameClean(final MetaInfoAtom cleanAtom) {
-        if (m_titleAtom.isDirty()) {
-            return;
-        }
         if (m_creationDateAtom.isDirty()) {
             return;
         }

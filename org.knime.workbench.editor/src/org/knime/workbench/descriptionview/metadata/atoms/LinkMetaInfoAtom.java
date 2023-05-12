@@ -50,16 +50,13 @@ package org.knime.workbench.descriptionview.metadata.atoms;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.xml.transform.sax.TransformerHandler;
 
-import org.apache.commons.collections4.bidimap.DualHashBidiMap;
-import org.apache.commons.lang3.text.WordUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.layout.GridData;
@@ -68,8 +65,10 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.workflow.metadata.MetadataXML;
+import org.knime.core.util.Pair;
 import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.descriptionview.metadata.PlatformSpecificUIisms;
+import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
@@ -81,29 +80,28 @@ import org.xml.sax.helpers.AttributesImpl;
  */
 public class LinkMetaInfoAtom extends MetaInfoAtom {
     /** The fixed acceptable link type for Blog links **/
-    public static final String LEGACY_METADATA_LINK_BLOG_TYPE_KEYWORD = "BLOG";
+    public static final String LEGACY_METADATA_LINK_BLOG_TYPE_KEYWORD =
+            MetaInfoFile.LEGACY_METADATA_LINK_BLOG_TYPE_KEYWORD;
     /** The fixed acceptable link type for general Website links **/
-    public static final String LEGACY_METADATA_LINK_URL_TYPE_KEYWORD = "URL";
+    public static final String LEGACY_METADATA_LINK_URL_TYPE_KEYWORD =
+            MetaInfoFile.LEGACY_METADATA_LINK_URL_TYPE_KEYWORD;
     /** The fixed acceptable link type for Video links **/
-    public static final String LEGACY_METADATA_LINK_VIDEO_TYPE_KEYWORD = "VIDEO";
+    public static final String LEGACY_METADATA_LINK_VIDEO_TYPE_KEYWORD =
+            MetaInfoFile.LEGACY_METADATA_LINK_VIDEO_TYPE_KEYWORD;
 
     /**
      * A list in preferred combobox display order of link types; display name is on the left, metadata keyword is on the
      * right.
      **/
-    public static final ArrayList<Pair<String, String>> LEGACY_LINK_TYPES;
+    public static final List<Pair<String, String>> LEGACY_LINK_TYPES = MetaInfoFile.LEGACY_LINK_TYPES;
 
     /**
      * This set is different than LEGACY_LINK_TYPES as this contains what we have seen in terms of what people have
      * historically used, whereas LEGACY_LINK_TYPES is an attempt to clamp down on what is legal going forward (until we
      * switch over to a new format for the metadata storage.)
      **/
-    public static final HashSet<String> LEGACY_VALID_INCOMING_TYPE_STRINGS;
-
-    // I've seen legacy metadata show up with this as a type:
-    private static final String URL_LEGACY_KEYWORD_TYPE_NAME = "Website";
-
-    private static final DualHashBidiMap<String, String> DISPLAY_KEYWORD_BIDI_MAP;
+    public static final Set<String> LEGACY_VALID_INCOMING_TYPE_STRINGS =
+            MetaInfoFile.LEGACY_VALID_INCOMING_TYPE_STRINGS;
 
     private static final String BLACK_CIRCLE;
     private static final Color BULLET_COLOR = new Color(PlatformUI.getWorkbench().getDisplay(), 68, 61, 65);
@@ -118,44 +116,9 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
         } else {
             BLACK_CIRCLE = "\u2022";
         }
-
-
-        LEGACY_LINK_TYPES = new ArrayList<>();
-        DISPLAY_KEYWORD_BIDI_MAP = new DualHashBidiMap<>();
-        addDisplayKeywordPair(URL_LEGACY_KEYWORD_TYPE_NAME, LEGACY_METADATA_LINK_URL_TYPE_KEYWORD);
-        addDisplayKeywordPair(LEGACY_METADATA_LINK_VIDEO_TYPE_KEYWORD, LEGACY_METADATA_LINK_VIDEO_TYPE_KEYWORD);
-        addDisplayKeywordPair(LEGACY_METADATA_LINK_BLOG_TYPE_KEYWORD, LEGACY_METADATA_LINK_BLOG_TYPE_KEYWORD);
-
-
-        LEGACY_VALID_INCOMING_TYPE_STRINGS = new HashSet<>();
-        LEGACY_VALID_INCOMING_TYPE_STRINGS.add(URL_LEGACY_KEYWORD_TYPE_NAME.toUpperCase());
-        LEGACY_VALID_INCOMING_TYPE_STRINGS.add(LEGACY_METADATA_LINK_BLOG_TYPE_KEYWORD);
-        LEGACY_VALID_INCOMING_TYPE_STRINGS.add(LEGACY_METADATA_LINK_URL_TYPE_KEYWORD);
-        LEGACY_VALID_INCOMING_TYPE_STRINGS.add(LEGACY_METADATA_LINK_VIDEO_TYPE_KEYWORD);
-    }
-
-    /**
-     * @param keyword the all-caps word beginning the link line in the legacy format metadata comments block
-     * @return the display text for the keyword; if none could be found, the display text associated to
-     *         {@link #LEGACY_METADATA_LINK_URL_TYPE_KEYWORD} will be returned
-     */
-    public static String getDisplayLinkTypeForKeyword(final String keyword) {
-        final String displayText = DISPLAY_KEYWORD_BIDI_MAP.getKey(keyword);
-
-        return (displayText != null)
-                    ? displayText
-                    : DISPLAY_KEYWORD_BIDI_MAP.getKey(LEGACY_METADATA_LINK_URL_TYPE_KEYWORD);
-    }
-
-    private static void addDisplayKeywordPair(final String display, final String keyword) {
-        final String capitalized = WordUtils.capitalizeFully(display);
-
-        LEGACY_LINK_TYPES.add(Pair.of(capitalized, keyword));
-        DISPLAY_KEYWORD_BIDI_MAP.put(capitalized, keyword);
     }
 
 
-    private String m_linkType;
     private String m_linkURL;
 
     private String m_displayText;
@@ -171,8 +134,8 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
     public LinkMetaInfoAtom(final String label, final String value, final boolean readOnly,
         final Map<String, String> otherAttributes)
             throws MalformedURLException {
-        this(label, value, ((otherAttributes != null) ? otherAttributes.get(MetadataXML.URL_TYPE_ATTRIBUTE) : null),
-            ((otherAttributes != null) ? otherAttributes.get(MetadataXML.URL_URL_ATTRIBUTE) : null), readOnly);
+        this(label, value, ((otherAttributes != null) ? otherAttributes.get(MetadataXML.URL_URL_ATTRIBUTE) : null),
+            readOnly);
     }
 
     /**
@@ -186,13 +149,9 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
      *            to mark something as read-only, so consider this future-proofing.
      * @throws MalformedURLException if the URL is null or is invalid
      */
-    public LinkMetaInfoAtom(final String label, final String value, final String type, final String url,
-        final boolean readOnly)
+    public LinkMetaInfoAtom(final String label, final String value, final String url, final boolean readOnly)
                 throws MalformedURLException {
         super(MetadataItemType.LINK, label, value, readOnly);
-
-        // TODO remove as part of the move to the new format for metadata
-        assert DISPLAY_KEYWORD_BIDI_MAP.keySet().contains(type);
 
         String urlToUse = url;
         if (url == null) {
@@ -207,10 +166,9 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
         @SuppressWarnings("unused") // only used to validate the URL
         final URL u = new URL(urlToUse);
 
-        m_linkType = type;
         m_linkURL = urlToUse;
 
-        if (((m_value == null) || (m_value.trim().length() == 0)) && (m_linkURL != null)) {
+        if (((m_value == null) || (m_value.trim().length() == 0))) {
             index = m_linkURL.indexOf("//");
 
             if (index != -1) {
@@ -222,13 +180,6 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
     }
 
     /**
-     * @return the type (e.g 'Blog') for the link
-     */
-    public String getLinkType() {
-        return m_linkType;
-    }
-
-    /**
      * @return the url for the link
      */
     public String getURL() {
@@ -236,7 +187,7 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
     }
 
     private void updateDisplayText() {
-        m_displayText = m_value + (((m_linkType != null) && !m_linkType.isEmpty()) ? " (" + m_linkType + ")" : "");
+        m_displayText = m_value;
     }
 
     /**
@@ -246,11 +197,9 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
      * @return a string to be stuck in the description block
      */
     public String getLegacyDescriptionRepresentation() {
-        final StringBuilder sb = new StringBuilder();
+        final var sb = new StringBuilder();
         final boolean urlMissing = (m_linkURL == null) || (m_linkURL.trim().length() == 0);
         final boolean titleMissing = (m_value == null) || (m_value.trim().length() == 0);
-
-        sb.append(DISPLAY_KEYWORD_BIDI_MAP.get(m_linkType)).append(": ");
 
         if (titleMissing) {
             sb.append("A link");
@@ -331,7 +280,8 @@ public class LinkMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     protected void addAdditionalSaveTimeAttributes(final AttributesImpl attributes) {
-        attributes.addAttribute(null, null, MetadataXML.URL_TYPE_ATTRIBUTE, "CDATA", m_linkType);
+        attributes.addAttribute(null, null, MetadataXML.URL_TYPE_ATTRIBUTE, "CDATA",
+            LEGACY_METADATA_LINK_URL_TYPE_KEYWORD);
         attributes.addAttribute(null, null, MetadataXML.URL_URL_ATTRIBUTE, "CDATA", m_linkURL);
     }
 

@@ -52,11 +52,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.eclipse.core.filesystem.EFS;
@@ -71,13 +69,11 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.eclipse.ui.internal.wizards.datatransfer.ArchiveFileManipulations;
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
-import org.knime.core.node.workflow.WorkflowPersistor;
 import org.knime.core.util.FileUtil;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
-import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
 
 /**
  * Imports workflows from an archive (Zip, tar.gz) file or directory into the workspace.
@@ -95,12 +91,6 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
     private final Shell m_shell;
 
     private final Set<String> m_importedFiles = new HashSet<>();
-
-    // stores those directories which not yet contain a metainfo file and
-    // hence are not displayed - meta info file has to be created after the
-    // import -> occurs when importing archive files containing directories
-    private final List<AbstractExplorerFileStore> m_missingMetaInfoLocations =
-        new ArrayList<AbstractExplorerFileStore>();
 
     /**
      * Imports the elements specified in the passed collection.
@@ -151,11 +141,6 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                 }
                 provider = handleCopyProject(wf, monitor);
             }
-            if (!m_missingMetaInfoLocations.isEmpty()) {
-                createMetaInfo();
-            }
-            // clean up afterwards
-            m_missingMetaInfoLocations.clear();
 
         } catch (Exception e) {
             throw new InvocationTargetException(e);
@@ -376,19 +361,4 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             }
         }
     }
-
-    private void createMetaInfo() throws Exception {
-        for (AbstractExplorerFileStore f : m_missingMetaInfoLocations) {
-            assert f.fetchInfo().exists();
-            File parent = f.toLocalFile();
-            if (parent != null) {
-                File metaInfoFile = new File(parent, WorkflowPersistor.METAINFO_FILE);
-                if (!metaInfoFile.exists() || (metaInfoFile.length() == 0)) {
-                    // don't overwrite (use io.File for the test, AEFS hides the meta info file!)
-                    MetaInfoFile.createOrGetMetaInfoFileForDirectory(parent, false);
-                }
-            }
-        }
-    }
-
 }

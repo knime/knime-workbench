@@ -385,7 +385,9 @@ public class FlatButton extends Canvas {
         m_highlightAsCircle.set(asCircle);
 
         getDisplay().asyncExec(() -> {
-            redraw();
+            if (!isDisposed()) {
+                redraw();
+            }
         });
     }
 

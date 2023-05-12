@@ -48,7 +48,7 @@
  */
 package org.knime.workbench.descriptionview.metadata.component;
 
-import java.util.Calendar;
+import java.time.ZonedDateTime;
 import java.util.EnumSet;
 
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -85,7 +85,7 @@ public class ComponentMetaView extends AbstractMetaView {
      * @param parent
      */
     public ComponentMetaView(final Composite parent) {
-        super(parent, EnumSet.of(HiddenSection.TITLE, HiddenSection.TAGS, HiddenSection.LINKS, HiddenSection.LICENSE,
+        super(parent, EnumSet.of(HiddenSection.TAGS, HiddenSection.LINKS, HiddenSection.LICENSE,
             HiddenSection.CREATION_DATE, HiddenSection.AUTHOR));
     }
 
@@ -241,7 +241,7 @@ public class ComponentMetaView extends AbstractMetaView {
         m_currentAssetName = subNodeContainer.getName();    // TODO getMetadataTitle or similar...
         currentAssetNameHasChanged();
 
-        m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName, Calendar::getInstance);
+        m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName, ZonedDateTime::now);
         m_modelFacilitator.setModelObserver(this);
 
         m_currentWriteProtectionState = m_currentSubNodeContainer.isWriteProtected();
@@ -267,9 +267,18 @@ public class ComponentMetaView extends AbstractMetaView {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    protected void completeSave() { }
+    protected void completeSave() {
+        // nothing to do
+    }
+
+    @Override
+    protected boolean isEditorAvailable() {
+        return true;
+    }
+
+    @Override
+    protected void editModeChanged(final boolean active) {
+        // ignore
+    }
 }

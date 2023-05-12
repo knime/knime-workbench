@@ -48,20 +48,19 @@
  */
 package org.knime.workbench.descriptionview.metadata.atoms;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoField;
 import java.util.Calendar;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.GregorianCalendar;
 
 import javax.xml.transform.sax.TransformerHandler;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.DateTime;
 import org.eclipse.swt.widgets.Label;
 import org.knime.core.node.workflow.metadata.MetaInfoFile;
-import org.knime.core.node.workflow.metadata.MetadataXML;
 import org.knime.workbench.descriptionview.metadata.AbstractMetaView;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 import org.xml.sax.SAXException;
@@ -75,63 +74,40 @@ import org.xml.sax.SAXException;
 public class DateMetaInfoAtom extends MetaInfoAtom {
     private static final String TIME_OF_DAY_SUFFIX = "/12:00:01 +02:00";
 
-    private static boolean compareCalendarDates(final Calendar c1, final Calendar c2) {
-        if ((c1.get(Calendar.YEAR) != c2.get(Calendar.YEAR))
-                || (c1.get(Calendar.MONTH) != c2.get(Calendar.MONTH))
-                || (c1.get(Calendar.DAY_OF_MONTH) != c2.get(Calendar.DAY_OF_MONTH))) {
-            return false;
-        }
-
-        return true;
-    }
-
-
-    private Calendar m_date;
-    private DateTime m_datePicker;
-
-    // redundant to m_date but clearer
-    private Calendar m_editState;
-    private final AtomicBoolean m_isDirty;
+    private ZonedDateTime m_date;
 
     /**
      * @param label the label displayed with the value of this atom in some UI widget; this is historical and unused.
      * @param value the displayed value of this atom.
-     * @param readOnly this has never been observed, and we don't currently have a use case in which we allow the user
-     *            to mark something as read-only, so consider this future-proofing.
      */
-    public DateMetaInfoAtom (final String label, final String value, final boolean readOnly) {
-        super(MetadataItemType.CREATION_DATE, label, value, readOnly);
+    public DateMetaInfoAtom (final String label, final String value) {
+        super(MetadataItemType.CREATION_DATE, label, value, true);
 
         if (value == null) {
             m_date = null;
         } else {
-            m_date = MetaInfoFile.calendarFromDateString(value);
+            final var calendar = MetaInfoFile.calendarFromDateString(value);
+            m_date = calendar instanceof GregorianCalendar gregorian ? gregorian.toZonedDateTime()
+                : ZonedDateTime.ofInstant(calendar.toInstant(), ZoneId.systemDefault());
         }
-
-        m_isDirty = new AtomicBoolean(false);
     }
 
     /**
      * @param label the label displayed with the value of this atom in some UI widget; this is historical and unused.
      * @param date the {@link Calendar} instance representing the date represented by this instance
-     * @param readOnly this has never been observed, and we don't currently have a use case in which we allow the user
-     *            to mark something as read-only, so consider this future-proofing.
      */
-    public DateMetaInfoAtom (final String label, final Calendar date, final boolean readOnly) {
-        super(MetadataItemType.CREATION_DATE, label, MetaInfoFile.dateToStorageString(date), readOnly);
+    public DateMetaInfoAtom (final String label, final ZonedDateTime date) {
+        super(MetadataItemType.CREATION_DATE, label, MetaInfoFile.dateToStorageString(date.getDayOfMonth(),
+            date.getMonthValue(), date.getYear()), true);
 
         m_date = date;
-
-        m_isDirty = new AtomicBoolean(false);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getValue() {
         if (m_date != null) {
-            return MetaInfoFile.dateToStorageString(m_date) + TIME_OF_DAY_SUFFIX;
+            return MetaInfoFile.dateToStorageString(m_date.getDayOfMonth(), m_date.getMonthValue(),
+                m_date.getYear()) + TIME_OF_DAY_SUFFIX;
         }
 
         return super.getValue();
@@ -142,14 +118,6 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     public void storeStateForEdit() {
-        if (m_date != null) {
-            m_editState = Calendar.getInstance();
-            m_editState.set(m_date.get(Calendar.YEAR), m_date.get(Calendar.MONTH), m_date.get(Calendar.DAY_OF_MONTH));
-        } else {
-            m_editState = null;
-        }
-
-        m_isDirty.set(false);
     }
 
     /**
@@ -157,8 +125,6 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     public void restoreState() {
-        m_editState = null;
-        m_datePicker = null;
     }
 
     /**
@@ -166,14 +132,6 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     public void commitEdit() {
-        if (m_datePicker != null) {
-            m_date = Calendar.getInstance();
-            m_date.set(m_datePicker.getYear(), m_datePicker.getMonth(), m_datePicker.getDay());
-
-            m_value = MetaInfoFile.dateToStorageString(m_date) + TIME_OF_DAY_SUFFIX;
-        }
-
-        m_datePicker = null;
     }
 
     /**
@@ -181,7 +139,7 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     public boolean isDirty() {
-        return m_isDirty.get();
+        return false;
     }
 
     /**
@@ -211,31 +169,7 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     public void populateContainerForEdit(final Composite parent) {
-        m_datePicker = new DateTime (parent, SWT.DROP_DOWN | SWT.DATE);
-        m_datePicker.addSelectionListener(new SelectionListener() {
-            @Override
-            public void widgetSelected(final SelectionEvent e) {
-                final Calendar selected = getSelectedDate();
-                final boolean dirty = !compareCalendarDates(selected, m_editState);
-
-                if (dirty != m_isDirty.getAndSet(dirty)) {
-                    messageListeners(dirty ? ListenerEventType.DIRTY : ListenerEventType.CLEAN);
-                }
-            }
-
-            @Override
-            public void widgetDefaultSelected(final SelectionEvent e) { }
-        });
-        if (m_date != null) {
-            m_datePicker.setYear(m_date.get(Calendar.YEAR));
-            m_datePicker.setMonth(m_date.get(Calendar.MONTH));
-            m_datePicker.setDay(m_date.get(Calendar.DAY_OF_MONTH));
-        }
-
-        final GridData gd = (GridData)parent.getLayoutData();
-        gd.heightHint = m_datePicker.computeSize(SWT.DEFAULT, SWT.DEFAULT).y + 4;
-        // re-set it again in case some platform does a clone on get
-        parent.setLayoutData(gd);
+        populateContainerForDisplay(parent);
     }
 
     /**
@@ -243,7 +177,6 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     public void focus() {
-        m_datePicker.setFocus();
     }
 
     /**
@@ -251,28 +184,25 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
      */
     @Override
     public void save(final TransformerHandler parentElement) throws SAXException {
-        if (hasContent()) {
-            save(parentElement, MetadataXML.DATE);
-        }
-    }
-
-    private Calendar getSelectedDate() {
-        final Calendar date = Calendar.getInstance();
-
-        date.set(m_datePicker.getYear(), m_datePicker.getMonth(), m_datePicker.getDay());
-
-        return date;
+        // nothing to save
     }
 
     private String displayFormatForCalendar() {
         if (m_date != null) {
-            final StringBuilder sb = new StringBuilder();
-            sb.append(m_date.get(Calendar.YEAR)).append('-');
-            sb.append(m_date.get(Calendar.MONTH) + 1).append('-');
-            sb.append(m_date.get(Calendar.DAY_OF_MONTH));
+            final var sb = new StringBuilder();
+            sb.append(m_date.get(ChronoField.YEAR)).append('-');
+            sb.append(m_date.get(ChronoField.MONTH_OF_YEAR)).append('-');
+            sb.append(m_date.get(ChronoField.DAY_OF_MONTH));
             return sb.toString();
         }
 
         return "Not set.";
+    }
+
+    /**
+     * @return the selected point in time
+     */
+    public ZonedDateTime getDateTime() {
+        return m_date;
     }
 }

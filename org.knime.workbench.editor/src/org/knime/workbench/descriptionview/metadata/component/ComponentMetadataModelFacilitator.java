@@ -51,9 +51,9 @@ package org.knime.workbench.descriptionview.metadata.component;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.net.URL;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -89,7 +89,7 @@ import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.ComponentMetadata;
-import org.knime.core.node.workflow.ComponentMetadata.ComponentMetadataBuilder;
+import org.knime.core.node.workflow.ComponentMetadata.ComponentOptionalsBuilder;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.workbench.descriptionview.BrowserProvider;
@@ -123,9 +123,7 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
     static {
         NODE_TYPES_TO_DISPLAY = new ArrayList<>();
         NODE_TYPES_TO_DISPLAY.add(NO_SELECTION_NODE_TYPE);
-        for (final ComponentMetadata.ComponentNodeType ct : ComponentMetadata.ComponentNodeType.values()) {
-            NODE_TYPES_TO_DISPLAY.add(ct);
-        }
+        NODE_TYPES_TO_DISPLAY.addAll(Arrays.asList(ComponentMetadata.ComponentNodeType.values()));
     }
 
 
@@ -194,11 +192,9 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
         // These are not presently used in component views, so we populate them with dummy values as their
         //      existence and (not-)dirty state is tracked by our parent class.
-        m_titleAtom =
-            new TextFieldMetaInfoAtom(MetadataItemType.TITLE, "legacy-title", "unused in components", false);
         m_authorAtom =
             new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, "legacy-author", "unused in components", false);
-        m_creationDateAtom = new DateMetaInfoAtom("legacy-creation-date", Calendar.getInstance(), false);
+        m_creationDateAtom = new DateMetaInfoAtom("legacy-creation-date", ZonedDateTime.now());
         m_licenseAtom = new ComboBoxMetaInfoAtom("legacy-license", "unused in components", false);
         // Left here, but commented out, for future versions of component metadata
 //        for (final String tag : m_mockProvider.getTags()) {
@@ -330,31 +326,36 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
                 //limit size of the image stored
                 m_nodeIcon = NodeContainerFigure.scaleImageTo(64, m_nodeIcon);
             }
-            final ImageLoader imageLoader = new ImageLoader();
-            imageLoader.data = new ImageData[]{m_nodeIcon};
-            final ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            imageLoader.save(stream, 5); //write to byte[] as png
+            final var imageLoader = new ImageLoader();
+            imageLoader.data = new ImageData[]{ m_nodeIcon };
+            final var stream = new ByteArrayOutputStream();
+            imageLoader.save(stream, SWT.IMAGE_PNG);
             icon = stream.toByteArray();
         } else {
             icon = null;
         }
 
-        final ComponentMetadataBuilder builder = ComponentMetadata.builder().description(m_descriptionAtom.getValue())
-            .type((m_nodeType != null) ? m_nodeType : null).icon(icon);
+        final ComponentOptionalsBuilder builder = ComponentMetadata.fluentBuilder()
+                .withComponentType((m_nodeType != null) ? m_nodeType : null)
+                .withIcon(icon);
 
         String[] names = getStringArrayFromTextArray(m_inportNameTextFields);
         String[] descriptions = getStringArrayFromTextArray(m_inportDescriptionTextFields);
-        for (int i = 0; i < names.length; i++) {
-            builder.addInPortNameAndDescription(names[i], descriptions[i]);
+        for (var i = 0; i < names.length; i++) {
+            builder.withInPort(names[i], descriptions[i]);
         }
 
         names = getStringArrayFromTextArray(m_outportNameTextFields);
         descriptions = getStringArrayFromTextArray(m_outportDescriptionTextFields);
-        for (int i = 0; i < names.length; i++) {
-            builder.addOutPortNameAndDescription(names[i], descriptions[i]);
+        for (var i = 0; i < names.length; i++) {
+            builder.withOutPort(names[i], descriptions[i]);
         }
 
-        m_subNodeContainer.setMetadata(builder.build());
+        m_subNodeContainer.setMetadata(builder //
+                .withPlainContent() //
+                .withLastModifiedNow() //
+                .withDescription(m_descriptionAtom.getValue()) //
+                .build());
 
     }
 

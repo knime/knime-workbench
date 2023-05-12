@@ -50,7 +50,6 @@ package org.knime.workbench.descriptionview;
 
 import java.lang.ref.WeakReference;
 import java.time.ZonedDateTime;
-import java.util.GregorianCalendar;
 
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.ISelection;
@@ -106,7 +105,7 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
     private ComponentMetaView m_componentMetaView;
     private Control m_previousNonEmtpyView;
 
-    private WeakReference<IStructuredSelection> m_lastSelection;
+    private WeakReference<?> m_lastSelection;
 
     private Composite m_control;
 
@@ -116,7 +115,7 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
     @Override
     public void createPartControl(final Composite parent) {
         final IWorkbenchPage iwp = getViewSite().getPage();
-        iwp.addSelectionListener(this);
+        iwp.addPostSelectionListener(this);
 
         parent.setLayout(new GridLayout());
 
@@ -140,9 +139,7 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
         m_stackLayout.topControl = m_nodeDescriptionView;
         m_previousNonEmtpyView = m_nodeDescriptionView;
 
-        parent.getDisplay().asyncExec(() -> {
-            attemptToDisplayCurrentSelectionOrWorkflowMetadata();
-        });
+        parent.getDisplay().asyncExec(this::attemptToDisplayCurrentSelectionOrWorkflowMetadata);
     }
 
     /**
@@ -150,13 +147,14 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
      */
     @Override
     public void dispose () {
+        super.dispose();
         final IWorkbenchPage iwp = getViewSite().getPage();
-        iwp.removeSelectionListener(this);
+        iwp.removePostSelectionListener(this);
     }
 
     /**
      * This provides a sew-in point for the display of remotely fetched metadata as requested in AP-12082; if
-     *  the author, description, and creation date are all null, it will be interpretted as a failure to
+     *  the author, description, and creation date are all null, it will be interpreted as a failure to
      *  fetch remote metadata.
      *
      * @param author the author, or null
@@ -166,11 +164,9 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
      */
     public void displayRemoteMetadata(final String author, final String legacyDescription,
         final ZonedDateTime creationDate, final boolean shouldShowCCBY40License) {
-        PlatformUI.getWorkbench().getDisplay().asyncExec(() -> {
-            final GregorianCalendar c = (creationDate != null) ? GregorianCalendar.from(creationDate) : null;
-            m_workflowMetaView.handleAsynchronousRemoteMetadataPopulation(author, legacyDescription, c,
-                shouldShowCCBY40License);
-        });
+        PlatformUI.getWorkbench().getDisplay().asyncExec(() ->
+            m_workflowMetaView.handleAsynchronousRemoteMetadataPopulation(author, legacyDescription, creationDate,
+                shouldShowCCBY40License));
     }
 
     /**
@@ -194,22 +190,20 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
      * {@inheritDoc}
      */
     @Override
-    public void selectionChanged(final IWorkbenchPart part, final ISelection selection) {
-        if (selection instanceof IStructuredSelection) {
-            final IStructuredSelection structuredSelection = (IStructuredSelection)selection;
-            final IStructuredSelection lastSelection = (m_lastSelection == null) ? null : m_lastSelection.get();
+    public void selectionChanged(final IWorkbenchPart part, final ISelection selection) { // NOSONAR
+        if (selection instanceof IStructuredSelection structuredSelection) {
+            final var selected = structuredSelection.getFirstElement();
+            final var lastSelected = (m_lastSelection == null) ? null : m_lastSelection.get();
 
             // we do not clear our content if nothing is selected.
-            if ((structuredSelection.size() < 1) || structuredSelection.equals(lastSelection)) {
+            if (selected == null || selected.equals(lastSelected)) {
                 return;
             }
 
-            if ((lastSelection != null)
-                    && ((lastSelection.getFirstElement() instanceof WorkflowRootEditPart)
-                            || (lastSelection.getFirstElement() instanceof ContentObject))
-                && (m_workflowMetaView.inEditMode() || m_componentMetaView.inEditMode())) {
-                final AbstractMetaView editModeView = m_componentMetaView.inEditMode() ? m_componentMetaView
-                                                                                       : m_workflowMetaView;
+            if ((lastSelected instanceof WorkflowRootEditPart || lastSelected instanceof ContentObject)
+                    && (m_workflowMetaView.inEditMode() || m_componentMetaView.inEditMode())) {
+                final AbstractMetaView editModeView =
+                        m_componentMetaView.inEditMode() ? m_componentMetaView : m_workflowMetaView;
 
                 if (editModeView.modelIsDirty()) {
                     displayDirtyWarning(() -> {
@@ -226,7 +220,7 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
     }
 
     private void moveControlToTop(final Control c) {
-        if (m_stackLayout.topControl != c) {
+        if (!m_control.isDisposed() && !c.isDisposed() && m_stackLayout.topControl != c) {
             if (m_emptyView != c) {
                 m_previousNonEmtpyView = c;
             }
@@ -255,12 +249,11 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
     }
 
     private void finishSelectionChange(final IStructuredSelection structuredSelection) {
-        m_lastSelection = new WeakReference<>(structuredSelection);
-
         final Object o = structuredSelection.getFirstElement();
+        m_lastSelection = new WeakReference<>(o);
+
         if ((o instanceof ContentObject) || (o instanceof WorkflowRootEditPart)) {
-            if (o instanceof WorkflowRootEditPart) {
-                final WorkflowRootEditPart wrep = (WorkflowRootEditPart)o;
+            if (o instanceof WorkflowRootEditPart wrep) {
                 if (Wrapper.wraps(wrep.getWorkflowManager(), WorkflowManager.class)) {
                     final WorkflowManager wm = Wrapper.unwrapWFM(wrep.getWorkflowManager());
                     final NodeContainerParent ncp = wm.getDirectNCParent();
@@ -283,7 +276,7 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
         }
     }
 
-    private void attemptToDisplayCurrentSelectionOrWorkflowMetadata() {
+    private void attemptToDisplayCurrentSelectionOrWorkflowMetadata() { // NOSONAR
         final IWorkbenchWindow iww = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
 
         if (iww != null) {
@@ -312,5 +305,15 @@ public class DescriptionView extends ViewPart implements ISelectionListener {
                 }
             }
         }
+    }
+
+    /**
+     * @param manager workflow manager to look for, may be {@code null}
+     * @return {@code true} if this editor is currently editing the given workflow manager's metadata,
+     * {@code false} otherwise
+     */
+    public boolean isDirtyEditing(final WorkflowManager manager) {
+        return manager != null && !m_workflowMetaView.isDisposed() && m_workflowMetaView.inEditMode()
+                && m_workflowMetaView.isDirtyEditing(manager);
     }
 }

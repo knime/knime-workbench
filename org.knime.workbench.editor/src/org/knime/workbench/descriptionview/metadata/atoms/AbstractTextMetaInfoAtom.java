@@ -150,6 +150,7 @@ public abstract class AbstractTextMetaInfoAtom extends MetaInfoAtom {
 
         m_editTextWidget.setLayoutData(gridData);
         m_editTextWidget.setText((m_value == null) ? "" : m_value);
+        m_editTextWidget.setEditable(!isReadOnly());
         m_editTextWidget.addKeyListener(new KeyAdapter() {
             /**
              * {@inheritDoc}

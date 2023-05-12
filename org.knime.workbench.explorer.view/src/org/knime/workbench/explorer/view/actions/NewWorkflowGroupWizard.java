@@ -47,14 +47,11 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
-import java.io.File;
-
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.ui.workflow.metadata.MetaInfoFile;
 
 /**
  * @author ohl, University of Konstanz
@@ -75,28 +72,23 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
      */
     @Override
     public void addPages() {
-        NewWorkflowWizardPage page = new NewWorkflowWizardPage(getMountIDs(),
-                getInitialSelection(),
-                /* isWorkflow= */false);
-        addPage(page);
+        addPage(new NewWorkflowWizardPage(getMountIDs(), getInitialSelection(), /* isWorkflow= */false));
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    protected void doFinish(final AbstractExplorerFileStore newItem,
-            final IProgressMonitor monitor) throws CoreException {
+    protected void doFinish(final AbstractExplorerFileStore newItem, final IProgressMonitor monitor)
+            throws CoreException {
 
         if (newItem.fetchInfo().exists()) {
-            throwCoreException("Resource \"" + newItem.getFullName()
-                    + "\" already exists.", null);
+            throwCoreException("Resource \"" + newItem.getFullName() + "\" already exists.", null);
         }
 
         if (!newItem.getParent().fetchInfo().exists()) {
             throwCoreException("Parent directory doesn't exist. "
-                    + "Create a workflow group before you place "
-                    + "a workflow group in.", null);
+                + "Create a workflow group before you place a workflow group in.", null);
         }
 
         // create workflow group dir
@@ -104,17 +96,15 @@ public class NewWorkflowGroupWizard extends NewWorkflowWizard {
 
         if (newItem instanceof LocalExplorerFileStore) {
             // create a new empty meta info file
-            File locFile = newItem.toLocalFile(EFS.NONE, monitor);
+            final var locFile = newItem.toLocalFile(EFS.NONE, monitor);
             if (locFile == null) {
                 // strange - can't create meta info file then
                 return;
             }
-            MetaInfoFile.createOrGetMetaInfoFileForDirectory(locFile, false);
         }
 
         // Refresh parent of the newly created workflow group.
         newItem.getParent().refresh();
-        // TODO handle meta file creation for remote files
     }
 
     /**
