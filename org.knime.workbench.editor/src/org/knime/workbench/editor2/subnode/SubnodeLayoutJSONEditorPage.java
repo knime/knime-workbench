@@ -115,6 +115,7 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.node.dialog.DialogNode;
 import org.knime.core.node.dialog.util.ConfigurationLayoutUtil;
+import org.knime.core.node.port.report.ReportConfiguration;
 import org.knime.core.node.util.ViewUtils;
 import org.knime.core.node.web.WebTemplate;
 import org.knime.core.node.web.WebViewContent;
@@ -180,6 +181,8 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
     private LayoutEditorBrowser m_configurationBrowser;
     private LayoutEditorBrowserFunction m_visualLayoutUpdate;
     private LayoutEditorBrowserFunction m_configurationLayoutUpdate;
+
+    private ReportUsageComposite m_reportUsageComposite;
 
     /**
      * Crates a new page instance with a given page name
@@ -294,8 +297,15 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
                     return false;
                 }
             }
+            final ReportConfiguration reportConfig;
+            if (m_reportUsageComposite.isEnableReportOutput()) {
+                reportConfig = new ReportConfiguration(m_reportUsageComposite.getReportPageSize(),
+                    m_reportUsageComposite.getReportOrientation());
+            } else {
+                reportConfig = null;
+            }
+            m_subNodeContainer.getParent().changeSubNodeReportOutput(m_subNodeContainer.getID(), reportConfig);
         }
-
         return true;
     }
 
@@ -352,6 +362,7 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
             }
         });
         m_visualLayoutUpdate = m_browser.registerBrowserFunction("pushLayout", new UpdateLayoutFunction());
+        m_reportUsageComposite = new ReportUsageComposite(composite, m_subNodeContainer);
         return composite;
     }
 
