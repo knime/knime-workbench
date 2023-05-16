@@ -284,6 +284,52 @@ public class ExplorerURLStreamHandlerTest {
     }
 
     /**
+     * Checks if workflow-relative knime-URLs do not leave the space.
+     *
+     * @throws Exception if an error occurs
+     */
+    @Test
+    public void testResolveWorkflowRelativeURLDontLeaveSpace() throws Exception {
+        final var repoAddressUri = URI.create("https://api.hub.knime.com:443/knime/rest/v4/repository");
+        final var currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
+
+        final var context = WorkflowContextV2.builder()
+                .withHubJobExecutor(exec -> exec
+                    .withCurrentUserAsUserId()
+                    .withLocalWorkflowPath(currentLocation)
+                    .withJobId(UUID.randomUUID())
+                    .withScope("test", "test")
+                    .withJobCreator("test"))
+                .withHubSpaceLocation(loc -> loc
+                    .withRepositoryAddress(repoAddressUri)
+                    .withWorkflowPath("/Users/john/Private/folder/workflow")
+                    .withAuthenticator(new SimpleTokenAuthenticator("token"))
+                    .withDefaultMountId("My-Knime-Hub")
+                    .withSpace("/Users/john/Private", "*11", null)
+                    .withWorkflowItemId("*12"))
+                .build();
+
+        final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
+            new WorkflowCreationHelper(context));
+        wfm.save(currentLocation.toFile(), new ExecutionMonitor(), false);
+        NodeContext.pushContext(wfm);
+
+        assertResolvedURIEquals("Unexpected resolved URL",
+            URI.create("https://api.hub.knime.com:443/knime/rest/v4/repository/Users/john/Private/test.txt:data"),
+            new URL("knime://knime.workflow/../../test.txt"));
+
+        final var urlA = new URL("knime://knime.workflow/../../../Public/test.txt");
+        final var eA = assertThrows(IOException.class, () -> m_handler.openConnection(urlA));
+        assertTrue("Error should indicate that leaving the Hub space is not allowed, found " + eA,
+            eA.getMessage().contains("Leaving the Hub space is not allowed for workflow relative URLs:"));
+
+        final var urlB = new URL("knime://knime.workflow/foo/../../../../test.txt");
+        final var eB = assertThrows(IOException.class, () -> m_handler.openConnection(urlB));
+        assertTrue("Error should indicate that '../' must be at start of URL, found: " + eB,
+            eB.getMessage().contains("URLs leaving the workflow must start with '/..'"));
+    }
+
+    /**
      * Checks if mountpoint-relative knime-URLs are resolved correctly.
      *
      * @throws Exception if an error occurs
@@ -616,6 +662,10 @@ public class ExplorerURLStreamHandlerTest {
         assertResolvedURIEquals("Unexpected resolved URL",
             URI.create(repoAddressUri.toString() + "/Users/john/Private/boss/test%20small.txt:data?spaceVersion=4"),
             new URL("knime://knime.space/boss/test%20small.txt"));
+        final var e = assertThrows(IOException.class,
+            () -> m_handler.openConnection(new URL("knime://knime.space/test/../../Public/stuff/test.txt")));
+        assertTrue("Error should indicate that leaving the Hub space is not allowed.",
+            e.getMessage().contains("Leaving the Hub space is not allowed"));
     }
 
     /**
