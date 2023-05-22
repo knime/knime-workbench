@@ -60,7 +60,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.cxf.jaxrs.impl.UriBuilderImpl;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -114,6 +113,8 @@ import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProvider.LinkType;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.ui.KNIMEUIPlugin;
+
+import jakarta.ws.rs.core.UriBuilder;
 
 /**
  * JFace implementation of a dialog for changing link properties of multiple components or meta nodes at once. Only
@@ -531,7 +532,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         }
         final var targetVersion = dialog.getSelectedVersion();
         final var paramValue = targetVersion.getFirst().getParameterString(targetVersion.getSecond());
-        final var newUri = new UriBuilderImpl(m_selectedLinkURI) //
+        final var newUri = UriBuilder.fromUri(m_selectedLinkURI) //
                 .replaceQueryParam("spaceVersion", paramValue) //
                 .build();
         m_selectedLinkURI = newUri;

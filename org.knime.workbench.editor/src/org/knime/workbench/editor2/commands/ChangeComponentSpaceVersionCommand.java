@@ -48,12 +48,13 @@ package org.knime.workbench.editor2.commands;
 
 import java.net.URI;
 
-import org.apache.cxf.jaxrs.impl.UriBuilderImpl;
 import org.eclipse.gef.commands.CompoundCommand;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
+
+import jakarta.ws.rs.core.UriBuilder;
 
 /**
  * A compound command that first changes the link (source URI) of a linked Component and then performs an update.
@@ -84,7 +85,7 @@ public class ChangeComponentSpaceVersionCommand extends AbstractKNIMECommand {
 
     static URI setSpaceVersion(final URI oldUri, final String spaceVersion) {
         // this removes the parameter if spaceVersion is null
-        return new UriBuilderImpl(oldUri)//
+        return UriBuilder.fromUri(oldUri)//
             .replaceQueryParam("spaceVersion", spaceVersion)//
             .build();
     }
