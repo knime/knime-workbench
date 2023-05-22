@@ -8,6 +8,6 @@
     <extension>
         <groupId>com.nuance.clu.maven</groupId>
         <artifactId>maven-feature-branch-extension</artifactId>
-        <version>1.0.2.0011-fb0f827</version>
+        <version>1.1.0.0013-6a6c855</version>
      </extension>
 </extensions>
