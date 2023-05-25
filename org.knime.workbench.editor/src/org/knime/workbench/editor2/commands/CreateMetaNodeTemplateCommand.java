@@ -161,42 +161,57 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
     /** {@inheritDoc} */
     @Override
     public void execute() {
+        createMetaNodeTemplate(getHostWFM(), m_templateURI, m_location.x, m_location.y, m_isRemoteLocation,
+            m_snapToGrid);
+    }
+
+    /**
+     * Creates a meta-node template (i.e. adds a component or metanode from a url to the workflow).
+     *
+     * @param wfm
+     * @param templateURI
+     * @param x
+     * @param y
+     * @param isRemoteLocation
+     * @param snapToGrid
+     * @return the added node or {@code null} if it failed
+     */
+    public static NodeContainer createMetaNodeTemplate(final WorkflowManager wfm, final URI templateURI, final int x, // NOSONAR
+        final int y, final boolean isRemoteLocation, final boolean snapToGrid) {
         // Add node to workflow and get the container
         LoadMetaNodeTemplateRunnable loadRunnable = null;
+        NodeContainer container = null;
         try {
             IWorkbench wb = PlatformUI.getWorkbench();
             IProgressService ps = wb.getProgressService();
             // this one sets the workflow manager in the editor
-            loadRunnable = new LoadMetaNodeTemplateRunnable(getHostWFM(), m_templateURI);
-            if (m_isRemoteLocation) {
+            loadRunnable = new LoadMetaNodeTemplateRunnable(wfm, templateURI);
+            if (isRemoteLocation) {
                 ps.busyCursorWhile(loadRunnable);
             } else {
                 ps.run(false, true, loadRunnable);
             }
             MetaNodeLinkUpdateResult result = loadRunnable.getLoadResult();
-            m_container = (NodeContainer)result.getLoadedInstance();
-            if (m_container == null) {
+            container = (NodeContainer)result.getLoadedInstance();
+            if (container == null) {
                 throw new RuntimeException("No template returned by load routine, see log for details");
             }
             // create extra info and set it
-            NodeUIInformation info = NodeUIInformation.builder()
-                    .setNodeLocation(m_location.x, m_location.y, -1, -1)
-                    .setHasAbsoluteCoordinates(false)
-                    .setSnapToGrid(m_snapToGrid)
-                    .setIsDropLocation(true).build();
-            m_container.setUIInformation(info);
+            NodeUIInformation info = NodeUIInformation.builder().setNodeLocation(x, y, -1, -1)
+                .setHasAbsoluteCoordinates(false).setSnapToGrid(snapToGrid).setIsDropLocation(true).build();
+            container.setUIInformation(info);
 
-            if (m_container instanceof SubNodeContainer) {
-                SubNodeContainer projectComponent = getHostWFM().getProjectComponent().orElse(null);
+            if (container instanceof SubNodeContainer) {
+                SubNodeContainer projectComponent = wfm.getProjectComponent().orElse(null);
                 if (projectComponent != null) {
                     // unlink component if it's added to itself
                     MetaNodeTemplateInformation projectTemplateInformation = projectComponent.getTemplateInformation();
                     MetaNodeTemplateInformation templateInformation =
-                        ((SubNodeContainer)m_container).getTemplateInformation();
+                        ((SubNodeContainer)container).getTemplateInformation();
                     if (Objects.equals(templateInformation.getSourceURI(), projectTemplateInformation.getSourceURI())) {
                         MessageDialog.openWarning(SWTUtilities.getActiveShell(), "Disconnect Link",
                             "Components can only be added to themselves without linking. Will be disconnected.");
-                        m_container.getParent().setTemplateInformation(m_container.getID(),
+                        container.getParent().setTemplateInformation(container.getID(),
                             MetaNodeTemplateInformation.NONE);
                     }
                 }
@@ -229,6 +244,8 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
                 MessageDialog.openError(SWTUtilities.getActiveShell(), "Node cannot be created.", error);
             }
         }
+
+        return container;
     }
 
     /** {@inheritDoc} */
