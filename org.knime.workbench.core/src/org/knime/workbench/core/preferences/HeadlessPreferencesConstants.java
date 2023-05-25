@@ -53,8 +53,14 @@ import org.knime.core.node.workflow.NodeTimer;
 public final class HeadlessPreferencesConstants {
     private HeadlessPreferencesConstants() { }
 
-    /** Preference constant: log level for console appender. */
+    /** Preference constant: log level for log file appender. */
     public static final String P_LOGLEVEL_LOG_FILE = "logging.loglevel.logfile";
+
+    /** Preference constant: log level for stdout appender. */
+    public static final String P_LOGLEVEL_STDOUT = "logging.loglevel.stdout";
+
+    /** Preference constant: log level for console appender. */
+    public static final String P_LOGLEVEL_CONSOLE = "logging.loglevel.console";
 
     /** Preference constant: log file location. */
     public static final String P_LOG_FILE_LOCATION = "logging.logfile.location";

@@ -57,6 +57,7 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.knime.core.node.Node;
 import org.knime.core.node.NodeLogger.LEVEL;
 import org.knime.workbench.core.KNIMECorePlugin;
+import org.knime.workbench.core.preferences.HeadlessPreferencesConstants;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
@@ -97,7 +98,7 @@ public class MainPreferencePage extends FieldEditorPreferencePage
 
         // Specify the minimum log level for the console
         m_consoleLogEditor = new RadioGroupFieldEditor(
-                KNIMECorePlugin.P_LOGLEVEL_CONSOLE,
+                HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE,
                 "Console View Log Level", 4,
                 new String[][] {
                         {"&DEBUG", LEVEL.DEBUG.name()},

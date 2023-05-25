@@ -98,9 +98,6 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(
             KNIMECorePlugin.class);
 
-    /** Preference constant: log level for console appender. */
-    public static final String P_LOGLEVEL_CONSOLE = "logging.loglevel.console";
-
     /**
      * Keeps list of <code>ConsoleViewAppender</code>. TODO FIXME remove
      * static if you want to have a console for each Workbench
@@ -133,8 +130,7 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
         try {
             // get the preference store
             // with the preferences for nr threads and tempDir
-            IPreferenceStore pStore =
-                KNIMECorePlugin.getDefault().getPreferenceStore();
+            final var pStore = KNIMECorePlugin.getDefault().getPreferenceStore();
             initMaxThreadCountProperty();
             initTmpDirProperty();
             // set log file level to stored
@@ -224,7 +220,7 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
                         if (newName.isEmpty()) {
                             return;
                         }
-                        setLogLevel(newName);
+                        setLogLevelOnConsoleView(newName);
                     } else if (HeadlessPreferencesConstants.P_DATABASE_TIMEOUT.equals(propertyName)) {
                         //setting is still exposed in the new db preference page and stored in this preference store!!!
                         DatabaseConnectionSettings.setDatabaseTimeout(Integer.parseInt(event.getNewValue().toString()));
@@ -239,8 +235,7 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             });
             // end property listener
 
-            String logLevelConsole =
-                pStore.getString(P_LOGLEVEL_CONSOLE);
+            String logLevelConsole = pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE);
             if (!Boolean.getBoolean("java.awt.headless") && PlatformUI.isWorkbenchRunning()) {
                 //async exec should fix AP-13234 (deadlock):
                 Display.getDefault().asyncExec(() -> {
@@ -254,7 +249,7 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
                     } catch (IOException ioe) {
                         LOGGER.error("Could not print welcome message: ", ioe);
                     }
-                    setLogLevel(logLevelConsole);
+                    setLogLevelOnConsoleView(logLevelConsole);
                 });
             }
             // encryption key supplier registered with the eclipse framework
@@ -373,13 +368,12 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
 
 
     /**
-     * Register the appenders according to logLevel, i.e.
-     * PreferenceConstants.P_LOGLEVEL_DEBUG,
-     * PreferenceConstants.P_LOGLEVEL_INFO, etc.
+     * Register the appenders according to logLevel for the console view, i.e.
+     * PreferenceConstants.P_LOGLEVEL_DEBUG, PreferenceConstants.P_LOGLEVEL_INFO, etc.
      *
      * @param logLevel The new log level.
      */
-    private static void setLogLevel(final String logLevel) {
+    private static void setLogLevelOnConsoleView(final String logLevel) {
         // check if can create a console view
         // only possible if we are not "headless"
         if (Boolean.valueOf(System.getProperty("java.awt.headless", "false"))) {
@@ -413,13 +407,12 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
         } else {
             LOGGER.warn("Invalid log level " + logLevel + "; setting to "
                     + LEVEL.WARN.name());
-            setLogLevel(LEVEL.WARN.name());
+            setLogLevelOnConsoleView(LEVEL.WARN.name());
         }
         if (changed) {
             LOGGER.info("Setting console view log level to " + logLevel);
         }
     }
-
 
     /**
      * Add the given Appender to the NodeLogger.

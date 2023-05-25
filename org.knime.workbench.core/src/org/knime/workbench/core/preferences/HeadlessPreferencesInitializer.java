@@ -44,9 +44,9 @@
  */
 package org.knime.workbench.core.preferences;
 
-import static org.knime.workbench.core.KNIMECorePlugin.P_LOGLEVEL_CONSOLE;
 import static org.knime.workbench.core.WorkflowMigrationSettings.P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_DATABASE_TIMEOUT;
+import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOG_FILE_LOCATION;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOG_GLOBAL_IN_WF_DIR;
