@@ -66,6 +66,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeLogger.LEVEL;
+import org.knime.core.node.NodeLoggerConfig;
 import org.knime.core.node.port.database.DatabaseConnectionSettings;
 import org.knime.core.node.port.database.DatabaseDriverLoader;
 import org.knime.core.util.KnimeEncryption;
@@ -134,10 +135,12 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             initMaxThreadCountProperty();
             initTmpDirProperty();
             // set log file level to stored
-            String logLevelFile =
-                pStore.getString(HeadlessPreferencesConstants
-                        .P_LOGLEVEL_LOG_FILE);
-            NodeLogger.setAppenderLevelRange(NodeLogger.LOGFILE_APPENDER, LEVEL.valueOf(logLevelFile), LEVEL.FATAL);
+            setLogLevelOnNodeLogger(pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE),
+                HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE);
+            // set stdout level to stored
+            setLogLevelOnNodeLogger(pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_STDOUT),
+                HeadlessPreferencesConstants.P_LOGLEVEL_STDOUT);
+
             final boolean enableWorkflowRelativeLogging =
                     pStore.getBoolean(HeadlessPreferencesConstants.P_LOG_FILE_LOCATION);
             NodeLogger.logInWorkflowDir(enableWorkflowRelativeLogging);
@@ -179,23 +182,6 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
                         } catch (Exception e) {
                             LOGGER.error("Setting temp dir failed: " + e.getMessage(), e);
                         }
-                    } else if (HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE.equals(propertyName)) {
-                        if (!(event.getNewValue() instanceof String)) {
-                            // when preferences are imported and this value is
-                            // not set, they send an empty string
-                            return;
-                        }
-                        String newName = (String)event.getNewValue();
-                        if (newName.isEmpty()) {
-                            return;
-                        }
-                        LEVEL level = LEVEL.WARN;
-                        try {
-                            level = LEVEL.valueOf(newName);
-                        } catch (IllegalArgumentException iae) {
-                            LOGGER.error("Invalid log level " + newName + ", using WARN");
-                        }
-                        NodeLogger.setAppenderLevelRange(NodeLogger.LOGFILE_APPENDER, level, LEVEL.FATAL);
                     } else if (HeadlessPreferencesConstants.P_LOG_FILE_LOCATION.equals(propertyName)) {
                         if (!(event.getNewValue() instanceof Boolean)) {
                             // when preferences are imported and this value is not set, they send an empty string
@@ -210,7 +196,20 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
                         }
                         Boolean enable = (Boolean)event.getNewValue();
                         NodeLogger.logGlobalMsgsInWfDir(enable);
-                    } else if (P_LOGLEVEL_CONSOLE.equals(propertyName)) {
+
+                    } else if (HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE.equals(propertyName) ||
+                            HeadlessPreferencesConstants.P_LOGLEVEL_STDOUT.equals(propertyName)) {
+                        if (!(event.getNewValue() instanceof String)) {
+                            // when preferences are imported and this value is
+                            // not set, they send an empty string
+                            return;
+                        }
+                        String newName = (String)event.getNewValue();
+                        if (newName.isEmpty()) {
+                            return;
+                        }
+                        setLogLevelOnNodeLogger(newName, propertyName);
+                    } else if (HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE.equals(propertyName)) {
                         if (!(event.getNewValue() instanceof String)) {
                             // when preferences are imported and this value is
                             // not set, they send an empty string
@@ -235,7 +234,7 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             });
             // end property listener
 
-            String logLevelConsole = pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE);
+            final var logLevelConsole = pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE);
             if (!Boolean.getBoolean("java.awt.headless") && PlatformUI.isWorkbenchRunning()) {
                 //async exec should fix AP-13234 (deadlock):
                 Display.getDefault().asyncExec(() -> {
@@ -366,6 +365,33 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
         m_resourceBundle = null;
     }
 
+    /**
+     * Sets a given minimum log level to the given logger property. Uses the default maximum log level value of FATAL.
+     *
+     * @param logLevel Log level to set.
+     * @param logerProperty Name of the property corresponding to NodeLoggers (found in
+     *            HeadlessPreferencesConstants.P_LOGLEVEL_*).
+     */
+    private static void setLogLevelOnNodeLogger(final String logLevel, final String loggerProperty) {
+        var nodeLoggerLevel = LEVEL.WARN;
+        try {
+            nodeLoggerLevel = LEVEL.valueOf(logLevel);
+        } catch (IllegalArgumentException ignored) {
+            LOGGER.error("Invalid log level \"" + logLevel + "\", using " + nodeLoggerLevel.name());
+        }
+
+        switch (loggerProperty) {
+            case HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE:
+                NodeLoggerConfig.setAppenderLevelRange(NodeLogger.LOGFILE_APPENDER, nodeLoggerLevel, LEVEL.FATAL);
+                break;
+            case HeadlessPreferencesConstants.P_LOGLEVEL_STDOUT:
+                NodeLoggerConfig.setAppenderLevelRange(NodeLogger.STDOUT_APPENDER, nodeLoggerLevel, LEVEL.FATAL);
+                break;
+            default:
+                LOGGER.error("Unsupported NodeLogger property, log level cannot be set: " + loggerProperty);
+                break;
+        }
+    }
 
     /**
      * Register the appenders according to logLevel for the console view, i.e.

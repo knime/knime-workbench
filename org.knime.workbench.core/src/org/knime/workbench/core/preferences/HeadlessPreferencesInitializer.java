@@ -48,6 +48,7 @@ import static org.knime.workbench.core.WorkflowMigrationSettings.P_WORKFLOW_MIGR
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_DATABASE_TIMEOUT;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE;
+import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOGLEVEL_STDOUT;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOG_FILE_LOCATION;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOG_GLOBAL_IN_WF_DIR;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_MAXIMUM_THREADS;
@@ -57,7 +58,9 @@ import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.core.node.KNIMEConstants;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeLogger.LEVEL;
+import org.knime.core.node.NodeLoggerConfig;
 import org.knime.core.node.port.database.DatabaseConnectionSettings;
 import org.knime.workbench.core.KNIMECorePlugin;
 
@@ -74,14 +77,24 @@ public class HeadlessPreferencesInitializer extends AbstractPreferenceInitialize
 
         store.setDefault(P_TEMP_DIR, System.getProperty("java.io.tmpdir"));
 
-        store.setDefault(P_LOGLEVEL_LOG_FILE, LEVEL.WARN.name());
+        final var logfileLevelRange = NodeLoggerConfig.getAppenderLevelRange(NodeLogger.LOGFILE_APPENDER);
+        store.setDefault(P_LOGLEVEL_LOG_FILE, logfileLevelRange != null//
+                ? logfileLevelRange.getFirst().name()//
+                : LEVEL.WARN.name());
+
+        final var stdoutLevelRange = NodeLoggerConfig.getAppenderLevelRange(NodeLogger.STDOUT_APPENDER);
+        store.setDefault(P_LOGLEVEL_STDOUT, stdoutLevelRange != null//
+                ? stdoutLevelRange.getFirst().name()//
+                : LEVEL.WARN.name());
+
+        final var consoleLevelRange = NodeLoggerConfig.getAppenderLevelRange(NodeLogger.KNIME_CONSOLE_APPENDER);
+        store.setDefault(P_LOGLEVEL_CONSOLE, consoleLevelRange != null//
+                ? consoleLevelRange.getFirst().name()//
+                : LEVEL.WARN.name());
 
         store.setDefault(P_LOG_FILE_LOCATION, false);
 
         store.setDefault(P_LOG_GLOBAL_IN_WF_DIR, false);
-
-        // set default values
-        store.setDefault(P_LOGLEVEL_CONSOLE, LEVEL.WARN.name());
 
         store.setDefault(P_SEND_ANONYMOUS_STATISTICS, false);
 
