@@ -1995,12 +1995,15 @@ public class WorkflowEditor extends GraphicalEditor implements
             if (isComponentProjectWFM()) {
                 //it's a workflow of an opened component
                 //-> use different save routine
+
+                final var oldContext = getWorkflowManager()
+                        .map(WorkflowManager::getContextV2)
+                        .orElseThrow(() -> new IllegalStateException("Project workflow manager needs to have a "
+                            + "context: " + getWorkflowManager().get()));
                 if (newContext != null) {
-                    saveRunnable =
-                        new SaveComponentRunnable(this, exceptionMessage, monitor,
-                            newContext.getExecutorInfo().getLocalWorkflowPath().toFile());
+                    saveRunnable = new SaveProjectComponentRunnable(this, exceptionMessage, monitor, newContext);
                 } else {
-                    saveRunnable = new SaveComponentRunnable(this, exceptionMessage, monitor, workflowDir);
+                    saveRunnable = new SaveProjectComponentRunnable(this, exceptionMessage, monitor, oldContext);
                 }
             } else {
                 if (newContext != null) {
