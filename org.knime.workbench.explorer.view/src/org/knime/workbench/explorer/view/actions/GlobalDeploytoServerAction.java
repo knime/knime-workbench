@@ -129,7 +129,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
     @Override
     public void run() {
         AbstractExplorerFileStore srcFileStore = getSingleSelectedElement()
-                .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
+                .orElseThrow(() -> new IllegalStateException("No single workflow, group, or file selected"));
         String dialogTitle = "Upload " + srcFileStore.getName();
 
         String lockableMessage = ExplorerFileSystemUtils.isLockable(Collections.singletonList(srcFileStore), true);
@@ -142,7 +142,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
             return;
         }
 
-        Optional<SelectedDestination> destInfoOptional = promptForTargetLocation(srcFileStore);
+        Optional<SelectedDestination> destInfoOptional = promptForTargetLocation(!AbstractExplorerFileStore.isDataFile(srcFileStore));
         if (!destInfoOptional.isPresent()) {
             LOGGER.debug(getText() + "canceled");
             return;
@@ -193,14 +193,19 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         lastUsedLocation = destination;
     }
 
-    /** Opens the selection prompt and lets the user choose a remote workflow group.
-     * @return An empty if the prompt was cancelled, otherwise the selected target. */
-    Optional<SelectedDestination> promptForTargetLocation(final AbstractExplorerFileStore srcFileStore) {
+    /**
+     * Opens the selection prompt and lets the user choose a remote workflow group.
+     *
+     * @param showResetOption if the reset option should be displayed
+     * @return An empty if the prompt was cancelled, otherwise the selected target.
+     */
+    private static Optional<SelectedDestination> promptForTargetLocation(final boolean showResetOption) {
         String[] validMountIDs = getValidTargets().map(c -> c.getMountID()).toArray(String[]::new);
         Shell shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
 
         DestinationSelectionDialog destinationDialog =
-                new DestinationSelectionDialog(shell, validMountIDs, ContentObject.forFile(lastUsedLocation));
+            new DestinationSelectionDialog(shell, validMountIDs, ContentObject.forFile(lastUsedLocation));
+        destinationDialog.setShowExcludeDataOption(showResetOption);
         while (destinationDialog.open() == Window.OK) {
             SelectedDestination destGroup = destinationDialog.getSelectedDestination();
             AbstractExplorerFileInfo destGroupInfo = destGroup.getDestination().fetchInfo();
@@ -231,8 +236,9 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
     }
 
     private Optional<AbstractExplorerFileStore> getSingleSelectedElement() {
-        return super.getSingleSelectedElement(fs -> AbstractExplorerFileStore.isWorkflow(fs)
-            || AbstractExplorerFileStore.isWorkflowGroup(fs) || AbstractExplorerFileStore.isWorkflowTemplate(fs));
+        return super.getSingleSelectedElement(
+            fs -> AbstractExplorerFileStore.isWorkflow(fs) || AbstractExplorerFileStore.isWorkflowGroup(fs)
+                || AbstractExplorerFileStore.isWorkflowTemplate(fs) || AbstractExplorerFileStore.isDataFile(fs));
     }
 
     /** @return a stream of content providers that are remote and writable, i.e. server mount points. */
@@ -247,6 +253,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
         private Button m_excludeDataButton;
         private boolean m_isExcludeData;
         private Composite m_tooltipContainer;
+        private boolean m_showExcludeData = true;
 
         private AbstractContentProvider m_currentContentProvider;
 
@@ -278,22 +285,23 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
 
         @Override
         protected void createCustomFooterField(final Composite parent) {
-            // Create marginless composite to show tooltip since a disabled checkbox can not trigger any events
-            m_tooltipContainer = new Composite(parent, SWT.NONE);
-            m_tooltipContainer.setLayout(new FillLayout());
-            GridDataFactory.fillDefaults().applyTo(m_tooltipContainer);
-            m_excludeDataButton = new Button(m_tooltipContainer, SWT.CHECK);
-            m_isExcludeData =
-                m_currentContentProvider != null && m_currentContentProvider.isForceResetOnUpload();
-            m_excludeDataButton.setSelection(m_isExcludeData);
-            m_excludeDataButton.setText("Reset Workflow(s) before upload");
-            m_excludeDataButton.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    Button b = (Button)e.widget;
-                    m_isExcludeData = b.getSelection();
-                }
-            });
+            if (m_showExcludeData) {
+                // Create marginless composite to show tooltip since a disabled checkbox can not trigger any events
+                m_tooltipContainer = new Composite(parent, SWT.NONE);
+                m_tooltipContainer.setLayout(new FillLayout());
+                GridDataFactory.fillDefaults().applyTo(m_tooltipContainer);
+                m_excludeDataButton = new Button(m_tooltipContainer, SWT.CHECK);
+                m_isExcludeData = m_currentContentProvider != null && m_currentContentProvider.isForceResetOnUpload();
+                m_excludeDataButton.setSelection(m_isExcludeData);
+                m_excludeDataButton.setText("Reset Workflow(s) before upload");
+                m_excludeDataButton.addSelectionListener(new SelectionAdapter() {
+                    @Override
+                    public void widgetSelected(final SelectionEvent e) {
+                        Button b = (Button)e.widget;
+                        m_isExcludeData = b.getSelection();
+                    }
+                });
+            }
         }
 
         @Override
@@ -303,16 +311,27 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
             final boolean changedContentProvider = !ct.equals(m_currentContentProvider);
             m_currentContentProvider = ct;
 
-            m_excludeDataButton.setSelection(
-                (changedContentProvider && ct.isForceResetOnUpload()) || m_excludeDataButton.getSelection());
-            m_excludeDataButton.setEnabled(!ct.isForceResetOnUpload() || ct.isEnableResetOnUploadCheckbox());
-            m_isExcludeData = m_excludeDataButton.getSelection();
-            m_tooltipContainer.setToolTipText(m_excludeDataButton.getEnabled() ? ""
-                : "This option is selected by default as set by the server administrator.");
+            if (m_showExcludeData) {
+                m_excludeDataButton.setSelection(
+                    (changedContentProvider && ct.isForceResetOnUpload()) || m_excludeDataButton.getSelection());
+                m_excludeDataButton.setEnabled(!ct.isForceResetOnUpload() || ct.isEnableResetOnUploadCheckbox());
+                m_isExcludeData = m_excludeDataButton.getSelection();
+                m_tooltipContainer.setToolTipText(m_excludeDataButton.getEnabled() ? ""
+                    : "This option is selected by default as set by the server administrator.");
+            }
         }
 
         SelectedDestination getSelectedDestination() {
             return new SelectedDestination(getSelection(), m_isExcludeData);
+        }
+
+        /**
+         * Whether or not the "Reset Workflows(s) before upload" option should be shown (default is {@code true}).
+         *
+         * @param showExcludeData new setting
+         */
+        public void setShowExcludeDataOption(final boolean showExcludeData) {
+            m_showExcludeData = showExcludeData;
         }
     }
 
