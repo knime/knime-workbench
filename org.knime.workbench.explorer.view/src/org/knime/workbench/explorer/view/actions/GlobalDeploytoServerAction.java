@@ -114,7 +114,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
     @Override
     public void run() {
         final var srcFileStore = getSingleSelectedElement()
-                .orElseThrow(() -> new IllegalStateException("No single workflow or group selected"));
+                .orElseThrow(() -> new IllegalStateException("No single workflow, group, or file selected"));
         final var dialogTitle = "Upload " + srcFileStore.getName();
 
         final var lockableMessage = ExplorerFileSystemUtils.isLockable(Collections.singletonList(srcFileStore), true);
@@ -126,7 +126,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
             return;
         }
 
-        final var destInfoOptional = promptForTargetLocation();
+        final var destInfoOptional = promptForTargetLocation(!AbstractExplorerFileStore.isDataFile(srcFileStore));
         if (!destInfoOptional.isPresent()) {
             LOGGER.debug(getText() + "canceled");
             return;
@@ -179,14 +179,16 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
     /**
      * Opens the selection prompt and lets the user choose a remote workflow group.
      *
+     * @param showResetOption if the reset option should be displayed
      * @return An empty if the prompt was cancelled, otherwise the selected target.
      */
-    private static Optional<SelectedDestination> promptForTargetLocation() {
+    private static Optional<SelectedDestination> promptForTargetLocation(final boolean showResetOption) {
         String[] validMountIDs = getValidTargets().map(c -> c.getMountID()).toArray(String[]::new);
         final var shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
 
         final var destinationDialog =
-                new DestinationSelectionDialog(shell, validMountIDs, ContentObject.forFile(lastUsedLocation));
+            new DestinationSelectionDialog(shell, validMountIDs, ContentObject.forFile(lastUsedLocation));
+        destinationDialog.setShowExcludeDataOption(showResetOption);
         while (destinationDialog.open() == Window.OK) {
             final var destGroup = destinationDialog.getSelectedDestination();
             AbstractExplorerFileInfo destGroupInfo = destGroup.getDestination().fetchInfo();
@@ -211,8 +213,9 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
     }
 
     private Optional<AbstractExplorerFileStore> getSingleSelectedElement() {
-        return super.getSingleSelectedElement(fs -> AbstractExplorerFileStore.isWorkflow(fs)
-            || AbstractExplorerFileStore.isWorkflowGroup(fs) || AbstractExplorerFileStore.isWorkflowTemplate(fs));
+        return super.getSingleSelectedElement(
+            fs -> AbstractExplorerFileStore.isWorkflow(fs) || AbstractExplorerFileStore.isWorkflowGroup(fs)
+                || AbstractExplorerFileStore.isWorkflowTemplate(fs) || AbstractExplorerFileStore.isDataFile(fs));
     }
 
     /** @return a stream of content providers that are remote and writable, i.e. server mount points. */
