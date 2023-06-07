@@ -54,8 +54,10 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.InvalidSettingsException;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.util.LockFailedException;
 
 /**
@@ -63,14 +65,13 @@ import org.knime.core.util.LockFailedException;
  *
  * @author Martin Horn, KNIME GmbH, Konstanz, Germany
  */
-class SaveComponentRunnable extends AbstractSaveRunnable {
+class SaveProjectComponentRunnable extends AbstractSaveRunnable {
+    private final WorkflowContextV2 m_newContext;
 
-    private final File m_componentDir;
-
-    SaveComponentRunnable(final WorkflowEditor editor, final StringBuilder exceptionMessage,
-        final IProgressMonitor monitor, final File componentDir) {
+    SaveProjectComponentRunnable(final WorkflowEditor editor, final StringBuilder exceptionMessage,
+        final IProgressMonitor monitor, final WorkflowContextV2 newContext) {
         super(editor, exceptionMessage, monitor);
-        m_componentDir = componentDir;
+        m_newContext = CheckUtils.checkArgumentNotNull(newContext, "workflow context of the target location");
     }
 
     /**
@@ -78,7 +79,7 @@ class SaveComponentRunnable extends AbstractSaveRunnable {
      */
     @Override
     protected File getSaveLocation() {
-        return m_componentDir;
+        return m_newContext.getExecutorInfo().getLocalWorkflowPath().toFile();
     }
 
     /**
