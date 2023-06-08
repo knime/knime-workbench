@@ -85,7 +85,7 @@ public class HeadlessPreferencesInitializer extends AbstractPreferenceInitialize
         final var stdoutLevelRange = NodeLoggerConfig.getAppenderLevelRange(NodeLogger.STDOUT_APPENDER);
         store.setDefault(P_LOGLEVEL_STDOUT, stdoutLevelRange != null//
                 ? stdoutLevelRange.getFirst().name()//
-                : LEVEL.WARN.name());
+                : LEVEL.INFO.name());
 
         final var consoleLevelRange = NodeLoggerConfig.getAppenderLevelRange(NodeLogger.KNIME_CONSOLE_APPENDER);
         store.setDefault(P_LOGLEVEL_CONSOLE, consoleLevelRange != null//
