@@ -111,7 +111,7 @@
             category="org.knime.workbench.ui.preferences"
             class="org.knime.workbench.ui.preferences.MainPreferencePage"
             id="org.knime.workbench.ui.preferences.gui"
-            name="KNIME GUI">
+            name="KNIME Classic User Interface">
       </page>
       <page
             category="org.knime.workbench.ui.preferences"
