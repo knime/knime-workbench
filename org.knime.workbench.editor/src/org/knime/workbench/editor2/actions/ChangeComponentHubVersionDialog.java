@@ -83,30 +83,30 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.TemplateUpdateUtil.LinkType;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.util.SWTUtilities;
-import org.knime.core.util.Pair;
+import org.knime.core.util.hub.HubItemVersion;
+import org.knime.core.util.hub.NamedItemVersion;
 import org.knime.core.util.pathresolve.ResolverUtil;
-import org.knime.core.util.pathresolve.SpaceVersion;
 import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
- * Dialog for selecting a space version for a component.
+ * Dialog for selecting a Hub item version for a component.
  *
  * Shows the metadata, e.g., author, date, and description for each version.
  *
  * @author Carl Witt, KNIME AG, Zurich, Switzerland
  */
-public final class ChangeComponentSpaceVersionDialog extends Dialog {
+public final class ChangeComponentHubVersionDialog extends Dialog {
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(ChangeComponentSpaceVersionDialog.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(ChangeComponentHubVersionDialog.class);
 
     // ============ state ============ //
     private final WorkflowManager m_manager;
@@ -116,14 +116,14 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
 
     private LinkType m_selectedLinkType;
 
-    private Integer m_selectedSpaceVersion;
+    private Integer m_selectedItemVersion;
 
 
     /** Fetched using a {@link FetchVersionListJob} */
-    private List<SpaceVersion> m_spaceVersions;
+    private List<NamedItemVersion> m_versions;
 
     // ============ view ============ //
-    /** Shows the available hub space versions */
+    /** Shows the available item versions */
     private TableViewer m_tableViewer;
 
     private Button m_useSpecificVersionCheckBox;
@@ -133,10 +133,10 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
     private Button m_useLatestVersionCheckBox;
 
     /** The strings that appear in the header column of the version table. */
-    private static final List<String> COLUMN_NAMES = List.of("Version", "Name", "Author", "Created On");
+    private static final List<String> COLUMN_NAMES = List.of("Version", "Title", "Description", "Author", "Created On");
 
     /** Initial column widths in pixels. */
-    private static final List<Integer> COLUMN_WIDTHS = List.of(54, 213, 166, 152);
+    private static final List<Integer> COLUMN_WIDTHS = List.of(54, 213, 200, 166, 152);
 
     // ============ async ============ //
     private FetchVersionListJob m_fetchVersionListJob;
@@ -148,13 +148,13 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
      * @param manager The manager (used for resolution of 'knime://' URLs)
      * @param metaNodes components and metanodes in the currently edited workflow
      */
-    ChangeComponentSpaceVersionDialog(final Shell parent, final SubNodeContainer subNodeContainer,
+    ChangeComponentHubVersionDialog(final Shell parent, final SubNodeContainer subNodeContainer,
         final WorkflowManager manager) {
         super(parent);
         m_manager = manager;
         m_component = subNodeContainer;
         m_selectedLinkType = LinkType.LATEST_STATE;
-        m_selectedSpaceVersion = null;
+        m_selectedItemVersion = null;
     }
 
     @Override
@@ -171,28 +171,28 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
         // version list
 
         var selectorLabel = new Label(content, SWT.LEFT);
-        selectorLabel.setText("Select a KNIME Hub Space Version");
+        selectorLabel.setText("Select a KNIME Hub Item Version");
         final Composite parent1 = content;
 
         final var buttonGroup = new Composite(content, SWT.NONE);
         buttonGroup.setLayout(new RowLayout());
 
-        final var link = ChangeComponentSpaceVersionAction.spaceVersion(
+        final var link = HubItemVersion.of(
             m_component.getTemplateInformation().getSourceURI());
 
         m_useSpecificVersionCheckBox = new Button(buttonGroup, SWT.RADIO);
         m_useSpecificVersionCheckBox.setText("Specific version    ");
-        m_useSpecificVersionCheckBox.setSelection(link.getFirst() == LinkType.FIXED_VERSION);
+        m_useSpecificVersionCheckBox.setSelection(link.linkType() == LinkType.FIXED_VERSION);
         m_useSpecificVersionCheckBox.addListener(SWT.Selection, l -> sync());
 
         m_useLatestVersionCheckBox = new Button(buttonGroup, SWT.RADIO);
         m_useLatestVersionCheckBox.setText("Latest version     ");
-        m_useLatestVersionCheckBox.setSelection(link.getFirst() == LinkType.LATEST_VERSION);
+        m_useLatestVersionCheckBox.setSelection(link.linkType() == LinkType.LATEST_VERSION);
         m_useLatestVersionCheckBox.addListener(SWT.Selection, l -> sync());
 
         m_useLatestStateCheckBox = new Button(buttonGroup, SWT.RADIO);
         m_useLatestStateCheckBox.setText("Working Area");
-        m_useLatestStateCheckBox.setSelection(link.getFirst() == LinkType.LATEST_STATE);
+        m_useLatestStateCheckBox.setSelection(link.linkType() == LinkType.LATEST_STATE);
         m_useLatestStateCheckBox.addListener(SWT.Selection, l -> sync());
         // holds the table and defines its resizing behavior
         var tableComp = new Composite(parent1, SWT.NONE);
@@ -211,11 +211,11 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
     }
 
     private void sync() {
-        if (m_spaceVersions == null) {
+        if (m_versions == null) {
             m_useLatestVersionCheckBox.setEnabled(false);
             m_useLatestStateCheckBox.setEnabled(false);
             m_useSpecificVersionCheckBox.setEnabled(false);
-        } else if (m_spaceVersions.isEmpty()) {
+        } else if (m_versions.isEmpty()) {
             m_useLatestStateCheckBox.setEnabled(true);
             m_useLatestVersionCheckBox.setEnabled(false);
             m_useSpecificVersionCheckBox.setEnabled(false);
@@ -228,7 +228,7 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
         final boolean okEnabled;
         final var table = m_tableViewer.getTable();
         final LinkType selectedLinkType;
-        Integer selectedSpaceVersion = null;
+        Integer selectedItemVersion = null;
         if (m_useLatestStateCheckBox.getSelection()) {
             selectedLinkType = LinkType.LATEST_STATE;
             okEnabled = m_useLatestStateCheckBox.isEnabled();
@@ -239,16 +239,16 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
             table.setEnabled(false);
         } else {
             selectedLinkType = LinkType.FIXED_VERSION;
-            if (table.getSelectionIndex() != -1) {
+            if (table.getSelectionIndex() != -1 && m_versions != null) {
                 int index = table.getSelectionIndex();
-                // the table is not sortable, the i-th row always corresponds to the i-th space version
-                selectedSpaceVersion = m_spaceVersions.get(index).getVersion();
+                // the table is not sortable, the i-th row always corresponds to the i-th item version
+                selectedItemVersion = m_versions.get(index).version();
             }
             table.setEnabled(m_useSpecificVersionCheckBox.isEnabled());
-            okEnabled = m_useSpecificVersionCheckBox.isEnabled() && selectedSpaceVersion != null;
+            okEnabled = m_useSpecificVersionCheckBox.isEnabled() && selectedItemVersion != null;
         }
         m_selectedLinkType = selectedLinkType;
-        m_selectedSpaceVersion = selectedSpaceVersion;
+        m_selectedItemVersion = selectedItemVersion;
 
         final var okButton = getButton(IDialogConstants.OK_ID);
         if (okButton != null) {
@@ -257,7 +257,7 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
     }
 
     /**
-     * Upon double clicking a space version in the versions list, select the version and close the dialog.
+     * Upon double clicking an item version in the versions list, select the version and close the dialog.
      *
      * @param event
      */
@@ -284,7 +284,7 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
         viewer.getTable().setLinesVisible(true);
 
         viewer.setContentProvider(new ArrayContentProvider());
-        viewer.setLabelProvider(new SpaceVersionLabelProvider());
+        viewer.setLabelProvider(new HubItemVersionLabelProvider());
 
         viewer.getTable().pack();
         viewer.refresh();
@@ -293,11 +293,11 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
     }
 
     /**
-     * @return selected link space version
+     * @return selected link item version
      */
-    Pair<LinkType, Integer> getSelectedVersion() {
-        return Pair.create(m_selectedLinkType,
-            m_selectedLinkType == LinkType.FIXED_VERSION ? CheckUtils.checkNotNull(m_selectedSpaceVersion) : null);
+    HubItemVersion getSelectedVersion() {
+        return new HubItemVersion(m_selectedLinkType,
+            m_selectedLinkType == LinkType.FIXED_VERSION ? m_selectedItemVersion : null);
     }
 
     @Override
@@ -309,12 +309,12 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
     protected void configureShell(final Shell shell) {
         super.configureShell(shell);
         shell.setSize(615, 400);
-        shell.setText("Select KNIME Hub Space Version");
+        shell.setText("Select KNIME Hub Item Version");
         var img = KNIMEUIPlugin.getDefault().getImageRegistry().get("knime");
         shell.setImage(img);
     }
 
-    private static final class SpaceVersionLabelProvider extends LabelProvider implements ITableLabelProvider {
+    private static final class HubItemVersionLabelProvider extends LabelProvider implements ITableLabelProvider {
 
         /**
          * Gets the content of the n-th row in the versions table.
@@ -325,13 +325,13 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
          * <li>date of creation</li>
          * </ol>
          */
-        private static final List<Function<SpaceVersion, String>> COLUMN_VALUE_EXTRACTORS =
-            List.of(e -> String.valueOf(e.getVersion()), SpaceVersion::getName, SpaceVersion::getAuthor,
-                SpaceVersion::getCreatedOn);
+        private static final List<Function<NamedItemVersion, String>> COLUMN_VALUE_EXTRACTORS =
+            List.of(e -> String.valueOf(e.version()), NamedItemVersion::title, NamedItemVersion::description, NamedItemVersion::author,
+                NamedItemVersion::createdOn);
 
         @Override
         public String getColumnText(final Object row, final int colIdx) {
-            return COLUMN_VALUE_EXTRACTORS.get(colIdx).apply((SpaceVersion)row);
+            return COLUMN_VALUE_EXTRACTORS.get(colIdx).apply((NamedItemVersion)row);
         }
 
         @Override
@@ -370,7 +370,7 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
         private final Display m_display;
 
         FetchVersionListJob(final Display display) {
-            super("Fetching available Hub Space versions.");
+            super("Fetching available Hub item versions.");
             m_display = display;
             m_tableViewer.getTable().setEnabled(false);
             setPriority(Job.INTERACTIVE);
@@ -378,58 +378,52 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
 
         @Override
         protected IStatus run(final IProgressMonitor monitor) {
-            Optional<List<SpaceVersion>> optList = fetch(monitor);
-            List<SpaceVersion> list;
-
             IStatus status;
-            if (optList.isPresent()) {
-                list = optList.get();
-                status = Status.OK_STATUS;
-            } else {
-                list = List.of();
-                status = Status.warning(
-                    String.format("Unable to fetch available Hub Space versions for Component %s with name \"%s\"",
-                        m_component.getID(), m_component.getName()));
-            }
 
-            m_display.asyncExec(() -> {
-                if (!m_display.isDisposed() && !monitor.isCanceled()) {
-                    setSpaceVersionList(list);
-                }
-            });
+            try {
+                var versions = fetch(monitor);
+                status = Status.OK_STATUS;
+                m_display.asyncExec(() -> {
+                    if (!m_display.isDisposed() && !monitor.isCanceled()) {
+                        setItemVersionList(versions);
+                    }
+                });
+            } catch (Exception e) {
+                status = Status.warning(
+                    String.format("Unable to fetch available Hub item versions for Component %s with name \"%s\"%n%s",
+                        m_component.getID(), m_component.getName(), e.getLocalizedMessage()));
+                e.printStackTrace();
+            }
 
             return status;
         }
 
-        private Optional<List<SpaceVersion>> fetch(final IProgressMonitor monitor) {
+        private List<NamedItemVersion> fetch(final IProgressMonitor monitor) throws CanceledExecutionException {
             if (monitor.isCanceled()) {
-                return Optional.empty();
+                throw new CanceledExecutionException();
             }
             NodeContext.pushContext(m_manager);
             try {
-                return ResolverUtil.getSpaceVersions(m_component.getTemplateInformation().getSourceURI(), monitor);
-            } catch (Exception e) {
-                NodeLogger.getLogger(getClass()).error(e);
-                return Optional.empty();
+                return ResolverUtil.getHubItemVersions(m_component.getTemplateInformation().getSourceURI());
             } finally {
                 NodeContext.removeLastContext();
             }
         }
 
         /** Display the fetched versions in the dialog's table viewer component. */
-        private void setSpaceVersionList(final List<SpaceVersion> list) {
+        private void setItemVersionList(final List<NamedItemVersion> list) {
             // incoming list is immutable, copy before sorting
-            m_spaceVersions = new ArrayList<>(list);
-            m_spaceVersions.sort(Comparator.comparing(SpaceVersion::getVersion).reversed());
+            m_versions = new ArrayList<>(list);
+            m_versions.sort(Comparator.comparing(NamedItemVersion::version).reversed());
 
-            m_tableViewer.setInput(m_spaceVersions);
+            m_tableViewer.setInput(m_versions);
             final var uri = m_component.getTemplateInformation().getSourceURI();
-            final var initialLinkPair = ChangeComponentSpaceVersionAction.spaceVersion(uri);
+            final var initialLinkPair = HubItemVersion.of(uri);
 
-            if (initialLinkPair.getFirst() == LinkType.FIXED_VERSION) {
+            if (initialLinkPair.linkType() == LinkType.FIXED_VERSION) {
                 // pre-select current version in the list
 
-                rowIdxForSpaceVersion(initialLinkPair.getSecond())//
+                rowIdxForItemVersion(initialLinkPair.versionNumber())//
                     .map(m_tableViewer::getElementAt)//
                     .ifPresent(o -> m_tableViewer.setSelection(new StructuredSelection(o), true));
             }
@@ -437,10 +431,10 @@ public final class ChangeComponentSpaceVersionDialog extends Dialog {
             sync();
         }
 
-        /** Find the row that represents a space version (in order to preselect the current version in the table) */
-        private Optional<Integer> rowIdxForSpaceVersion(final Integer version) {
+        /** Find the row that represents an item version (in order to preselect the current version in the table) */
+        private Optional<Integer> rowIdxForItemVersion(final Integer version) {
             final List<Integer> versions =
-                m_spaceVersions.stream().map(SpaceVersion::getVersion).collect(Collectors.toList());
+                m_versions.stream().map(NamedItemVersion::version).collect(Collectors.toList());
             int idx = versions.indexOf(version);
             return Optional.ofNullable(idx == -1 ? null : idx);
         }

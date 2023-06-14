@@ -95,7 +95,7 @@ public class BulkChangeMetaNodeLinksAction extends AbstractNodeAction {
             URI_CHANGE,
 
             /**
-             * Indicates that the KNIME Hub Space Version has changed.
+             * Indicates that the KNIME Hub Item Version has changed.
              */
             VERSION_CHANGE,
 
@@ -181,8 +181,7 @@ public class BulkChangeMetaNodeLinksAction extends AbstractNodeAction {
                     new BulkChangeMetaNodeLinksCommand(getManager(), LinkChangeAction.TYPE_CHANGE, selectedMetaNodes);
                 changeCommand.setLinkType(dialog.getLinkType());
                 break;
-            case VERSION_CHANGE: // same as URI change, the new URI will have the space version set as query parameter
-            case URI_CHANGE:
+            case VERSION_CHANGE, URI_CHANGE: // same as URI change, the new URI will have the item version set as query parameter
                 changeCommand =
                     new BulkChangeMetaNodeLinksCommand(getManager(), LinkChangeAction.URI_CHANGE, selectedMetaNodes);
                 changeCommand.setURI(dialog.getURI());

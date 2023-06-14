@@ -44,47 +44,25 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   23 Sep 2022 (carlwitt): created
+ *   Jun 14, 2023 (carlwitt): created
  */
-package org.knime.workbench.editor2.commands;
+package org.knime.workbench.editor2.actions.delegates;
 
-import static org.junit.Assert.assertEquals;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import org.junit.Test;
+import org.knime.workbench.editor2.WorkflowEditor;
+import org.knime.workbench.editor2.actions.AbstractNodeAction;
+import org.knime.workbench.editor2.actions.ChangeComponentHubVersionAction;
 
 /**
+ * This provides the delegate to the action responsible for changing the version of a shared component.
  *
  * @author Carl Witt, KNIME AG, Zurich, Switzerland
  */
-public class ChangeComponentSpaceVersionCommandTest {
-
+public class ChangeHubItemVersionAction extends AbstractEditorAction {
     /**
-     * Test method for
-     * {@link org.knime.workbench.editor2.commands.ChangeComponentSpaceVersionCommand#setSpaceVersion(java.net.URI, java.lang.Integer)}.
-     *
-     * @throws URISyntaxException
+     * {@inheritDoc}
      */
-    @Test
-    public void testSetSpaceVersion() throws URISyntaxException {
-        // set to latest by removing query parameter (set space version null)
-        URI withSpaceVersion3 = new URI("knime://My-KNIME-Hub/*02j3f023j?someParameter=12,2&spaceVersion=3&param=4");
-        assertEquals(new URI("knime://My-KNIME-Hub/*02j3f023j?someParameter=12,2&param=4"),
-            ChangeComponentSpaceVersionCommand.setSpaceVersion(withSpaceVersion3, null));
-        URI withoutSpaceVersion = new URI("knime://SomeMountPoint/some/path?someParameter=12,2");
-        assertEquals(withoutSpaceVersion,
-            ChangeComponentSpaceVersionCommand.setSpaceVersion(withoutSpaceVersion, null));
-
-        // update
-        assertEquals(new URI("knime://My-KNIME-Hub/*02j3f023j?someParameter=12,2&spaceVersion=4&param=4"),
-            ChangeComponentSpaceVersionCommand.setSpaceVersion(withSpaceVersion3, "4"));
-
-        // add
-        URI simple = new URI("knime://SomeMountPoint/some/path");
-        assertEquals(new URI("knime://SomeMountPoint/some/path?spaceVersion=100"),
-            ChangeComponentSpaceVersionCommand.setSpaceVersion(simple, "100"));
+    @Override
+    protected AbstractNodeAction createAction(final WorkflowEditor editor) {
+        return new ChangeComponentHubVersionAction(editor);
     }
-
 }

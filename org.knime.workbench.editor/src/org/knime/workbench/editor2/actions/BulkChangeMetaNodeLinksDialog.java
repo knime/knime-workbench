@@ -114,8 +114,6 @@ import org.knime.workbench.explorer.view.AbstractContentProvider.LinkType;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
-import jakarta.ws.rs.core.UriBuilder;
-
 /**
  * JFace implementation of a dialog for changing link properties of multiple components or meta nodes at once. Only
  * allows for changing for distinct component/metanode and only allows for either chaning the link type or the link uri.
@@ -142,7 +140,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
     private URI m_oldLinkURI;
 
-    /** Updated when the user types in the {@link #m_uriTextField} or selects a hub space version from the dialog. */
+    /** Updated when the user types in the {@link #m_uriTextField} or selects a Hub item version from the dialog. */
     private URI m_selectedLinkURI;
 
     private boolean m_uriInputViaText;
@@ -153,7 +151,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
     /**
      * Multi-purpose button that opens either a dialog to change the link type, a dialog to change the link destination,
-     * or a dialog to select the Hub space version.
+     * or a dialog to select the Hub item version.
      */
     private Button m_linkChangeButton;
 
@@ -339,9 +337,9 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             }
         });
 
-        // Hub Space version (also maps to link URI) radio button
+        // Hub item version (also maps to link URI) radio button
         final var versionButton = new Button(propertiesGroup, SWT.RADIO);
-        versionButton.setText("KNIME Hub Space Version");
+        versionButton.setText("KNIME Hub Item Version");
         versionButton.addSelectionListener(new SelectionAdapter() {
             @Override
             public void widgetSelected(final SelectionEvent e) {
@@ -350,7 +348,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
                     m_linkChangeButton.setText("Select Version...");
                     // only if both the action and group has been selected, the button is enabled
                     final var isComponentOnHub =
-                        isSelectedSubNode() && ChangeComponentSpaceVersionAction.isHubUri(m_oldLinkURI);
+                        isSelectedSubNode() && ChangeComponentHubVersionAction.isHubUri(m_oldLinkURI);
                     m_linkChangeButton.setEnabled(isComponentOnHub);
                     m_linkChangeButton.setToolTipText(isComponentOnHub ? ""
                         : "Versioning is available only for linked Components stored on a KNIME Hub.");
@@ -515,7 +513,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
     }
 
     /**
-     * Opens the dialog for changing the KNIME Hub Space Version for the linked component.
+     * Opens the dialog for changing the KNIME Hub item Version for the linked component.
      */
     private void openVersionChangeDialog() {
         final var shell = SWTUtilities.getActiveShell();
@@ -525,16 +523,13 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         }
         final var componentRepresentative = (SubNodeContainer)representative.get();
 
-        var dialog = new ChangeComponentSpaceVersionDialog(shell, componentRepresentative, m_manager);
+        var dialog = new ChangeComponentHubVersionDialog(shell, componentRepresentative, m_manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
             return;
         }
         final var targetVersion = dialog.getSelectedVersion();
-        final var paramValue = targetVersion.getFirst().getParameterString(targetVersion.getSecond());
-        final var newUri = UriBuilder.fromUri(m_selectedLinkURI) //
-                .replaceQueryParam("spaceVersion", paramValue) //
-                .build();
+        final var newUri = targetVersion.applyTo(m_selectedLinkURI);
         m_selectedLinkURI = newUri;
         m_uriTextField.setText(newUri.toString());
         m_uriInputViaText = false;

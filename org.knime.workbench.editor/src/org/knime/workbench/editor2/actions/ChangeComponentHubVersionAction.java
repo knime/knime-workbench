@@ -49,45 +49,45 @@
 package org.knime.workbench.editor2.actions;
 
 import java.net.URI;
-import java.util.Objects;
 import java.util.Optional;
 
-import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.SubNodeContainer;
-import org.knime.core.node.workflow.TemplateUpdateUtil.LinkType;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.util.Pair;
+import org.knime.core.util.hub.HubItemVersion;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.commands.ChangeComponentSpaceVersionCommand;
+import org.knime.workbench.editor2.commands.ChangeComponentHubVersionCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 
 /**
- * Select a space version for one linked component in a workflow. Does nothing if the selected version equals the
+ * Select a Hub item version for one linked component in a workflow. Does nothing if the selected version equals the
  * current version.
  *
  * @see #internalCalculateEnabled()
  *
  * @author Carl Witt, KNIME AG, Zurich, Switzerland
  */
-public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
+public class ChangeComponentHubVersionAction extends AbstractNodeAction {
 
-    /** The action ID is in snake case while in the plugin.xml, the definition ID is in camel case. */
-    public static final String ID = "knime.action.change_component_space_version";
+    /** actions registry ID for this action. **/
+    public static final String ID = "knime.action.change_component_item_version";
+
+    /** org.eclipse.ui.commands command ID for this action. **/
+    private static final String COMMAND_ID = "knime.commands.changeComponentItemVersion";
 
     /** @param editor The host editor. */
-    public ChangeComponentSpaceVersionAction(final WorkflowEditor editor) {
+    public ChangeComponentHubVersionAction(final WorkflowEditor editor) {
         super(editor);
     }
 
     /** {@inheritDoc} */
-    @Override
+    @Override()
     public String getId() {
         return ID;
     }
@@ -95,7 +95,7 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
     /** {@inheritDoc} */
     @Override
     public String getText() {
-        return "Change KNIME Hub Space Version...\t" + getHotkey("knime.commands.changeComponentSpaceVersion");
+        return "Change KNIME Hub Item Version...\t" + getHotkey("knime.commands.changeComponentItemVersion");
     }
 
     /** {@inheritDoc} */
@@ -104,7 +104,6 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
         return "";
     }
 
-    // TODO Peter Schramm contacted to create icon
     /** {@inheritDoc} */
     @Override
     public ImageDescriptor getImageDescriptor() {
@@ -121,8 +120,7 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
      * Enabled if exactly one Component is selected that has a source URI that points to a KNIME hub.
      * <ul>
      * <li>Metanodes cannot be stored on the hub, thus have no versioning.</li>
-     * <li>A selection of Components may come from different spaces, in which case no sensible version list can be
-     * displayed.</li>
+     * <li>To change multiple components (with identical source) the {@link BulkChangeMetaNodeLinksAction} can be used.</li>
      * </ul>
      * {@inheritDoc}
      */
@@ -179,7 +177,7 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
 
         // abort in remote workflow editor
         if (manager == null) {
-            MessageDialog.openInformation(shell, "Select Hub Space Version",
+            MessageDialog.openInformation(shell, "Select Hub Item Version",
                 "Changing links is currently only possible for local workflows");
             return;
         }
@@ -192,56 +190,27 @@ public class ChangeComponentSpaceVersionAction extends AbstractNodeAction {
         final var component = optComponent.get();
         // currently, the only sources that support versioning are hub instances
         if (!isHubUri(component.getTemplateInformation().getSourceURI())) {
-            String message = "Changing the space version is only supported on KNIME Hub instances.\n"
+            String message = "Changing the item version is only supported on KNIME Hub instances.\n"
                 + "The source of this node is located either on a local mountpoint or on a KNIME Server.";
-            MessageDialog.openWarning(shell, "Change Space Version", message);
+            MessageDialog.openWarning(shell, "Change Hub Item Version", message);
             return;
         }
 
-        final Pair<LinkType, Integer> previous = spaceVersion(component.getTemplateInformation().getSourceURI());
-        final var prevVersion = previous.getSecond();
+        final var previousVersion = HubItemVersion.of(component.getTemplateInformation().getSourceURI());
 
         // prompt for target version
         final var dialog =
-            new ChangeComponentSpaceVersionDialog(shell, component, manager);
+            new ChangeComponentHubVersionDialog(shell, component, manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
             return;
         }
 
         // only do something if versions differ
-        final var target = dialog.getSelectedVersion();
-        final var targetType = target.getFirst();
-        final var targetVersion = target.getSecond();
-        if (targetType != previous.getFirst()
-                || (targetType == LinkType.FIXED_VERSION && !Objects.equals(prevVersion, targetVersion))) {
-            execute(new ChangeComponentSpaceVersionCommand(getManager(), optComponent.get(),
-                targetType.getParameterString(targetVersion)));
+        final var targetVersion = dialog.getSelectedVersion();
+        if (targetVersion != previousVersion) {
+            execute(new ChangeComponentHubVersionCommand(getManager(), optComponent.get(), targetVersion));
         }
     }
 
-    /**
-     * For instance "knime://My-KNIME-Hub/*Rllck6Bn2-EaOR6d?spaceVersion=3" -> "3"
-     *
-     * @param knimeUri KNIME URI
-     * @return the link space version
-     */
-    static Pair<LinkType, Integer> spaceVersion(final URI knimeUri) {
-        final var queryParams = JAXRSUtils.getStructuredParams(knimeUri.getRawQuery(), "&", false, true);
-        if (queryParams.containsKey("spaceVersion")) {
-            // getFirst: technically, the URI could have the form someprefix?spaceVersion=1,2
-            // however, this URI comes from the core so we expect it to either contain no spaceVersion or exactly one
-            final var spaceVersion = queryParams.getFirst("spaceVersion");
-            switch (spaceVersion) {
-                case "-1":
-                    return Pair.create(LinkType.LATEST_STATE, null);
-                case "latest":
-                    return Pair.create(LinkType.LATEST_VERSION, null);
-                default:
-                    return Pair.create(LinkType.FIXED_VERSION, Integer.parseInt(spaceVersion));
-            }
-        } else {
-            return Pair.create(LinkType.LATEST_STATE, -1);
-        }
-    }
 }

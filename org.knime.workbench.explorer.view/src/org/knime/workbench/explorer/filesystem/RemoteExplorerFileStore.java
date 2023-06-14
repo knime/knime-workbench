@@ -51,7 +51,6 @@ package org.knime.workbench.explorer.filesystem;
 import java.io.File;
 import java.net.URI;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,6 +58,7 @@ import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
+import org.knime.core.util.hub.NamedItemVersion;
 import org.knime.core.util.pathresolve.SpaceVersion;
 
 /**
@@ -124,7 +124,17 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * @throws Exception
      */
     public List<SpaceVersion> getSpaceVersions() throws Exception {
-        return new ArrayList<>();
+        return List.of();
+    }
+
+    /**
+     * Returns the KNIME Hub repository item versions for the repository item this file store represents.
+     *
+     * @return never {@code null}
+     * @since 8.10
+     */
+    public List<NamedItemVersion> getVersions() {
+        return List.of();
     }
 
     /**

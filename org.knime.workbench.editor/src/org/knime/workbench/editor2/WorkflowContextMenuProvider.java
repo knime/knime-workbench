@@ -90,7 +90,7 @@ import org.knime.workbench.editor2.actions.AddAnnotationAction;
 import org.knime.workbench.editor2.actions.BringAnnotationForwardAction;
 import org.knime.workbench.editor2.actions.BringAnnotationToFrontAction;
 import org.knime.workbench.editor2.actions.CancelAction;
-import org.knime.workbench.editor2.actions.ChangeComponentSpaceVersionAction;
+import org.knime.workbench.editor2.actions.ChangeComponentHubVersionAction;
 import org.knime.workbench.editor2.actions.ChangeMetaNodeLinkAction;
 import org.knime.workbench.editor2.actions.ChangeSubNodeLinkAction;
 import org.knime.workbench.editor2.actions.CheckUpdateMetaNodeLinkAction;
@@ -583,7 +583,7 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
             ((AbstractNodeAction)action).update();
 
             // CHANGE VERSION
-            action = m_actionRegistry.getAction(ChangeComponentSpaceVersionAction.ID);
+            action = m_actionRegistry.getAction(ChangeComponentHubVersionAction.ID);
             subnodeMenuMgr.appendToGroup(GROUP_SUBNODE_LINKS, action);
             ((AbstractNodeAction)action).update();
 

@@ -67,8 +67,10 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.hub.NamedItemVersion;
 import org.knime.core.util.pathresolve.SpaceVersion;
 import org.knime.core.util.pathresolve.URIToFileResolve;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler;
@@ -320,10 +322,6 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         return Optional.of(new KNIMEURIDescription(mountId, path, info.getName()));
     }
 
-    /**
-     * {@inheritDoc}
-     * @throws Exception
-     */
     @Override
     public Optional<List<SpaceVersion>> getSpaceVersions(final URI uri) throws Exception {
         if (uri.getScheme().equals("file")) {
@@ -336,5 +334,19 @@ public class URIToFileResolveImpl implements URIToFileResolve {
             return Optional.of(remoteFileStore.getSpaceVersions());
         }
         return Optional.empty();
+    }
+
+    @Override
+    public List<NamedItemVersion> getHubItemVersions(final URI uri) {
+        CheckUtils.checkArgument(uri.getScheme().equals("knime"), "Expected a KNIME URI but got: %s", uri);
+
+        var s = ExplorerFileSystem.INSTANCE.getStore(uri);
+
+        CheckUtils.checkState(s instanceof RemoteExplorerFileStore,
+            "Cannot retrieve Hub item versions for %s, the content is not available via a mount point.", uri);
+
+        var remoteFileStore = (RemoteExplorerFileStore)s;
+        return remoteFileStore.getVersions();
+
     }
 }

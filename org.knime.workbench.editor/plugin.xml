@@ -163,9 +163,9 @@
             name="Update Links"/>
       <command
             categoryId="knime.command.category"
-            description="Select a Hub Space version for a Component"
-            id="knime.commands.changeComponentSpaceVersion"
-            name="Select Hub Space Version"/>
+            description="Select a Hub Item version for a Component"
+            id="knime.commands.changeComponentItemVersion"
+            name="Select Hub Item Version"/>
       <command
             categoryId="knime.command.category"
             description="Allows for bulk changing component and metanode links"
@@ -327,6 +327,16 @@
                menubarPath="org.knime.workbench.editor.menu/group1"
                style="push"
                tooltip="Check and update metanode and component links"/>
+         <action
+               class="org.knime.workbench.editor2.actions.delegates.ChangeHubItemVersionAction"    
+               definitionId="knime.commands.changeComponentItemVersion"
+               disabledIcon="icons/meta/metanode_link_update.png"
+               icon="icons/meta/metanode_link_update.png"
+               id="knime.action.change_component_item_version"
+               label="Update Hub Item Version"
+               menubarPath="org.knime.workbench.editor.menu/group1"
+               style="push"
+               tooltip="Select a Hub version"/>
          <action
                class="org.knime.workbench.editor2.actions.delegates.BulkChangeMetaNodeLinksEditorAction"    
                definitionId="knime.commands.bulkChangeMetaNodeLinks"
@@ -597,12 +607,11 @@
             contextId="org.knime.workbench.editor.context"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M1+ALT+U"/>
-<!--            TODO: adding the short cut here isn't enough, doesn't work out of the box-->
-<!--      <key-->
-<!--            commandId="knime.commands.changeComponentSpaceVersion"-->
-<!--            contextId="org.knime.workbench.editor.context"-->
-<!--            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"-->
-<!--            sequence="M1+ALT+V"/>-->
+      <key
+            commandId="knime.commands.changeComponentItemVersion"
+            contextId="org.knime.workbench.editor.context"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+ALT+V"/>
       <key
             commandId="knime.commands.bulkChangeMetaNodeLinks"
             contextId="org.knime.workbench.editor.context"

@@ -1,6 +1,5 @@
 /*
  * ------------------------------------------------------------------------
- *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -43,38 +42,70 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * History
- *   23 Sep 2022 (carlwitt): created
+ * Created on Sep 21, 2022 by Carl Witt
  */
-package org.knime.workbench.editor2.actions;
+package org.knime.workbench.editor2.commands;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import org.junit.Test;
+import org.eclipse.gef.commands.CompoundCommand;
+import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeID;
+import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.util.hub.HubItemVersion;
 
 /**
- *
+ * A compound command that first changes the link (source URI) of a linked Component and then performs an update.
  * @author Carl Witt, KNIME AG, Zurich, Switzerland
  */
-public class ChangeComponentSpaceVersionActionTest {
+public class ChangeComponentHubVersionCommand extends AbstractKNIMECommand {
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(ChangeComponentHubVersionCommand.class);
+
+    private final SubNodeContainer m_component;
+
+    private final HubItemVersion m_targetVersion;
+
+    /** To achieve a version change, the source URI is modified and then an update is performed. */
+    private final CompoundCommand m_commandRegistry = new CompoundCommand();
 
     /**
-     * Test method for
-     * {@link org.knime.workbench.editor2.actions.ChangeComponentSpaceVersionAction#spaceVersion(java.net.URI)}.
-     *
-     * @throws URISyntaxException
+     * @param manager
+     * @param component
+     * @param targetVersion
      */
-    @Test
-    public void testSpaceVersionNumber() throws URISyntaxException {
-        URI withoutSpaceVersion = new URI("knime://SomeMountPoint/some/path?someParameter=12,2");
-        assertNull(ChangeComponentSpaceVersionAction.spaceVersion(withoutSpaceVersion));
+    public ChangeComponentHubVersionCommand(final WorkflowManager manager, final SubNodeContainer component,
+            final HubItemVersion targetVersion) {
+        super(manager);
 
-        URI withSpaceVersion3 = new URI("knime://My-KNIME-Hub/*02j3f023j?someParameter=12,2&spaceVersion=3&param=4");
-        assertEquals((Integer)3, ChangeComponentSpaceVersionAction.spaceVersion(withSpaceVersion3));
+        m_component = component;
+        m_targetVersion = targetVersion;
+    }
+
+    @Override
+    public void execute() {
+        doLinkURIChange();
+        var updateComponentCommand = new UpdateMetaNodeLinkCommand(getHostWFM(), new NodeID[]{m_component.getID()});
+        updateComponentCommand.execute();
+        m_commandRegistry.add(updateComponentCommand);
+    }
+
+    private void doLinkURIChange() {
+        final var oldUri = m_component.getTemplateInformation().getSourceURI();
+        final var targetUri = m_targetVersion.applyTo(oldUri);
+        final var changeCommand = new ChangeSubNodeLinkCommand(getHostWFM(), m_component, oldUri, targetUri);
+        if (changeCommand.canExecute()) {
+            changeCommand.execute();
+            m_commandRegistry.add(changeCommand);
+        }
+    }
+
+    @Override
+    public boolean canUndo() {
+        return m_commandRegistry.canUndo();
+    }
+
+    @Override
+    public void undo() {
+        m_commandRegistry.undo();
     }
 
 }
