@@ -74,7 +74,7 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
     public ExplorerPreferencePage() {
         super("KNIME Explorer Settings", null, GRID);
         setDescription("Set up mount points for usage in KNIME Explorer view. "
-            + "In KNIME Modern UI only mount points of type \"KNIME Hub\" are shown in the explorer.");
+            + "In KNIME Modern UI only mount points of type “KNIME Hub” are shown in the explorer.");
     }
 
     /**
