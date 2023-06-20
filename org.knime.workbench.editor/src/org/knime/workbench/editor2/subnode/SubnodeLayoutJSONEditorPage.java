@@ -82,6 +82,7 @@ import javax.swing.event.DocumentListener;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.layout.PixelConverter;
 import org.eclipse.jface.wizard.WizardPage;
 import org.eclipse.swt.SWT;
@@ -275,6 +276,11 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
     }
 
     boolean applyUsageChanges() {
+        if (!canApplyChanges()) {
+            MessageDialog.openInformation(getShell(), "Cannot apply settings",
+                "Can not apply new settings as the component is currently executing or has executing successors.");
+            return false;
+        }
         try (WorkflowLock lock = m_subNodeContainer.lock()) { // each node will cause lock acquisition, do it as bulk
             for (Entry<NodeID, Button> wUsage : m_nodeUsageComposite.getWizardUsageMap().entrySet()) {
                 NodeID id = wUsage.getKey();
@@ -305,6 +311,22 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
                 reportConfig = null;
             }
             m_subNodeContainer.getParent().changeSubNodeReportOutput(m_subNodeContainer.getID(), reportConfig);
+        }
+        return true;
+    }
+
+    /**
+     * @return true if the subnode can be modified (no executing successors, etc).
+     */
+    private boolean canApplyChanges() {
+        try (WorkflowLock lock = m_subNodeContainer.lock()) {
+            final var state = m_subNodeContainer.getNodeContainerState();
+            if (state.isExecutionInProgress()) {
+                return false;
+            }
+            if (state.isExecuted() && !m_subNodeContainer.canResetContainedNodes()) {
+                return false;
+            }
         }
         return true;
     }
