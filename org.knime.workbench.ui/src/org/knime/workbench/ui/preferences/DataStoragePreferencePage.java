@@ -84,7 +84,7 @@ public class DataStoragePreferencePage extends FieldEditorPreferencePage
     public DataStoragePreferencePage() {
         super(GRID);
         setDescription(
-            "Select the format used to store data for workflows that are configured to use the default data storage. "
+            "Select the format used to store data for workflows that are configured to use the row-based data storage. "
             + "This applies to temporary data and final table results "
             + "that are persisted as part of an executed workflow.");
     }
