@@ -55,6 +55,7 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.hub.HubItemVersion;
@@ -160,8 +161,14 @@ public class ChangeComponentHubVersionAction extends AbstractNodeAction {
      */
     private Optional<SubNodeContainer> getSingleSelectedComponent() {
         final NodeContainerEditPart[] parts = getSelectedParts(NodeContainerEditPart.class);
-        return parts.length == 1 ? Wrapper.unwrapOptional(parts[0].getNodeContainer(), SubNodeContainer.class)
-            : Optional.empty();
+        if (parts.length != 1) {
+            return Optional.empty();
+        }
+        final var nodeContainer = parts[0].getNodeContainer();
+        if (!(nodeContainer instanceof SubNodeContainerUI)) {
+            return Optional.empty();
+        }
+        return Wrapper.unwrapOptional(nodeContainer, SubNodeContainer.class);
     }
 
     /**
