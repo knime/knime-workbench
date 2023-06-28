@@ -373,6 +373,7 @@ public final class RepositoryFactory {
                 factory.getNodeName(), categoryPath, nodeType);
 
             node.setAfterID(nodeSet.getAfterID(factoryId));
+            node.setDeprecated(factory.isDeprecated());
 
             if (!Boolean.getBoolean("java.awt.headless")) {
                 Image icon = ImageRepository.getIconImage(factory);
