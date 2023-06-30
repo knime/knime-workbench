@@ -49,6 +49,7 @@
 package org.knime.workbench.editor2.actions;
 
 import java.net.URI;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -203,11 +204,11 @@ public class ChangeComponentHubVersionAction extends AbstractNodeAction {
             return;
         }
 
-        final var previousVersion = HubItemVersion.of(component.getTemplateInformation().getSourceURI());
+        final var previousVersion = HubItemVersion.of(component.getTemplateInformation().getSourceURI()) //
+                .orElse(HubItemVersion.currentState());
 
         // prompt for target version
-        final var dialog =
-            new ChangeComponentHubVersionDialog(shell, component, manager);
+        final var dialog = new ChangeComponentHubVersionDialog(shell, component, manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
             return;
@@ -215,9 +216,8 @@ public class ChangeComponentHubVersionAction extends AbstractNodeAction {
 
         // only do something if versions differ
         final var targetVersion = dialog.getSelectedVersion();
-        if (targetVersion != previousVersion) {
+        if (!Objects.equals(targetVersion, previousVersion)) {
             execute(new ChangeComponentHubVersionCommand(getManager(), optComponent.get(), targetVersion));
         }
     }
-
 }

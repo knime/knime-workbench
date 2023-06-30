@@ -57,6 +57,7 @@ import org.knime.core.node.workflow.contextv2.ServerJobExecutorInfo;
 import org.knime.core.node.workflow.contextv2.ServerLocationInfo;
 import org.knime.core.util.URIPathEncoder;
 import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.hub.HubItemVersion;
 
 /**
  * KNIME URL Resolver for a Server executor.
@@ -77,8 +78,10 @@ final class ServerExecutorUrlResolver extends KnimeUrlResolver {
     @Override
     URL resolveMountpointAbsolute(final URL url) throws ResourceAccessException {
         final var mountId = url.getAuthority();
+        checkNoVersion(HubItemVersion.of(url).orElse(null));
         if (m_locationInfo.getDefaultMountId().equals(mountId)) {
-            final var uri = resolveMountpointRelative(URIPathEncoder.decodePath(url));
+            final var uri = resolveMountpointRelative(URIPathEncoder.decodePath(url),
+                HubItemVersion.of(url).orElse(null));
             return URIPathEncoder.UTF_8.encodePathSegments(URLResolverUtil.toURL(uri));
         }
         // possibly a MountTable is present, which will then resolve the URL (AP-19986)
@@ -86,19 +89,26 @@ final class ServerExecutorUrlResolver extends KnimeUrlResolver {
     }
 
     @Override
-    URI resolveMountpointRelative(final String decodedPath) throws ResourceAccessException {
-        // legacy Servers don't have spaces, resolve directly against repo root
+    URI resolveMountpointRelative(final String decodedPath, final HubItemVersion version)
+            throws ResourceAccessException {
+        checkNoVersion(version);
+
+        // legacy Servers don't have spaces or versions, resolve directly against repo root
         final var repositoryAddress = m_locationInfo.getRepositoryAddress().normalize();
         return URIUtil.append(repositoryAddress, decodedPath + ":data").normalize();
     }
 
     @Override
-    URI resolveSpaceRelative(final String decodedPath) throws ResourceAccessException {
-        return resolveMountpointRelative(decodedPath);
+    URI resolveSpaceRelative(final String decodedPath, final HubItemVersion version) throws ResourceAccessException {
+        checkNoVersion(version);
+
+        return resolveMountpointRelative(decodedPath, version);
     }
 
     @Override
-    URI resolveWorkflowRelative(final String decodedPath) throws ResourceAccessException {
+    URI resolveWorkflowRelative(final String decodedPath, final HubItemVersion version) throws ResourceAccessException {
+        checkNoVersion(version);
+
         if (leavesScope(decodedPath)) {
             // we're on a server executor, resolve against the repository
             final var repositoryAddress = m_locationInfo.getRepositoryAddress().normalize();
@@ -122,5 +132,11 @@ final class ServerExecutorUrlResolver extends KnimeUrlResolver {
     @Override
     URI resolveNodeRelative(final String decodedPath) throws ResourceAccessException {
         return defaultResolveNodeRelative(decodedPath, m_executorInfo.getLocalWorkflowPath());
+    }
+
+    private static void checkNoVersion(final HubItemVersion version) throws ResourceAccessException {
+        if (version != null) {
+            throw new ResourceAccessException("KNIME URLs on a KNIME Server cannot specify an item version.");
+        }
     }
 }

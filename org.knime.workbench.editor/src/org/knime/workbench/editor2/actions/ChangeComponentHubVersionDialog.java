@@ -177,8 +177,8 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
         final var buttonGroup = new Composite(content, SWT.NONE);
         buttonGroup.setLayout(new RowLayout());
 
-        final var link = HubItemVersion.of(
-            m_component.getTemplateInformation().getSourceURI());
+        final var link = HubItemVersion.of(m_component.getTemplateInformation().getSourceURI()) //
+                .orElse(HubItemVersion.currentState());
 
         m_useSpecificVersionCheckBox = new Button(buttonGroup, SWT.RADIO);
         m_useSpecificVersionCheckBox.setText("Specific version    ");
@@ -418,7 +418,7 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
 
             m_tableViewer.setInput(m_versions);
             final var uri = m_component.getTemplateInformation().getSourceURI();
-            final var initialLinkPair = HubItemVersion.of(uri);
+            final var initialLinkPair = HubItemVersion.of(uri).orElse(HubItemVersion.currentState());
 
             if (initialLinkPair.linkType() == LinkType.FIXED_VERSION) {
                 // pre-select current version in the list

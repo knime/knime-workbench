@@ -52,13 +52,15 @@ import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-import org.apache.http.client.utils.URIBuilder;
+import org.apache.hc.core5.net.URIBuilder;
 import org.eclipse.core.runtime.URIUtil;
 import org.knime.core.node.util.ClassUtils;
+import org.knime.core.node.workflow.TemplateUpdateUtil.LinkType;
 import org.knime.core.node.workflow.contextv2.AnalyticsPlatformExecutorInfo;
 import org.knime.core.node.workflow.contextv2.HubSpaceLocationInfo;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
 import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.hub.HubItemVersion;
 
 /**
  * KNIME URL Resolver for an Analytics Platform with a workflow that comes from a REST location.
@@ -81,25 +83,32 @@ final class AnalyticsPlatformTempCopyUrlResolver extends KnimeUrlResolver {
     }
 
     @Override
-    URI resolveMountpointRelative(final String decodedPath) throws ResourceAccessException {
-        return resolveSpaceRelative(decodedPath);
+    URI resolveMountpointRelative(final String decodedPath, final HubItemVersion version)
+            throws ResourceAccessException {
+        return resolveSpaceRelative(decodedPath, version);
     }
 
     @Override
-    URI resolveSpaceRelative(final String decodedPath) throws ResourceAccessException {
+    URI resolveSpaceRelative(final String decodedPath, final HubItemVersion version) throws ResourceAccessException {
         // we are mounted in the Analytics Platform, make the ExplorerMountTable sort it out
-        final URI spaceUri;
-        try {
-            // on legacy Servers the whole directory tree is treated as a single space
-            final var spacePath = ClassUtils.castOptional(HubSpaceLocationInfo.class, m_locationInfo)
+
+        // set path to `null` on legacy Servers because the whole directory tree is treated as a single space
+        final var spacePath = ClassUtils.castOptional(HubSpaceLocationInfo.class, m_locationInfo)
                 .map(HubSpaceLocationInfo::getSpacePath).orElse(null);
 
-            // this inherits the space version
-            spaceUri = new URIBuilder(m_mountpointURI).setPath(spacePath).build().normalize();
+        final URI spaceUri;
+        final URI resolvedUri;
+        try {
+            final var spaceUriBuilder = new URIBuilder(m_mountpointURI).setPath(spacePath).removeQuery();
+            if (version != null) {
+                version.addVersionToURI(spaceUriBuilder);
+            }
+            spaceUri = spaceUriBuilder.build();
+            resolvedUri = URIUtil.append(spaceUri, decodedPath);
         } catch (URISyntaxException e) {
             throw new ResourceAccessException("Could not build space URI: " + e.getMessage(), e);
         }
-        final var resolvedUri = URIUtil.append(spaceUri, decodedPath).normalize();
+
         if (isContainedIn(resolvedUri, m_mountpointURI)) {
             // we could allow this at some point and resolve the URL in the local file system
             throw new ResourceAccessException(
@@ -114,11 +123,18 @@ final class AnalyticsPlatformTempCopyUrlResolver extends KnimeUrlResolver {
     }
 
     @Override
-    URI resolveWorkflowRelative(final String decodedPath) throws ResourceAccessException {
+    URI resolveWorkflowRelative(final String decodedPath, final HubItemVersion version) throws ResourceAccessException {
         if (leavesScope(decodedPath)) {
-            // remote REST location, access via mountpoint-absolute URL
-            final var uri = URIUtil.append(m_mountpointURI, decodedPath);
-            return uri.normalize();
+            try {
+                // remote REST location, access via mountpoint-absolute URL
+                final var uriBuilder = new URIBuilder(URIUtil.append(m_mountpointURI, decodedPath)).removeQuery();
+                if (version != null) {
+                    version.addVersionToURI(uriBuilder);
+                }
+                return uriBuilder.build();
+            } catch (URISyntaxException e) {
+                throw new ResourceAccessException("Could not build space URI: " + e.getMessage(), e);
+            }
         }
 
         // a file inside the workflow
@@ -127,11 +143,18 @@ final class AnalyticsPlatformTempCopyUrlResolver extends KnimeUrlResolver {
 
         // if resolved path is outside the workflow, check whether it is still inside the mountpoint
         if (!URLResolverUtil.getCanonicalPath(resolvedFile)
-            .startsWith(URLResolverUtil.getCanonicalPath(currentLocation.toFile()))) {
+                .startsWith(URLResolverUtil.getCanonicalPath(currentLocation.toFile()))) {
             throw new ResourceAccessException(
-                "Leaving temporarily copied workflow is not allowed for workflow relative URLs: "
-                    + resolvedFile.getAbsolutePath() + " is not in " + currentLocation);
+                "Path component of workflow relative URLs leaving the workflow must start with " + "'/..', found '"
+                    + decodedPath + "'.");
         }
+
+        if (version != null) {
+            throw new ResourceAccessException("Workflow relative URLs accessing workflow contents cannot specify a "
+                    + "version: 'knime://workflow.knime" + decodedPath + "?version="
+                    + version.getQueryParameterValue().orElse(LinkType.LATEST_STATE.getIdentifier()) + "'.");
+        }
+
         return resolvedFile.toURI();
     }
 

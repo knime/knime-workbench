@@ -54,12 +54,14 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 
-import org.apache.http.client.utils.URIBuilder;
+import org.apache.hc.core5.net.URIBuilder;
 import org.eclipse.core.runtime.URIUtil;
+import org.knime.core.node.workflow.TemplateUpdateUtil.LinkType;
 import org.knime.core.node.workflow.contextv2.HubJobExecutorInfo;
 import org.knime.core.node.workflow.contextv2.HubSpaceLocationInfo;
 import org.knime.core.util.URIPathEncoder;
 import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.hub.HubItemVersion;
 
 /**
  * KNIME URL Resolver for a Hub executor.
@@ -81,42 +83,41 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
     URL resolveMountpointAbsolute(final URL url) throws ResourceAccessException {
         final var mountId = url.getAuthority();
         if (!m_locationInfo.getDefaultMountId().equals(mountId)) {
+            // TODO should this be delegated to the `ExplorerMountTable`?
             throw new ResourceAccessException("Unknown Mount ID on Hub Executor in URL '" + url + "'.");
         }
 
         // we're on a Hub executor, resolve workflow locally via the repository
         final var decodedPath = URIPathEncoder.decodePath(url);
-        final var spaceVersion = URLResolverUtil.getSpaceVersion(url);
+        final var versionInfo = HubItemVersion.of(url);
 
         final var repoUriBuilder = new URIBuilder(m_locationInfo.getRepositoryAddress());
         final var segments = new ArrayList<>(repoUriBuilder.getPathSegments());
         segments.addAll(new URIBuilder().setPath(decodedPath + ":data").getPathSegments());
         repoUriBuilder.setPathSegments(segments);
-        if (spaceVersion != null) {
-            repoUriBuilder.addParameter("spaceVersion", spaceVersion);
-        }
+        versionInfo.ifPresent(version -> version.addVersionToURI(repoUriBuilder));
         return URLResolverUtil.toURL(repoUriBuilder);
     }
 
     @Override
-    URI resolveMountpointRelative(final String decodedPath) throws ResourceAccessException {
-        return resolveSpaceRelative(decodedPath);
+    URI resolveMountpointRelative(final String decodedPath, final HubItemVersion version)
+            throws ResourceAccessException {
+        return resolveSpaceRelative(decodedPath, version);
     }
 
     @Override
-    URI resolveSpaceRelative(final String decodedPath) throws ResourceAccessException {
+    URI resolveSpaceRelative(final String decodedPath, final HubItemVersion version) throws ResourceAccessException {
         // we're on a Hub executor, resolve workflow locally via the repository
         final var spacePath = m_locationInfo.getSpacePath();
-        final var spaceVersion = m_locationInfo.getSpaceVersion().orElse(null);
         final var repositoryAddress = m_locationInfo.getRepositoryAddress();
         final var workflowPath = m_locationInfo.getWorkflowPath();
         final var workflowAddress = m_locationInfo.getWorkflowAddress();
         return createSpaceRelativeRepoUri(workflowAddress, workflowPath, decodedPath, repositoryAddress, spacePath,
-            spaceVersion);
+            version);
     }
 
     @Override
-    URI resolveWorkflowRelative(final String decodedPath) throws ResourceAccessException {
+    URI resolveWorkflowRelative(final String decodedPath, final HubItemVersion version) throws ResourceAccessException {
         if (leavesScope(decodedPath)) {
             // we're on a server of hub executor, resolve against the repository
             final var spacePath = m_locationInfo.getSpacePath();
@@ -129,7 +130,9 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
             }
             try {
                 final var builder = new URIBuilder(URIUtil.append(workflowAddress, decodedPath + ":data"));
-                m_locationInfo.getSpaceVersion().ifPresent(v -> builder.addParameter("spaceVersion", v));
+                if (version != null) {
+                    version.addVersionToURI(builder);
+                }
                 return builder.build().normalize();
             } catch (URISyntaxException e) {
                 throw new ResourceAccessException("Could not build space URI: " + e.getMessage(), e);
@@ -146,6 +149,13 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
                 "Path component of workflow relative URLs leaving the workflow must start with " + "'/..', found '"
                     + decodedPath + "'.");
         }
+
+        if (version != null) {
+            throw new ResourceAccessException("Workflow relative URLs accessing workflow contents cannot specify a "
+                    + "version: 'knime://workflow.knime" + decodedPath + "?version="
+                    + version.getQueryParameterValue().orElse(LinkType.LATEST_STATE.getIdentifier()) + "'.");
+        }
+
         return resolvedFile.toURI();
     }
 
@@ -162,12 +172,12 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
      * @param decodedPath space-relative path
      * @param spacePath path to the Hub Space
      * @param spaceRepoUri REST repository address of the Hub Space
-     * @param spaceVersion space version, may be {@code null}
+     * @param itemVersion item version, may be {@code null}
      * @return resolved URI
      * @throws ResourceAccessException if the URI doesn't stay in its lane
      */
     static URI createSpaceRelativeRepoUri(final URI workflowAddress, final String workflowPath,
-        final String decodedPath, final URI repositoryAddress, final String spacePath, final String spaceVersion)
+        final String decodedPath, final URI repositoryAddress, final String spacePath, final HubItemVersion version)
         throws ResourceAccessException {
         final URI normalizedUri;
         final URI plainUri;
@@ -183,8 +193,8 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
             // omit `:data` and query parameter for the checks below
             plainUri = new URIBuilder(URIUtil.append(spaceRepoUri, decodedPath)).build().normalize();
             final var builder = new URIBuilder(URIUtil.append(spaceRepoUri, decodedPath + ":data"));
-            if (spaceVersion != null) {
-                builder.addParameter("spaceVersion", spaceVersion);
+            if (version != null) {
+                version.addVersionToURI(builder);
             }
             normalizedUri = builder.build().normalize();
         } catch (URISyntaxException e) {
@@ -196,10 +206,12 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
             throw new ResourceAccessException("Accessing the workflow contents is not allowed for space relative URLs: "
                 + "'" + decodedPath + "' points into current workflow " + workflowPath);
         }
+
         if (!isContainedIn(plainUri, spaceRepoUri)) {
             throw new ResourceAccessException("Leaving the Hub space is not allowed for space relative URLs: "
                 + decodedPath + " is not in " + spacePath);
         }
+
         return normalizedUri;
     }
 }

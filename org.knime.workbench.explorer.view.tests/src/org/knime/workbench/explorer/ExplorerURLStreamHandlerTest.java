@@ -305,7 +305,7 @@ public class ExplorerURLStreamHandlerTest {
                     .withWorkflowPath("/Users/john/Private/folder/workflow")
                     .withAuthenticator(new SimpleTokenAuthenticator("token"))
                     .withDefaultMountId("My-Knime-Hub")
-                    .withSpace("/Users/john/Private", "*11", null)
+                    .withSpace("/Users/john/Private", "*11")
                     .withWorkflowItemId("*12"))
                 .build();
 
@@ -650,8 +650,9 @@ public class ExplorerURLStreamHandlerTest {
                     .withWorkflowPath("/Users/john/Private/workflow")
                     .withAuthenticator(new SimpleTokenAuthenticator("token"))
                     .withDefaultMountId("My-Knime-Hub")
-                    .withSpace("/Users/john/Private", "*11", "4")
-                    .withWorkflowItemId("*12"))
+                    .withSpace("/Users/john/Private", "*11")
+                    .withWorkflowItemId("*12")
+                    .withItemVersion(4))
                 .build();
 
         final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
@@ -659,8 +660,9 @@ public class ExplorerURLStreamHandlerTest {
         wfm.save(currentLocation.toFile(), new ExecutionMonitor(), false);
         NodeContext.pushContext(wfm);
 
+        // different item, so the workflow's item version is irrelevant
         assertResolvedURIEquals("Unexpected resolved URL",
-            URI.create(repoAddressUri.toString() + "/Users/john/Private/boss/test%20small.txt:data?spaceVersion=4"),
+            URI.create(repoAddressUri.toString() + "/Users/john/Private/boss/test%20small.txt:data"),
             new URL("knime://knime.space/boss/test%20small.txt"));
         final var e = assertThrows(IOException.class,
             () -> m_handler.openConnection(new URL("knime://knime.space/test/../../Public/stuff/test.txt")));
@@ -690,7 +692,7 @@ public class ExplorerURLStreamHandlerTest {
                     .withWorkflowPath("/Users/john/Private/workflow")
                     .withAuthenticator(new SimpleTokenAuthenticator("token"))
                     .withDefaultMountId("My-Knime-Hub")
-                    .withSpace("/Users/john/Private", "*11", null)
+                    .withSpace("/Users/john/Private", "*11")
                     .withWorkflowItemId("*12"))
                 .build();
 
@@ -701,42 +703,6 @@ public class ExplorerURLStreamHandlerTest {
 
         assertResolvedURIEquals("Unexpected resolved URL",
             URI.create(repoAddressUri.toString() + "/Users/john/Private/boss/test%20small.txt:data"),
-            new URL("knime://knime.space/boss/test%20small.txt"));
-    }
-
-    /**
-     * Checks if space-relative knime-URLs are resolved correctly with empty version.
-     *
-     * @throws Exception if an error occurs
-     */
-    @Test
-    public void testResolveSpaceRelativeURLWithEmptyVersion() throws Exception {
-        final var repoAddressUri = URI.create("https://api.hub.knime.com:443/knime/rest/v4/repository");
-        final var currentLocation = KNIMEConstants.getKNIMETempPath().resolve("root").resolve("workflow");
-
-        final var context = WorkflowContextV2.builder()
-                .withHubJobExecutor(exec -> exec
-                    .withCurrentUserAsUserId()
-                    .withLocalWorkflowPath(currentLocation)
-                    .withJobId(UUID.randomUUID())
-                    .withScope("test", "test")
-                    .withJobCreator("test"))
-                .withHubSpaceLocation(loc -> loc
-                    .withRepositoryAddress(repoAddressUri)
-                    .withWorkflowPath("/Users/john/Private/workflow")
-                    .withAuthenticator(new SimpleTokenAuthenticator("token"))
-                    .withDefaultMountId("My-Knime-Hub")
-                    .withSpace("/Users/john/Private", "*11", "")
-                    .withWorkflowItemId("*12"))
-                .build();
-
-        final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
-            new WorkflowCreationHelper(context));
-        wfm.save(currentLocation.toFile(), new ExecutionMonitor(), false);
-        NodeContext.pushContext(wfm);
-
-        assertResolvedURIEquals("Unexpected resolved URL",
-            URI.create(repoAddressUri.toString() + "/Users/john/Private/boss/test%20small.txt:data?spaceVersion="),
             new URL("knime://knime.space/boss/test%20small.txt"));
     }
 
@@ -762,8 +728,9 @@ public class ExplorerURLStreamHandlerTest {
                     .withWorkflowPath("/Users/john/Private")
                     .withAuthenticator(new SimpleTokenAuthenticator("token"))
                     .withDefaultMountId("My-Knime-Hub")
-                    .withSpace("/Users/john/Private", "*11", "4")
-                    .withWorkflowItemId("*12"))
+                    .withSpace("/Users/john/Private", "*11")
+                    .withWorkflowItemId("*12")
+                    .withItemVersion(4))
                 .build();
 
         final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
@@ -821,8 +788,9 @@ public class ExplorerURLStreamHandlerTest {
                     .withWorkflowPath("/Users/john doe/Private/workflow")
                     .withAuthenticator(new SimpleTokenAuthenticator("token"))
                     .withDefaultMountId("KNIME-Community-Hub")
-                    .withSpace("/Users/john doe/Private", "*11", "4")
-                    .withWorkflowItemId("*12"))
+                    .withSpace("/Users/john doe/Private", "*11")
+                    .withWorkflowItemId("*12")
+                    .withItemVersion(4))
                 .build();
 
         final var wfm = WorkflowManager.ROOT.createAndAddProject("Test" + UUID.randomUUID(),
@@ -830,7 +798,7 @@ public class ExplorerURLStreamHandlerTest {
         NodeContext.pushContext(wfm);
 
         assertResolvedURIEquals("Unexpected resolved URL",
-            URI.create("knime://" + localMountId + "/Users/john%20doe/Private/Foo/test.txt?spaceVersion=4"),
+            URI.create("knime://" + localMountId + "/Users/john%20doe/Private/Foo/test.txt"),
             new URL("knime://knime.space/Foo/test.txt"));
 
         final var url1 = new URL("knime://knime.space/workflow/data/test.txt");

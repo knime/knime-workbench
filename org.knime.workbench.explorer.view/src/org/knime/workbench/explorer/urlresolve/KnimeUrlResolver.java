@@ -68,7 +68,9 @@ import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
 import org.knime.core.ui.node.workflow.WorkflowContextUI;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.KnimeUrlType;
+import org.knime.core.util.URIPathEncoder;
 import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.hub.HubItemVersion;
 
 /**
  * Resolves a KNIME URL in a specified environment specified by a {@link WorkflowContextUI}.
@@ -165,7 +167,8 @@ public abstract class KnimeUrlResolver {
      * @throws ResourceAccessException if resolution was not possible
      */
     final URL resolveMountpointRelative(final URL url) throws ResourceAccessException {
-        final var resolvedUri = resolveMountpointRelative(URLResolverUtil.pathForRelative(url));
+        final var resolvedUri = resolveMountpointRelative(URIPathEncoder.decodePath(url),
+            HubItemVersion.of(url).orElse(null));
         return URLResolverUtil.toURL(resolvedUri);
     }
 
@@ -177,7 +180,8 @@ public abstract class KnimeUrlResolver {
      * @throws ResourceAccessException if resolution was not possible
      */
     final URL resolveSpaceRelative(final URL url) throws ResourceAccessException {
-        final var resolvedUri = resolveSpaceRelative(URLResolverUtil.pathForRelative(url));
+        final var resolvedUri = resolveSpaceRelative(URIPathEncoder.decodePath(url),
+            HubItemVersion.of(url).orElse(null));
         return URLResolverUtil.toURL(resolvedUri);
     }
 
@@ -189,7 +193,8 @@ public abstract class KnimeUrlResolver {
      * @throws ResourceAccessException if resolution was not possible
      */
     final URL resolveWorkflowRelative(final URL url) throws ResourceAccessException {
-        final var resolvedUri = resolveWorkflowRelative(URLResolverUtil.pathForRelative(url));
+        final var resolvedUri = resolveWorkflowRelative(URIPathEncoder.decodePath(url),
+            HubItemVersion.of(url).orElse(null));
         return URLResolverUtil.toURL(resolvedUri);
     }
 
@@ -201,7 +206,10 @@ public abstract class KnimeUrlResolver {
      * @throws ResourceAccessException if resolution was not possible
      */
     final URL resolveNodeRelative(final URL url) throws ResourceAccessException {
-        final var resolvedUri = resolveNodeRelative(URLResolverUtil.pathForRelative(url));
+        if (HubItemVersion.of(url).isPresent()) {
+            throw new ResourceAccessException("Node-relative KNIME URLs cannot specify an item version: " + url);
+        }
+        final var resolvedUri = resolveNodeRelative(URIPathEncoder.decodePath(url));
         return URLResolverUtil.toURL(resolvedUri);
     }
 
@@ -214,7 +222,7 @@ public abstract class KnimeUrlResolver {
      * @throws ResourceAccessException if the URL could not be resolved
      */
     URI defaultResolveNodeRelative(final String decodedPath, final Path localWorkflowPath)
-        throws ResourceAccessException {
+            throws ResourceAccessException {
         ReferencedFile nodeDirectoryRef = NodeContext.getContext().getNodeContainer().getNodeContainerDirectory();
         if (nodeDirectoryRef == null) {
             throw new ResourceAccessException("Workflow must be saved before node-relative URLs can be used");
@@ -241,7 +249,7 @@ public abstract class KnimeUrlResolver {
      * @return resolved URI
      * @throws ResourceAccessException if the URL could not be resolved
      */
-    abstract URI resolveMountpointRelative(String decodedPath) throws ResourceAccessException;
+    abstract URI resolveMountpointRelative(String decodedPath, HubItemVersion version) throws ResourceAccessException;
 
     /**
      * Resolves a space relative URL in this resolver's scope.
@@ -250,7 +258,7 @@ public abstract class KnimeUrlResolver {
      * @return resolved URI
      * @throws ResourceAccessException if the URL could not be resolved
      */
-    abstract URI resolveSpaceRelative(String decodedPath) throws ResourceAccessException;
+    abstract URI resolveSpaceRelative(String decodedPath, HubItemVersion version) throws ResourceAccessException;
 
     /**
      * Resolves a workflow relative URL in this resolver's scope.
@@ -259,7 +267,7 @@ public abstract class KnimeUrlResolver {
      * @return resolved URI
      * @throws ResourceAccessException if the URL could not be resolved
      */
-    abstract URI resolveWorkflowRelative(String decodedPath) throws ResourceAccessException;
+    abstract URI resolveWorkflowRelative(String decodedPath, HubItemVersion version) throws ResourceAccessException;
 
     /**
      * Resolves a node relative URL in this resolver's scope.

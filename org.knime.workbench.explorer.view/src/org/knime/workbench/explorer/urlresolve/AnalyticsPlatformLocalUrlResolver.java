@@ -54,6 +54,7 @@ import java.net.URI;
 import org.knime.core.node.workflow.contextv2.AnalyticsPlatformExecutorInfo;
 import org.knime.core.util.Pair;
 import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.hub.HubItemVersion;
 
 /**
  * KNIME URL Resolver for an Analytics Platform with a workflow that comes from the local file system.
@@ -69,7 +70,8 @@ final class AnalyticsPlatformLocalUrlResolver extends KnimeUrlResolver {
     }
 
     @Override
-    URI resolveMountpointRelative(final String decodedPath) throws ResourceAccessException {
+    URI resolveMountpointRelative(final String decodedPath, final HubItemVersion version)
+            throws ResourceAccessException {
         final var mountpointRoot = m_executorInfo.getMountpoint().map(Pair::getSecond)
             .orElseThrow(() -> new ResourceAccessException("Mountpoint or space relative URL needs a mountpoint."));
         final var resolvedFile = new File(mountpointRoot.toFile(), decodedPath);
@@ -83,12 +85,12 @@ final class AnalyticsPlatformLocalUrlResolver extends KnimeUrlResolver {
     }
 
     @Override
-    URI resolveSpaceRelative(final String decodedPath) throws ResourceAccessException {
-        return resolveMountpointRelative(decodedPath);
+    URI resolveSpaceRelative(final String decodedPath, final HubItemVersion version) throws ResourceAccessException {
+        return resolveMountpointRelative(decodedPath, version);
     }
 
     @Override
-    URI resolveWorkflowRelative(final String decodedPath) throws ResourceAccessException {
+    URI resolveWorkflowRelative(final String decodedPath, final HubItemVersion version) throws ResourceAccessException {
         // in local application or a file inside the workflow
         final var currentLocation = m_executorInfo.getLocalWorkflowPath();
         final var resolvedFile = new File(currentLocation.toFile(), decodedPath);

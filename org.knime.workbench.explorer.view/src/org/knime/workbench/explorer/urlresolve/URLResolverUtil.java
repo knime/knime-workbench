@@ -54,10 +54,8 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.hc.core5.net.URIBuilder;
 import org.knime.core.util.URIPathEncoder;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.pathresolve.URIToFileResolve;
@@ -70,29 +68,6 @@ import org.knime.core.util.pathresolve.URIToFileResolve;
  * @since 4.8
  */
 public final class URLResolverUtil {
-    /**
-     * Extracts the space version from the given URL's query parameters.
-     *
-     * @param url URL to extract the space version from
-     * @return extracted space version (or {@code null} if absent)
-     * @throws ResourceAccessException if empty of conflicting spaceVersion parameters are found
-     */
-    static String getSpaceVersion(final URL url) throws ResourceAccessException {
-        String version = null;
-        for (final var nv : URLEncodedUtils.parse(url.getQuery(), StandardCharsets.UTF_8)) {
-            if ("spaceVersion".equals(nv.getName())) {
-                final var value = nv.getValue();
-                if (value == null) {
-                    throw new ResourceAccessException("spaceVersion parameter can't be empty in URL " + url);
-                }
-                if (version != null && !version.equals(value)) {
-                    throw new ResourceAccessException("Conflicting spaceVersion parameters in URL " + url);
-                }
-                version = value;
-            }
-        }
-        return version;
-    }
 
     /**
      * Wraps the IOException in a more specific ResourceAccessException.
@@ -107,20 +82,6 @@ public final class URLResolverUtil {
         } catch (IOException e) {
             throw new ResourceAccessException("Failed to get the canonical path of file: " + e.getMessage(), e);
         }
-    }
-
-    /**
-     * Checks that the relative URL doesn't specify a space version and extracts its path component.
-     *
-     * @param url URL to extract the path from
-     * @return extracted and decoded path
-     * @throws ResourceAccessException if a space version was specified
-     */
-    static String pathForRelative(final URL url) throws ResourceAccessException {
-        if (getSpaceVersion(url) != null) {
-            throw new ResourceAccessException("Relative KNIME URLs cannot specify a space version: " + url);
-        }
-        return URIPathEncoder.decodePath(url);
     }
 
     /**
