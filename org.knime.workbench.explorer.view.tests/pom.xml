@@ -10,7 +10,7 @@
 	<packaging>eclipse-test-plugin</packaging>
 
 	<properties>
-		<revision>8.9.0</revision>
+		<revision>8.10.0</revision>
 		<changelist>-SNAPSHOT</changelist>
 		<sonar.sources></sonar.sources>
 		<sonar.tests>src</sonar.tests>
@@ -21,7 +21,6 @@
 			<plugin>
 				<groupId>org.eclipse.tycho</groupId>
 				<artifactId>target-platform-configuration</artifactId>
-				<version>${tycho.version}</version>
 				<configuration>
 					<dependency-resolution>
 						<extraRequirements>
