@@ -47,8 +47,6 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import javax.swing.SwingUtilities;
-
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
@@ -122,9 +120,8 @@ public class OpenViewAction extends Action {
         LOGGER.debug("Open Node View " + m_nodeContainer.getName() + " (#" + m_index + ")");
         try {
             final String title = m_nodeContainer.getViewName(m_index) + " - " + m_nodeContainer.getDisplayLabel();
-            final java.awt.Rectangle knimeWindowBounds = OpenViewAction.getAppBoundsAsAWTRec();
-            SwingUtilities.invokeLater(
-                () -> Node.invokeOpenView(m_nodeContainer.getView(m_index), title, knimeWindowBounds));
+            Node.invokeOpenView(OpenNodeViewAction.createNodeView(m_nodeContainer, false, true), title,
+                OpenViewAction.getAppBoundsAsAWTRec());
         } catch (Throwable t) {
             MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_ERROR | SWT.OK);
             mb.setText("View cannot be opened");
