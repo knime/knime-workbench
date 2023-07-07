@@ -134,19 +134,11 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
              * {@link AbstractMetaView#populateUpperSection(Composite)})
              */
             UPPER,
-            /** The tags section **/
-            TAGS,
-            /** The links section **/
-            LINKS,
             /**
              * The license section - if the subclass view has its own logic as to whether to display this, then they
              * should not specify this enum value.
              */
             LICENSE,
-            /** The creation date section **/
-            CREATION_DATE,
-            /** The author section **/
-            AUTHOR,
             /**
              * The upper section (which subclasses will populate via
              * {@link AbstractMetaView#populateLowerSection(Composite)}
@@ -184,7 +176,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-edit.png");
 
     private static final Image SAVE_IMAGE =
-        ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-save.png");
+        ImageRepository.getImage(KNIMEEditorPlugin.PLUGIN_ID, "/icons/meta-view-accept.png");
 
     private static final int MINIMUM_CONTENT_PANE_WIDTH = 300;
 
@@ -866,68 +858,62 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
                 }
             }
 
-            if (m_hiddenSections.contains(HiddenSection.TAGS)) {
-                SWTUtilities.spaceReclaimingSetVisible(m_tagsSection, false);
-            } else {
-                SWTUtilities.spaceReclaimingSetVisible(m_tagsSection, true);
-                SWTUtilities.removeAllChildren(m_tagsAddContentPane);
-                SWTUtilities.removeAllChildren(m_tagsTagsContentPane);
+            // tags section
+            SWTUtilities.spaceReclaimingSetVisible(m_tagsSection, true);
+            SWTUtilities.removeAllChildren(m_tagsAddContentPane);
+            SWTUtilities.removeAllChildren(m_tagsTagsContentPane);
 
-                final List<? extends MetaInfoAtom> atoms = m_modelFacilitator.getTags();
-                if (editMode || (atoms.size() > 0)) {
-                    if (editMode) {
-                        SWTUtilities.spaceReclaimingSetVisible(m_tagsAddContentPane, true);
-                        createTagsAddUI();
-                    } else {
-                        SWTUtilities.spaceReclaimingSetVisible(m_tagsAddContentPane, false);
-                    }
-
-                    atoms.stream().forEach((atom) -> {
-                        if (editMode) {
-                            atom.populateContainerForEdit(m_tagsTagsContentPane);
-                        } else {
-                            atom.populateContainerForDisplay(m_tagsTagsContentPane);
-                        }
-                    });
-
-                    SWTUtilities.spaceReclaimingSetVisible(m_tagsNoDataLabelPane, false);
-                    SWTUtilities.spaceReclaimingSetVisible(m_tagsContentPane, true);
+            final List<? extends MetaInfoAtom> atoms = m_modelFacilitator.getTags();
+            if (editMode || (atoms.size() > 0)) {
+                if (editMode) {
+                    SWTUtilities.spaceReclaimingSetVisible(m_tagsAddContentPane, true);
+                    createTagsAddUI();
                 } else {
-                    SWTUtilities.spaceReclaimingSetVisible(m_tagsContentPane, false);
-                    SWTUtilities.spaceReclaimingSetVisible(m_tagsNoDataLabelPane, true);
+                    SWTUtilities.spaceReclaimingSetVisible(m_tagsAddContentPane, false);
                 }
+
+                atoms.stream().forEach((atom) -> {
+                    if (editMode) {
+                        atom.populateContainerForEdit(m_tagsTagsContentPane);
+                    } else {
+                        atom.populateContainerForDisplay(m_tagsTagsContentPane);
+                    }
+                });
+
+                SWTUtilities.spaceReclaimingSetVisible(m_tagsNoDataLabelPane, false);
+                SWTUtilities.spaceReclaimingSetVisible(m_tagsContentPane, true);
+            } else {
+                SWTUtilities.spaceReclaimingSetVisible(m_tagsContentPane, false);
+                SWTUtilities.spaceReclaimingSetVisible(m_tagsNoDataLabelPane, true);
             }
 
-            if (m_hiddenSections.contains(HiddenSection.LINKS)) {
-                SWTUtilities.spaceReclaimingSetVisible(m_linksSection, false);
-            } else {
-                SWTUtilities.spaceReclaimingSetVisible(m_linksSection, true);
-                SWTUtilities.removeAllChildren(m_linksAddContentPane);
-                SWTUtilities.removeAllChildren(m_linksLinksContentPane);
+            // links section
+            SWTUtilities.spaceReclaimingSetVisible(m_linksSection, true);
+            SWTUtilities.removeAllChildren(m_linksAddContentPane);
+            SWTUtilities.removeAllChildren(m_linksLinksContentPane);
 
-                final List<? extends MetaInfoAtom> atoms = m_modelFacilitator.getLinks();
-                if (editMode || (atoms.size() > 0)) {
-                    if (editMode) {
-                        SWTUtilities.spaceReclaimingSetVisible(m_linksAddContentPane, true);
-                        createLinksAddUI();
-                    } else {
-                        SWTUtilities.spaceReclaimingSetVisible(m_linksAddContentPane, false);
-                    }
-
-                    atoms.stream().forEach((atom) -> {
-                        if (editMode) {
-                            atom.populateContainerForEdit(m_linksLinksContentPane);
-                        } else {
-                            atom.populateContainerForDisplay(m_linksLinksContentPane);
-                        }
-                    });
-
-                    SWTUtilities.spaceReclaimingSetVisible(m_linksNoDataLabelPane, false);
-                    SWTUtilities.spaceReclaimingSetVisible(m_linksContentPane, true);
+            final List<? extends MetaInfoAtom> linkAtoms = m_modelFacilitator.getLinks();
+            if (editMode || !linkAtoms.isEmpty()) {
+                if (editMode) {
+                    SWTUtilities.spaceReclaimingSetVisible(m_linksAddContentPane, true);
+                    createLinksAddUI();
                 } else {
-                    SWTUtilities.spaceReclaimingSetVisible(m_linksContentPane, false);
-                    SWTUtilities.spaceReclaimingSetVisible(m_linksNoDataLabelPane, true);
+                    SWTUtilities.spaceReclaimingSetVisible(m_linksAddContentPane, false);
                 }
+
+                linkAtoms.stream().forEach((atom) -> {
+                    if (editMode) {
+                        atom.populateContainerForEdit(m_linksLinksContentPane);
+                    } else {
+                        atom.populateContainerForDisplay(m_linksLinksContentPane);
+                    }
+                });
+
+                SWTUtilities.spaceReclaimingSetVisible(m_linksNoDataLabelPane, false);
+                SWTUtilities.spaceReclaimingSetVisible(m_linksContentPane, true);
+            } else {
+                SWTUtilities.spaceReclaimingSetVisible(m_linksContentPane, false);
+                SWTUtilities.spaceReclaimingSetVisible(m_linksNoDataLabelPane, true);
             }
 
             if (!m_shouldDisplayLicenseSection.get() || m_hiddenSections.contains(HiddenSection.LICENSE)) {
@@ -951,32 +937,25 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
                 }
             }
 
-            if (m_hiddenSections.contains(HiddenSection.CREATION_DATE)) {
-                SWTUtilities.spaceReclaimingSetVisible(m_creationDateSection, false);
-            } else {
-                SWTUtilities.spaceReclaimingSetVisible(m_creationDateSection, true);
-                SWTUtilities.removeAllChildren(m_creationDateContentPane);
+            // creation date section
+            SWTUtilities.spaceReclaimingSetVisible(m_creationDateSection, true);
+            SWTUtilities.removeAllChildren(m_creationDateContentPane);
 
-                final MetaInfoAtom mia = m_modelFacilitator.getCreationDate();
-                if (editMode) {
-                    mia.populateContainerForEdit(m_creationDateContentPane);
-                } else {
-                    mia.populateContainerForDisplay(m_creationDateContentPane);
-                }
+            final MetaInfoAtom mia = m_modelFacilitator.getCreationDate();
+            if (editMode) {
+                mia.populateContainerForEdit(m_creationDateContentPane);
+            } else {
+                mia.populateContainerForDisplay(m_creationDateContentPane);
             }
 
-            if (m_hiddenSections.contains(HiddenSection.AUTHOR)) {
-                SWTUtilities.spaceReclaimingSetVisible(m_authorSection, false);
-            } else {
-                SWTUtilities.spaceReclaimingSetVisible(m_authorSection, true);
-                SWTUtilities.removeAllChildren(m_authorContentPane);
+            SWTUtilities.spaceReclaimingSetVisible(m_authorSection, true);
+            SWTUtilities.removeAllChildren(m_authorContentPane);
 
-                final MetaInfoAtom mia = m_modelFacilitator.getAuthor();
-                if (editMode) {
-                    mia.populateContainerForEdit(m_authorContentPane);
-                } else {
-                    mia.populateContainerForDisplay(m_authorContentPane);
-                }
+            final MetaInfoAtom authorAtom = m_modelFacilitator.getAuthor();
+            if (editMode) {
+                authorAtom.populateContainerForEdit(m_authorContentPane);
+            } else {
+                authorAtom.populateContainerForDisplay(m_authorContentPane);
             }
 
             updateLocalDisplay();
@@ -1069,18 +1048,14 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
             GridData gd = (GridData)m_editSaveButton.getLayoutData();
             gd.verticalIndent += 3;
             m_editSaveButton.setLayoutData(gd);
-            m_editSaveButton.addClickListener((source) -> {
-                performSave();
-            });
+            m_editSaveButton.addClickListener(source -> performSave());
             m_editSaveButton.setHighlightAsCircle(true);
 
             final FlatButton fb = new FlatButton(m_headerButtonPane, SWT.PUSH, CANCEL_IMAGE, new Point(20, 20), true);
             gd = (GridData)fb.getLayoutData();
             gd.verticalIndent += 3;
             fb.setLayoutData(gd);
-            fb.addClickListener((source) -> {
-                performDiscard();
-            });
+            fb.addClickListener(source -> performDiscard());
             fb.setHighlightAsCircle(true);
 
             updateEditSaveButton();
@@ -1391,6 +1366,7 @@ public abstract class AbstractMetaView extends ScrolledComposite implements Abst
         if (!increased) {
             layout(true, true);
         }
+        updateEditSaveButton();
     }
 
     /**

@@ -50,6 +50,7 @@ package org.knime.workbench.descriptionview.metadata.component;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -89,7 +90,8 @@ import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.ComponentMetadata;
-import org.knime.core.node.workflow.ComponentMetadata.ComponentOptionalsBuilder;
+import org.knime.core.node.workflow.NodeContainerMetadata.ContentType;
+import org.knime.core.node.workflow.NodeContainerMetadata.Link;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.workbench.descriptionview.BrowserProvider;
@@ -99,6 +101,7 @@ import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.DateMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextFieldMetaInfoAtom;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.editor2.figures.DisplayableNodeType;
 import org.knime.workbench.editor2.figures.NodeContainerFigure;
 import org.knime.workbench.repository.util.NodeFactoryHTMLCreator;
@@ -177,36 +180,36 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         super();
 
         m_subNodeContainer = snc;
-        ComponentMetadata metadata = snc.getMetadata();
+        final var metadata = snc.getMetadata();
 
-        if (metadata.getDescription().isPresent()) {
-            m_descriptionAtom = new TextAreaMetaInfoAtom("legacy-description", metadata.getDescription().get(), false);
+        metadata.getDescription().ifPresent(description -> {
+            final var desc = metadata.getContentType() == ContentType.PLAIN ? description
+                : AnnotationUtilities.stripHtmlFromTextPreservingLineBreaks(description);
+            m_descriptionAtom = new TextAreaMetaInfoAtom("legacy-description", desc, false);
             m_descriptionAtom.addChangeListener(this);
-        }
+        });
 
         m_nodeType = metadata.getNodeType().orElse(null);
 
-        if (metadata.getIcon().isPresent()) {
-            m_nodeIcon = new ImageData(new ByteArrayInputStream(metadata.getIcon().get()));
-        }
+        metadata.getIcon().ifPresent(icon -> m_nodeIcon = new ImageData(new ByteArrayInputStream(icon)));
 
         // These are not presently used in component views, so we populate them with dummy values as their
         //      existence and (not-)dirty state is tracked by our parent class.
-        m_authorAtom =
-            new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, "legacy-author", "unused in components", false);
-        m_creationDateAtom = new DateMetaInfoAtom("legacy-creation-date", ZonedDateTime.now());
+        m_authorAtom = new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, "legacy-author",
+            metadata.getAuthor().orElse(System.getProperty("user.name")), false);
+        m_creationDateAtom = new DateMetaInfoAtom("legacy-creation-date",
+            metadata.getCreated().orElse(ZonedDateTime.now()));
         m_licenseAtom = new ComboBoxMetaInfoAtom("legacy-license", "unused in components", false);
-        // Left here, but commented out, for future versions of component metadata
-//        for (final String tag : m_mockProvider.getTags()) {
-//            addTag(tag);
-//        }
-//        for (final String[] link : m_mockProvider.getLinkObjects()) {
-//            try {
-//                addLink(link[2], link[0], link[1]);
-//            } catch (final MalformedURLException e) {
-//                m_logger.error("Could not parse incoming URL [" + link[2] + "]", e);
-//            }
-//        }
+        for (final String tag : metadata.getTags()) {
+            addTag(tag);
+        }
+        for (final Link link : metadata.getLinks()) {
+            try {
+                addLink(link.url(), link.text());
+            } catch (final MalformedURLException e) {
+                m_logger.error("Could not parse incoming URL [" + link.url() + "]", e);
+            }
+        }
     }
 
     /**
@@ -220,15 +223,17 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
         m_savedNodeIcon = m_nodeIcon;
 
         ComponentMetadata meta = m_subNodeContainer.getMetadata();
-
+        final var richText = mayContainHTML();
         m_savedInPortNames = meta.getInPortNames().orElse(new String[m_subNodeContainer.getNrInPorts() - 1]);
-        correctSavedPortValues(m_savedInPortNames);
-        m_savedInPortDescriptions = meta.getInPortDescriptions().orElse(new String[m_subNodeContainer.getNrInPorts() - 1]);
-        correctSavedPortValues(m_savedInPortDescriptions);
+        correctSavedPortValues(m_savedInPortNames, richText);
+        m_savedInPortDescriptions =
+                meta.getInPortDescriptions().orElse(new String[m_subNodeContainer.getNrInPorts() - 1]);
+        correctSavedPortValues(m_savedInPortDescriptions, richText);
         m_savedOutPortNames = meta.getOutPortNames().orElse(new String[m_subNodeContainer.getNrOutPorts() - 1]);
-        correctSavedPortValues(m_savedOutPortNames);
-        m_savedOutPortDescriptions = meta.getOutPortDescriptions().orElse(new String[m_subNodeContainer.getNrOutPorts() - 1]);
-        correctSavedPortValues(m_savedOutPortDescriptions);
+        correctSavedPortValues(m_savedOutPortNames, richText);
+        m_savedOutPortDescriptions =
+                meta.getOutPortDescriptions().orElse(new String[m_subNodeContainer.getNrOutPorts() - 1]);
+        correctSavedPortValues(m_savedOutPortDescriptions, richText);
 
         m_imageSwatch.setImage(m_nodeIcon);
         m_nodeTypeImageSwatch.setImage(getImageForComponentType(m_nodeType));
@@ -248,10 +253,12 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
 
     // If we don't do this, the Objects.equals comparisons in containedMetadataIsDirty() will fail for empty
     //      content
-    private static void correctSavedPortValues (final String[] array) {
+    private static void correctSavedPortValues (final String[] array, final boolean strip) {
         for (int i = 0; i < array.length; i++) {
             if (array[i] == null) {
                 array[i] = "";
+            } else if (strip) {
+                array[i] = AnnotationUtilities.stripHtmlFromTextPreservingLineBreaks(array[i]);
             }
         }
     }
@@ -335,28 +342,33 @@ class ComponentMetadataModelFacilitator extends AbstractMetadataModelFacilitator
             icon = null;
         }
 
-        final ComponentOptionalsBuilder builder = ComponentMetadata.fluentBuilder()
+        final var componentMetadataBuilder = ComponentMetadata.fluentBuilder()
                 .withComponentType((m_nodeType != null) ? m_nodeType : null)
                 .withIcon(icon);
 
         String[] names = getStringArrayFromTextArray(m_inportNameTextFields);
         String[] descriptions = getStringArrayFromTextArray(m_inportDescriptionTextFields);
         for (var i = 0; i < names.length; i++) {
-            builder.withInPort(names[i], descriptions[i]);
+            componentMetadataBuilder.withInPort(names[i], descriptions[i]);
         }
 
         names = getStringArrayFromTextArray(m_outportNameTextFields);
         descriptions = getStringArrayFromTextArray(m_outportDescriptionTextFields);
         for (var i = 0; i < names.length; i++) {
-            builder.withOutPort(names[i], descriptions[i]);
+            componentMetadataBuilder.withOutPort(names[i], descriptions[i]);
         }
 
-        m_subNodeContainer.setMetadata(builder //
+        final var metadataBuilder = componentMetadataBuilder //
                 .withPlainContent() //
                 .withLastModifiedNow() //
                 .withDescription(m_descriptionAtom.getValue()) //
-                .build());
+                .withAuthor(m_authorAtom.getValue()) //
+                .withCreated(m_creationDateAtom.getDateTime());
 
+        m_tagAtoms.forEach(tag -> metadataBuilder.addTag(tag.getValue()));
+        m_linkAtoms.forEach(link -> metadataBuilder.addLink(link.getURL(), link.getValue()));
+
+        m_subNodeContainer.setMetadata(metadataBuilder.build());
     }
 
     void createUIAtomsForEdit(final Composite componentIconParent, final Composite portsParent) {

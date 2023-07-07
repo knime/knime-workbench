@@ -64,6 +64,7 @@ import org.knime.workbench.descriptionview.metadata.atoms.MetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TagMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextAreaMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.TextFieldMetaInfoAtom;
+import org.knime.workbench.editor2.AnnotationUtilities;
 import org.knime.workbench.ui.workflow.metadata.MetadataItemType;
 
 /**
@@ -167,8 +168,14 @@ class WorkflowMetadataModelFacilitator extends AbstractMetadataModelFacilitator 
                 case TITLE:
                     throw new IllegalArgumentException("Title not supported any more as of workflow format 5.1");
                 case DESCRIPTION:
-                    final String description = otherAttributes.containsKey("newStyle") ? value
-                        : potentiallyParseOldStyleDescription(value);
+                    final var isNewStyle = otherAttributes.containsKey("newStyle");
+                    final String description;
+                    if (isNewStyle) {
+                        final var isHTML = Boolean.TRUE.toString().equals(otherAttributes.get("html"));
+                        description = isHTML ? AnnotationUtilities.stripHtmlFromTextPreservingLineBreaks(value) : value;
+                    } else {
+                        description = potentiallyParseOldStyleDescription(value);
+                    }
                     m_descriptionAtom = new TextAreaMetaInfoAtom(label,
                         ((description.trim().length() == 0) ? null : description), isReadOnly);
                     mia = m_descriptionAtom;

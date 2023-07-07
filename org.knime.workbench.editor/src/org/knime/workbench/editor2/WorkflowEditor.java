@@ -4059,12 +4059,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                         JOptionPane.showMessageDialog(null, message, errorTitle, JOptionPane.ERROR_MESSAGE));
             }
         }
-        Display.getDefault().asyncExec(new Runnable() {
-            @Override
-            public void run() {
-                getEditorSite().getPage().closeEditor(WorkflowEditor.this, false);
-            }
-        });
+        Display.getDefault().asyncExec(() -> getEditorSite().getPage().closeEditor(WorkflowEditor.this, false));
     }
 
     /**

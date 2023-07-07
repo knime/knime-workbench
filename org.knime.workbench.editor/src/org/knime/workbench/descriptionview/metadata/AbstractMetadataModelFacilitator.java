@@ -55,8 +55,12 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeContainerMetadata;
+import org.knime.core.node.workflow.NodeContainerMetadata.ContentType;
 import org.knime.core.node.workflow.metadata.MetadataXML;
+import org.knime.core.ui.util.SWTUtilities;
 import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.DateMetaInfoAtom;
 import org.knime.workbench.descriptionview.metadata.atoms.LinkMetaInfoAtom;
@@ -105,6 +109,8 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
     protected final ArrayList<LinkMetaInfoAtom> m_linkAtoms;   // 1-N
     /** the license atom **/
     protected ComboBoxMetaInfoAtom m_licenseAtom;              // 1
+    /** Rich-text flag. */
+    protected NodeContainerMetadata m_metadata;
 
     /** a NodeLogger available for subclasses **/
     protected final NodeLogger m_logger;
@@ -142,9 +148,10 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
      * @param defaultTitleName the default name for the title field if none has been defined in the source metadata
      * @param defaultCreationDateSupplier the default creation date (e.g. retrieved from the workflow.knime file) for the
      *            creation-date field if none is defined in the source metadata - supplied in a lazy manner
+     * @param metadata metadata object
      */
     public void parsingHasFinishedWithDefaultTitleName(final String defaultTitleName,
-        final Supplier<ZonedDateTime> defaultCreationDateSupplier) {
+        final Supplier<ZonedDateTime> defaultCreationDateSupplier, final NodeContainerMetadata metadata) {
         if (m_authorAtom == null) {
             m_authorAtom = new TextFieldMetaInfoAtom(MetadataItemType.AUTHOR, MetadataXML.AUTHOR_LABEL,
                 System.getProperty("user.name"), false);
@@ -169,6 +176,7 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
                 new DateMetaInfoAtom(MetadataXML.CREATION_DATE_LABEL, defaultCreationDateSupplier.get());
             m_creationDateAtom.addChangeListener(this);
         }
+        m_metadata = metadata;
     }
 
     /**
@@ -182,6 +190,12 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
      * Invoking this allows this instance to store a copy of its state, and alert all atoms to store theirs.
      */
     public void storeStateForEdit() {
+        if (mayContainHTML()) {
+            MessageDialog.openInformation(SWTUtilities.getActiveShell(),
+                "Possible Loss of Formatting", "The metadata of this component are saved as rich text (HTML), which "
+                    + "this editor cannot display or save. All HTML formatting will be lost when you re-save here.");
+        }
+
         m_savedTagAtoms.addAll(m_tagAtoms);
         m_savedLinkAtoms.addAll(m_linkAtoms);
 
@@ -195,6 +209,13 @@ public abstract class AbstractMetadataModelFacilitator implements MetaInfoAtom.M
         m_tagWasDeletedDuringEdit.set(false);
         m_linkWasDeletedDuringEdit.set(false);
         m_editStateIsDirty.set(false);
+    }
+
+    /**
+     * @return whether or not the currently loaded metadata may contain HTML
+     */
+    protected boolean mayContainHTML() {
+        return m_metadata != null && m_metadata.getContentType() == ContentType.HTML;
     }
 
     /**

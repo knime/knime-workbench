@@ -85,8 +85,7 @@ public class ComponentMetaView extends AbstractMetaView {
      * @param parent
      */
     public ComponentMetaView(final Composite parent) {
-        super(parent, EnumSet.of(HiddenSection.TAGS, HiddenSection.LINKS, HiddenSection.LICENSE,
-            HiddenSection.CREATION_DATE, HiddenSection.AUTHOR));
+        super(parent, EnumSet.of(HiddenSection.LICENSE));
     }
 
     /**
@@ -217,7 +216,7 @@ public class ComponentMetaView extends AbstractMetaView {
             return;
         }
 
-        final SubNodeContainer subNodeContainer = (SubNodeContainer)o;
+        final var subNodeContainer = (SubNodeContainer)o;
         if (!hasComponentChanged(subNodeContainer)) {
             // We should still regenerate the port display since the name and description may have changed behind
             //  our backs by the user editing the virtual in and output nodes' configurations directly.
@@ -241,7 +240,8 @@ public class ComponentMetaView extends AbstractMetaView {
         m_currentAssetName = subNodeContainer.getName();    // TODO getMetadataTitle or similar...
         currentAssetNameHasChanged();
 
-        m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName, ZonedDateTime::now);
+        m_modelFacilitator.parsingHasFinishedWithDefaultTitleName(m_currentAssetName, ZonedDateTime::now,
+            subNodeContainer.getMetadata());
         m_modelFacilitator.setModelObserver(this);
 
         m_currentWriteProtectionState = m_currentSubNodeContainer.isWriteProtected();

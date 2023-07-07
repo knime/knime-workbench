@@ -328,7 +328,13 @@ public class AnnotationUtilities {
         }
     }
 
-    private static String stripHtmlFromTextPreservingLineBreaks(final String text) {
+    /**
+     * Strips HTML tags from the given string, adding line breaks after some block-level element types.
+     *
+     * @param text input text potentially containing HTML tags
+     * @return text without HTML
+     */
+    public static String stripHtmlFromTextPreservingLineBreaks(final String text) {
         var jsoupDoc = Jsoup.parse(text);
         var outputSettings = new Document.OutputSettings();
         var tagsToPreserveLineBreaksFrom = List.of("br", "p", "h1", "h2", "h3", "h4", "h5", "h6");
