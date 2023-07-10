@@ -54,8 +54,6 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.ParseException;
-import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -299,15 +297,7 @@ public class WorkflowMetaView extends AbstractMetaView {
         } else if ((legacyMetadataFile != null) && legacyMetadataFile.exists()) {
             try (final var inputStream = Files.newInputStream(legacyMetadataFile.toPath())) {
                 final var contents = WorkflowSetMetaParser.parse(inputStream);
-                final var metadataBuilder = WorkflowMetadata.fluentBuilder() //
-                        .withPlainContent() //
-                        .withLastModified(contents.getLastEdited().orElse(OffsetDateTime.now()).toZonedDateTime()) //
-                        .withDescription(contents.getDescription().orElse(""));
-                contents.getAuthor().ifPresent(metadataBuilder::withAuthor);
-                contents.getCreationDate().ifPresent(created -> metadataBuilder.withCreated(created.toZonedDateTime()));
-                contents.getTags().forEach(metadataBuilder::addTag);
-                contents.getLinks().forEach(link -> metadataBuilder.addLink(link.getUrl(), link.getText()));
-                metadata = metadataBuilder.build();
+                metadata = WorkflowMetadata.fromWorkflowSetMeta(contents);
                 loadMetadata(facilitator, metadata);
             } catch (Exception e) {
                 LOGGER.error("Failed to parse the workflow metadata file.", e);
@@ -365,7 +355,7 @@ public class WorkflowMetaView extends AbstractMetaView {
             try {
                 final var path = workflowPath.get();
                 return path == null ? dateTime : setFallbackCreationDateFromWorkflowFile(dateTime, workflowPath.get());
-            } catch (IOException | InvalidSettingsException | ParseException e) {
+            } catch (IOException | InvalidSettingsException e) {
                 LOGGER.error("The creation date couldn't be extracted from the workflow.", e);
             }
             return dateTime;
@@ -437,10 +427,9 @@ public class WorkflowMetaView extends AbstractMetaView {
      * @param workflowPath the workflow directory
      * @throws IOException
      * @throws InvalidSettingsException
-     * @throws ParseException
      */
     private static ZonedDateTime setFallbackCreationDateFromWorkflowFile(final ZonedDateTime dateTime,
-            final Path workflowPath) throws IOException, InvalidSettingsException, ParseException {
+            final Path workflowPath) throws IOException, InvalidSettingsException {
         final var creationDateFromWorkflowFile = getCreationDateFromWorkflowFile(workflowPath);
         return creationDateFromWorkflowFile == null ? dateTime : creationDateFromWorkflowFile;
     }

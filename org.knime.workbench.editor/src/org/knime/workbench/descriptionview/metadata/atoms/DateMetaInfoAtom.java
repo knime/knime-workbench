@@ -48,11 +48,9 @@
  */
 package org.knime.workbench.descriptionview.metadata.atoms;
 
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
-import java.util.Calendar;
-import java.util.GregorianCalendar;
 
 import javax.xml.transform.sax.TransformerHandler;
 
@@ -72,6 +70,9 @@ import org.xml.sax.SAXException;
  * @author loki der quaeler
  */
 public class DateMetaInfoAtom extends MetaInfoAtom {
+
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MMM/yyyy");
+
     private static final String TIME_OF_DAY_SUFFIX = "/12:00:01 +02:00";
 
     private ZonedDateTime m_date;
@@ -80,27 +81,9 @@ public class DateMetaInfoAtom extends MetaInfoAtom {
      * @param label the label displayed with the value of this atom in some UI widget; this is historical and unused.
      * @param value the displayed value of this atom.
      */
-    public DateMetaInfoAtom (final String label, final String value) {
-        super(MetadataItemType.CREATION_DATE, label, value, true);
-
-        if (value == null) {
-            m_date = null;
-        } else {
-            final var calendar = MetaInfoFile.calendarFromDateString(value);
-            m_date = calendar instanceof GregorianCalendar gregorian ? gregorian.toZonedDateTime()
-                : ZonedDateTime.ofInstant(calendar.toInstant(), ZoneId.systemDefault());
-        }
-    }
-
-    /**
-     * @param label the label displayed with the value of this atom in some UI widget; this is historical and unused.
-     * @param date the {@link Calendar} instance representing the date represented by this instance
-     */
-    public DateMetaInfoAtom (final String label, final ZonedDateTime date) {
-        super(MetadataItemType.CREATION_DATE, label, MetaInfoFile.dateToStorageString(date.getDayOfMonth(),
-            date.getMonthValue(), date.getYear()), true);
-
-        m_date = date;
+    public DateMetaInfoAtom (final String label, final ZonedDateTime value) {
+        super(MetadataItemType.CREATION_DATE, label, value == null ? null : DATE_FORMAT.format(value), true);
+        m_date = value;
     }
 
     @Override

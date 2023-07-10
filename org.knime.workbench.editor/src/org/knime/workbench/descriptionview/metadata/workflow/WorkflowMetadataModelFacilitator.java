@@ -54,7 +54,9 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 
+import org.knime.core.node.workflow.NodeContainerMetadata;
 import org.knime.core.node.workflow.WorkflowMetadata;
+import org.knime.core.node.workflow.metadata.MetaInfoFile;
 import org.knime.core.node.workflow.metadata.MetadataXML;
 import org.knime.workbench.descriptionview.metadata.AbstractMetadataModelFacilitator;
 import org.knime.workbench.descriptionview.metadata.atoms.ComboBoxMetaInfoAtom;
@@ -162,7 +164,9 @@ class WorkflowMetadataModelFacilitator extends AbstractMetadataModelFacilitator 
                     mia = m_authorAtom;
                     break;
                 case CREATION_DATE:
-                    m_creationDateAtom = new DateMetaInfoAtom(label, value);
+                    final var calendar = MetaInfoFile.calendarFromDateString(value);
+                    final var creationDate = NodeContainerMetadata.toZonedDateTime(calendar);
+                    m_creationDateAtom = new DateMetaInfoAtom(label, creationDate);
                     mia = m_creationDateAtom;
                     break;
                 case TITLE:
