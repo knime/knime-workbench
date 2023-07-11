@@ -174,7 +174,7 @@ public class WorkflowCoachPreferencePage extends PreferencePage implements IWork
         m_updateButton.addSelectionListener(new SelectionAdapter() {
             @Override
             public void widgetSelected(final SelectionEvent e) {
-                onUpate();
+                onUpdate();
             }
         });
         m_lastUpdate = new Label(manualUpdateComp, SWT.NONE);
@@ -199,7 +199,7 @@ public class WorkflowCoachPreferencePage extends PreferencePage implements IWork
     /**
      * Called when the update button has been pressed.
      */
-    private void onUpate() {
+    private void onUpdate() {
         Display.getDefault().syncExec(() -> {
             m_updateButton.setEnabled(false);
             m_lastUpdate.setText("Updating ...");

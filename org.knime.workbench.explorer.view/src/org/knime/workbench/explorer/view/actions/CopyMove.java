@@ -325,7 +325,7 @@ public final class CopyMove {
             return;
         }
         // do not delete workflowgroups that have workflows or other files as children...
-        if (hasOnlyWorkflowGroupChidlren(fileStore, monitor)) {
+        if (hasOnlyWorkflowGroupChildren(fileStore, monitor)) {
             fileStore.delete(EFS.NONE, monitor);
         } else {
             // ... but delete contained workflow groups that are empty
@@ -336,14 +336,14 @@ public final class CopyMove {
 
     }
 
-    private boolean hasOnlyWorkflowGroupChidlren(final AbstractExplorerFileStore fileStore,
-        final IProgressMonitor monitor) throws CoreException {
+    private boolean hasOnlyWorkflowGroupChildren(final AbstractExplorerFileStore fileStore,
+                                                 final IProgressMonitor monitor) throws CoreException {
         if (AbstractExplorerFileStore.isWorkflowGroup(fileStore)) {
             for (AbstractExplorerFileStore childStore : fileStore.childStores(EFS.NONE, monitor)) {
                 if (!AbstractExplorerFileStore.isWorkflowGroup(childStore)) {
                     return false;
                 }
-                if (!hasOnlyWorkflowGroupChidlren(childStore, monitor)) {
+                if (!hasOnlyWorkflowGroupChildren(childStore, monitor)) {
                     return false;
                 }
             }
