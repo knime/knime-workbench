@@ -60,6 +60,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.ExecutionMonitor;
+import org.knime.core.node.workflow.NodeContainerTemplate;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.NodePropertyChangedEvent.NodeProperty;
 import org.knime.core.node.workflow.SubNodeContainer;
@@ -92,7 +93,12 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
     private final WorkflowContextV2 m_context;
 
+    private final boolean m_deleteFileAfterLoad;
+
     /**
+     * Loads a {@link NodeContainerTemplate} into a {@link MetaNodeLinkUpdateResult} from a given URI.
+     * Defaults to deleting the resolved file after the load.
+     *
      * @param wfm the target workflow (where to insert)
      * @param templateURI URI to the workflow directory or file from which the template should be loaded
      */
@@ -101,6 +107,21 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
         m_templateURI = templateURI;
         m_editor = null;
         m_context = null;
+        m_deleteFileAfterLoad = true;
+    }
+
+    /**
+     * Used if a template/component is to be loaded into the workflow editor as a project (i.e. not embedded in another
+     * workflow).
+     * Defaults to deleting the resolved file after the load.
+     *
+     * @param editor the editor to open the component with
+     * @param templateURI URI to the workflow directory or file from which the template should be loaded
+     * @param context The context (for component template editors)
+     */
+    public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI,
+        final WorkflowContextV2 context) {
+        this(editor, templateURI, context, true);
     }
 
     /**
@@ -110,9 +131,10 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
      * @param editor the editor to open the component with
      * @param templateURI URI to the workflow directory or file from which the template should be loaded
      * @param context The context (for component template editors)
+     * @param deleteFile whether to delete the URI-resolved file after the load
      */
     public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI,
-            final WorkflowContextV2 context) {
+            final WorkflowContextV2 context, final boolean deleteFile) {
         m_parentWFM = WorkflowManager.ROOT;
 
         //strip "workflow.knime" from the URI which is append if
@@ -130,6 +152,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
         }
         m_editor = editor;
         m_context = context;
+        m_deleteFileAfterLoad = deleteFile;
     }
 
     @Override
@@ -145,7 +168,9 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 //unzip
                 final var tempDir = FileUtil.createTempDir("template-workflow");
                 FileUtil.unzip(parentFile, tempDir);
-                Files.delete(parentFile.toPath());
+                if (m_deleteFileAfterLoad) {
+                    Files.delete(parentFile.toPath());
+                }
                 final var extractedFiles = tempDir.listFiles();
                 if (extractedFiles.length == 0) {
                     throw new IOException("Unzipping of file '" + parentFile + "' failed");
