@@ -123,16 +123,6 @@
 					</dependency-resolution>
 				</configuration>
 			</plugin>
-
-			<plugin>
-				<groupId>org.eclipse.tycho</groupId>
-				<artifactId>tycho-surefire-plugin</artifactId>
-				<configuration>
-					<systemProperties>
-						<java.awt.headless>true</java.awt.headless>
-					</systemProperties>
-				</configuration>
-			</plugin>
 		</plugins>
 	</build>
 </project>
