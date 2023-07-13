@@ -47,6 +47,8 @@
  */
 package org.knime.workbench.editor2.actions;
 
+import javax.swing.SwingUtilities;
+
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
@@ -55,8 +57,11 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.Node;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.util.SWTUtilities;
+import org.knime.core.webui.node.view.NodeViewManager;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 
@@ -119,9 +124,7 @@ public class OpenViewAction extends Action {
     public void run() {
         LOGGER.debug("Open Node View " + m_nodeContainer.getName() + " (#" + m_index + ")");
         try {
-            final String title = m_nodeContainer.getViewName(m_index) + " - " + m_nodeContainer.getDisplayLabel();
-            Node.invokeOpenView(OpenNodeViewAction.createNodeView(m_nodeContainer, false, true), title,
-                OpenViewAction.getAppBoundsAsAWTRec());
+            openNodeView();
         } catch (Throwable t) {
             MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_ERROR | SWT.OK);
             mb.setText("View cannot be opened");
@@ -129,6 +132,36 @@ public class OpenViewAction extends Action {
             mb.open();
             LOGGER.error("The view for node '" + m_nodeContainer.getNameWithID() + "' has thrown a '"
                 + t.getClass().getSimpleName() + "'. That is most likely an " + "implementation error.", t);
+        }
+    }
+
+    /**
+     * Copy of org.knime.ui.java.api.NodeAPI#openNodeView
+     * (accepting a copy since this code is going to be phased out)
+     */
+    private void openNodeView() {
+        LOGGER.debug("Open Node View " + m_nodeContainer.getName() + " (#" + m_index + ")");
+        final var nc = m_nodeContainer;
+        if (nc instanceof SubNodeContainer snc) {
+            // composite view
+            OpenSubnodeWebViewAction.openView(snc);
+        } else if (NodeViewManager.hasNodeView(nc)) {
+            // 'ui-extension' view
+            final var nnc = ((NativeNodeContainer)nc);
+            final var viewName = "Interactive View: " + nnc.getNodeViewName(0);
+            OpenNodeViewAction.openNodeView(nnc, OpenNodeViewAction.createNodeView(nnc, false, true), viewName);
+        } else if (nc.getInteractiveWebViews().size() > 0 || nc.hasInteractiveView()) {
+            // legacy js-view
+            OpenInteractiveWebViewAction.openView((NativeNodeContainer)nc,
+                nc.getInteractiveWebViews().get(0).getViewName());
+        } else if (nc.getNrNodeViews() > m_index) {
+            // swing-based view
+            final var title = nc.getViewName(m_index) + " - " + nc.getDisplayLabel();
+            final var knimeWindowBounds = getAppBoundsAsAWTRec();
+            SwingUtilities.invokeLater(() -> Node.invokeOpenView(nc.getView(m_index), title, knimeWindowBounds));
+        } else {
+            throw new IllegalStateException(String.format(
+                "Node with id '%s' in workflow '%s' does not have a node view", nc.getID(), nc.getParent().getName()));
         }
     }
 
