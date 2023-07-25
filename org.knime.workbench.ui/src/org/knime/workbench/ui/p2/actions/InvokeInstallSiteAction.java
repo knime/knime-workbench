@@ -76,6 +76,9 @@ public class InvokeInstallSiteAction extends AbstractP2Action {
         if (!checkSDKAndReadOnly()) {
             return;
         }
+        if (!checkFetchingRepositories()) {
+            return;
+        }
         startLoadJob();
     }
 

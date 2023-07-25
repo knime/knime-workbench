@@ -54,6 +54,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.runtime.Platform;
@@ -64,12 +65,16 @@ import org.eclipse.equinox.internal.p2.ui.ProvUI;
 import org.eclipse.equinox.p2.ui.LoadMetadataRepositoryJob;
 import org.eclipse.equinox.p2.ui.ProvisioningUI;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.osgi.internal.framework.EquinoxContainer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.PlatformUI;
+import org.knime.core.eclipseUtil.UpdateChecker;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.PathUtils;
+import org.knime.core.util.proxy.DisabledSchemesChecker;
 
 /**
  * Abstract action for p2 related tasks (installing new extensions or updating, e.g.).
@@ -140,6 +145,48 @@ public abstract class AbstractP2Action extends Action {
             return (mbox.open() == SWT.YES);
         }
         return true;
+    }
+
+    /**
+     * Checks whether the current instance can fetch known repositories. Continues even when failing to reach
+     * repositories - as long as it's not caused by disabled schemes.
+     *
+     * @return <code>true</code> if the action should continue, <code>false</code> if it should be aborted
+     */
+    protected static final boolean checkFetchingRepositories() {
+        final var provUI = ProvisioningUI.getDefaultUI();
+        final var repositories = provUI.getRepositoryTracker().getKnownRepositories(provUI.getSession());
+        // if there is nothing to fetch, continue
+        if (repositories.length == 0) {
+            return true;
+        }
+        try {
+            // use the first URI as representative
+            UpdateChecker.checkForNewRelease(repositories[0]);
+            return true;
+        } catch (IOException | URISyntaxException e) {
+            return !checkAndShowDisabledSchemes(e);
+        }
+    }
+
+    /**
+     * Checks whether the current instance uses authenticated proxies but it is disabled. In this case, it shows a
+     * helpful error message, pointing to our FAQ.
+     *
+     * @return <code>true</code> if the exception was caused by disabled schemes
+     */
+    protected static final boolean checkAndShowDisabledSchemes(final Throwable t) {
+        if (DisabledSchemesChecker.isCausedByDisabledSchemes(t)) {
+            Display.getDefault().syncExec(() -> {
+                final var shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
+                final var reason = DisabledSchemesChecker.FAQ_MESSAGE;
+                final var message = "Error while fetching repositories because "
+                    + reason.substring(0, 1).toLowerCase(Locale.ENGLISH) + reason.substring(1);
+                MessageDialog.openError(shell, "Fetching failed", message);
+            });
+            return true;
+        }
+        return false;
     }
 
     private final AtomicBoolean m_shutdownHookAdded = new AtomicBoolean();

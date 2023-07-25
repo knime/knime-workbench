@@ -74,6 +74,7 @@ import org.knime.core.util.KnimeUrlType;
 import org.knime.core.util.auth.Authenticator;
 import org.knime.core.util.auth.CouldNotAuthorizeException;
 import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.proxy.URLConnectionFactory;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.urlresolve.KnimeUrlResolver;
@@ -155,7 +156,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             // already failed
             final var workflowContext =
                 NodeContext.getContext().getContextObjectForClass(WorkflowManagerUI.class).orElseThrow().getContext();
-            URLConnection conn = resolvedUrl.openConnection();
+            final var conn = URLConnectionFactory.getConnection(resolvedUrl);
             authorizeClient(workflowContext, conn);
 
             getRemoteRepositoryAddress(workflowContext).ifPresent(u -> m_requestModifier.modifyRequest(u, conn));
@@ -165,7 +166,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             }
             return conn;
         } else {
-            return resolvedUrl.openConnection();
+            return URLConnectionFactory.getConnection(resolvedUrl);
         }
     }
 

@@ -54,6 +54,7 @@ import java.net.URI;
 import java.util.Optional;
 
 import org.knime.core.node.workflow.contextv2.LocationInfo;
+import org.knime.core.util.proxy.URLConnectionFactory;
 
 /**
  * Holds the information required to import a repository object (workflow, component, file etc.) in to the AP (e.g., a
@@ -123,6 +124,6 @@ public interface RepoObjectImport extends EntityImport {
      * @throws IOException if something went wrong while establishing the connection
      */
     default HttpURLConnection getData() throws IOException {
-        return (HttpURLConnection)getDataURI().toURL().openConnection();
+        return (HttpURLConnection)URLConnectionFactory.getConnection(getDataURI().toURL());
     }
 }

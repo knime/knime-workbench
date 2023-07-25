@@ -89,6 +89,7 @@ import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
+import org.knime.core.util.proxy.DisabledSchemesChecker;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -255,6 +256,9 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         } catch (InvocationTargetException | IllegalStateException e) {
             var message = e instanceof InvocationTargetException
                 ? ((InvocationTargetException)e).getTargetException().getMessage() : e.getMessage();
+            if (DisabledSchemesChecker.isCausedByDisabledSchemes(e)) {
+                message = DisabledSchemesChecker.FAQ_MESSAGE;
+            }
             LOGGER.warn("Failed to check for updates: " + message, e);
             status = new Status(IStatus.WARNING, KNIMEEditorPlugin.PLUGIN_ID, message);
         } catch (InterruptedException e) {
