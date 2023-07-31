@@ -159,7 +159,6 @@ public class InvokeUpdateAction extends AbstractP2Action {
                                 "Unfortunately a direct update is not possible. Please download the new version"
                                     + " from the KNIME web page.";
                             MessageDialog.openInformation(shell, "New KNIME release available", message);
-                            abortFlag.setValue(true);
                         }
 
                     }
