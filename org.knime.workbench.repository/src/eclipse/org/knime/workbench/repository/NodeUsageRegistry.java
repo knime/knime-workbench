@@ -165,7 +165,7 @@ public final class NodeUsageRegistry {
      * @param nodeFactory the last used node (is added to last used nodes and the frequency is counted)
      */
     public static void addNode(final NodeFactory<?> nodeFactory) {
-        String id = nodeFactory.getClass().getCanonicalName();
+        String id = nodeFactory.getClass().getName();
         if (nodeFactory instanceof DynamicNodeFactory) {
             id += "#" + nodeFactory.getNodeName();
         }

@@ -90,7 +90,7 @@ public class DynamicNodeTemplate extends NodeTemplate {
     public DynamicNodeTemplate(final NodeSetFactoryExtension nodeSetFactoryExtension,
         final Class<? extends NodeFactory<? extends NodeModel>> factoryClass,
         final String factoryId, final String name, final String categoryPath, final NodeType nodeType) {
-        super(factoryClass.getCanonicalName() + NODE_NAME_SEP + name, name,
+        super(factoryClass.getName() + NODE_NAME_SEP + name, name,
             nodeSetFactoryExtension.getPlugInSymbolicName(), categoryPath, nodeType);
         m_factoryClass = factoryClass;
         m_factoryId = factoryId;
