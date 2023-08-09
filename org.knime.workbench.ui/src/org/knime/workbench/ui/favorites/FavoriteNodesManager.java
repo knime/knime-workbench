@@ -280,7 +280,7 @@ public final class FavoriteNodesManager {
     private void loadFavoriteNodes(final XMLMemento favoriteNodes) {
         IMemento favNodes = favoriteNodes.getChild(TAG_PERSONAL_FAVS);
         for (IMemento favNode : favNodes.getChildren(TAG_FAVORITE)) {
-            String id = favNode.getString(TAG_NODE_ID);
+            String id = NodeUsageRegistry.fixNodeTemplateId(favNode.getString(TAG_NODE_ID));
             NodeTemplate node = RepositoryManager.INSTANCE.getNodeTemplate(id);
             if (node != null) {
                 addFavoriteNode(node);

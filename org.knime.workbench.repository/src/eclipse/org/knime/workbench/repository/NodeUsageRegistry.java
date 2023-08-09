@@ -395,7 +395,7 @@ public final class NodeUsageRegistry {
      */
     public static void loadFrequentNodes(final IMemento freqNodes) {
         for (IMemento freqNode : freqNodes.getChildren(TAG_FAVORITE)) {
-            String id = freqNode.getString(TAG_NODE_ID);
+            String id = fixNodeTemplateId(freqNode.getString(TAG_NODE_ID));
             int frequency = freqNode.getInteger(TAG_FREQUENCY);
             NodeTemplate node = RepositoryManager.INSTANCE.getNodeTemplate(id);
             if (node != null) {
@@ -416,11 +416,30 @@ public final class NodeUsageRegistry {
      */
     public static void loadLastUsedNodes(final IMemento lastUsedNodes) {
         for (IMemento lastNode : lastUsedNodes.getChildren(TAG_FAVORITE)) {
-            String id = lastNode.getString(TAG_NODE_ID);
+            String id = fixNodeTemplateId(lastNode.getString(TAG_NODE_ID));
             NodeTemplate node = RepositoryManager.INSTANCE.getNodeTemplate(id);
             if (node != null) {
                 addToLastUsedNodes(node);
             }
+        }
+    }
+
+
+
+    /**
+     * Fixes node template ids which would otherwise not match anything in the {@link RepositoryManager}. See AP-20794.
+     *
+     * @param id
+     * @return the fixed id
+     */
+    public static String fixNodeTemplateId(final String id) {
+        var problematicIdPrefix =
+            "org.knime.python3.nodes.extension.ExtensionNodeSetFactory.DynamicExtensionNodeFactory";
+        if (id.startsWith(problematicIdPrefix)) {
+            return id.replace(problematicIdPrefix,
+                "org.knime.python3.nodes.extension.ExtensionNodeSetFactory$DynamicExtensionNodeFactory");
+        } else {
+            return id;
         }
     }
 
