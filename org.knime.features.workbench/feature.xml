@@ -2,7 +2,7 @@
 <feature
       id="org.knime.features.workbench"
       label="KNIME Workbench"
-      version="4.7.4.qualifier"
+      version="4.7.7.qualifier"
       provider-name="KNIME AG, Zurich, Switzerland">
 
    <description>
