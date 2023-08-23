@@ -64,6 +64,7 @@ import org.eclipse.gef.editparts.ZoomManager;
 import org.eclipse.gef.editpolicies.ConnectionEndpointEditPolicy;
 import org.eclipse.gef.requests.ChangeBoundsRequest;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.ConnectionProgressEvent;
 import org.knime.core.node.workflow.ConnectionProgressListener;
@@ -289,7 +290,7 @@ public class ConnectionContainerEditPart extends AbstractConnectionEditPart
     /** {@inheritDoc} */
     @Override
     public void connectionUIInformationChanged(final ConnectionUIInformationEvent evt) {
-        refreshVisuals();
+        Display.getDefault().syncExec(this::refreshVisuals);
     }
 
     /**
