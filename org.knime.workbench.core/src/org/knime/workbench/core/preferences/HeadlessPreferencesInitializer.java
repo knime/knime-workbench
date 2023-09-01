@@ -52,6 +52,7 @@ import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOG_FILE_LOCATION;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOG_GLOBAL_IN_WF_DIR;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_MAXIMUM_THREADS;
+import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_META_NODE_LINK_UPDATE_ON_LOAD;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_SEND_ANONYMOUS_STATISTICS;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_TEMP_DIR;
 
@@ -65,6 +66,7 @@ import org.knime.core.node.port.database.DatabaseConnectionSettings;
 import org.knime.workbench.core.KNIMECorePlugin;
 
 /**
+ * General KNIME preferences, not necessarily only for headless (e.g., P_META_NODE_LINK_UPDATE_ON_LOAD)
  *
  * @author Fabian Dill, University of Konstanz
  */
@@ -104,6 +106,8 @@ public class HeadlessPreferencesInitializer extends AbstractPreferenceInitialize
         int syspropTimeout = DatabaseConnectionSettings.getSystemPropertyDatabaseTimeout();
         store.setDefault(P_DATABASE_TIMEOUT, syspropTimeout >= 0 ? syspropTimeout : 15);
         store.setDefault(P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED, true);
+
+        store.setDefault(P_META_NODE_LINK_UPDATE_ON_LOAD, "prompt");
     }
 
 }

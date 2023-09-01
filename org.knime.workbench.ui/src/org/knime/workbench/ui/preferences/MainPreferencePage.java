@@ -51,7 +51,6 @@ import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.preference.RadioGroupFieldEditor;
-import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.knime.core.node.Node;
@@ -61,23 +60,21 @@ import org.knime.workbench.core.preferences.HeadlessPreferencesConstants;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
- * This class represents a preference page that is contributed to the
- * Preferences dialog. By subclassing <samp>FieldEditorPreferencePage</samp>,
- * we can use the field support built into JFace that allows us to create a page
+ * This class represents a preference page that is contributed to the Preferences dialog. By subclassing
+ * <samp>FieldEditorPreferencePage</samp>, we can use the field support built into JFace that allows us to create a page
  * that is small and knows how to save, restore and apply itself.
  * <p>
- * This page is used to modify preferences only. They are stored in the
- * preference store that belongs to the main plug-in class. That way,
- * preferences can be accessed directly via the preference store.
+ * This page is used to modify preferences only. They are stored in the preference store that belongs to the main
+ * plug-in class. That way, preferences can be accessed directly via the preference store.
  *
  * @author Florian Georg, University of Konstanz
  */
-public class MainPreferencePage extends FieldEditorPreferencePage
-        implements IWorkbenchPreferencePage {
+public class MainPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
     private RadioGroupFieldEditor m_consoleLogEditor;
 
     private IntegerFieldEditor m_autoSaveIntervalEditor;
+
     private BooleanFieldEditor m_autoSaveWithDataEditor;
 
     /**
@@ -88,107 +85,86 @@ public class MainPreferencePage extends FieldEditorPreferencePage
     }
 
     /**
-     * Creates the field editors. Field editors are abstractions of the common
-     * GUI blocks needed to manipulate various types of preferences. Each field
-     * editor knows how to save and restore itself.
+     * Creates the field editors. Field editors are abstractions of the common GUI blocks needed to manipulate various
+     * types of preferences. Each field editor knows how to save and restore itself.
      */
     @Override
     public void createFieldEditors() {
-        final Composite parent = getFieldEditorParent();
-
         // Specify the minimum log level for the console
-        m_consoleLogEditor = new RadioGroupFieldEditor(
-                HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE,
-                "Console View Log Level", 4,
-                new String[][] {
-                        {"&DEBUG", LEVEL.DEBUG.name()},
-                        {"&INFO",  LEVEL.INFO.name()},
-                        {"&WARN",  LEVEL.WARN.name()},
-                        {"&ERROR", LEVEL.ERROR.name()}
-                }, parent);
+        m_consoleLogEditor = new RadioGroupFieldEditor(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE,
+            "Console View Log Level", 4, new String[][]{//
+                {"&DEBUG", LEVEL.DEBUG.name()}, //
+                {"&INFO", LEVEL.INFO.name()}, //
+                {"&WARN", LEVEL.WARN.name()}, //
+                {"&ERROR", LEVEL.ERROR.name()}},
+            getFieldEditorParent());
         addField(m_consoleLogEditor);
 
-        addField(new HorizontalLineField(parent));
-        addField(new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_RESET,
-                "Confirm Node Reset", parent));
-        addField(new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_DELETE,
-                "Confirm Node/Connection Deletion", parent));
+        addField(new HorizontalLineField(getFieldEditorParent()));
+        addField(
+            new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_RESET, "Confirm Node Reset", getFieldEditorParent()));
+        addField(new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_DELETE, "Confirm Node/Connection Deletion",
+            getFieldEditorParent()));
         addField(new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_REPLACE,
-                "Confirm Node/Connection Replacement/Interruption", parent));
+            "Confirm Node/Connection Replacement/Interruption", getFieldEditorParent()));
         addField(new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_RECONNECT,
-                "Confirm reconnection of already connected nodes", parent));
-        addField(new BooleanFieldEditor(
-                PreferenceConstants.P_CONFIRM_EXEC_NODES_NOT_SAVED,
-                "Confirm if executing nodes are not saved", parent));
-        addField(new BooleanFieldEditor(
-            PreferenceConstants.P_CONFIRM_LOAD_NIGHTLY_BUILD_WORKFLOW,
-            "Confirm when loading workflows created by a nightly build", parent));
+            "Confirm reconnection of already connected nodes", getFieldEditorParent()));
+        addField(new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_EXEC_NODES_NOT_SAVED,
+            "Confirm if executing nodes are not saved", getFieldEditorParent()));
+        addField(new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_LOAD_NIGHTLY_BUILD_WORKFLOW,
+            "Confirm when loading workflows created by a nightly build", getFieldEditorParent()));
 
         // added with AP-15442 -- don't bother user with this unless this property is set
         if (Node.DISALLOW_WEAK_PASSWORDS_IN_NODE_CONFIGURATION) {
             addField(new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS,
-                "Confirm when storing (weakly encrypted) passwords in node configurations", parent));
+                "Confirm when storing (weakly encrypted) passwords in node configurations", getFieldEditorParent()));
         }
 
-        ComboFieldEditor dataAwareExecutePromptEditor = new ComboFieldEditor(
-            PreferenceConstants.P_EXEC_NODES_DATA_AWARE_DIALOGS,
-            "Execute upstream nodes when needed",
-            new String[][] {
-                    {"Always", MessageDialogWithToggle.ALWAYS},
-                    {"Never", MessageDialogWithToggle.NEVER},
-                    {"Prompt", MessageDialogWithToggle.PROMPT},
-            }, getFieldEditorParent());
+        final var dataAwareExecutePromptEditor =
+            new ComboFieldEditor(PreferenceConstants.P_EXEC_NODES_DATA_AWARE_DIALOGS,
+                "Execute upstream nodes when needed", new String[][]{//
+                    {"Always", MessageDialogWithToggle.ALWAYS}, //
+                    {"Never", MessageDialogWithToggle.NEVER}, //
+                    {"Prompt", MessageDialogWithToggle.PROMPT}},
+                getFieldEditorParent());
         addField(dataAwareExecutePromptEditor);
 
-        addField(new HorizontalLineField(parent));
-        final BooleanFieldEditor enableAutoSaveBooleanField = new BooleanFieldEditor(
-            PreferenceConstants.P_AUTO_SAVE_ENABLE, "Auto Save open workflows", parent) {
+        addField(new HorizontalLineField(getFieldEditorParent()));
+        final var enableAutoSaveBooleanField = new BooleanFieldEditor(PreferenceConstants.P_AUTO_SAVE_ENABLE,
+            "Auto Save open workflows", getFieldEditorParent()) {
             @Override
             protected void valueChanged(final boolean old, final boolean neu) {
-                m_autoSaveIntervalEditor.setEnabled(neu, parent);
-                m_autoSaveWithDataEditor.setEnabled(neu, parent);
+                m_autoSaveIntervalEditor.setEnabled(neu, getFieldEditorParent());
+                m_autoSaveWithDataEditor.setEnabled(neu, getFieldEditorParent());
             }
         };
         m_autoSaveIntervalEditor = new IntegerFieldEditor(PreferenceConstants.P_AUTO_SAVE_INTERVAL,
-            "Auto-Save Interval (in secs)", parent);
-        m_autoSaveWithDataEditor = new BooleanFieldEditor(PreferenceConstants.P_AUTO_SAVE_DATA,
-            "Save with data", parent);
+            "Auto-Save Interval (in secs)", getFieldEditorParent());
+        m_autoSaveWithDataEditor =
+            new BooleanFieldEditor(PreferenceConstants.P_AUTO_SAVE_DATA, "Save with data", getFieldEditorParent());
         addField(enableAutoSaveBooleanField);
         addField(m_autoSaveIntervalEditor);
         addField(m_autoSaveWithDataEditor);
 
-        addField(new HorizontalLineField(parent));
-        addField(new BooleanFieldEditor(PreferenceConstants.P_WRAP_TABLE_HEADER,
-                                        "Wrap Column Header in Table Views", parent));
+        addField(new HorizontalLineField(getFieldEditorParent()));
+        addField(new BooleanFieldEditor(PreferenceConstants.P_WRAP_TABLE_HEADER, "Wrap Column Header in Table Views",
+            getFieldEditorParent()));
         addField(new IntegerFieldEditor(PreferenceConstants.P_ANNOTATION_BORDER_SIZE,
-            "Workflow Annotation border size (in px)", parent));
-        addField(new HorizontalLineField(parent));
+            "Workflow Annotation border size (in px)", getFieldEditorParent()));
 
-        final ComboFieldEditor updateMetaNodeLinkOnLoadEditor = new ComboFieldEditor(
-                PreferenceConstants.P_META_NODE_LINK_UPDATE_ON_LOAD,
-                "Update linked component when workflow loads",
-                new String[][] {
-                        {"Always", MessageDialogWithToggle.ALWAYS},
-                        {"Never", MessageDialogWithToggle.NEVER},
-                        {"Prompt", MessageDialogWithToggle.PROMPT},
-                }, getFieldEditorParent());
-        addField(updateMetaNodeLinkOnLoadEditor);
-
-        addField(new HorizontalLineField(parent));
+        addField(new HorizontalLineField(getFieldEditorParent()));
         addField(new BooleanFieldEditor(PreferenceConstants.P_OMIT_MISSING_BROWSER_WARNING,
-            "Suppress warnings about missing browser integration", parent));
+            "Suppress warnings about missing browser integration", getFieldEditorParent()));
 
-        addField(new HorizontalLineField(parent));
-        addField(new LabelField(parent, "Settings for the 'Favorite Nodes' view"));
-        final IntegerFieldEditor freqHistorySizeEditor = new IntegerFieldEditor(
-                PreferenceConstants.P_FAV_FREQUENCY_HISTORY_SIZE,
-                "Maximal size for most frequently used nodes", parent, 3);
+        addField(new HorizontalLineField(getFieldEditorParent()));
+        addField(new LabelField(getFieldEditorParent(), "Settings for the 'Favorite Nodes' view"));
+        final var freqHistorySizeEditor = new IntegerFieldEditor(PreferenceConstants.P_FAV_FREQUENCY_HISTORY_SIZE,
+            "Maximal size for most frequently used nodes", getFieldEditorParent(), 3);
         freqHistorySizeEditor.setValidRange(1, 50);
         freqHistorySizeEditor.setTextLimit(3);
         freqHistorySizeEditor.load();
-        final IntegerFieldEditor usedHistorySizeEditor = new IntegerFieldEditor(
-                PreferenceConstants.P_FAV_LAST_USED_SIZE,
-                "Maximal size for last used nodes", parent, 3);
+        final var usedHistorySizeEditor = new IntegerFieldEditor(PreferenceConstants.P_FAV_LAST_USED_SIZE,
+            "Maximal size for last used nodes", getFieldEditorParent(), 3);
         usedHistorySizeEditor.setValidRange(1, 50);
         usedHistorySizeEditor.setTextLimit(3);
         usedHistorySizeEditor.load();
@@ -196,14 +172,12 @@ public class MainPreferencePage extends FieldEditorPreferencePage
         addField(freqHistorySizeEditor);
     }
 
-    /** {@inheritDoc} */
     @Override
     public void init(final IWorkbench workbench) {
         // we use the pref store of the UI plugin
         setPreferenceStore(KNIMEUIPlugin.getDefault().getPreferenceStore());
     }
 
-    /** {@inheritDoc} */
     @Override
     protected void initialize() {
         super.initialize();
@@ -211,7 +185,6 @@ public class MainPreferencePage extends FieldEditorPreferencePage
         m_consoleLogEditor.load();
     }
 
-    /** {@inheritDoc} */
     @Override
     protected void performDefaults() {
         super.performDefaults();

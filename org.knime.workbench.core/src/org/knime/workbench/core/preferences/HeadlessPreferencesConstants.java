@@ -99,4 +99,9 @@ public final class HeadlessPreferencesConstants {
 
     /** Preference constant to store loaded database driver files. */
     public static final String P_DATABASE_TIMEOUT = "database_timeout";
+
+    /* --- Other --- */
+
+    /** Preference constant for whether meta node links should be updated on workflow load. */
+    public static final String P_META_NODE_LINK_UPDATE_ON_LOAD = "knime.metanode.updateOnLoad";
 }

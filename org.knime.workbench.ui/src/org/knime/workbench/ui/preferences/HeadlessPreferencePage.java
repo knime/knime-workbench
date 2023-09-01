@@ -44,14 +44,13 @@
  */
 package org.knime.workbench.ui.preferences;
 
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.BooleanFieldEditor;
-import org.eclipse.jface.preference.DirectoryFieldEditor;
+import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
-import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.preference.RadioGroupFieldEditor;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.IWorkbench;
@@ -61,106 +60,94 @@ import org.knime.core.node.NodeLogger.LEVEL;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.core.preferences.HeadlessPreferencesConstants;
+import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  *
  * @author Fabian Dill, University of Konstanz
  */
-public class HeadlessPreferencePage extends FieldEditorPreferencePage implements
-        IWorkbenchPreferencePage {
+public class HeadlessPreferencePage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
     private boolean m_apply = false;
 
     private String m_tempPath;
 
-    private BooleanFieldEditor m_logDirGLobal;
-
-    /**
-     *
-     */
     public HeadlessPreferencePage() {
         super(GRID);
 
         // get the preference store for the UI plugin
-        IPreferenceStore store =
-                KNIMECorePlugin.getDefault().getPreferenceStore();
+        final var store = KNIMECorePlugin.getDefault().getPreferenceStore();
         m_tempPath = store.getString(HeadlessPreferencesConstants.P_TEMP_DIR);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void createFieldEditors() {
-        Composite parent = getFieldEditorParent();
-
         // Specify the minimum log level for log file
-        addField(new RadioGroupFieldEditor(
-                HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE,
-                "Log File Log Level",
-                4, new String[][] {
-                        {"&DEBUG", LEVEL.DEBUG.name()},
+        addField(new RadioGroupFieldEditor(HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE, "Log File Log Level", 4,
+            new String[][]{//
+                {"&DEBUG", LEVEL.DEBUG.name()}, //
+                {"&INFO", LEVEL.INFO.name()}, //
+                {"&WARN", LEVEL.WARN.name()}, //
+                {"&ERROR", LEVEL.ERROR.name()}},
+            getFieldEditorParent()));
 
-                        {"&INFO", LEVEL.INFO.name()},
-
-                        {"&WARN", LEVEL.WARN.name()},
-
-                        {"&ERROR", LEVEL.ERROR.name()} },
-                parent));
-
-        addField(new BooleanFieldEditor(HeadlessPreferencesConstants.P_LOG_FILE_LOCATION,
-            "Enable per workflow logs", parent));
-        m_logDirGLobal = new BooleanFieldEditor(HeadlessPreferencesConstants.P_LOG_GLOBAL_IN_WF_DIR,
-            "Log global messages also to workflow log", parent);
-        addField(m_logDirGLobal);
+        addField(new BooleanFieldEditor(HeadlessPreferencesConstants.P_LOG_FILE_LOCATION, "Enable per workflow logs",
+            getFieldEditorParent()));
+        final var logDirGLobal = new BooleanFieldEditor(HeadlessPreferencesConstants.P_LOG_GLOBAL_IN_WF_DIR,
+            "Log global messages also to workflow log", getFieldEditorParent());
+        addField(logDirGLobal);
 
         // number threads
-        IntegerFieldEditor maxThreadEditor = new IntegerFieldEditor(
-                HeadlessPreferencesConstants.P_MAXIMUM_THREADS,
-                "Maximum working threads for all nodes", parent, 3);
-        maxThreadEditor.setValidRange(1, Math.max(100, Runtime.getRuntime()
-                .availableProcessors() * 4));
+        final var maxThreadEditor = new IntegerFieldEditor(HeadlessPreferencesConstants.P_MAXIMUM_THREADS,
+            "Maximum working threads for all nodes", getFieldEditorParent(), 3);
+        maxThreadEditor.setValidRange(1, Math.max(100, Runtime.getRuntime().availableProcessors() * 4));
         maxThreadEditor.setTextLimit(3);
         addField(maxThreadEditor);
 
-
         // temp dir
-        DirectoryFieldEditor tempDirEditor = new TempDirFieldEditor(
-                HeadlessPreferencesConstants.P_TEMP_DIR,
-                "Directory for temporary files\n(you should restart KNIME after"
-                        + " changing this value)", parent);
+        final var tempDirEditor = new TempDirFieldEditor(HeadlessPreferencesConstants.P_TEMP_DIR,
+            "Directory for temporary files\n(you should restart KNIME after changing this value)",
+            getFieldEditorParent());
         tempDirEditor.setEmptyStringAllowed(false);
 
         addField(tempDirEditor);
 
-        addField(new HorizontalLineField(parent));
-        addField(new LabelField(parent, "Improve KNIME", SWT.BOLD));
-        addField(new LabelField(parent, "Help us improve KNIME by sending anonymous usage data."));
-        addField(new LabelField(parent, "Click <a href=\"https://www.knime.com/faq#usage_data\">here</a> to find out what is being transmitted."));
-        BooleanFieldEditor sendAnonymousStatisticsEditor =
-            new BooleanFieldEditor(HeadlessPreferencesConstants.P_SEND_ANONYMOUS_STATISTICS,
-                "Yes, help improve KNIME.", parent);
+        addField(new HorizontalLineField(getFieldEditorParent()));
+        addField(new LabelField(getFieldEditorParent(), "Improve KNIME", SWT.BOLD));
+        addField(new LabelField(getFieldEditorParent(), "Help us improve KNIME by sending anonymous usage data."));
+        addField(new LabelField(getFieldEditorParent(),
+            "Click <a href=\"https://www.knime.com/faq#usage_data\">here</a> to find out what is being transmitted."));
+        final var sendAnonymousStatisticsEditor =
+            new BooleanFieldEditor(HeadlessPreferencesConstants.P_SEND_ANONYMOUS_STATISTICS, "Yes, help improve KNIME.",
+                getFieldEditorParent());
         addField(sendAnonymousStatisticsEditor);
 
+        addField(new HorizontalLineField(getFieldEditorParent()));
+
+        addField(new LabelField(getFieldEditorParent(), "Component updates", SWT.BOLD));
+        final var updateMetaNodeLinkOnLoadEditor =
+            new ComboFieldEditor(HeadlessPreferencesConstants.P_META_NODE_LINK_UPDATE_ON_LOAD,
+                "Update linked components when workflow loads", new String[][]{//
+                    {"Always", MessageDialogWithToggle.ALWAYS}, //
+                    {"Never", MessageDialogWithToggle.NEVER}, //
+                    {"Prompt", MessageDialogWithToggle.PROMPT}},
+                getFieldEditorParent());
+        addField(updateMetaNodeLinkOnLoadEditor);
     }
     //TK_TODO: Enable disable the global messages in wf dir option depending on the wf option
-//
-//    /**
-//     * {@inheritDoc}
-//     */
-//    @Override
-//    public void propertyChange(final PropertyChangeEvent event) {
-//        if (HeadlessPreferencesConstants.P_LOG_FILE_LOCATION.equals(event.getProperty())) {
-//            final Boolean enabled = (Boolean)event.getNewValue();
-//            m_logDirGLobal.setEnabled(enabled, getFieldEditorParent());
-//        }
-//        super.propertyChange(event);
-//    }
+    //
+    //    /**
+    //     * {@inheritDoc}
+    //     */
+    //    @Override
+    //    public void propertyChange(final PropertyChangeEvent event) {
+    //        if (HeadlessPreferencesConstants.P_LOG_FILE_LOCATION.equals(event.getProperty())) {
+    //            final Boolean enabled = (Boolean)event.getNewValue();
+    //            m_logDirGLobal.setEnabled(enabled, getFieldEditorParent());
+    //        }
+    //        super.propertyChange(event);
+    //    }
 
-    /**
-     *
-     * {@inheritDoc}
-     */
     @Override
     protected void performApply() {
         m_apply = true;
@@ -168,15 +155,13 @@ public class HeadlessPreferencePage extends FieldEditorPreferencePage implements
     }
 
     /**
-     * Overriden to display a message box in case the temp directory was
-     * changed.
+     * Overridden to display a message box in case the temp directory was changed.
      *
      * {@inheritDoc}
      */
     @Override
     public boolean performOk() {
-
-        boolean result = super.performOk();
+        final boolean result = super.performOk();
 
         checkChanges();
 
@@ -184,13 +169,13 @@ public class HeadlessPreferencePage extends FieldEditorPreferencePage implements
     }
 
     /**
-     * Overriden to react when the users applies but then presses cancel.
+     * Overridden to react when the users applies but then presses cancel.
      *
      * {@inheritDoc}
      */
     @Override
     public boolean performCancel() {
-        boolean result = super.performCancel();
+        final boolean result = super.performCancel();
 
         checkChanges();
 
@@ -198,7 +183,7 @@ public class HeadlessPreferencePage extends FieldEditorPreferencePage implements
     }
 
     private void checkChanges() {
-        boolean apply = m_apply;
+        final boolean apply = m_apply;
         m_apply = false;
 
         if (apply) {
@@ -206,26 +191,23 @@ public class HeadlessPreferencePage extends FieldEditorPreferencePage implements
         }
 
         // get the preference store for the UI plugin
-        IPreferenceStore store =
-                KNIMECorePlugin.getDefault().getPreferenceStore();
-        String currentTmpDir =
-                store.getString(HeadlessPreferencesConstants.P_TEMP_DIR);
+        final var store = KNIMECorePlugin.getDefault().getPreferenceStore();
+        final var currentTmpDir = store.getString(HeadlessPreferencesConstants.P_TEMP_DIR);
         boolean tempDirChanged = !m_tempPath.equals(currentTmpDir);
         if (tempDirChanged) {
             // reset the directory
             m_tempPath = currentTmpDir;
-            String message = "Changes of the temporary directory become "
-                    + "first available after restarting the workbench.\n"
+            final var message =
+                "Changes of the temporary directory become first available after restarting the workbench.\n"
                     + "Do you want to restart the workbench now?";
 
-            Display.getDefault().asyncExec(
-                () -> promptRestartWithMessage(message));
+            Display.getDefault().asyncExec(() -> promptRestartWithMessage(message));
 
         }
     }
 
-    private static void promptRestartWithMessage(final String message){
-        MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_QUESTION | SWT.YES | SWT.NO);
+    private static void promptRestartWithMessage(final String message) {
+        final var mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_QUESTION | SWT.YES | SWT.NO);
         mb.setText("Restart workbench...");
         mb.setMessage(message);
         if (mb.open() != SWT.YES) {
@@ -235,14 +217,20 @@ public class HeadlessPreferencePage extends FieldEditorPreferencePage implements
         PlatformUI.getWorkbench().restart();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void init(final IWorkbench workbench) {
         // we use the pref store of the UI plugin
-        setPreferenceStore(KNIMECorePlugin.getDefault()
-                .getPreferenceStore());
+        setPreferenceStore(KNIMECorePlugin.getDefault().getPreferenceStore());
+
+        // copy "update metanode" setting from ui plugin
+        final var oldKey = PreferenceConstants.P_META_NODE_LINK_UPDATE_ON_LOAD;
+        final var newKey = HeadlessPreferencesConstants.P_META_NODE_LINK_UPDATE_ON_LOAD;
+        if (!getPreferenceStore().contains(newKey)) {
+            final var uiPrefStore = KNIMEUIPlugin.getDefault().getPreferenceStore();
+            if (uiPrefStore.contains(oldKey)) {
+                getPreferenceStore().setValue(newKey, uiPrefStore.getString(oldKey));
+            }
+        }
     }
 
 }

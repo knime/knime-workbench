@@ -69,7 +69,6 @@ import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
-import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.data.container.storage.TableStoreFormatInformation;
@@ -91,6 +90,8 @@ import org.knime.core.node.workflow.WorkflowPersistor.WorkflowLoadResult;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.util.LockFailedException;
+import org.knime.workbench.core.KNIMECorePlugin;
+import org.knime.workbench.core.preferences.HeadlessPreferencesConstants;
 import org.knime.workbench.editor2.actions.CheckUpdateMetaNodeLinkAllAction;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.p2.actions.AbstractP2Action;
@@ -391,8 +392,8 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
         final List<NodeID> componentLinks = partitionedLinks.get(Boolean.TRUE);
         final List<NodeID> metanodeLinks = partitionedLinks.get(Boolean.FALSE);
 
-        final StringBuilder m = new StringBuilder("The workflow contains ");
-        if (componentLinks.size() > 0) {
+        final var m = new StringBuilder("The workflow contains ");
+        if (!componentLinks.isEmpty()) {
             if (componentLinks.size() == 1) {
                 m.append("one component link (\"");
                 m.append(parent.findNodeContainer(componentLinks.get(0)).getNameWithID());
@@ -400,7 +401,7 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
             } else {
                 m.append(componentLinks.size()).append(" component links");
             }
-            if (metanodeLinks.size() > 0) {
+            if (!metanodeLinks.isEmpty()) {
                 m.append(" and ");
             } else {
                 m.append(".");
@@ -415,33 +416,31 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
         }
         m.append("\n\nDo you want to check for updates now?");
 
-        final String message = m.toString();
-        final AtomicBoolean result = new AtomicBoolean(false);
-        final IPreferenceStore corePrefStore = KNIMEUIPlugin.getDefault().getPreferenceStore();
-        final String pKey = PreferenceConstants.P_META_NODE_LINK_UPDATE_ON_LOAD;
-        String pref = corePrefStore.getString(pKey);
-        boolean showInfoMsg = true;
+        final var message = m.toString();
+        final var result = new AtomicBoolean(false);
+        final var corePrefStore = KNIMECorePlugin.getDefault().getPreferenceStore();
+        final var pKey = HeadlessPreferencesConstants.P_META_NODE_LINK_UPDATE_ON_LOAD;
+        final String pref;
+        if (corePrefStore.contains(pKey)) {
+            pref = corePrefStore.getString(pKey);
+        } else {
+            // Get the preference from the UI Plugin, where it was stored earlier.
+            final var uiPrefStore = KNIMEUIPlugin.getDefault().getPreferenceStore();
+            pref = uiPrefStore.getString(PreferenceConstants.P_META_NODE_LINK_UPDATE_ON_LOAD);
+        }
+        var showInfoMsg = true;
         if (MessageDialogWithToggle.ALWAYS.equals(pref)) {
             result.set(true);
             showInfoMsg = false;
         } else if (MessageDialogWithToggle.NEVER.equals(pref)) {
             result.set(false);
         } else {
-            final Display display = Display.getDefault();
-            display.syncExec(new Runnable() {
-                @Override
-                public void run() {
-                    Shell activeShell = SWTUtilities.getActiveShell(display);
-                    MessageDialogWithToggle dlg = MessageDialogWithToggle.openYesNoCancelQuestion(activeShell,
-                        "Metanode Link Update", message, "Remember my decision", false, corePrefStore, pKey);
-                    switch (dlg.getReturnCode()) {
-                        case IDialogConstants.YES_ID:
-                            result.set(true);
-                            break;
-                        default:
-                            result.set(false);
-                    }
-                }
+            final var display = Display.getDefault();
+            display.syncExec(() -> {
+                final var activeShell = SWTUtilities.getActiveShell(display);
+                final var dlg = MessageDialogWithToggle.openYesNoCancelQuestion(activeShell, "Metanode Link Update",
+                    message, "Remember my decision", false, corePrefStore, pKey);
+                result.set(dlg.getReturnCode() == IDialogConstants.YES_ID);
             });
         }
         if (result.get()) {

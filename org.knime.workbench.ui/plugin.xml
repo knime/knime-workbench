@@ -106,12 +106,28 @@
       </perspectiveExtension>
    </extension>
    <extension
+     point="org.eclipse.ui.keywords">
+            <keyword id="P_META_NODE_LINK_UPDATE_ON_LOAD" label="prompt component update shared linked metanode"/>
+            <keyword id="LOG_LEVEL" label="log level debug info warn error"/>
+            <keyword id="LOG_FILE_LOCATION" label="log location"/>
+            <keyword id="LOG_GLOBAL_IN_WF_DIR" label="log global messages workflow"/>
+            <keyword id="MAXIMUM_THREADS" label="maximum working threads pool worker"/>
+            <keyword id="TEMP_DIR" label="temporary storage files directory"/>
+            <keyword id="STATISTICS" label="help improve statistics usage send"/>
+            <keyword id="AUTOSAVE" label="auto save autosave interval data"/>
+            <keyword id="UI_CONSOLE_LOG_LEVEL" label="console log level debug info warn error"/>
+            <keyword id="UI_CONFIRM" label="confirm node reset delete connection"/>
+   </extension>
+   <extension
          point="org.eclipse.ui.preferencePages">
       <page
             category="org.knime.workbench.ui.preferences"
             class="org.knime.workbench.ui.preferences.MainPreferencePage"
             id="org.knime.workbench.ui.preferences.gui"
             name="KNIME classic user interface">
+            <keywordReference id="UI_CONFIRM"/>
+            <keywordReference id="AUTOSAVE"/>
+            <keywordReference id="UI_CONSOLE_LOG_LEVEL"/>
       </page>
       <page
             category="org.knime.workbench.ui.preferences"
@@ -123,6 +139,13 @@
             class="org.knime.workbench.ui.preferences.HeadlessPreferencePage"
             id="org.knime.workbench.ui.preferences"
             name="KNIME">
+            <keywordReference id="META_NODE_LINK_UPDATE_ON_LOAD"/>
+            <keywordReference id="LOG_LEVEL"/>
+            <keywordReference id="LOG_FILE_LOCATION"/>
+            <keywordReference id="LOG_GLOBAL_IN_WF_DIR"/>
+            <keywordReference id="MAXIMUM_THREADS"/>
+            <keywordReference id="TEMP_DIR"/>
+            <keywordReference id="STATISTICS"/>
       </page>
       <page
             category="org.knime.workbench.ui.preferences"
