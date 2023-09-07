@@ -107,7 +107,7 @@
    </extension>
    <extension
      point="org.eclipse.ui.keywords">
-            <keyword id="P_META_NODE_LINK_UPDATE_ON_LOAD" label="prompt component update shared linked metanode"/>
+            <keyword id="META_NODE_LINK_UPDATE_ON_LOAD" label="prompt component update shared linked metanode"/>
             <keyword id="LOG_LEVEL" label="log level debug info warn error"/>
             <keyword id="LOG_FILE_LOCATION" label="log location"/>
             <keyword id="LOG_GLOBAL_IN_WF_DIR" label="log global messages workflow"/>
