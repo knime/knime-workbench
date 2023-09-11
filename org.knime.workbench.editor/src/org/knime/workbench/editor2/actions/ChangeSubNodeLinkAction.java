@@ -254,7 +254,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
         return true;
     }
 
-    static class LinkPrompt extends MessageDialog {
+    public static class LinkPrompt extends MessageDialog {
         private Button m_absoluteLink;
 
         private Button m_mountpointRelativeLink;

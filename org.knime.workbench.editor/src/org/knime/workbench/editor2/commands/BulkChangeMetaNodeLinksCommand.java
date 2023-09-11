@@ -126,7 +126,7 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
      * @param link input URI
      * @return resolved link type
      */
-    public static LinkType resolveLinkType(final URI link) {
+    public static LinkType resolveLinkType(final URI link) { // Not complete
         var linkType = LinkType.None;
         try {
             if (ResolverUtil.isMountpointRelativeURL(link)) {

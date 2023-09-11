@@ -146,9 +146,9 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
      *
      * @param parent the parent shell
      * @param manager The manager (used for resolution of 'knime://' URLs)
-     * @param metaNodes components and metanodes in the currently edited workflow
+     * @param subNodeContainer component to change the version of
      */
-    ChangeComponentHubVersionDialog(final Shell parent, final SubNodeContainer subNodeContainer,
+    public ChangeComponentHubVersionDialog(final Shell parent, final SubNodeContainer subNodeContainer,
         final WorkflowManager manager) {
         super(parent);
         m_manager = manager;
@@ -295,7 +295,7 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
     /**
      * @return selected link item version
      */
-    HubItemVersion getSelectedVersion() {
+    public HubItemVersion getSelectedVersion() {
         return new HubItemVersion(m_selectedLinkType,
             m_selectedLinkType == LinkType.FIXED_VERSION ? m_selectedItemVersion : null);
     }
