@@ -858,7 +858,7 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
         var dialogType = OpenDialogAction.getDialogType(container);
         if (dialogType == DialogType.MODERN) {
             NodeContainer nc = Wrapper.unwrapNC(container);
-            var canBeEnlarged = NodeDialogManager.getInstance().getNodeDialog(nc).getNodeDialog().canBeEnlarged();
+            var canBeEnlarged = NodeDialogManager.getInstance().canBeEnlarged(nc);
             OpenNodeViewAction.openNodeView(nc, OpenNodeViewAction.createNodeView(nc, true,
                 OpenNodeViewAction.hasNodeView(container) && !canBeEnlarged), "Dialog - " + nc.getDisplayLabel());
         } else if (dialogType == DialogType.SWING) {
