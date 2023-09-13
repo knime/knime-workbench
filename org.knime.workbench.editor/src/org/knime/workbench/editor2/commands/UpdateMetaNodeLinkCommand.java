@@ -120,7 +120,7 @@ public class UpdateMetaNodeLinkCommand extends AbstractKNIMECommand {
 
     /** {@inheritDoc} */
     @Override
-    public void execute() { // TODO: How should the BE know that this command actually changed something?
+    public void execute() {
         UpdateMetaNodeTemplateRunnable updateRunner = null;
         try {
             IWorkbench wb = PlatformUI.getWorkbench();

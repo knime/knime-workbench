@@ -147,7 +147,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      *
      * @since 5.0
      */
-    public enum LinkType { // Might not be complete, what about space relative?
+    public enum LinkType {
         /** Don't create a link. */
         None,
         /** Link with absolute URI, i.e. with mountpoint name. */
