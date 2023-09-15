@@ -165,12 +165,6 @@
             id="org.knime.workbench.ui.preferences.tablebackend"
             name="Table Backend">
       </page>
-      <page
-            category="org.knime.workbench.ui.preferences.tablebackend"
-            class="org.knime.workbench.ui.preferences.DataStoragePreferencePage"
-            id="org.knime.workbench.ui.preferences.datastorage"
-            name="Row-based Backend">
-      </page>
    </extension>
    <extension
          point="org.eclipse.core.runtime.preferences">
