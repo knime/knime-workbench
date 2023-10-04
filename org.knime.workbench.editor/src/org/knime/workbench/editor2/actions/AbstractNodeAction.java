@@ -152,15 +152,8 @@ public abstract class AbstractNodeAction extends SelectionAction {
      */
     @Override
     public final void run() {
-
         // call implementation of this action in the SWT UI thread
-        Display.getCurrent().syncExec(new Runnable() {
-            @Override
-            public void run() {
-                runInSWT();
-            }
-
-        });
+        Display.getCurrent().syncExec(this::runInSWT);
     }
 
     /**
@@ -169,8 +162,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
      */
     public void runInSWT() {
         // get selected parts...
-        final NodeContainerEditPart[] parts =
-            getSelectedParts(NodeContainerEditPart.class);
+        final NodeContainerEditPart[] parts = getSelectedParts(NodeContainerEditPart.class);
         runOnNodes(parts);
 
     }
@@ -249,8 +241,7 @@ public abstract class AbstractNodeAction extends SelectionAction {
         // clean list, that is, remove all objects that are not edit parts for a NodeContainer
         for (Object e : list) {
             if (connectableClass.isInstance(e)) {
-                T cast = connectableClass.cast(e);
-                objects.add(cast);
+                objects.add(connectableClass.cast(e));
             }
         }
         @SuppressWarnings("unchecked")

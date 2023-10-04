@@ -57,13 +57,11 @@ import org.knime.workbench.editor2.WorkflowEditor;
  *
  * @author Bernd Wiswedel, KNIME AG, Zurich, Switzerland
  */
-public class CheckUpdateMetaNodeLinkAllAction extends
-        CheckUpdateMetaNodeLinkAction {
+public class CheckUpdateMetaNodeLinkAllAction extends CheckUpdateMetaNodeLinkAction {
 
     /** Action ID. */
     @SuppressWarnings("hiding")
-    public static final String ID =
-        "knime.action.meta_node_check_update_link_all";
+    public static final String ID = "knime.action.meta_node_check_update_link_all";
 
     /** @param editor The host editor. */
     public CheckUpdateMetaNodeLinkAllAction(final WorkflowEditor editor) {
@@ -74,8 +72,7 @@ public class CheckUpdateMetaNodeLinkAllAction extends
      *  CheckUpdateMetaNodeLinkAction(WorkflowEditor, boolean)}.
      * @param editor Host editor
      * @param showInfoMsgIfNoUpdateAvail see super constructor */
-    public CheckUpdateMetaNodeLinkAllAction(final WorkflowEditor editor,
-            final boolean showInfoMsgIfNoUpdateAvail) {
+    public CheckUpdateMetaNodeLinkAllAction(final WorkflowEditor editor, final boolean showInfoMsgIfNoUpdateAvail) {
         super(editor, showInfoMsgIfNoUpdateAvail);
     }
 
@@ -93,8 +90,7 @@ public class CheckUpdateMetaNodeLinkAllAction extends
 
     /** {@inheritDoc} */
     @Override
-    protected <T extends EditPart> T[] getSelectedParts(
-            final Class<T> editPartClass) {
+    protected <T extends EditPart> T[] getSelectedParts(final Class<T> editPartClass) {
         return getAllParts(editPartClass);
     }
 

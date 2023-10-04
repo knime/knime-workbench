@@ -68,7 +68,6 @@ import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.progress.IProgressService;
@@ -84,7 +83,6 @@ import org.knime.core.node.workflow.TemplateUpdateUtil;
 import org.knime.core.node.workflow.WorkflowLoadHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResult;
-import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.pathresolve.ResolverUtil;
@@ -193,7 +191,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
     protected List<NodeID> getMetaNodesToCheck(final boolean updateableOnly) {
         List<NodeID> list = new ArrayList<>();
         for (NodeContainerEditPart p : getSelectedParts(NodeContainerEditPart.class)) {
-            NodeContainerUI model = p.getNodeContainer();
+            final var model = p.getNodeContainer();
             if (Wrapper.wraps(model, NodeContainerTemplate.class)) {
                 NodeContainerTemplate tnc = Wrapper.unwrap(model, NodeContainerTemplate.class);
                 var isLink = tnc.getTemplateInformation().getRole() == Role.Link;
@@ -220,10 +218,8 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
     private List<NodeID> getNCTemplatesToCheck(final NodeContainerTemplate template, final boolean updateableOnly) {
         List<NodeID> list = new ArrayList<>();
         for (NodeContainer nc : template.getNodeContainers()) {
-            if (nc instanceof NodeContainerTemplate) {
-                NodeContainerTemplate tnc = (NodeContainerTemplate)nc;
-                var isLink = tnc.getTemplateInformation().getRole() == Role.Link;
-
+            if (nc instanceof NodeContainerTemplate tnc) {
+                final var isLink = tnc.getTemplateInformation().getRole() == Role.Link;
                 if (isLink && updateableOnly && !getManager().canUpdateMetaNodeLink(tnc.getID())) {
                     return Collections.emptyList();
                 } else if (isLink) {
@@ -243,19 +239,18 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
     @Override
     public void runInSWT() {
         List<NodeID> candidateList = getMetaNodesToCheck(false);
-        final Shell shell = SWTUtilities.getActiveShell();
+        final var shell = SWTUtilities.getActiveShell();
         IWorkbench wb = PlatformUI.getWorkbench();
         IProgressService ps = wb.getProgressService();
         LOGGER.debug("Checking for updates for " + candidateList.size() + " node link(s)...");
-        CheckUpdateRunnableWithProgress runner =
-            new CheckUpdateRunnableWithProgress(getManager(), candidateList);
+        final var runner = new CheckUpdateRunnableWithProgress(getManager(), candidateList);
         Status status;
         try {
             ps.busyCursorWhile(runner);
             status = runner.getStatus();
         } catch (InvocationTargetException | IllegalStateException e) {
-            var message = e instanceof InvocationTargetException
-                ? ((InvocationTargetException)e).getTargetException().getMessage() : e.getMessage();
+            var message = e instanceof InvocationTargetException ite ? ite.getTargetException().getMessage()
+                : e.getMessage();
             if (DisabledSchemesChecker.isCausedByDisabledSchemes(e)) {
                 message = DisabledSchemesChecker.FAQ_MESSAGE;
             }
@@ -270,8 +265,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
             ErrorDialog.openError(SWTUtilities.getActiveShell(), null,
                 "Errors while checking for updates on node links", status);
             if (updateList.isEmpty()) {
-                /* As there are only nodes which have no updates or an error,
-                 * there is nothing else to do. */
+                /* As there are only nodes which have no updates or an error, there is nothing else to do. */
                 return;
             }
         }
@@ -280,8 +274,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         var nodesToResetCount = 0;
         var hasOnlySelectedSubnodes = true;
         for (NodeID id : updateList) {
-            NodeContainerTemplate templateNode =
-                (NodeContainerTemplate)getManager().findNodeContainer(id);
+            NodeContainerTemplate templateNode = (NodeContainerTemplate)getManager().findNodeContainer(id);
             // TODO problematic with through-connections
             if (templateNode.containsExecutedNode()) {
                 nodesToResetCount += 1;
@@ -303,13 +296,12 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         } else {
             boolean isSingle = updateList.size() == 1;
             String title = "Update " + nodeSUp + (isSingle ? "" : "s");
-            StringBuilder messageBuilder = new StringBuilder();
+            final var messageBuilder = new StringBuilder();
             messageBuilder.append("Update available for ");
             if (isSingle && candidateList.size() == 1) {
                 messageBuilder.append(nodeSLow);
                 messageBuilder.append(" \"");
-                messageBuilder.append(getManager().findNodeContainer(
-                        candidateList.get(0)).getNameWithID());
+                messageBuilder.append(getManager().findNodeContainer(candidateList.get(0)).getNameWithID());
                 messageBuilder.append("\".");
             } else if (isSingle) {
                 messageBuilder.append("one " + nodeSLow + ".");
@@ -323,17 +315,15 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
             } else {
                 messageBuilder.append("Update now?");
             }
-            String message = messageBuilder.toString();
+            final var message = messageBuilder.toString();
             if (MessageDialog.openQuestion(shell, title, message)) {
                 LOGGER.debug("Running update for " + updateList.size() + " node(s): " + updateList);
-                execute(new UpdateMetaNodeLinkCommand(getManager(),
-                        updateList.toArray(new NodeID[updateList.size()])));
+                execute(new UpdateMetaNodeLinkCommand(getManager(), updateList.toArray(NodeID[]::new)));
             }
         }
     }
 
-    private static final class CheckUpdateRunnableWithProgress
-        implements IRunnableWithProgress {
+    private static final class CheckUpdateRunnableWithProgress implements IRunnableWithProgress {
 
         private final WorkflowManager m_hostWFM;
         private final List<NodeID> m_candidateList;
@@ -343,14 +333,12 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         /**
          * @param hostWFM
          * @param candidateList */
-        public CheckUpdateRunnableWithProgress(final WorkflowManager hostWFM,
-                final List<NodeID> candidateList) {
+        public CheckUpdateRunnableWithProgress(final WorkflowManager hostWFM, final List<NodeID> candidateList) {
             m_hostWFM = hostWFM;
             m_candidateList = candidateList;
             m_updateList = new ArrayList<>();
         }
 
-        /** {@inheritDoc} */
         @Override
         public void run(final IProgressMonitor monitor)
                 throws InvocationTargetException, InterruptedException, IllegalStateException {
@@ -362,8 +350,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
             }
         }
 
-        private void runWithContext(final IProgressMonitor monitor)
-                throws InvocationTargetException, InterruptedException, IllegalStateException {
+        private void runWithContext(final IProgressMonitor monitor) throws InterruptedException, IllegalStateException {
             monitor.beginTask("Checking Link Updates", m_candidateList.size());
             var lH = new WorkflowLoadHelper(true, m_hostWFM.getContextV2());
 

@@ -385,7 +385,7 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
     }
 
     static void postLoadCheckForMetaNodeUpdates(final WorkflowEditor editor, final WorkflowManager parent,
-        final List<NodeID> links) {
+            final List<NodeID> links) {
 
         final Map<Boolean, List<NodeID>> partitionedLinks = links.stream()
             .collect(Collectors.partitioningBy(i -> parent.findNodeContainer(i) instanceof SubNodeContainer));
