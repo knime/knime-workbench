@@ -56,8 +56,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -97,6 +95,12 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 
 /**
  * Action to check for updates of metanode templates.
+ *
+ * Iterates recursively over all selected metanodes/components.
+ * Checks if any are linked (metanode templates) and updateable (workflow manager can update the link).
+ * If any are found a prompt is shown whether to update those.
+ * If the user agrees, an {@link UpdateMetaNodeLinkCommand} is executed.
+ *
  * @author Bernd Wiswedel, KNIME AG, Zurich, Switzerland
  */
 public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
@@ -223,7 +227,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 NodeContainerTemplate tnc = (NodeContainerTemplate)nc;
                 var isLink = tnc.getTemplateInformation().getRole() == Role.Link;
 
-                if (isLink && updateableOnly && !getManager().canUpdateMetaNodeLink(tnc.getID())) {
+                if (isLink && updateableOnly && !tnc.getParent().canUpdateMetaNodeLink(tnc.getID())) {
                     return Collections.emptyList();
                 } else if (isLink) {
                     list.add(tnc.getID());
@@ -468,26 +472,24 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
          * @throws InterruptedException
          */
         private void verifyMultiStatus() throws IllegalStateException {
-            // retrieves all top-level NodeIDs, works because of the recursive scan of the candidates,
-            // i.e. the first node to set m_topLevelPrefix will always be on the top level
-            var topLevelCandidates = m_candidateList.stream().filter(new Predicate<NodeID>() {
-                private NodeID m_topLevelPrefix = null;
-
-                @Override
-                public boolean test(final NodeID t) {
-                    if (m_topLevelPrefix == null) {
-                        m_topLevelPrefix = t.getPrefix();
-                        return true;
-                    }
-                    return t.getPrefix().equals(m_topLevelPrefix);
-                }
-            }).collect(Collectors.toList());
+            // Filtering for nodes that have updates filters out shared templates in shared templates -
+            // because we don't recurse into them to look for updates and thus they are not in the list.
+            // However, when actually updating a shared template that should contain an outdated shared template,
+            // we update the inner shared template, too (workflow manager updateMetaNodeLinkInternalRecursively).
+            // This is not what a software developer would do (the inner update might render the component unusable)
+            // but it is how KNIME works - and is considered useful to reduce the number of manual updates needed.
+            var templates = m_candidateList.stream().filter(m_updateList::contains).toList();
 
             var updateError = false;
-            // for each of the top level templates nodes, invoke a recursive update check
-            for (NodeID tlc : topLevelCandidates) {
+            // for each of the shared metanode templates with: entry point > !shared metanode template > T
+            // Where entry points are the nodes selected for update by the user.
+            // Each template T
+            // - is an ancestor of an entry point
+            // - has no shared metanode template as ancestor
+            for (NodeID template : templates) {
                 try {
-                    m_hostWFM.checkUpdateMetaNodeLink(tlc, new WorkflowLoadHelper(true, m_hostWFM.getContextV2()));
+                    var parentWfm = m_hostWFM.findNodeContainer(template).getParent();
+                    parentWfm.checkUpdateMetaNodeLink(template, new WorkflowLoadHelper(true, parentWfm.getContextV2()));
                 } catch (IOException e) {
                     updateError = true;
                 }

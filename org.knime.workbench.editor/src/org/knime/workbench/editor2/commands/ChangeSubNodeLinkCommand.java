@@ -101,7 +101,7 @@ public class ChangeSubNodeLinkCommand extends AbstractKNIMECommand {
     }
 
     private boolean setLink(final URI link) {
-        NodeContainer subNode = getHostWFM().getNodeContainer(m_subNodeID);
+        NodeContainer subNode = getHostWFM().findNodeContainer(m_subNodeID);
         if (!(subNode instanceof SubNodeContainer)) {
             LOGGER.error("Command failed: Specified node is not a Component");
             return false;
@@ -115,7 +115,7 @@ public class ChangeSubNodeLinkCommand extends AbstractKNIMECommand {
             LOGGER.error("Command failed: Specified node is not a Component with a link." + e1.getMessage(), e1);
             return false;
         }
-        getHostWFM().setTemplateInformation(m_subNodeID, newInfo);
+        subNode.getParent().setTemplateInformation(m_subNodeID, newInfo);
         return true;
     }
 
