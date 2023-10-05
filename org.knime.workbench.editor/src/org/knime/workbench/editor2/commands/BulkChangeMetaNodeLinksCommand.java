@@ -207,7 +207,7 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
             return false;
         }
         var wfm = getHostWFM();
-        return m_templatesToChange.stream().allMatch(nct -> wfm.containsNodeContainer(nct.getID()));
+        return m_templatesToChange.stream().allMatch(nct -> wfm.findNodeContainer(nct.getID()) != null);
     }
 
     /** {@inheritDoc} */
