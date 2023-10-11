@@ -53,6 +53,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.swing.UIManager;
 
@@ -87,13 +88,17 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
     private final URI m_templateURI;
 
-    private final WorkflowEditor m_editor;
+    private WorkflowEditor m_editor;
 
     private MetaNodeLinkUpdateResult m_result;
 
     private final WorkflowContextV2 m_context;
 
     private final boolean m_deleteFileAfterLoad;
+
+    private final Consumer<WorkflowManager> m_workflowLoadedCallback;
+
+    private boolean m_isComponentProject;
 
     /**
      * Loads a {@link NodeContainerTemplate} into a {@link MetaNodeLinkUpdateResult} from a given URI.
@@ -108,6 +113,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
         m_editor = null;
         m_context = null;
         m_deleteFileAfterLoad = true;
+        m_workflowLoadedCallback = w -> {};
     }
 
     /**
@@ -134,7 +140,27 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
      * @param deleteFile whether to delete the URI-resolved file after the load
      */
     public LoadMetaNodeTemplateRunnable(final WorkflowEditor editor, final URI templateURI,
-            final WorkflowContextV2 context, final boolean deleteFile) {
+        final WorkflowContextV2 context, final boolean deleteFile) {
+        this(wfm -> {
+            if (editor != null) {
+                editor.setWorkflowManager(wfm);
+            }
+        }, templateURI, context, deleteFile, editor != null);
+        m_editor = editor;
+    }
+
+    /**
+     * Used if a template/component is to be loaded into the workflow editor as a project (i.e. not embedded in another
+     * workflow).
+     *
+     * @param workflowLoadedCallback TODO will only be called for component projects
+     * @param templateURI URI to the workflow directory or file from which the template should be loaded
+     * @param context The context (for component template editors)
+     * @param deleteFile whether to delete the URI-resolved file after the load
+     * @param isComponentProject
+     */
+    public LoadMetaNodeTemplateRunnable(final Consumer<WorkflowManager> workflowLoadedCallback, final URI templateURI,
+        final WorkflowContextV2 context, final boolean deleteFile, final boolean isComponentProject) {
         m_parentWFM = WorkflowManager.ROOT;
 
         //strip "workflow.knime" from the URI which is append if
@@ -150,9 +176,10 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
         } else {
             m_templateURI = templateURI;
         }
-        m_editor = editor;
+        m_workflowLoadedCallback = workflowLoadedCallback;
         m_context = context;
         m_deleteFileAfterLoad = deleteFile;
+        m_isComponentProject = isComponentProject;
     }
 
     @Override
@@ -183,7 +210,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
             final var d = Display.getDefault();
             final var loadHelper =
-                GUIWorkflowLoadHelper.forTemplate(d, parentFile.getName(), m_context, m_editor != null);
+                GUIWorkflowLoadHelper.forTemplate(d, parentFile.getName(), m_context, m_isComponentProject);
             final var loadPersistor = loadHelper.createTemplateLoadPersistor(parentFile, m_templateURI);
             final var loadResult = new MetaNodeLinkUpdateResult("Shared instance from \"" + m_templateURI + "\"");
             m_parentWFM.load(loadPersistor, loadResult, new ExecutionMonitor(progressMonitor), false);
@@ -198,7 +225,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             // components are always stored without data
             // -> don't report data load errors neither node state changes if component is loaded as project
             final IStatus status = createStatus(m_result,
-                !m_result.getGUIMustReportDataLoadErrors() || isComponentProject(), isComponentProject());
+                !m_result.getGUIMustReportDataLoadErrors() || m_isComponentProject, m_isComponentProject);
             final String message;
             switch (status.getSeverity()) {
                 case IStatus.OK:
@@ -210,23 +237,26 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 default:
                     message = "Errors during load";
             }
-            if (isComponentProject() && m_result.getLoadedInstance() instanceof SubNodeContainer) {
+            if (m_isComponentProject && m_result.getLoadedInstance() instanceof SubNodeContainer) {
                 SubNodeContainer snc = (SubNodeContainer)m_result.getLoadedInstance();
                 final var wfm = snc.getWorkflowManager();
-                m_editor.setWorkflowManager(wfm);
+                m_workflowLoadedCallback.accept(wfm);
                 if (!status.isOK()) {
                     LoadWorkflowRunnable.showLoadErrorDialog(m_result, status, message, false);
                 }
-                final List<NodeID> linkedMNs = wfm.getLinkedMetaNodes(true);
-                if (!linkedMNs.isEmpty()) {
-                    final WorkflowEditor editor = m_editor;
-                    m_editor.addAfterOpenRunnable(
-                        () -> LoadWorkflowRunnable.postLoadCheckForMetaNodeUpdates(editor, wfm, linkedMNs));
-                }
-                snc.addNodePropertyChangedListener(l -> {
-                    if (l.getProperty() == NodeProperty.ComponentMetadata) {
-                        m_editor.markDirty();
+
+                callOnWorkflowEditor(e -> {
+                    final List<NodeID> linkedMNs = wfm.getLinkedMetaNodes(true);
+                    if (!linkedMNs.isEmpty()) {
+                        final WorkflowEditor editor = e;
+                        e.addAfterOpenRunnable(
+                            () -> LoadWorkflowRunnable.postLoadCheckForMetaNodeUpdates(editor, wfm, linkedMNs));
                     }
+                    snc.addNodePropertyChangedListener(l -> {
+                        if (l.getProperty() == NodeProperty.ComponentMetadata) {
+                            e.markDirty();
+                        }
+                    });
                 });
             } else {
                 if (!status.isOK()) {
@@ -234,9 +264,11 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 }
             }
         } catch (Exception ex) {
-            if(isComponentProject()) {
-                m_editor.setWorkflowManager(null);
-            }
+            callOnWorkflowEditor(e -> {
+                if (m_isComponentProject) {
+                    e.setWorkflowManager(null);
+                }
+            });
             throw new RuntimeException(ex);
         } finally {
             // IMPORTANT: Remove the reference to the file and the editor!!! Otherwise the memory cannot be freed later
@@ -244,12 +276,14 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
         }
     }
 
-    private boolean isComponentProject() {
-        return m_editor != null;
-    }
-
     /** @return the result */
     public MetaNodeLinkUpdateResult getLoadResult() {
         return m_result;
+    }
+
+    private void callOnWorkflowEditor(final Consumer<WorkflowEditor> call) {
+        if (m_editor != null) {
+            call.accept(m_editor);
+        }
     }
 }
