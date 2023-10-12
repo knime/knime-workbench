@@ -206,7 +206,7 @@ public class OverwriteRenameDialog extends Dialog {
         m_multiple = multiple;
         m_forbiddenStores = forbiddenStores;
         m_showSnapshotPanel = showSnapshotPanel;
-        m_showKeepHistoryCheckbox = showKeepHistoryCheckbox;
+        m_showKeepHistoryCheckbox = showKeepHistoryCheckbox && destination.getContentProvider().supportsSnapshots();
     }
 
     /** Can be called right after construction to programmatically set the
