@@ -103,6 +103,7 @@ import org.eclipse.ui.progress.IProgressService;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.port.PortObject;
+import org.knime.core.node.util.ClassUtils;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerParent;
@@ -615,8 +616,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
                 return originalUri;
             }
 
-            WorkflowContext wfc = node.getProjectWFM().getContext();
-            File workflowMountpointRoot = wfc.getMountpointRoot();
+            WorkflowContext wfc = Optional.of(node.getProjectWFM()) //
+                    .filter(wfm -> wfm != WorkflowManager.ROOT) //
+                    .or(() -> ClassUtils.castOptional(SubNodeContainer.class, node) //
+                        .map(SubNodeContainer::getWorkflowManager) //
+                        .flatMap(wfm -> wfm.getProjectComponent().map(SubNodeContainer::getWorkflowManager))) //
+                    .map(WorkflowManager::getContext)
+                    .orElse(null);
+            File workflowMountpointRoot = wfc == null ? null : wfc.getMountpointRoot();
             if (workflowMountpointRoot == null) {
                 LOGGER.warn("Cannot determine mountpoint for workflow, using absolute link instead of relative link");
                 return originalUri;
@@ -955,10 +962,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
         OverwriteAndMergeInfo info = null;
         if (doesTargetExist) {
-            DestinationChecker<AbstractExplorerFileStore,
-                AbstractExplorerFileStore> dc = new DestinationChecker
-                    <AbstractExplorerFileStore, AbstractExplorerFileStore>(
-                            Display.getDefault().getActiveShell(), "create template", false, false);
+            DestinationChecker<AbstractExplorerFileStore, AbstractExplorerFileStore> dc =
+                    new DestinationChecker<>(Display.getDefault().getActiveShell(), "create template", false, false);
             dc.setIsOverwriteEnabled(overwriteOK);
             dc.setIsOverwriteDefault(overwriteOK);
 
@@ -974,12 +979,14 @@ public abstract class AbstractContentProvider extends LabelProvider implements
 
         String newName = templateLoc.getName();
 
-        WorkflowContext wfc = subNode.getProjectWFM().getContext();
-        AbstractContentProvider workflowMountPoint = null;
-        LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE.fromLocalFile(wfc.getMountpointRoot());
-        if (fs != null) {
-            workflowMountPoint = fs.getContentProvider();
-        }
+        AbstractContentProvider workflowMountPoint = Optional.of(subNode.getProjectWFM()) //
+                .filter(wfm -> wfm != WorkflowManager.ROOT) //
+                .or(() -> subNode.getWorkflowManager().getProjectComponent().map(snc -> snc.getWorkflowManager())) //
+                .map(WorkflowManager::getContext) //
+                .map(wfc -> ExplorerFileSystem.INSTANCE.fromLocalFile(wfc.getMountpointRoot())) //
+                .map(fs -> fs.getContentProvider()) //
+                .orElse(null);
+
         Collection<LinkType> allowedLinkTypes = new ArrayList<LinkType>();
         allowedLinkTypes.add(LinkType.None);
         allowedLinkTypes.add(LinkType.Absolute);
