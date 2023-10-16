@@ -50,6 +50,8 @@ package org.knime.workbench.explorer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -60,6 +62,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.ClassUtils;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.contextv2.JobExecutorInfo;
@@ -74,6 +77,8 @@ import org.knime.core.util.KnimeUrlType;
 import org.knime.core.util.auth.Authenticator;
 import org.knime.core.util.auth.CouldNotAuthorizeException;
 import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.proxy.GlobalProxyConfigProvider;
+import org.knime.core.util.proxy.ProxyProtocol;
 import org.knime.core.util.proxy.URLConnectionFactory;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
@@ -122,6 +127,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      */
     public static final String SPACE_RELATIVE = "knime.space";
 
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(ExplorerURLStreamHandler.class);
+
     private final ServerRequestModifier m_requestModifier;
 
     /**
@@ -148,7 +155,65 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
     @Override
     public URLConnection openConnection(final URL url) throws IOException {
+        return openConnection(url, null);
+    }
+
+    @Override
+    public URLConnection openConnection(final URL url, final Proxy p) throws IOException {
         final var resolvedUrl = resolveKNIMEURL(url);
+        if (p == null) {
+            return openConnectionForResolved(resolvedUrl);
+        } else if (urlPointsToRemote(url)) { // must be unresolved URL to extract mount ID
+            final var globalProxy = GlobalProxyConfigProvider.getCurrent().map(cfg -> {
+                int intPort;
+                try {
+                    intPort = Integer.parseInt(cfg.port());
+                } catch (NumberFormatException nfe) {
+                    intPort = cfg.protocol().getDefaultPort();
+                }
+                return new Proxy(cfg.protocol() == ProxyProtocol.SOCKS ? Proxy.Type.SOCKS : Proxy.Type.HTTP,
+                    new InetSocketAddress(cfg.host(), intPort));
+            });
+            // log ignored proxy if different to global proxy config
+            if (!globalProxy.map(p::equals).orElse(false)) {
+                final var identifier = globalProxy.map(Proxy::toString).orElse("no proxy");
+                LOGGER.warn(String.format("For the connection to \"%s\" the proxy \"%s\" has been supplied, "
+                    + "ignoring and using \"%s\" instead", url, p, identifier));
+            }
+        }
+        // global proxy settings will be applied if and when an actual remote connection is opened
+        return openConnectionForResolved(resolvedUrl);
+    }
+
+    /**
+     * Checks whether the provided URL points to a remote host.
+     * This is the case for KNIME URLs to remote mountpoints, and all non-KNIME URLs.
+     *
+     * @param url
+     * @return whether the url points to a remote location
+     * @throws IOException
+     */
+    private static boolean urlPointsToRemote(final URL url) throws IOException {
+        if (ExplorerFileSystem.SCHEME.equals(url.getProtocol())) {
+            try {
+                final var mountId = ExplorerFileSystem.getIDfromURI(url.toURI());
+                return !ExplorerMountTable.getAllVisibleLocalMountIDs().contains(mountId);
+            } catch (URISyntaxException e) {
+                throw new IOException(e.getMessage(), e);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Opens the connection to an *already resolved* URL, distinguishes between KNIME URLs (opens the connection via the
+     * mount table) and other URLs, like HTTP(S).
+     *
+     * @param resolvedUrl
+     * @return opened connection to the given URL
+     * @throws IOException
+     */
+    private URLConnection openConnectionForResolved(final URL resolvedUrl) throws IOException {
         if (ExplorerFileSystem.SCHEME.equals(resolvedUrl.getProtocol())) {
             return openExternalMountConnection(resolvedUrl);
         } else if ("http".equals(resolvedUrl.getProtocol()) || "https".equals(resolvedUrl.getProtocol())) {
