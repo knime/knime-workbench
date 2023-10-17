@@ -57,7 +57,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -97,12 +96,10 @@ import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeFactory.NodeType;
-import org.knime.core.node.NodeInfo;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
 import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
-import org.knime.core.ui.util.NodeTemplateId;
 import org.knime.core.ui.workflowcoach.NodeRecommendationManager;
 import org.knime.core.ui.workflowcoach.NodeRecommendationManager.IUpdateListener;
 import org.knime.core.ui.workflowcoach.NodeRecommendationManager.NodeRecommendation;
@@ -291,20 +288,11 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
      *
      */
     private static void initializeNodeRecommendationManager() {
-        Predicate<NodeInfo> isSourceNode = nodeInfo -> {
-            var nt = getNodeTemplate(nodeInfo);
-            try {
-                return nt != null && nt.getType() == NodeType.Source;
-            } catch (Exception e) {
-                LOGGER.warn(String.format("Could not create a factory instance for <%s>", nodeInfo), e);
-                return false;
-            }
+        Function<String, NodeType> getNodeType = id -> {
+            var nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(id);
+            return nodeTemplate == null ? null : nodeTemplate.getType();
         };
-        Function<NodeInfo, Optional<String>> getNameFromRepository = nodeInfo -> {
-            var nodeTemplate = getNodeTemplate(nodeInfo);
-            return nodeTemplate == null ? Optional.empty() : Optional.of(nodeTemplate.getName());
-        };
-        NodeRecommendationManager.getInstance().initialize(isSourceNode, getNameFromRepository);
+        NodeRecommendationManager.getInstance().initialize(getNodeType);
     }
 
     /**
@@ -338,19 +326,9 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         };
     }
 
-    /**
-     * @param nodeInfo The node info object to return a node template for
-     * @return A node template or <code>null</code>
-     */
-    private static NodeTemplate getNodeTemplate(final NodeInfo nodeInfo) {
-        return NodeTemplateId.callWithNodeTemplateIdVariants(nodeInfo.getFactory(), nodeInfo.getName(),
-            RepositoryManager.INSTANCE::getNodeTemplate);
-    }
-
     static NodeTemplate getNodeTemplateFromNodeRecommendations(final NodeRecommendation[] nodeRecommendations) {
         var nodeRecommendation = getNonNullEntry(nodeRecommendations);
-        var nodeTemplate = NodeTemplateId.callWithNodeTemplateIdVariants(nodeRecommendation.getNodeFactoryClassName(),
-            nodeRecommendation.getNodeName(), RepositoryManager.INSTANCE::getNodeTemplate);
+        var nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(nodeRecommendation.getFactoryId());
         if (nodeTemplate == null) {
             LOGGER.debug(String.format("Could not find node template for <%s>", nodeRecommendation));
         }
