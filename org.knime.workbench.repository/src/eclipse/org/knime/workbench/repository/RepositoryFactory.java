@@ -368,9 +368,9 @@ public final class RepositoryFactory {
             NodeType nodeType = factory.getType();
 
             @SuppressWarnings("unchecked")
-            DynamicNodeTemplate node = new DynamicNodeTemplate(set,
-                (Class<? extends NodeFactory<? extends NodeModel>>)factory.getClass(), factoryId,
-                factory.getNodeName(), categoryPath, nodeType);
+            var node = new DynamicNodeTemplate(() -> set.createNodeFactory(factoryId).get(),
+                (Class<? extends NodeFactory<? extends NodeModel>>)factory.getClass(), factory.getFactoryId(),
+                factory.getNodeName(), set.getPlugInSymbolicName(), categoryPath, nodeType);
 
             node.setAfterID(nodeSet.getAfterID(factoryId));
 

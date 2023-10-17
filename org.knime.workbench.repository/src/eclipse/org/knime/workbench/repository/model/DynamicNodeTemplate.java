@@ -48,6 +48,8 @@
 
 package org.knime.workbench.repository.model;
 
+import java.util.function.Supplier;
+
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeFactory.NodeType;
 import org.knime.core.node.NodeModel;
@@ -64,37 +66,28 @@ import org.knime.core.node.extension.NodeSetFactoryExtension;
  */
 public class DynamicNodeTemplate extends NodeTemplate {
 
-    /**
-     * Separator to separate the node factory's class name from the node's in order to construct the id:
-     * <code>&#60;node-factory class name&#62;#&#60;node name&#62;</code>.
-     */
-    private static final String NODE_NAME_SEP = "#";
-
-    private final NodeSetFactoryExtension m_nodeSetFactoryExtension;
+    private final Supplier<NodeFactory<? extends NodeModel>> m_factoryInstanceCreator;
 
     private final Class<? extends NodeFactory<? extends NodeModel>> m_factoryClass;
-
-    private final String m_factoryId;
 
     /**
      * Constructs a new DynamicNodeTemplate.
      *
-     * @param nodeSetFactoryExtension the factory class
+     * @param factoryInstanceCreator creates a new factory instance
      * @param factoryClass the NodeFactory class (instantiation of it done via
      *            {@link NodeSetFactoryExtension#createNodeFactory(String)}.
-     * @param factoryId The id of the NodeFactory, must not be <code>null</code>
+     * @param factoryId {@link NodeFactory#getFactoryId()}, must not be <code>null</code>
      * @param name the name of this repository entry, must not be <code>null</code>
+     * @param contributingPlugin the plugin name
      * @param categoryPath category path as per {@link NodeSetFactory#getCategoryPath(String)}
      * @param nodeType type as per node's (runtime generated) factory xml descriptin.
      */
-    public DynamicNodeTemplate(final NodeSetFactoryExtension nodeSetFactoryExtension,
-        final Class<? extends NodeFactory<? extends NodeModel>> factoryClass,
-        final String factoryId, final String name, final String categoryPath, final NodeType nodeType) {
-        super(factoryClass.getName() + NODE_NAME_SEP + name, name,
-            nodeSetFactoryExtension.getPlugInSymbolicName(), categoryPath, nodeType);
+    public DynamicNodeTemplate(final Supplier<NodeFactory<? extends NodeModel>> factoryInstanceCreator,
+        final Class<? extends NodeFactory<? extends NodeModel>> factoryClass, final String factoryId, final String name,
+        final String contributingPlugin, final String categoryPath, final NodeType nodeType) {
+        super(factoryId, name, contributingPlugin, categoryPath, nodeType);
+        m_factoryInstanceCreator = factoryInstanceCreator;
         m_factoryClass = factoryClass;
-        m_factoryId = factoryId;
-        m_nodeSetFactoryExtension = nodeSetFactoryExtension;
     }
 
     /**
@@ -104,9 +97,8 @@ public class DynamicNodeTemplate extends NodeTemplate {
      */
     protected DynamicNodeTemplate(final DynamicNodeTemplate copy) {
         super(copy);
-        m_nodeSetFactoryExtension = copy.m_nodeSetFactoryExtension;
+        m_factoryInstanceCreator = copy.m_factoryInstanceCreator;
         m_factoryClass = copy.m_factoryClass;
-        m_factoryId = copy.m_factoryId;
     }
 
     @Override
@@ -118,10 +110,12 @@ public class DynamicNodeTemplate extends NodeTemplate {
     public NodeFactory<? extends NodeModel> createFactoryInstance() throws Exception {
         // exception is unexpected here as the constructor was called with a concrete instance already
         // (which for some reason we never re-use but create a new factory instead)
-        return m_nodeSetFactoryExtension.createNodeFactory(m_factoryId).orElseThrow(//
-            () -> new RuntimeException(
-                String.format("Can't create node for id \"%s\" from node set factory extension %s", m_factoryId,
-                    m_nodeSetFactoryExtension)));
+        var instance = m_factoryInstanceCreator.get();
+        if (instance == null) {
+            throw new RuntimeException(String.format("Can't create node for id \"%s\"", getID()));
+        } else {
+            return instance;
+        }
     }
 
     /**
