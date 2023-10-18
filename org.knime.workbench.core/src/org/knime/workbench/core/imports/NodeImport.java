@@ -48,6 +48,8 @@
  */
 package org.knime.workbench.core.imports;
 
+import org.knime.core.node.NodeFactory;
+
 /**
  * Represents the information required to import a node into the AP (i.e. to add a node to a workflow and potentially
  * trigger an installation of the respective extension).
@@ -57,19 +59,9 @@ package org.knime.workbench.core.imports;
 public interface NodeImport extends EntityImport {
 
     /**
-     * @return the node's canonical factory class name
+     * @return the factory id as per {@link NodeFactory#getFactoryId()}
      */
-    String getCanonicalNodeFactory();
-
-    /**
-     * @return the node's name/title
-     */
-    String getNodeName();
-
-    /**
-     * @return whether the node is a dynamic node (i.e. programmatically created)
-     */
-    boolean isDynamicNode();
+    String getFactoryId();
 
     /**
      * @return the name of the feature (extensions/plugin) the node is part of
