@@ -128,7 +128,6 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.explorer.view.actions.OpenKNIMEArchiveFileAction;
 import org.knime.workbench.repository.RepositoryManager;
-import org.knime.workbench.repository.model.NodeTemplate;
 import org.knime.workbench.ui.p2.actions.AbstractP2Action;
 
 /**
@@ -391,16 +390,14 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
 
     private Command handleNodeDropFromURI(final WorkflowManagerUI manager, final NodeImport nodeImport,
         final CreateDropRequest request) {
-        String nodeFactory = nodeImport.getCanonicalNodeFactory();
-        String nodeName = nodeImport.getNodeName();
-        boolean isDynamicNode = nodeImport.isDynamicNode();
-        final NodeTemplate nodeTemplate = getNodeTemplate(nodeFactory, nodeName, isDynamicNode);
+        var factoryId = nodeImport.getFactoryId();
+        final var nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(factoryId);
         if (nodeTemplate != null) {
             try {
                 return handleNodeDrop(manager, nodeTemplate.createFactoryInstance(), request);
             } catch (Exception e) {
                 //shouldn't happen
-                LOGGER.error("Cannot add node (node factory: " + nodeFactory + ", node name: " + nodeName + ")", e);
+                LOGGER.error("Cannot add node (" + nodeTemplate.getID() + ")", e);
                 return null;
             }
         } else {
@@ -458,31 +455,6 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             }
             return null;
         }
-    }
-
-    private static NodeTemplate getNodeTemplate(final String factoryName, final String nodeName,
-        final boolean isDynamicNode) {
-        String templateId = factoryName;
-
-        // If we are dealing with a dynamic node the node template
-        // can only be found with the id {node_factory}#{node-name}.
-        if (isDynamicNode) {
-            templateId = factoryName + "#" + nodeName;
-        }
-
-        NodeTemplate template = RepositoryManager.INSTANCE.getNodeTemplate(templateId);
-
-        // Corner case: sometimes nodes are registered at the nodesets-extension point (for dynamic nodes)
-        // but don't implement the DynamicNodeFactory. In that case the node can only be found
-        // via {node-factory}#{node-name}. But we don't know beforehand
-        // - that's why we try again with the node name appended if template is still null.
-        // (see https://knime-com.atlassian.net/browse/AP-12220)
-        if (template == null && !isDynamicNode) {
-            templateId = templateId + "#" + nodeName;
-            template = RepositoryManager.INSTANCE.getNodeTemplate(templateId);
-        }
-
-        return template;
     }
 
     @Override
