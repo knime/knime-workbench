@@ -48,11 +48,14 @@
  */
 package org.knime.workbench.workflowcoach.data;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
+import org.knime.core.node.KNIMEConstants;
 import org.knime.core.ui.workflowcoach.data.NodeTripleProvider;
 import org.knime.core.ui.workflowcoach.data.NodeTripleProviderFactory;
 import org.knime.workbench.workflowcoach.prefs.WorkflowCoachPreferenceInitializer;
@@ -96,7 +99,16 @@ public class CommunityTripleProvider extends AbstractFileDownloadTripleProvider 
      * Creates a new provider that fetched recommendation from the KNIME web page.
      */
     public CommunityTripleProvider() {
-        super("https://update.knime.com/community_recommendations.json", "community_recommendations.json");
+        super("https://update.knime.com/community_recommendations_5.2.json", "community_recommendations_5.2.json");
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void update() throws Exception {
+        super.update();
+        Files.deleteIfExists(Paths.get(KNIMEConstants.getKNIMEHomeDir(), "community_recommendations.json"));
     }
 
     /**
