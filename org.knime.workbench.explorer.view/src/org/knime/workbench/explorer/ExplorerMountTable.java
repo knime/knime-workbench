@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -375,6 +376,7 @@ public final class ExplorerMountTable {
                 }
             }
         }
+        result.sort(Comparator.comparingInt(AbstractContentProviderFactory::getSortPriority).reversed());
         return result;
     }
 
@@ -399,6 +401,7 @@ public final class ExplorerMountTable {
                 result.add(fac);
             }
         }
+        result.sort(Comparator.comparingInt(AbstractContentProviderFactory::getSortPriority).reversed());
         return result;
     }
 

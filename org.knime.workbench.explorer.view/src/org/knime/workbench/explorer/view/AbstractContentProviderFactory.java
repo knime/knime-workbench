@@ -126,6 +126,17 @@ public abstract class AbstractContentProviderFactory {
     }
 
     /**
+     * Returns this content providers sort priority. The higher the returned value the closer to the top the
+     * content provider will be sorted in a list view.
+     *
+     * @return The sort priority. The higher the earlier this element appears in the list view.
+     * @since 8.10
+     */
+    public int getSortPriority() {
+        return 1;
+    }
+
+    /**
      * Not intended to be called. Rather go through the
      * {@link ExplorerMountTable}.
      *
