@@ -88,7 +88,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
     private final URI m_templateURI;
 
-    private WorkflowEditor m_editor;
+    private WorkflowEditor m_editor; // Cannot be final since not all constructors set it
 
     private MetaNodeLinkUpdateResult m_result;
 
@@ -98,7 +98,7 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
 
     private final Consumer<WorkflowManager> m_workflowLoadedCallback;
 
-    private boolean m_isComponentProject;
+    private boolean m_isComponentProject; // Cannot be final since not all constructors set it
 
     /**
      * Loads a {@link NodeContainerTemplate} into a {@link MetaNodeLinkUpdateResult} from a given URI.
