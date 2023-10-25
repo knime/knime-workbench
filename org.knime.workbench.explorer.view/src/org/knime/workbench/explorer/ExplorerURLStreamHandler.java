@@ -127,8 +127,6 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      */
     public static final String SPACE_RELATIVE = "knime.space";
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(ExplorerURLStreamHandler.class);
-
     private final ServerRequestModifier m_requestModifier;
 
     /**
@@ -177,8 +175,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             // log ignored proxy if different to global proxy config
             if (!globalProxy.map(p::equals).orElse(false)) {
                 final var identifier = globalProxy.map(Proxy::toString).orElse("no proxy");
-                LOGGER.warn(String.format("For the connection to \"%s\" the proxy \"%s\" has been supplied, "
-                    + "ignoring and using \"%s\" instead", url, p, identifier));
+                NodeLogger.getLogger(ExplorerURLStreamHandler.class) //
+                    .warn(String.format("For the connection to \"%s\" the proxy \"%s\" has been supplied, "
+                        + "ignoring and using \"%s\" instead", url, p, identifier));
             }
         }
         // global proxy settings will be applied if and when an actual remote connection is opened
