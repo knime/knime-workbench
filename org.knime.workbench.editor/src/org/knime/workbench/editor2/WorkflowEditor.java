@@ -1170,7 +1170,7 @@ public class WorkflowEditor extends GraphicalEditor implements
      * {@inheritDoc}
      */
     @Override
-    protected void setInput(final IEditorInput input) {
+    public void setInput(final IEditorInput input) {
         LOGGER.debug("Setting input into editor...");
         super.setInput(input);
 
