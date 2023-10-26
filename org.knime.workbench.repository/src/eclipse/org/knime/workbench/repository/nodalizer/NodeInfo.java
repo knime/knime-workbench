@@ -58,6 +58,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.knime.core.node.NodeFactory;
 import org.knime.core.util.Version;
 import org.knime.core.util.workflowalizer.NodeAndBundleInformation;
 
@@ -79,6 +80,8 @@ public class NodeInfo {
     private List<String> m_path;
 
     private String m_factoryName;
+
+    private String m_factoryId;
 
     private BundleInformation m_bundleInformation;
 
@@ -148,10 +151,20 @@ public class NodeInfo {
     }
 
     /**
+     * @return the node factory id as per {@link NodeFactory#getFactoryId()}
+     */
+    public String getFactoryId() {
+        return m_factoryId;
+    }
+
+    /**
      * Returns this node's unique ID encoded as base64url.
      *
      * @return a 17 character unique id
+     *
+     * @deprecated use {@link #getFactoryId()} instead
      */
+    @Deprecated
     public String getId() {
         // TODO the ID is currently derived from the factory class name. As soon as that changes, also the ID
         // changes. We still need to find a way to define a truly unique id for nodes.
@@ -372,6 +385,13 @@ public class NodeInfo {
      */
     public void setFactoryName(final String factoryName) {
         m_factoryName = factoryName;
+    }
+
+    /**
+     * @param factoryId the factory-id as per {@link NodeFactory#getFactoryId()}
+     */
+    public void setFactoryId(final String factoryId) {
+        m_factoryId = factoryId;
     }
 
     /**

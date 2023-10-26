@@ -521,6 +521,7 @@ public class Nodalizer implements IApplication {
         fac.saveAdditionalFactorySettings(settings);
         final String factoryName = factoryString + ConfigUtils.contentBasedHashString(settings);
         nInfo.setFactoryName(factoryName);
+        nInfo.setFactoryId(fac.getFactoryId());
         nInfo.setTitle(name.trim());
         nInfo.setNodeType(kcn.getType().toString());
         nInfo.setPath(path);
