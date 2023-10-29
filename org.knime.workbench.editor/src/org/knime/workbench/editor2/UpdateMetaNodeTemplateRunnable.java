@@ -55,7 +55,6 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.swt.widgets.Display;
-import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContainerTemplate;
@@ -121,14 +120,8 @@ public class UpdateMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             exec.setMessage(progMsg);
 
             final var loadHelper = GUIWorkflowLoadHelper.forTemplate(d, progMsg, null, false);
-            NodeContainerTemplateLinkUpdateResult updateMetaNodeLinkResult;
-            try {
-                updateMetaNodeLinkResult = tnc.getParent().updateMetaNodeLink(id, subExec, loadHelper);
-            } catch (CanceledExecutionException e) {
-                String message = "Node update canceled";
-                LOGGER.warn(message, e);
-                throw new InterruptedException(message);
-            }
+            NodeContainerTemplateLinkUpdateResult updateMetaNodeLinkResult =
+                    tnc.getParent().updateMetaNodeLink(id, subExec, loadHelper);
             WorkflowPersistor p = updateMetaNodeLinkResult.getUndoPersistor();
             if (p != null) { // no error
                 m_newIDs.add(updateMetaNodeLinkResult.getNCTemplate().getID());
