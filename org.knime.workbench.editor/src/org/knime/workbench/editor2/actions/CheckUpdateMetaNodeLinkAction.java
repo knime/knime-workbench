@@ -471,7 +471,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
             // but it is how KNIME works - and is considered useful to reduce the number of manual updates needed.
             var templates = m_candidateList.stream().filter(m_updateList::contains).toList();
 
-            var updateError = false;
+            var updateError = m_status.getSeverity() >= IStatus.WARNING;
             // for each of the shared metanode templates with: entry point > !shared metanode template > T
             // Where entry points are the nodes selected for update by the user.
             // Each template T
