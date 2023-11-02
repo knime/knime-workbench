@@ -89,10 +89,12 @@ class SaveProjectComponentRunnable extends AbstractSaveRunnable {
     protected void save(final WorkflowManager wfm, final ExecutionMonitor exec)
         throws IOException, CanceledExecutionException, LockFailedException {
         try {
-            ((SubNodeContainer)wfm.getDirectNCParent()).saveAsTemplate(getSaveLocation(), exec, null);
+            var newLocation = getSaveLocation();
+            ((SubNodeContainer)wfm.getDirectNCParent()).saveAsTemplate(newLocation, exec, null);
 
             // component is relocated, set the project workflow manager's context accordingly
             wfm.setWorkflowContext(m_newContext);
+            wfm.getNodeContainerDirectory().changeRoot(newLocation);
         } catch (InvalidSettingsException e) {
             throw new IOException(e);
         }
