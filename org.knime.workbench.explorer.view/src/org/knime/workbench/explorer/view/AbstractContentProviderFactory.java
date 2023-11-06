@@ -130,7 +130,7 @@ public abstract class AbstractContentProviderFactory {
      * content provider will be sorted in a list view.
      *
      * @return The sort priority. The higher the earlier this element appears in the list view.
-     * @since 8.10
+     * @since 8.12
      */
     public int getSortPriority() {
         return 1;
