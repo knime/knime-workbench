@@ -48,13 +48,9 @@
  */
 package org.knime.workbench.workflowcoach.ui;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -104,7 +100,6 @@ import org.knime.core.ui.workflowcoach.NodeRecommendationManager;
 import org.knime.core.ui.workflowcoach.NodeRecommendationManager.IUpdateListener;
 import org.knime.core.ui.workflowcoach.NodeRecommendationManager.NodeRecommendation;
 import org.knime.core.ui.workflowcoach.data.NodeTripleProvider;
-import org.knime.core.ui.workflowcoach.data.UpdatableNodeTripleProvider;
 import org.knime.core.util.KNIMEJob;
 import org.knime.core.util.Pair;
 import org.knime.workbench.core.KNIMECorePlugin;
@@ -114,9 +109,8 @@ import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.repository.RepositoryManager;
 import org.knime.workbench.repository.model.NodeTemplate;
+import org.knime.workbench.workflowcoach.NodeRecommendationUpdater;
 import org.knime.workbench.workflowcoach.data.CommunityTripleProvider;
-import org.knime.workbench.workflowcoach.prefs.UpdateJob;
-import org.knime.workbench.workflowcoach.prefs.UpdateJob.UpdateListener;
 import org.knime.workbench.workflowcoach.prefs.WorkflowCoachPreferenceInitializer;
 import org.osgi.framework.FrameworkUtil;
 
@@ -152,7 +146,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
     /**
      * Indicates whether recommendations are available (i.e. properly configured etc.).
      */
-    private boolean m_recommendationsAvailable = false;
+    private boolean m_recommendationsAvailable;
 
     /**
      * The table with the recommendation or a message.
@@ -163,7 +157,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
     /**
      * Current state of the viewer.
      */
-    private ViewerState m_viewerState = null;
+    private ViewerState m_viewerState;
 
     /**
      * A string describing the last selection (e.g. a node or no selection), in order to not unneccessarily retrieve and
@@ -268,7 +262,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         nodesLoader.schedule();
 
         //if the 'send anonymous statistics'-property has been changed, try updating the workflow coach
-        KNIMECorePlugin.getDefault().getPreferenceStore().addPropertyChangeListener(e -> {
+        NodeRecommendationUpdater.setPropertyChangeListener(e -> {
             if (e.getProperty().equals(HeadlessPreferencesConstants.P_SEND_ANONYMOUS_STATISTICS)
                 && e.getNewValue().equals(Boolean.TRUE)) {
                 //enable the community recommendations
@@ -309,9 +303,9 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                     m_loadState.set(LoadState.INITIALIZED);
                     return Status.CANCEL_STATUS;
                 } else {
-                    // check for update if necessary
+                    // check for update if necessary, blocking
                     updateInput(LOADING_MESSAGE);
-                    checkForStatisticUpdates();
+                    NodeRecommendationUpdater.checkForStatisticUpdates(true);
                 }
                 if (m_loadState.get() != LoadState.DISPOSED) {
                     // Prevent state transition if already disposed. In that case, the Part can no longer be used.
@@ -410,7 +404,7 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
                 updateInput(LOADING_MESSAGE);
 
                 //try updating the triple provider that are enabled and require an update
-                updateTripleProviders(e -> {
+                NodeRecommendationUpdater.updateTripleProviders(e -> {
                     m_loadState.set(LoadState.INITIALIZED);
                     if (e.isPresent()) {
                         updateInputNoProvider();
@@ -615,7 +609,8 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
     }
 
     /**
-     * Changes the state of the table viewer or leaves it unchanged (if the provided one is the same as the current one).
+     * Changes the state of the table viewer or leaves it unchanged (if the provided one is the same as the current
+     * one).
      *
      * @param state the state to change to
      */
@@ -701,61 +696,6 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
     }
 
     /**
-     * Checks whether the update (i.e. download) of the node recommendation statistics is necessary, either because they
-     * haven't been updated so far, or the update schedule tells to do so. If an update is necessary it is immediately
-     * performed.
-     */
-    private static void checkForStatisticUpdates() {
-        var updateSchedule = PREFS.getInt(WorkflowCoachPreferenceInitializer.P_AUTO_UPDATE_SCHEDULE);
-        if (updateSchedule == WorkflowCoachPreferenceInitializer.NO_AUTO_UPDATE) {
-            return;
-        }
-
-        Optional<LocalDateTime> oldest = NodeRecommendationManager.getNodeTripleProviders().stream()
-            .map(NodeTripleProvider::getLastUpdate).filter(Optional::isPresent).map(Optional::get)
-            .min(Comparator.naturalOrder());
-
-        if (oldest.isPresent()) {
-            //check whether an automatic update is necessary
-            long weeksDiff = ChronoUnit.WEEKS.between(oldest.get(), LocalDateTime.now());
-            if ((updateSchedule == WorkflowCoachPreferenceInitializer.WEEKLY_UPDATE && weeksDiff == 0)
-                || (updateSchedule == WorkflowCoachPreferenceInitializer.MONTHLY_UPDATE && weeksDiff < 4)) {
-                return;
-            }
-        }
-
-        //trigger update for all updatable and enabled providers
-        updateTripleProviders(e -> {
-            if (e.isPresent()) {
-                NodeLogger.getLogger(WorkflowCoachView.class).warn("Could not update node recommendations statistics.",
-                    e.get());
-            }
-        }, false, true);
-    }
-
-    /**
-     * Updates all updatable and enabled triple providers.
-     *
-     * @param requiredOnly if only the enabled triple providers should be updated that require an update in order to
-     *            work
-     * @param updateListener to get feedback of the updating process
-     * @param block if <code>true</code> the method will block till the update is finished, otherwise it will return
-     *            immediately after triggering the update job
-     */
-    private static void updateTripleProviders(final UpdateListener updateListener, final boolean requiredOnly, final boolean block) {
-        List<UpdatableNodeTripleProvider> toUpdate =
-            NodeRecommendationManager.getNodeTripleProviders().stream().filter(ntp -> {
-                if (!(ntp instanceof UpdatableNodeTripleProvider)) {
-                    return false;
-                } else {
-                    UpdatableNodeTripleProvider untp = (UpdatableNodeTripleProvider)ntp;
-                    return ntp.isEnabled() && (!requiredOnly || untp.updateRequired());
-                }
-            }).map(UpdatableNodeTripleProvider.class::cast).collect(Collectors.toList());
-        UpdateJob.schedule(updateListener, toUpdate, block);
-    }
-
-    /**
      * {@inheritDoc}
      */
     @Override
@@ -763,4 +703,5 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         updateFrequencyColumnHeadersAndToolTips();
         m_loadState.set(LoadState.INITIALIZED);
     }
+
 }

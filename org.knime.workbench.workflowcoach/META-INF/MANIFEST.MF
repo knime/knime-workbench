@@ -5,7 +5,8 @@ Bundle-SymbolicName: org.knime.workbench.workflowcoach;singleton:=true
 Bundle-Version: 5.2.0.qualifier
 Bundle-ClassPath: .
 Bundle-Vendor: KNIME AG, Zurich, Switzerland
-Export-Package: org.knime.workbench.workflowcoach.data
+Export-Package: org.knime.workbench.workflowcoach,
+ org.knime.workbench.workflowcoach.data
 Require-Bundle: org.eclipse.jface;bundle-version="[3.11.0,4.0.0)",
   org.knime.core;bundle-version="[5.2.0,6.0.0)",
   org.knime.workbench.editor;bundle-version="[5.2.0,6.0.0)",
