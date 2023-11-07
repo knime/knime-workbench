@@ -250,4 +250,17 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      */
     public abstract Optional<File> resolveToLocalFileConditional(IProgressMonitor pm, ZonedDateTime ifModifiedSince)
             throws CoreException;
+
+    /**
+     * Deletes the item (without refreshing the parent).
+     *
+     * @param deletePermanently {@code true} if the item shall be deleted permanently, {@code false} if the item shall
+     *            be moved to the recycle bin.
+     * @throws CoreException If an error occurs.
+     * @since 8.12
+     */
+    public void delete(final boolean deletePermanently) throws CoreException {
+        // all known subclasses implement this method
+        throw new UnsupportedOperationException("Not implemented");
+    }
 }

@@ -1724,4 +1724,32 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     public Optional<ServerAndExecutorVersions> getServerAndExecutorVersions() {
         return Optional.empty();
     }
+
+    /**
+     * Delete workflows from argument list.
+     *
+     * @param toDelWFs the list of workflows
+     * @param confirmationResults the result returned from the corresponding confirmation dialogs, can be empty, must
+     *         not be <code>null</code>
+     * @return <code>true</code> if that was successful, <code>false</code> otherwise
+     * @since 8.12
+     */
+    public boolean deleteWorkflows(final List<? extends AbstractExplorerFileStore> toDelWFs,
+        final Map<AbstractContentProvider, DeletionConfirmationResult> confirmationResults) {
+        return ExplorerFileSystemUtils.deleteLockedWorkflows(toDelWFs, confirmationResults);
+    }
+
+    /**
+     * Delete items from argument list.
+     *
+     * @param toDelItems the list of item
+     * @param confirmationResults the result returned from the corresponding confirmation dialogs, can be empty, must
+     *         not be <code>null</code>
+     * @return <code>true</code> if that was successful, <code>false</code> otherwise
+     * @since 8.12
+     */
+    public boolean delete(final List<? extends AbstractExplorerFileStore> toDelItems,
+        final Map<AbstractContentProvider, DeletionConfirmationResult> confirmationResults) {
+        return ExplorerFileSystemUtils.deleteTheRest(toDelItems, confirmationResults);
+    }
 }

@@ -47,6 +47,8 @@
  */
 package org.knime.workbench.explorer.view.actions;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -185,9 +187,25 @@ public class GlobalDeleteAction extends ExplorerAction {
 
             @Override
             protected IStatus run(final IProgressMonitor monitor) {
-                // delete Workflows first (unlocks them too)
-                boolean success = ExplorerFileSystemUtils.deleteLockedWorkflows(lockedWFs, confResults);
-                success &= ExplorerFileSystemUtils.deleteTheRest(allFiles, confResults);
+                var success = true;
+                Map<AbstractContentProvider, List<AbstractExplorerFileStore>> providerToStoreMap = new HashMap<>();
+
+                // workflows first
+                for (var fs : lockedWFs) {
+                    providerToStoreMap.computeIfAbsent(fs.getContentProvider(), p -> new ArrayList<>()).add(fs);
+                }
+                for (var entry : providerToStoreMap.entrySet()) {
+                    success &= entry.getKey().deleteWorkflows(entry.getValue(), confResults);
+                }
+
+                // then all other files
+                providerToStoreMap.clear();
+                for (var fs : allFiles) {
+                    providerToStoreMap.computeIfAbsent(fs.getContentProvider(), p -> new ArrayList<>()).add(fs);
+                }
+                for (var entry : providerToStoreMap.entrySet()) {
+                    success &= entry.getKey().delete(entry.getValue(), confResults);
+                }
 
                 if (!success) {
                     Display.getDefault().syncExec(() -> showUnsuccessfulMessage());
@@ -207,7 +225,6 @@ public class GlobalDeleteAction extends ExplorerAction {
                         Object parent = ContentDelegator.getTreeObjectFor(parentStore);
                         getViewer().refresh(parent);
                     }
-                    ;
                 });
 
                 return Status.OK_STATUS;
