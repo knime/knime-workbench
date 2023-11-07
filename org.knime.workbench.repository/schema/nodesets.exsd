@@ -89,6 +89,13 @@ If this flag is set in the extension point, there is not need to specify it also
                </appInfo>
             </annotation>
          </attribute>
+         <attribute name="internal" type="boolean" use="default" value="false">
+            <annotation>
+               <documentation>
+                  Internal node sets are never shown in the node repository. This is used for instance for the component input and output nodes. Hidden and deprecated nodes might be shown under special circumstances.
+               </documentation>
+            </annotation>
+         </attribute>
       </complexType>
    </element>
 
