@@ -48,23 +48,12 @@
  */
 package org.knime.workbench.editor2.subnode;
 
-import java.util.stream.Stream;
-
-import org.apache.commons.lang3.ArrayUtils;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Group;
-import org.eclipse.swt.widgets.Label;
-import org.knime.core.node.port.report.ReportConfiguration;
-import org.knime.core.node.port.report.ReportConfiguration.Orientation;
-import org.knime.core.node.port.report.ReportConfiguration.PageSize;
 import org.knime.core.node.port.report.ReportUtil;
 import org.knime.core.node.workflow.SubNodeContainer;
 
@@ -76,9 +65,6 @@ import org.knime.core.node.workflow.SubNodeContainer;
 public class ReportUsageComposite extends Composite {
 
     private Button m_enableReportOutputPortButton;
-    private Combo m_pageSizeCombo;
-    private Button m_portraitButton;
-    private Button m_landscapeButton;
 
     /**
      * @param parent of the composite
@@ -95,7 +81,6 @@ public class ReportUsageComposite extends Composite {
         createNodeGrid(subNodeContainer);
     }
 
-    @SuppressWarnings("unused")
     private void createNodeGrid(final SubNodeContainer subNodeContainer) {
         Composite composite = new Composite(this, SWT.NONE);
         final var layout = new RowLayout();
@@ -112,67 +97,11 @@ public class ReportUsageComposite extends Composite {
         m_enableReportOutputPortButton.setEnabled(isReportingExtensionInstalled);
         String text = "Enable Report Output";
         if (!isReportingExtensionInstalled) {
-            text = text.concat(" (requires Reporting (Labs) extension)");
+            text = text.concat(" (requires Reporting extension)");
         }
-
-        m_enableReportOutputPortButton.addSelectionListener(new SelectionAdapter() {
-            @Override
-            public void widgetSelected(final SelectionEvent e) {
-                setButtonsEnabled(m_enableReportOutputPortButton.getSelection());
-            }
-        });
 
         m_enableReportOutputPortButton.setText(text);
         m_enableReportOutputPortButton.setSelection(reportConfig.isPresent());
-
-        new Composite(composite, 0); // place holder
-
-        Label dialogLabel = new Label(composite, SWT.CENTER);
-        dialogLabel.setText("  Page Size: ");
-
-        m_pageSizeCombo = new Combo(composite, SWT.CENTER | SWT.READ_ONLY);
-        final var data = Stream.of(PageSize.values()).map(PageSize::getHumanReadableFormat).toArray(String[]::new);
-        m_pageSizeCombo.setItems(data);
-        final var selectedFormat = reportConfig.map(ReportConfiguration::pageSize) //
-                .map(PageSize::getHumanReadableFormat).orElse(PageSize.A4.getHumanReadableFormat());
-        final var selectedIndex = ArrayUtils.indexOf(data, selectedFormat);
-        m_pageSizeCombo.select(selectedIndex); // out of range ignored
-
-        new Composite(composite, 0); // place holder
-
-        Label orientationLabel = new Label(composite, SWT.CENTER);
-        orientationLabel.setText("  Orientation: ");
-
-        Group orientationGroup = new Group(composite, SWT.NONE);
-        final RowLayout rowLayout = new RowLayout(SWT.HORIZONTAL);
-        rowLayout.marginWidth = 5;
-        orientationGroup.setLayout(rowLayout);
-
-        m_portraitButton = new Button(orientationGroup, SWT.CENTER | SWT.RADIO);
-        m_portraitButton.setText("Portrait");
-
-        m_landscapeButton = new Button(orientationGroup, SWT.CENTER | SWT.RADIO);
-        m_landscapeButton.setText("Landscape");
-
-        final var isLandscape =
-            reportConfig.map(ReportConfiguration::orientation).filter(o -> o == Orientation.Landscape).isPresent();
-        m_landscapeButton.setSelection(isLandscape);
-        m_portraitButton.setSelection(!isLandscape);
-
-        setButtonsEnabled(isReportingExtensionInstalled && reportConfig.isPresent());
-    }
-
-
-    Orientation getReportOrientation() {
-        return m_portraitButton.getSelection() ? Orientation.Portrait : Orientation.Landscape;
-    }
-
-    PageSize getReportPageSize() {
-        final var selectedItem = m_pageSizeCombo.getItem(m_pageSizeCombo.getSelectionIndex());
-        return Stream.of(PageSize.values()) //
-                .filter(p -> p.getHumanReadableFormat().equals(selectedItem)) //
-                .findFirst() //
-                .orElseThrow(() -> new IllegalStateException("Unknown identifier: " + selectedItem));
     }
 
     /**
@@ -181,14 +110,4 @@ public class ReportUsageComposite extends Composite {
     boolean isEnableReportOutput() {
         return m_enableReportOutputPortButton.getSelection();
     }
-
-    /**
-     * @param isSelected
-     */
-    private void setButtonsEnabled(final boolean isSelected) {
-        m_landscapeButton.setEnabled(isSelected);
-        m_portraitButton.setEnabled(isSelected);
-        m_pageSizeCombo.setEnabled(isSelected);
-    }
-
 }

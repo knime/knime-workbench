@@ -303,13 +303,8 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
                     return false;
                 }
             }
-            final ReportConfiguration reportConfig;
-            if (m_reportUsageComposite.isEnableReportOutput()) {
-                reportConfig = new ReportConfiguration(m_reportUsageComposite.getReportPageSize(),
-                    m_reportUsageComposite.getReportOrientation());
-            } else {
-                reportConfig = null;
-            }
+            final ReportConfiguration reportConfig =
+                    m_reportUsageComposite.isEnableReportOutput() ? ReportConfiguration.INSTANCE : null;
             m_subNodeContainer.getParent().changeSubNodeReportOutput(m_subNodeContainer.getID(), reportConfig);
         }
         return true;
