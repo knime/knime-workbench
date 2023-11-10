@@ -95,7 +95,7 @@ public class ReportUsageComposite extends Composite {
         m_enableReportOutputPortButton = new Button(composite, SWT.CHECK);
         final var isReportingExtensionInstalled = ReportUtil.isReportingExtensionInstalled();
         m_enableReportOutputPortButton.setEnabled(isReportingExtensionInstalled);
-        String text = "Enable Report Output";
+        String text = "Enable Reporting";
         if (!isReportingExtensionInstalled) {
             text = text.concat(" (requires Reporting extension)");
         }
