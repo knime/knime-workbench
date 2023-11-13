@@ -53,6 +53,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -83,6 +84,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.draw2d.FigureCanvas;
@@ -2378,6 +2380,15 @@ public class WorkflowEditor extends GraphicalEditor implements
                 final var saveRunnable = new AutosaveRunnable(WorkflowEditor.this, messageBuilder, saveHelper,
                     new NullProgressMonitor(), workflowDir);
                 saveRunnable.run(jobMonitor);
+
+                // Hides the auto save directory on DOS based file systems
+                if (Platform.OS_WIN32.equals(Platform.getOS())) {
+                    try {
+                        Files.setAttribute(workflowDir.toPath(), "dos:hidden", true);
+                    } catch (IOException e) {
+                        LOGGER.warn(e);
+                    }
+                }
                 jobMonitor.done();
                 return Status.OK_STATUS;
             } catch (Exception e) {
