@@ -758,6 +758,9 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
                 } else {
                     emptyRows = true;
                 }
+            } else if (row.isPageBreakAfter()) {
+                // for page breaks we allow empty rows
+                cleanedRows.add(row);
             } else {
                 emptyRows = true;
             }
@@ -805,6 +808,9 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
                     row.setColumns(cleanedColumns);
                     cleanedRows.add(row);
                 }
+            } else if (row.isPageBreakAfter()) {
+                // for page breaks we allow empty rows
+                cleanedRows.add(row);
             }
         }
         page.setRows(cleanedRows);
