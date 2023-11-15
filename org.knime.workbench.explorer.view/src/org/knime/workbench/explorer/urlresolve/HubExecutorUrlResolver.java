@@ -123,7 +123,8 @@ final class HubExecutorUrlResolver extends KnimeUrlResolver {
             final var spacePath = m_locationInfo.getSpacePath();
             final var workflowAddress = m_locationInfo.getWorkflowAddress().normalize();
             final var plainUri = URIUtil.append(workflowAddress, decodedPath).normalize();
-            final var spaceUri = URIUtil.append(m_locationInfo.getRepositoryAddress(), spacePath).normalize();
+            final var relativeSpacePath = spacePath.startsWith("/") ? spacePath.substring(1) : spacePath;
+            final var spaceUri = URIUtil.append(m_locationInfo.getRepositoryAddress(), relativeSpacePath).normalize();
             if (!isContainedIn(plainUri, spaceUri)) {
                 throw new ResourceAccessException("Leaving the Hub space is not allowed for workflow relative URLs: "
                     + decodedPath + " is not in " + spacePath);
