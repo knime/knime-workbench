@@ -109,6 +109,12 @@ import org.knime.workbench.ui.preferences.PreferenceConstants;
 public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
 
     /**
+     * Hack to be able to suppress metanode/component update check when workflow is opened in modern UI (while the
+     * classic UI has been loaded).
+     */
+    public static boolean doPostLoadCheckForMetaNodeUpdates = true;
+
+    /**
      * Message returned by {@link #getLoadingCanceledMessage()} in case the loading has been canceled due to a (future)
      * version conflict. (See also AP-7982)
      */
@@ -386,6 +392,9 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
 
     static void postLoadCheckForMetaNodeUpdates(final WorkflowEditor editor, final WorkflowManager parent,
             final List<NodeID> links) {
+        if (!doPostLoadCheckForMetaNodeUpdates) {
+            return;
+        }
 
         final Map<Boolean, List<NodeID>> partitionedLinks = links.stream()
             .collect(Collectors.partitioningBy(i -> parent.findNodeContainer(i) instanceof SubNodeContainer));
