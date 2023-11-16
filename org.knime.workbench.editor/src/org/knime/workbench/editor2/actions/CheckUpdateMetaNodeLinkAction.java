@@ -47,20 +47,13 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.MultiStatus;
-import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -71,20 +64,14 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.progress.IProgressService;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
-import org.knime.core.node.workflow.MetaNodeTemplateInformation.UpdateStatus;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerTemplate;
-import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
-import org.knime.core.node.workflow.TemplateUpdateUtil;
-import org.knime.core.node.workflow.WorkflowLoadHelper;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.WorkflowPersistor.LoadResult;
+import org.knime.core.ui.component.CheckForComponentUpdatesUtil;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.util.pathresolve.ResolverUtil;
-import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
 import org.knime.core.util.proxy.DisabledSchemesChecker;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
@@ -331,7 +318,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
 
         private final WorkflowManager m_hostWFM;
         private final List<NodeID> m_candidateList;
-        private final List<NodeID> m_updateList;
+        private List<NodeID> m_updateList;
         private Status m_status;
 
         /**
@@ -340,155 +327,16 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         public CheckUpdateRunnableWithProgress(final WorkflowManager hostWFM, final List<NodeID> candidateList) {
             m_hostWFM = hostWFM;
             m_candidateList = candidateList;
-            m_updateList = new ArrayList<>();
+            m_updateList = Collections.emptyList();
         }
 
         @Override
         public void run(final IProgressMonitor monitor)
-                throws InvocationTargetException, InterruptedException, IllegalStateException {
-            NodeContext.pushContext(m_hostWFM);
-            try {
-                runWithContext(monitor);
-            } finally {
-                NodeContext.removeLastContext();
-            }
-        }
-
-        private void runWithContext(final IProgressMonitor monitor) throws InterruptedException, IllegalStateException {
-            monitor.beginTask("Checking Link Updates", m_candidateList.size());
-            var lH = new WorkflowLoadHelper(true, m_hostWFM.getContextV2());
-
-            var stats = new Status[m_candidateList.size()];
-            int overallStatus = IStatus.OK;
-
-            // retrieving the node templates per node id
-            Map<NodeID, NodeContainerTemplate> nodeIdToTemplate = new LinkedHashMap<>();
-            for (NodeID id : m_candidateList) {
-                nodeIdToTemplate.put(id, (NodeContainerTemplate)m_hostWFM.findNodeContainer(id));
-            }
-
-            // retrieving the update status per node template
-            final var loadResult = new LoadResult("ignored");
-            Map<NodeID, UpdateStatus> nodeIdToUpdateStatus;
-            try {
-                nodeIdToUpdateStatus = TemplateUpdateUtil.fillNodeUpdateStates(nodeIdToTemplate.values(), lH,
-                    loadResult, new LinkedHashMap<>());
-            } catch (IOException e) {
-                final var ex = e.getCause() != null ? e.getCause() : e;
-                LOGGER.warn(ex);
-                m_status = new MultiStatus(KNIMEEditorPlugin.PLUGIN_ID, IStatus.ERROR, new IStatus[]{Status.error("")},
-                    "Some Node Link Updates failed", ex);
-                verifyMultiStatus();
-                monitor.done();
-                return;
-            }
-
-            var i = 0;
-            for (Map.Entry<NodeID, UpdateStatus> entry : nodeIdToUpdateStatus.entrySet()) {
-                var id = entry.getKey();
-                var updateStatus = entry.getValue();
-                var tnc = nodeIdToTemplate.get(id);
-
-                monitor.subTask(tnc.getNameWithID());
-                var stat = createTemplateStatus(updateStatus, tnc);
-                // if at least one WARNING level status was detected, entire status will be on WARNING level
-                if (stat.getSeverity() == IStatus.WARNING) {
-                    overallStatus = IStatus.WARNING;
-                }
-
-                if (monitor.isCanceled()) {
-                    throw new InterruptedException("Update check canceled");
-                }
-                stats[i] = stat;
-                i++;
-                monitor.worked(1);
-
-            }
-            m_status = new MultiStatus(
-                KNIMEEditorPlugin.PLUGIN_ID, overallStatus, stats, "Some Node Link Updates failed", null);
-            verifyMultiStatus();
-            monitor.done();
-        }
-
-        /**
-         * Builds a Status object from the the retrieve UpdateStatus. An UpdateStatus.Error will be masked if a
-         * parent node has an update available
-         * @param updateStatus status per node template
-         * @param tnc node container template
-         * @return status object
-         */
-        private Status createTemplateStatus(final UpdateStatus updateStatus, final NodeContainerTemplate tnc) {
-            final String idName = KNIMEEditorPlugin.PLUGIN_ID;
-            var id = tnc.getID();
-            final String tncName = tnc.getNameWithID();
-
-            switch (updateStatus) {
-                case HasUpdate:
-                    m_updateList.add(id);
-                    return new Status(IStatus.OK, idName, "Update available for " + tncName);
-                case UpToDate:
-                    return new Status(IStatus.OK, idName, "No update available for " + tncName);
-                case Error:
-                    // if an update for a parent was found, ignore the child's error
-                    if (!updateableParentExists(id)) {
-                        final var sourceURI = tnc.getTemplateInformation().getSourceURI();
-                        Optional<KNIMEURIDescription> d =
-                                ResolverUtil.toDescription(sourceURI, new NullProgressMonitor());
-                        var s = d.map(KNIMEURIDescription::toDisplayString).orElse(Objects.toString(sourceURI));
-                        return new Status(IStatus.WARNING, idName,
-                            "Unable to check for update of \"" + tncName + "\"; can't read " + s, null);
-                    } else {
-                        return new Status(IStatus.OK, idName,
-                            "Update error exists, but could be resolved by parent update for " + tncName);
-                    }
-                default:
-                    return new Status(IStatus.WARNING , idName, "Could not resolve update status for " + tncName, null);
-            }
-        }
-
-        /**
-         * Checks whether for a given nodeID a parent already has an update found.
-         * Note: this absolutely relies on the node templates being scanned in the correct order, from outer to inner,
-         * which will be due to how {@link CheckUpdateMetaNodeLinkAction#getMetaNodesToCheck()} works.
-         * @param id NodeID
-         * @return does a parent have an update available?
-         */
-        private boolean updateableParentExists(final NodeID id) {
-            return m_updateList.stream().anyMatch(id::hasPrefix);
-        }
-
-        /**
-         * Verifies the multi status that was constructed in the run method.
-         * As a side effect, correctly sets the internal update state per NodeTemplate iff all went well.
-         * @throws InterruptedException
-         */
-        private void verifyMultiStatus() throws IllegalStateException {
-            // Filtering for nodes that have updates filters out shared templates in shared templates -
-            // because we don't recurse into them to look for updates and thus they are not in the list.
-            // However, when actually updating a shared template that should contain an outdated shared template,
-            // we update the inner shared template, too (workflow manager updateMetaNodeLinkInternalRecursively).
-            // This is not what a software developer would do (the inner update might render the component unusable)
-            // but it is how KNIME works - and is considered useful to reduce the number of manual updates needed.
-            var templates = m_candidateList.stream().filter(m_updateList::contains).toList();
-
-            var updateError = m_status.getSeverity() >= IStatus.WARNING;
-            // for each of the shared metanode templates with: entry point > !shared metanode template > T
-            // Where entry points are the nodes selected for update by the user.
-            // Each template T
-            // - is an ancestor of an entry point
-            // - has no shared metanode template as ancestor
-            for (NodeID template : templates) {
-                try {
-                    var parentWfm = m_hostWFM.findNodeContainer(template).getParent();
-                    parentWfm.checkUpdateMetaNodeLink(template, new WorkflowLoadHelper(true, parentWfm.getContextV2()));
-                } catch (IOException e) {
-                    updateError = true;
-                }
-            }
-
-            if ((m_status.getSeverity() == IStatus.WARNING || m_status.getSeverity() == IStatus.ERROR) != updateError) {
-                throw new IllegalStateException("Inconsistent update states, something went wrong");
-            }
+            throws InvocationTargetException, InterruptedException, IllegalStateException {
+            var res = CheckForComponentUpdatesUtil.checkForComponentUpdatesAndSetUpdateStatus(m_hostWFM,
+                KNIMEEditorPlugin.PLUGIN_ID, m_candidateList, monitor);
+            m_updateList = res.updateList();
+            m_status = res.status();
         }
 
         /** @return the updateList */
