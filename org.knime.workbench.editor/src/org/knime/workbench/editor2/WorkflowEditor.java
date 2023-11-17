@@ -1400,6 +1400,17 @@ public class WorkflowEditor extends GraphicalEditor implements
                                     MessageDialog.openWarning(SWTUtilities.getActiveShell(),
                                         "Auto-Save Rename Problem", message + "\nAuto-Save will be disabled.");
                                 }
+                            } else if (Platform.OS_WIN32.equals(Platform.getOS())) {
+                                // the Autosave file might be hidden in DOS based systems
+                                try {
+                                    boolean isHidden =
+                                        (boolean)Files.getAttribute(restoredAutoSaveDirectory.toPath(), "dos:hidden");
+                                    if (isHidden) {
+                                        Files.setAttribute(restoredAutoSaveDirectory.toPath(), "dos:hidden", false);
+                                    }
+                                } catch (IOException e) {
+                                    LOGGER.warn(e);
+                                }
                             }
                             if (openCopy) {
                                 m_fileResource = restoredAutoSaveDirectory.toURI();
