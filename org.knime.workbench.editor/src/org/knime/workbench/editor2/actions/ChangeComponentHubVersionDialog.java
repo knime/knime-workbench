@@ -191,7 +191,7 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
         m_useLatestVersionCheckBox.addListener(SWT.Selection, l -> sync());
 
         m_useLatestStateCheckBox = new Button(buttonGroup, SWT.RADIO);
-        m_useLatestStateCheckBox.setText("Working Area");
+        m_useLatestStateCheckBox.setText("Latest edits");
         m_useLatestStateCheckBox.setSelection(link.linkType() == LinkType.LATEST_STATE);
         m_useLatestStateCheckBox.addListener(SWT.Selection, l -> sync());
         // holds the table and defines its resizing behavior
