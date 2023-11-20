@@ -4194,35 +4194,9 @@ public class WorkflowEditor extends GraphicalEditor implements
                         updateWorkflowMessages();
                         notifySaveEventListeners();
 
-                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().closeEditor(ep,
-                                                                                                         false);
+                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().closeEditor(ep, false);
                     } else {
-                        /*
-                         * Eclipse will eventually mark us clean, even though the save hasn't yet finished -
-                         *  correctly or incorrectly. We need make sure to mark ourselves dirty again since
-                         *  the remote save failed.
-                         *
-                         * As Mortiz has seen happen, we can apparently get here *too* quickly and Eclipse
-                         *  ends up marking us clean after we do the below dirty set. This is the reason for
-                         *  the following hacky thread sleep (the thread is of a scheduled action operating
-                         *  asynchronously from vital threads.)
-                         */
-                        int waitCount = 0;
-                        // we should no long be dirty if Eclipse has finished its save cycle
-                        while (isDirty()) {
-                            if (waitCount > 30) {
-                                LOGGER.warn("Eclipse never (im)properly set the dirty state.");
-                                m_isClosing = false;
-                                return;
-                            }
-                            try {
-                                Thread.sleep(100);
-                            } catch (final Exception e) { }  // NOPMD
-
-                            waitCount++;
-                        }
-
-                        markDirty();
+                        waitUntilEditorIsCleanAndThenMarkDirty();
                         m_isClosing = false;
                     }
                 };
@@ -4248,7 +4222,12 @@ public class WorkflowEditor extends GraphicalEditor implements
                 remoteStore.getContentProvider().performUploadAsync(localFS,
                     (RemoteExplorerFileStore)remoteStore, /*deleteSource=*/false,
                     remoteStore.getContentProvider().isForceResetOnUpload(),
-                    (throwable) -> m_workflowCanBeDeleted.release());
+                    throwable -> {
+                        m_workflowCanBeDeleted.release();
+                        if (throwable != null) {
+                            waitUntilEditorIsCleanAndThenMarkDirty();
+                        }
+                    });
             }
         } catch (CoreException e) {
             String msg = "Failed to upload the workflow to its remote location\n(" + e.getMessage() + ")";
@@ -4257,6 +4236,34 @@ public class WorkflowEditor extends GraphicalEditor implements
             return false;
         }
         return true;
+    }
+
+    /**
+     * Eclipse will eventually mark us clean, even though the save hasn't yet finished -
+     * correctly or incorrectly. We need make sure to mark ourselves dirty again since
+     * the remote save failed.
+     *
+     * As Moritz has seen happen, we can apparently get here *too* quickly and Eclipse
+     * ends up marking us clean after we do the below dirty set. This is the reason for
+     * the following hacky thread sleep (the thread is of a scheduled action operating
+     * asynchronously from vital threads.)
+     */
+    private void waitUntilEditorIsCleanAndThenMarkDirty() {
+        var waitCount = 0;
+        // we should no long be dirty if Eclipse has finished its save cycle
+        while (isDirty()) {
+            if (waitCount > 30) {
+                LOGGER.warn("Eclipse never (im)properly set the dirty state.");
+                m_isClosing = false;
+                return;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (final Exception e) { }  // NOSONAR
+
+            waitCount++;
+        }
+        markDirty();
     }
 
     private void notifyCloseEventListeners() {
