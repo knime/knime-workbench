@@ -55,6 +55,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.eclipse.core.resources.IProject;
 import org.knime.core.node.NodeLogger;
@@ -102,6 +103,12 @@ import org.knime.core.util.ThreadUtils;
  *
  */
 public final class ProjectWorkflowMap {
+
+    /**
+     * Hack to be able to control from the outside whether the project-workflow-map is active (and does what it does) or
+     * is inactive (and any calls to it won't have an effect).
+     */
+    public static boolean isActive = true;
 
     private static class MapWFKey {
         private final String m_key;
@@ -211,18 +218,20 @@ public final class ProjectWorkflowMap {
      */
     public static void registerClientTo(final URI workflow,
             final Object client) {
-        if (workflow == null) {
-            return;
-        }
-        MapWFKey wf = new MapWFKey(workflow);
-        Set<Object> callers = WORKFLOW_CLIENTS.get(wf);
-        if (callers == null) {
-            callers = new HashSet<Object>();
-        }
-        callers.add(client);
-        WORKFLOW_CLIENTS.put(wf, callers);
-        LOGGER.debug("registering " + client + " to " + wf
-                + ". " + callers.size() + " registered clients now.");
+        ifActive(() -> {
+            if (workflow == null) {
+                return;
+            }
+            MapWFKey wf = new MapWFKey(workflow);
+            Set<Object> callers = WORKFLOW_CLIENTS.get(wf);
+            if (callers == null) {
+                callers = new HashSet<Object>();
+            }
+            callers.add(client);
+            WORKFLOW_CLIENTS.put(wf, callers);
+            LOGGER.debug("registering " + client + " to " + wf
+                    + ". " + callers.size() + " registered clients now.");
+        });
     }
 
     /**
@@ -236,22 +245,24 @@ public final class ProjectWorkflowMap {
      */
     public static void unregisterClientFrom(final URI workflow,
             final Object client) {
-        if (workflow == null) {
-            return;
-        }
-        MapWFKey wf = new MapWFKey(workflow);
-        if (!WORKFLOW_CLIENTS.containsKey(wf)) {
-            return;
-        }
-        Set<Object> callers = WORKFLOW_CLIENTS.get(wf);
-        callers.remove(client);
-        if (callers.isEmpty()) {
-            WORKFLOW_CLIENTS.remove(wf);
-        } else {
-            WORKFLOW_CLIENTS.put(wf, callers);
-        }
-        LOGGER.debug("unregistering " + client + " from " + wf
-                + ". " + callers.size() + " left.");
+        ifActive(() -> {
+            if (workflow == null) {
+                return;
+            }
+            MapWFKey wf = new MapWFKey(workflow);
+            if (!WORKFLOW_CLIENTS.containsKey(wf)) {
+                return;
+            }
+            Set<Object> callers = WORKFLOW_CLIENTS.get(wf);
+            callers.remove(client);
+            if (callers.isEmpty()) {
+                WORKFLOW_CLIENTS.remove(wf);
+            } else {
+                WORKFLOW_CLIENTS.put(wf, callers);
+            }
+            LOGGER.debug("unregistering " + client + " from " + wf
+                    + ". " + callers.size() + " left.");
+        });
     }
 
     /*
@@ -359,22 +370,24 @@ public final class ProjectWorkflowMap {
      */
     public static void replace(final URI newPath,
             final WorkflowManagerUI nc, final URI oldPath) {
-        if (oldPath == null) {
-            throw new IllegalArgumentException("Old path must not be null (old is null, new is " + newPath + ")");
-        }
-        final MapWFKey oldKey = new MapWFKey(oldPath);
-        NodeContainerUI removed = PROJECTS.remove(oldKey);
-        if (removed == null) {
-            throw new IllegalArgumentException("No project registered on URI " + oldPath);
-        }
-        Set<Object> clientList = WORKFLOW_CLIENTS.remove(oldKey);
-        WF_LISTENER.workflowChanged(new WorkflowEvent(WorkflowEvent.Type.NODE_REMOVED, removed.getID(), Wrapper.unwrapNC(removed), null));
-        putWorkflowUI(newPath, nc);
-        if (clientList != null) {
-            WORKFLOW_CLIENTS.put(new MapWFKey(newPath), clientList);
-        }
-        WF_LISTENER.workflowChanged(new WorkflowEvent(WorkflowEvent.Type.NODE_ADDED, nc.getID(), null, nc));
-        NSC_LISTENER.stateChanged(new NodeStateEvent(nc.getID()));
+        ifActive(() -> {
+            if (oldPath == null) {
+                throw new IllegalArgumentException("Old path must not be null (old is null, new is " + newPath + ")");
+            }
+            final MapWFKey oldKey = new MapWFKey(oldPath);
+            NodeContainerUI removed = PROJECTS.remove(oldKey);
+            if (removed == null) {
+                throw new IllegalArgumentException("No project registered on URI " + oldPath);
+            }
+            Set<Object> clientList = WORKFLOW_CLIENTS.remove(oldKey);
+            WF_LISTENER.workflowChanged(new WorkflowEvent(WorkflowEvent.Type.NODE_REMOVED, removed.getID(), Wrapper.unwrapNC(removed), null));
+            putWorkflowUI(newPath, nc);
+            if (clientList != null) {
+                WORKFLOW_CLIENTS.put(new MapWFKey(newPath), clientList);
+            }
+            WF_LISTENER.workflowChanged(new WorkflowEvent(WorkflowEvent.Type.NODE_ADDED, nc.getID(), null, nc));
+            NSC_LISTENER.stateChanged(new NodeStateEvent(nc.getID()));
+        });
     }
 
     /**
@@ -384,66 +397,68 @@ public final class ProjectWorkflowMap {
      * {@link WorkflowManager} is stored in the map.
      */
     public static void remove(final URI path) {
-        MapWFKey p = new MapWFKey(path);
-        final WorkflowManagerUI manager = (WorkflowManagerUI)PROJECTS.get(p);
-        // workflow is only in client map if there is at least one client
-        if (manager != null && !WORKFLOW_CLIENTS.containsKey(p)) {
-            Wrapper.unwrapWFMOptional(manager).ifPresent(wm -> NodeContext.pushContext(wm));
-            try {
-                PROJECTS.remove(p);
-                if (Wrapper.wraps(manager, WorkflowManager.class)) {
-                    WF_LISTENER.workflowChanged(new WorkflowEvent(WorkflowEvent.Type.NODE_REMOVED, manager.getID(),
-                        Wrapper.unwrapWFM(manager), null));
-                }
-                manager.removeListener(WF_LISTENER);
-                manager.removeNodeStateChangeListener(NSC_LISTENER);
-                manager.removeNodeMessageListener(MSG_LISTENER);
-                manager.removeNodePropertyChangedListener(NODE_PROP_LISTENER);
+        ifActive(() -> {
+            MapWFKey p = new MapWFKey(path);
+            final WorkflowManagerUI manager = (WorkflowManagerUI)PROJECTS.get(p);
+            // workflow is only in client map if there is at least one client
+            if (manager != null && !WORKFLOW_CLIENTS.containsKey(p)) {
+                Wrapper.unwrapWFMOptional(manager).ifPresent(wm -> NodeContext.pushContext(wm));
                 try {
-                    manager.shutdown();
-                } catch (Throwable t) {
-                    // at least we have tried it
-                    LOGGER.error("Could not cancel workflow manager for workflow " + p, t);
-                } finally {
-                    // So far this only needs to be done for locally executed workflows,
-                    // i.e. those represented by an ordinary WorkflowManager.
-                    // For all other WorkflowManagerUI implementations this is not done.
+                    PROJECTS.remove(p);
                     if (Wrapper.wraps(manager, WorkflowManager.class)) {
-                        NodeID nodeIDToRemove;
-                        WorkflowManager wfm = unwrapWFM(manager);
-                        if (wfm.getParent() == WorkflowManager.ROOT) {
-                            nodeIDToRemove = wfm.getID();
-                        } else {
-                            nodeIDToRemove = ((SubNodeContainer)wfm.getDirectNCParent()).getID();
-                        }
-                        if (manager.getNodeContainerState().isExecutionInProgress()) {
-                            ThreadUtils.threadWithContext(() -> {
-                                final int timeout = 20;
-                                LOGGER.debugWithFormat(
-                                    "Workflow still in execution after canceling it - " + "waiting %d seconds max....",
-                                    timeout);
-                                try {
-                                    manager.waitWhileInExecution(timeout, TimeUnit.SECONDS);
-                                } catch (InterruptedException ie) {
-                                    LOGGER.fatal("interrupting thread that no one has access to", ie);
-                                }
-                                if (manager.getNodeContainerState().isExecutionInProgress()) {
-                                    LOGGER.errorWithFormat(
-                                        "Workflow did not react on cancel within %d seconds, giving up", timeout);
-                                } else {
-                                    LOGGER.debug("Workflow now canceled - will remove from parent");
-                                }
+                        WF_LISTENER.workflowChanged(new WorkflowEvent(WorkflowEvent.Type.NODE_REMOVED, manager.getID(),
+                            Wrapper.unwrapWFM(manager), null));
+                    }
+                    manager.removeListener(WF_LISTENER);
+                    manager.removeNodeStateChangeListener(NSC_LISTENER);
+                    manager.removeNodeMessageListener(MSG_LISTENER);
+                    manager.removeNodePropertyChangedListener(NODE_PROP_LISTENER);
+                    try {
+                        manager.shutdown();
+                    } catch (Throwable t) {
+                        // at least we have tried it
+                        LOGGER.error("Could not cancel workflow manager for workflow " + p, t);
+                    } finally {
+                        // So far this only needs to be done for locally executed workflows,
+                        // i.e. those represented by an ordinary WorkflowManager.
+                        // For all other WorkflowManagerUI implementations this is not done.
+                        if (Wrapper.wraps(manager, WorkflowManager.class)) {
+                            NodeID nodeIDToRemove;
+                            WorkflowManager wfm = unwrapWFM(manager);
+                            if (wfm.getParent() == WorkflowManager.ROOT) {
+                                nodeIDToRemove = wfm.getID();
+                            } else {
+                                nodeIDToRemove = ((SubNodeContainer)wfm.getDirectNCParent()).getID();
+                            }
+                            if (manager.getNodeContainerState().isExecutionInProgress()) {
+                                ThreadUtils.threadWithContext(() -> {
+                                    final int timeout = 20;
+                                    LOGGER.debugWithFormat(
+                                        "Workflow still in execution after canceling it - " + "waiting %d seconds max....",
+                                        timeout);
+                                    try {
+                                        manager.waitWhileInExecution(timeout, TimeUnit.SECONDS);
+                                    } catch (InterruptedException ie) {
+                                        LOGGER.fatal("interrupting thread that no one has access to", ie);
+                                    }
+                                    if (manager.getNodeContainerState().isExecutionInProgress()) {
+                                        LOGGER.errorWithFormat(
+                                            "Workflow did not react on cancel within %d seconds, giving up", timeout);
+                                    } else {
+                                        LOGGER.debug("Workflow now canceled - will remove from parent");
+                                    }
+                                    WorkflowManager.ROOT.removeProject(nodeIDToRemove);
+                                }, "Removal workflow - " + manager.getNameWithID()).start();
+                            } else {
                                 WorkflowManager.ROOT.removeProject(nodeIDToRemove);
-                            }, "Removal workflow - " + manager.getNameWithID()).start();
-                        } else {
-                            WorkflowManager.ROOT.removeProject(nodeIDToRemove);
+                            }
                         }
                     }
+                } finally {
+                    Wrapper.unwrapWFMOptional(manager).ifPresent(wm -> NodeContext.removeLastContext());
                 }
-            } finally {
-                Wrapper.unwrapWFMOptional(manager).ifPresent(wm -> NodeContext.removeLastContext());
             }
-        }
+        });
     }
 
     /**
@@ -455,7 +470,9 @@ public final class ProjectWorkflowMap {
      */
     public static void putWorkflow(final URI path,
             final WorkflowManager manager) {
-        putWorkflowUI(path, WorkflowManagerWrapper.wrap(manager));
+        ifActive(() -> {
+            putWorkflowUI(path, WorkflowManagerWrapper.wrap(manager));
+        });
     }
 
     /**
@@ -467,30 +484,32 @@ public final class ProjectWorkflowMap {
      */
     public static void putWorkflowUI(final URI path,
             final WorkflowManagerUI manager) {
-        MapWFKey p = new MapWFKey(path);
-        // in case the manager is replaced
-        // -> unregister listeners from the old one
-        NodeContainerUI oldOne = PROJECTS.get(p);
-        if (oldOne != null) {
-            oldOne.removeNodeStateChangeListener(NSC_LISTENER);
-            ((WorkflowManagerUI)oldOne).removeListener(WF_LISTENER);
-            oldOne.removeNodeMessageListener(MSG_LISTENER);
-            oldOne.removeNodePropertyChangedListener(NODE_PROP_LISTENER);
-        }
-        PROJECTS.put(p, manager);
-        manager.addNodeStateChangeListener(NSC_LISTENER);
-        manager.addListener(WF_LISTENER);
-        manager.addNodeMessageListener(MSG_LISTENER);
-        manager.addNodePropertyChangedListener(NODE_PROP_LISTENER);
+        ifActive(() -> {
+            MapWFKey p = new MapWFKey(path);
+            // in case the manager is replaced
+            // -> unregister listeners from the old one
+            NodeContainerUI oldOne = PROJECTS.get(p);
+            if (oldOne != null) {
+                oldOne.removeNodeStateChangeListener(NSC_LISTENER);
+                ((WorkflowManagerUI)oldOne).removeListener(WF_LISTENER);
+                oldOne.removeNodeMessageListener(MSG_LISTENER);
+                oldOne.removeNodePropertyChangedListener(NODE_PROP_LISTENER);
+            }
+            PROJECTS.put(p, manager);
+            manager.addNodeStateChangeListener(NSC_LISTENER);
+            manager.addListener(WF_LISTENER);
+            manager.addNodeMessageListener(MSG_LISTENER);
+            manager.addNodePropertyChangedListener(NODE_PROP_LISTENER);
 
-        //so far, the WorkflowManagerUI doesn't allow any edit operations won't trigger any changed events
-        //TODO - needs to be considered in the future! WorkflowEvent consumers then need to be able to work
-        //with WorkflowManagerUI instances, too!
-        if(Wrapper.wraps(manager, WorkflowManager.class)) {
-            WF_LISTENER.workflowChanged(new WorkflowEvent(
-                    WorkflowEvent.Type.NODE_ADDED, manager.getID(), null,
-                    Wrapper.unwrapWFM(manager)));
-        }
+            //so far, the WorkflowManagerUI doesn't allow any edit operations won't trigger any changed events
+            //TODO - needs to be considered in the future! WorkflowEvent consumers then need to be able to work
+            //with WorkflowManagerUI instances, too!
+            if(Wrapper.wraps(manager, WorkflowManager.class)) {
+                WF_LISTENER.workflowChanged(new WorkflowEvent(
+                        WorkflowEvent.Type.NODE_ADDED, manager.getID(), null,
+                        Wrapper.unwrapWFM(manager)));
+            }
+        });
     }
 
     /**
@@ -507,7 +526,9 @@ public final class ProjectWorkflowMap {
      * if the workflow manager is not registered with the passed URI
      */
     public static NodeContainer getWorkflow(final URI path) {
-        return Wrapper.unwrapNCOptional(getWorkflowUI(path)).orElse(null);
+        return ifActive(() -> {
+            return Wrapper.unwrapNCOptional(getWorkflowUI(path)).orElse(null);
+        });
     }
 
     /**
@@ -524,7 +545,9 @@ public final class ProjectWorkflowMap {
      * if the workflow manager is not registered with the passed URI
      */
     public static NodeContainerUI getWorkflowUI(final URI path) {
-        return PROJECTS.get(new MapWFKey(path));
+        return ifActive(() -> {
+            return PROJECTS.get(new MapWFKey(path));
+        });
     }
 
     /**
@@ -537,12 +560,14 @@ public final class ProjectWorkflowMap {
      *         null, if the workflow is not registered (not opened).
      */
     public static URI findProjectFor(final NodeID workflowID) {
-        for (Map.Entry<MapWFKey, NodeContainerUI> entry : PROJECTS.entrySet()) {
-            if (entry.getValue().getID().equals(workflowID)) {
-                return entry.getKey().getURI();
+        return ifActive(() -> {
+            for (Map.Entry<MapWFKey, NodeContainerUI> entry : PROJECTS.entrySet()) {
+                if (entry.getValue().getID().equals(workflowID)) {
+                    return entry.getKey().getURI();
+                }
             }
-        }
-        return null;
+            return null;
+        });
     }
 
     /**
@@ -552,7 +577,9 @@ public final class ProjectWorkflowMap {
      * @param listener to be added
      */
     public static void addWorkflowListener(final WorkflowListener listener) {
-        WF_LISTENERS.add(listener);
+        ifActive(() -> {
+            WF_LISTENERS.add(listener);
+        });
     }
 
     /**
@@ -560,7 +587,9 @@ public final class ProjectWorkflowMap {
      * @param listener to be removed
      */
     public static void removeWorkflowListener(final WorkflowListener listener) {
-        WF_LISTENERS.remove(listener);
+        ifActive(() -> {
+            WF_LISTENERS.remove(listener);
+        });
     }
 
     /**
@@ -569,7 +598,9 @@ public final class ProjectWorkflowMap {
      */
     public static void addStateListener(
             final NodeStateChangeListener listener) {
-        NSC_LISTENERS.add(listener);
+        ifActive(() -> {
+            NSC_LISTENERS.add(listener);
+        });
     }
 
     /**
@@ -578,7 +609,9 @@ public final class ProjectWorkflowMap {
      */
     public static void removeStateListener(
             final NodeStateChangeListener listener) {
-        NSC_LISTENERS.remove(listener);
+        ifActive(() -> {
+            NSC_LISTENERS.remove(listener);
+        });
     }
 
     /**
@@ -586,7 +619,9 @@ public final class ProjectWorkflowMap {
      * @param l listener to be informed about message changes
      */
     public static void addNodeMessageListener(final NodeMessageListener l) {
-        MSG_LISTENERS.add(l);
+        ifActive(() -> {
+            MSG_LISTENERS.add(l);
+        });
     }
 
     /**
@@ -594,7 +629,9 @@ public final class ProjectWorkflowMap {
      * @param l listener to be removed
      */
     public static void removeNodeMessageListener(final NodeMessageListener l) {
-        MSG_LISTENERS.remove(l);
+        ifActive(() -> {
+            MSG_LISTENERS.remove(l);
+        });
     }
 
     /**
@@ -602,7 +639,9 @@ public final class ProjectWorkflowMap {
      */
     public static void addNodePropertyChangedListener(
             final NodePropertyChangedListener l) {
-        NODE_PROP_LISTENERS.add(l);
+        ifActive(() -> {
+            NODE_PROP_LISTENERS.add(l);
+        });
     }
 
     /**
@@ -610,7 +649,23 @@ public final class ProjectWorkflowMap {
      */
     public static void removeNodePropertyChangedListener(
             final NodePropertyChangedListener l) {
-        NODE_PROP_LISTENERS.remove(l);
+        ifActive(() -> {
+            NODE_PROP_LISTENERS.remove(l);
+        });
+    }
+
+    private static void ifActive(final Runnable logic) {
+        if (isActive) {
+            logic.run();
+        }
+    }
+
+    private static <T> T ifActive(final Supplier<T> logic) {
+        if (isActive) {
+            return logic.get();
+        } else {
+            return null;
+        }
     }
 
 }
