@@ -49,6 +49,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -614,6 +615,19 @@ public class MountSettings {
             IEclipsePreferences mountPointChildNode = (IEclipsePreferences)mountPointsNode.node(ms.getMountID());
             saveMountSettingsToNode(ms, mountPointChildNode, i);
         }
+
+        MOUNT_SETTINGS_SAVED_LISTENERS.forEach(Runnable::run);
+    }
+
+    private static final List<Runnable> MOUNT_SETTINGS_SAVED_LISTENERS =
+        Collections.synchronizedList(new ArrayList<>());
+
+    /**
+     * @param listener called whenever the mount settings change
+     * @since 8.12
+     */
+    public static void addMountSettingsSavedListener(final Runnable listener) {
+        MOUNT_SETTINGS_SAVED_LISTENERS.add(listener);
     }
 
     private static String MOUNT_ID = "mountID";
