@@ -170,8 +170,8 @@ public abstract class AbstractP2Action extends Action {
     }
 
     /**
-     * Checks whether the current instance uses authenticated proxies but it is disabled. In this case, it shows a
-     * helpful error message, pointing to our FAQ.
+     * Checks whether the current instance uses authenticated proxies but it is disabled.
+     * In this case, it shows a helpful error message, pointing to our FAQ.
      *
      * @return <code>true</code> if the exception was caused by disabled schemes
      */
@@ -187,6 +187,23 @@ public abstract class AbstractP2Action extends Action {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Displays the reason why the update check failed in a pop-up dialog.
+     * Checks also if authentication schemes are disabled, see {@link #checkAndShowDisabledSchemes(Throwable)}.
+     *
+     * @param t Throwable holding the reason why the update check failed.
+     */
+    protected static void showFetchingErrorDialog(final Throwable t) {
+        if (!checkAndShowDisabledSchemes(t)) {
+            Display.getDefault().syncExec(() -> {
+                final var message = String.format(//
+                    "Error while fetching repositories because of the following reason:%n%n%s", t.getMessage());
+                final var shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
+                MessageDialog.openError(shell, "Fetching failed", message);
+            });
+        }
     }
 
     private final AtomicBoolean m_shutdownHookAdded = new AtomicBoolean();

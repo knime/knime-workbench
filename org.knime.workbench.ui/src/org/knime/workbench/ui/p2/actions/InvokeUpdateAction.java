@@ -116,10 +116,9 @@ public class InvokeUpdateAction extends AbstractP2Action {
                         // should not happen
                         LOGGER.error("Error while checking for new update sites: " + ex.getMessage(), ex);
                     } catch (IOException ex) {
-                        if (checkAndShowDisabledSchemes(ex)) {
-                            return Status.CANCEL_STATUS;
-                        }
                         LOGGER.error("I/O error while checking for new update sites: " + ex.getMessage(), ex);
+                        showFetchingErrorDialog(ex);
+                        return Status.CANCEL_STATUS;
                     }
                 }
                 monitor.worked(1);
