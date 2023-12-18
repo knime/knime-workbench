@@ -52,6 +52,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -83,23 +84,23 @@ import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndExecuto
  * @author Thorsten Meinl, University of Konstanz
  */
 public class InvokeUpdateAction extends AbstractP2Action {
+
+    private static final Pattern AP_PROGRAM_NAME = Pattern.compile("KNIME Analytics Platform \\d+.*");
+
     private class NewReleaseCheckerJob extends Job {
         NewReleaseCheckerJob() {
             super("KNIME release checker");
             setUser(true);
         }
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         protected IStatus run(final IProgressMonitor monitor) {
-            final ProvisioningUI provUI = ProvisioningUI.getDefaultUI();
+            final var provUI = ProvisioningUI.getDefaultUI();
             URI[] repositories = provUI.getRepositoryTracker().getKnownRepositories(provUI.getSession());
 
             monitor.beginTask("Checking for new KNIME release", repositories.length);
 
-            final List<UpdateInfo> updateInfos = new ArrayList<UpdateInfo>();
+            final List<UpdateInfo> updateInfos = new ArrayList<>();
             for (URI uri : repositories) {
                 if (monitor.isCanceled()) {
                     break;
@@ -124,46 +125,39 @@ public class InvokeUpdateAction extends AbstractP2Action {
                 monitor.worked(1);
             }
 
-            MutableBoolean abortFlag = new MutableBoolean(false);
+            final var abortFlag = new MutableBoolean(false);
             if (!updateInfos.isEmpty()) {
-                Display.getDefault().syncExec(new Runnable() {
-                    @Override
-                    public void run() {
-                        Shell shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
+                Display.getDefault().syncExec(() -> {
+                    final var shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
 
-                        boolean updatePossible = true;
-                        for (UpdateInfo ui : updateInfos) {
-                            updatePossible &= ui.isUpdatePossible();
+                    var updatePossible = true;
+                    var messageBuilder = new StringBuilder();
+                    messageBuilder.append("New releases of the following components are available:\n");
+                    for (UpdateInfo ui : updateInfos) {
+                        updatePossible &= ui.isUpdatePossible();
+                        if (AP_PROGRAM_NAME.matcher(ui.getName()).matches()
+                            && !showWarningIfServerConnectionsWithOldExecutorAreRegistered(shell, ui.getShortName())) {
+                            abortFlag.setValue(true);
+                            return;
                         }
-
-                        String message = "New releases of the following components are available:\n";
-                        for (UpdateInfo ui : updateInfos) {
-                            if (ui.getName().matches("KNIME Analytics Platform \\d+.*")) {
-                                if (!showWarningIfServerConnectionsWithOldExecutorAreRegistered(shell, ui.getShortName())) {
-                                    abortFlag.setValue(true);
-                                    return;
-                                }
-                            }
-                            message += "\t" + ui.getName() + "\n";
-                        }
-
-
-                        if (updatePossible) {
-                            message += "Do you want to upgrade to the new version?";
-                            boolean yes = MessageDialog.openQuestion(shell, "New KNIME release available", message);
-                            if (yes) {
-                                for (UpdateInfo ui : updateInfos) {
-                                    provUI.getRepositoryTracker().addRepository(ui.getUri(), null, provUI.getSession());
-                                }
-                            }
-                        } else {
-                            message +=
-                                "Unfortunately a direct update is not possible. Please download the new version"
-                                    + " from the KNIME web page.";
-                            MessageDialog.openInformation(shell, "New KNIME release available", message);
-                        }
-
+                        messageBuilder.append("\t" + ui.getName() + "\n");
                     }
+
+                    if (updatePossible) {
+                        messageBuilder.append("Do you want to upgrade to the new version?");
+                        final var message = messageBuilder.toString();
+                        boolean yes = MessageDialog.openQuestion(shell, "New KNIME release available", message);
+                        if (yes) {
+                            updateInfos.forEach(ui -> provUI.getRepositoryTracker().addRepository(ui.getUri(), null,
+                                provUI.getSession()));
+                        }
+                    } else {
+                        messageBuilder.append("Unfortunately a direct update is not possible. "
+                            + "Please download the new version from the KNIME web page.");
+                        final var message = messageBuilder.toString();
+                        MessageDialog.openInformation(shell, "New KNIME release available", message);
+                    }
+
                 });
             }
             if (!abortFlag.booleanValue()) {
@@ -178,15 +172,12 @@ public class InvokeUpdateAction extends AbstractP2Action {
     private static final String ID = "INVOKE_UPDATE_ACTION";
 
     /**
-     *
+     * Default constructor.
      */
     public InvokeUpdateAction() {
         super("Update KNIME...", "Checks for KNIME updates", ID);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void run() {
         if (!checkSDKAndReadOnly()) {
@@ -207,12 +198,12 @@ public class InvokeUpdateAction extends AbstractP2Action {
             return true;
         }
 
-        StringBuilder b = new StringBuilder();
+        final var b = new StringBuilder();
         if (olderServerList.size() == 1) {
             var s = olderServerList.get(0);
-            if(s.isServerOlderThan413()) {
+            if (s.isServerOlderThan413()) {
                 b.append("This client is connecting to server \"").append(s.getServerMountId()) //
-                .append("\" with version \"").append(s.getServerVersion()).append("\". ");
+                    .append("\" with version \"").append(s.getServerVersion()).append("\". ");
             } else {
                 b.append("This client is connecting to server \"").append(s.getServerMountId()) //
                     .append("\" communicating with at least one executor with")
@@ -239,33 +230,40 @@ public class InvokeUpdateAction extends AbstractP2Action {
 
     @Override
     protected void openWizard(final LoadMetadataRepositoryJob job, final ProvisioningUI provUI) {
-        final UpdateOperation operation = provUI.getUpdateOperation(null, null);
+        final var operation = provUI.getUpdateOperation(null, null);
         // check for updates
         operation.resolveModal(null);
 
-        PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable() {
-            @Override
-            public void run() {
-                Shell shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
-                if (!operation.hasResolved()) {
-                    MessageDialog.openInformation(shell, "Update KNIME...", "No updates were found");
-                } else if (provUI.getPolicy().continueWorkingWithOperation(operation, shell)) {
-                    if (UpdateSingleIUWizard.validFor(operation)) {
-                        // Special case for only updating a single root
-                        UpdateSingleIUWizard wizard = new UpdateSingleIUWizard(provUI, operation);
-                        WizardDialog dialog = new WizardDialog(shell, wizard);
-                        dialog.create();
-                        if (dialog.open() == 0) {
-                            clearOsgiAreaBeforeRestart();
-                        }
-                    } else {
-                        // Open the normal version of the update wizard
-                        if (provUI.openUpdateWizard(false, operation, job) == 0) {
-                            clearOsgiAreaBeforeRestart();
-                        }
-                    }
+        PlatformUI.getWorkbench().getDisplay().asyncExec(() -> openWizard(job, provUI, operation));
+    }
+
+    /**
+     * Opens the dialog for updating and restarting the AP, if updates are available.
+     *
+     * @param job job that fetched the update sites
+     * @param provUI defines provisioning session, and UI policy
+     * @param operation update operation, performing the update
+     */
+    private void openWizard(final LoadMetadataRepositoryJob job, final ProvisioningUI provUI,
+        final UpdateOperation operation) {
+        final var shell = PlatformUI.getWorkbench().getModalDialogShellProvider().getShell();
+        if (!operation.hasResolved()) {
+            MessageDialog.openInformation(shell, "Update KNIME...", "No updates were found");
+        } else if (provUI.getPolicy().continueWorkingWithOperation(operation, shell)) {
+            if (UpdateSingleIUWizard.validFor(operation)) {
+                // Special case for only updating a single root
+                final var wizard = new UpdateSingleIUWizard(provUI, operation);
+                final var dialog = new WizardDialog(shell, wizard);
+                dialog.create();
+                if (dialog.open() == 0) {
+                    clearOsgiAreaBeforeRestart();
+                }
+            } else {
+                // Open the normal version of the update wizard
+                if (provUI.openUpdateWizard(false, operation, job) == 0) {
+                    clearOsgiAreaBeforeRestart();
                 }
             }
-        });
+        }
     }
 }

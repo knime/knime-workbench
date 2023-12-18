@@ -50,9 +50,7 @@ package org.knime.workbench.ui.p2.actions;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -100,9 +98,9 @@ public abstract class AbstractP2Action extends Action {
      * {@link #openWizard(LoadMetadataRepositoryJob, ProvisioningUI)} is called.
      */
     protected final void startLoadJob() {
-        final ProvisioningUI provUI = ProvisioningUI.getDefaultUI();
+        final var provUI = ProvisioningUI.getDefaultUI();
         Job.getJobManager().cancel(LoadMetadataRepositoryJob.LOAD_FAMILY);
-        final LoadMetadataRepositoryJob loadJob = new LoadMetadataRepositoryJob(provUI);
+        final var loadJob = new LoadMetadataRepositoryJob(provUI);
         loadJob.setProperty(LoadMetadataRepositoryJob.ACCUMULATE_LOAD_ERRORS, Boolean.toString(true));
 
         loadJob.addJobChangeListener(new JobChangeAdapter() {
@@ -123,9 +121,9 @@ public abstract class AbstractP2Action extends Action {
      * @return <code>true</code> if the action should continue, <code>false</code> if it should be aborted
      */
     public static final boolean checkSDKAndReadOnly() {
-        final ProvisioningUI provUI = ProvisioningUI.getDefaultUI();
+        final var provUI = ProvisioningUI.getDefaultUI();
         if (provUI.getRepositoryTracker() == null) {
-            MessageBox mbox = new MessageBox(ProvUI.getDefaultParentShell(), SWT.ICON_WARNING | SWT.OK);
+            final var mbox = new MessageBox(ProvUI.getDefaultParentShell(), SWT.ICON_WARNING | SWT.OK);
             mbox.setText("Action impossible");
             mbox.setMessage("It seems you are running KNIME from an SDK. "
                 + "Installing extension is not possible in this case.");
@@ -133,11 +131,11 @@ public abstract class AbstractP2Action extends Action {
             return false;
         }
 
-        String installLocation = Platform.getInstallLocation().getURL().toString();
-        String configurationLocation = Platform.getConfigurationLocation().getURL().toString();
+        final var installLocation = Platform.getInstallLocation().getURL().toString();
+        final var configurationLocation = Platform.getConfigurationLocation().getURL().toString();
 
         if (!configurationLocation.contains(installLocation)) {
-            MessageBox mbox = new MessageBox(ProvUI.getDefaultParentShell(), SWT.ICON_WARNING | SWT.YES | SWT.NO);
+            final var mbox = new MessageBox(ProvUI.getDefaultParentShell(), SWT.ICON_WARNING | SWT.YES | SWT.NO);
             mbox.setText("Permission problem");
             mbox.setMessage("Your KNIME installation directory seems to be read-only, maybe because KNIME was "
                 + "installed by a different user, e.g., the system administrator. Installing extensions or updating "
@@ -219,8 +217,8 @@ public abstract class AbstractP2Action extends Action {
 
         try {
             @SuppressWarnings("restriction")
-            URL configUrl = Platform.getConfigurationLocation().getDataArea(EquinoxContainer.NAME);
-            Path configPath = Paths.get(new URI(configUrl.toString().replace(" ", "%20")));
+            final var configUrl = Platform.getConfigurationLocation().getDataArea(EquinoxContainer.NAME);
+            final var configPath = Paths.get(new URI(configUrl.toString().replace(" ", "%20")));
 
             // make sure PathUtils is initialized, because it registers a shutdown hook itself and this is not possible
             // while the JVM shuts down
