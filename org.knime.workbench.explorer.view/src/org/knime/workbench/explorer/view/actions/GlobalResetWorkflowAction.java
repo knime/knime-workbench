@@ -47,6 +47,7 @@ package org.knime.workbench.explorer.view.actions;
 import java.util.List;
 
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
@@ -106,7 +107,13 @@ public class GlobalResetWorkflowAction extends ExplorerAction {
             return;
         }
         WorkflowManager wfm = getWorkflow();
-        wfm.getParent().resetAndConfigureNode(wfm.getID());
+        wfm.getNodeContainers().stream().filter(nc -> {
+            var incoming = wfm.getIncomingConnectionsFor(nc.getID());
+            return incoming.isEmpty() || incoming.stream().allMatch(cc -> cc.getSource().equals(wfm.getID()));
+        }) //
+            .map(NodeContainer::getID) //
+            .filter(wfm::canResetNode) //
+            .forEach(id -> wfm.resetAndConfigureNode(id, true));
     }
 
 
