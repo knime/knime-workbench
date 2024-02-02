@@ -54,6 +54,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
@@ -154,13 +155,15 @@ public abstract class AbstractP2Action extends Action {
     protected static final boolean checkFetchingRepositories() {
         final var provUI = ProvisioningUI.getDefaultUI();
         final var repositories = provUI.getRepositoryTracker().getKnownRepositories(provUI.getSession());
+
+        // use the first URI as representative
+        final var remoteURI = Stream.of(repositories).filter(uri -> uri.getScheme().startsWith("http")).findFirst();
         // if there is nothing to fetch, continue
-        if (repositories.length == 0) {
+        if (remoteURI.isEmpty()) {
             return true;
         }
         try {
-            // use the first URI as representative
-            UpdateChecker.checkForNewRelease(repositories[0]);
+            UpdateChecker.checkForNewRelease(remoteURI.get());
             return true;
         } catch (IOException | URISyntaxException e) {
             return !checkAndShowDisabledSchemes(e);
