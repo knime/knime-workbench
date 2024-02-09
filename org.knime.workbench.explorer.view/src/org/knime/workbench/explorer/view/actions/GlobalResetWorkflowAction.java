@@ -47,6 +47,7 @@ package org.knime.workbench.explorer.view.actions;
 import java.util.List;
 
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
@@ -98,8 +99,7 @@ public class GlobalResetWorkflowAction extends ExplorerAction {
      */
     @Override
     public void run() {
-        List<AbstractExplorerFileStore> fileStores =
-            DragAndDropUtils.getExplorerFileStores(getSelection());
+        List<AbstractExplorerFileStore> fileStores = DragAndDropUtils.getExplorerFileStores(getSelection());
         AbstractExplorerFileStore wfStore = fileStores.get(0);
         if (!(wfStore instanceof LocalExplorerFileStore)) {
             LOGGER.error("Can only execute local workflows locally.");
@@ -107,6 +107,9 @@ public class GlobalResetWorkflowAction extends ExplorerAction {
         }
         WorkflowManager wfm = getWorkflow();
         wfm.getParent().resetAndConfigureNode(wfm.getID());
+        // Directly trigger reset on metanodes in "Reset All" action to reset them *fully* (all contained nodes).
+        wfm.getNodeContainers().stream().filter(nc -> nc instanceof WorkflowManager)
+            .map(NodeContainer::getID).forEach(wfm::resetAndConfigureNode);
     }
 
 
