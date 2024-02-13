@@ -381,15 +381,17 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
         }
 
         switch (loggerProperty) {
-            case HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE:
-                NodeLoggerConfig.setAppenderLevelRange(NodeLogger.LOGFILE_APPENDER, nodeLoggerLevel, LEVEL.FATAL);
-                break;
-            case HeadlessPreferencesConstants.P_LOGLEVEL_STDOUT:
-                NodeLoggerConfig.setAppenderLevelRange(NodeLogger.STDOUT_APPENDER, nodeLoggerLevel, LEVEL.FATAL);
-                break;
-            default:
-                LOGGER.error("Unsupported NodeLogger property, log level cannot be set: " + loggerProperty);
-                break;
+            case HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE -> {
+                final var existing = NodeLoggerConfig.getAppenderLevelRange(NodeLogger.LOGFILE_APPENDER);
+                final var max = existing != null ? existing.getSecond() : LEVEL.FATAL;
+                NodeLoggerConfig.setAppenderLevelRange(NodeLogger.LOGFILE_APPENDER, nodeLoggerLevel, max);
+            }
+            case HeadlessPreferencesConstants.P_LOGLEVEL_STDOUT -> {
+                final var existing = NodeLoggerConfig.getAppenderLevelRange(NodeLogger.STDOUT_APPENDER);
+                final var max = existing != null ? existing.getSecond() : LEVEL.FATAL;
+                NodeLoggerConfig.setAppenderLevelRange(NodeLogger.STDOUT_APPENDER, nodeLoggerLevel, max);
+            }
+            default -> LOGGER.error("Unsupported NodeLogger property, log level cannot be set: " + loggerProperty);
         }
     }
 
