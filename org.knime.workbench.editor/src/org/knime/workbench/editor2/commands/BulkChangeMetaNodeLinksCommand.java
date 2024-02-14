@@ -49,28 +49,17 @@
 package org.knime.workbench.editor2.commands;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.gef.commands.CompoundCommand;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.TemplateType;
-import org.knime.core.node.workflow.NodeContainerParent;
 import org.knime.core.node.workflow.NodeContainerTemplate;
-import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.util.SWTUtilities;
-import org.knime.core.util.exception.ResourceAccessException;
-import org.knime.core.util.pathresolve.ResolverUtil;
-import org.knime.workbench.editor2.actions.BulkChangeMetaNodeLinksAction.LinkChangeAction;
-import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.AbstractContentProvider.LinkType;
 
 /**
  * Changes specific link settings on a list of NodeContainerTemplates.
@@ -87,102 +76,34 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
 
     private final List<NodeContainerTemplate> m_templatesToChange;
 
-    private final LinkChangeAction m_linkChangeAction;
-
-    private final LinkType m_oldLinkType;
-
-    private LinkType m_newLinkType = LinkType.None;
-
     private final URI m_oldLinkURI;
 
-    private URI m_newLinkURI = null;
+    private final URI m_newLinkURI;
+
+    private final boolean m_askForUpdate;
 
     /**
      * Creates a new command.
      *
      * @param manager The workflow manager containing the links to be changed.
-     * @param action the type of link-changing action
      * @param templates NodeContainerTemplates to be changed
+     * @param newLinkURI new link URI
+     * @param askForUpdate should the user be asked whether they want to update all components afterwards?
      */
-    public BulkChangeMetaNodeLinksCommand(final WorkflowManager manager, final LinkChangeAction action,
-        final List<NodeContainerTemplate> templates) {
+    public BulkChangeMetaNodeLinksCommand(final WorkflowManager manager, final List<NodeContainerTemplate> templates,
+        final URI newLinkURI, final boolean askForUpdate) {
         super(manager);
         m_templatesToChange = templates;
-        m_linkChangeAction = action;
+        m_askForUpdate = askForUpdate;
 
         // determining existing (old) link properties
         if (templates.isEmpty()) {
             throw new IllegalArgumentException("Metanode templates to change must not be empty!");
         }
-        var nc = m_templatesToChange.get(0);
+        final var nc = m_templatesToChange.get(0);
         m_oldLinkURI = nc.getTemplateInformation().getSourceURI();
-        m_oldLinkType = resolveLinkType(m_oldLinkURI);
+        m_newLinkURI = newLinkURI;
         m_templateType = nc instanceof SubNodeContainer ? TemplateType.SubNode : TemplateType.MetaNode;
-    }
-
-    /**
-     * Resolves a URI to a specific {@link LinkType}.
-     *
-     * @param link input URI
-     * @return resolved link type
-     */
-    public static LinkType resolveLinkType(final URI link) {
-        var linkType = LinkType.None;
-        try {
-            if (ResolverUtil.isMountpointRelativeURL(link)) {
-                linkType = LinkType.MountpointRelative;
-            } else if (ResolverUtil.isWorkflowRelativeURL(link)) {
-                linkType = LinkType.WorkflowRelative;
-            } else {
-                linkType = LinkType.Absolute;
-            }
-        } catch (ResourceAccessException e) {
-            LOGGER.error("Unable to resolve current link to template " + link + ": " + e.getMessage(), e);
-        }
-        return linkType;
-    }
-
-    /**
-     * Generates a new link URI based on a given URI and a new link type. Does not change the link URI of the
-     * contextNode!
-     *
-     * @param contextNode node used for resolving the template location
-     * @param oldURI URI with the old link type
-     * @param newLinkType new link type to be set
-     * @return new URI with having the new link type
-     */
-    public static URI changeLinkType(final NodeContainerParent contextNode, final URI oldURI,
-        final LinkType newLinkType) {
-        URI newURI = null;
-        NodeContext.pushContext(contextNode);
-        try {
-            var targetFile = ResolverUtil.resolveURItoLocalFile(oldURI);
-            var targetfs = ExplorerFileSystem.INSTANCE.fromLocalFile(targetFile);
-            newURI = AbstractContentProvider.createMetanodeLinkUri(contextNode, targetfs, newLinkType);
-        } catch (ResourceAccessException | URISyntaxException | CoreException e) {
-            LOGGER.error("Unable to resolve shared component URI " + oldURI + ": " + e.getMessage(), e);
-        } finally {
-            NodeContext.removeLastContext();
-        }
-        return newURI;
-    }
-
-    /**
-     * Sets the new link type.
-     *
-     * @param linkType
-     */
-    public void setLinkType(final LinkType linkType) {
-        m_newLinkType = linkType;
-    }
-
-    /**
-     * Sets the new link URI.
-     *
-     * @param uri
-     */
-    public void setURI(final URI uri) {
-        m_newLinkURI = uri;
     }
 
     /**
@@ -197,49 +118,32 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
         if (m_templatesToChange == null || m_templatesToChange.isEmpty()) {
             return false;
         }
-        // link type change action cannot be executed
-        if ((m_linkChangeAction == LinkChangeAction.TYPE_CHANGE
-            && (m_oldLinkType == LinkType.None || m_newLinkType == LinkType.None))) {
-            return false;
-        }
-        // link URI change action cannot be executed
-        if ((m_linkChangeAction == LinkChangeAction.URI_CHANGE && (m_oldLinkURI == null || m_newLinkURI == null))) {
+        if (m_oldLinkURI == null || m_newLinkURI == null) {
             return false;
         }
         var wfm = getHostWFM();
         return m_templatesToChange.stream().allMatch(nct -> wfm.findNodeContainer(nct.getID()) != null);
     }
 
-    /** {@inheritDoc} */
     @Override
     public void execute() {
-        if (m_linkChangeAction == LinkChangeAction.TYPE_CHANGE) {
-            doLinkTypeBulkChange();
-        } else if (m_linkChangeAction == LinkChangeAction.URI_CHANGE) {
-            doLinkURIBulkChange();
+        doLinkURIBulkChange();
 
+        if (m_askForUpdate) {
             // asking if all nodes should be updated subsequently
             var shell = SWTUtilities.getActiveShell();
             if (MessageDialog.openQuestion(shell, "Change Links",
                 "Do you want to update all nodes where the links have been changed?\n"
                     + "The update will be fetched from \"" + m_newLinkURI + "\".")) {
-                var templateIds = m_templatesToChange.stream().map(NodeContainerTemplate::getID).collect(Collectors.toList());
-                var updateCommand = new UpdateMetaNodeLinkCommand(getHostWFM(), templateIds.toArray(new NodeID[0]));
+                var templateIds = m_templatesToChange.stream() //
+                        .map(NodeContainerTemplate::getID) //
+                        .toArray(NodeID[]::new);
+                var updateCommand = new UpdateMetaNodeLinkCommand(getHostWFM(), templateIds);
                 updateCommand.execute();
                 m_commandRegistry.add(updateCommand);
                 MessageDialog.openInformation(shell, "Change Links", "All selected nodes have been updated.");
             }
         }
-    }
-
-    /**
-     * Uses the given, new link type to change the old URI into new one. After that, calls the bulk link URI change
-     * method for setting this new URI.
-     */
-    private void doLinkTypeBulkChange() {
-        // we can choose the first NodeContainerTemplate because it only acts as context node
-        m_newLinkURI = changeLinkType((NodeContainerParent)m_templatesToChange.get(0), m_oldLinkURI, m_newLinkType);
-        doLinkURIBulkChange();
     }
 
     /**
@@ -269,7 +173,6 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
         }
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean canUndo() {
         if (m_templatesToChange.isEmpty() || m_commandRegistry == null || m_commandRegistry.isEmpty()) {
@@ -278,14 +181,12 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
         return m_commandRegistry.canUndo();
     }
 
-    /** {@inheritDoc} */
     @Override
     public void undo() {
         LOGGER.debug("Undo: Reverting metanode links (" + m_commandRegistry.size() + " metanode(s))");
         m_commandRegistry.undo();
     }
 
-    /** {@inheritDoc} */
     @Override
     public boolean canRedo() {
         if (m_templatesToChange.isEmpty() || m_commandRegistry == null || m_commandRegistry.isEmpty()) {
@@ -294,7 +195,6 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
         return m_commandRegistry.canRedo();
     }
 
-    /** {@inheritDoc} */
     @Override
     public void redo() {
         LOGGER.debug("Redo: Reverting the undo of metanode links (" + m_commandRegistry.size() + " metanode(s))");

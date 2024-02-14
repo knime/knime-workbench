@@ -47,51 +47,37 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import static org.knime.core.ui.wrapper.Wrapper.unwrapWFM;
-import static org.knime.core.ui.wrapper.Wrapper.wraps;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.Map;
+import java.util.Optional;
 
-import java.net.URI;
-import java.nio.file.Path;
-
-import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionAdapter;
-import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.util.ClassUtils;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
+import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.node.workflow.contextv2.AnalyticsPlatformExecutorInfo;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.util.KnimeUrlType;
 import org.knime.core.util.Pair;
+import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.urlresolve.KnimeUrlResolver;
+import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.editor2.commands.BulkChangeMetaNodeLinksCommand;
 import org.knime.workbench.editor2.commands.ChangeMetaNodeLinkCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
-import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
-import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider.LinkType;
 
 /**
  * Allows changing the type of the template link of a metanode.
  * @author Peter Ohl, KNIME AG, Zurich, Switzerland
  */
+@SuppressWarnings("restriction")
 public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(ChangeMetaNodeLinkAction.class);
@@ -106,35 +92,21 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
         super(editor);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getId() {
         return ID;
     }
 
-    /**
-     *
-     * {@inheritDoc}
-     */
     @Override
     public String getText() {
         return "Change Link Type...";
     }
 
-    /**
-     *
-     * {@inheritDoc}
-     */
     @Override
     public String getToolTipText() {
         return "Change the link type to the shared metanode";
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public ImageDescriptor getImageDescriptor() {
         return ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "icons/meta/metanode_setname.png");
@@ -145,210 +117,125 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
      */
     @Override
     protected boolean internalCalculateEnabled() {
-        NodeContainerEditPart[] nodes = getSelectedParts(NodeContainerEditPart.class);
-        if (nodes.length != 1) {
-            return false;
-        }
-        NodeContainerUI nc = nodes[0].getNodeContainer();
-        if (!(nc instanceof WorkflowManagerUI)) {
-            return false;
-        }
-        if (!wraps(nc, WorkflowManager.class)) {
-            //action not yet supported for the general UI workflow manager
-            return false;
-        }
-        WorkflowManagerUI metaNode = (WorkflowManagerUI)nc;
-        if (metaNode.getParent().isWriteProtected()) {
-            // the metanode's parent must not forbid the change
-            return false;
-        }
-
-        var templateInfo = unwrapWFM(metaNode).getTemplateInformation();
-        var host = templateInfo.getSourceURI() != null ? templateInfo.getSourceURI().getHost() : null;
-        var provider = ExplorerMountTable.getMountedContent().get(host);
-
-        // the metanode must be linked and the contentprovider must be non-null
-        return templateInfo.getRole() == Role.Link && provider != null;
+        return getMetanodeAndURLsIfValid(getSelectedParts(NodeContainerEditPart.class)).isPresent();
     }
 
-    /** {@inheritDoc} */
+    private static Optional<Pair<WorkflowManager, Map<KnimeUrlType, URL>>>
+            getMetanodeAndURLsIfValid(final NodeContainerEditPart[] nodes) { //NOSONAR too many returns
+        if (nodes.length != 1) {
+            return Optional.empty();
+        }
+        NodeContainerUI nc = nodes[0].getNodeContainer();
+        if (!(nc instanceof WorkflowManagerUI && Wrapper.wraps(nc, WorkflowManager.class))) {
+            //action not yet supported for the general UI workflow manager
+            return Optional.empty();
+        }
+
+        final var metaNode = (WorkflowManagerUI)nc;
+        final var metaNodeWFM = Wrapper.unwrapWFM(metaNode);
+        var templateInfo = metaNodeWFM.getTemplateInformation();
+        if (metaNode.getParent().isWriteProtected() || templateInfo.getRole() != Role.Link) {
+            // the subnode's parent must not forbid the change
+            return Optional.empty();
+        }
+
+        final var templateUri = templateInfo.getSourceURI();
+        final var optLinkType = KnimeUrlType.getType(templateUri);
+        if (optLinkType.isEmpty()) {
+            return Optional.empty();
+        }
+
+        final var linkType = optLinkType.get();
+        final var context = Optional.of(metaNodeWFM) //
+            .map(wfm -> wfm.getProjectComponent().map(SubNodeContainer::getWorkflowManager) //
+                .orElse(wfm.getProjectWFM())) //
+            .map(WorkflowManager::getContextV2) //
+            .orElseThrow(() -> new IllegalStateException("Could not find workflow context for " + metaNode));
+
+        try {
+            final var urls = KnimeUrlResolver.getResolver(context).changeLinkType(URLResolverUtil.toURL(templateUri));
+            if (urls.size() > (urls.containsKey(linkType) ? 1 : 0)) {
+                // there are other options available
+                return Optional.of(Pair.create(metaNodeWFM, urls));
+            }
+        } catch (ResourceAccessException e) {
+            LOGGER.debug(
+                () -> "Cannot compute alternative KNIME URL types for '" + templateUri + "': " + e.getMessage(), e);
+        }
+
+        return Optional.empty();
+    }
+
     @Override
     public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
         if (nodeParts.length < 1) {
             return;
         }
 
-        WorkflowManager metaNode = Wrapper.unwrapWFM(nodeParts[0].getNodeContainer());
-        if (metaNode.getTemplateInformation().getRole() == Role.Link) {
-            final WorkflowManager wfm = metaNode.getParent();
-            var targetURI = metaNode.getTemplateInformation().getSourceURI();
+        final var validated = getMetanodeAndURLsIfValid(nodeParts) //
+                .orElseThrow(() -> new IllegalStateException("Can't change link type of the current selection."));
 
-            /**
-             * Do all further API calls to check if the URI has ONE of the following attributes:
-             * - is a mountpoint-relative URI
-             * - is a workflow-relative URI
-             * - is a absolute URI and the local mountpoint's contentprovider equals the one of the target filestore
-             */
-            var linkType = BulkChangeMetaNodeLinksCommand.resolveLinkType(targetURI);
-            switch (linkType) {
-                case MountpointRelative:
-                case WorkflowRelative:
-                    // continue to change link
-                    break;
-                case Absolute:
-                    if (!checkAbsoluteURIValidity(metaNode, targetURI)) {
-                        return;
-                    }
-                    break;
-                case None:
-                default:
-                    // abort changing link without message - existing behavior
-                    return;
-            }
+        final var metaNode = validated.getFirst();
 
-            String msg = "This is a linked (read-only) Metanode. Only the link type can be changed.\n";
-            msg += "Please select the new type of the link to the metanode.\n";
-            msg += "(current type: " + linkType + ", current link: " + targetURI + ")\n";
-            msg += "The origin of the template will not be changed - just the way it is referenced.";
-            LinkPrompt dlg = new LinkPrompt(getEditor().getSite().getShell(), msg, linkType);
-            dlg.open();
-            if (dlg.getReturnCode() == Window.CANCEL) {
-                return;
-            }
-            var newLinkType = dlg.getLinkType();
-            if (linkType == newLinkType) {
-                LOGGER.info("Link type not changes as selected type equals existing type " + targetURI);
-                return;
-            }
-            // as the workflow is local and the template in the same mountID, it should resolve to a file
-            var newURI = BulkChangeMetaNodeLinksCommand.changeLinkType(metaNode, targetURI, newLinkType);
-            if (newURI != null) {
-                var cmd = new ChangeMetaNodeLinkCommand(wfm, metaNode, targetURI, newURI);
-                getCommandStack().execute(cmd);
-            }
-        } else {
-            throw new IllegalStateException(
-                "Can only change the type of a template link if the metanode is actually linked to a template - "
-                    + metaNode + " is not.");
+        final var linkUrl = metaNode.getTemplateInformation().getSourceURI();
+        final var linkType = KnimeUrlType.getType(linkUrl).orElseThrow();
+        final var linkTypeName = ChangeSubNodeLinkAction.getLinkTypeName(linkType);
+        final var message = "This is a linked (read-only) Metanode. Only the link type can be changed.\n"
+            + "Please select the new type of the link to the metanode.\n"
+            + "(current type: " + linkTypeName + ", current link: " + linkUrl + ")\n"
+            + "The origin of the template will not be changed - just the way it is referenced.";
+
+        final var options = validated.getSecond();
+        final var dialog = new LinkPrompt(getEditor().getSite().getShell(), message, options, linkType);
+        dialog.open();
+        if (dialog.getReturnCode() == Window.CANCEL) {
+            return;
+        }
+
+        var newLinkType = dialog.getLinkType();
+        if (linkType == newLinkType) {
+            LOGGER.info("Link type not changes as selected type equals existing type " + linkUrl);
+            return;
+        }
+
+        final var newUrl = options.get(newLinkType);
+        try {
+            var cmd = new ChangeMetaNodeLinkCommand(metaNode.getParent(), metaNode, linkUrl, newUrl.toURI());
+            getCommandStack().execute(cmd);
+        } catch (final URISyntaxException e) {
+            LOGGER.debug(() -> "Cannot convert KNIME URL'" + newUrl + "' to URI: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Checks the validity of an absolute URI for changing the link (aka performing the action).
-     * @param targetURI the metanode's source URI
-     * @return is valid?
-     */
-    private boolean checkAbsoluteURIValidity(final WorkflowManager metaNode, final URI targetURI) {
-        // check if the contentproviders match and if the filestore is resolvable
-        final var wfc = metaNode.getProjectWFM().getContextV2();
-        final var mountpointRoot = ClassUtils.castOptional(AnalyticsPlatformExecutorInfo.class, wfc.getExecutorInfo())
-                .flatMap(AnalyticsPlatformExecutorInfo::getMountpoint)
-                .map(Pair::getSecond)
-                .map(Path::toFile)
-                .orElse(null);
-        LocalExplorerFileStore fs = ExplorerFileSystem.INSTANCE.fromLocalFile(mountpointRoot);
-        var localProvider = fs != null ? fs.getContentProvider() : null;
-
-        AbstractExplorerFileStore targetFs = ExplorerFileSystem.INSTANCE.getStore(targetURI);
-        var targetProvider = targetFs != null ? targetFs.getContentProvider() : null;
-
-        if (localProvider == null || targetProvider == null || !localProvider.equals(targetProvider)) {
-            String message = "Cannot change metanode link of node: " + metaNode.getNameWithID() + ".\n"
-                + "You can only change the link for a metanode source on a local mountpoint.";
-            MessageDialog.openError(getEditor().getSite().getShell(), "Change Metanode Link", message);
-            return false;
-        }
-        return true;
-    }
-
-    static class LinkPrompt extends MessageDialog {
-        private Button m_absoluteLink;
-
-        private Button m_mountpointRelativeLink;
-
-        private Button m_workflowRelativeLink;
-
-        private LinkType m_linkType;
-
-        private LinkType m_preSelect;
+    static class LinkPrompt extends ChangeSubNodeLinkAction.LinkPrompt {
 
         /**
-         *
+         * @param parentShell
+         * @param messageText
+         * @param options
+         * @param preSelect
          */
-        public LinkPrompt(final Shell parentShell, final String message, final LinkType preSelect) {
-            super(parentShell, "Change Type of Link to Metanode", null, message,
-                MessageDialog.QUESTION_WITH_CANCEL, new String[]{IDialogConstants.OK_LABEL,
-                    IDialogConstants.CANCEL_LABEL}, 0);
-            setShellStyle(getShellStyle() | SWT.SHEET);
-            if (preSelect != null) {
-                m_preSelect = preSelect;
-                m_linkType = preSelect;
-            } else {
-                m_preSelect = LinkType.Absolute;
-                m_linkType = LinkType.Absolute;
-            }
+        public LinkPrompt(final Shell parentShell, final String messageText, final Map<KnimeUrlType, URL> options,
+            final KnimeUrlType preSelect) {
+            super(parentShell, messageText, options, preSelect);
         }
 
-        /**
-         * After the dialog closes get the selected link type.
-         *
-         * @return null, if no link should be created, otherwise the selected link type.
-         */
-        public LinkType getLinkType() {
-            return m_linkType;
-        }
-
-        /**
-         * {@inheritDoc}
-         */
         @Override
-        protected Control createCustomArea(final Composite parent) {
-            Composite group = new Composite(parent, SWT.NONE);
-            group.setLayout(new GridLayout(2, true));
-            group.setLayoutData(new GridData(SWT.RIGHT, SWT.TOP, false, false));
-
-            Label l1 = new Label(group, SWT.NONE);
-            l1.setText("Select the new type of the link:");
-            m_absoluteLink = new Button(group, SWT.RADIO);
-            m_absoluteLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
-            m_absoluteLink.setText("Create absolute link");
-            m_absoluteLink.setToolTipText("If you move the workflow to a new location it will "
-                + "always link back to this template");
-            m_absoluteLink.setSelection(LinkType.Absolute.equals(m_preSelect));
-            m_absoluteLink.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    m_linkType = LinkType.Absolute;
-                }
-            });
-
-            new Label(group, SWT.NONE);
-            m_mountpointRelativeLink = new Button(group, SWT.RADIO);
-            m_mountpointRelativeLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
-            m_mountpointRelativeLink.setText("Create mountpoint-relative link");
-            m_mountpointRelativeLink.setToolTipText("If you move the workflow to a new workspace - the metanode "
-                + "template must be available on this new workspace as well");
-            m_mountpointRelativeLink.setSelection(LinkType.MountpointRelative.equals(m_preSelect));
-            m_mountpointRelativeLink.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    m_linkType = LinkType.MountpointRelative;
-                }
-            });
-
-            new Label(group, SWT.NONE);
-            m_workflowRelativeLink = new Button(group, SWT.RADIO);
-            m_workflowRelativeLink.setLayoutData(new GridData(SWT.LEFT, SWT.TOP, true, false));
-            m_workflowRelativeLink.setText("Create workflow-relative link");
-            m_workflowRelativeLink.setToolTipText("Workflow and metanode should always be moved together");
-            m_workflowRelativeLink.setSelection(LinkType.WorkflowRelative.equals(m_preSelect));
-            m_workflowRelativeLink.addSelectionListener(new SelectionAdapter() {
-                @Override
-                public void widgetSelected(final SelectionEvent e) {
-                    m_linkType = LinkType.WorkflowRelative;
-                }
-            });
-            return group;
+        LinkTypeOption getOptionTexts(final KnimeUrlType urlType) {
+            return switch (urlType) {
+                case MOUNTPOINT_ABSOLUTE -> new LinkTypeOption("Create absolute link",
+                    "If you move the workflow to a new location it will always link back to this template");
+                case HUB_SPACE_RELATIVE -> new LinkTypeOption("Create space-relative link",
+                    "If you move the workflow to another space, the metanode must be available in the same"
+                            + " location relative to the space's root");
+                case MOUNTPOINT_RELATIVE -> new LinkTypeOption("Create mountpoint-relative link",
+                    "If you move the workflow to a new workspace - the metanode template must be available on this new"
+                            + " workspace as well");
+                case WORKFLOW_RELATIVE -> new LinkTypeOption("Create workflow-relative link",
+                    "Workflow and metanode should always be moved together");
+                case NODE_RELATIVE -> new LinkTypeOption("Create node-relative link",
+                    "Addresses a resource relative to the current node's directory");
+            };
         }
     }
 

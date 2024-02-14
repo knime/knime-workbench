@@ -61,9 +61,11 @@ import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.FileUtil;
+import org.knime.core.util.KnimeUrlType;
+import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
@@ -97,25 +99,52 @@ public class ExplorerFileSystem extends FileSystem {
      */
     @Override
     public AbstractExplorerFileStore getStore(final URI uri) {
-        String mountID = getIDfromURI(uri);
-        MountPoint mountPoint = ExplorerMountTable.getMountPoint(mountID);
-        if (mountPoint == null) {
-            return null;
-        }
-        if (ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equals(uri.getHost())) {
-            Optional<String> relPath = getRelativePathFromContext();
-            if (relPath.isPresent()) {
-                String combinedPath = relPath.get() + uri.getPath();
+        final var urlType = KnimeUrlType.getType(uri) //
+                .orElseThrow(() -> new IllegalArgumentException("Invalid scheme in URI ('" + uri + "'). "
+                    + "Only '" + SCHEME + "' is allowed here."));
+
+        // try to resolve relative URLs using the workflow context
+        var resolvedUri = uri;
+        if (urlType.isRelative()) {
+            final var resolver = Optional.ofNullable(NodeContext.getContext()) //
+                    .map(NodeContext::getWorkflowManager) //
+                    .map(WorkflowManager::getContextV2) //
+                    .map(KnimeUrlResolver::getResolver)
+                    .orElse(null);
+            if (resolver != null) {
                 try {
-                    URI newUri = new URI(uri.getScheme(), mountID, combinedPath, null).normalize();
-                    return mountPoint.getProvider().getFileStore(newUri);
-                } catch (URISyntaxException ex) {
+                    final var absoluteUri = resolver.resolveToAbsolute(resolvedUri);
+                    if (absoluteUri.isPresent()) { // NOSONAR
+                        resolvedUri = absoluteUri.get();
+                    }
+                } catch (ResourceAccessException ex) {
                     NodeLogger.getLogger(getClass())
-                        .error("Could not create absolute URI from relative URI '" + uri + "': " + ex.getMessage(), ex);
+                        .error("Could not create absolute URI from relative URI '" + resolvedUri + "': "
+                                + ex.getMessage(), ex);
                 }
             }
         }
-        return mountPoint.getProvider().getFileStore(uri);
+
+        String mountID = getIDfromURI(resolvedUri);
+        var mountPoint = ExplorerMountTable.getMountPoint(mountID);
+        if (mountPoint == null) {
+            return null;
+        }
+        if (ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equals(resolvedUri.getHost())) {
+            Optional<String> relPath = getRelativePathFromContext();
+            if (relPath.isPresent()) {
+                String combinedPath = relPath.get() + resolvedUri.getPath();
+                try {
+                    URI newUri = new URI(resolvedUri.getScheme(), mountID, combinedPath, null).normalize();
+                    return mountPoint.getProvider().getFileStore(newUri);
+                } catch (URISyntaxException ex) {
+                    NodeLogger.getLogger(getClass())
+                        .error("Could not create absolute URI from relative URI '" + resolvedUri + "': "
+                                + ex.getMessage(), ex);
+                }
+            }
+        }
+        return mountPoint.getProvider().getFileStore(resolvedUri);
     }
 
     /**
@@ -127,17 +156,10 @@ public class ExplorerFileSystem extends FileSystem {
      * @since 6.0
      */
     public static String getIDfromURI(final URI uri) {
-        if (!SCHEME.equalsIgnoreCase(uri.getScheme())) {
-            throw new IllegalArgumentException("Invalid scheme in URI ('"
-                    + uri.getScheme() + "'). Only '" + SCHEME
-                    + "' is allowed here.");
-        }
-        if (ExplorerURLStreamHandler.MOUNTPOINT_RELATIVE.equals(uri.getHost())
-            || ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equals(uri.getHost())
-            || ExplorerURLStreamHandler.NODE_RELATIVE.equals(uri.getHost())) {
-            return getMountpointIdFromContext().orElse(uri.getHost());
-        }
-        return uri.getHost();
+        final var urlType = KnimeUrlType.getType(uri) //
+                .orElseThrow(() -> new IllegalArgumentException("Invalid scheme in URI ('" + uri + "'). "
+                    + "Only '" + SCHEME + "' is allowed here."));
+        return urlType.isRelative() ? getMountpointIdFromContext().orElse(uri.getHost()) : uri.getHost();
     }
 
 

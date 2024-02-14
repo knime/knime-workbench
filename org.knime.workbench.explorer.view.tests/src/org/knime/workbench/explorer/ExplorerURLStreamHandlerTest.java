@@ -190,15 +190,15 @@ public class ExplorerURLStreamHandlerTest {
             new URL("knime://knime.workflow/workflow.knime"));
 
         assertResolvedURIEquals("Unexpected resolved URL",
-            currentLocation.resolve("..").resolve("test.txt").toUri(),
+            currentLocation.resolve("..").resolve("test.txt").toUri().normalize(),
             new URL("knime://knime.workflow/../test.txt"));
 
         assertResolvedURIEquals("Unexpected resolved URL",
-            currentLocation.resolve("..").resolve("With Space+Plus.txt").toUri(),
+            currentLocation.resolve("..").resolve("With Space+Plus.txt").toUri().normalize(),
             new URL("knime://knime.workflow/../With Space+Plus.txt"));
 
         assertResolvedURIEquals("Unexpected resolved URL",
-            currentLocation.resolve("..").resolve("With Space+Plus.txt").toUri(),
+            currentLocation.resolve("..").resolve("With Space+Plus.txt").toUri().normalize(),
             new URL("knime://knime.workflow/../With%20Space+Plus.txt"));
 
         assertResolvedURIEquals("Unexpected resolved URL",
@@ -206,11 +206,11 @@ public class ExplorerURLStreamHandlerTest {
             new URL("knime://knime.workflow//Double Slash Decoded"));
 
         assertResolvedURIEquals("Unexpected resolved URL",
-            currentLocation.resolve("..").resolve("Double Slash Encoded").toUri(),
+            currentLocation.resolve("..").resolve("Double Slash Encoded").toUri().normalize(),
             new URL("knime://knime.workflow/..//Double%20Slash%20Encoded"));
 
         assertResolvedURIEquals("Unexpected resolved URL",
-            currentLocation.resolve("..").resolve("Double Slash Decoded").toUri(),
+            currentLocation.resolve("..").resolve("Double Slash Decoded").toUri().normalize(),
             new URL("knime://knime.workflow/..//Double Slash Decoded"));
 
         assertResolvedURIEquals("Unexpected resolved URL",
@@ -325,8 +325,8 @@ public class ExplorerURLStreamHandlerTest {
 
         final var urlB = new URL("knime://knime.workflow/foo/../../../../test.txt");
         final var eB = assertThrows(IOException.class, () -> m_handler.openConnection(urlB));
-        assertTrue("Error should indicate that '../' must be at start of URL, found: " + eB,
-            eB.getMessage().contains("URLs leaving the workflow must start with '/..'"));
+        assertTrue("Error should indicate that leaving the Hub space is not allowed, found " + eB,
+            eB.getMessage().contains("Leaving the Hub space is not allowed for workflow relative URLs:"));
     }
 
     /**
@@ -485,7 +485,7 @@ public class ExplorerURLStreamHandlerTest {
 
         // path outside the workflow
         final var url = new URL("knime://knime.workflow/../test.txt");
-        final var expectedPath = new File(currentLocation, "../test.txt");
+        final var expectedPath = new File(currentLocation.getParentFile(), "test.txt");
         final var conn = m_handler.openConnection(url);
         assertEquals("Unexpected resolved URL", expectedPath.toURI(), conn.getURL().toURI());
         assertEquals("Unexpected resulting file", expectedPath, new File(conn.getURL().toURI()));

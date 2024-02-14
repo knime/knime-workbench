@@ -53,7 +53,6 @@ import java.net.URI;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
-import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
@@ -101,7 +100,7 @@ public class ChangeSubNodeLinkCommand extends AbstractKNIMECommand {
     }
 
     private boolean setLink(final URI link) {
-        NodeContainer subNode = getHostWFM().findNodeContainer(m_subNodeID);
+        final var subNode = getHostWFM().findNodeContainer(m_subNodeID);
         if (!(subNode instanceof SubNodeContainer)) {
             LOGGER.error("Command failed: Specified node is not a Component");
             return false;

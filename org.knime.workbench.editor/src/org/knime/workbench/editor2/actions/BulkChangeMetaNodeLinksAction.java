@@ -74,6 +74,7 @@ import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
  *
  * @author Leon Wenzler, KNIME AG, Konstanz, Germany
  */
+@SuppressWarnings("restriction")
 public class BulkChangeMetaNodeLinksAction extends AbstractNodeAction {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(BulkChangeMetaNodeLinksAction.class);
@@ -83,25 +84,16 @@ public class BulkChangeMetaNodeLinksAction extends AbstractNodeAction {
 
     /** Selected action in the dialog */
     public enum LinkChangeAction {
-
-            /**
-             * Indicates that the link type was changed, e.g. absolute, relative to, ...
-             */
+            /** Indicates that the link type was changed, e.g. absolute, relative to, ... */
             TYPE_CHANGE,
 
-            /**
-             * Indicates that the link URI has changed.
-             */
+            /** Indicates that the link URI has changed. */
             URI_CHANGE,
 
-            /**
-             * Indicates that the KNIME Hub Item Version has changed.
-             */
+            /** Indicates that the KNIME Hub Item Version has changed. */
             VERSION_CHANGE,
 
-            /**
-             * Indicates that no changes have been made.
-             */
+            /** Indicates that no changes have been made. */
             NO_CHANGE;
     }
 
@@ -110,43 +102,36 @@ public class BulkChangeMetaNodeLinksAction extends AbstractNodeAction {
         super(editor);
     }
 
-    /** {@inheritDoc} */
     @Override
     public String getId() {
         return ID;
     }
 
-    /** {@inheritDoc} */
     @Override
     public String getText() {
         return "Change Links...\t" + getHotkey("knime.commands.bulkChangeMetaNodeLinks");
     }
 
-    /** {@inheritDoc} */
     @Override
     public String getToolTipText() {
         return "";
     }
 
-    /** {@inheritDoc} */
     @Override
     public ImageDescriptor getImageDescriptor() {
         return ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "icons/meta/metanode_link_change.png");
     }
 
-    /** {@inheritDoc} */
     @Override
     protected <T extends EditPart> T[] getSelectedParts(final Class<T> editPartClass) {
         return getAllParts(editPartClass);
     }
 
-    /** {@inheritDoc} */
     @Override
     public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
         throw new IllegalStateException("Not to be called");
     }
 
-    /** {@inheritDoc} */
     @Override
     protected boolean internalCalculateEnabled() {
         if (getManager().isWriteProtected()) {
@@ -155,11 +140,9 @@ public class BulkChangeMetaNodeLinksAction extends AbstractNodeAction {
         return !getMetaNodesToCheck().isEmpty();
     }
 
-    /** {@inheritDoc} */
     @Override
     public void runInSWT() {
         var shell = SWTUtilities.getActiveShell();
-        var metaNodeList = getMetaNodesToCheck();
         var manager = getEditor().getWorkflowManager().orElse(null);
         if (manager == null) {
             MessageDialog.openInformation(shell, "Changing links",
@@ -167,6 +150,7 @@ public class BulkChangeMetaNodeLinksAction extends AbstractNodeAction {
             return;
         }
 
+        var metaNodeList = getMetaNodesToCheck();
         final var dialog = new BulkChangeMetaNodeLinksDialog(shell, metaNodeList, manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
@@ -175,24 +159,15 @@ public class BulkChangeMetaNodeLinksAction extends AbstractNodeAction {
 
         BulkChangeMetaNodeLinksCommand changeCommand = null;
         var selectedMetaNodes = dialog.getNCsToChange();
-        switch (dialog.getLinkChangeAction()) {
-            case TYPE_CHANGE:
-                changeCommand =
-                    new BulkChangeMetaNodeLinksCommand(getManager(), LinkChangeAction.TYPE_CHANGE, selectedMetaNodes);
-                changeCommand.setLinkType(dialog.getLinkType());
-                break;
-            case VERSION_CHANGE, URI_CHANGE: // same as URI change, the new URI will have the item version set as query parameter
-                changeCommand =
-                    new BulkChangeMetaNodeLinksCommand(getManager(), LinkChangeAction.URI_CHANGE, selectedMetaNodes);
-                changeCommand.setURI(dialog.getURI());
-                break;
-            case NO_CHANGE:
-                LOGGER.warn("No link properties will be changed");
-                selectedMetaNodes = Collections.emptyList();
-                break;
-            default:
-                throw new IllegalStateException("Cannot change metanode links: unknown link change action");
+        final var action = dialog.getLinkChangeAction();
+        if (action == LinkChangeAction.NO_CHANGE) {
+            LOGGER.warn("No link properties will be changed");
+            selectedMetaNodes = Collections.emptyList();
+        } else {
+            changeCommand = new BulkChangeMetaNodeLinksCommand(getManager(), selectedMetaNodes,
+                dialog.getURI(), action != LinkChangeAction.TYPE_CHANGE);
         }
+
         if (selectedMetaNodes.isEmpty()) {
             MessageDialog.openInformation(shell, "Change Links", "No link properties have been changed");
         } else {
@@ -259,8 +234,7 @@ public class BulkChangeMetaNodeLinksAction extends AbstractNodeAction {
     private static List<NodeContainerTemplate> getNCTemplatesToCheck(final NodeContainerTemplate template) {
         List<NodeContainerTemplate> list = new ArrayList<>();
         for (NodeContainer nc : template.getNodeContainers()) {
-            if (nc instanceof NodeContainerTemplate) {
-                NodeContainerTemplate tnc = (NodeContainerTemplate)nc;
+            if (nc instanceof NodeContainerTemplate tnc) {
                 if (tnc.getTemplateInformation().getRole() == Role.Link) {
                     list.add(tnc);
                 } else {

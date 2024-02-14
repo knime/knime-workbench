@@ -51,6 +51,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -73,12 +74,12 @@ import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.hub.NamedItemVersion;
 import org.knime.core.util.pathresolve.SpaceVersion;
 import org.knime.core.util.pathresolve.URIToFileResolve;
+import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
-import org.knime.workbench.explorer.urlresolve.URLResolverUtil;
 
 /**
  *
@@ -140,7 +141,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
             }
             return s.toLocalFile(EFS.NONE, monitor);
         } catch (Exception e) {
-            throw new ResourceAccessException("Can't resolve knime URI \"" + uri + "\" to file", e);
+            throw new ResourceAccessException("Can't resolve KNIME URL \"" + uri + "\" to local file or folder", e);
         }
     }
 
@@ -182,8 +183,8 @@ public class URIToFileResolveImpl implements URIToFileResolve {
             AbstractExplorerFileStore fs = ExplorerFileSystem.INSTANCE.getStore(uri);
             if (fs instanceof LocalExplorerFileStore) {
                 return resolveStandardUri(uri, monitor);
-            } else if (fs instanceof RemoteExplorerFileStore) {
-                return fetchRemoteFileStore((RemoteExplorerFileStore)fs, monitor, ifModifiedSince);
+            } else if (fs instanceof RemoteExplorerFileStore remoteStore) {
+                return fetchRemoteFileStore(remoteStore, monitor, ifModifiedSince);
             } else {
                 throw new ResourceAccessException("Unsupported file store type: " + fs.getClass());
             }
@@ -288,37 +289,35 @@ public class URIToFileResolveImpl implements URIToFileResolve {
             && ExplorerURLStreamHandler.NODE_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isSpaceRelative(final URI uri) {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
                 && ExplorerURLStreamHandler.SPACE_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<KNIMEURIDescription> toDescription(final URI uri, final IProgressMonitor monitor) {
         if (uri.getScheme().equals("file")) {
-            final var file = new File(uri);
-            return Optional.of(new KNIMEURIDescription(uri.getHost(), file.getAbsolutePath(), file.getName()));
+            try {
+                final var file = FileUtil.getFileFromURL(uri.toURL());
+                return Optional.of(new KNIMEURIDescription(uri.getHost(), file.getAbsolutePath(), file.getName()));
+            } catch (final MalformedURLException e) {
+                return Optional.empty();
+            }
         }
 
-        var filestore = ExplorerFileSystem.INSTANCE.getStore(uri);
-        if (filestore == null) {
+        final var fileStore = ExplorerFileSystem.INSTANCE.getStore(uri);
+        if (fileStore == null) {
             return Optional.empty();
         }
 
-        final var mountId = filestore.getMountID();
-        final var info = filestore.fetchInfo();
+        final var info = fileStore.fetchInfo();
         if (!info.exists()) {
             return Optional.empty();
         }
 
-        var path = StringUtils.substringAfterLast(filestore.getMountIDWithFullPath(), ":");
+        final var mountId = fileStore.getMountID();
+        var path = StringUtils.substringAfterLast(fileStore.getMountIDWithFullPath(), ":");
         return Optional.of(new KNIMEURIDescription(mountId, path, info.getName()));
     }
 
@@ -329,8 +328,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         }
 
         var s = ExplorerFileSystem.INSTANCE.getStore(uri);
-        if (s instanceof RemoteExplorerFileStore) {
-            var remoteFileStore = (RemoteExplorerFileStore)s;
+        if (s instanceof RemoteExplorerFileStore remoteFileStore) {
             return Optional.of(remoteFileStore.getSpaceVersions());
         }
         return Optional.empty();

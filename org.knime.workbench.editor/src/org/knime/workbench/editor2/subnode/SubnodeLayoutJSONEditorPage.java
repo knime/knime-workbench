@@ -787,16 +787,14 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
                 for (final JSONLayoutColumn col : row.getColumns()) {
                     if (col.getContent() != null) {
                         col.getContent().stream().forEach(content -> {
-                            if (content instanceof JSONLayoutConfigurationContent) {
+                            if (content instanceof JSONLayoutConfigurationContent jlcc) {
                                 if (allNodes.containsKey(
-                                    NodeIDSuffix.fromString(((JSONLayoutConfigurationContent)content).getNodeID()))) {
+                                    NodeIDSuffix.fromString(jlcc.getNodeID()))) {
                                     cleanedColumns.add(col);
                                 }
-                            } else if (content instanceof JSONNestedLayout) {
-                                if (allNodes
-                                    .containsKey(NodeIDSuffix.fromString(((JSONNestedLayout)content).getNodeID()))) {
-                                    cleanedColumns.add(col);
-                                }
+                            } else if (content instanceof JSONNestedLayout jnl
+                                    && allNodes.containsKey(NodeIDSuffix.fromString(jnl.getNodeID()))) {
+                                cleanedColumns.add(col);
                             }
                         });
                     }

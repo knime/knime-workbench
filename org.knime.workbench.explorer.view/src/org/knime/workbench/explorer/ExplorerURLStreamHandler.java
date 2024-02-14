@@ -80,9 +80,9 @@ import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.proxy.GlobalProxyConfigProvider;
 import org.knime.core.util.proxy.ProxyProtocol;
 import org.knime.core.util.proxy.URLConnectionFactory;
+import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
-import org.knime.workbench.explorer.urlresolve.KnimeUrlResolver;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.url.AbstractURLStreamHandlerService;
@@ -225,8 +225,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
             getRemoteRepositoryAddress(workflowContext).ifPresent(u -> m_requestModifier.modifyRequest(u, conn));
 
-            if (conn instanceof HttpsURLConnection) {
-                ((HttpsURLConnection)conn).setHostnameVerifier(KNIMEServerHostnameVerifier.getInstance());
+            if (conn instanceof HttpsURLConnection httpsConnection) {
+                httpsConnection.setHostnameVerifier(KNIMEServerHostnameVerifier.getInstance());
             }
             return conn;
         } else {
@@ -250,21 +250,32 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
         final var nodeContext = Optional.ofNullable(NodeContext.getContext());
         final var wfmUI = nodeContext.flatMap(ctx -> ctx.getContextObjectForClass(WorkflowManagerUI.class));
-        final var workflowContext = wfmUI.map(WorkflowManagerUI::getContext).orElse(null);
+        final var workflowContextUI = wfmUI.map(WorkflowManagerUI::getContext).orElse(null);
         if (urlType.isRelative()) {
             if (nodeContext.isEmpty()) {
                 throw new ResourceAccessException("No context for relative URL available");
-            } else if (workflowContext == null) {
+            } else if (workflowContextUI == null) {
                 throw new ResourceAccessException("Workflow " + wfmUI + " does not have a context");
             }
         }
 
-        return KnimeUrlResolver.getResolver(workflowContext).resolve(url);
+        final KnimeUrlResolver resolver;
+        if (workflowContextUI instanceof RemoteWorkflowContext remoteCtx) {
+            final var mountpointURI = remoteCtx.getMountpointURI();
+            final var contextV2 = remoteCtx.getWorkflowContextV2().orElse(null);
+            resolver = KnimeUrlResolver.getRemoteWorkflowResolver(mountpointURI, contextV2);
+        } else {
+            final var contextV2 = workflowContextUI == null ? null
+                : Wrapper.unwrap(workflowContextUI, WorkflowContextV2.class);
+            resolver = KnimeUrlResolver.getResolver(contextV2);
+        }
+
+        return resolver.resolve(url);
     }
 
     private static Optional<URI> getRemoteRepositoryAddress(final WorkflowContextUI workflowContext) {
-        if (workflowContext instanceof RemoteWorkflowContext) {
-            return Optional.of(((RemoteWorkflowContext) workflowContext).getRepositoryAddress());
+        if (workflowContext instanceof RemoteWorkflowContext remoteCtx) {
+            return Optional.of(remoteCtx.getRepositoryAddress());
         } else {
             return Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
                     .filter(ctx -> ctx.getExecutorInfo() instanceof JobExecutorInfo)
@@ -274,8 +285,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     }
 
     private static Optional<Authenticator> getServerAuthenticator(final WorkflowContextUI workflowContext) {
-        if (workflowContext instanceof RemoteWorkflowContext) {
-            return Optional.of(((RemoteWorkflowContext) workflowContext).getServerAuthenticator());
+        if (workflowContext instanceof RemoteWorkflowContext remoteCtx) {
+            return Optional.of(remoteCtx.getServerAuthenticator());
         } else {
             return Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
                     .filter(ctx -> ctx.getExecutorInfo() instanceof JobExecutorInfo)

@@ -51,12 +51,14 @@ package org.knime.workbench.editor2.actions;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -85,6 +87,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.TemplateType;
 import org.knime.core.node.workflow.NodeContainerTemplate;
 import org.knime.core.node.workflow.NodeContext;
@@ -95,13 +98,16 @@ import org.knime.core.node.workflow.WorkflowLoadHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResult;
 import org.knime.core.ui.util.SWTUtilities;
+import org.knime.core.util.KnimeUrlType;
+import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
+import org.knime.core.util.urlresolve.KnimeUrlResolver;
+import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.core.imports.ImportForbiddenException;
 import org.knime.workbench.core.imports.RepoObjectImport;
 import org.knime.workbench.core.imports.URIImporterFinder;
 import org.knime.workbench.editor2.actions.BulkChangeMetaNodeLinksAction.LinkChangeAction;
-import org.knime.workbench.editor2.commands.BulkChangeMetaNodeLinksCommand;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.dialogs.MessageJobFilter;
 import org.knime.workbench.explorer.dialogs.SpaceResourceSelectionDialog;
@@ -110,16 +116,16 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.AbstractContentProvider.LinkType;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
 /**
  * JFace implementation of a dialog for changing link properties of multiple components or meta nodes at once. Only
- * allows for changing for distinct component/metanode and only allows for either chaning the link type or the link uri.
+ * allows for changing for distinct component/metanode and only allows for either changing the link's type uri.
  *
  * @author Leon Wenzler, KNIME AG, Konstanz, Germany
  */
+@SuppressWarnings("restriction")
 public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(BulkChangeMetaNodeLinksDialog.class);
@@ -133,10 +139,6 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
     private Map<String, URI> m_displayNamesToGroupKeys = new HashMap<>();
 
     private LinkChangeAction m_linkChangeAction = LinkChangeAction.NO_CHANGE;
-
-    private LinkType m_oldLinkType = LinkType.None;
-
-    private LinkType m_selectedLinkType = LinkType.None;
 
     private URI m_oldLinkURI;
 
@@ -210,8 +212,8 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             // The KNIME URI resolving will should changed according to the outcome of AP-19371, so that the
             // returned URI here does not contain an ID but a path.
             final var importObject = URIImporterFinder.getInstance().createEntityImportFor(uri);
-            if (importObject.isPresent() && importObject.get() instanceof RepoObjectImport) {
-                return Optional.of(((RepoObjectImport)importObject.get()).getKnimeURI());
+            if (importObject.isPresent() && importObject.get() instanceof RepoObjectImport repoImport) {
+                return Optional.of(repoImport.getKnimeURI());
             }
         } catch (ImportForbiddenException e) {
             LOGGER.debug("Could not resolve URI \"" + uri + "\" to KNIME URI", e);
@@ -261,13 +263,12 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
                 //   "Foo Bar (knime://KNIME-Community-Hub/*AR8XsII1jufnF0PA)"
                 // be sure to use the real name...:
                 final var componentName = m_metaNodeGroups.get(m_oldLinkURI).get(0).getName();
-                m_oldLinkType = BulkChangeMetaNodeLinksCommand.resolveLinkType(m_oldLinkURI);
 
                 scheduleURIDescriptionJob(m_oldLinkURI, componentName, content.getDisplay());
 
-                // selected properties can be changed multiple times, but will be compared to old ones for change detection
+                // selected properties can be changed multiple times, but will be compared to old ones for
+                // change detection
                 m_selectedLinkURI = m_oldLinkURI;
-                m_selectedLinkType = m_oldLinkType;
                 // only if both group and action has been selected, the button is enabled
                 m_linkChangeButton.setEnabled(m_linkChangeAction != LinkChangeAction.NO_CHANGE);
                 m_uriTextField.setEditable(m_linkChangeAction == LinkChangeAction.URI_CHANGE);
@@ -463,22 +464,73 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
      *
      * @param shell
      */
-    private void openTypeChangeDialog() {
+    private void openTypeChangeDialog() { // NOSONAR
+        final var optRepresentative = getRepresentativeFromSelected();
+        if (optRepresentative.isEmpty()) {
+            return;
+        }
+
+        final var representative = optRepresentative.get();
+        boolean isComponent;
+        final MetaNodeTemplateInformation templateInfo;
+        final WorkflowManager workflowManager;
+        if (representative instanceof SubNodeContainer snc) {
+            isComponent = true;
+            templateInfo = snc.getTemplateInformation();
+            workflowManager = snc.getWorkflowManager();
+        } else if (representative instanceof WorkflowManager metanode) {
+            isComponent = false;
+            templateInfo = metanode.getTemplateInformation();
+            workflowManager = metanode;
+        } else {
+            // TODO what's going on here?
+            return;
+        }
+
+
+        final var templateUri = templateInfo.getSourceURI();
+        final var optLinkType = KnimeUrlType.getType(templateUri);
+        if (optLinkType.isEmpty()) {
+            return;
+        }
+
+        final var context = Optional.of(workflowManager) //
+                .map(wfm -> wfm.getProjectComponent().map(SubNodeContainer::getWorkflowManager) //
+                    .orElse(wfm.getProjectWFM())) //
+                .map(WorkflowManager::getContextV2) //
+                .orElseThrow(() -> new IllegalStateException("Could not find workflow context for " + representative));
+
+        final Map<KnimeUrlType, URL> urls;
+        try {
+            urls = KnimeUrlResolver.getResolver(context).changeLinkType(URLResolverUtil.toURL(templateUri));
+        } catch (ResourceAccessException e) {
+            LOGGER.debug(
+                () -> "Cannot compute alternative KNIME URL types for '" + templateUri + "': " + e.getMessage(), e);
+            return;
+        }
+
+        if (urls.size() <= (urls.containsKey(optLinkType.get()) ? 1 : 0)) {
+            // there are no other options available
+            return;
+        }
+
+        var message = "Please select a new link type for the " + (isComponent ? "component" : "metanode") + "s.";
+        final var currentType = m_selectedLinkURI == null ? null : KnimeUrlType.getType(m_selectedLinkURI).orElse(null);
         final var shell = SWTUtilities.getActiveShell();
-        var message =
-            "Please select a new link type for the " + (isSelectedSubNode() ? "component" : "metanode") + "s.";
-        if (isSelectedSubNode()) {
-            final var prompt = new ChangeSubNodeLinkAction.LinkPrompt(shell, message, m_selectedLinkType);
-            if (prompt.open() != Window.OK) {
-                return;
+        final var prompt = new ChangeSubNodeLinkAction.LinkPrompt(shell, message, urls, currentType);
+        if (prompt.open() != Window.OK) {
+            return;
+        }
+
+        final var newType = prompt.getLinkType();
+        if (newType != currentType) {
+            try {
+                m_selectedLinkURI = urls.get(newType).toURI();
+                m_uriTextField.setText(m_selectedLinkURI.toString());
+                m_uriInputViaText = false;
+            } catch (URISyntaxException e) {
+                LOGGER.debug("Could not convert KNIME URL to URI: " + e.getMessage(), e);
             }
-            m_selectedLinkType = prompt.getLinkType();
-        } else if (isSelectedMetaNode()) {
-            final var prompt = new ChangeMetaNodeLinkAction.LinkPrompt(shell, message, m_selectedLinkType);
-            if (prompt.open() != Window.OK) {
-                return;
-            }
-            m_selectedLinkType = prompt.getLinkType();
         }
     }
 
@@ -492,7 +544,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         List<String> validMountPointList = new ArrayList<>();
         for (Map.Entry<String, AbstractContentProvider> entry : ExplorerMountTable.getMountedContent().entrySet()) {
             AbstractContentProvider contentProvider = entry.getValue();
-            if (contentProvider.isWritable() && contentProvider.canHostMetaNodeTemplates()) {
+            if (contentProvider.canHostComponentTemplates() || contentProvider.canHostMetaNodeTemplates()) {
                 validMountPointList.add(entry.getKey());
             }
         }
@@ -516,13 +568,13 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
      * Opens the dialog for changing the KNIME Hub item Version for the linked component.
      */
     private void openVersionChangeDialog() {
-        final var shell = SWTUtilities.getActiveShell();
         final Optional<NodeContainerTemplate> representative = getRepresentativeFromSelected();
         if (representative.isEmpty()) {
             return;
         }
         final var componentRepresentative = (SubNodeContainer)representative.get();
 
+        final var shell = SWTUtilities.getActiveShell();
         var dialog = new ChangeComponentHubVersionDialog(shell, componentRepresentative, m_manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
@@ -617,22 +669,11 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
      * @return link change action
      */
     public LinkChangeAction getLinkChangeAction() {
-        if (m_linkChangeAction == LinkChangeAction.TYPE_CHANGE && m_selectedLinkType == m_oldLinkType) {
-            return LinkChangeAction.NO_CHANGE;
-        }
-        if (m_linkChangeAction == LinkChangeAction.URI_CHANGE && m_selectedLinkURI.equals(m_oldLinkURI)) {
+        if ((m_linkChangeAction == LinkChangeAction.URI_CHANGE || m_linkChangeAction == LinkChangeAction.TYPE_CHANGE)
+                && m_selectedLinkURI.equals(m_oldLinkURI)) {
             return LinkChangeAction.NO_CHANGE;
         }
         return m_linkChangeAction;
-    }
-
-    /**
-     * Retrieves the potentially newly set link type.
-     *
-     * @return String link type
-     */
-    public LinkType getLinkType() {
-        return m_selectedLinkType;
     }
 
     /**
@@ -670,7 +711,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
                             || (templateType == TemplateType.MetaNode && info.isMetaNodeTemplate())) {
                         return null;
                     }
-                    return "Only " + templateName.toLowerCase() + " templates can be selected as target.";
+                    return "Only " + templateName.toLowerCase(Locale.ROOT) + " templates can be selected as target.";
                 }
             });
             setFilter(new MessageJobFilter());
