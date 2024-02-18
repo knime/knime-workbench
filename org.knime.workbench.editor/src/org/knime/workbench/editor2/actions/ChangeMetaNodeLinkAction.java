@@ -47,13 +47,11 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Map;
 import java.util.Optional;
 
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.window.Window;
 import org.eclipse.swt.widgets.Shell;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
@@ -185,25 +183,11 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
             + "(current type: " + linkTypeName + ", current link: " + linkUrl + ")\n"
             + "The origin of the template will not be changed - just the way it is referenced.";
 
-        final var options = validated.getSecond();
-        final var dialog = new LinkPrompt(getEditor().getSite().getShell(), message, options, linkType);
-        dialog.open();
-        if (dialog.getReturnCode() == Window.CANCEL) {
-            return;
-        }
-
-        var newLinkType = dialog.getLinkType();
-        if (linkType == newLinkType) {
-            LOGGER.info("Link type not changes as selected type equals existing type " + linkUrl);
-            return;
-        }
-
-        final var newUrl = options.get(newLinkType);
-        try {
-            var cmd = new ChangeMetaNodeLinkCommand(metaNode.getParent(), metaNode, linkUrl, newUrl.toURI());
-            getCommandStack().execute(cmd);
-        } catch (final URISyntaxException e) {
-            LOGGER.debug(() -> "Cannot convert KNIME URL'" + newUrl + "' to URI: " + e.getMessage(), e);
+        final var newUri = ChangeSubNodeLinkAction.showDialogAndGetUri(getEditor().getSite().getShell(), linkUrl,
+            linkType, message, validated.getSecond());
+        if (newUri.isPresent()) {
+            final var command = new ChangeMetaNodeLinkCommand(metaNode.getParent(), metaNode, linkUrl, newUri.get());
+            getCommandStack().execute(command);
         }
     }
 

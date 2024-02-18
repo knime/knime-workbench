@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.editor2.actions;
 
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
@@ -74,7 +75,6 @@ import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.KnimeUrlType;
-import org.knime.core.util.Pair;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.core.util.urlresolve.URLResolverUtil;
@@ -130,11 +130,13 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
      */
     @Override
     protected boolean internalCalculateEnabled() {
-        return getSubnodeAndURLsIfValid(getSelectedParts(NodeContainerEditPart.class)).isPresent();
+        return extractLinkedComponent(getSelectedParts(NodeContainerEditPart.class)) //
+                .flatMap(ChangeSubNodeLinkAction::getURLsIfValid) //
+                .isPresent();
     }
 
-    private static Optional<Pair<SubNodeContainer, Map<KnimeUrlType, URL>>>
-            getSubnodeAndURLsIfValid(final NodeContainerEditPart[] nodes) { //NOSONAR too many returns
+
+    static Optional<SubNodeContainer> extractLinkedComponent(final NodeContainerEditPart[] nodes) {
         if (nodes.length != 1) {
             return Optional.empty();
         }
@@ -149,6 +151,17 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
             return Optional.empty();
         }
 
+        return Optional.of(subNode);
+    }
+
+    /**
+     *
+     * @param subNode
+     * @return
+     */
+    public static Optional<Map<KnimeUrlType, URL>> getURLsIfValid(final SubNodeContainer subNode) {
+
+        final var templateInfo = subNode.getTemplateInformation();
         final var templateUri = templateInfo.getSourceURI();
         final var optLinkType = KnimeUrlType.getType(templateUri);
         if (optLinkType.isEmpty()) {
@@ -166,7 +179,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
             final var urls = KnimeUrlResolver.getResolver(context).changeLinkType(URLResolverUtil.toURL(templateUri));
             if (urls.size() > (urls.containsKey(linkType) ? 1 : 0)) {
                 // there are other options available
-                return Optional.of(Pair.create(subNode, urls));
+                return Optional.of(urls);
             }
         } catch (ResourceAccessException e) {
             LOGGER.debug(() -> "Cannot compute alternative KNIME URL types for '"
@@ -192,10 +205,10 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
             return;
         }
 
-        final var validated = getSubnodeAndURLsIfValid(nodeParts) //
+        final var subNode = extractLinkedComponent(nodeParts) //
+                .orElseThrow(() -> new IllegalStateException("Current selection is not a linked component."));
+        final var changeOptions = getURLsIfValid(subNode) //
                 .orElseThrow(() -> new IllegalStateException("Can't change link type of the current selection."));
-
-        final var subNode = validated.getFirst();
 
         final var linkUrl = subNode.getTemplateInformation().getSourceURI();
         final var linkType = KnimeUrlType.getType(linkUrl).orElseThrow();
@@ -204,25 +217,43 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
             + getLinkTypeName(linkType) + ", current link: " + linkUrl + ")\n"
             + "The origin of the component will not be changed - just the way it is referenced.";
 
-        final var options = validated.getSecond();
-        final var dialog = new LinkPrompt(getEditor().getSite().getShell(), message, options, linkType);
+        final var newUri = showDialogAndGetUri(getEditor().getSite().getShell(), linkUrl, linkType, message,
+            changeOptions);
+        if (newUri.isPresent()) {
+            final var cmd = new ChangeSubNodeLinkCommand(subNode.getParent(), subNode, linkUrl, newUri.get());
+            getCommandStack().execute(cmd);
+        }
+    }
+
+    /**
+     *
+     * @param shell
+     * @param linkUrl
+     * @param linkType
+     * @param message
+     * @param options
+     * @return
+     */
+    public static Optional<URI> showDialogAndGetUri(final Shell shell, final URI linkUrl, final KnimeUrlType linkType,
+            final String message, final Map<KnimeUrlType, URL> options) {
+        final var dialog = new LinkPrompt(shell, message, options, linkType);
         dialog.open();
         if (dialog.getReturnCode() == Window.CANCEL) {
-            return;
+            return Optional.empty();
         }
 
         var newLinkType = dialog.getLinkType();
         if (linkType == newLinkType) {
-            LOGGER.info("Link type not changes as selected type equals existing type " + linkUrl);
-            return;
+            LOGGER.info("Link type not changed as selected type equals existing type " + linkUrl);
+            return Optional.empty();
         }
 
         final var newUrl = options.get(newLinkType);
         try {
-            var cmd = new ChangeSubNodeLinkCommand(subNode.getParent(), subNode, linkUrl, newUrl.toURI());
-            getCommandStack().execute(cmd);
+            return Optional.of(newUrl.toURI());
         } catch (final URISyntaxException e) {
             LOGGER.debug(() -> "Cannot convert KNIME URL'" + newUrl + "' to URI: " + e.getMessage(), e);
+            return Optional.empty();
         }
     }
 
