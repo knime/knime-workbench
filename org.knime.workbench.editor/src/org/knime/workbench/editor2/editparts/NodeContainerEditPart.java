@@ -105,6 +105,7 @@ import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.SWTException;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.widgets.Display;
@@ -235,6 +236,8 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
         } catch (IOException e) {
             //should never happen
             LOGGER.error("Problem while closing icon input stream", e);
+        } catch (SWTException e) {
+            LOGGER.debug("Cannot load icon for node %s: %s".formatted(nodeContainer.getNameWithID(), e));
         }
 
         if (icon == null) {
