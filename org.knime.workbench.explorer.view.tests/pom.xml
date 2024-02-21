@@ -32,6 +32,14 @@
 					</dependency-resolution>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-surefire-plugin</artifactId>
+				<version>${tycho.version}</version>
+				<configuration>
+					<argLine>${failsafeArgLine} --add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED</argLine>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 </project>
