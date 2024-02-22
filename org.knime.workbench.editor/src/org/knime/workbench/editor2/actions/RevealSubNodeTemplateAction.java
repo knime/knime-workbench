@@ -51,20 +51,26 @@ package org.knime.workbench.editor2.actions;
 import static org.knime.core.ui.wrapper.Wrapper.unwrap;
 import static org.knime.core.ui.wrapper.Wrapper.wraps;
 
+import java.net.URI;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Optional;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.StructuredSelection;
-import org.eclipse.ui.IViewReference;
+import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.NodeContext;
-import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.UI;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.util.KnimeUrlType;
+import org.knime.core.util.exception.ResourceAccessException;
+import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -77,8 +83,11 @@ import org.knime.workbench.explorer.view.ExplorerView;
 
 /**
  * Action to reveal the template of a linked sub node.
+ *
  * @author Dominik Morent, KNIME AG, Zurich, Switzerland
+ * @author Leonard Wörteler, KNIME GmbH, Konstanz, Germany
  */
+@SuppressWarnings("restriction")
 public class RevealSubNodeTemplateAction extends AbstractNodeAction {
     /** Action ID. */
     public static final String ID = "knime.action.sub_node_reveal_template";
@@ -89,59 +98,52 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
         super(editor);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String getId() {
         return ID;
     }
 
-    /**
-     *
-     * {@inheritDoc}
-     */
     @Override
     public String getText() {
         return "Select in Explorer";
     }
 
-    /**
-     *
-     * {@inheritDoc}
-     */
     @Override
     public String getToolTipText() {
         return "Selects the shared component in the KNIME explorer";
     }
 
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public ImageDescriptor getImageDescriptor() {
         return ImageRepository.getIconDescriptor(KNIMEEditorPlugin.PLUGIN_ID, "icons/meta/metanode_link_reveal.png");
     }
 
-    /**
-     * @return true, if underlying model instance of
-     *         <code>WorkflowManager</code>, otherwise false
-     */
     @Override
     protected boolean internalCalculateEnabled() {
-        NodeContainerEditPart[] nodes = getSelectedParts(NodeContainerEditPart.class);
+        final var nodes = getSelectedParts(NodeContainerEditPart.class);
         if (nodes == null) {
             return false;
         }
-        for (NodeContainerEditPart p : nodes) {
-            Object model = p.getModel();
+
+        final var resolver = getEditor().getRootEditor().getWorkflowManager() //
+                .map(WorkflowManager::getContextV2) //
+                .map(KnimeUrlResolver::getResolver) //
+                .orElse(null);
+
+        for (final var p : nodes) {
+            final var model = p.getModel();
             if (wraps(model, SubNodeContainer.class)) {
-                SubNodeContainer snc = unwrap((UI)model, SubNodeContainer.class);
-                var templateInfo = snc.getTemplateInformation();
-                var host = templateInfo.getSourceURI() != null ? templateInfo.getSourceURI().getHost() : null;
-                var provider = ExplorerMountTable.getMountedContent().get(host);
-                if (templateInfo.getRole() == Role.Link && provider != null) {
+                final var templateInfo = unwrap((UI)model, SubNodeContainer.class).getTemplateInformation();
+                if (templateInfo.getRole() != Role.Link) {
+                    continue;
+                }
+
+                if (getAbsoluteKnimeUri(resolver, templateInfo) //
+                        .map(URI::getHost) //
+                        .filter(ExplorerMountTable.getMountedContent()::containsKey) //
+                        .isPresent()) {
+                    // the URL references a known mountpoint
                     return true;
                 }
             }
@@ -149,47 +151,60 @@ public class RevealSubNodeTemplateAction extends AbstractNodeAction {
         return false;
     }
 
-    /** {@inheritDoc} */
     @Override
-    public void runOnNodes(final NodeContainerEditPart[] nodes) {
-        List<NodeID> candidateList = new ArrayList<NodeID>();
-        List<AbstractExplorerFileStore> templates
-                = new ArrayList<AbstractExplorerFileStore>();
-        for (NodeContainerEditPart p : nodes) {
-            Object model = p.getModel();
-            if (wraps(model, SubNodeContainer.class)) {
-                NodeContext.pushContext(Wrapper.unwrapNC(p.getNodeContainer()));
-                try {
-                    SubNodeContainer snc = unwrap((UI)model, SubNodeContainer.class);
-                    MetaNodeTemplateInformation i = snc.getTemplateInformation();
-                    if (Role.Link.equals(i.getRole())) {
-                        candidateList.add(snc.getID());
-                        AbstractExplorerFileStore template = ExplorerFileSystem.INSTANCE.getStore(i.getSourceURI());
-                        if (template != null) {
-                            templates.add(template);
-                        }
-                    }
-                } finally {
-                    NodeContext.removeLastContext();
-                }
-            }
-        }
-        List<Object> treeObjects
-                = ContentDelegator.getTreeObjectList(templates);
-        if (treeObjects != null && treeObjects.size() > 0) {
-            IViewReference[] views = PlatformUI.getWorkbench()
-                .getActiveWorkbenchWindow().getActivePage().getViewReferences();
+    public void runOnNodes(final NodeContainerEditPart[] nodes) { // NOSONAR
+        final var resolver = getEditor().getRootEditor().getWorkflowManager() //
+                .map(WorkflowManager::getContextV2) //
+                .map(KnimeUrlResolver::getResolver) //
+                .orElse(null);
 
-            for (IViewReference view : views) {
-                if (ExplorerView.ID.equals(view.getId())) {
-                    ExplorerView explorerView
-                            = (ExplorerView)view.getView(true);
-                   explorerView.getViewer().setSelection(
-                           new StructuredSelection(treeObjects), true);
-                }
+        final var templates = new ArrayList<AbstractExplorerFileStore>();
+        for (final var p : nodes) { // NOSONAR
+            final var model = p.getModel();
+            if (!wraps(model, SubNodeContainer.class)) {
+                continue;
+            }
+
+            NodeContext.pushContext(Wrapper.unwrapNC(p.getNodeContainer()));
+            try {
+                Optional.of(unwrap((UI)model, SubNodeContainer.class)) //
+                    .map(SubNodeContainer::getTemplateInformation) //
+                    .filter(templateInfo -> templateInfo.getRole() == Role.Link)
+                    .flatMap(templateInfo -> getAbsoluteKnimeUri(resolver, templateInfo)) //
+                    .map(ExplorerFileSystem.INSTANCE::getStore) //
+                    .ifPresent(templates::add);
+            } finally {
+                NodeContext.removeLastContext();
             }
         }
 
+        final var selection = Optional.ofNullable(ContentDelegator.getTreeObjectList(templates)) //
+            .filter(objs -> !objs.isEmpty()) //
+            .map(StructuredSelection::new) //
+            .orElse(null);
+
+        if (selection != null) {
+            Optional.ofNullable(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage()) //
+                .map(IWorkbenchPage::getViewReferences) //
+                .flatMap(refs -> Arrays.stream(refs).filter(ref -> ExplorerView.ID.equals(ref.getId())).findAny()) //
+                .ifPresent(viewRef -> ((ExplorerView)viewRef.getView(true)).getViewer().setSelection(selection, true));
+        }
+    }
+
+    private static Optional<URI> getAbsoluteKnimeUri(final KnimeUrlResolver resolver,
+            final MetaNodeTemplateInformation templateInfo) {
+        var sourceURI = templateInfo.getSourceURI();
+        if (resolver != null) {
+            try {
+                sourceURI = resolver.resolveToAbsolute(sourceURI).orElse(sourceURI);
+            } catch (final ResourceAccessException e) {
+                NodeLogger.getLogger(RevealSubNodeTemplateAction.class) //
+                    .debug(() -> "Cannot resolve source URI '" + templateInfo.getSourceURI()
+                        + "' to absolute: " + e.getMessage(), e);
+            }
+        }
+        return KnimeUrlType.getType(sourceURI).orElse(null) == KnimeUrlType.MOUNTPOINT_ABSOLUTE
+                ? Optional.of(sourceURI) : Optional.empty();
     }
 
 }

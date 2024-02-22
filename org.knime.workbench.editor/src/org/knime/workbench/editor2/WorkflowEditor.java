@@ -1166,6 +1166,19 @@ public class WorkflowEditor extends GraphicalEditor implements
     }
 
     /**
+     * Returns the root editor.
+     *
+     * @return the editor one ends up at when following the chain of parent editors to the end
+     */
+    public WorkflowEditor getRootEditor() {
+        var editor = this;
+        while (editor.m_parentEditor != null) {
+            editor = editor.m_parentEditor;
+        }
+        return editor;
+    }
+
+    /**
      * Sets the editor input, that is, the file that contains the serialized
      * workflow manager.
      *
