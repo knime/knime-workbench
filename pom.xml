@@ -108,6 +108,21 @@
 			<layout>p2</layout>
 			<url>${knime.gateway.p2}</url>
 		</repository>
+		<repository>
+			<id>p2-knime-database</id>
+			<layout>p2</layout>
+			<url>${knime.database.p2}</url>
+		</repository>
+		<repository>
+			<id>p2-knime-filehandling</id>
+			<layout>p2</layout>
+			<url>${knime.filehandling.p2}</url>
+		</repository>
+		<repository>
+			<id>p2-knime-kerberos</id>
+			<layout>p2</layout>
+			<url>${knime.kerberos.p2}</url>
+		</repository>
 	</repositories>
 	<build>
 		<plugins>
