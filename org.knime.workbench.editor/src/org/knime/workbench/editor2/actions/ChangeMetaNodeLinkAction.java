@@ -183,23 +183,19 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
             + "(current type: " + linkTypeName + ", current link: " + linkUrl + ")\n"
             + "The origin of the template will not be changed - just the way it is referenced.";
 
-        final var newUri = ChangeSubNodeLinkAction.showDialogAndGetUri(getEditor().getSite().getShell(), linkUrl,
-            linkType, message, validated.getSecond());
+        final var options = validated.getSecond();
+        final var dialog = new LinkPrompt(getEditor().getSite().getShell(), message, options, linkType);
+        final var newUri = ChangeSubNodeLinkAction.showDialogAndGetUri(dialog, linkUrl, linkType, options);
         if (newUri.isPresent()) {
-            final var command = new ChangeMetaNodeLinkCommand(metaNode.getParent(), metaNode, linkUrl, newUri.get());
+            final var command = new ChangeMetaNodeLinkCommand(metaNode.getParent(), metaNode,
+                linkUrl, null, newUri.get(), null);
             getCommandStack().execute(command);
         }
     }
 
-    static class LinkPrompt extends ChangeSubNodeLinkAction.LinkPrompt {
+    private static class LinkPrompt extends ChangeSubNodeLinkAction.LinkPrompt {
 
-        /**
-         * @param parentShell
-         * @param messageText
-         * @param options
-         * @param preSelect
-         */
-        public LinkPrompt(final Shell parentShell, final String messageText, final Map<KnimeUrlType, URL> options,
+        LinkPrompt(final Shell parentShell, final String messageText, final Map<KnimeUrlType, URL> options,
             final KnimeUrlType preSelect) {
             super(parentShell, messageText, options, preSelect);
         }

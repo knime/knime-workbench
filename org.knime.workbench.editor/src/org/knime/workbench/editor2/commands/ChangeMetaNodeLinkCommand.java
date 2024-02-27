@@ -48,100 +48,55 @@
 package org.knime.workbench.editor2.commands;
 
 import java.net.URI;
+import java.time.Instant;
 
+import org.apache.commons.lang3.Functions;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
-import org.knime.core.node.workflow.NodeContainer;
-import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
 
 /**
  * GEF Command for changing the link (back to its template) of a metanode.
  *
  * @author Peter Ohl, KNIME AG, Zurich, Switzerland
+ * @author Leonard Wörteler, KNIME GmbH, Konstanz, Germany
  */
-public class ChangeMetaNodeLinkCommand extends AbstractKNIMECommand {
+public class ChangeMetaNodeLinkCommand extends ChangeTemplateLinkCommand {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(ChangeMetaNodeLinkCommand.class);
-    private URI m_oldLink;
-    private URI m_newLink;
-
-    /* must not keep NodeContainer here to enable undo/redo (the node container
-     * instance may change if deleted and the delete is undone. */
-    private final NodeID m_metaNodeID;
 
     /**
-     * @param metaNode whose link to its template is changed
-     * @param flow the manager (project) that contains the metanode
-     * @param oldLink the old link for undo
-     * @param newLink the new link to set
-     *
+     * @param flow parent workflow
+     * @param metaNode metanode to change the link of
+     * @param oldUri old link URI
+     * @param oldLastModified old last-modified timestamp, {@code null} if timestamps should be left alone
+     * @param newUri new link URI
+     * @param newLastModified new last-modified timestamp, {@code null} if timestamps should be left alone
      */
-    public ChangeMetaNodeLinkCommand(final WorkflowManager flow, final WorkflowManager metaNode, final URI oldLink,
-        final URI newLink) {
-        super(flow);
-        m_metaNodeID = metaNode.getID();
-        m_oldLink = oldLink;
-        m_newLink = newLink;
+    public ChangeMetaNodeLinkCommand(final WorkflowManager flow, final WorkflowManager metaNode, final URI oldUri,
+        final Instant oldLastModified, final URI newUri, final Instant newLastModified) {
+        super(flow, metaNode.getID(), oldUri, oldLastModified, newUri, newLastModified);
     }
 
-    /**
-     * Sets the new bounds.
-     *
-     * @see org.eclipse.gef.commands.Command#execute()
-     */
     @Override
-    public void execute() {
-        if (!setLink(m_newLink)) {
-            m_oldLink = null; // disable undo
-        }
-    }
-
-    private boolean setLink(final URI link) {
-        NodeContainer metaNode = getHostWFM().getNodeContainer(m_metaNodeID);
-        if (!(metaNode instanceof WorkflowManager)) {
+    boolean setLink(final Functions.FailableFunction<MetaNodeTemplateInformation, MetaNodeTemplateInformation,
+            InvalidSettingsException> linkModifier) {
+        final var metanode = getHostWFM().findNodeContainer(m_linkedContainerID);
+        if (!(metanode instanceof WorkflowManager)) {
             LOGGER.error("Command failed: Specified node is not a metanode");
             return false;
         }
-        MetaNodeTemplateInformation templateInfo = ((WorkflowManager)metaNode).getTemplateInformation();
+        MetaNodeTemplateInformation templateInfo = ((WorkflowManager)metanode).getTemplateInformation();
         MetaNodeTemplateInformation newInfo;
         try {
-            newInfo = templateInfo.createLinkWithUpdatedSource(link);
+            newInfo = linkModifier.apply(templateInfo);
         } catch (InvalidSettingsException e1) {
             // will not happen.
             LOGGER.error("Command failed: Specified node is not a metanode with a link." + e1.getMessage(), e1);
             return false;
         }
-        getHostWFM().setTemplateInformation(m_metaNodeID, newInfo);
+        getHostWFM().setTemplateInformation(m_linkedContainerID, newInfo);
         return true;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean canUndo() {
-        return m_oldLink != null;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean canExecute() {
-        return m_newLink != null && m_metaNodeID != null;
-    }
-
-    /**
-     * Sets the old bounds.
-     *
-     * @see org.eclipse.gef.commands.Command#execute()
-     */
-    @Override
-    public void undo() {
-        if (!setLink(m_oldLink)) {
-            m_newLink = null;
-        }
     }
 }

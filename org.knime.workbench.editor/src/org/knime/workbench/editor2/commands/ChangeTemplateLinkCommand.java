@@ -41,10 +41,10 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * -------------------------------------------------------------------
+ * ---------------------------------------------------------------------
  *
  * History
- *   16.07.2013 (Peter Ohl): created
+ *   Feb 26, 2024 (leonard.woerteler): created
  */
 package org.knime.workbench.editor2.commands;
 
@@ -53,52 +53,72 @@ import java.time.Instant;
 
 import org.apache.commons.lang3.Functions;
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
-import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
 
 /**
- * GEF Command for changing the link (back to its template) of a sub node.
+ * GEF Command for changing the link (back to its template) of a sub node or metanode.
  *
- * @author Peter Ohl, KNIME AG, Zurich, Switzerland
  * @author Leonard Wörteler, KNIME GmbH, Konstanz, Germany
  */
-public class ChangeSubNodeLinkCommand extends ChangeTemplateLinkCommand {
+abstract class ChangeTemplateLinkCommand extends AbstractKNIMECommand {
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(ChangeSubNodeLinkCommand.class);
+    record Link(URI linkUri, Instant lastModified) {}
+
+    Link m_oldLink;
+    Link m_newLink;
+
+    // must not keep NodeContainer here to enable undo/redo, the node container instance may change if deleted and
+    // the delete is undone
+    final NodeID m_linkedContainerID;
 
     /**
-     * @param flow parent workflow
-     * @param subNode sub node to change the link of
+     * @param hostWFM parent workflow
+     * @param linkedContainerID node ID of the sub node or metanode
      * @param oldUri old link URI
      * @param oldLastModified old last-modified timestamp, {@code null} if timestamps should be left alone
      * @param newUri new link URI
      * @param newLastModified new last-modified timestamp, {@code null} if timestamps should be left alone
      */
-    public ChangeSubNodeLinkCommand(final WorkflowManager flow, final SubNodeContainer subNode, final URI oldUri,
+    ChangeTemplateLinkCommand(final WorkflowManager hostWFM, final NodeID linkedContainerID, final URI oldUri,
         final Instant oldLastModified, final URI newUri, final Instant newLastModified) {
-        super(flow, subNode.getID(), oldUri, oldLastModified, newUri, newLastModified);
+        super(hostWFM);
+        m_linkedContainerID = linkedContainerID;
+        m_oldLink = new Link(oldUri, oldLastModified);
+        m_newLink = new Link(newUri, newLastModified);
+    }
+
+    /**
+     * Set the modified link on the sub node or metanode.
+     *
+     * @param linkModifier function computing the new link information from the old one
+     * @return {@code true} if the link info could be changed, {@code false} otherwise
+     */
+    abstract boolean setLink(final Functions.FailableFunction<MetaNodeTemplateInformation, MetaNodeTemplateInformation,
+        InvalidSettingsException> linkModifier);
+
+    @Override
+    public final void execute() {
+        if (!setLink(info -> info.createLinkWithUpdatedSource(m_newLink.linkUri(), m_newLink.lastModified()))) {
+            m_oldLink = null; // disable undo
+        }
     }
 
     @Override
-    boolean setLink(final Functions.FailableFunction<MetaNodeTemplateInformation, MetaNodeTemplateInformation,
-            InvalidSettingsException> linkModifier) {
-        final var subNode = getHostWFM().findNodeContainer(m_linkedContainerID);
-        if (!(subNode instanceof SubNodeContainer)) {
-            LOGGER.error("Command failed: Specified node is not a Component");
-            return false;
+    public final boolean canUndo() {
+        return m_oldLink != null;
+    }
+
+    @Override
+    public final boolean canExecute() {
+        return m_newLink != null && m_linkedContainerID != null;
+    }
+
+    @Override
+    public final void undo() {
+        if (!setLink(info -> info.createLinkWithUpdatedSource(m_oldLink.linkUri(), m_oldLink.lastModified()))) {
+            m_newLink = null;
         }
-        MetaNodeTemplateInformation templateInfo = ((SubNodeContainer)subNode).getTemplateInformation();
-        MetaNodeTemplateInformation newInfo;
-        try {
-            newInfo = linkModifier.apply(templateInfo);
-        } catch (InvalidSettingsException e1) {
-            // will not happen.
-            LOGGER.error("Command failed: Specified node is not a Component with a link." + e1.getMessage(), e1);
-            return false;
-        }
-        subNode.getParent().setTemplateInformation(m_linkedContainerID, newInfo);
-        return true;
     }
 }

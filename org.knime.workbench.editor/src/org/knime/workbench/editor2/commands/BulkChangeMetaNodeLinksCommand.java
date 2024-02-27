@@ -49,6 +49,7 @@
 package org.knime.workbench.editor2.commands;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 
 import org.eclipse.gef.commands.CompoundCommand;
@@ -154,8 +155,12 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
     private void doLinkURIBulkChange() {
         if (m_templateType == TemplateType.SubNode) {
             for (NodeContainerTemplate template : m_templatesToChange) {
-                var singleChangeCommand =
-                    new ChangeSubNodeLinkCommand(getHostWFM(), (SubNodeContainer)template, m_oldLinkURI, m_newLinkURI);
+                final var snc = (SubNodeContainer)template;
+                final var oldLastModified =
+                        m_askForUpdate ? snc.getTemplateInformation().getTimestampInstant() : null;
+                final var newLastModified = m_askForUpdate ? Instant.EPOCH : null;
+                var singleChangeCommand = new ChangeSubNodeLinkCommand(getHostWFM(), snc, m_oldLinkURI, oldLastModified,
+                    m_newLinkURI, newLastModified);
                 if (singleChangeCommand.canExecute()) {
                     singleChangeCommand.execute();
                     m_commandRegistry.add(singleChangeCommand);
@@ -163,8 +168,12 @@ public class BulkChangeMetaNodeLinksCommand extends AbstractKNIMECommand {
             }
         } else if (m_templateType == TemplateType.MetaNode) {
             for (NodeContainerTemplate template : m_templatesToChange) {
-                var singleChangeCommand =
-                    new ChangeMetaNodeLinkCommand(getHostWFM(), (WorkflowManager)template, m_oldLinkURI, m_newLinkURI);
+                final var metanode = (WorkflowManager)template;
+                final var oldLastModified =
+                        m_askForUpdate ? metanode.getTemplateInformation().getTimestampInstant() : null;
+                final var newLastModified = m_askForUpdate ? Instant.EPOCH : null;
+                var singleChangeCommand = new ChangeMetaNodeLinkCommand(getHostWFM(), metanode,
+                    m_oldLinkURI, oldLastModified, m_newLinkURI, newLastModified);
                 if (singleChangeCommand.canExecute()) {
                     singleChangeCommand.execute();
                     m_commandRegistry.add(singleChangeCommand);

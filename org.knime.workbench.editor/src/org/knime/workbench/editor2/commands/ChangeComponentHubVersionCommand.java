@@ -46,6 +46,8 @@
  */
 package org.knime.workbench.editor2.commands;
 
+import java.time.Instant;
+
 import org.eclipse.gef.commands.CompoundCommand;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
@@ -89,9 +91,11 @@ public class ChangeComponentHubVersionCommand extends AbstractKNIMECommand {
     }
 
     private void doLinkURIChange() {
-        final var oldUri = m_component.getTemplateInformation().getSourceURI();
+        final var templateInfo = m_component.getTemplateInformation();
+        final var oldUri = templateInfo.getSourceURI();
         final var targetUri = m_targetVersion.applyTo(oldUri);
-        final var changeCommand = new ChangeSubNodeLinkCommand(getHostWFM(), m_component, oldUri, targetUri);
+        final var changeCommand = new ChangeSubNodeLinkCommand(getHostWFM(), m_component,
+            oldUri, templateInfo.getTimestampInstant(), targetUri, Instant.EPOCH);
         if (changeCommand.canExecute()) {
             changeCommand.execute();
             m_commandRegistry.add(changeCommand);

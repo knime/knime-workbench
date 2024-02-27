@@ -154,12 +154,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
         return Optional.of(subNode);
     }
 
-    /**
-     *
-     * @param subNode
-     * @return
-     */
-    public static Optional<Map<KnimeUrlType, URL>> getURLsIfValid(final SubNodeContainer subNode) {
+    static Optional<Map<KnimeUrlType, URL>> getURLsIfValid(final SubNodeContainer subNode) {
 
         final var templateInfo = subNode.getTemplateInformation();
         final var templateUri = templateInfo.getSourceURI();
@@ -217,26 +212,34 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
             + getLinkTypeName(linkType) + ", current link: " + linkUrl + ")\n"
             + "The origin of the component will not be changed - just the way it is referenced.";
 
-        final var newUri = showDialogAndGetUri(getEditor().getSite().getShell(), linkUrl, linkType, message,
-            changeOptions);
+        final var dialog = new LinkPrompt(getEditor().getSite().getShell(), message, changeOptions, linkType);
+        final var newUri = showDialogAndGetUri(dialog, linkUrl, linkType, changeOptions);
         if (newUri.isPresent()) {
-            final var cmd = new ChangeSubNodeLinkCommand(subNode.getParent(), subNode, linkUrl, newUri.get());
+            final var cmd = new ChangeSubNodeLinkCommand(subNode.getParent(), subNode,
+                linkUrl, null, newUri.get(), null);
             getCommandStack().execute(cmd);
         }
     }
 
     /**
+     * Displays a dialog to the user presenting the different representations of the URL that are available.
      *
-     * @param shell
-     * @param linkUrl
-     * @param linkType
-     * @param message
-     * @param options
-     * @return
+     * @param shell context in which the dialog is opened
+     * @param linkUrl initial link URL
+     * @param linkType initial link type
+     * @param message text displayed in the body of the dialog
+     * @param options possible options for representing the initial link URL
+     * @return new URI if the user chose one, {@link Optional#empty()} otherwise
      */
     public static Optional<URI> showDialogAndGetUri(final Shell shell, final URI linkUrl, final KnimeUrlType linkType,
             final String message, final Map<KnimeUrlType, URL> options) {
         final var dialog = new LinkPrompt(shell, message, options, linkType);
+        return showDialogAndGetUri(dialog, linkUrl, linkType, options);
+    }
+
+    static Optional<URI> showDialogAndGetUri(final LinkPrompt dialog, final URI linkUrl,
+            final KnimeUrlType linkType, final Map<KnimeUrlType, URL> options) {
+
         dialog.open();
         if (dialog.getReturnCode() == Window.CANCEL) {
             return Optional.empty();
@@ -257,10 +260,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
         }
     }
 
-    /**
-     *
-     */
-    public static class LinkPrompt extends MessageDialog {
+    static class LinkPrompt extends MessageDialog {
 
         private static final List<KnimeUrlType> ORDER = List.of(
             KnimeUrlType.MOUNTPOINT_ABSOLUTE,
@@ -277,13 +277,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
 
         private KnimeUrlType m_preSelect;
 
-        /**
-         * @param parentShell
-         * @param messageText
-         * @param options
-         * @param preSelect
-         */
-        public LinkPrompt(final Shell parentShell, final String messageText, final Map<KnimeUrlType, URL> options,
+        LinkPrompt(final Shell parentShell, final String messageText, final Map<KnimeUrlType, URL> options,
             final KnimeUrlType preSelect) {
             super(parentShell, "Change Link Type to Shared Component", null, messageText,
                 MessageDialog.QUESTION_WITH_CANCEL, new String[]{ IDialogConstants.OK_LABEL,
