@@ -210,6 +210,7 @@ public class InstallOrOpenHubViewJob extends Job {
         Job.getJobManager().cancel(LoadMetadataRepositoryJob.LOAD_FAMILY);
         final LoadMetadataRepositoryJob loadJob = new LoadMetadataRepositoryJob(provUI);
         loadJob.setProperty(LoadMetadataRepositoryJob.ACCUMULATE_LOAD_ERRORS, Boolean.toString(true));
+        loadJob.setProperty(LoadMetadataRepositoryJob.SUPPRESS_AUTHENTICATION_JOB_MARKER, Boolean.toString(true));
 
         loadJob.addJobChangeListener(new JobChangeAdapter() {
             @Override
