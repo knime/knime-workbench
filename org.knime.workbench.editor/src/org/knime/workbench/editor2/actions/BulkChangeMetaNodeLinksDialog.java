@@ -99,6 +99,8 @@ import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResult;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.util.KnimeUrlType;
+import org.knime.core.util.LoadVersion;
+import org.knime.core.util.Version;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
@@ -604,8 +606,15 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             final var result = new LoadResult("Link Change Verification");
             NodeContext.pushContext(m_manager);
             try {
-                final var template =
-                    TemplateUpdateUtil.loadMetaNodeTemplate(m_selectedLinkURI, new WorkflowLoadHelper(true), result);
+                final var loadHelper = new WorkflowLoadHelper(true) {
+                    @Override
+                    public UnknownKNIMEVersionLoadPolicy getUnknownKNIMEVersionLoadPolicy(
+                        final LoadVersion workflowKNIMEVersion, final Version createdByKNIMEVersion,
+                        final boolean isNightlyBuild) {
+                        return UnknownKNIMEVersionLoadPolicy.Try;
+                    }
+                };
+                final var template = TemplateUpdateUtil.loadMetaNodeTemplate(m_selectedLinkURI, loadHelper, result);
                 if (result.hasErrors()) {
                     errorMessage =
                         "Could not load the template at URI \"" + m_selectedLinkURI + "\":\n" + result.getMessage();
