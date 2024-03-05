@@ -73,6 +73,7 @@ import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.hub.NamedItemVersion;
 import org.knime.core.util.pathresolve.SpaceVersion;
 import org.knime.core.util.pathresolve.URIToFileResolve;
+import org.knime.core.util.proxy.URLConnectionFactory;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
@@ -231,7 +232,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     private static InputStream addAuthHeaderAndOpenStream(final URL url, final ZonedDateTime ifModifiedSince)
         throws ResourceAccessException {
         try {
-            HttpURLConnection uc = (HttpURLConnection)url.openConnection();
+            HttpURLConnection uc = (HttpURLConnection)URLConnectionFactory.getConnection(url);
             String userInfo = url.getUserInfo();
             if (userInfo != null) {
                 String urlDecodedUserInfo = URLDecoder.decode(userInfo, StandardCharsets.UTF_8.name());
