@@ -54,7 +54,9 @@ import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -73,16 +75,20 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation.Role;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.contextv2.HubSpaceLocationInfo;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.util.KnimeUrlType;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.urlresolve.KnimeUrlResolver;
+import org.knime.core.util.urlresolve.KnimeUrlResolver.IdAndPath;
+import org.knime.core.util.urlresolve.KnimeUrlResolver.KnimeUrlVariant;
 import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.ChangeSubNodeLinkCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 
 /**
  * Allows changing the type of the template link of a sub node.
@@ -130,9 +136,16 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
      */
     @Override
     protected boolean internalCalculateEnabled() {
-        return extractLinkedComponent(getSelectedParts(NodeContainerEditPart.class)) //
-                .flatMap(ChangeSubNodeLinkAction::getURLsIfValid) //
-                .isPresent();
+        final var component = extractLinkedComponent(getSelectedParts(NodeContainerEditPart.class));
+        if (component.isEmpty()) {
+            return false;
+        }
+
+        final var snc = component.get();
+        final var options = getURLsIfValid(snc, null);
+        final var linkUri = snc.getTemplateInformation().getSourceURI();
+        return options.isPresent()
+                || KnimeUrlVariant.getVariant(linkUri).orElse(null) == KnimeUrlVariant.MOUNTPOINT_ABSOLUTE_ID;
     }
 
 
@@ -154,16 +167,17 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
         return Optional.of(subNode);
     }
 
-    static Optional<Map<KnimeUrlType, URL>> getURLsIfValid(final SubNodeContainer subNode) {
+    static Optional<Map<KnimeUrlVariant, URL>> getURLsIfValid(final SubNodeContainer subNode,
+            final Function<URL, Optional<IdAndPath>> hubUrlTranslator) {
 
         final var templateInfo = subNode.getTemplateInformation();
         final var templateUri = templateInfo.getSourceURI();
-        final var optLinkType = KnimeUrlType.getType(templateUri);
-        if (optLinkType.isEmpty()) {
+        final var optLinkVariant = KnimeUrlVariant.getVariant(templateUri);
+        if (optLinkVariant.isEmpty()) {
             return Optional.empty();
         }
 
-        final var linkType = optLinkType.get();
+        final var linkType = optLinkVariant.get();
         final var context = Optional.of(subNode.getWorkflowManager()) //
                 .map(wfm -> wfm.getProjectComponent().map(SubNodeContainer::getWorkflowManager) //
                     .orElse(wfm.getProjectWFM())) //
@@ -171,7 +185,8 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
                 .orElseThrow(() -> new IllegalStateException("Could not find workflow context for " + subNode));
 
         try {
-            final var urls = KnimeUrlResolver.getResolver(context).changeLinkType(URLResolverUtil.toURL(templateUri));
+            final var urls = KnimeUrlResolver.getResolver(context) //
+                    .changeLinkType(URLResolverUtil.toURL(templateUri), hubUrlTranslator);
             if (urls.size() > (urls.containsKey(linkType) ? 1 : 0)) {
                 // there are other options available
                 return Optional.of(urls);
@@ -184,16 +199,6 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
         return Optional.empty();
     }
 
-    static final String getLinkTypeName(final KnimeUrlType type) {
-        return switch (type) {
-            case MOUNTPOINT_ABSOLUTE -> "mountpoint-absolute";
-            case HUB_SPACE_RELATIVE -> "space-relative";
-            case MOUNTPOINT_RELATIVE -> "mountpoint-relative";
-            case NODE_RELATIVE -> "node-relative";
-            case WORKFLOW_RELATIVE -> "workflow-relative";
-        };
-    }
-
     @Override
     public void runOnNodes(final NodeContainerEditPart[] nodeParts) {
         if (nodeParts.length < 1) {
@@ -202,18 +207,19 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
 
         final var subNode = extractLinkedComponent(nodeParts) //
                 .orElseThrow(() -> new IllegalStateException("Current selection is not a linked component."));
-        final var changeOptions = getURLsIfValid(subNode) //
+        final var changeOptions = getURLsIfValid(subNode, ChangeSubNodeLinkAction::translateHubUrl) //
                 .orElseThrow(() -> new IllegalStateException("Can't change link type of the current selection."));
 
         final var linkUrl = subNode.getTemplateInformation().getSourceURI();
-        final var linkType = KnimeUrlType.getType(linkUrl).orElseThrow();
+        final var linkVariant = KnimeUrlVariant.getVariant(linkUrl).orElseThrow();
+
         final var message = "This is a linked (read-only) component. Only the link type can be changed.\n"
             + "Please select the new type of the link to the shared component.\n" + "(current type: "
-            + getLinkTypeName(linkType) + ", current link: " + linkUrl + ")\n"
+            + linkVariant.getDescription() + ", current link: " + linkUrl + ")\n"
             + "The origin of the component will not be changed - just the way it is referenced.";
 
-        final var dialog = new LinkPrompt(getEditor().getSite().getShell(), message, changeOptions, linkType);
-        final var newUri = showDialogAndGetUri(dialog, linkUrl, linkType, changeOptions);
+        final var dialog = new LinkPrompt(getEditor().getSite().getShell(), message, changeOptions, linkVariant);
+        final var newUri = showDialogAndGetUri(dialog, linkUrl, linkVariant, changeOptions);
         if (newUri.isPresent()) {
             final var cmd = new ChangeSubNodeLinkCommand(subNode.getParent(), subNode,
                 linkUrl, null, newUri.get(), null);
@@ -231,21 +237,21 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
      * @param options possible options for representing the initial link URL
      * @return new URI if the user chose one, {@link Optional#empty()} otherwise
      */
-    public static Optional<URI> showDialogAndGetUri(final Shell shell, final URI linkUrl, final KnimeUrlType linkType,
-            final String message, final Map<KnimeUrlType, URL> options) {
+    public static Optional<URI> showDialogAndGetUri(final Shell shell, final URI linkUrl,
+            final KnimeUrlVariant linkType, final String message, final Map<KnimeUrlVariant, URL> options) {
         final var dialog = new LinkPrompt(shell, message, options, linkType);
         return showDialogAndGetUri(dialog, linkUrl, linkType, options);
     }
 
     static Optional<URI> showDialogAndGetUri(final LinkPrompt dialog, final URI linkUrl,
-            final KnimeUrlType linkType, final Map<KnimeUrlType, URL> options) {
+            final KnimeUrlVariant linkType, final Map<KnimeUrlVariant, URL> options) {
 
         dialog.open();
         if (dialog.getReturnCode() == Window.CANCEL) {
             return Optional.empty();
         }
 
-        var newLinkType = dialog.getLinkType();
+        var newLinkType = dialog.getLinkVariant();
         if (linkType == newLinkType) {
             LOGGER.info("Link type not changed as selected type equals existing type " + linkUrl);
             return Optional.empty();
@@ -260,25 +266,39 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
         }
     }
 
+    static Optional<IdAndPath> translateHubUrl(final URL url) {
+        try {
+            if (ExplorerFileSystem.INSTANCE.getStore(url.toURI()) instanceof RemoteExplorerFileStore remoteStore
+                    && remoteStore.locationInfo().orElse(null) instanceof HubSpaceLocationInfo hubLocation) {
+                return Optional.of(new IdAndPath(hubLocation.getWorkflowItemId(),
+                    Path.forPosix(hubLocation.getWorkflowPath()).makeRelative()));
+            }
+        } catch (URISyntaxException e) {
+            LOGGER.debug(e);
+        }
+        return Optional.empty();
+    }
+
     static class LinkPrompt extends MessageDialog {
 
-        private static final List<KnimeUrlType> ORDER = List.of(
-            KnimeUrlType.MOUNTPOINT_ABSOLUTE,
-            KnimeUrlType.HUB_SPACE_RELATIVE,
-            KnimeUrlType.MOUNTPOINT_RELATIVE,
-            KnimeUrlType.WORKFLOW_RELATIVE,
-            KnimeUrlType.NODE_RELATIVE);
+        private static final List<KnimeUrlVariant> ORDER = List.of(
+            KnimeUrlVariant.MOUNTPOINT_ABSOLUTE_ID,
+            KnimeUrlVariant.MOUNTPOINT_ABSOLUTE_PATH,
+            KnimeUrlVariant.SPACE_RELATIVE,
+            KnimeUrlVariant.MOUNTPOINT_RELATIVE,
+            KnimeUrlVariant.WORKFLOW_RELATIVE,
+            KnimeUrlVariant.NODE_RELATIVE);
 
         record LinkTypeOption(String desc, String tooltip) {}
 
-        private final Map<KnimeUrlType, URL> m_options;
+        private final Map<KnimeUrlVariant, URL> m_options;
 
-        private KnimeUrlType m_linkType;
+        private KnimeUrlVariant m_linkType;
 
-        private KnimeUrlType m_preSelect;
+        private KnimeUrlVariant m_preSelect;
 
-        LinkPrompt(final Shell parentShell, final String messageText, final Map<KnimeUrlType, URL> options,
-            final KnimeUrlType preSelect) {
+        LinkPrompt(final Shell parentShell, final String messageText, final Map<KnimeUrlVariant, URL> options,
+            final KnimeUrlVariant preSelect) {
             super(parentShell, "Change Link Type to Shared Component", null, messageText,
                 MessageDialog.QUESTION_WITH_CANCEL, new String[]{ IDialogConstants.OK_LABEL,
                     IDialogConstants.CANCEL_LABEL }, 0);
@@ -288,8 +308,8 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
                 m_preSelect = preSelect;
                 m_linkType = preSelect;
             } else {
-                m_preSelect = KnimeUrlType.MOUNTPOINT_ABSOLUTE;
-                m_linkType = KnimeUrlType.MOUNTPOINT_ABSOLUTE;
+                m_preSelect = KnimeUrlVariant.MOUNTPOINT_ABSOLUTE_PATH;
+                m_linkType = KnimeUrlVariant.MOUNTPOINT_ABSOLUTE_PATH;
                 for (final var type : ORDER) {
                     if (options.containsKey(type)) {
                         m_preSelect = type;
@@ -300,11 +320,15 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
             }
         }
 
-        LinkTypeOption getOptionTexts(final KnimeUrlType urlType) {
+        LinkTypeOption getOptionTexts(final KnimeUrlVariant urlType) {
             return switch (urlType) {
-                case MOUNTPOINT_ABSOLUTE -> new LinkTypeOption("Create absolute link",
-                    "If you move the workflow to a new location it will always link back to its shared component");
-                case HUB_SPACE_RELATIVE -> new LinkTypeOption("Create space-relative link",
+                case MOUNTPOINT_ABSOLUTE_PATH -> new LinkTypeOption("Create absolute link",
+                    "If you move the workflow to a new location it will always link back to the component at its"
+                            + " current location");
+                case MOUNTPOINT_ABSOLUTE_ID -> new LinkTypeOption("Create ID-based absolute link",
+                    "If you move the workflow to a new location it will always link back to its current shared"
+                            + " component based on the shared component's ID in the Hub repository");
+                case SPACE_RELATIVE -> new LinkTypeOption("Create space-relative link",
                     "If you move the workflow to another space, the shared component must be available in the same"
                             + " location relative to the space's root");
                 case MOUNTPOINT_RELATIVE -> new LinkTypeOption("Create mountpoint-relative link",
@@ -322,7 +346,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
          *
          * @return null, if no link should be created, otherwise the selected link type.
          */
-        public KnimeUrlType getLinkType() {
+        public KnimeUrlVariant getLinkVariant() {
             return m_linkType;
         }
 

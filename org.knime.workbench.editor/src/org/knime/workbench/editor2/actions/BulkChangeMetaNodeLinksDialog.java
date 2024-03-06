@@ -98,13 +98,13 @@ import org.knime.core.node.workflow.WorkflowLoadHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor.LoadResult;
 import org.knime.core.ui.util.SWTUtilities;
-import org.knime.core.util.KnimeUrlType;
 import org.knime.core.util.LoadVersion;
 import org.knime.core.util.Version;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
 import org.knime.core.util.urlresolve.KnimeUrlResolver;
+import org.knime.core.util.urlresolve.KnimeUrlResolver.KnimeUrlVariant;
 import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.core.imports.ImportForbiddenException;
 import org.knime.workbench.core.imports.RepoObjectImport;
@@ -491,8 +491,8 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
 
 
         final var templateUri = templateInfo.getSourceURI();
-        final var optLinkType = KnimeUrlType.getType(templateUri);
-        if (optLinkType.isEmpty()) {
+        final var optLinkVariant = KnimeUrlVariant.getVariant(templateUri);
+        if (optLinkVariant.isEmpty()) {
             return;
         }
 
@@ -502,7 +502,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
                 .map(WorkflowManager::getContextV2) //
                 .orElseThrow(() -> new IllegalStateException("Could not find workflow context for " + representative));
 
-        final Map<KnimeUrlType, URL> urls;
+        final Map<KnimeUrlVariant, URL> urls;
         try {
             urls = KnimeUrlResolver.getResolver(context).changeLinkType(URLResolverUtil.toURL(templateUri));
         } catch (ResourceAccessException e) {
@@ -511,23 +511,24 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             return;
         }
 
-        if (urls.size() <= (urls.containsKey(optLinkType.get()) ? 1 : 0)) {
+        if (urls.size() <= (urls.containsKey(optLinkVariant.get()) ? 1 : 0)) {
             // there are no other options available
             return;
         }
 
         var message = "Please select a new link type for the " + (isComponent ? "component" : "metanode") + "s.";
-        final var currentType = m_selectedLinkURI == null ? null : KnimeUrlType.getType(m_selectedLinkURI).orElse(null);
+        final var currentVariant = m_selectedLinkURI == null ? null
+            : KnimeUrlVariant.getVariant(m_selectedLinkURI).orElse(null);
         final var shell = SWTUtilities.getActiveShell();
-        final var prompt = new ChangeSubNodeLinkAction.LinkPrompt(shell, message, urls, currentType);
+        final var prompt = new ChangeSubNodeLinkAction.LinkPrompt(shell, message, urls, currentVariant);
         if (prompt.open() != Window.OK) {
             return;
         }
 
-        final var newType = prompt.getLinkType();
-        if (newType != currentType) {
+        final var newVariant = prompt.getLinkVariant();
+        if (newVariant != currentVariant) {
             try {
-                m_selectedLinkURI = urls.get(newType).toURI();
+                m_selectedLinkURI = urls.get(newVariant).toURI();
                 m_uriTextField.setText(m_selectedLinkURI.toString());
                 m_uriInputViaText = false;
             } catch (URISyntaxException e) {
