@@ -48,6 +48,7 @@
  */
 package org.knime.workbench.workflowcoach.data;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -106,7 +107,7 @@ public class CommunityTripleProvider extends AbstractFileDownloadTripleProvider 
      * {@inheritDoc}
      */
     @Override
-    public void update() throws Exception {
+    public void update() throws IOException {
         super.update();
         Files.deleteIfExists(Paths.get(KNIMEConstants.getKNIMEHomeDir(), "community_recommendations.json"));
     }

@@ -50,10 +50,6 @@ package org.knime.workbench.workflowcoach.data;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.net.ProxySelector;
-import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -65,22 +61,21 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpException;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeFrequencies;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeTriple;
 import org.knime.core.ui.workflowcoach.data.UpdatableNodeTripleProvider;
+import org.knime.core.util.auth.SuppressingAuthenticator;
+import org.knime.core.util.exception.HttpExceptionUtils;
+
+import jakarta.ws.rs.client.ClientBuilder;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response.Status;
 
 /**
  * A node triple provider that downloads the nodes triples from a url and stores it to a file.
@@ -116,58 +111,49 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
         m_tmpFile = Paths.get(KNIMEConstants.getKNIMEHomeDir(), TMP_FILE_NAME);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Stream<NodeTriple> getNodeTriples() throws IOException {
-        return NodeFrequencies.from(Files.newInputStream(m_file)).getFrequencies().stream();
+        try (final var inStream = Files.newInputStream(m_file)) {
+            return NodeFrequencies.from(inStream).getFrequencies().stream();
+        }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean updateRequired() {
         return !Files.exists(m_file);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void update() throws Exception {
+    public void update() throws IOException {
+        final var clientBuilder = ClientBuilder.newBuilder() //
+                .connectTimeout(TIMEOUT, TimeUnit.MILLISECONDS) //
+                .readTimeout(TIMEOUT, TimeUnit.MILLISECONDS);
+        try (final var client = clientBuilder.build()) {
+            final var requestBuilder = client.target(m_url).request() //
+                    .acceptEncoding("gzip");
 
-        // default of 3 retries is what we want
-        final var request = new HttpGet(m_url);
-        if (Files.exists(m_file)) {
-            String lastModified = getHttpDateFormat().format(Date.from(Files.getLastModifiedTime(m_file).toInstant()));
-            request.setHeader("If-Modified-Since", lastModified);
-        }
-        request.setHeader("Accept-Encoding", "gzip");
-
-        final var configBuilder = RequestConfig.custom().setConnectTimeout(TIMEOUT);
-        ProxySelector.getDefault().select(URI.create(m_url)).stream()
-                .map(Proxy::address)
-                .filter(InetSocketAddress.class::isInstance) // also takes care of `null`
-                .map(InetSocketAddress.class::cast)
-                .findFirst()
-                .ifPresent(addr -> configBuilder.setProxy(new HttpHost(addr.getHostString(), addr.getPort())));
-
-        try (final var client = HttpClientBuilder.create().setDefaultRequestConfig(configBuilder.build()).build();
-                final var response = client.execute(request)) {
-            final var statusLine = response.getStatusLine();
-            final var statusCode = statusLine.getStatusCode();
-            if (statusCode == HttpStatus.SC_NOT_MODIFIED) {
-                return;
-            }
-            if (statusCode != HttpStatus.SC_OK) {
-                throw new HttpException("Cannot access server node recommendation file: " + statusLine);
+            if (Files.exists(m_file)) {
+                // date is automatically converted to the correct format
+                final var lastModified = Date.from(Files.getLastModifiedTime(m_file).toInstant());
+                requestBuilder.header("If-Modified-Since", getHttpDateFormat().format(lastModified));
             }
 
-            //download and store the file
-            try (final var in = getInputStream(response); final var out = Files.newOutputStream(m_tmpFile)) {
-                IOUtils.copy(in, out);
+            try (final var supp = SuppressingAuthenticator.suppressDelegate();
+                    final var response = requestBuilder.get()) {
+                final var statusInfo = response.getStatusInfo();
+                if (statusInfo.toEnum() == Status.NOT_MODIFIED) {
+                    return;
+                }
+
+                if (statusInfo.getFamily() != Status.Family.SUCCESSFUL) {
+                    throw HttpExceptionUtils.wrapException(statusInfo.getStatusCode(),
+                        "Cannot access server node recommendation file: " + statusInfo.getReasonPhrase());
+                }
+
+                //download and store the file
+                try (final var in = getInputStream(response)) {
+                    Files.copy(in, m_tmpFile, StandardCopyOption.REPLACE_EXISTING);
+                }
             }
         }
 
@@ -198,9 +184,6 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<LocalDateTime> getLastUpdate() {
         try {
@@ -217,10 +200,9 @@ public abstract class AbstractFileDownloadTripleProvider implements UpdatableNod
         }
     }
 
-    private static InputStream getInputStream(final CloseableHttpResponse response) throws IOException {
-        final var stream = response.getEntity().getContent();
-        final var encoding = response.getFirstHeader("Content-Encoding");
-        return encoding != null && encoding.getValue().equals("gzip") ? new GZIPInputStream(stream) : stream;
+    private static InputStream getInputStream(final Response response) throws IOException {
+        final var stream = response.readEntity(InputStream.class);
+        return "gzip".equals(response.getHeaderString("Content-Encoding")) ? new GZIPInputStream(stream) : stream;
     }
 
     private static SimpleDateFormat getHttpDateFormat() {
