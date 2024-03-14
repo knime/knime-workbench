@@ -1426,9 +1426,8 @@ public class WorkflowEditor extends GraphicalEditor implements
                         loadWorkflowRunnable = new LoadWorkflowRunnable(this, wfFile, workflowContext);
                         progressService.busyCursorWhile(loadWorkflowRunnable);
                     } else {
-                        final var loadTemplateRunnable = new LoadMetaNodeTemplateRunnable(this,
-                            CheckUtils.checkNotNull(workflowContext).getTempSourceLocation().orElse(uri),
-                                workflowContext, false);
+                        final var loadTemplateRunnable = new LoadMetaNodeTemplateRunnable(this, uri,
+                            CheckUtils.checkNotNull(workflowContext), false);
                         progressService.busyCursorWhile(loadTemplateRunnable);
                         if (m_manager != null && Wrapper.wraps(m_manager, WorkflowManager.class)
                             && m_manager.isEncrypted()) {
