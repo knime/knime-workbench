@@ -77,6 +77,7 @@ import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.contextv2.HubSpaceLocationInfo;
 import org.knime.core.ui.wrapper.Wrapper;
+import org.knime.core.util.KnimeUrlType;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.core.util.urlresolve.KnimeUrlResolver.IdAndPath;
@@ -87,8 +88,12 @@ import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.ChangeSubNodeLinkCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
+import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 
 /**
  * Allows changing the type of the template link of a sub node.
@@ -143,11 +148,26 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
 
         final var snc = component.get();
         final var options = getURLsIfValid(snc, null);
-        final var linkUri = snc.getTemplateInformation().getSourceURI();
-        return options.isPresent()
-                || KnimeUrlVariant.getVariant(linkUri).orElse(null) == KnimeUrlVariant.MOUNTPOINT_ABSOLUTE_ID;
+        return options.isPresent() || isAbsoluteUrlOnHub(snc.getTemplateInformation().getSourceURI());
     }
 
+    /**
+     * Checks whether the given URI represents a mountpoint-absolute KNIME URL referencing a known Hub mountpoint.
+     * To determine whether it is a Hub mountpoint we look at its {@link AbstractContentProviderFactory}'s ID and check
+     * whether it is for a Hub or the Examples server, which is also a Hub space.
+     *
+     * @param uri the URI to check
+     * @return result of check
+     */
+    static boolean isAbsoluteUrlOnHub(final URI uri) {
+        return uri != null && KnimeUrlType.getType(uri).orElse(null) == KnimeUrlType.MOUNTPOINT_ABSOLUTE
+            && Optional.ofNullable(ExplorerMountTable.getMountPoint(uri.getAuthority())) //
+                .map(MountPoint::getProvider) //
+                .map(AbstractContentProvider::getFactory) //
+                .map(AbstractContentProviderFactory::getID) //
+                .filter(id -> id.endsWith("_hub") || id.equals("com.knime.explorer.server.examples")) //
+                .isPresent();
+    }
 
     static Optional<SubNodeContainer> extractLinkedComponent(final NodeContainerEditPart[] nodes) {
         if (nodes.length != 1) {

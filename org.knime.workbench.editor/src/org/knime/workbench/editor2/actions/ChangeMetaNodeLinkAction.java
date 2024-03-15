@@ -122,9 +122,8 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
         }
         final var metaNodeWFM = metaNode.get();
         final var urls = getURLsIfValid(metaNodeWFM, null);
-        final var linkUri = metaNodeWFM.getTemplateInformation().getSourceURI();
         return urls.isPresent()
-                || KnimeUrlVariant.getVariant(linkUri).orElse(null) == KnimeUrlVariant.MOUNTPOINT_ABSOLUTE_ID;
+                || ChangeSubNodeLinkAction.isAbsoluteUrlOnHub(metaNodeWFM.getTemplateInformation().getSourceURI());
     }
 
     private static final Optional<WorkflowManager> extractSelectedMetanode(final NodeContainerEditPart[] selected) {

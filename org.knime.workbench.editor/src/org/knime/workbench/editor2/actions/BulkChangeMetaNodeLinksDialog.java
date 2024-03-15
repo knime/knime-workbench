@@ -351,7 +351,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
                     m_linkChangeButton.setText("Select Version...");
                     // only if both the action and group has been selected, the button is enabled
                     final var isComponentOnHub =
-                        isSelectedSubNode() && ChangeComponentHubVersionAction.isHubUri(m_oldLinkURI);
+                        isSelectedSubNode() && ChangeSubNodeLinkAction.isAbsoluteUrlOnHub(m_oldLinkURI);
                     m_linkChangeButton.setEnabled(isComponentOnHub);
                     m_linkChangeButton.setToolTipText(isComponentOnHub ? ""
                         : "Versioning is available only for linked Components stored on a KNIME Hub.");

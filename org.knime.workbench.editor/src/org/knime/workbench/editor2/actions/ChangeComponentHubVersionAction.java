@@ -48,7 +48,6 @@
  */
 package org.knime.workbench.editor2.actions;
 
-import java.net.URI;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -65,7 +64,6 @@ import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.ChangeComponentHubVersionCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
-import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 
 /**
  * Select a Hub item version for one linked component in a workflow. Does nothing if the selected version equals the
@@ -135,25 +133,11 @@ public class ChangeComponentHubVersionAction extends AbstractNodeAction {
         final var component = optComponent.get();
 
         // Component must be linked and parent must allow modification
-        final var isLinked = Role.Link == component.getTemplateInformation().getRole();
-        final var isChangeable = component.getParent().isWriteProtected();
-        return isLinked && !isChangeable;
-    }
-
-    static boolean isHubUri(final URI uri) {
-        if (uri == null) {
-            return false;
-        }
-        // TODO getting the explorer file store can take in the order of ~100ms, so pretty expensive
-        // inspecting the mount ID won't be enough, since for custom mounted hub instances the user can select an
-        // arbitrary mount ID
-        final var explorerFileStore = ExplorerFileSystem.INSTANCE.getStore(uri);
-        if (explorerFileStore == null) {
-            return false;
-        }
-        final var fileStoreClassName = explorerFileStore.getClass().getName();
-        // NOSONAR I don't want instanceof because it would force me to introduce a dependency to commercial code
-        return fileStoreClassName.equals("com.knime.explorer.server.hub.HubExplorerFileStore"); // NOSONAR
+        final var templateInformation = component.getTemplateInformation();
+        final var isLinked = Role.Link == templateInformation.getRole();
+        final var isChangeable = !component.getParent().isWriteProtected();
+        return isLinked && isChangeable
+                && ChangeSubNodeLinkAction.isAbsoluteUrlOnHub(templateInformation.getSourceURI());
     }
 
     /**
@@ -197,7 +181,7 @@ public class ChangeComponentHubVersionAction extends AbstractNodeAction {
         }
         final var component = optComponent.get();
         // currently, the only sources that support versioning are hub instances
-        if (!isHubUri(component.getTemplateInformation().getSourceURI())) {
+        if (!ChangeSubNodeLinkAction.isAbsoluteUrlOnHub(component.getTemplateInformation().getSourceURI())) {
             String message = "Changing the item version is only supported on KNIME Hub instances.\n"
                 + "The source of this node is located either on a local mountpoint or on a KNIME Server.";
             MessageDialog.openWarning(shell, "Change Hub Item Version", message);
