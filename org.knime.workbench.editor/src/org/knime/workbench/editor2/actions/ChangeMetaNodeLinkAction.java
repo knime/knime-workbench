@@ -50,7 +50,6 @@ package org.knime.workbench.editor2.actions;
 import java.net.URL;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.widgets.Shell;
@@ -63,7 +62,6 @@ import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.urlresolve.KnimeUrlResolver;
-import org.knime.core.util.urlresolve.KnimeUrlResolver.IdAndPath;
 import org.knime.core.util.urlresolve.KnimeUrlResolver.KnimeUrlVariant;
 import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.KNIMEEditorPlugin;
@@ -121,8 +119,7 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
             return false;
         }
         final var metaNodeWFM = metaNode.get();
-        final var urls = getURLsIfValid(metaNodeWFM, null);
-        return urls.isPresent()
+        return getURLsIfValid(metaNodeWFM, false).isPresent()
                 || ChangeSubNodeLinkAction.isAbsoluteUrlOnHub(metaNodeWFM.getTemplateInformation().getSourceURI());
     }
 
@@ -146,8 +143,8 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
         return Optional.of(metaNodeWFM);
     }
 
-    private static Optional<Map<KnimeUrlVariant, URL>> getURLsIfValid(final WorkflowManager metaNodeWFM,
-            final Function<URL, Optional<IdAndPath>> hubUrlTranslator) {
+    static Optional<Map<KnimeUrlVariant, URL>> getURLsIfValid(final WorkflowManager metaNodeWFM,
+            final boolean resolveHubUrls) {
         final var templateInfo = metaNodeWFM.getTemplateInformation();
         final var templateUri = templateInfo.getSourceURI();
         final var optLinkVariant = KnimeUrlVariant.getVariant(templateUri);
@@ -163,8 +160,8 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
             .orElseThrow(() -> new IllegalStateException("Could not find workflow context for " + metaNodeWFM));
 
         try {
-            final var resolver = KnimeUrlResolver.getResolver(context);
-            final var urls = resolver.changeLinkType(URLResolverUtil.toURL(templateUri), hubUrlTranslator);
+            final var urls = KnimeUrlResolver.getResolver(context).changeLinkType(URLResolverUtil.toURL(templateUri),
+                resolveHubUrls ? ChangeSubNodeLinkAction::translateHubUrl : null);
             if (urls.size() > (urls.containsKey(linkVariant) ? 1 : 0)) {
                 // there are other options available
                 return Optional.of(urls);
@@ -187,7 +184,7 @@ public class ChangeMetaNodeLinkAction extends AbstractNodeAction {
             throw new IllegalStateException("Selected node is not a linked metanode.");
         }
 
-        final var options = getURLsIfValid(metaNode, ChangeSubNodeLinkAction::translateHubUrl) //
+        final var options = getURLsIfValid(metaNode, true) //
                 .orElseThrow(() -> new IllegalStateException("Can't change link type of the current selection."));
 
         final var linkUrl = metaNode.getTemplateInformation().getSourceURI();

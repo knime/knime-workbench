@@ -54,7 +54,6 @@ import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.dialogs.IDialogConstants;
@@ -147,8 +146,8 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
         }
 
         final var snc = component.get();
-        final var options = getURLsIfValid(snc, null);
-        return options.isPresent() || isAbsoluteUrlOnHub(snc.getTemplateInformation().getSourceURI());
+        return getURLsIfValid(snc, false).isPresent()
+                || isAbsoluteUrlOnHub(snc.getTemplateInformation().getSourceURI());
     }
 
     /**
@@ -188,7 +187,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
     }
 
     static Optional<Map<KnimeUrlVariant, URL>> getURLsIfValid(final SubNodeContainer subNode,
-            final Function<URL, Optional<IdAndPath>> hubUrlTranslator) {
+            final boolean resolveHubUrls) {
 
         final var templateInfo = subNode.getTemplateInformation();
         final var templateUri = templateInfo.getSourceURI();
@@ -205,8 +204,8 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
                 .orElseThrow(() -> new IllegalStateException("Could not find workflow context for " + subNode));
 
         try {
-            final var urls = KnimeUrlResolver.getResolver(context) //
-                    .changeLinkType(URLResolverUtil.toURL(templateUri), hubUrlTranslator);
+            final var urls = KnimeUrlResolver.getResolver(context).changeLinkType(URLResolverUtil.toURL(templateUri),
+                        resolveHubUrls ? ChangeSubNodeLinkAction::translateHubUrl : null);
             if (urls.size() > (urls.containsKey(linkType) ? 1 : 0)) {
                 // there are other options available
                 return Optional.of(urls);
@@ -227,7 +226,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
 
         final var subNode = extractLinkedComponent(nodeParts) //
                 .orElseThrow(() -> new IllegalStateException("Current selection is not a linked component."));
-        final var changeOptions = getURLsIfValid(subNode, ChangeSubNodeLinkAction::translateHubUrl) //
+        final var changeOptions = getURLsIfValid(subNode, true) //
                 .orElseThrow(() -> new IllegalStateException("Can't change link type of the current selection."));
 
         final var linkUrl = subNode.getTemplateInformation().getSourceURI();

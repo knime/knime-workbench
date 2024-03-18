@@ -100,12 +100,9 @@ import org.knime.core.node.workflow.WorkflowPersistor.LoadResult;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.util.LoadVersion;
 import org.knime.core.util.Version;
-import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
-import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.core.util.urlresolve.KnimeUrlResolver.KnimeUrlVariant;
-import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.core.imports.ImportForbiddenException;
 import org.knime.workbench.core.imports.RepoObjectImport;
 import org.knime.workbench.core.imports.URIImporterFinder;
@@ -233,7 +230,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
     }
 
     @Override
-    protected Control createDialogArea(final Composite parent) {
+    protected Control createDialogArea(final Composite parent) { // NOSONAR too complex
         final var content = new Composite(parent, SWT.NONE);
         final var fillBoth = new GridData(GridData.FILL_BOTH);
         content.setLayoutData(fillBoth);
@@ -478,17 +475,13 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
         final WorkflowManager workflowManager;
         if (representative instanceof SubNodeContainer snc) {
             isComponent = true;
-            templateInfo = snc.getTemplateInformation();
             workflowManager = snc.getWorkflowManager();
-        } else if (representative instanceof WorkflowManager metanode) {
-            isComponent = false;
-            templateInfo = metanode.getTemplateInformation();
-            workflowManager = metanode;
+            templateInfo = snc.getTemplateInformation();
         } else {
-            // TODO what's going on here?
-            return;
+            isComponent = false;
+            workflowManager = (WorkflowManager)representative;
+            templateInfo = workflowManager.getTemplateInformation();
         }
-
 
         final var templateUri = templateInfo.getSourceURI();
         final var optLinkVariant = KnimeUrlVariant.getVariant(templateUri);
@@ -496,21 +489,11 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             return;
         }
 
-        final var context = Optional.of(workflowManager) //
-                .map(wfm -> wfm.getProjectComponent().map(SubNodeContainer::getWorkflowManager) //
-                    .orElse(wfm.getProjectWFM())) //
-                .map(WorkflowManager::getContextV2) //
-                .orElseThrow(() -> new IllegalStateException("Could not find workflow context for " + representative));
+        final Optional<Map<KnimeUrlVariant, URL>> optUrls = isComponent
+                ? ChangeSubNodeLinkAction.getURLsIfValid((SubNodeContainer)representative, true)
+                    : ChangeMetaNodeLinkAction.getURLsIfValid(workflowManager, true);
 
-        final Map<KnimeUrlVariant, URL> urls;
-        try {
-            urls = KnimeUrlResolver.getResolver(context).changeLinkType(URLResolverUtil.toURL(templateUri));
-        } catch (ResourceAccessException e) {
-            LOGGER.debug(
-                () -> "Cannot compute alternative KNIME URL types for '" + templateUri + "': " + e.getMessage(), e);
-            return;
-        }
-
+        final var urls = optUrls.orElse(Map.of());
         if (urls.size() <= (urls.containsKey(optLinkVariant.get()) ? 1 : 0)) {
             // there are no other options available
             return;
@@ -712,7 +695,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             super(parentShell, mountIDs, initialSelection);
             final var templateName = templateType == TemplateType.SubNode ? "Component" : "Metanode";
             setTitle("Save As " + templateName + " Template");
-            setHeader("Select destination workflow group for " + templateName.toLowerCase() + " template");
+            setHeader("Select destination workflow group for " + templateName.toLowerCase(Locale.US) + " template");
             setValidator(new Validator() {
                 @Override
                 public String validateSelectionValue(final AbstractExplorerFileStore selection, final String name) {
