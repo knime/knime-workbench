@@ -45,6 +45,7 @@
 package org.knime.workbench.repository;
 
 import java.util.MissingResourceException;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 import org.eclipse.core.runtime.jobs.IJobManager;
@@ -54,7 +55,10 @@ import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.core.customization.APCustomization;
+import org.knime.core.customization.APCustomizationProviderService;
 import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
 
 /**
  * Repository Plugin.
@@ -64,8 +68,7 @@ import org.osgi.framework.BundleContext;
 public class KNIMERepositoryPlugin extends AbstractUIPlugin {
     // Make sure that this *always* matches the ID in plugin.xml
     /** The plugin-id. */
-    public static final String PLUGIN_ID = "org.knime.workbench."
-            + "repository";
+    public static final String PLUGIN_ID = "org.knime.workbench.repository";
 
     // The shared instance.
     private static KNIMERepositoryPlugin plugin;
@@ -76,12 +79,14 @@ public class KNIMERepositoryPlugin extends AbstractUIPlugin {
     // image registry
     private ImageRegistry m_imageRegistry;
 
-    /**
-     * The constructor.
-     */
-    public KNIMERepositoryPlugin() {
-        super();
-        plugin = this;
+    private ServiceTracker<APCustomizationProviderService, APCustomizationProviderService>
+            m_customizationServiceTracker;
+
+    @Override
+    public void start(final BundleContext context) throws Exception {
+        plugin = this; // NOSONAR
+        m_customizationServiceTracker = new ServiceTracker<>(context, APCustomizationProviderService.class, null);
+        m_customizationServiceTracker.open();
     }
 
     /**
@@ -97,6 +102,8 @@ public class KNIMERepositoryPlugin extends AbstractUIPlugin {
         jobMan.join(getBundle().getSymbolicName(), null);
         plugin = null;
         m_resourceBundle = null;
+        m_customizationServiceTracker.close();
+        m_customizationServiceTracker = null;
         super.stop(context);
     }
 
@@ -107,6 +114,12 @@ public class KNIMERepositoryPlugin extends AbstractUIPlugin {
      */
     public static KNIMERepositoryPlugin getDefault() {
         return plugin;
+    }
+
+    /** @return the customization set in KNIME core, often a "noop" customization, never null. */
+    public APCustomization getCustomization() {
+        return Optional.ofNullable(m_customizationServiceTracker.getService())
+            .map(APCustomizationProviderService::getCustomization).orElse(APCustomization.DEFAULT);
     }
 
     /**
