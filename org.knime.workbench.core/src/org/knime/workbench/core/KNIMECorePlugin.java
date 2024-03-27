@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.MissingResourceException;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -70,6 +71,7 @@ import org.knime.core.node.NodeLoggerConfig;
 import org.knime.core.node.port.database.DatabaseConnectionSettings;
 import org.knime.core.node.port.database.DatabaseDriverLoader;
 import org.knime.core.util.KnimeEncryption;
+import org.knime.core.util.Pair;
 import org.knime.workbench.core.preferences.HeadlessPreferencesConstants;
 import org.knime.workbench.core.util.ThreadsafeImageRegistry;
 import org.osgi.framework.BundleContext;
@@ -112,6 +114,16 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
     public KNIMECorePlugin() {
         super();
         plugin = this;
+    }
+
+    private static final LEVEL parseLevel(final String knimeLogLevel) {
+        try {
+            return LEVEL.valueOf(knimeLogLevel);
+        } catch (IllegalArgumentException ignored) {
+            final var defaultLevel = LEVEL.WARN;
+            LOGGER.error("Invalid log level \"" + knimeLogLevel + "\", using " + defaultLevel.name());
+            return defaultLevel;
+        }
     }
 
     /**
@@ -365,34 +377,28 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
         m_resourceBundle = null;
     }
 
+    private static Optional<String> getAppenderForPreference(final String loggerPreferenceKey) {
+        return Optional.ofNullable(switch (loggerPreferenceKey) {
+            case HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE -> NodeLogger.LOGFILE_APPENDER;
+            case HeadlessPreferencesConstants.P_LOGLEVEL_STDOUT -> NodeLogger.STDOUT_APPENDER;
+            default -> null;
+        });
+    }
+
     /**
-     * Sets a given minimum log level to the given logger property. Uses the default maximum log level value of FATAL.
+     * Sets the given minimum level for the appender associated with the given preference key
+     * (as defined in {@code HeadlessPreferencesConstants.P_LOGLEVEL_*}).
      *
-     * @param logLevel Log level to set.
-     * @param logerProperty Name of the property corresponding to NodeLoggers (found in
+     * @param minimumKNIMELogLevel minimum KNIME log level to set appender to
+     * @param loggerPreferenceKey key of the property corresponding to NodeLoggers (found in
      *            HeadlessPreferencesConstants.P_LOGLEVEL_*).
      */
-    private static void setLogLevelOnNodeLogger(final String logLevel, final String loggerProperty) {
-        var nodeLoggerLevel = LEVEL.WARN;
-        try {
-            nodeLoggerLevel = LEVEL.valueOf(logLevel);
-        } catch (IllegalArgumentException ignored) {
-            LOGGER.error("Invalid log level \"" + logLevel + "\", using " + nodeLoggerLevel.name());
-        }
-
-        switch (loggerProperty) {
-            case HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE -> {
-                final var existing = NodeLoggerConfig.getAppenderLevelRange(NodeLogger.LOGFILE_APPENDER);
-                final var max = existing != null ? existing.getSecond() : LEVEL.FATAL;
-                NodeLoggerConfig.setAppenderLevelRange(NodeLogger.LOGFILE_APPENDER, nodeLoggerLevel, max);
-            }
-            case HeadlessPreferencesConstants.P_LOGLEVEL_STDOUT -> {
-                final var existing = NodeLoggerConfig.getAppenderLevelRange(NodeLogger.STDOUT_APPENDER);
-                final var max = existing != null ? existing.getSecond() : LEVEL.FATAL;
-                NodeLoggerConfig.setAppenderLevelRange(NodeLogger.STDOUT_APPENDER, nodeLoggerLevel, max);
-            }
-            default -> LOGGER.error("Unsupported NodeLogger property, log level cannot be set: " + loggerProperty);
-        }
+    private static void setLogLevelOnNodeLogger(final String minimumKNIMELogLevel, final String loggerPreferenceKey) {
+        final var minimum = parseLevel(minimumKNIMELogLevel);
+        getAppenderForPreference(loggerPreferenceKey).ifPresentOrElse( //
+            appenderName -> NodeLoggerConfig.modifyAppenderLevelRange(appenderName, //
+                (min, max) -> Pair.create(minimum, max)), //
+            () -> LOGGER.error("Unsupported NodeLogger property, log level cannot be set: " + loggerPreferenceKey));
     }
 
     /**
