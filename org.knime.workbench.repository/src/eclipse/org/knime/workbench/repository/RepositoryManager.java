@@ -67,6 +67,7 @@ import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Platform;
+import org.knime.core.customization.APCustomization;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
@@ -386,6 +387,7 @@ public final class RepositoryManager {
 
     private void readNodes(final IProgressMonitor monitor, final Root root, final boolean isIncludeDeprecated) {
         IContainerObject uncategorized = findUncategorizedCategory(root);
+        final APCustomization customization = KNIMERepositoryPlugin.getDefault().getCustomization();
 
         for (NodeFactoryExtension nodeFactoryExtension : NodeFactoryExtensionManager.getInstance()
             .getNodeFactoryExtensions()) {
@@ -401,6 +403,10 @@ public final class RepositoryManager {
 
                 Pair<DefaultNodeTemplate, Boolean> nodePair = RepositoryFactory.createNode(nodeFactoryExtension);
                 DefaultNodeTemplate node = nodePair.getFirst();
+                if (!customization.isViewAllowed(node.getID())) {
+                    continue; // hidden by AP customization
+                }
+
                 node.setDeprecated(nodeFactoryExtension.isDeprecated());
                 Boolean isDeprecatedInNode = nodePair.getSecond();
 
