@@ -387,7 +387,7 @@ public final class RepositoryManager {
 
     private void readNodes(final IProgressMonitor monitor, final Root root, final boolean isIncludeDeprecated) {
         IContainerObject uncategorized = findUncategorizedCategory(root);
-        final APCustomization customization = KNIMERepositoryPlugin.getDefault().getCustomization();
+        final APCustomization.Nodes nodesCustomization = KNIMERepositoryPlugin.getDefault().getCustomization().nodes();
 
         for (NodeFactoryExtension nodeFactoryExtension : NodeFactoryExtensionManager.getInstance()
             .getNodeFactoryExtensions()) {
@@ -403,7 +403,7 @@ public final class RepositoryManager {
 
                 Pair<DefaultNodeTemplate, Boolean> nodePair = RepositoryFactory.createNode(nodeFactoryExtension);
                 DefaultNodeTemplate node = nodePair.getFirst();
-                if (!customization.isViewAllowed(node.getID())) {
+                if (!nodesCustomization.isViewAllowed(node.getID())) {
                     continue; // hidden by AP customization
                 }
 
