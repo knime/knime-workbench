@@ -61,7 +61,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.IMemento;
-import org.knime.core.node.DynamicNodeFactory;
+import org.knime.core.node.ParameterizedNodeFactory;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.util.KNIMEJob;
 import org.knime.workbench.repository.model.NodeTemplate;
@@ -166,7 +166,7 @@ public final class NodeUsageRegistry {
      */
     public static void addNode(final NodeFactory<?> nodeFactory) {
         String id = nodeFactory.getClass().getName();
-        if (nodeFactory instanceof DynamicNodeFactory) {
+        if (nodeFactory instanceof ParameterizedNodeFactory) {
             id += "#" + nodeFactory.getNodeName();
         }
         addNode(RepositoryManager.INSTANCE.getNodeTemplate(id));

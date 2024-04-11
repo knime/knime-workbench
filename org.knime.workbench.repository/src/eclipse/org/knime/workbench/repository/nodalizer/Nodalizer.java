@@ -87,7 +87,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.knime.core.node.ConfigurableNodeFactory;
-import org.knime.core.node.DynamicNodeFactory;
+import org.knime.core.node.ParameterizedNodeFactory;
 import org.knime.core.node.Node;
 import org.knime.core.node.NodeAndBundleInformationPersistor;
 import org.knime.core.node.NodeDescription;
@@ -428,7 +428,7 @@ public class Nodalizer implements IApplication {
                 final NodeFactory<? extends NodeModel> fac = RepositoryManager.loadNodeFactory(parts[0]);
 
                 // Dynamic nodes require additional information to load the factory
-                if ((fac instanceof DynamicNodeFactory) && (parts.length > 1)) {
+                if ((fac instanceof ParameterizedNodeFactory) && (parts.length > 1)) {
                     final String s = parts[1];
                     final NodeSettingsRO ns =
                         NodeSettings.loadFromXML(new ByteArrayInputStream(s.getBytes(StandardCharsets.UTF_8)));
