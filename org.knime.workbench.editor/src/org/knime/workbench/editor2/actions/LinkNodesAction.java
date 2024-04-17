@@ -527,7 +527,8 @@ public class LinkNodesAction extends AbstractLinkNodesAction {
     protected boolean nodeHasConnectionWithinSet(final ConnectableEditPart node,
         final Collection<ConnectableEditPart> set) {
         final WorkflowManager wm = getManager();
-        final Set<ConnectionContainer> incoming = getConnectionsForConnectable(node, true, wm);
+        // We want to know if the potential destination nodes has any incoming connections yet
+        final Set<ConnectionContainer> incoming = getConnectionsForConnectable(node, false, wm);
 
         if (!incoming.isEmpty()) {
             for (ConnectionContainer cc : incoming) {
