@@ -83,12 +83,13 @@ public class HeadlessPreferencePage extends FieldEditorPreferencePage implements
     @Override
     protected void createFieldEditors() {
         // Specify the minimum log level for log file
-        addField(new RadioGroupFieldEditor(HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE, "Log File Log Level", 4,
+        addField(new RadioGroupFieldEditor(HeadlessPreferencesConstants.P_LOGLEVEL_LOG_FILE, "Log File Log Level", 5,
             new String[][]{//
                 {"&DEBUG", LEVEL.DEBUG.name()}, //
                 {"&INFO", LEVEL.INFO.name()}, //
                 {"&WARN", LEVEL.WARN.name()}, //
-                {"&ERROR", LEVEL.ERROR.name()}},
+                {"&ERROR", LEVEL.ERROR.name()}, //
+                {"&OFF", LEVEL.OFF.name()}},
             getFieldEditorParent()));
 
         addField(new BooleanFieldEditor(HeadlessPreferencesConstants.P_LOG_FILE_LOCATION, "Enable per workflow logs",

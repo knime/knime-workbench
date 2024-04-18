@@ -92,11 +92,12 @@ public class MainPreferencePage extends FieldEditorPreferencePage implements IWo
     public void createFieldEditors() {
         // Specify the minimum log level for the console
         m_consoleLogEditor = new RadioGroupFieldEditor(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE,
-            "Console View Log Level", 4, new String[][]{//
+            "Console View Log Level", 5, new String[][]{//
                 {"&DEBUG", LEVEL.DEBUG.name()}, //
                 {"&INFO", LEVEL.INFO.name()}, //
                 {"&WARN", LEVEL.WARN.name()}, //
-                {"&ERROR", LEVEL.ERROR.name()}},
+                {"&ERROR", LEVEL.ERROR.name()}, //
+                {"&OFF", LEVEL.OFF.name()}},
             getFieldEditorParent());
         addField(m_consoleLogEditor);
 
