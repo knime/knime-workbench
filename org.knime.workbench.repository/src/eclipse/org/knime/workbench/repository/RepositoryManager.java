@@ -487,6 +487,9 @@ public final class RepositoryManager {
 
 
     private void readNodeSets(final IProgressMonitor monitor, final Root root, final boolean isIncludeDeprecated) {
+        final APCustomization.Nodes nodesCustomization =
+                KNIMERepositoryPlugin.getDefault().getCustomization().nodes();
+
         for (NodeSetFactoryExtension set : NodeFactoryExtensionManager.getInstance().getNodeSetFactoryExtensions()) {
             Collection<DynamicNodeTemplate> dynamicNodeTemplates =
                     RepositoryFactory.createNodeSet(set, root, isIncludeDeprecated);
@@ -497,6 +500,9 @@ public final class RepositoryManager {
                 }
                 for (Listener l : m_loadListeners) {
                     l.newNode(root, node);
+                }
+                if (!nodesCustomization.isViewAllowed(node.getID())) {
+                    continue; // hidden by AP customization
                 }
                 m_nodesById.put(node.getID(), node);
 
