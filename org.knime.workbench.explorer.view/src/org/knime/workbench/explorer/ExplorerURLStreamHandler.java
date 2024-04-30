@@ -50,7 +50,6 @@ package org.knime.workbench.explorer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -77,9 +76,8 @@ import org.knime.core.util.KnimeUrlType;
 import org.knime.core.util.auth.Authenticator;
 import org.knime.core.util.auth.CouldNotAuthorizeException;
 import org.knime.core.util.exception.ResourceAccessException;
-import org.knime.core.util.proxy.GlobalProxyConfigProvider;
-import org.knime.core.util.proxy.ProxyProtocol;
 import org.knime.core.util.proxy.URLConnectionFactory;
+import org.knime.core.util.proxy.search.GlobalProxySearch;
 import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
@@ -162,16 +160,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         if (p == null) {
             return openConnectionForResolved(resolvedUrl);
         } else if (urlPointsToRemote(url)) { // must be unresolved URL to extract mount ID
-            final var globalProxy = GlobalProxyConfigProvider.getCurrent().map(cfg -> {
-                int intPort;
-                try {
-                    intPort = Integer.parseInt(cfg.port());
-                } catch (NumberFormatException nfe) {
-                    intPort = cfg.protocol().getDefaultPort();
-                }
-                return new Proxy(cfg.protocol() == ProxyProtocol.SOCKS ? Proxy.Type.SOCKS : Proxy.Type.HTTP,
-                    new InetSocketAddress(cfg.host(), intPort));
-            });
+            final var globalProxy = GlobalProxySearch.getCurrentFor(url)
+                    .map(cfg -> cfg.forJavaNetProxy().getFirst());
             // log ignored proxy if different to global proxy config
             if (!globalProxy.map(p::equals).orElse(false)) {
                 final var identifier = globalProxy.map(Proxy::toString).orElse("no proxy");
