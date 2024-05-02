@@ -62,7 +62,7 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.RGB;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.safety.Whitelist;
+import org.jsoup.safety.Safelist;
 import org.knime.core.node.workflow.Annotation;
 import org.knime.core.node.workflow.AnnotationData;
 import org.knime.core.node.workflow.NodeAnnotation;
@@ -342,6 +342,6 @@ public class AnnotationUtilities {
         jsoupDoc.outputSettings(outputSettings);
         tagsToPreserveLineBreaksFrom.forEach(tag -> jsoupDoc.select(tag).after("\\n"));
         var replaced = jsoupDoc.html().replace("\\n", "\n");
-        return Jsoup.clean(replaced, "", Whitelist.none(), outputSettings);
+        return Jsoup.clean(replaced, "", Safelist.none(), outputSettings);
     }
 }
