@@ -47,8 +47,6 @@
  */
 package org.knime.workbench.editor2.figures;
 
-import java.util.List;
-
 import org.eclipse.draw2d.Figure;
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.Locator;
@@ -121,7 +119,7 @@ public class NodeContainerLocator implements Locator {
         int y = 0;
         // as components change (status bar gets replaced by progress)
         // we need to find the component above us
-        List<IFigure> children = m_container.getChildren();
+        var children = m_container.getChildren();
         IFigure above = m_container;
         for (IFigure f : children) {
             if (f == fig) {

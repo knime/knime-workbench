@@ -57,6 +57,7 @@ import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.gef.DragTracker;
 import org.eclipse.gef.EditPart;
 import org.eclipse.gef.EditPolicy;
+import org.eclipse.gef.GraphicalEditPart;
 import org.eclipse.gef.Request;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.widgets.Display;
@@ -216,7 +217,7 @@ public abstract class AbstractWorkflowPortBarEditPart extends AbstractWorkflowEd
      */
     @Override
     @SuppressWarnings("unchecked")
-    public List<EditPart> getChildren() {
+    public List<? extends GraphicalEditPart> getChildren() {
         return super.getChildren();
     }
 

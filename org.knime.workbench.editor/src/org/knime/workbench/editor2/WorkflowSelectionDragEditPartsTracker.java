@@ -264,7 +264,7 @@ public class WorkflowSelectionDragEditPartsTracker extends DragEditPartsTracker 
     private static ConnectionContainerEditPart[] getOutportConnections(final EditPart containerPart) {
         // result list
         List<ConnectionContainerEditPart> result = new ArrayList<ConnectionContainerEditPart>();
-        List<EditPart> children = containerPart.getChildren();
+        var children = containerPart.getChildren();
 
         for (EditPart part : children) {
             if (part instanceof AbstractPortEditPart) {

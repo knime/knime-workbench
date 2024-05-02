@@ -106,13 +106,13 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
 
     private Figure marqueeRectangleFigure;
 
-    private Set<GraphicalEditPart> allChildren = new HashSet<GraphicalEditPart>();
+    private Set<? extends GraphicalEditPart> allChildren = new HashSet<>();
 
-    private Collection<GraphicalEditPart> selectedEditParts;
+    private Collection<EditPart> selectedEditParts;
 
-    private Collection<GraphicalEditPart> deselectedEditParts;
+    private Collection<EditPart> deselectedEditParts;
 
-    private Collection<GraphicalEditPart> alreadySelectedEditParts;
+    private Collection<EditPart> alreadySelectedEditParts;
 
     private Request targetRequest;
 
@@ -152,7 +152,7 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
         Collection<EditPart> currentNodes = new HashSet<EditPart>();
         if (getSelectionMode() != DEFAULT_MODE) { // everything is deselected
             // in default mode
-            Iterator<EditPart> iter =
+            Iterator<? extends EditPart> iter =
                     getCurrentViewer().getSelectedEditParts().iterator();
             while (iter.hasNext()) {
                 EditPart selected = iter.next();
@@ -205,8 +205,8 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
         deselections.addAll(connections);
     }
 
-    private void calculateNewSelection(final Collection<GraphicalEditPart> newSelections,
-            final Collection<GraphicalEditPart> deselections) {
+    private void calculateNewSelection(final Collection newSelections,
+            final Collection deselections) {
         Rectangle marqueeRect = getMarqueeSelectionRectangle();
         for (Iterator<GraphicalEditPart> itr = getAllChildren().iterator(); itr.hasNext();) {
             GraphicalEditPart child = itr.next();
@@ -315,17 +315,17 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
         }
     }
 
-    private Set<GraphicalEditPart> getAllChildren() {
+    private Set getAllChildren() {
         if (allChildren.isEmpty()) {
             getAllChildren(getCurrentViewer().getRootEditPart(), allChildren);
         }
         return allChildren;
     }
 
-    private void getAllChildren(final EditPart editPart, final Set<GraphicalEditPart> allChildren) {
-        List<GraphicalEditPart> children = editPart.getChildren();
+    private void getAllChildren(final EditPart editPart, final Set allChildren) {
+        var children = editPart.getChildren();
         for (int i = 0; i < children.size(); i++) {
-            GraphicalEditPart child = children.get(i);
+            GraphicalEditPart child = (GraphicalEditPart)children.get(i);
             if (marqueeBehavior == BEHAVIOR_NODES_CONTAINED
                     || marqueeBehavior == BEHAVIOR_NODES_AND_CONNECTIONS_TOUCHED) {
                 allChildren.add(child);
@@ -399,7 +399,7 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
                 setSelectionMode(DEFAULT_MODE);
             }
         }
-        alreadySelectedEditParts = new ArrayList<GraphicalEditPart>();
+        alreadySelectedEditParts = new ArrayList<>();
         alreadySelectedEditParts.addAll(getCurrentViewer()
                 .getSelectedEditParts());
         return true;
@@ -420,7 +420,7 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
     }
 
 
-    boolean nodesAndConnectionsEqual(final Collection<GraphicalEditPart> c1, final Collection<GraphicalEditPart> c2) {
+    boolean nodesAndConnectionsEqual(final Collection<EditPart> c1, final Collection<EditPart> c2) {
         if (c1.size() != c2.size()) {
             return false;
         }
@@ -457,8 +457,8 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
         if (isInState(STATE_DRAG | STATE_DRAG_IN_PROGRESS)) {
             showMarqueeFeedback();
             eraseTargetFeedback();
-            List<GraphicalEditPart> previousSelection = new ArrayList<GraphicalEditPart>();
-            List<GraphicalEditPart> previousDeselection = new ArrayList<GraphicalEditPart>();
+            List<EditPart> previousSelection = new ArrayList<>();
+            List<EditPart> previousDeselection = new ArrayList<>();
             if (selectedEditParts != null) {
                 previousSelection.addAll(selectedEditParts);
             } else {
@@ -467,8 +467,8 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
             if (isToggle() && deselectedEditParts != null) {
                 previousDeselection.addAll(deselectedEditParts);
             }
-            selectedEditParts = new ArrayList<GraphicalEditPart>();
-            deselectedEditParts = new ArrayList<GraphicalEditPart>();
+            selectedEditParts = new ArrayList<>();
+            deselectedEditParts = new ArrayList<>();
             calculateNewSelection(selectedEditParts, deselectedEditParts);
             showTargetFeedback();
             if (!nodesAndConnectionsEqual(previousSelection, selectedEditParts)
@@ -551,8 +551,8 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
 
     private void performMarqueeSelect() {
         EditPartViewer viewer = getCurrentViewer();
-        Collection<GraphicalEditPart> newSelections = new LinkedHashSet<GraphicalEditPart>(),
-                deselections = new HashSet<GraphicalEditPart>();
+        var newSelections = new LinkedHashSet<>();
+        var deselections = new HashSet<>();
         calculateNewSelection(newSelections, deselections);
         if (getSelectionMode() != DEFAULT_MODE) {
             newSelections.addAll(viewer.getSelectedEditParts());
@@ -606,7 +606,7 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
     }
 
     private void showTargetFeedback() {
-        for (Iterator<GraphicalEditPart> itr = selectedEditParts.iterator(); itr.hasNext();) {
+        for (var itr = selectedEditParts.iterator(); itr.hasNext();) {
             EditPart editPart = itr.next();
             editPart.showTargetFeedback(getTargetRequest());
         }

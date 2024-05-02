@@ -1300,11 +1300,11 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
             // but after the info sign, it must be checked in the case there
             // is only one sign so far at which position to insert the
             // warning sign
-            final List<Figure> children = getChildren();
+            final var children = getChildren();
 
             // check if there is already a warning sign
             boolean alreadyInserted = false;
-            for (final Figure child : children) {
+            for (final var child : children) {
                 if (child.equals(m_warningFigure)) {
                     alreadyInserted = true;
                 }
@@ -1319,7 +1319,7 @@ public class NodeContainerFigure extends RectangleFigure implements EditorModePa
                     add(m_warningFigure, 1);
                 } else {
                     // else there is exact 1 child
-                    final Figure figure = children.get(0);
+                    final var figure = children.get(0);
                     // in case of the error sign, the warning sign has to be
                     // inserted before the error sign
                     if (figure.equals(m_errorFigure)) {

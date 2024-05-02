@@ -55,7 +55,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import javax.xml.xpath.XPathConstants;
@@ -133,7 +132,7 @@ public final class SVGExporter {
 
         // clip the bounds and remove unoccupied space at the borders
         @SuppressWarnings("unchecked")
-        List<EditPart> children = part.getChildren();
+        var children = part.getChildren();
         for (EditPart ep : children) {
             if (ep instanceof AbstractGraphicalEditPart) {
                 Rectangle epBounds = ((AbstractGraphicalEditPart)ep).getFigure().getBounds();
