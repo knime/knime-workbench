@@ -162,7 +162,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         if (p == null) {
             return openConnectionForResolved(resolvedUrl);
         } else if (urlPointsToRemote(url)) { // must be unresolved URL to extract mount ID
-            final var globalProxy = GlobalProxyConfigProvider.getCurrent().map(cfg -> {
+            final var globalProxy = GlobalProxyConfigProvider.getCurrentFor(url).map(cfg -> {
                 int intPort;
                 try {
                     intPort = Integer.parseInt(cfg.port());
