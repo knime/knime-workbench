@@ -126,7 +126,7 @@
 							<requirement>
 								<!-- Required by tests using zt-zip -->
 								<type>eclipse-plugin</type>
-								<id>org.slf4j.api</id>
+								<id>slf4j.api</id>
 								<versionRange>0.0.0</versionRange>
 							</requirement>
 						</extraRequirements>
