@@ -242,6 +242,9 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     }
 
     private static void refreshResource(final LocalExplorerFileStore fileStore) {
+        if (fileStore == null) {
+            return;
+        }
         fileStore.getContentProvider().refresh(fileStore);
     }
 
