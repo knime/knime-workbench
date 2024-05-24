@@ -53,7 +53,6 @@ import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.preference.RadioGroupFieldEditor;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
-import org.knime.core.node.Node;
 import org.knime.core.node.NodeLogger.LEVEL;
 import org.knime.workbench.core.KNIMECorePlugin;
 import org.knime.workbench.core.preferences.HeadlessPreferencesConstants;
@@ -116,7 +115,7 @@ public class MainPreferencePage extends FieldEditorPreferencePage implements IWo
             "Confirm when loading workflows created by a nightly build", getFieldEditorParent()));
 
         // added with AP-15442 -- don't bother user with this unless this property is set
-        if (Node.DISALLOW_WEAK_PASSWORDS_IN_NODE_CONFIGURATION) {
+        if (KNIMEUIPlugin.getDefault().isDisablePasswordSaving()) {
             addField(new BooleanFieldEditor(PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS,
                 "Confirm when storing (weakly encrypted) passwords in node configurations", getFieldEditorParent()));
         }

@@ -67,6 +67,7 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.core.customization.APCustomization;
 import org.knime.core.internal.CorePlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.KnimeEncryption;
@@ -380,5 +381,14 @@ public class KNIMEUIPlugin extends AbstractUIPlugin {
         //Invalid thread access if it is not the UI Thread
         //and the workbench is not created.
         throw new SWTError(SWT.ERROR_THREAD_INVALID_ACCESS);
+    }
+
+    /**
+     * @return Forwards and returns value of current's customization 'isDisablePasswordSaving' property, see
+     * {@link APCustomization}.
+     */
+    public boolean isDisablePasswordSaving() {
+        return CorePlugin.getInstance().getCustomizationService() //
+                .map(s -> s.getCustomization().workflow().isDisablePasswordSaving()).orElse(false);
     }
 }

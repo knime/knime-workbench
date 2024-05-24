@@ -87,7 +87,6 @@ import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.InvalidSettingsException;
-import org.knime.core.node.Node;
 import org.knime.core.node.NodeDialogPane;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeSettings;
@@ -678,7 +677,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
     }
 
     private static void checkSettingsForPasswordsAndWarn(final NodeSettings settings) {
-        if (Node.DISALLOW_WEAK_PASSWORDS_IN_NODE_CONFIGURATION && settings != null
+        if (KNIMEUIPlugin.getDefault().isDisablePasswordSaving() && settings != null
             && ConfigPasswordEntry.containsPassword(settings, false)) {
             IPreferenceStore store = KNIMEUIPlugin.getDefault().getPreferenceStore();
             if (!store.contains(PreferenceConstants.P_CONFIRM_PASSWORDS_IN_SETTINGS)
