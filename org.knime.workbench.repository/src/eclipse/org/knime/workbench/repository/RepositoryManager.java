@@ -67,7 +67,7 @@ import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Platform;
-import org.knime.core.customization.APCustomization;
+import org.knime.core.customization.nodes.NodesCustomization;
 import org.knime.core.node.InvalidSettingsException;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
@@ -387,7 +387,7 @@ public final class RepositoryManager {
 
     private void readNodes(final IProgressMonitor monitor, final Root root, final boolean isIncludeDeprecated) {
         IContainerObject uncategorized = findUncategorizedCategory(root);
-        final APCustomization.Nodes nodesCustomization = KNIMERepositoryPlugin.getDefault().getCustomization().nodes();
+        final NodesCustomization nodesCustomization = KNIMERepositoryPlugin.getDefault().getCustomization().nodes();
 
         for (NodeFactoryExtension nodeFactoryExtension : NodeFactoryExtensionManager.getInstance()
             .getNodeFactoryExtensions()) {
@@ -487,8 +487,7 @@ public final class RepositoryManager {
 
 
     private void readNodeSets(final IProgressMonitor monitor, final Root root, final boolean isIncludeDeprecated) {
-        final APCustomization.Nodes nodesCustomization =
-                KNIMERepositoryPlugin.getDefault().getCustomization().nodes();
+        final NodesCustomization nodesCustomization = KNIMERepositoryPlugin.getDefault().getCustomization().nodes();
 
         for (NodeSetFactoryExtension set : NodeFactoryExtensionManager.getInstance().getNodeSetFactoryExtensions()) {
             Collection<DynamicNodeTemplate> dynamicNodeTemplates =
