@@ -44,7 +44,6 @@
  */
 package org.knime.workbench.explorer;
 
-import java.util.Hashtable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.runtime.preferences.DefaultScope;
@@ -52,12 +51,8 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
-import org.knime.core.util.pathresolve.URIToFileResolve;
-import org.knime.workbench.explorer.pathresolve.URIToFileResolveImpl;
 import org.knime.workbench.explorer.view.preferences.ExplorerPrefsSyncer;
 import org.knime.workbench.explorer.view.preferences.MountSettings;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.prefs.BackingStoreException;
 
 /**
@@ -69,8 +64,6 @@ public class ExplorerActivator extends AbstractUIPlugin {
      * the id of the plug-in.
      */
     public static final String PLUGIN_ID = "org.knime.workbench.explorer.view";
-
-    private ServiceRegistration<?> m_uriToFileServiceRegistration;
 
     private AtomicBoolean m_prefSyncerAdded = new AtomicBoolean();
 
@@ -90,27 +83,6 @@ public class ExplorerActivator extends AbstractUIPlugin {
      */
     public static ExplorerActivator getDefault() {
         return plugin;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void start(final BundleContext bundleContext) throws Exception {
-        super.start(bundleContext);
-        m_uriToFileServiceRegistration = bundleContext.registerService(
-                URIToFileResolve.class.getName(),
-                new URIToFileResolveImpl(), new Hashtable<String, String>());
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void stop(final BundleContext bundleContext) throws Exception {
-        bundleContext.ungetService(
-                m_uriToFileServiceRegistration.getReference());
-        super.stop(bundleContext);
     }
 
     /**
