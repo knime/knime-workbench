@@ -57,6 +57,7 @@ import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.equinox.internal.p2.ui.dialogs.UpdateSingleIUWizard;
@@ -232,7 +233,7 @@ public class InvokeUpdateAction extends AbstractP2Action {
     protected void openWizard(final LoadMetadataRepositoryJob job, final ProvisioningUI provUI) {
         final var operation = provUI.getUpdateOperation(null, null);
         // check for updates
-        operation.resolveModal(null);
+        operation.resolveModal(new NullProgressMonitor());
 
         PlatformUI.getWorkbench().getDisplay().asyncExec(() -> openWizard(job, provUI, operation));
     }
