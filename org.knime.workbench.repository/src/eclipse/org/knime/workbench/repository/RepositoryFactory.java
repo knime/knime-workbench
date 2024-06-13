@@ -360,7 +360,8 @@ public final class RepositoryFactory {
             NodeFactory<? extends NodeModel> factory = factoryOptional.get();
 
             // DynamicNodeFactory implementations can set deprecation independently from extension
-            if ((set.isDeprecated() || factory.isDeprecated()) && !isIncludeDeprecated ) {
+            boolean isDeprecated = set.isDeprecated() || factory.isDeprecated();
+            if (isDeprecated && !isIncludeDeprecated) {
                 continue;
             }
 
@@ -373,6 +374,7 @@ public final class RepositoryFactory {
                 factory.getNodeName(), set.getPlugInSymbolicName(), categoryPath, nodeType);
 
             node.setAfterID(nodeSet.getAfterID(factoryId));
+            node.setDeprecated(isDeprecated); // Set "deprecated" if nodeset or node is deprecated -- AP-22627
 
             if (!Boolean.getBoolean("java.awt.headless")) {
                 Image icon = ImageRepository.getIconImage(factory);
