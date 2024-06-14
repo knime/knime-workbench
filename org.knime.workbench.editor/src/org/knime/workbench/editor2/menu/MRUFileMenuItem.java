@@ -53,7 +53,6 @@ import java.io.InputStream;
 import java.io.StringReader;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -80,8 +79,9 @@ import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.util.ThreadLocalHTTPAuthenticator;
+import org.knime.core.util.proxy.URLConnectionFactory;
 import org.knime.workbench.editor2.WorkflowEditor;
-import org.knime.workbench.explorer.ExplorerURLStreamHandler;
 import org.knime.workbench.explorer.RemoteWorkflowInput;
 import org.knime.workbench.explorer.filesystem.RemoteDownloadStream;
 import org.osgi.framework.Bundle;
@@ -266,10 +266,8 @@ public final class MRUFileMenuItem extends ContributionItem {
 
         @Override
         public void run() {
-            final ExplorerURLStreamHandler handler = new ExplorerURLStreamHandler();
-
-            try {
-                final URLConnection connection = handler.openConnection(m_assetURL);
+            try (final var c = ThreadLocalHTTPAuthenticator.suppressAuthenticationPopups()) {
+                final var connection = URLConnectionFactory.getConnection(m_assetURL);
                 try (final InputStream is = connection.getInputStream()) {
                     boolean connectionHasContent = (connection.getContentLength() > 0);
                     // This if-block is kept for the future case in which we support remembering

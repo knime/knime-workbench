@@ -70,6 +70,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.util.FileUtil;
+import org.knime.core.util.ThreadLocalHTTPAuthenticator;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.hub.NamedItemVersion;
 import org.knime.core.util.pathresolve.SpaceVersion;
@@ -232,8 +233,8 @@ public class URIToFileResolveImpl implements URIToFileResolve {
 
     private static InputStream addAuthHeaderAndOpenStream(final URL url, final ZonedDateTime ifModifiedSince)
         throws ResourceAccessException {
-        try {
-            HttpURLConnection uc = (HttpURLConnection)URLConnectionFactory.getConnection(url);
+        try (final var c = ThreadLocalHTTPAuthenticator.suppressAuthenticationPopups()) {
+            final var uc = URLConnectionFactory.getConnection(url);
             String userInfo = url.getUserInfo();
             if (userInfo != null) {
                 String urlDecodedUserInfo = URLDecoder.decode(userInfo, StandardCharsets.UTF_8.name());
@@ -245,7 +246,8 @@ public class URIToFileResolveImpl implements URIToFileResolve {
             if (ifModifiedSince != null) {
                 uc.setIfModifiedSince(ifModifiedSince.toInstant().toEpochMilli());
                 uc.connect();
-                if (uc.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
+                if (uc instanceof HttpURLConnection huc
+                    && huc.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
                     NodeLogger.getLogger(URIToFileResolveImpl.class)
                         .debug("Download of resource at '" + url + "' skipped. Resource not modified.");
                     return null;
