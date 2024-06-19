@@ -105,7 +105,7 @@ public class LockMetaNodeDialog extends IconAndMessageDialog {
      */
     public LockMetaNodeDialog(final Shell parent, final WorkflowManager mgr) {
         super(parent);
-        super.message = "Metanode Locking";
+        super.message = "Component Locking";
         m_workflow = mgr;
         setShellStyle(SWT.DIALOG_TRIM | SWT.RESIZE | SWT.APPLICATION_MODAL);
     }
@@ -309,12 +309,12 @@ public class LockMetaNodeDialog extends IconAndMessageDialog {
     }
 
     /** @return password as entered or null if disabled. */
-    String getPassword() {
+    public String getPassword() {
         return m_newPassword;
     }
 
     /** @return password hint as entered or null if disabled. */
-    String getPasswordHint() {
+    public String getPasswordHint() {
         return m_passwordHint;
     }
 
