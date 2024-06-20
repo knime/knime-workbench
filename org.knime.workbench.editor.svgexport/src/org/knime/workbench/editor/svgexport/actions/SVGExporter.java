@@ -48,15 +48,19 @@
 package org.knime.workbench.editor.svgexport.actions;
 
 import java.awt.Dimension;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
@@ -107,15 +111,13 @@ public final class SVGExporter {
     public static void export(final WorkflowEditor editor, final File file) throws SVGExportException {
         try {
             exportInternal(editor, file);
-        } catch (IOException ioe) {
-            throw new SVGExportException(ioe);
-        } catch (TranscoderException te) {
-            throw new SVGExportException(te);
+        } catch (IOException | TranscoderException | TransformerException e) {
+            throw new SVGExportException(e);
         }
     }
 
     private static void exportInternal(final WorkflowEditor editor, final File file)
-            throws IOException, TranscoderException {
+            throws IOException, TranscoderException, TransformerException {
         // Obtain WorkflowRootEditPart, which holds all the nodes
         final GraphicalViewer viewer = editor.getViewer();
         if (viewer == null) {
@@ -176,10 +178,6 @@ public final class SVGExporter {
         for (ConnectionContainerEditPart ep : connections) {
             ep.getFigure().paint(svgExporter);
         }
-        SVGTranscoder transcoder = new SVGTranscoder();
-        Writer fileOut =  new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "UTF-8"));
-        fileOut.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        TranscoderOutput out = new TranscoderOutput(fileOut);
         Document doc = svgExporter.getDocument();
         doc.replaceChild(svgExporter.getRoot(), doc.getDocumentElement());
         // fix font sizes
@@ -203,9 +201,16 @@ public final class SVGExporter {
                 // ignore
             }
         }
-        TranscoderInput in = new TranscoderInput(doc);
-        transcoder.transcode(in, out);
-        fileOut.close();
-    }
 
+        // Serialize to String first, otherwise special characters don't get escaped (see AP-22522).
+        // The `SVGTranscoder` serializes internally if it gets a DOM `Document` instead of a `Reader`.
+        final var stringWriter = new StringWriter();
+        TransformerFactory.newInstance().newTransformer().transform(new DOMSource(doc), new StreamResult(stringWriter));
+
+        final var transcoder = new SVGTranscoder();
+        transcoder.addTranscodingHint(SVGTranscoder.KEY_XML_DECLARATION, "<?xml version=\"1.1\" encoding=\"UTF-8\"?>");
+        try (final Writer fileOut =  Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
+            transcoder.transcode(new TranscoderInput(stringWriter.toString()), new TranscoderOutput(fileOut));
+        }
+    }
 }
