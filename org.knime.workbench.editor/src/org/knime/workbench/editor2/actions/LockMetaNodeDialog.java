@@ -95,6 +95,7 @@ public class LockMetaNodeDialog extends IconAndMessageDialog {
     private Label m_passwordHintLabel;
     private Text m_passwordHintTextField;
 
+    private String m_subnodeType;
 
     /**
      * Dialog with enable checker and two text fields in which the user enters
@@ -104,9 +105,22 @@ public class LockMetaNodeDialog extends IconAndMessageDialog {
      * @param mgr the workflow manager for the metanode
      */
     public LockMetaNodeDialog(final Shell parent, final WorkflowManager mgr) {
+        this(parent, mgr, "Component Locking");
+    }
+
+    /**
+     * Dialog with enable checker and two text fields in which the user enters
+     * the password and the password hint. With configurable labels
+     *
+     * @param parent the parent shell for this dialog
+     * @param mgr the workflow manager for the metanode
+     * @param subnodeType the type of subnode, either Component or Metanode
+     */
+    public LockMetaNodeDialog(final Shell parent, final WorkflowManager mgr, final String subnodeType) {
         super(parent);
-        super.message = "Component Locking";
+        super.message = subnodeType + " Locking";
         m_workflow = mgr;
+        m_subnodeType = subnodeType;
         setShellStyle(SWT.DIALOG_TRIM | SWT.RESIZE | SWT.APPLICATION_MODAL);
     }
 
@@ -218,7 +232,7 @@ public class LockMetaNodeDialog extends IconAndMessageDialog {
     @Override
     protected void configureShell(final Shell newShell) {
         super.configureShell(newShell);
-        newShell.setText("Metanode Locking");
+        newShell.setText(m_subnodeType + " Locking");
     }
 
     /**
