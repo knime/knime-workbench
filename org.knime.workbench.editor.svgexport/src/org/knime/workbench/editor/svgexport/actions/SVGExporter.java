@@ -50,17 +50,14 @@ package org.knime.workbench.editor.svgexport.actions;
 import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
@@ -83,8 +80,8 @@ import org.knime.workbench.editor2.editparts.ConnectionContainerEditPart;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.editor2.svgexport.SVGExportException;
-import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 /**
@@ -93,6 +90,12 @@ import org.w3c.dom.NodeList;
  * @author Patrick Winter, KNIME AG, Zurich, Switzerland
  */
 public final class SVGExporter {
+
+    /** Non-XML characters, validated against {@code org.apache.batik.xml.XMLUtilities#isXMLCharacter(int)}. */
+    private static final Pattern NON_XML_CHARS =
+            Pattern.compile("[\\u0000-\\u0008\\u000B-\\u000C\\u000E-\\u001F\\uD800-\\uDFFF]");
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(SVGExporter.class);
 
     private SVGExporter() {
         // Disable public constructor
@@ -111,13 +114,13 @@ public final class SVGExporter {
     public static void export(final WorkflowEditor editor, final File file) throws SVGExportException {
         try {
             exportInternal(editor, file);
-        } catch (IOException | TranscoderException | TransformerException e) {
+        } catch (IOException | TranscoderException e) {
             throw new SVGExportException(e);
         }
     }
 
     private static void exportInternal(final WorkflowEditor editor, final File file)
-            throws IOException, TranscoderException, TransformerException {
+            throws IOException, TranscoderException {
         // Obtain WorkflowRootEditPart, which holds all the nodes
         final GraphicalViewer viewer = editor.getViewer();
         if (viewer == null) {
@@ -165,9 +168,7 @@ public final class SVGExporter {
         svgExporter.pushState();
         figure.paint(svgExporter);
         // export all connections
-        Set<ConnectionContainerEditPart> connections = new HashSet<ConnectionContainerEditPart>();
-        //@SuppressWarnings("unchecked")
-        //List<EditPart> children = part.getChildren();
+        Set<ConnectionContainerEditPart> connections = new HashSet<>();
         for (EditPart ep : children) {
             if (ep instanceof NodeContainerEditPart) {
                 for (ConnectionContainerEditPart c : ((NodeContainerEditPart)ep).getAllConnections()) {
@@ -183,34 +184,41 @@ public final class SVGExporter {
         // fix font sizes
         int dpix = DisplayUtils.getDisplay().getDPI().x;
         if (dpix > 72) {
-            try {
-                XPathExpression xpath = XPathFactory.newInstance().newXPath().compile("//@font-size");
-                NodeList fontSizes = (NodeList)xpath.evaluate(doc, XPathConstants.NODESET);
-                for (int i = 0; i < fontSizes.getLength(); i++) {
-                    Attr attribute = (Attr)fontSizes.item(i);
-                    String value = attribute.getNodeValue();
-                    try {
-                        double size = Double.parseDouble(value);
-                        size = Math.floor(size / dpix * 72.0) * dpix / 72.0;
-                        attribute.setNodeValue(Integer.toString((int)size));
-                    } catch (NumberFormatException ex) {
-                        // ignore it
-                    }
+            visitXPathMatches(doc, "//@font-size", attr -> {
+                try {
+                    final var oldValue = Double.parseDouble(attr.getNodeValue());
+                    final var size = Math.floor(oldValue / dpix * 72.0) * dpix / 72.0;
+                    attr.setNodeValue(Integer.toString((int)size));
+                } catch (NumberFormatException ex) {
+                    // ignore it
                 }
-            } catch (XPathExpressionException ex) {
-                // ignore
-            }
+            });
         }
 
-        // Serialize to String first, otherwise special characters don't get escaped (see AP-22522).
-        // The `SVGTranscoder` serializes internally if it gets a DOM `Document` instead of a `Reader`.
-        final var stringWriter = new StringWriter();
-        TransformerFactory.newInstance().newTransformer().transform(new DOMSource(doc), new StreamResult(stringWriter));
+        // Remove non-XML characters from all text nodes, attributes and processing instructions
+        visitXPathMatches(doc, "//@*|//text()|//processing-instruction()", node -> {
+            final var illegalCharsMatcher = NON_XML_CHARS.matcher(node.getNodeValue());
+            if (illegalCharsMatcher.find()) {
+                node.setNodeValue(illegalCharsMatcher.replaceAll(""));
+            }
+        });
 
         final var transcoder = new SVGTranscoder();
-        transcoder.addTranscodingHint(SVGTranscoder.KEY_XML_DECLARATION, "<?xml version=\"1.1\" encoding=\"UTF-8\"?>");
+        transcoder.addTranscodingHint(SVGTranscoder.KEY_XML_DECLARATION, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         try (final Writer fileOut =  Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
-            transcoder.transcode(new TranscoderInput(stringWriter.toString()), new TranscoderOutput(fileOut));
+            transcoder.transcode(new TranscoderInput(doc), new TranscoderOutput(fileOut));
+        }
+    }
+
+    private static void visitXPathMatches(final Document doc, final String xPath, final Consumer<Node> callback) {
+        try {
+            final XPathExpression expression = XPathFactory.newInstance().newXPath().compile(xPath);
+            final NodeList nodes = (NodeList)expression.evaluate(doc, XPathConstants.NODESET);
+            for (var i = 0; i < nodes.getLength(); i++) {
+                callback.accept(nodes.item(i));
+            }
+        } catch (XPathExpressionException ex) {
+            LOGGER.error("Invalid XPath", ex);
         }
     }
 }
