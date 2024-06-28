@@ -264,6 +264,14 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
     }
 
     /**
+     * @since 8.13
+     */
+    @Override
+    public boolean isAuthenticated(final URI uri) {
+        return getStore(uri).getContentProvider().isAuthenticated();
+    }
+
+    /**
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if mountpoint does not exist

@@ -1417,6 +1417,16 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         // do nothing by default
     }
 
+    /**
+     * Checks if the content provider is authenticated or not. Returns <code>false</code> if authentication
+     * is required but the user is not authenticated yet.
+     *
+     * @return true if the content provider is authenticated, false otherwise
+     * @since 8.13
+     */
+    public boolean isAuthenticated() {
+        return true;
+    }
 
     /**
      * Checks whether it is possible to add items to the content provider or
@@ -1426,6 +1436,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      *
      * @return true if the provider's content cannot be modified, false
      *      otherwise
+     * @see #isAuthenticated()
      */
     public abstract boolean isWritable();
 
