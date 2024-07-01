@@ -164,8 +164,7 @@ public class LockMetaNodeAction extends AbstractNodeAction {
         if (!unwrapWFM(metaNodeWFM).unlock(new GUIWorkflowCipherPrompt(false))) {
             return;
         }
-        LockMetaNodeDialog lockDialog =
-            new LockMetaNodeDialog(shell, unwrapWFM(metaNodeWFM));
+        LockMetaNodeDialog lockDialog = new LockMetaNodeDialog(shell, unwrapWFM(metaNodeWFM), false);
         if (lockDialog.open() != Window.OK) {
             return;
         }

@@ -95,7 +95,7 @@ public class LockMetaNodeDialog extends IconAndMessageDialog {
     private Label m_passwordHintLabel;
     private Text m_passwordHintTextField;
 
-    private String m_subnodeType;
+    private final boolean m_isPromptForComponent;
 
     /**
      * Dialog with enable checker and two text fields in which the user enters
@@ -105,22 +105,23 @@ public class LockMetaNodeDialog extends IconAndMessageDialog {
      * @param mgr the workflow manager for the metanode
      */
     public LockMetaNodeDialog(final Shell parent, final WorkflowManager mgr) {
-        this(parent, mgr, "Component Locking");
+        this(parent, mgr, true);
     }
 
     /**
-     * Dialog with enable checker and two text fields in which the user enters
-     * the password and the password hint. With configurable labels
+     * Dialog with enable checker and two text fields in which the user enters the password and the password hint. With
+     * configurable labels
      *
      * @param parent the parent shell for this dialog
      * @param mgr the workflow manager for the metanode
-     * @param subnodeType the type of subnode, either Component or Metanode
+     * @param isPromptForComponent whether the prompt is for a component (<code>true</code>) or a metanode
+     *            (<code>false</code>)
      */
-    public LockMetaNodeDialog(final Shell parent, final WorkflowManager mgr, final String subnodeType) {
+    public LockMetaNodeDialog(final Shell parent, final WorkflowManager mgr, final boolean isPromptForComponent) {
         super(parent);
-        super.message = subnodeType + " Locking";
+        m_isPromptForComponent = isPromptForComponent;
+        super.message = (isPromptForComponent ? "Component" : "Metanode") + " Locking";
         m_workflow = mgr;
-        m_subnodeType = subnodeType;
         setShellStyle(SWT.DIALOG_TRIM | SWT.RESIZE | SWT.APPLICATION_MODAL);
     }
 
@@ -232,7 +233,7 @@ public class LockMetaNodeDialog extends IconAndMessageDialog {
     @Override
     protected void configureShell(final Shell newShell) {
         super.configureShell(newShell);
-        newShell.setText(m_subnodeType + " Locking");
+        newShell.setText((m_isPromptForComponent ? "Component" : "Metanode") + " Locking");
     }
 
     /**
