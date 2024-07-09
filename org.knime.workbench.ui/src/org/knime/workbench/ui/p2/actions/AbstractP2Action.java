@@ -71,6 +71,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.eclipseUtil.UpdateChecker;
+import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.PathUtils;
 import org.knime.core.util.proxy.DisabledSchemesChecker;
@@ -103,7 +104,8 @@ public abstract class AbstractP2Action extends Action {
         Job.getJobManager().cancel(LoadMetadataRepositoryJob.LOAD_FAMILY);
         final var loadJob = new LoadMetadataRepositoryJob(provUI);
         loadJob.setProperty(LoadMetadataRepositoryJob.ACCUMULATE_LOAD_ERRORS, Boolean.toString(true));
-        loadJob.setProperty(LoadMetadataRepositoryJob.SUPPRESS_AUTHENTICATION_JOB_MARKER, Boolean.toString(true));
+        loadJob.setProperty(LoadMetadataRepositoryJob.SUPPRESS_AUTHENTICATION_JOB_MARKER,
+            Boolean.toString(!Boolean.getBoolean(KNIMEConstants.PROPERTY_AUTH_POPUPS_ALLOWED)));
 
         loadJob.addJobChangeListener(new JobChangeAdapter() {
             @Override
