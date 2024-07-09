@@ -115,7 +115,9 @@ public abstract class AbstractWrappedDialog extends Dialog {
         if (Platform.OS_MACOSX.equals(Platform.getOS()) || Platform.OS_LINUX.equals(Platform.getOS())) {
             final AWTKeyTracker keyTracker = AWTKeyTracker.getInstance();
 
-            keyTracker.removeListeners(m_wrapper.getRootFrame(), getShell());
+            if (m_wrapper != null) {
+                keyTracker.removeListeners(m_wrapper.getRootFrame(), getShell());
+            }
         }
 
         super.handleShellCloseEvent();
@@ -139,7 +141,9 @@ public abstract class AbstractWrappedDialog extends Dialog {
 
             final AWTKeyTracker keyTracker = AWTKeyTracker.getInstance();
 
-            keyTracker.instrumentTree(m_wrapper.getRootFrame(), m_awtKeyListener, getShell(), m_swtKeyListener);
+            if (m_wrapper != null) {
+                keyTracker.instrumentTree(m_wrapper.getRootFrame(), m_awtKeyListener, getShell(), m_swtKeyListener);
+            }
         }
     }
 
