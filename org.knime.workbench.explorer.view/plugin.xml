@@ -24,6 +24,7 @@
                class="org.knime.workbench.explorer.view.preferences.ExplorerPreferencePage"
                id="org.knime.workbench.explorer.view.explorer"
                name="KNIME Explorer">
+               <keywordReference id="MANAGE_MOUNTPOINTS"/>            
          </page>
       </extension>
       <extension

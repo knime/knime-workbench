@@ -117,6 +117,7 @@
             <keyword id="AUTOSAVE" label="auto save autosave interval data"/>
             <keyword id="UI_CONSOLE_LOG_LEVEL" label="console log level debug info warn error"/>
             <keyword id="UI_CONFIRM" label="confirm node reset delete connection"/>
+            <keyword id="MANAGE_MOUNTPOINTS" label="mount point mountpoint hub server space"/>
    </extension>
    <extension
          point="org.eclipse.ui.preferencePages">
