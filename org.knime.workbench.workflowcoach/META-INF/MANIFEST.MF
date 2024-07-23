@@ -8,21 +8,21 @@ Bundle-Vendor: KNIME AG, Zurich, Switzerland
 Export-Package: org.knime.workbench.workflowcoach,
  org.knime.workbench.workflowcoach.data
 Require-Bundle: org.eclipse.jface;bundle-version="[3.11.0,4.0.0)",
- org.knime.core;bundle-version="[5.3.0,6.0.0)",
- org.knime.workbench.editor;bundle-version="[5.3.0,6.0.0)",
+ org.knime.core;bundle-version="[5.4.0,6.0.0)",
+ org.knime.workbench.editor;bundle-version="[5.4.0,6.0.0)",
  org.eclipse.gef;bundle-version="[3.10.0,4.0.0)",
- org.knime.workbench.core;bundle-version="[5.3.0,6.0.0)",
+ org.knime.workbench.core;bundle-version="[5.4.0,6.0.0)",
  org.apache.commons.lang3;bundle-version="[3.2.0,4.0.0)",
- org.knime.workbench.ui;bundle-version="[5.3.0,6.0.0)",
+ org.knime.workbench.ui;bundle-version="[5.4.0,6.0.0)",
  org.eclipse.core.jobs;bundle-version="[3.7.0,4.0.0)",
  org.eclipse.ui.forms;bundle-version="[3.6.0,4.0.0)",
- org.knime.workbench.repository;bundle-version="[5.3.0,6.0.0)",
+ org.knime.workbench.repository;bundle-version="[5.4.0,6.0.0)",
  com.fasterxml.jackson.core.jackson-core;bundle-version="[2.13.2,3.0.0)",
  com.fasterxml.jackson.core.jackson-databind;bundle-version="[2.13.2.2,3.0.0)",
  com.fasterxml.jackson.core.jackson-annotations;bundle-version="[2.13.2,3.0.0)",
  com.fasterxml.jackson.datatype.jackson-datatype-jdk8;bundle-version="[2.13.2,3.0.0)",
- org.knime.workbench.explorer.view;bundle-version="[8.13.0,9.0.0)",
- org.knime.core.ui;bundle-version="[5.3.0,6.0.0)",
+ org.knime.workbench.explorer.view;bundle-version="[8.14.0,9.0.0)",
+ org.knime.core.ui;bundle-version="[5.4.0,6.0.0)",
  jakarta.ws.rs-api;bundle-version="[3.1.0,4.0.0)"
 Bundle-RequiredExecutionEnvironment: JavaSE-11
 Eclipse-RegisterBuddy: org.knime.base
