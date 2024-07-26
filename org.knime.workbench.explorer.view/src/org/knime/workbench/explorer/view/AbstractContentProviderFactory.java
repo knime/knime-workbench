@@ -46,10 +46,13 @@ package org.knime.workbench.explorer.view;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
+import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
 
 /**
@@ -148,8 +151,7 @@ public abstract class AbstractContentProviderFactory {
      * @return a new, fully parameterized instance for a specific content
      *         provider or <code>null</code> if no provider can be created
      */
-    public abstract AbstractContentProvider
-        createContentProvider(final String mountID);
+    public abstract AbstractContentProvider createContentProvider(final String mountID);
 
     /** Restore content provider. Caller needs to dispose returned value when
      * no longer needed!
@@ -159,8 +161,48 @@ public abstract class AbstractContentProviderFactory {
      *            provider
      * @return a new instance with its state restored from the passed structure
      */
-   public abstract AbstractContentProvider createContentProvider(
-           final String mountID, final String content);
+    public abstract AbstractContentProvider createContentProvider(final String mountID, final String content);
+
+    /**
+     * Try to create a content provider. If an error occurs, it is printed to the console and the method returns
+     * normally.
+     *
+     * @param mountID The ID of the mount
+     * @return the created instance, or an empty optional if an error occurred
+     * @since 8.14
+     */
+    public final Optional<AbstractContentProvider> tryCreateContentProvider(final String mountID) {
+        return wrapFailable(mountID, () -> createContentProvider(mountID));
+    }
+
+    /**
+     * Try to restore a content provider. If an error occurs, it is printed to the console and the method returns
+     * normally.
+     *
+     * @param mountID The ID of the mount
+     * @param content The content to restore
+     * @return the created instance, or an empty optional if an error occurred
+     * @since 8.14
+     */
+    public final Optional<AbstractContentProvider> tryCreateContentProvider(final String mountID,
+        final String content) {
+        return wrapFailable(mountID, () -> createContentProvider(mountID, content));
+    }
+
+    private static final Optional<AbstractContentProvider> wrapFailable(final String mountID,
+        final Supplier<AbstractContentProvider> supplier) {
+        try {
+            return Optional.ofNullable(supplier.get());
+        } catch (Throwable t) {
+            if (t instanceof OutOfMemoryError oome) {
+                throw oome;
+            }
+            NodeLogger.getLogger(AbstractContentProviderFactory.class)
+                .error("Error during the creation of the content provider for mount ID \"%s\": %s".formatted(mountID,
+                    t.getMessage()), t);
+            return Optional.empty();
+        }
+    }
 
     /**
      * Indicates if additional information is needed by the factory for

@@ -299,28 +299,18 @@ public final class ExplorerMountTable {
                 throw new IllegalStateException("Cannot mount "
                         + fac.toString() + " multiple times.");
             }
-            AbstractContentProvider newProvider = null;
-            if (storage == null) {
-                // may open a dialog for the user to provide parameters
-                newProvider = fac.createContentProvider(mountID);
-                if (newProvider == null) {
-                    // user probably canceled.
-                    return null;
-                }
-            } else {
-                newProvider = fac.createContentProvider(mountID, storage);
-                if (newProvider == null) {
-                    // something went wrong
-                    return null;
-                }
-            }
 
-            MountPoint mp = new MountPoint(mountID, newProvider, fac);
-            synchronized (MOUNTED) {
-                MOUNTED.put(mountID, mp);
-                notifyListeners(new PropertyChangeEvent(mp, MOUNT_POINT_PROPERTY, null, mp.getMountID()));
+            final var newProvider = storage == null ? fac.tryCreateContentProvider(mountID)
+                : fac.tryCreateContentProvider(mountID, storage);
+
+            if (newProvider.isPresent()) {
+                MountPoint mp = new MountPoint(mountID, newProvider.get(), fac);
+                synchronized (MOUNTED) {
+                    MOUNTED.put(mountID, mp);
+                    notifyListeners(new PropertyChangeEvent(mp, MOUNT_POINT_PROPERTY, null, mp.getMountID()));
+                }
             }
-            return newProvider;
+            return newProvider.orElse(null);
         }
     }
 
