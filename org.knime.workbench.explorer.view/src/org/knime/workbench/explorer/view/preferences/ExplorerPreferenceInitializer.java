@@ -59,7 +59,6 @@ import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.osgi.framework.FrameworkUtil;
@@ -112,14 +111,13 @@ public class ExplorerPreferenceInitializer extends
 
         for (AbstractContentProviderFactory fac : factories) {
             if (fac.getDefaultMountID() != null && include.contains(fac.getDefaultMountID())) {
-                final AbstractContentProvider cntProvider = fac.createContentProvider(fac.getDefaultMountID());
-                if (cntProvider != null) {
+                fac.tryCreateContentProvider(fac.getDefaultMountID()).ifPresent(cntProvider -> {
                     try {
                         settingsList.add(new MountSettings(cntProvider));
                     } finally {
                         cntProvider.dispose();
                     }
-                }
+                });
             }
         }
 
