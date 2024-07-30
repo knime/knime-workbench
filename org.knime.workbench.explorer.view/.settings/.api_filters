@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<component id="org.knime.workbench.explorer.view" version="2">
+    <resource path="src/org/knime/workbench/explorer/view/AbstractContentProviderFactory.java" type="org.knime.workbench.explorer.view.AbstractContentProviderFactory">
+        <filter comment="internal api, added in 5.4/5.3.1" id="1141899266">
+            <message_arguments>
+                <message_argument value="8.14"/>
+                <message_argument value="8.13"/>
+                <message_argument value="tryCreateContentProvider(String)"/>
+            </message_arguments>
+        </filter>
+        <filter comment="internal api, added in 5.4/5.3.1" id="1141899266">
+            <message_arguments>
+                <message_argument value="8.14"/>
+                <message_argument value="8.13"/>
+                <message_argument value="tryCreateContentProvider(String, String)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+</component>
