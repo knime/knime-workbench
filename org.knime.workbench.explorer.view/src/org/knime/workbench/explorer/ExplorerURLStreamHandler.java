@@ -160,14 +160,16 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         if (p == null) {
             return openConnectionForResolved(resolvedUrl);
         } else if (urlPointsToRemote(url)) { // must be unresolved URL to extract mount ID
-            final var globalProxy = GlobalProxySearch.getCurrentFor(url)
-                    .map(cfg -> cfg.forJavaNetProxy().getFirst());
-            // log ignored proxy if different to global proxy config
-            if (!globalProxy.map(p::equals).orElse(false)) {
-                final var identifier = globalProxy.map(Proxy::toString).orElse("no proxy");
+            final var uri = createNullableURI(url);
+            final var globalProxy = GlobalProxySearch.getCurrentFor(uri) //
+                .filter(cfg -> !cfg.isHostExcluded(uri)) //
+                .map(cfg -> cfg.forJavaNetProxy().getFirst()) //
+                .orElse(Proxy.NO_PROXY);
+            // log incoming proxy (that is ignored) if different to global config
+            if (!globalProxy.equals(p)) {
                 NodeLogger.getLogger(ExplorerURLStreamHandler.class) //
                     .warn(String.format("For the connection to \"%s\" the proxy \"%s\" has been supplied, "
-                        + "ignoring and using \"%s\" instead", url, p, identifier));
+                        + "ignoring and using \"%s\" instead", url, p, globalProxy));
             }
         }
         // global proxy settings will be applied if and when an actual remote connection is opened
@@ -304,6 +306,18 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         } catch (URISyntaxException e) {
             throw new IOException(e.getMessage(), e);
         }
+    }
+
+    private static URI createNullableURI(final URL url) {
+        if (url != null) {
+            try {
+                return url.toURI();
+            } catch (URISyntaxException e) {
+                NodeLogger.getLogger(ExplorerURLStreamHandler.class)
+                    .debug("Could not parse URL as URI for proxy selection", e);
+            }
+        }
+        return null;
     }
 
     /**
