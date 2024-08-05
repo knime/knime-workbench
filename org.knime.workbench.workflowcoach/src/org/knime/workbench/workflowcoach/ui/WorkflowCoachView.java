@@ -469,10 +469,11 @@ public class WorkflowCoachView extends ViewPart implements ISelectionListener, I
         List<NodeRecommendation>[] recommendations;
         if (nodeSelected) {
             //retrieve node recommendations if exactly one node is selected
-            recommendations = NodeRecommendationManager.getInstance().getNodeRecommendationFor((NativeNodeContainerUI)nc);
+            recommendations =
+                NodeRecommendationManager.getInstance().getSuccessorNodeRecommendationFor((NativeNodeContainerUI)nc);
         } else if (nc == null) {
             //retrieve node recommendations if no node is selected (most likely the source nodes etc.)
-            recommendations = NodeRecommendationManager.getInstance().getNodeRecommendationFor();
+            recommendations = NodeRecommendationManager.getInstance().getSuccessorNodeRecommendationFor();
         } else {
             Display.getDefault().syncExec(() -> {
                 if (m_loadState.get() == LoadState.DISPOSED) {
