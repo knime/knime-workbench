@@ -103,7 +103,7 @@ public final class ConfigurableNodeFactoryMapper {
                             new Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>(clazz, icon));
                     } // else already registered -> first come first serve
                 }
-            } catch (InvalidRegistryObjectException | CoreException e) {
+            } catch (InvalidRegistryObjectException | CoreException | ClassCastException e) {
                 LOGGER.error("File extension handler from contributor \"" + element.getContributor().getName()
                     + "\" doesn't properly load -- ignoring it.", e);
             }
