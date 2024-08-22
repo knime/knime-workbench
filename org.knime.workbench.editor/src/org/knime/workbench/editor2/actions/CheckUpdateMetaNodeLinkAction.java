@@ -51,7 +51,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -300,6 +303,14 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 messageBuilder.append(updateList.size());
                 messageBuilder.append(" ").append(nodeSLow).append("s.");
             }
+            try {
+                messageBuilder.append("\n\n");
+                final var manager = getManager();
+                messageBuilder
+                    .append(nodeUpdateList(updateList, nodeId -> manager.findNodeContainer(nodeId).getName(), 50, 120));
+            } catch (Exception e) {  // NOSONAR we don't want to break component updates because of a failed message
+                LOGGER.debug("Error while creating update message", e);
+            }
             messageBuilder.append("\n\n");
             if (nodesToResetCount > 0) {
                 messageBuilder.append("Reset " + nodeSLow + "s and update now?");
@@ -312,6 +323,40 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 execute(new UpdateMetaNodeLinkCommand(getManager(), updateList.toArray(NodeID[]::new)));
             }
         }
+    }
+
+    /**
+     * Resolve node ids to names and group by name.
+     * @param nodeIds of components with updates
+     * @param nodeName function to resolve node id to name
+     * @param maxNodes maximum number of lines to generate
+     * @param maxChars maximum width of one line
+     * @return formatted message like
+     * <pre>
+     * Connect to Instrumentation
+     * Community Hub Revenue (2 instances with updates)
+     * </pre>
+     */
+    static String nodeUpdateList(final List<NodeID> nodeIds, final Function<NodeID, String> nodeName,
+        final int maxNodes, final int maxChars) {
+        // resolve node ids to names
+        final var nodeNames = nodeIds.stream().map(nodeName::apply).toList();
+        // group by node name, count occurrences
+        final var nodeCounts = nodeNames.stream().collect(Collectors.groupingBy(n -> n, Collectors.counting()));
+        // append to message in format "NodeName (n instances with updates)"
+        final var formattedNodeList = nodeCounts.entrySet().stream() //
+            // sort by name
+            .sorted((e1, e2) -> e1.getKey().compareTo(e2.getKey())) //
+            .map(e -> e.getValue() == 1 ? e.getKey()
+                : "%s (%s instances with updates)".formatted(e.getKey(), e.getValue())) //
+            .map(s -> "\u2022 " + s) //
+            .map(s -> StringUtils.abbreviateMiddle(s, "...", maxChars)) //
+            .limit(maxNodes) //
+            .collect(Collectors.joining("\n"));
+        if (nodeCounts.size() > maxNodes) {
+            return formattedNodeList + "\nand " + (nodeCounts.size() - maxNodes) + " more";
+        }
+        return formattedNodeList;
     }
 
     private static final class CheckUpdateRunnableWithProgress implements IRunnableWithProgress {
