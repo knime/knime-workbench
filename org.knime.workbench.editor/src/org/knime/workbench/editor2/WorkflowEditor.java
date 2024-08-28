@@ -2170,6 +2170,7 @@ public class WorkflowEditor extends GraphicalEditor implements
             MessageDialog.openError(getSite().getShell(), "Workflow not writable",
                 "You cannot save a workflow opened from an archive. Use \"Save As...\" in order to save it to "
                 + "a different location.");
+            monitor.setCanceled(true);
             return;
         }
 
