@@ -77,7 +77,6 @@ import org.knime.core.util.auth.Authenticator;
 import org.knime.core.util.auth.CouldNotAuthorizeException;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.proxy.URLConnectionFactory;
-import org.knime.core.util.proxy.search.GlobalProxySearch;
 import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
@@ -157,43 +156,13 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     @Override
     public URLConnection openConnection(final URL url, final Proxy p) throws IOException {
         final var resolvedUrl = resolveKNIMEURL(url);
-        if (p == null) {
-            return openConnectionForResolved(resolvedUrl);
-        } else if (urlPointsToRemote(url)) { // must be unresolved URL to extract mount ID
-            final var uri = createNullableURI(url);
-            final var globalProxy = GlobalProxySearch.getCurrentFor(uri) //
-                .filter(cfg -> !cfg.isHostExcluded(uri)) //
-                .map(cfg -> cfg.forJavaNetProxy().getFirst()) //
-                .orElse(Proxy.NO_PROXY);
-            // log incoming proxy (that is ignored) if different to global config
-            if (!globalProxy.equals(p)) {
-                NodeLogger.getLogger(ExplorerURLStreamHandler.class) //
-                    .warn(String.format("For the connection to \"%s\" the proxy \"%s\" has been supplied, "
-                        + "ignoring and using \"%s\" instead", url, p, globalProxy));
-            }
+        if (p != null && !Proxy.NO_PROXY.equals(p)) {
+            NodeLogger.getLogger(ExplorerURLStreamHandler.class).debug(
+                String.format("Ignoring proxy \"%s\" for unresolved URL \"%s\", will apply for proxy for resolved URL "
+                    + "(could be the same as ignored here)", p, url));
         }
         // global proxy settings will be applied if and when an actual remote connection is opened
         return openConnectionForResolved(resolvedUrl);
-    }
-
-    /**
-     * Checks whether the provided URL points to a remote host.
-     * This is the case for KNIME URLs to remote mountpoints, and all non-KNIME URLs.
-     *
-     * @param url
-     * @return whether the url points to a remote location
-     * @throws IOException
-     */
-    private static boolean urlPointsToRemote(final URL url) throws IOException {
-        if (ExplorerFileSystem.SCHEME.equals(url.getProtocol())) {
-            try {
-                final var mountId = ExplorerFileSystem.getIDfromURI(url.toURI());
-                return !ExplorerMountTable.getAllVisibleLocalMountIDs().contains(mountId);
-            } catch (URISyntaxException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-        }
-        return true;
     }
 
     /**
@@ -306,18 +275,6 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         } catch (URISyntaxException e) {
             throw new IOException(e.getMessage(), e);
         }
-    }
-
-    private static URI createNullableURI(final URL url) {
-        if (url != null) {
-            try {
-                return url.toURI();
-            } catch (URISyntaxException e) {
-                NodeLogger.getLogger(ExplorerURLStreamHandler.class)
-                    .debug("Could not parse URL as URI for proxy selection", e);
-            }
-        }
-        return null;
     }
 
     /**
