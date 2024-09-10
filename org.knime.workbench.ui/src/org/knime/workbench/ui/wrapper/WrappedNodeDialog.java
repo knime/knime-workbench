@@ -308,10 +308,8 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
         // create the dialogs' panel and pass it to the SWT wrapper composite
         getShell().setText("Dialog - " + m_nodeContainer.getDisplayLabel());
 
-        if (!m_dialogPane.populateDialog(area)) {
-            final JPanel p = m_dialogPane.getPanel();
-            m_wrapper = new Panel2CompositeWrapper(area, p, SWT.EMBEDDED);
-        }
+        final JPanel p = m_dialogPane.getPanel();
+        m_wrapper = new Panel2CompositeWrapper(area, p, SWT.EMBEDDED);
 
         // Bug 6275: Explicitly set has size flag and layout.
         // This ensures that the wrapper component has the correct size.
@@ -348,9 +346,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
         finishDialogCreation();
         // set focus on wrapped component so that it can be navigated using the keyboard and elements
         // can request the focus correctly
-        if (m_wrapper != null) {
-            m_wrapper.setFocus();
-        }
+        m_wrapper.setFocus();
     }
 
     /**
@@ -478,9 +474,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
             m_okButton.addKeyListener(m_swtKeyListener);
             m_applyButton.addKeyListener(m_swtKeyListener);
             btnCancel.addKeyListener(m_swtKeyListener);
-            if (m_wrapper != null) {
-                m_wrapper.addKeyListener(m_swtKeyListener);
-            }
+            m_wrapper.addKeyListener(m_swtKeyListener);
         }
 
         // Register listeners that notify the content object, which
@@ -789,9 +783,7 @@ public class WrappedNodeDialog extends AbstractWrappedDialog {
 
         // set the size of the container composite
         final Point size = new Point(width, height);
-        if (m_wrapper != null) {
-            m_wrapper.setSize(size);
-        }
+        m_wrapper.setSize(size);
         return size;
     }
 
