@@ -44,12 +44,13 @@
  */
 package org.knime.workbench.repository.util;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExtensionRegistry;
 import org.eclipse.core.runtime.InvalidRegistryObjectException;
@@ -57,9 +58,9 @@ import org.eclipse.core.runtime.Platform;
 import org.eclipse.swt.graphics.Image;
 import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.NodeModel;
-import org.knime.core.util.Pair;
 import org.knime.workbench.core.util.ImageRepository;
+
+import com.google.common.base.Suppliers;
 
 /**
  * Mapper for all registered configurable node factories.
@@ -71,46 +72,48 @@ public final class ConfigurableNodeFactoryMapper {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(ConfigurableNodeFactoryMapper.class);
 
-    private static final Map<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>> EXTENSION_REGISTRY;
+    private static final Map<String, ExtensionDetails> EXTENSION_REGISTRY;
 
     static {
-        EXTENSION_REGISTRY = new TreeMap<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>>();
+        EXTENSION_REGISTRY = new TreeMap<>();
         IExtensionRegistry registry = Platform.getExtensionRegistry();
         for (IConfigurationElement element : registry
             .getConfigurationElementsFor("org.knime.workbench.repository.registeredFileExtensions")) {
             try {
-                /*
-                 * Use the configuration element method to load an object of the
-                 * given class name. This method ensures the correct classpath
-                 * is used providing access to all extension points.
-                 */
-                @SuppressWarnings("unchecked")
-                final ConfigurableNodeFactory<NodeModel> o =
-                    (ConfigurableNodeFactory<NodeModel>)element.createExecutableExtension("NodeFactory");
-                @SuppressWarnings("unchecked")
-                Class<? extends ConfigurableNodeFactory<?>> clazz =
-                    (Class<? extends ConfigurableNodeFactory<?>>)o.getClass();
+                final String factoryClassName = element.getAttribute("NodeFactory");
+
+                // delay object instantiation until needed (AP-23071). To init Modern UI the
+                // mapping '.ext' -> 'class name' is sufficient
+                Supplier<Optional<FactoryClassAndIcon>> factoryClassSupplier = Suppliers.memoize(() -> { // NOSONAR
+                    try {
+                        final ConfigurableNodeFactory<?> factory =
+                                (ConfigurableNodeFactory<?>)element.createExecutableExtension("NodeFactory");
+                        @SuppressWarnings("unchecked")
+                        final Class<? extends ConfigurableNodeFactory<?>> factoryClass =
+                                (Class<? extends ConfigurableNodeFactory<?>>)factory.getClass();
+                        final Image icon = Boolean.getBoolean("java.awt.headless")
+                                ? null : ImageRepository.getIconImage(factory);
+                        return Optional.of(new FactoryClassAndIcon(factoryClass, icon));
+                    } catch (Exception e) { // NOSONAR (3rd party code)
+                        LOGGER.error(String.format("Error initializing factory class: \"%s\"", factoryClassName), e);
+                        return Optional.empty();
+                    }
+                });
 
                 for (IConfigurationElement child : element.getChildren()) {
                     String extension = child.getAttribute("extension");
-                    if (EXTENSION_REGISTRY.get(extension) == null) {
-                        Image icon = null;
-                        if (!Boolean.getBoolean("java.awt.headless")) {
-                            // Load images from declaring plugin
-                            icon = ImageRepository.getIconImage(o);
-                        }
-                        EXTENSION_REGISTRY.put(extension,
-                            new Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>(clazz, icon));
-                    } // else already registered -> first come first serve
+                    EXTENSION_REGISTRY.putIfAbsent(extension,
+                        new ExtensionDetails(factoryClassName, factoryClassSupplier));
                 }
-            } catch (InvalidRegistryObjectException | CoreException | ClassCastException e) {
-                LOGGER.error("File extension handler from contributor \"" + element.getContributor().getName()
-                    + "\" doesn't properly load -- ignoring it.", e);
+            } catch (InvalidRegistryObjectException e) {
+                LOGGER.error(() -> String.format(
+                    "File extension handler from contributor \"%s\" doesn't properly load -- ignoring it.",
+                    element.getContributor().getName()), e);
             }
         }
-        for (String key : EXTENSION_REGISTRY.keySet()) {
-            LOGGER.debug("File extension: \"" + key + "\" registered for Node Factory: "
-                + EXTENSION_REGISTRY.get(key).getFirst().getSimpleName() + ".");
+        for (Map.Entry<String, ExtensionDetails> entry : EXTENSION_REGISTRY.entrySet()) {
+            LOGGER.debugWithFormat("File extension: \"%s\" registered for Node Factory \"%s\".", entry.getKey(),
+                StringUtils.substringAfterLast(entry.getValue().factoryClassName, '.'));
         }
     }
 
@@ -120,28 +123,23 @@ public final class ConfigurableNodeFactoryMapper {
      * @return a map from file extension to node factory
      */
     public static Map<String, String> getAllNodeFactoriesForFileExtensions() {
-        final var fileExtToNodeFact = new HashMap<String, String>();
-        final var iterator = EXTENSION_REGISTRY.keySet().iterator();
-        while (iterator.hasNext()) {
-            String key = iterator.next();
-            String factory = EXTENSION_REGISTRY.get(key).getFirst().getCanonicalName();
-            fileExtToNodeFact.put(key, factory);
-        }
-        return fileExtToNodeFact;
+        return EXTENSION_REGISTRY.entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().factoryClassName));
     }
 
     /**
      * @param url the url for which a node factory should be returned
-     * @return the node factory registered for this extension, or null if the extension is not registered.
+     * @return the node factory registered for this extension, or {@code null} if the extension is not registered or in
+     *         case of an error during factory init
      */
-    public static Class<? extends ConfigurableNodeFactory<?>> getNodeFactory(final String url) {
-        for (Map.Entry<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>> e : EXTENSION_REGISTRY
-            .entrySet()) {
-            if (StringUtils.endsWithIgnoreCase(url, e.getKey())) {
-                return e.getValue().getFirst();
-            }
-        }
-        return null;
+    public static Class<? extends ConfigurableNodeFactory<?>> getNodeFactory(final String url) { // NOSONAR
+        return EXTENSION_REGISTRY.entrySet().stream() //
+            .filter(e -> StringUtils.endsWithIgnoreCase(url, e.getKey())) //
+            .map(e -> e.getValue().getOrLoadFactoryClass()) //
+            .filter(Optional::isPresent) // may be empty in case of error during factory init (error logged)
+            .map(t -> (Class<? extends ConfigurableNodeFactory<?>>)t.get()) //
+            .findFirst() //
+            .orElse(null);
     }
 
     /**
@@ -149,16 +147,34 @@ public final class ConfigurableNodeFactoryMapper {
      * provide an image.
      *
      * @param url
-     * @return the image
+     * @return the image, or {@code null} if the extension is not registered or in
+     *         case of an error during factory init
      * @since 2.7
      */
     public static Image getImage(final String url) {
-        for (Map.Entry<String, Pair<Class<? extends ConfigurableNodeFactory<?>>, Image>> e : EXTENSION_REGISTRY
-            .entrySet()) {
-            if (url.endsWith(e.getKey())) {
-                return e.getValue().getSecond();
-            }
+        return EXTENSION_REGISTRY.entrySet().stream() //
+            .filter(e -> StringUtils.endsWithIgnoreCase(url, e.getKey())) //
+            .map(e -> e.getValue().getOrLoadImage()) //
+            .filter(Optional::isPresent) // may be empty in case of error during factory init (error logged)
+            .map(t -> t.get()) //
+            .findFirst() //
+            .orElse(null);
+    }
+
+    /** Private record to store extension details, whereby any (expensive) class loading and object instantiation is
+     * delayed until needed. Added as part of AP-23071. */
+    private record ExtensionDetails(String factoryClassName, Supplier<Optional<FactoryClassAndIcon>> details) {
+
+        Optional<Class<? extends ConfigurableNodeFactory<?>>> getOrLoadFactoryClass() { // NOSONAR
+            return details.get().map(FactoryClassAndIcon::factoryClass);
         }
-        return null;
+
+        Optional<Image> getOrLoadImage() {
+            return details.get().map(FactoryClassAndIcon::icon);
+        }
+    }
+
+    /** Pair of factory class and icon image. */
+    private record FactoryClassAndIcon(Class<? extends ConfigurableNodeFactory<?>> factoryClass, Image icon) {
     }
 }
