@@ -154,10 +154,7 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
         if (!super.canExecute()) {
             return false;
         }
-        if (m_location == null || m_templateURI == null) {
-            return false;
-        }
-        return true;
+        return m_location != null && m_templateURI != null;
     }
 
     /** {@inheritDoc} */
@@ -203,19 +200,19 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
                 .setHasAbsoluteCoordinates(false).setSnapToGrid(snapToGrid).setIsDropLocation(true).build();
             container.setUIInformation(info);
 
-            if (container instanceof SubNodeContainer) {
+            if (container instanceof SubNodeContainer snc) {
                 SubNodeContainer projectComponent = wfm.getProjectComponent().orElse(null);
-                if (projectComponent != null) {
-                    // unlink component if it's added to itself
-                    MetaNodeTemplateInformation projectTemplateInformation = projectComponent.getTemplateInformation();
-                    MetaNodeTemplateInformation templateInformation =
-                        ((SubNodeContainer)container).getTemplateInformation();
-                    if (Objects.equals(templateInformation.getSourceURI(), projectTemplateInformation.getSourceURI())) {
-                        MessageDialog.openWarning(SWTUtilities.getActiveShell(), "Disconnect Link",
-                            "Components can only be added to themselves without linking. Will be disconnected.");
-                        container.getParent().setTemplateInformation(container.getID(),
-                            MetaNodeTemplateInformation.NONE);
-                    }
+                if (projectComponent == null) {
+                    return container;
+                }
+
+                // unlink component if it's added to itself
+                MetaNodeTemplateInformation projectTemplateInformation = projectComponent.getTemplateInformation();
+                MetaNodeTemplateInformation templateInformation = snc.getTemplateInformation();
+                if (Objects.equals(templateInformation.getSourceURI(), projectTemplateInformation.getSourceURI())) {
+                    MessageDialog.openWarning(SWTUtilities.getActiveShell(), "Disconnect Link",
+                        "Components can only be added to themselves without linking. Will be disconnected.");
+                    container.getParent().setTemplateInformation(container.getID(), MetaNodeTemplateInformation.NONE);
                 }
             }
         } catch (Throwable t) {
