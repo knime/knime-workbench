@@ -52,6 +52,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Objects;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.ui.IWorkbench;
@@ -217,35 +219,38 @@ public class CreateMetaNodeTemplateCommand extends AbstractKNIMECommand {
                 }
             }
         } catch (Throwable t) {
-            Throwable cause = t;
-            while ((cause.getCause() != null) && (cause.getCause() != cause)) {
-                cause = cause.getCause();
-            }
-
-            String error = "The selected node could not be created";
-            if (cause instanceof FileNotFoundException) {
-                error += " because a file could not be found: " + cause.getMessage();
-                MessageDialog.openError(SWTUtilities.getActiveShell(), "Node cannot be created.", error);
-            } else if (cause instanceof IOException) {
-                error += " because of an I/O error: " + cause.getMessage();
-                MessageDialog.openError(SWTUtilities.getActiveShell(), "Node cannot be created.", error);
-            } else if (cause instanceof InvalidSettingsException) {
-                error += " because the metanode contains invalid settings: " + cause.getMessage();
-                MessageDialog.openError(SWTUtilities.getActiveShell(), "Node cannot be created.", error);
-            } else if (cause instanceof UnsupportedWorkflowVersionException) {
-                error += " because the metanode version is incompatible: " + cause.getMessage();
-                MessageDialog.openError(SWTUtilities.getActiveShell(), "Node cannot be created.", error);
-            } else if ((cause instanceof CanceledExecutionException) || (cause instanceof InterruptedException)) {
+            final var cause = ExceptionUtils.getRootCause(t);
+            if ((cause instanceof CanceledExecutionException) || (cause instanceof InterruptedException)) {
                 LOGGER.info("Metanode loading was canceled by the user", cause);
             } else {
-                LOGGER.error(String.format("Metanode loading failed with %s: %s",
-                    cause.getClass().getSimpleName(), cause.getMessage()), cause);
-                error += ": " + cause.getMessage();
-                MessageDialog.openError(SWTUtilities.getActiveShell(), "Node cannot be created.", error);
+                openErrorOnFailedNodeCreation(cause);
             }
         }
 
         return container;
+    }
+
+    private static void openErrorOnFailedNodeCreation(final Throwable cause) {
+        var error = "The selected node could not be created";
+        if (cause instanceof FileNotFoundException) {
+            error += " because a file could not be found.";
+        } else if (cause instanceof IOException) {
+            error += " because of an I/O error.";
+        } else if (cause instanceof InvalidSettingsException) {
+            error += " because the metanode contains invalid settings.";
+        } else if (cause instanceof UnsupportedWorkflowVersionException) {
+            error += " because the metanode version is incompatible.";
+        } else {
+            error += ".";
+            LOGGER.error(String.format("Metanode loading failed with %s: %s",
+                cause.getClass().getSimpleName(), cause.getMessage()), cause);
+        }
+        var causeMessage = StringUtils.defaultIfBlank(cause.getMessage(), "");
+        if (!"".equals(causeMessage) && !StringUtils.endsWith(causeMessage, ".")) {
+            causeMessage += ".";
+        }
+        MessageDialog.openError(SWTUtilities.getActiveShell(), "Node could not be created.",
+            String.format("%s %s", error, causeMessage));
     }
 
     /** {@inheritDoc} */
