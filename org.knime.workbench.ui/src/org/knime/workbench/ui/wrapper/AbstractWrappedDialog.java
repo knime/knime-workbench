@@ -49,6 +49,7 @@
 package org.knime.workbench.ui.wrapper;
 
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.gef.Disposable;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
@@ -82,6 +83,8 @@ public abstract class AbstractWrappedDialog extends Dialog {
      */
     protected org.eclipse.swt.events.KeyListener m_swtKeyListener;
 
+    private Disposable m_onCloseDisposable;
+
     /**
      * This constructs our superclass using parentShell, and sets the shell style to be SWT.PRIMARY_MODAL with
      *      SWT.SHELL_TRIM
@@ -112,14 +115,9 @@ public abstract class AbstractWrappedDialog extends Dialog {
      */
     @Override
     protected void handleShellCloseEvent() {
-        if (Platform.OS_MACOSX.equals(Platform.getOS()) || Platform.OS_LINUX.equals(Platform.getOS())) {
-            final AWTKeyTracker keyTracker = AWTKeyTracker.getInstance();
-
-            if (m_wrapper != null) {
-                keyTracker.removeListeners(m_wrapper.getRootFrame(), getShell());
-            }
+        if (m_onCloseDisposable != null) {
+            m_onCloseDisposable.dispose();
         }
-
         super.handleShellCloseEvent();
     }
 
@@ -142,7 +140,8 @@ public abstract class AbstractWrappedDialog extends Dialog {
             final AWTKeyTracker keyTracker = AWTKeyTracker.getInstance();
 
             if (m_wrapper != null) {
-                keyTracker.instrumentTree(m_wrapper.getRootFrame(), m_awtKeyListener, getShell(), m_swtKeyListener);
+                m_onCloseDisposable =
+                    keyTracker.instrumentTree(m_wrapper.getRootFrame(), m_awtKeyListener, getShell(), m_swtKeyListener);
             }
         }
     }
