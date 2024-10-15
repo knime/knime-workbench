@@ -338,7 +338,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     }
 
     @Override
-    public List<NamedItemVersion> getHubItemVersions(final URI uri) {
+    public List<NamedItemVersion> getHubItemVersions(final URI uri) throws ResourceAccessException {
         CheckUtils.checkArgument(uri.getScheme().equals("knime"), "Expected a KNIME URI but got: %s", uri);
 
         var s = ExplorerFileSystem.INSTANCE.getStore(uri);

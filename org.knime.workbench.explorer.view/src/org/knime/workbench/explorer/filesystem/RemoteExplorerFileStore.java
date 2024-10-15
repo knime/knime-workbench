@@ -58,6 +58,7 @@ import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
+import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.hub.NamedItemVersion;
 import org.knime.core.util.pathresolve.SpaceVersion;
 
@@ -131,9 +132,10 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * Returns the KNIME Hub repository item versions for the repository item this file store represents.
      *
      * @return never {@code null}
+     * @throws ResourceAccessException
      * @since 8.10
      */
-    public List<NamedItemVersion> getVersions() {
+    public List<NamedItemVersion> getVersions() throws ResourceAccessException {
         return List.of();
     }
 
