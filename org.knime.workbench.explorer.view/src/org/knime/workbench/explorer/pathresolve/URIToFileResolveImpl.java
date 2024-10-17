@@ -63,6 +63,7 @@ import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -338,7 +339,17 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     }
 
     @Override
-    public List<NamedItemVersion> getHubItemVersions(final URI uri) throws ResourceAccessException {
+    @Deprecated(since = "5.4")
+    public List<NamedItemVersion> getHubItemVersions(final URI uri) {
+        try {
+            return getHubItemVersionList(uri);
+        } catch (ResourceAccessException ex) {
+            throw ExceptionUtils.asRuntimeException(ex);
+        }
+    }
+
+    @Override
+    public List<NamedItemVersion> getHubItemVersionList(final URI uri) throws ResourceAccessException {
         CheckUtils.checkArgument(uri.getScheme().equals("knime"), "Expected a KNIME URI but got: %s", uri);
 
         var s = ExplorerFileSystem.INSTANCE.getStore(uri);

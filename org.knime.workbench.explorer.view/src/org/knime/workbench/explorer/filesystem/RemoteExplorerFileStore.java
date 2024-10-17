@@ -132,7 +132,7 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
      * Returns the KNIME Hub repository item versions for the repository item this file store represents.
      *
      * @return never {@code null}
-     * @throws ResourceAccessException
+     * @throws ResourceAccessException if no item with the provided path or id exists
      * @since 8.10
      */
     public List<NamedItemVersion> getVersions() throws ResourceAccessException {

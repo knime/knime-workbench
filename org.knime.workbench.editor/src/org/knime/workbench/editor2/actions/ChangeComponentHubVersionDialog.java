@@ -90,7 +90,6 @@ import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.TemplateUpdateUtil.LinkType;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.util.SWTUtilities;
-import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.hub.HubItemVersion;
 import org.knime.core.util.hub.NamedItemVersion;
 import org.knime.core.util.pathresolve.ResolverUtil;
@@ -399,8 +398,7 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
             return status;
         }
 
-        private List<NamedItemVersion> fetch(final IProgressMonitor monitor)
-            throws CanceledExecutionException, ResourceAccessException {
+        private List<NamedItemVersion> fetch(final IProgressMonitor monitor) throws CanceledExecutionException {
             if (monitor.isCanceled()) {
                 throw new CanceledExecutionException();
             }
