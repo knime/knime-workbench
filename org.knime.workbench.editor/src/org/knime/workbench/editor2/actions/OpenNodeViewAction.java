@@ -48,6 +48,8 @@
  */
 package org.knime.workbench.editor2.actions;
 
+import static org.knime.core.ui.wrapper.NodeContainerWrapper.wrap;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Optional;
@@ -91,6 +93,8 @@ import org.knime.workbench.core.util.ImageRepository;
  */
 public class OpenNodeViewAction extends Action {
 
+    // TODO make this work in RWE, too
+
     private static final String NODE_VIEW_EXTENSION_ID = "org.knime.workbench.editor.NodeView";
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(OpenNodeViewAction.class);
@@ -110,7 +114,7 @@ public class OpenNodeViewAction extends Action {
 
     @Override
     public void run() {
-        openNodeView(m_nc, createNodeView(m_nc, false, true), getText());
+        openNodeView(wrap(m_nc), createNodeView(wrap(m_nc), false, true), getText());
     }
 
     @Override
@@ -140,7 +144,7 @@ public class OpenNodeViewAction extends Action {
      * @param view the view to open
      * @param viewName
      */
-    public static void openNodeView(final NodeContainer nc, final AbstractNodeView<?> view,
+    public static void openNodeView(final NodeContainerUI nc, final AbstractNodeView<?> view,
         final String viewName) {
         try {
             Node.invokeOpenView(view, viewName, OpenViewAction.getAppBoundsAsAWTRec());
@@ -150,7 +154,7 @@ public class OpenNodeViewAction extends Action {
 
     }
 
-    private static void showWarningDialog(final NodeContainer nc, final Throwable t) {
+    private static void showWarningDialog(final NodeContainerUI nc, final Throwable t) {
         final MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_ERROR | SWT.OK);
         mb.setText("Node View cannot be opened");
         mb.setMessage("The node view cannot be opened for the following reason:\n" + t.getMessage());
@@ -172,7 +176,7 @@ public class OpenNodeViewAction extends Action {
      * @param isView  whether the view instance is used to actually display a view
      * @return the new view instance
      */
-    public static AbstractNodeView<?> createNodeView(final NodeContainer nc, final boolean isDialog, final boolean isView) {
+    public static AbstractNodeView<?> createNodeView(final NodeContainerUI nc, final boolean isDialog, final boolean isView) {
         IExtensionRegistry registry = Platform.getExtensionRegistry();
         IExtensionPoint point = registry.getExtensionPoint(NODE_VIEW_EXTENSION_ID);
         CheckUtils.checkState(point != null, "Invalid extension point: %s", NODE_VIEW_EXTENSION_ID);
@@ -235,13 +239,7 @@ public class OpenNodeViewAction extends Action {
      * @return <code>true</code> if the node container provides a {@link NodeView}
      */
     public static boolean hasNodeView(final NodeContainerUI nc) {
-        if (Wrapper.wraps(nc, NativeNodeContainer.class)) {
-            NativeNodeContainer nnc = Wrapper.unwrap(nc, NativeNodeContainer.class);
-            if (NodeViewManager.hasNodeView(nnc)) {
-                return true;
-            }
-        }
-        return false;
+        return NodeViewManager.hasNodeView(nc);
     }
 
     /**

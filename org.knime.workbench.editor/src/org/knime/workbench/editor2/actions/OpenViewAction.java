@@ -47,6 +47,8 @@
  */
 package org.knime.workbench.editor2.actions;
 
+import static org.knime.core.ui.wrapper.NodeContainerWrapper.wrap;
+
 import javax.swing.SwingUtilities;
 
 import org.eclipse.jface.action.Action;
@@ -73,6 +75,9 @@ import org.knime.workbench.core.util.ImageRepository;
  * @author Florian Georg, University of Konstanz
  */
 public class OpenViewAction extends Action {
+
+    // TODO make this work in RWE, too?
+
     private final NodeContainer m_nodeContainer;
 
     private final int m_index;
@@ -145,11 +150,11 @@ public class OpenViewAction extends Action {
         if (nc instanceof SubNodeContainer snc) {
             // composite view
             OpenSubnodeWebViewAction.openView(snc);
-        } else if (NodeViewManager.hasNodeView(nc)) {
+        } else if (NodeViewManager.hasNodeView(wrap(nc))) {
             // 'ui-extension' view
             final var nnc = ((NativeNodeContainer)nc);
             final var viewName = "Interactive View: " + nnc.getNodeViewName(0);
-            OpenNodeViewAction.openNodeView(nnc, OpenNodeViewAction.createNodeView(nnc, false, true), viewName);
+            OpenNodeViewAction.openNodeView(wrap(nnc), OpenNodeViewAction.createNodeView(wrap(nnc), false, true), viewName);
         } else if (nc.getInteractiveWebViews().size() > 0 || nc.hasInteractiveView()) {
             // legacy js-view
             OpenInteractiveWebViewAction.openView((NativeNodeContainer)nc,

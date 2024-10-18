@@ -132,6 +132,7 @@ import org.knime.core.node.workflow.SubnodeContainerConfigurationStringProvider;
 import org.knime.core.node.workflow.SubnodeContainerLayoutStringProvider;
 import org.knime.core.node.workflow.WorkflowLock;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.ui.wrapper.NodeContainerWrapper;
 import org.knime.core.webui.node.view.NodeViewManager;
 import org.knime.js.core.JavaScriptViewCreator;
 import org.knime.js.core.layout.DefaultConfigurationCreatorImpl;
@@ -207,7 +208,8 @@ public final class SubnodeLayoutJSONEditorPage extends WizardPage {
 
         TabItem usageTab = new TabItem(tabs, SWT.NONE);
         usageTab.setText("Node Usage");
-        var legacyViewNodes = m_viewNodes.entrySet().stream().filter(e -> !NodeViewManager.hasNodeView(e.getValue()))
+        var legacyViewNodes = m_viewNodes.entrySet().stream()
+            .filter(e -> !NodeViewManager.hasNodeView(NodeContainerWrapper.wrap(e.getValue())))
             .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
         m_nodeUsageComposite = new NodeUsageComposite(tabs, legacyViewNodes, m_subNodeContainer);
         usageTab.setControl(m_nodeUsageComposite);

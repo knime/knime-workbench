@@ -150,13 +150,13 @@ public class OpenDialogAction extends AbstractNodeAction {
     public static DialogType getDialogType(final NodeContainerUI nc) {
         if (Wrapper.wraps(nc, SubNodeContainer.class)
             && SubNodeContainerDialogFactory.isSubNodeContainerNodeDialogEnabled()) {
-            if (NodeDialogManager.hasNodeDialog(Wrapper.unwrapNC(nc))) {
+            if (NodeDialogManager.hasNodeDialog(nc)) {
                 return DialogType.MODERN;
             } else {
                 return DialogType.NONE;
             }
         } else if (Wrapper.wraps(nc, NativeNodeContainer.class)
-            && NodeDialogManager.hasNodeDialog(Wrapper.unwrapNC(nc))) {
+            && NodeDialogManager.hasNodeDialog(nc)) {
             return DialogType.MODERN;
         }
         return nc.hasDialog() ? DialogType.SWING : DialogType.NONE;

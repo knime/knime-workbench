@@ -72,7 +72,6 @@ import org.knime.core.node.port.DataTableSpecProvider;
 import org.knime.core.node.port.PortType;
 import org.knime.core.node.port.flowvariable.FlowVariablePortObject;
 import org.knime.core.node.workflow.LoopEndNode;
-import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.SingleNodeContainer;
 import org.knime.core.ui.node.workflow.InteractiveWebViewsResultUI;
@@ -300,14 +299,12 @@ public class WorkflowContextMenuProvider extends ContextMenuProvider {
             if (p instanceof NodeContainerEditPart) {
                 final NodeContainerUI container = (NodeContainerUI)((NodeContainerEditPart)p).getModel();
                 if (container instanceof NativeNodeContainerUI) {
-                    Wrapper.unwrapOptional(container, NativeNodeContainer.class).ifPresent(sncImpl -> {
-                        if (NodeDialogManager.hasNodeDialog(sncImpl)) { // NOSONAR
-                            // show flow variable configuration and job manager selection
-                            IAction showFlowVariableTab = m_actionRegistry.getAction(OpenFlowVariableConfigAction.ID);
-                            manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, showFlowVariableTab);
-                            ((AbstractNodeAction)showFlowVariableTab).update();
-                        }
-                    });
+                    if (NodeDialogManager.hasNodeDialog(container)) { // NOSONAR
+                        // show flow variable configuration and job manager selection
+                        IAction showFlowVariableTab = m_actionRegistry.getAction(OpenFlowVariableConfigAction.ID);
+                        manager.appendToGroup(IWorkbenchActionConstants.GROUP_APP, showFlowVariableTab);
+                        ((AbstractNodeAction)showFlowVariableTab).update();
+                    }
                 }
             }
         }
