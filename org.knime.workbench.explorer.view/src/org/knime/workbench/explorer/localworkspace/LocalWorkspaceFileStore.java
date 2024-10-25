@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Optional;
@@ -86,14 +87,38 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
     private final IFileStore m_file;
 
     /**
+     * Creates a file store from an absolute file path.
+     *
      * @param mountID the id of the mount
-     * @param fullPath the full path of the file store
+     * @param absolutePath the full path of the file store
      */
-    public LocalWorkspaceFileStore(final String mountID, final String fullPath) {
-        super(mountID, fullPath);
+    public LocalWorkspaceFileStore(final String mountID, final String absolutePath) {
+        super(mountID, absolutePath);
         IPath rootPath = Path.fromPortableString(KNIMEPath.getWorkspaceDirPath().getAbsolutePath());
         IPath filePath = rootPath.append(new Path(getFullName()));
         m_file = EFS.getLocalFileSystem().getStore(filePath);
+    }
+
+    /**
+     * Creates a file store from a relative file path. Typically, {@link AbstractExplorerFileStore}s only allow
+     * for absolute paths despite all file stores in the workspace being declared as relative to the workspace.
+     * Hence, most {@link LocalWorkspaceFileStore} are instantiated with an absolute {@code /relative/path}.
+     * <p>
+     * This method makes the distinction more explicit, less hacky, and allows for passing actual relative
+     * paths as {@code ./relative/path}.
+     * </p>
+     *
+     * @param mountID the id of the mount
+     * @param relativePath the path of the file store, relative to the workspace
+     * @return a file store relative to the default workspace directory
+     * @since 8.14
+     */
+    public static LocalWorkspaceFileStore fromRelativeToWorkspacePath(final String mountID, final String relativePath) {
+        final var workspacePath = Path.fromPortableString(KNIMEPath.getWorkspaceDirPath().getAbsolutePath());
+        IPath filePath = workspacePath.append(new Path(relativePath));
+        // this is how workspace-relative WFs pass their "relative" paths - as an absolute path from root
+        final var absolutePath = Paths.get("/").resolve(relativePath).toString();
+        return new LocalWorkspaceFileStore(mountID, EFS.getLocalFileSystem().getStore(filePath), absolutePath);
     }
 
     @Override

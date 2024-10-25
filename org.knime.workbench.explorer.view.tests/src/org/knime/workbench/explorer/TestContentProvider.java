@@ -49,6 +49,7 @@
 package org.knime.workbench.explorer;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,6 +62,7 @@ import org.eclipse.swt.graphics.Image;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.localworkspace.LocalWorkspaceFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.explorer.view.ExplorerView;
@@ -130,7 +132,14 @@ class TestContentProvider extends AbstractContentProvider {
 
     @Override
     public LocalExplorerFileStore fromLocalFile(final File file) {
-        return null;
+        try {
+            if (file.isAbsolute()) {
+                return new LocalWorkspaceFileStore(getMountID(), file.getCanonicalPath());
+            }
+            return LocalWorkspaceFileStore.fromRelativeToWorkspacePath(getMountID(), file.getPath());
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     @Override

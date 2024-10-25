@@ -69,6 +69,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.eclipse.ui.internal.wizards.datatransfer.ArchiveFileManipulations;
 import org.eclipse.ui.internal.wizards.datatransfer.ILeveledImportStructureProvider;
+import org.knime.core.node.NodeLogger;
 import org.knime.core.util.FileUtil;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -154,13 +155,15 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
 
     @SuppressWarnings("restriction")
     private ILeveledImportStructureProvider handleCopyProject(final IWorkflowImportElement importElement,
-        final IProgressMonitor monitor) throws Exception {
+        final IProgressMonitor monitor) throws IOException, CoreException {
 
         // determine the destination from the renamed element
         IPath renamedElementPath = importElement.getRenamedPath();
-        AbstractExplorerFileStore destination = m_targetPath;
+        AbstractExplorerFileStore destination;
         if (renamedElementPath.segmentCount() > 0) {
             destination = m_targetPath.getChild(renamedElementPath.toString());
+        } else {
+            throw new IllegalStateException("Cannot import workflow to empty destination path");
         }
 
         ILeveledImportStructureProvider provider = null;
@@ -190,10 +193,11 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      * @param fileElement source
      * @param destination target
      * @param monitor monitor
-     * @throws IOException if things go bad.
+     * @throws IOException if things go bad
+     * @throws CoreException if deleting the existing files fails
      */
     protected void importWorkflowFromFile(final WorkflowImportElementFromFile fileElement,
-        final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException {
+        final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException, CoreException {
         if (!m_importedFiles.contains(fileElement.getRenamedPath().toString())) {
             // in the wizard page we make sure the destination doesn't exist
             assert !destination.fetchInfo().exists();
@@ -235,6 +239,9 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
     protected void importWorkflowFromArchive(final WorkflowImportElementFromArchive archiveElement,
         final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException, CoreException {
         if (!m_importedFiles.contains(archiveElement.getOriginalPath().toString())) {
+            // check if destination (1) exists and (2) can be deleted, then delete its children
+            deleteIfExists(destination, monitor);
+
             AbstractExplorerFileStore tmpDestDir;
             if (destination instanceof RemoteExplorerFileStore) {
                 tmpDestDir = ExplorerMountTable.createExplorerTempDir(archiveElement.getRenamedPath().toString());
@@ -257,10 +264,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      * Import the entire subtree.
      */
     private void importArchiveEntry(final ILeveledImportStructureProvider importProvider, final Object entry,
-        final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException {
-
-        //assert !destination.fetchInfo().exists();
-
+        final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException, CoreException {
         if (importProvider.isFolder(entry)) {
             // first create the destination
             try {
@@ -360,5 +364,37 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                 }
             }
         }
+    }
+
+    /**
+     * Deletes the contents (i.e. children) of a given target destination if it the target already exists.
+     * Only call this method, if you know that the destination should be overwritten by the import.
+     *
+     * @param destination the target file store (top-level element)
+     * @param monitor the progress monitor
+     * @throws IOException if deletion went wrong
+     */
+    private static void deleteIfExists(final AbstractExplorerFileStore destination, final IProgressMonitor monitor)
+        throws CoreException {
+        final var progress = SubMonitor.convert(monitor, 2);
+        final var info = destination.fetchInfo(EFS.NONE, progress);
+        if (!info.exists()) {
+            progress.worked(1);
+            return;
+        }
+        progress.worked(1);
+
+        if (monitor.isCanceled()) {
+            throw new OperationCanceledException();
+        }
+        if (destination.canDelete()) {
+            destination.delete(EFS.NONE, progress);
+            NodeLogger.getLogger(WorkflowImportAction.class).debug( //
+                "Deleted existing destination \"%s\" with an overwriting import".formatted(destination));
+        } else if (info.isDirectory()) {
+            NodeLogger.getLogger(WorkflowImportAction.class).warn( //
+                "Cannot delete \"%s\" for import, will only overwrite certain files within".formatted(destination));
+        }
+        progress.worked(1);
     }
 }
