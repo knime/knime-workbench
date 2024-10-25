@@ -49,8 +49,6 @@ package org.knime.workbench.explorer.view.actions.imports;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Collections;
@@ -64,7 +62,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.SubMonitor;
-import org.eclipse.core.runtime.SubProgressMonitor;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.eclipse.ui.internal.wizards.datatransfer.ArchiveFileManipulations;
@@ -167,20 +164,13 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
         }
 
         ILeveledImportStructureProvider provider = null;
-
-        if (importElement instanceof WorkflowImportElementFromFile) {
-            WorkflowImportElementFromFile importFile = (WorkflowImportElementFromFile)importElement;
-
+        if (importElement instanceof WorkflowImportElementFromFile fileElement) {
             // copy workflow from file location
-            importWorkflowFromFile(importFile, destination, new SubProgressMonitor(monitor, 1));
-
-        } else if (importElement instanceof WorkflowImportElementFromArchive) {
-            WorkflowImportElementFromArchive archive = (WorkflowImportElementFromArchive)importElement;
-            provider = archive.getProvider();
-
+            importWorkflowFromFile(fileElement, destination, SubMonitor.convert(monitor, 1));
+        } else if (importElement instanceof WorkflowImportElementFromArchive archiveElement) {
+            provider = archiveElement.getProvider();
             // create workflow from archive
-            importWorkflowFromArchive(archive, destination, new SubProgressMonitor(monitor, 1));
-
+            importWorkflowFromArchive(archiveElement, destination, SubMonitor.convert(monitor, 1));
         } else {
             monitor.worked(1);
         }
@@ -207,7 +197,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                     AbstractExplorerFileStore tmpDestDir =
                         ExplorerMountTable.createExplorerTempDir(fileElement.getRenamedPath().toString());
                     tmpDestDir = tmpDestDir.getChild(fileElement.getRenamedPath().toString());
-                    SubMonitor progress = SubMonitor.convert(monitor, 1);
+                    final var progress = SubMonitor.convert(monitor, 1);
                     tmpDestDir.mkdir(EFS.NONE, progress);
 
                     importFromFile(fileElement, tmpDestDir, progress);
@@ -246,15 +236,15 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             if (destination instanceof RemoteExplorerFileStore) {
                 tmpDestDir = ExplorerMountTable.createExplorerTempDir(archiveElement.getRenamedPath().toString());
                 tmpDestDir = tmpDestDir.getChild(archiveElement.getRenamedPath().toString());
-                SubMonitor progress = SubMonitor.convert(monitor, 1);
+                final var progress = SubMonitor.convert(monitor, 1);
                 tmpDestDir.mkdir(EFS.NONE, progress);
             } else {
                 tmpDestDir = destination;
             }
             importArchiveEntry(archiveElement.getProvider(), archiveElement.getEntry(), tmpDestDir, monitor);
-            if (destination instanceof RemoteExplorerFileStore) {
+            if (destination instanceof RemoteExplorerFileStore remoteDestination) {
                 destination.getContentProvider().performUploadAsync((LocalExplorerFileStore)tmpDestDir,
-                    (RemoteExplorerFileStore)destination, true, destination.getContentProvider().isForceResetOnUpload(),
+                    remoteDestination, true, destination.getContentProvider().isForceResetOnUpload(),
                     null);
             }
         }
@@ -287,9 +277,9 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
                 }
             }
         } else {
-            try (InputStream inStream = importProvider.getContents(entry);
-                    OutputStream outStream = destination.openOutputStream(EFS.NONE, monitor)) {
-                byte[] buffer = new byte[BUFFSIZE];
+            try (var inStream = importProvider.getContents(entry);
+                    var outStream = destination.openOutputStream(EFS.NONE, monitor)) {
+                final var buffer = new byte[BUFFSIZE];
                 int read;
                 while ((read = inStream.read(buffer)) >= 0) {
                     if (monitor.isCanceled()) {
@@ -327,7 +317,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
             FileUtil.copy(fileElement.getFile(), dest);
             addImportedFiles(fileElement, false);
         } else if (fileElement.isWorkflow()) {
-            final File dir = fileElement.getFile();
+            final var dir = fileElement.getFile();
             FileUtil.copyDir(dir, dest);
             addImportedFiles(fileElement, true);
         } else {
@@ -354,7 +344,7 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
      * @param recursive if the descendants shall be added.
      */
     private void addImportedFiles(final IWorkflowImportElement fileElement, final boolean recursive) {
-        final String path = fileElement.getRenamedPath().toString();
+        final var path = fileElement.getRenamedPath().toString();
         m_importedFiles.add(path);
 
         if (recursive) {
