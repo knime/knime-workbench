@@ -52,8 +52,8 @@ import static org.junit.Assert.assertTrue;
 import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isComponentTemplate;
 import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isMetaNodeTemplate;
 
-import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.eclipse.core.runtime.CoreException;
@@ -66,10 +66,14 @@ import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
+import org.knime.core.workbench.WorkbenchConstants;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountException;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
+import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
  * Tests some method implementations of {@link LocalExplorerFileStore}.
@@ -85,12 +89,14 @@ public class LocalWorkspaceFileStoreTest {
     /**
      * Setup local mountpoint etc.
      *
-     * @throws IOException
+     * @throws WorkbenchMountException
      */
     @Before
-    public void setup() throws IOException {
-        LocalWorkspaceContentProvider localWorkspace = (LocalWorkspaceContentProvider)ExplorerMountTable.mount("LOCAL",
-            LocalWorkspaceContentProviderFactory.ID, null);
+    public void setup() throws WorkbenchMountException {
+        final var localMountPoint = WorkbenchMountTable.mount( //
+            new MountSettings("LOCAL", LocalWorkspaceContentProviderFactory.ID, "LOCAL", true, 0, Map.of()));
+        LocalWorkspaceContentProvider localWorkspace =
+                (LocalWorkspaceContentProvider)localMountPoint.getProvider(AbstractContentProvider.class).orElseThrow();
         m_localExplorerRoot = (LocalExplorerFileStore)localWorkspace.getRootStore();
     }
 
@@ -137,7 +143,7 @@ public class LocalWorkspaceFileStoreTest {
         }
         //deactivate prompt for linking type
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        prefStore.setValue(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE, MessageDialogWithToggle.NEVER);
+        prefStore.setValue(WorkbenchConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE, MessageDialogWithToggle.NEVER);
 
         NodeID nodeId = METANODE_ROOT.createAndAddProject(name, createWorkflowCreationHelper(parent, name)).getID();
         if (wrap) {
