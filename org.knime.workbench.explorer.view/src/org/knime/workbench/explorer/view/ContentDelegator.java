@@ -50,12 +50,16 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -76,15 +80,14 @@ import org.eclipse.ui.IMemento;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.ThreadUtils;
+import org.knime.core.workbench.WorkbenchConstants;
+import org.knime.core.workbench.preferences.MountPointsPreferenceInitializer;
+import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializer;
-import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
-import org.osgi.service.prefs.BackingStoreException;
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
@@ -104,14 +107,12 @@ public class ContentDelegator extends LabelProvider
      */
     public static final String CONTENT_CHANGED = "CONTENT_CHANGED";
 
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(ContentDelegator.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(ContentDelegator.class);
 
     private final List<IPropertyChangeListener> m_changeListener;
 
-    private static final Image USER_SPACE_IMG = AbstractUIPlugin
-            .imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
-                    "icons/workflow_projects.png").createImage();
+    private static final Image USER_SPACE_IMG = AbstractUIPlugin.imageDescriptorFromPlugin(KNIMEUIPlugin.PLUGIN_ID,
+        "icons/workflow_projects.png").createImage();
 
     /**
      * constant empty array. Yup.
@@ -121,7 +122,7 @@ public class ContentDelegator extends LabelProvider
     /**
      * All currently visible providers.
      */
-    private final HashSet<MountPoint> m_provider;
+    private final HashMap<String, MountPoint> m_provider;
 
     private final boolean m_updateProvSettings;
 
@@ -143,7 +144,7 @@ public class ContentDelegator extends LabelProvider
      * @since 8.5
      */
     public ContentDelegator(final boolean updateProvSettings) {
-        m_provider = new LinkedHashSet<>();
+        m_provider = new LinkedHashMap<>();
         m_changeListener = new CopyOnWriteArrayList<>();
         m_updateProvSettings = updateProvSettings;
         ExplorerMountTable.addPropertyChangeListener(this);
@@ -158,7 +159,7 @@ public class ContentDelegator extends LabelProvider
         if (mountPoint == null) {
             throw new NullPointerException("Mount point can't be null");
         }
-        m_provider.add(mountPoint);
+        m_provider.put(mountPoint.getMountID(), mountPoint);
         mountPoint.getProvider().addListener(this);
         notifyListeners(new PropertyChangeEvent(mountPoint, CONTENT_CHANGED,
                 null, mountPoint.getMountID()));
@@ -168,18 +169,14 @@ public class ContentDelegator extends LabelProvider
      * @return a set with the ids of the currently shown mount points
      */
     public Set<String> getMountedIds() {
-        Set<String> mounted = new LinkedHashSet<String>();
-        for (MountPoint mountPoint : m_provider) {
-            mounted.add(mountPoint.getMountID());
-        }
-        return mounted;
+        return new LinkedHashSet<>(m_provider.keySet());
     }
 
     /**
      * Clears the view content.
      */
     public void removeAllMountPoints() {
-        for (MountPoint mountPoint : m_provider) {
+        for (MountPoint mountPoint : m_provider.values()) {
             final AbstractContentProvider provider = mountPoint.getProvider();
             provider.removeListener(this);
             // don't dispose provider (owned by the mount table)
@@ -187,9 +184,6 @@ public class ContentDelegator extends LabelProvider
         m_provider.clear();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void dispose() {
         if (m_updateProvSettings) {
@@ -204,12 +198,9 @@ public class ContentDelegator extends LabelProvider
      * @return a list of providers currently visible in this view
      */
     public Collection<AbstractContentProvider> getVisibleContentProvider() {
-        ArrayList<AbstractContentProvider> result =
-                new ArrayList<AbstractContentProvider>();
-        for (MountPoint mp : m_provider) {
-            result.add(mp.getProvider());
-        }
-        return result;
+        return m_provider.values().stream() //
+                .map(MountPoint::getProvider) //
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
@@ -219,74 +210,52 @@ public class ContentDelegator extends LabelProvider
      * @param fileStores the explorer file stores to wrap
      * @return a new array with wrapped objects.
      */
-    private ContentObject[] wrapObjects(final AbstractContentProvider provider,
+    private static ContentObject[] wrapObjects(final AbstractContentProvider provider,
             final AbstractExplorerFileStore[] fileStores) {
-        ContentObject[] result = new ContentObject[fileStores.length];
-        for (int i = 0; i < fileStores.length; i++) {
-            result[i] = new ContentObject(provider, fileStores[i]);
-        }
-        return result;
+        return Arrays.stream(fileStores) //
+                .map(store -> new ContentObject(provider, store)) //
+                .toArray(ContentObject[]::new);
     }
 
     /*
      * ------------ Content Provider Methods --------------------
      */
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Object[] getChildren(final Object parentElement) {
         // we are the root element - providers are the first level children
         if (parentElement == this) {
             return getVisibleContentProvider().toArray();
         }
-        if (parentElement instanceof AbstractContentProvider) {
-            AbstractContentProvider prov =
-                    (AbstractContentProvider)parentElement;
+        if (parentElement instanceof AbstractContentProvider prov) {
             // get the children of the provider's root.
             return wrapObjects(prov, prov.getChildren(prov.getRootStore()));
 
         }
-        if (!(parentElement instanceof ContentObject)) {
-            // all children should be of that type!
-            LOGGER.coding("Unexpected object in tree view! (" + parentElement
-                    + " of type " + parentElement.getClass().getCanonicalName());
-            return NO_CHILDREN;
+        if (parentElement instanceof ContentObject c) {
+            AbstractContentProvider prov = c.getProvider();
+            return wrapObjects(prov, prov.getChildren(c.getObject()));
         }
-        ContentObject c = ((ContentObject)parentElement);
-        AbstractContentProvider prov = c.getProvider();
-        return wrapObjects(prov, prov.getChildren(c.getObject()));
+        // all children should be of that type!
+        logUnexpectedObject(parentElement);
+        return NO_CHILDREN;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Object[] getElements(final Object inputElement) {
         return getChildren(inputElement);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         return "KNIME Explorer #" + System.identityHashCode(this);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public void inputChanged(final Viewer viewer, final Object oldInput,
-            final Object newInput) {
+    public void inputChanged(final Viewer viewer, final Object oldInput, final Object newInput) {
         // thanks for letting me know.
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Object getParent(final Object element) {
         if (element == this) {
@@ -297,47 +266,38 @@ public class ContentDelegator extends LabelProvider
             // content providers are the first level children
             return this;
         }
-        if (!(element instanceof ContentObject)) {
-            // all children should be of that type!
-            LOGGER.coding("Unexpected object in tree view! (" + element
-                    + " of type " + element.getClass().getCanonicalName());
-            return null;
+        if (element instanceof ContentObject c) {
+            // we must ask the corresponding content provider
+            AbstractContentProvider provider = c.getProvider();
+            AbstractExplorerFileStore parent = provider.getParent(c.getObject());
+            if (parent == null || provider.getRootStore().equals(parent)) {
+                // the root of each subtree is the provider itself
+                return provider;
+            } else {
+                return new ContentObject(provider, parent);
+            }
         }
-
-        ContentObject c = (ContentObject)element;
-        // we must ask the corresponding content provider
-        AbstractContentProvider provider = c.getProvider();
-        AbstractExplorerFileStore parent = provider.getParent(c.getObject());
-        if (parent == null || provider.getRootStore().equals(parent)) {
-            // the root of each subtree is the provider itself
-            return provider;
-        } else {
-            return new ContentObject(provider, parent);
-        }
+        // all children should be of that type!
+        logUnexpectedObject(element);
+        return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean hasChildren(final Object element) {
         if (element == this) {
             // content providers are the first level children
             return !m_provider.isEmpty();
         }
-        if (element instanceof AbstractContentProvider) {
+        if (element instanceof AbstractContentProvider prov) {
             // content providers are the first level children
-            AbstractContentProvider prov = (AbstractContentProvider)element;
             return prov.hasChildren(prov.getRootStore());
         }
-        if (!(element instanceof ContentObject)) {
-            // all children should be of that type!
-            LOGGER.coding("Unexpected object in tree view! (" + element
-                    + " of type " + element.getClass().getCanonicalName());
-            return false;
+        if (element instanceof ContentObject c) {
+            return c.getProvider().hasChildren(c.getObject());
         }
-        ContentObject c = (ContentObject)element;
-        return c.getProvider().hasChildren(c.getObject());
+        // all children should be of that type!
+        logUnexpectedObject(element);
+        return false;
     }
 
     /**
@@ -386,12 +346,11 @@ public class ContentDelegator extends LabelProvider
      * @param files the files to get tree objects for
      * @return a list of tree objects for the files.
      */
-    public static List<Object> getTreeObjectList(
-            final Collection<? extends AbstractExplorerFileStore> files) {
+    public static List<Object> getTreeObjectList(final Collection<? extends AbstractExplorerFileStore> files) {
         if (files == null) {
             return null;
         }
-        ArrayList<Object> result = new ArrayList<Object>();
+        ArrayList<Object> result = new ArrayList<>();
         for (AbstractExplorerFileStore f : files) {
             Object o = getTreeObjectFor(f);
             if (o != null) {
@@ -409,11 +368,11 @@ public class ContentDelegator extends LabelProvider
      *         null, if the object passed is of unexpected type
      */
     public static AbstractExplorerFileStore getFileStore(final Object treeObject) {
-        if (treeObject instanceof ContentObject) {
-            return ((ContentObject)treeObject).getObject();
-        } else if (treeObject instanceof AbstractContentProvider) {
+        if (treeObject instanceof ContentObject content) {
+            return content.getObject();
+        } else if (treeObject instanceof AbstractContentProvider provider) {
             // content provider represent the root object of their content
-            return ((AbstractContentProvider)treeObject).getRootStore();
+            return provider.getRootStore();
         } else {
             return null;
         }
@@ -427,13 +386,11 @@ public class ContentDelegator extends LabelProvider
      * @param treeObjects the tree objects to convert
      * @return a list of file stores
      */
-    public static List<AbstractExplorerFileStore> getFileStoreList(
-            final Collection<? extends Object> treeObjects) {
+    public static List<AbstractExplorerFileStore> getFileStoreList(final Collection<?> treeObjects) {
         if (treeObjects == null) {
             return null;
         }
-        ArrayList<AbstractExplorerFileStore> result =
-                new ArrayList<AbstractExplorerFileStore>();
+        ArrayList<AbstractExplorerFileStore> result = new ArrayList<>();
         for (Object o : treeObjects) {
             AbstractExplorerFileStore f = getFileStore(o);
             if (f != null) {
@@ -446,53 +403,43 @@ public class ContentDelegator extends LabelProvider
     /*
      * ------------ Label Provider Methods --------------------
      */
-    /**
-     * {@inheritDoc}
-     */
+
     @Override
     public Image getImage(final Object obj) {
         if (obj == this) {
             return USER_SPACE_IMG;
         }
-        if (obj instanceof AbstractContentProvider) {
-            return ((AbstractContentProvider)obj).getImage();
+        if (obj instanceof AbstractContentProvider provider) {
+            return provider.getImage();
         }
-        if (!(obj instanceof ContentObject)) {
-            // all children should be of that type!
-            LOGGER.coding("Unexpected object in tree view! (" + obj
-                    + " of type " + obj.getClass().getCanonicalName());
-            return null;
+        if (obj instanceof ContentObject content) {
+            return content.getProvider().getImage(content.getObject());
         }
-        ContentObject c = (ContentObject)obj;
-        return c.getProvider().getImage(c.getObject());
+        // all children should be of that type!
+        logUnexpectedObject(obj);
+        return null;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public String getText(final Object element) {
-        if (element == this) {
+    public String getText(final Object obj) {
+        if (obj == this) {
             return toString();
         }
-        if (element instanceof AbstractContentProvider) {
-            AbstractContentProvider acp = (AbstractContentProvider)element;
+        if (obj instanceof AbstractContentProvider acp) {
             return getMountID(acp) + " (" + acp.toString() + ")";
         }
-        if (!(element instanceof ContentObject)) {
-            // all children should be of that type!
-            LOGGER.coding("Unexpected object in tree view! (" + element
-                    + " of type " + element.getClass().getCanonicalName());
-            return null;
+        if (obj instanceof ContentObject content) {
+            return content.getProvider().getText(content.getObject());
         }
-        ContentObject c = (ContentObject)element;
-        return c.getProvider().getText(c.getObject());
+        // all children should be of that type!
+        logUnexpectedObject(obj);
+        return null;
     }
 
     private String getMountID(final AbstractContentProvider p) {
-        for (MountPoint mp : m_provider) {
-            if (mp.getProvider() == p) {
-                return mp.getMountID();
+        for (Entry<String, MountPoint> mp : m_provider.entrySet()) {
+            if (mp.getValue().getProvider() == p) {
+                return mp.getKey();
             }
         }
         return "<?>";
@@ -534,8 +481,8 @@ public class ContentDelegator extends LabelProvider
             m_pre29Storage = storage.getString(KEY);
             ignoreMemento = Boolean.TRUE.equals(storage.getBoolean(IGNORE_MEMENTO));
         }
-        if (ignoreMemento || ExplorerPreferenceInitializer.existMountPointPreferenceNodes()
-                || ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
+        if (ignoreMemento || MountPointsPreferenceInitializer.existMountPointPreferenceNodes()
+                || MountPointsPreferenceInitializer.existsMountPreferencesXML()) {
             restoreStateFromPreferences();
         } else {
             createMountPointXMLPreferences();
@@ -553,10 +500,10 @@ public class ContentDelegator extends LabelProvider
         }
     }
 
-    private void createMountPointXMLPreferences() {
-        String prefKey = PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML;
+    private static void createMountPointXMLPreferences() {
+        String prefKey = WorkbenchConstants.P_EXPLORER_MOUNT_POINT_XML;
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        String pre29PrefString = prefStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
+        String pre29PrefString = prefStore.getString(WorkbenchConstants.P_EXPLORER_MOUNT_POINT);
         if (pre29PrefString != null && !pre29PrefString.isEmpty()) {
             prefStore.setValue(prefKey, pre29PrefString);
         } else {
@@ -586,46 +533,34 @@ public class ContentDelegator extends LabelProvider
     private void restoreStateFromPreferences() {
         List<MountSettings> settingsList = getMountSettingsFromPreferences();
         for (MountSettings settings : settingsList) {
-            if (settings.isActive() && MountSettings.isMountSettingsAddable(settings)) {
+            if (settings.isActive() && ExplorerMountTable.getContentProviderFactory(settings.getFactoryID()) != null) {
                 tryAddMountPoint(settings.getMountID());
             }
         }
     }
 
-    private List<MountSettings> getMountSettingsFromPreferences() {
-        List<MountSettings> mountSettings = null;
-
-        try {
-            mountSettings = MountSettings.loadSortedMountSettingsFromPreferences();
-        } catch (BackingStoreException e) {
-            LOGGER.error("Could not load mount point settings:" + e.getMessage(), e);
-        }
-
-        return mountSettings;
+    private static List<MountSettings> getMountSettingsFromPreferences() {
+        return MountSettings.loadSortedMountSettingsFromPreferences(true);
     }
 
-    private void writeToPreferences(final List<MountSettings> mountSettings) {
+    private static void writeToPreferences(final List<MountSettings> mountSettings) {
         if (!CollectionUtils.isEmpty(mountSettings)) {
             MountSettings.saveMountSettings(mountSettings);
         }
     }
 
     private void tryAddMountPoint(final String mountID) {
-        MountPoint mp = ExplorerMountTable.getMountPoint(mountID);
+        final MountPoint mp = ExplorerMountTable.getMountPoint(mountID);
         if (mp != null) {
             addMountPoint(mp);
         } else {
             LOGGER.info("Can't restore mount point to display: " + mountID);
-            return;
         }
     }
 
     private static boolean hasLoggedBugSRV715;
     private static final String LOG_MOUNT_REMOVE_SRV_715 = System.getProperty("knime.log.srv-715.path");
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void propertyChange(final PropertyChangeEvent event) {
         if (ExplorerMountTable.MOUNT_POINT_PROPERTY.equals(event.getProperty())) {
@@ -633,7 +568,7 @@ public class ContentDelegator extends LabelProvider
             if (event.getNewValue() == null) {
                 // mount point was removed
                 mp.getProvider().removeListener(this);
-                boolean removed = m_provider.remove(mp);
+                boolean removed = m_provider.remove(mp.getMountID()) != null;
                 if (removed) {
                     notifyListeners(new PropertyChangeEvent(mp,
                             CONTENT_CHANGED, mp.getMountID(), null));
@@ -646,16 +581,13 @@ public class ContentDelegator extends LabelProvider
                             LOGGER.error("Couldn't log details for SRV-715", e);
                         }
                     }
-                    LOGGER.debug("Removed mount point with id \""
-                            + mp.getMountID()
-                            + "\" from view because it was deleted in the "
-                            + "preferences.");
+                    LOGGER.debug("Removed mount point with id \"" + mp.getMountID()
+                        + "\" from view because it was deleted in the " + "preferences.");
                 }
             } else {
                 tryAddMountPoint(((MountPoint)event.getSource()).getMountID());
                 LOGGER.debug("Added mount point with id \"" + mp.getMountID() + ".");
             }
-            return;
         }
     }
 
@@ -668,20 +600,10 @@ public class ContentDelegator extends LabelProvider
      */
     @Override
     public void labelProviderChanged(final LabelProviderChangedEvent event) {
-        if (event != null
-                && (event.getSource() instanceof AbstractContentProvider)) {
-            AbstractContentProvider source =
-                    (AbstractContentProvider)event.getSource();
-            Object refresh = event.getElement();
-            if (refresh instanceof AbstractExplorerFileStore) {
-                notifyListeners(new PropertyChangeEvent(source,
-                        CONTENT_CHANGED, null, refresh));
-            } else {
-                notifyListeners(new PropertyChangeEvent(source,
-                        CONTENT_CHANGED, null, null));
-            }
+        if (event != null && event.getSource() instanceof AbstractContentProvider source) {
+            final var newValue = event.getElement() instanceof AbstractExplorerFileStore store ? store : null;
+            notifyListeners(new PropertyChangeEvent(source, CONTENT_CHANGED, null, newValue));
         }
-
     }
 
     /*---------------------------------------------------------------*/
@@ -717,11 +639,10 @@ public class ContentDelegator extends LabelProvider
      */
     @Override
     public Color getForeground(final Object element) {
-        if (element instanceof AbstractContentProvider) {
-            return ((AbstractContentProvider)element).getForeground(element);
-        } else if (element instanceof ContentObject) {
-            ContentObject co = (ContentObject) element;
-            return co.getProvider().getForeground(co.getObject());
+        if (element instanceof AbstractContentProvider provider) {
+            return provider.getForeground(element);
+        } else if (element instanceof ContentObject content) {
+            return content.getProvider().getForeground(content.getObject());
         } else {
             return Display.getDefault().getSystemColor(SWT.COLOR_LIST_FOREGROUND);
         }
@@ -733,13 +654,17 @@ public class ContentDelegator extends LabelProvider
      */
     @Override
     public Color getBackground(final Object element) {
-        if (element instanceof AbstractContentProvider) {
-            return ((AbstractContentProvider)element).getBackground(element);
-        } else if (element instanceof ContentObject) {
-            ContentObject co = (ContentObject) element;
-            return co.getProvider().getBackground(co.getObject());
+        if (element instanceof AbstractContentProvider provider) {
+            return provider.getBackground(element);
+        } else if (element instanceof ContentObject content) {
+            return content.getProvider().getBackground(content.getObject());
         } else {
             return Display.getDefault().getSystemColor(SWT.COLOR_LIST_BACKGROUND);
         }
+    }
+
+    private static void logUnexpectedObject(final Object obj) {
+        LOGGER.coding(() -> "Unexpected object in tree view! (%s of type %s)" //
+            .formatted(obj, obj.getClass().getCanonicalName()));
     }
 }

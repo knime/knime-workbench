@@ -51,7 +51,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -69,6 +68,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -96,22 +96,11 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
 
     /**
      * @param factory the factory that created us.
-     * @param id mount id
+     * @param mountPoint non-null mount point
      */
-    LocalWorkspaceContentProvider(final LocalWorkspaceContentProviderFactory factory, final String id) {
-        super(factory, id);
-    }
-
-    private static boolean isChildOfOrSame(
-            final IResource candidate, final IResource parent) {
-        if (candidate.equals(parent)) {
-            return true;
-        }
-        IResource candidateParent = candidate.getParent();
-        if (candidateParent == null) {
-            return false;
-        }
-        return isChildOfOrSame(candidateParent, parent);
+    LocalWorkspaceContentProvider(final LocalWorkspaceContentProviderFactory factory,
+            final WorkbenchMountPoint mountPoint) {
+        super(factory, mountPoint);
     }
 
     /*
@@ -292,14 +281,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider {
     @Override
     public Image getImage() {
         return ImageRepository.getIconImage(SharedImages.LocalSpaceIcon);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String saveState() {
-        return ""; // nothing to save here
     }
 
     /**

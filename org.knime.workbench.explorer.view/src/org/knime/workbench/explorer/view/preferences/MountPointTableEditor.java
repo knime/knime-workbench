@@ -47,11 +47,12 @@
 package org.knime.workbench.explorer.view.preferences;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.function.FailableFunction;
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.layout.PixelConverter;
@@ -68,8 +69,6 @@ import org.eclipse.jface.viewers.TableLayout;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.DisposeEvent;
-import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
@@ -85,38 +84,43 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Widget;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.workbench.WorkbenchActivator;
+import org.knime.core.workbench.WorkbenchConstants;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountException;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
+import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.osgi.service.prefs.BackingStoreException;
 
 /**
+ * Classic UI editor for the mount table.
  *
  * @author Christian Albrecht, KNIME AG, Zurich, Switzerland
  * @since 6.0
  */
-public class MountPointTableEditor extends FieldEditor {
+@SuppressWarnings("java:S6212") // `var` can hinder readability
+public final class MountPointTableEditor extends FieldEditor {
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(
-        MountPointTableEditor.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(MountPointTableEditor.class);
 
     private static final int MOUNT_ID_PROP = 0;
+
     private static final int CONTENT_PROP = 1;
+
     private static final int TYPE_PROP = 2;
 
     private final List<String> m_removedMountPointNames = new ArrayList<>();
 
-    private class MountPointTableLabelProvider implements ITableLabelProvider {
+    private static final class MountPointTableLabelProvider implements ITableLabelProvider {
 
         @Override
         public Image getColumnImage(final Object element, final int columnIndex) {
             switch (columnIndex) {
-                case CONTENT_PROP:
-                case TYPE_PROP:
+                case CONTENT_PROP, TYPE_PROP:
                     final MountSettings settings = (MountSettings)element;
-                    final AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
+                    final AbstractContentProviderFactory factory =
+                        ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
                     return factory == null ? null : factory.getImage();
 
                 default:
@@ -129,47 +133,25 @@ public class MountPointTableEditor extends FieldEditor {
         @Override
         public String getColumnText(final Object element, final int columnIndex) {
             MountSettings settings = (MountSettings)element;
-            AbstractContentProviderFactory factory;
+            final WorkbenchMountPointType type =
+                WorkbenchActivator.getInstance().getMountPointType(settings.getFactoryID()).orElse(null);
 
-            switch (columnIndex) {
-            case MOUNT_ID_PROP:
-                return settings.getMountID();
+            return switch (columnIndex) {
+                case MOUNT_ID_PROP -> settings.getMountID();
+                case CONTENT_PROP -> fromMountPointType(type, settings, t -> t.getContentDisplayString(settings));
+                case TYPE_PROP -> fromMountPointType(type, settings, WorkbenchMountPointType::getDisplayName);
+                default -> null;
+            };
+        }
 
-            case CONTENT_PROP:
-                String mID = settings.getMountID();
-                MountPoint mountPoint = ExplorerMountTable.getMountPoint(mID);
-                if (mountPoint != null) {
-                    AbstractContentProvider provider = mountPoint.getProvider();
-                    return provider.toString();
-                } else {
-                    factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
-                    if (factory == null) {
-                        return null;
-                    }
-                    AbstractContentProvider provider =
-                        factory.createContentProvider(settings.getMountID(), settings.getContent());
-                    String value = provider.toString();
-                    provider.dispose();
-                    return value;
-                }
-
-            case TYPE_PROP:
-                factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
-                return factory == null ? null : factory.toString();
-
-            default:
-                break;
+        private static String fromMountPointType(final WorkbenchMountPointType type, final MountSettings settings,
+            final FailableFunction<WorkbenchMountPointType, String, WorkbenchMountException> callback) {
+            try {
+                return type == null ? ("Unknown type '" + settings.getFactoryID() + "'") : callback.apply(type);
+            } catch (WorkbenchMountException e) {
+                LOGGER.error(e);
+                return "'" + settings.getFactoryID() + "' (unloadable)";
             }
-
-            return null;
-        }
-
-        @Override
-        public void addListener(final ILabelProviderListener listener) {
-        }
-
-        @Override
-        public void dispose() {
         }
 
         @Override
@@ -178,11 +160,22 @@ public class MountPointTableEditor extends FieldEditor {
         }
 
         @Override
+        public void addListener(final ILabelProviderListener listener) {
+            // unused
+        }
+
+        @Override
         public void removeListener(final ILabelProviderListener listener) {
+            // unused
+        }
+
+        @Override
+        public void dispose() {
+          // unused
         }
     }
 
-    private final class MountPointTableCheckStateProvider implements ICheckStateProvider {
+    private static final class MountPointTableCheckStateProvider implements ICheckStateProvider {
 
         @Override
         public boolean isGrayed(final Object element) {
@@ -195,7 +188,7 @@ public class MountPointTableEditor extends FieldEditor {
         }
     }
 
-    private class MountPointTableCheckStateListener implements ICheckStateListener {
+    private static final class MountPointTableCheckStateListener implements ICheckStateListener {
 
         @Override
         public void checkStateChanged(final CheckStateChangedEvent event) {
@@ -206,24 +199,32 @@ public class MountPointTableEditor extends FieldEditor {
     }
 
     private Table m_table;
+
     private TableViewer m_tableViewer;
 
     private List<MountSettings> m_mountSettings;
 
     private Composite m_buttonBox;
+
     private Button m_addButton;
+
     private Button m_editButton;
+
     private Button m_removeButton;
+
     private Button m_upButton;
+
     private Button m_downButton;
+
     private SelectionListener m_selectionListener;
 
     /**
      * Creates a new MountPointTableEditor.
+     *
      * @param parent The parent component
      */
     public MountPointTableEditor(final Composite parent) {
-        init(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, "List of configured mount points:");
+        init(WorkbenchConstants.P_EXPLORER_MOUNT_POINT_XML, "List of configured mount points:");
         createControl(parent);
     }
 
@@ -233,8 +234,8 @@ public class MountPointTableEditor extends FieldEditor {
     @Override
     protected void adjustForNumColumns(final int numColumns) {
         Control control = getLabelControl();
-        ((GridData) control.getLayoutData()).horizontalSpan = numColumns;
-        ((GridData) m_tableViewer.getControl().getLayoutData()).horizontalSpan = numColumns - 1;
+        ((GridData)control.getLayoutData()).horizontalSpan = numColumns;
+        ((GridData)m_tableViewer.getControl().getLayoutData()).horizontalSpan = numColumns - 1;
     }
 
     /**
@@ -266,8 +267,8 @@ public class MountPointTableEditor extends FieldEditor {
      */
     private TableViewer getTableControl(final Composite parent) {
 
-        m_table = new Table(parent, SWT.H_SCROLL | SWT.V_SCROLL | SWT.SINGLE
-                | SWT.BORDER | SWT.FULL_SELECTION | SWT.CHECK);
+        m_table =
+            new Table(parent, SWT.H_SCROLL | SWT.V_SCROLL | SWT.SINGLE | SWT.BORDER | SWT.FULL_SELECTION | SWT.CHECK);
         m_table.setHeaderVisible(true);
         m_table.setLinesVisible(true);
 
@@ -307,7 +308,7 @@ public class MountPointTableEditor extends FieldEditor {
         return m_tableViewer;
     }
 
-    private int getTableHeightHint(final Table table, final int rows) {
+    private static int getTableHeightHint(final Table table, final int rows) {
         if (table.getFont().equals(JFaceResources.getDefaultFont())) {
             table.setFont(JFaceResources.getDialogFont());
         }
@@ -325,16 +326,13 @@ public class MountPointTableEditor extends FieldEditor {
             layout.marginWidth = 0;
             m_buttonBox.setLayout(layout);
             createButtons(m_buttonBox);
-            m_buttonBox.addDisposeListener(new DisposeListener() {
-                @Override
-                public void widgetDisposed(final DisposeEvent event) {
-                    m_addButton = null;
-                    m_editButton = null;
-                    m_removeButton = null;
-                    m_upButton = null;
-                    m_downButton = null;
-                    m_buttonBox = null;
-                }
+            m_buttonBox.addDisposeListener(event -> {
+                m_addButton = null;
+                m_editButton = null;
+                m_removeButton = null;
+                m_upButton = null;
+                m_downButton = null;
+                m_buttonBox = null;
             });
 
         } else {
@@ -368,18 +366,15 @@ public class MountPointTableEditor extends FieldEditor {
         button.setText(label);
         button.setFont(parent.getFont());
         GridData data = new GridData(GridData.FILL_HORIZONTAL);
-        int widthHint = convertHorizontalDLUsToPixels(button,
-                IDialogConstants.BUTTON_WIDTH);
-        data.widthHint = Math.max(widthHint, button.computeSize(SWT.DEFAULT,
-                SWT.DEFAULT, true).x);
+        int widthHint = convertHorizontalDLUsToPixels(button, IDialogConstants.BUTTON_WIDTH);
+        data.widthHint = Math.max(widthHint, button.computeSize(SWT.DEFAULT, SWT.DEFAULT, true).x);
         button.setLayoutData(data);
         button.addSelectionListener(getSelectionListener());
         return button;
     }
 
     /**
-     * Returns this field editor's selection listener.
-     * The listener is created if nessessary.
+     * Returns this field editor's selection listener. The listener is created if nessessary.
      *
      * @return the selection listener
      */
@@ -422,7 +417,9 @@ public class MountPointTableEditor extends FieldEditor {
 
         if (index >= 0) {
             MountSettings settings = (MountSettings)m_table.getItem(index).getData();
-            AbstractContentProviderFactory contentProviderFactory = ExplorerMountTable.getContentProviderFactories().get(settings.getFactoryID());
+            //settings.getWorkbenchMountPointTypeOrFail().
+            AbstractContentProviderFactory contentProviderFactory =
+                ExplorerMountTable.getContentProviderFactories().get(settings.getFactoryID());
             m_editButton.setEnabled(contentProviderFactory.isMountpointEditable());
         } else {
             m_editButton.setEnabled(false);
@@ -486,7 +483,7 @@ public class MountPointTableEditor extends FieldEditor {
     private void swap(final boolean up) {
         setPresentsDefaultValue(false);
         int index = m_table.getSelectionIndex();
-        int target = up ? index - 1 : index + 1;
+        int target = up ? (index - 1) : (index + 1);
 
         if (index >= 0) {
             TableItem[] selection = m_table.getSelection();
@@ -501,22 +498,13 @@ public class MountPointTableEditor extends FieldEditor {
     }
 
     private MountSettings getNewInputObject() {
-        EditMountPointDialog dlg =
-            new EditMountPointDialog(getShell(),
-                    ExplorerMountTable.getAddableContentProviders(getContentProviderIDs()),
-                    getAllMountIDs());
+        EditMountPointDialog dlg = new EditMountPointDialog(getShell(),
+            ExplorerMountTable.getAddableContentProviders(getContentProviderIDs()), getAllMountIDs());
+        getAllMountIDs();
         if (dlg.open() != Window.OK) {
             return null;
         }
-        AbstractContentProvider newCP = dlg.getContentProvider();
-        if (newCP != null) {
-            MountSettings mountSettings = new MountSettings(newCP);
-            if (mountSettings.getDefaultMountID() == null) {
-                mountSettings.setDefaultMountID(dlg.getDefaultMountID());
-            }
-            return mountSettings;
-        }
-        return null;
+        return dlg.getMountSettings().orElseThrow();
     }
 
     private List<String> getContentProviderIDs() {
@@ -524,15 +512,13 @@ public class MountPointTableEditor extends FieldEditor {
         for (MountSettings settings : m_mountSettings) {
             idSet.add(settings.getFactoryID());
         }
-        return new ArrayList<String>(idSet);
+        return new ArrayList<>(idSet);
     }
 
     private List<String> getAllMountIDs() {
-        List<String> result = new ArrayList<String>(m_mountSettings.size());
-        for (MountSettings settings : m_mountSettings) {
-            result.add(settings.getMountID());
-        }
-        return result;
+        return m_mountSettings.stream() //
+            .map(MountSettings::getMountID) //
+            .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private Shell getShell() {
@@ -544,52 +530,35 @@ public class MountPointTableEditor extends FieldEditor {
 
     /**
      * Edits an existing item from the list.
+     *
      * @param settings the settings object to load into the edit dialog
      * @return an edited item or null if item unchanged
      */
     private MountSettings editSelectedObject(final MountSettings settings) {
         List<String> existingMountIDs = getAllMountIDs();
         existingMountIDs.remove(settings.getMountID());
-        AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
-        EditMountPointDialog dlg = new EditMountPointDialog(getShell(),
-            Arrays.asList(new AbstractContentProviderFactory[]{factory}), existingMountIDs, settings);
+        final String factoryID = settings.getFactoryID();
+        AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactory(factoryID);
+        EditMountPointDialog dlg = new EditMountPointDialog(getShell(), List.of(factory), existingMountIDs, settings);
         if (dlg.open() != Window.OK) {
             return null;
         }
 
-        AbstractContentProvider newCP = dlg.getContentProvider();
-        if (newCP != null) {
-            MountSettings mountSettings = new MountSettings(newCP);
-            if (mountSettings.getDefaultMountID() == null) {
-                mountSettings.setDefaultMountID(dlg.getDefaultMountID());
-            }
-            return mountSettings;
-        }
-        return null;
+        return dlg.getMountSettings().orElse(null);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void doLoad() {
-        try {
-            List<MountSettings> mountSettings = MountSettings.loadSortedMountSettingsFromPreferences();
-            m_mountSettings = mountSettings;
-            m_tableViewer.setInput(m_mountSettings);
-            m_tableViewer.refresh();
-        } catch (final BackingStoreException e) {
-            LOGGER.error("Unable to read mount point settings: " + e.getMessage(), e);
-        }
+        doLoad(MountSettings.loadSortedMountSettingsFromPreferenceNode());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void doLoadDefault() {
-        String s = getPreferenceStore().getDefaultString(getPreferenceName());
-        m_mountSettings = MountSettings.parseSettings(s, true);
+        doLoad(MountSettings.loadSortedMountSettingsFromDefaultPreferenceNode());
+    }
+
+    private void doLoad(final List<MountSettings> mountSettings) {
+        m_mountSettings = mountSettings;
         m_tableViewer.setInput(m_mountSettings);
         m_tableViewer.refresh();
     }

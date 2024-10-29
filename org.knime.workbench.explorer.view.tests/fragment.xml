@@ -13,5 +13,13 @@
             ContentProviderFactory="org.knime.workbench.explorer.TestContentProviderFactory">
       </KNIMEExplorerContentProvider>
    </extension>
+   <extension
+         point="org.knime.core.workbench.MountPointType">
+      <MountPointType
+            stateFactoryClass="org.knime.workbench.explorer.TestMountPointState$Factory"
+            supportsMultipleInstances="true"
+            typeIdentifier="test-provider">
+      </MountPointType>
+   </extension>
 
 </fragment>

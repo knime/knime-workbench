@@ -60,15 +60,9 @@ import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
  */
 public class MountPoint {
 
-    // the name it is mounted with
-    private final String m_id;
-
-    // the factory that created the provider of this map point
-    private final AbstractContentProviderFactory m_parent;
-
-    private final AbstractContentProvider m_contentProvider;
-
     private final AtomicInteger m_refCount = new AtomicInteger();
+
+    private final ExplorerMountPointDelegate m_delegate;
 
     /**
      * Creates a new mount point. Sets the ref count to one.
@@ -77,24 +71,31 @@ public class MountPoint {
      * @param contentProvider the content provider
      * @param factory the content provider factory
      */
-    MountPoint(final String id, final AbstractContentProvider contentProvider,
-            final AbstractContentProviderFactory factory) {
-        m_id = id;
-        m_parent = factory;
-        m_contentProvider = contentProvider;
+    MountPoint(final ExplorerMountPointDelegate delegate) {
         m_refCount.set(1);
+        m_delegate = delegate;
     }
 
+    /**
+     * @return factory that created the provider of this mount point
+     */
     public AbstractContentProviderFactory getProviderFactory() {
-        return m_parent;
+        return m_delegate.getProviderFactory();
     }
 
+    /**
+     * @return the provider of this mount point
+     */
     public AbstractContentProvider getProvider() {
-        return m_contentProvider;
+        return m_delegate.getProvider();
     }
 
+    /**
+     * Gets the mount points ID.
+     * @return mount ID
+     */
     public String getMountID() {
-        return m_id;
+        return m_delegate.getMountID();
     }
 
     /**
@@ -115,7 +116,16 @@ public class MountPoint {
         return m_refCount.decrementAndGet();
     }
 
+    /**
+     * Disposes this mount point.
+     */
     public void dispose() {
-        m_contentProvider.dispose();
+        m_delegate.disposeProvider();
+    }
+
+    @Override
+    public String toString() {
+        return "MountPoint[%s]{ typeID=%s }".formatted(m_delegate.getMountID(),
+            m_delegate.getProviderFactory().getMountPointType().getTypeIdentifier());
     }
 }

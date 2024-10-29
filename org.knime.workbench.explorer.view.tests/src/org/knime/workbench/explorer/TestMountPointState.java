@@ -44,59 +44,49 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   08.05.2020 (thor): created
+ *   Oct 31, 2024 (wiswedel): created
  */
 package org.knime.workbench.explorer;
 
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Text;
 import org.knime.core.workbench.WorkbenchActivator;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointState;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointStateFactory;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
+import org.knime.core.workbench.preferences.MountSettings;
 
 /**
- * Content provider factory for testcases.
- *
- * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
+ * @author Leonard Wörteler, KNIME GmbH, Konstanz, Germany
  */
-public class TestContentProviderFactory extends AbstractContentProviderFactory {
+public final class TestMountPointState implements WorkbenchMountPointState {
 
-    static final String PROVIDER_ID = "test-provider";
-
+    /** The type of this mount point. */
     private static final WorkbenchMountPointType TYPE =
-            WorkbenchActivator.getInstance().getMountPointTypeOrFail(PROVIDER_ID);
+        WorkbenchActivator.getInstance().getMountPointTypeOrFail("test-provider");
+
+    /** Factory class. */
+    public static final class Factory implements WorkbenchMountPointStateFactory<TestMountPointState> {
+
+        @Override
+        public TestMountPointState newInstance(final MountSettings settings) {
+            return new TestMountPointState();
+        }
+
+        @Override
+        public String getDisplayName() {
+            return "Test Mountpoint";
+        }
+
+        @Override
+        public String getContentDisplayString(final MountSettings mountSettings) {
+            return "TEST";
+        }
+    }
+
+    private TestMountPointState() {
+    }
 
     @Override
-    public WorkbenchMountPointType getMountPointType() {
+    public WorkbenchMountPointType getType() {
         return TYPE;
-    }
-
-    @Override
-    public String toString() {
-        return "Test provider";
-    }
-
-    @Override
-    public Image getImage() {
-        return null;
-    }
-
-    @Override
-    public AbstractContentProvider createContentProvider(final WorkbenchMountPoint mountPoint) {
-        return new TestContentProvider(this, mountPoint);
-    }
-
-    @Override
-    public boolean isAdditionalInformationNeeded() {
-        return false;
-    }
-
-    @Override
-    public AdditionalInformationPanel createAdditionalInformationPanel(final Composite parent,
-        final Text mountIDInput) {
-        return null;
     }
 }
