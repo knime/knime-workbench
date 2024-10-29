@@ -792,9 +792,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         final IMemento mementoContent = memento.createChild("content");
         m_contentDelegator.saveState(mementoContent);
         // save the mount ids that were expanded so that 1st level can be expanded when view opened again
-        String expandedMountPoints = Arrays.stream(m_viewer.getExpandedTreePaths()).map(p -> p.getFirstSegment())
-                .filter(o -> o instanceof AbstractContentProvider).map(o -> (AbstractContentProvider)o)
-                .map(fs -> fs.getMountID()).collect(Collectors.joining("|"));
+        String expandedMountPoints = Arrays.stream(m_viewer.getExpandedTreePaths()) //
+                .map(p -> p.getFirstSegment()) //
+                .filter(AbstractContentProvider.class::isInstance) //
+                .map(AbstractContentProvider.class::cast) //
+                .map(AbstractContentProvider::getMountID) //
+                .collect(Collectors.joining("|"));
         mementoContent.putString("expandedElements", expandedMountPoints);
     }
 

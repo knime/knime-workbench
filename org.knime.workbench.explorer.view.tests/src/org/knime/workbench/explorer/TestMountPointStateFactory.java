@@ -44,59 +44,21 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   08.05.2020 (thor): created
+ *   23 Jan 2025 (leonard.woerteler): created
  */
 package org.knime.workbench.explorer;
 
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Text;
-import org.knime.core.workbench.WorkbenchActivator;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointStateFactory;
+import org.knime.core.workbench.preferences.MountSettings;
 
 /**
- * Content provider factory for testcases.
  *
- * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
+ * @author leonard.woerteler
  */
-public class TestContentProviderFactory extends AbstractContentProviderFactory {
-
-    static final String PROVIDER_ID = "test-provider";
-
-    private static final WorkbenchMountPointType TYPE =
-            WorkbenchActivator.getInstance().getMountPointTypeOrFail(PROVIDER_ID);
+public final class TestMountPointStateFactory implements WorkbenchMountPointStateFactory<TestMountPointState> {
 
     @Override
-    public WorkbenchMountPointType getMountPointType() {
-        return TYPE;
-    }
-
-    @Override
-    public String toString() {
-        return "Test provider";
-    }
-
-    @Override
-    public Image getImage() {
-        return null;
-    }
-
-    @Override
-    public AbstractContentProvider createContentProvider(final WorkbenchMountPoint mountPoint) {
-        return new TestContentProvider(this, mountPoint);
-    }
-
-    @Override
-    public boolean isAdditionalInformationNeeded() {
-        return false;
-    }
-
-    @Override
-    public AdditionalInformationPanel createAdditionalInformationPanel(final Composite parent,
-        final Text mountIDInput) {
-        return null;
+    public TestMountPointState newInstance(final MountSettings settings) {
+        return TestMountPointState.INSTANCE;
     }
 }

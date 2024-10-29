@@ -1234,7 +1234,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                                         final var builder2 = builder
                                                 .withCurrentUserAsUserId()
                                                 .withLocalWorkflowPath(localPath);
-                                        if (!contentProvider.getFactory().isTempSpace()) {
+                                        if (!contentProvider.getFactory().getMountPointType().isTemporaryMountPoint()) {
                                             builder2.withMountpoint(contentProvider.getMountID(), mountpointRoot);
                                         }
                                         return builder2;
@@ -1284,7 +1284,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                                 final var builder2 = builder
                                         .withCurrentUserAsUserId()
                                         .withLocalWorkflowPath(localPath);
-                                if (!contentProvider.getFactory().isTempSpace()) {
+                                if (!contentProvider.getFactory().getMountPointType().isTemporaryMountPoint()) {
                                     builder2.withMountpoint(contentProvider.getMountID(), mountpointRoot);
                                 }
                                 return builder2;
