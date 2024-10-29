@@ -44,59 +44,25 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   08.05.2020 (thor): created
+ *   30 Oct 2024 (Manuel Hotz, KNIME GmbH, Konstanz, Germany): created
  */
 package org.knime.workbench.explorer;
 
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Text;
-import org.knime.core.workbench.WorkbenchActivator;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 
 /**
- * Content provider factory for testcases.
  *
- * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
+ * @author Manuel Hotz, KNIME GmbH, Konstanz, Germany
  */
-public class TestContentProviderFactory extends AbstractContentProviderFactory {
+interface ExplorerMountPointDelegate {
 
-    static final String PROVIDER_ID = "test-provider";
+    AbstractContentProviderFactory getProviderFactory();
 
-    private static final WorkbenchMountPointType TYPE =
-            WorkbenchActivator.getInstance().getMountPointTypeOrFail(PROVIDER_ID);
+    AbstractContentProvider getProvider();
 
-    @Override
-    public WorkbenchMountPointType getMountPointType() {
-        return TYPE;
-    }
+    String getMountID();
 
-    @Override
-    public String toString() {
-        return "Test provider";
-    }
+    void disposeProvider();
 
-    @Override
-    public Image getImage() {
-        return null;
-    }
-
-    @Override
-    public AbstractContentProvider createContentProvider(final WorkbenchMountPoint mountPoint) {
-        return new TestContentProvider(this, mountPoint);
-    }
-
-    @Override
-    public boolean isAdditionalInformationNeeded() {
-        return false;
-    }
-
-    @Override
-    public AdditionalInformationPanel createAdditionalInformationPanel(final Composite parent,
-        final Text mountIDInput) {
-        return null;
-    }
 }

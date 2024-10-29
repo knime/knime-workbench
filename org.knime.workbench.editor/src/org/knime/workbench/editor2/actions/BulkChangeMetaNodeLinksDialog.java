@@ -60,6 +60,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -528,7 +529,7 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
     private void openURIChangeDialog() {
         final var shell = SWTUtilities.getActiveShell();
         List<String> validMountPointList = new ArrayList<>();
-        for (Map.Entry<String, AbstractContentProvider> entry : ExplorerMountTable.getMountedContent().entrySet()) {
+        for (Entry<String, AbstractContentProvider> entry : ExplorerMountTable.getMountedContent().entrySet()) {
             AbstractContentProvider contentProvider = entry.getValue();
             if (contentProvider.canHostComponentTemplates() || contentProvider.canHostMetaNodeTemplates()) {
                 validMountPointList.add(entry.getKey());
