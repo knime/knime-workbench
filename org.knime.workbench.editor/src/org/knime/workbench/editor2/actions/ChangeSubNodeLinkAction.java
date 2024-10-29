@@ -82,16 +82,16 @@ import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.core.util.urlresolve.KnimeUrlResolver.IdAndPath;
 import org.knime.core.util.urlresolve.KnimeUrlResolver.KnimeUrlVariant;
 import org.knime.core.util.urlresolve.URLResolverUtil;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.editor2.commands.ChangeSubNodeLinkCommand;
 import org.knime.workbench.editor2.editparts.NodeContainerEditPart;
-import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 
 /**
@@ -160,10 +160,9 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
      */
     static boolean isAbsoluteUrlOnHub(final URI uri) {
         return uri != null && KnimeUrlType.getType(uri).orElse(null) == KnimeUrlType.MOUNTPOINT_ABSOLUTE
-            && Optional.ofNullable(ExplorerMountTable.getMountPoint(uri.getAuthority())) //
-                .map(MountPoint::getProvider) //
-                .map(AbstractContentProvider::getFactory) //
-                .map(AbstractContentProviderFactory::getID) //
+                && WorkbenchMountTable.getMountPoint(uri.getAuthority()) //
+                .map(WorkbenchMountPoint::getType) //
+                .map(WorkbenchMountPointType::getTypeIdentifier) //
                 .filter(id -> id.endsWith("_hub") || id.equals("com.knime.explorer.server.examples")) //
                 .isPresent();
     }

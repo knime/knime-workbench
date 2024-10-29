@@ -138,27 +138,28 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         }
 
         if ((selection != null) && !selection.isEmpty()) {
-            String defaultLocalID = new LocalWorkspaceContentProviderFactory().getDefaultMountID();
+            final String defaultLocalID =
+                new LocalWorkspaceContentProviderFactory().getMountPointType().getDefaultMountID().orElseThrow();
 
             Map<AbstractContentProvider, List<AbstractExplorerFileStore>> providerMap =
                 DragAndDropUtils.getProviderMap(selection);
+            final AbstractContentProvider provider = ExplorerMountTable.getContentProvider(defaultLocalID).orElse(null);
             if (providerMap != null) {
                 AbstractExplorerFileStore firstSelectedItem = providerMap.values().iterator().next().get(0);
                 // use a different default selection if:
                 //   - the selected mount point isn't writable (e.g. missing teamspace license)
                 //   - a remote workflow is requested to be created (not supported)
                 if (!validMountPointList.contains(firstSelectedItem.getMountID())
-                        || (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote())) {
+                    || (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote())) {
                     // can't create workflow on the selected item (it is remote)
-                    if (ExplorerMountTable.getMountPoint(defaultLocalID) != null) {
-                        m_initialSelection =
-                                ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getRootStore();
+                    if (provider != null) {
+                        m_initialSelection = provider.getRootStore();
                     } else {
                         // find some local content provider to use as a fallback
-                        Optional<AbstractContentProvider>
-                                defaultLocalContentProvider = ExplorerMountTable.getMountedContent().values().stream()
-                                .filter(cp -> !cp.isRemote()).findFirst();
-                        m_initialSelection = defaultLocalContentProvider.map(AbstractContentProvider::getRootStore).orElse(null);
+                        Optional<AbstractContentProvider> defaultLocalContentProvider = ExplorerMountTable
+                            .getMountedContent().values().stream().filter(cp -> !cp.isRemote()).findFirst();
+                        m_initialSelection =
+                            defaultLocalContentProvider.map(AbstractContentProvider::getRootStore).orElse(null);
                     }
                 } else if (firstSelectedItem.fetchInfo().isWorkflowGroup()) {
                     m_initialSelection = firstSelectedItem;
@@ -166,7 +167,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                     m_initialSelection = firstSelectedItem.getParent();
                 }
             } else {
-                m_initialSelection = ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getRootStore();
+                m_initialSelection = provider.getRootStore();
             }
         }
     }
@@ -237,16 +238,13 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
      * @param monitor a progress monitor
      * @throws CoreException if an error occurs while creating the workflow
      */
-    protected void doFinish(final AbstractExplorerFileStore newItem,
-            final IProgressMonitor monitor) throws CoreException {
+    protected void doFinish(final AbstractExplorerFileStore newItem, final IProgressMonitor monitor)
+        throws CoreException {
         createNewWorkflow(newItem, monitor);
     }
 
-    protected static void throwCoreException(final String message,
-            final Throwable t) throws CoreException {
-        IStatus status =
-                new Status(IStatus.ERROR, "org.knime.workbench.ui", IStatus.OK,
-                        message, t);
+    protected static void throwCoreException(final String message, final Throwable t) throws CoreException {
+        IStatus status = new Status(IStatus.ERROR, "org.knime.workbench.ui", IStatus.OK, message, t);
         throw new CoreException(status);
     }
 

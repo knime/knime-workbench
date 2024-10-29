@@ -44,16 +44,8 @@
  */
 package org.knime.workbench.explorer;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.eclipse.core.runtime.preferences.DefaultScope;
-import org.eclipse.core.runtime.preferences.IEclipsePreferences;
-import org.eclipse.core.runtime.preferences.InstanceScope;
-import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
-import org.knime.workbench.explorer.view.preferences.ExplorerPrefsSyncer;
-import org.knime.workbench.explorer.view.preferences.MountSettings;
-import org.osgi.service.prefs.BackingStoreException;
+import org.knime.core.workbench.WorkbenchConstants;
 
 /**
  *
@@ -63,9 +55,7 @@ public class ExplorerActivator extends AbstractUIPlugin {
     /**
      * the id of the plug-in.
      */
-    public static final String PLUGIN_ID = "org.knime.workbench.explorer.view";
-
-    private AtomicBoolean m_prefSyncerAdded = new AtomicBoolean();
+    public static final String PLUGIN_ID = WorkbenchConstants.WORKBENCH_PREFERENCES_PLUGIN_ID;
 
     private static ExplorerActivator plugin;
 
@@ -84,38 +74,5 @@ public class ExplorerActivator extends AbstractUIPlugin {
     public static ExplorerActivator getDefault() {
         return plugin;
     }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public IPreferenceStore getPreferenceStore() {
-        IPreferenceStore prefStore = super.getPreferenceStore();
-        addPrefSyncer();
-        return prefStore;
-    }
-
-    private void addPrefSyncer() {
-        if (!m_prefSyncerAdded.getAndSet(true)) {
-            // AP-8989 switching to IEclipsePreferences
-            ExplorerPrefsSyncer prefsSyncer = new ExplorerPrefsSyncer();
-            IEclipsePreferences defaultPrefs = DefaultScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation());
-            defaultPrefs.addPreferenceChangeListener(prefsSyncer);
-            IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation());
-            preferences.addNodeChangeListener(prefsSyncer);
-            preferences.addPreferenceChangeListener(prefsSyncer);
-            try {
-
-                for (String childName : preferences.childrenNames()) {
-                    IEclipsePreferences childPreference = (IEclipsePreferences)preferences.node(childName);
-                    childPreference.addNodeChangeListener(prefsSyncer);
-                    childPreference.addPreferenceChangeListener(prefsSyncer);
-                }
-            } catch (BackingStoreException e) {
-
-            }
-        }
-    }
-
 
 }

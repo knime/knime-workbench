@@ -53,15 +53,16 @@ import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
+import org.knime.core.workbench.WorkbenchConstants;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.osgi.framework.FrameworkUtil;
 
 public class ExplorerPreferencePage extends FieldEditorPreferencePage
-        implements IWorkbenchPreferencePage, IPreferenceChangeListener {
+    implements IWorkbenchPreferencePage, IPreferenceChangeListener {
+
     /** The id of this preference page. */
-    public static final String ID
-            = "org.knime.workbench.explorer.view.explorer";
+    public static final String ID = "org.knime.workbench.explorer.view.explorer";
     private MountPointTableEditor m_mountEditor;
     private ComboFieldEditor m_linkTemplateEditor;
     private BooleanFieldEditor m_showEJBWarningEditor;
@@ -93,7 +94,7 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
         addField(m_mountEditor);
 
         m_linkTemplateEditor = new ComboFieldEditor(
-                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
+                WorkbenchConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
                 "Link components when sharing on Server or Local Workspace",
                 new String[][] {
                         {"Never", MessageDialogWithToggle.NEVER},
@@ -125,9 +126,9 @@ public class ExplorerPreferencePage extends FieldEditorPreferencePage
         // default preference and then store the old default preference as user settings once the preference dialog is
         // closed with OK. This listener updates the components when the default preferences change.
 
-        if (PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML.equals(event.getKey())) {
+        if (WorkbenchConstants.P_EXPLORER_MOUNT_POINT_XML.equals(event.getKey())) {
             m_mountEditor.load();
-        } else if (PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE.equals(event.getKey())) {
+        } else if (WorkbenchConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE.equals(event.getKey())) {
             m_linkTemplateEditor.load();
         } else if (PreferenceConstants.P_SHOW_EJB_WARNING_DIALOG.equals(event.getKey())) {
             m_showEJBWarningEditor.load();

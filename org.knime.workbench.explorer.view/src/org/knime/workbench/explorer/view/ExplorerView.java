@@ -54,9 +54,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -210,7 +211,6 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     /** The ID of the view as specified by the extension. */
     public static final String ID = "org.knime.workbench.explorer.view";
-
 
     private TreeViewer m_viewer;
 
@@ -503,39 +503,37 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     @Override
     public void workflowChanged(final WorkflowEvent event) {
         switch (event.getType()) {
-        case NODE_ADDED:
-            NodeID id = event.getID();
-            refreshAsync(id);
-            break;
-        case NODE_REMOVED:
-            // can't just use the ID here as the workflow is no longer in
-            // the static workflow map, try to get path from workflow and
-            // refresh here
-            Object oldValue = event.getOldValue();
-            if (oldValue instanceof WorkflowManager) {
-                WorkflowManager wm = (WorkflowManager)oldValue;
-                ReferencedFile workingDir = wm.getWorkingDir();
-                if (workingDir != null) {
-                    File file = workingDir.getFile();
-                    final AbstractExplorerFileStore fs =
-                        ExplorerMountTable.getFileSystem().fromLocalFile(file);
-                    if (fs != null) {
-                        SyncExecQueueDispatcher.asyncExec(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (m_viewer == null
-                                        || m_viewer.getControl().isDisposed()) {
-                                    return;
+            case NODE_ADDED:
+                NodeID id = event.getID();
+                refreshAsync(id);
+                break;
+            case NODE_REMOVED:
+                // can't just use the ID here as the workflow is no longer in
+                // the static workflow map, try to get path from workflow and
+                // refresh here
+                Object oldValue = event.getOldValue();
+                if (oldValue instanceof WorkflowManager) {
+                    WorkflowManager wm = (WorkflowManager)oldValue;
+                    ReferencedFile workingDir = wm.getWorkingDir();
+                    if (workingDir != null) {
+                        File file = workingDir.getFile();
+                        final AbstractExplorerFileStore fs = ExplorerMountTable.getFileSystem().fromLocalFile(file);
+                        if (fs != null) {
+                            SyncExecQueueDispatcher.asyncExec(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (m_viewer == null || m_viewer.getControl().isDisposed()) {
+                                        return;
+                                    }
+                                    m_viewer.refresh(ContentObject.forFile(fs));
                                 }
-                                m_viewer.refresh(ContentObject.forFile(fs));
-                            }
-                        });
+                            });
+                        }
                     }
                 }
-            }
-            break;
-        default:
-            // ignore
+                break;
+            default:
+                // ignore
         }
     }
 
@@ -570,8 +568,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
     public void propertyChange(final PropertyChangeEvent event) {
         if (event != null
                 && ContentDelegator.CONTENT_CHANGED.equals(event.getProperty())) {
-            if (event.getNewValue() instanceof AbstractExplorerFileStore) {
-                refreshAsync(ContentDelegator.getTreeObjectFor((AbstractExplorerFileStore)event.getNewValue()));
+            if (event.getNewValue() instanceof AbstractExplorerFileStore fileStore) {
+                refreshAsync(ContentDelegator.getTreeObjectFor(fileStore));
             } else {
                 refreshAsync();
             }
@@ -584,27 +582,37 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         refreshAsync((Object)null);
     }
 
+    /** Map containing all tree objects for which updates are scheduled but not yet performed. */
+    private final ConcurrentMap<Object, Object> m_pendingRefreshes = new ConcurrentHashMap<>();
+
+    /** {@link ConcurrentHashMap} doesn't allow {@code null} as key or value, so we use this object as marker. */
+    private static final Object FULL_REFRESH = new Object();
+
     private void refreshAsync(final Object refreshRoot) {
+        final var nonNullRoot = refreshRoot == null ? FULL_REFRESH : refreshRoot;
+        if (m_pendingRefreshes.put(nonNullRoot, nonNullRoot) != null) {
+            return;
+        }
+
         Display.getDefault().asyncExec(new Runnable() {
             @Override
             public void run() {
+                m_pendingRefreshes.remove(nonNullRoot);
                 if (m_viewer != null && !m_viewer.getControl().isDisposed()) {
                     if (refreshRoot != null) {
                         m_viewer.refresh(refreshRoot);
                     } else {
                         m_viewer.refresh();
                     }
-                    Collection<AbstractExplorerFileStore> fs =
-                            m_nextSelection.getAndSet(null);
+
+                    Collection<AbstractExplorerFileStore> fs = m_nextSelection.getAndSet(null);
                     if (fs != null) {
                         List<Object> sel = ContentDelegator.getTreeObjectList(fs);
-                        m_viewer.setSelection(new StructuredSelection(sel),
-                                true);
+                        m_viewer.setSelection(new StructuredSelection(sel), true);
                     }
 
                     for (ViewerFilter vf : m_viewer.getFilters()) {
-                        if ((vf instanceof TextualViewFilter)
-                                && ((TextualViewFilter) vf).hasNonEmptyQuery()) {
+                        if (vf instanceof TextualViewFilter tvf && tvf.hasNonEmptyQuery()) {
                             m_viewer.expandAll();
                             break;
                         }
@@ -635,8 +643,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
 
     /** The set/map of node IDs that need to be refreshed. Only if a new id is
      * not in the map it will be queued for refresh. */
-    private final ConcurrentHashMap<NodeID, NodeID> m_refreshSet =
-        new ConcurrentHashMap<NodeID, NodeID>();
+    private final ConcurrentHashMap<NodeID, NodeID> m_refreshSet = new ConcurrentHashMap<>();
 
     private void refreshAsync(final NodeID node) {
         if (m_refreshSet.put(node, node) == null) { // freshly added to set
@@ -792,9 +799,12 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
         final IMemento mementoContent = memento.createChild("content");
         m_contentDelegator.saveState(mementoContent);
         // save the mount ids that were expanded so that 1st level can be expanded when view opened again
-        String expandedMountPoints = Arrays.stream(m_viewer.getExpandedTreePaths()).map(p -> p.getFirstSegment())
-                .filter(o -> o instanceof AbstractContentProvider).map(o -> (AbstractContentProvider)o)
-                .map(fs -> fs.getMountID()).collect(Collectors.joining("|"));
+        String expandedMountPoints = Arrays.stream(m_viewer.getExpandedTreePaths()) //
+                .map(p -> p.getFirstSegment()) //
+                .filter(AbstractContentProvider.class::isInstance) //
+                .map(AbstractContentProvider.class::cast) //
+                .map(AbstractContentProvider::getMountID) //
+                .collect(Collectors.joining("|"));
         mementoContent.putString("expandedElements", expandedMountPoints);
     }
 
@@ -825,8 +835,8 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             Display.getCurrent().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    Arrays.stream(finalVar).map(i -> ExplorerMountTable.getMountPoint(i))
-                    .filter(Objects::nonNull).map(mp -> mp.getProvider())
+                    Arrays.stream(finalVar).map(ExplorerMountTable::getContentProvider)
+                    .flatMap(Optional::stream) //)
                     .filter(mp -> !mp.isRemote()).forEach(s -> m_viewer.expandToLevel(s, 1));
                 }
             });

@@ -50,6 +50,7 @@ package org.knime.workbench.explorer.view.preferences;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -91,10 +92,12 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.dialogs.ListDialog;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointSettings;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointState;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointState.WorkbenchMountPointStateSettings;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory.AdditionalInformationPanel;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory.ValidationRequiredListener;
@@ -106,7 +109,7 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  * @author ohl, University of Konstanz
  * @since 6.0
  */
-
+@SuppressWarnings("java:S6212") // `var` can hinder readability
 public class EditMountPointDialog extends ListDialog {
 
 
@@ -138,13 +141,9 @@ public class EditMountPointDialog extends ListDialog {
 
     private AdditionalInformationPanel m_additionalPanel;
 
-    private AbstractContentProvider m_contentProvider;
-
-    private boolean m_isNew;
+    private WorkbenchMountPointStateSettings m_newStateSettings;
 
     private AbstractContentProviderFactory m_factory;
-
-    private String m_additionalContent;
 
     private CLabel m_mountIDHeader;
 
@@ -157,6 +156,8 @@ public class EditMountPointDialog extends ListDialog {
     private String m_oldMountID;
 
     private Thread m_backgroundWaitThread;
+
+    private WorkbenchMountPointSettings m_oldMountSettings;
 
     /**
      * Creates a new mount point dialog for creating a new mount point.
@@ -178,9 +179,10 @@ public class EditMountPointDialog extends ListDialog {
      * @param input list of selectable items
      * @param invalidIDs list of invalid ids - rejected in the mountID field.
      * @param settings existing MountSettings to edit
+     * @since 9.0
      */
     public EditMountPointDialog(final Shell parentShell, final List<AbstractContentProviderFactory> input,
-        final Collection<String> invalidIDs, final MountSettings settings) {
+        final Collection<String> invalidIDs, final WorkbenchMountPointSettings settings) {
         super(parentShell);
         init(input, invalidIDs, settings);
     }
@@ -197,10 +199,10 @@ public class EditMountPointDialog extends ListDialog {
     }
 
     private void init(final List<AbstractContentProviderFactory> input,
-            final Collection<String> invalidIDs, final MountSettings settings) {
-        m_isNew = (settings == null);
+            final Collection<String> invalidIDs, final WorkbenchMountPointSettings settings) {
+        m_oldMountSettings = settings;
         m_validationListener = createValidationListener();
-        m_invalidIDs = new HashSet<String>(invalidIDs);
+        m_invalidIDs = new HashSet<>(invalidIDs);
         m_mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
         setAddCancelButton(true);
         setContentProvider(new ContentFactoryProvider(input));
@@ -210,14 +212,11 @@ public class EditMountPointDialog extends ListDialog {
         if (settings == null) {
             setTitle("Select New Content");
             m_mountIDval = "";
-            m_isNew = true;
         } else {
             setTitle("Edit Mount Point");
-            m_mountIDval = settings.getMountID();
-            m_additionalContent = settings.getContent();
-            m_defaultMountID = settings.getDefaultMountID();
+            m_mountIDval = settings.mountID();
+            m_defaultMountID = settings.defaultMountID();
             m_oldMountID = m_mountIDval;
-            m_isNew = false;
         }
     }
 
@@ -298,27 +297,19 @@ public class EditMountPointDialog extends ListDialog {
     /**
      * See {@link #okPressed() okPressed}.
      *
-     * @param waitForBackgroundWork {@code true} ift the current thread should wait for the background work to finish,
+     * @param waitForBackgroundWork {@code true} if the current thread should wait for the background work to finish,
      *            {@code false} otherwise.
      */
     private void okPressed(final boolean waitForBackgroundWork) {
-        // this method gets called through a double click (if cancel button is
-        // added)
+        // this method gets called through a double click (if cancel button is added)
         if (!validate(waitForBackgroundWork)) {
             return;
         }
         Object selection = ((IStructuredSelection)getTableViewer().getSelection()).toArray()[0];
         m_factory = (AbstractContentProviderFactory)selection;
         m_mountIDval = m_mountID.getText().trim();
-        if (m_additionalPanel != null) {
-            if (m_contentProvider != null) {
-                // we should disconnect the server when we edit it, especially as we get a new content provider.
-                m_contentProvider.disconnect();
-            }
-            m_contentProvider = m_additionalPanel.createContentProvider();
-        } else {
-            m_contentProvider = m_factory.createContentProvider(m_mountIDval);
-        }
+        m_newStateSettings = m_additionalPanel == null ? WorkbenchMountPointState.EMPTY_SETTINGS
+            : m_additionalPanel.getStateSettings();
         super.okPressed();
     }
 
@@ -330,10 +321,17 @@ public class EditMountPointDialog extends ListDialog {
     }
 
     /**
-     * @return an {@link AbstractContentProvider} if it can be created from the panel, null if not.
+     * Retrieves the new mount settings if they have changed.
+     *
+     * @return new mount settings if modified, {@link Optional#empty()} otherwise
+     * @since 9.0
      */
-    public AbstractContentProvider getContentProvider() {
-        return m_contentProvider;
+    public Optional<WorkbenchMountPointSettings> getMountSettings() {
+        final boolean active = m_oldMountSettings == null || m_oldMountSettings.isActive();
+        final String typeIdentifier = m_factory.getMountPointType().getTypeIdentifier();
+        final var updatedSettings = new WorkbenchMountPointSettings(m_mountIDval, m_defaultMountID, typeIdentifier,
+            m_newStateSettings, active);
+        return updatedSettings.equals(m_oldMountSettings) ? Optional.empty() : Optional.of(updatedSettings);
     }
 
     /**
@@ -350,9 +348,6 @@ public class EditMountPointDialog extends ListDialog {
         return m_defaultMountID;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Control createDialogArea(final Composite parent) {
 
@@ -386,12 +381,11 @@ public class EditMountPointDialog extends ListDialog {
             @Override
             public void selectionChanged(final SelectionChangedEvent event) {
                 Object selection = ((IStructuredSelection)event.getSelection()).getFirstElement();
-                if (selection != null && selection instanceof AbstractContentProviderFactory) {
-                    AbstractContentProviderFactory factory = (AbstractContentProviderFactory)selection;
+                if (selection != null && selection instanceof AbstractContentProviderFactory factory) {
                     for (Control cont : additionalPanel.getChildren()) {
                         cont.dispose();
                     }
-                    if (m_isNew && !m_mountID.getText().isEmpty()) {
+                    if (isNew() && !m_mountID.getText().isEmpty()) {
                         m_defaultMountID = null;
                         if (!m_mountID.getText().isEmpty()) {
                             m_mountID.setText("");
@@ -399,17 +393,16 @@ public class EditMountPointDialog extends ListDialog {
                     }
                     m_mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
                     m_mountIDHeader.setText(m_mountIDHeaderText);
+
                     if (factory.isAdditionalInformationNeeded()) {
-                        m_additionalPanel =
-                            factory.createAdditionalInformationPanel(additionalPanel, m_mountID);
+                        m_additionalPanel = factory.createAdditionalInformationPanel(additionalPanel, m_mountID);
                         if (m_additionalPanel != null) {
                             m_additionalPanel.addValidationRequiredListener(m_validationListener);
-                            m_additionalPanel.createPanel(m_additionalContent);
+                            m_additionalPanel.createPanel(m_oldMountSettings);
                         }
                     } else {
                         m_additionalPanel = null;
-                        String mountID = factory.getDefaultMountID() == null ? "" : factory.getDefaultMountID();
-                        m_mountID.setText(mountID);
+                        m_mountID.setText(factory.getMountPointType().getDefaultMountID().orElse(""));
                     }
 
                     setMountIdStatic(factory.isMountIdStatic());
@@ -481,10 +474,14 @@ public class EditMountPointDialog extends ListDialog {
             //force selectionChanged event
             tableViewer.setSelection(tableViewer.getSelection());
         }
-        if (!m_isNew) {
+        if (!isNew()) {
             tableViewer.getTable().setEnabled(false);
         }
         return c;
+    }
+
+    private boolean isNew() {
+        return m_oldMountSettings == null;
     }
 
     private void setMountIdStatic(final boolean isStatic) {
@@ -504,7 +501,7 @@ public class EditMountPointDialog extends ListDialog {
      * @return true, if the selection/input is okay.
      */
     protected boolean validate() {
-       return validate(false);
+        return validate(false);
     }
 
     /**
@@ -558,12 +555,12 @@ public class EditMountPointDialog extends ListDialog {
             m_resetMountID.setEnabled(true);
         } else if (!StringUtils.isEmpty(m_oldMountID) && !m_oldMountID.equals(id)) {
             mountIDHeaderText += "\n\nChanging the default Mount ID is not recommended since it can cause\n"
-                    + "issues when trying to reference server resources\n"
-                    + "by the Mount ID (e.g. knime://knime-server/resource.txt).\n"
-                    + "Only change the Mount ID if you are certain of what you are doing.\n\n"
-                    + "The old Mount ID is: " + m_oldMountID;
-                mountIDHeaderImage = ImageRepository.getIconImage(SharedImages.Warning);
-                m_resetMountID.setEnabled(true);
+                + "issues when trying to reference server resources\n"
+                + "by the Mount ID (e.g. knime://knime-server/resource.txt).\n"
+                + "Only change the Mount ID if you are certain of what you are doing.\n\n"
+                + "The old Mount ID is: " + m_oldMountID;
+            mountIDHeaderImage = ImageRepository.getIconImage(SharedImages.Warning);
+            m_resetMountID.setEnabled(true);
         } else {
             m_resetMountID.setEnabled(false);
         }
@@ -638,6 +635,7 @@ public class EditMountPointDialog extends ListDialog {
      *
      * @param parent
      */
+    @SuppressWarnings("unused")
     protected void createHeader(final Composite parent) {
         Composite header = new Composite(parent, SWT.FILL);
         Color white = Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
@@ -649,7 +647,7 @@ public class EditMountPointDialog extends ListDialog {
         new Label(header, SWT.NONE);
         Label exec = new Label(header, SWT.NONE);
         exec.setBackground(white);
-        if (m_isNew) {
+        if (isNew()) {
             exec.setText("Mounting a new resource for display in the KNIME Explorer");
         } else {
             exec.setText("Edit a resource for display in the KNIME Explorer");
@@ -666,11 +664,11 @@ public class EditMountPointDialog extends ListDialog {
         execIcon.setImage(IMG_NEWITEM.createImage());
         execIcon.setLayoutData(new GridData(SWT.END, SWT.BEGINNING, true, true));
         // second row
-        if (m_isNew) {
+        if (isNew()) {
             new Label(header, SWT.None);
             Label txt = new Label(header, SWT.NONE);
             txt.setBackground(white);
-            txt.setText("Please select the type of resource that should " + "be mounted.");
+            txt.setText("Please select the type of resource that should be mounted.");
             txt.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
             new Label(header, SWT.None);
         }
@@ -766,11 +764,7 @@ public class EditMountPointDialog extends ListDialog {
          */
         @Override
         public Image getImage(final Object element) {
-            if (element instanceof AbstractContentProviderFactory) {
-                return ((AbstractContentProviderFactory)element).getImage();
-            } else {
-                return null;
-            }
+            return element instanceof AbstractContentProviderFactory factory ? factory.getImage() : null;
         }
 
         /**
@@ -778,11 +772,7 @@ public class EditMountPointDialog extends ListDialog {
          */
         @Override
         public String getText(final Object element) {
-            if (element instanceof AbstractContentProviderFactory) {
-                return ((AbstractContentProviderFactory)element).toString();
-            } else {
-                return null;
-            }
+            return element instanceof AbstractContentProviderFactory factory ? factory.toString() : null;
         }
 
     }
@@ -794,11 +784,10 @@ public class EditMountPointDialog extends ListDialog {
             m_elements = elements;
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public Object[] getElements(final Object inputElement) {
             if (inputElement == m_elements) {
-                return ((List<AbstractContentProviderFactory>)inputElement).toArray();
+                return ((List<?>)inputElement).toArray();
             }
             return new Object[0];
         }

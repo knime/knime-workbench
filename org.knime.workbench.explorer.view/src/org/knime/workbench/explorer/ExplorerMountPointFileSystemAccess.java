@@ -55,9 +55,12 @@ import java.net.URL;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
 import org.knime.filehandling.core.connections.base.attributes.BaseFileAttributes;
 import org.knime.filehandling.core.util.MountPointFileSystemAccess;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
@@ -79,7 +82,9 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
         "com.knime.explorer.server.knime_hub", "com.knime.explorer.server.workflow_hub");
 
     private static String getProviderFactoryId(final String mountId) {
-        return ExplorerMountTable.getMountPoint(mountId).getProviderFactory().getID();
+        return ExplorerMountTable.getContentProvider(mountId) //
+                .map(a -> a.getMountPoint().getType().getTypeIdentifier()) //
+                .orElse(null);
     }
 
     @Override
@@ -94,7 +99,12 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
 
     @Override
     public List<String> getMountedIDs() {
-        return ExplorerMountTable.getAllMountedIDs();
+        return WorkbenchMountTable.getAllMountedIDs().stream() //
+                .map(WorkbenchMountTable::getMountPoint) //
+                .flatMap(Optional::stream) //
+                .filter(mp -> ExplorerMountTable.toAbstractContentProvider(mp).isPresent()) //
+                .map(WorkbenchMountPoint::getMountID) //
+                .toList();
     }
 
     @Override

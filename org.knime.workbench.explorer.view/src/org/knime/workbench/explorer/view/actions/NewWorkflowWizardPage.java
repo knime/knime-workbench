@@ -132,8 +132,7 @@ public class NewWorkflowWizardPage extends WizardPage {
             m_parent = selection;
         } else {
             // set the parent to the root of the first selected content provider
-            m_parent = ExplorerMountTable.getMountPoint(mountIDs[0])
-                    .getProvider().getRootStore();
+            m_parent = ExplorerMountTable.getContentProvider(mountIDs[0]).map(p -> p.getRootStore()).orElse(null);
         }
         m_mountIDs = mountIDs;
     }

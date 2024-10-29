@@ -46,14 +46,14 @@ package org.knime.workbench.explorer.view;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Supplier;
 
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
-import org.knime.core.node.NodeLogger;
-import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointSettings;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointState.WorkbenchMountPointStateSettings;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
 
 /**
  *
@@ -62,9 +62,11 @@ import org.knime.workbench.explorer.ExplorerMountTable;
 public abstract class AbstractContentProviderFactory {
 
     /**
-     * @return a unique ID (e.g. "com.knime.explorer.filesystem", etc.)
+     * @return The non-null definition of the mount point implementation, the definition is shared (meta) info
+     * about such as unique ID etc.
+     * @since 9.0
      */
-    public abstract String getID();
+    public abstract WorkbenchMountPointType getMountPointType();
 
     /**
      * @return a readable name useful for the user (e.g. "Local Workspace",
@@ -79,37 +81,6 @@ public abstract class AbstractContentProviderFactory {
     public abstract Image getImage();
 
     /**
-     *
-     * @return true, if the factory can produce multiple content provider
-     *         instances, false, if not more than one content provider must be
-     *         created.
-     */
-    public abstract boolean multipleInstances();
-
-    /**
-     * Always return false. Except for the one temp space provider implementation.
-     * @return false. Almost always.
-     * @since 6.4
-     */
-    public boolean isTempSpace() {
-        return false;
-    }
-
-
-    /**
-     * @return a unique mount ID if this mount point should appear by default in
-     *         the mount table and the explorer view. Or null, if it shouldn't
-     *         be mounted by default. If an ID is returned the instantiation of
-     *         the corresponding content provider must not open any dialog (or
-     *         cause any other interaction).
-     */
-    public String getDefaultMountID() {
-        return null;
-    }
-
-    /**
-     * Returns whether the mountpoint can be edited.
-     *
      * @return Whether the mountpoint can be edited
      * @since 8.4
      */
@@ -139,79 +110,20 @@ public abstract class AbstractContentProviderFactory {
         return 1;
     }
 
-    /**
-     * Not intended to be called. Rather go through the
-     * {@link ExplorerMountTable}.
+    /** Restore content provider. Caller needs to dispose returned value when no longer needed!
      *
-     * <p>The caller needs to make sure the returned value is disposed when
-     * no longer needed!
-     *
-     * @param mountID the mount ID the new content provider is mounted with
-     *
-     * @return a new, fully parameterized instance for a specific content
-     *         provider or <code>null</code> if no provider can be created
-     */
-    public abstract AbstractContentProvider createContentProvider(final String mountID);
-
-    /** Restore content provider. Caller needs to dispose returned value when
-     * no longer needed!
-     *
-     * @param mountID the id of the mount to restore
-     * @param content the string content representing the state of the content
-     *            provider
+     * @param mountPoint the mount point with mountID etc.
      * @return a new instance with its state restored from the passed structure
+     * @since 9.0
      */
-    public abstract AbstractContentProvider createContentProvider(final String mountID, final String content);
+    public abstract AbstractContentProvider createContentProvider(WorkbenchMountPoint mountPoint);
 
     /**
-     * Try to create a content provider. If an error occurs, it is printed to the console and the method returns
-     * normally.
-     *
-     * @param mountID The ID of the mount
-     * @return the created instance, or an empty optional if an error occurred
-     * @since 8.14
-     */
-    public final Optional<AbstractContentProvider> tryCreateContentProvider(final String mountID) {
-        return wrapFailable(mountID, () -> createContentProvider(mountID));
-    }
-
-    /**
-     * Try to restore a content provider. If an error occurs, it is printed to the console and the method returns
-     * normally.
-     *
-     * @param mountID The ID of the mount
-     * @param content The content to restore
-     * @return the created instance, or an empty optional if an error occurred
-     * @since 8.14
-     */
-    public final Optional<AbstractContentProvider> tryCreateContentProvider(final String mountID,
-        final String content) {
-        return wrapFailable(mountID, () -> createContentProvider(mountID, content));
-    }
-
-    private static final Optional<AbstractContentProvider> wrapFailable(final String mountID,
-        final Supplier<AbstractContentProvider> supplier) {
-        try {
-            return Optional.ofNullable(supplier.get());
-        } catch (Throwable t) {
-            if (t instanceof OutOfMemoryError oome) {
-                throw oome;
-            }
-            NodeLogger.getLogger(AbstractContentProviderFactory.class)
-                .error("Error during the creation of the content provider for mount ID \"%s\": %s".formatted(mountID,
-                    t.getMessage()), t);
-            return Optional.empty();
-        }
-    }
-
-    /**
-     * Indicates if additional information is needed by the factory for
-     * creating a content provider. In general this information is gathered
-     * by the factory in the {@link #createContentProvider(String)} by opening
+     * Indicates if additional information is needed by the factory for creating a content provider. In general this
+     * information is gathered by the factory in the {@link #createContentProvider(WorkbenchMountPoint)} by opening
      * a dialog.
      *
-     * @return true, if additional information is needed by the factory for
-     *      creating a content provider, false otherwise
+     * @return true, if additional information is needed by the factory for creating a content provider, false otherwise
      *
      * @since 3.0
      */
@@ -228,8 +140,7 @@ public abstract class AbstractContentProviderFactory {
      * @return the additional information panel
      * @since 6.0
      */
-    public abstract AdditionalInformationPanel createAdditionalInformationPanel(
-            Composite parent, Text mountIDInput);
+    public abstract AdditionalInformationPanel createAdditionalInformationPanel(Composite parent, Text mountIDInput);
 
     /**
      * @since 6.0
@@ -247,14 +158,15 @@ public abstract class AbstractContentProviderFactory {
         protected AdditionalInformationPanel(final Composite parent, final Text mountIDInput) {
             m_parent = parent;
             m_mountIDInput = mountIDInput;
-            m_listeners = new ArrayList<ValidationRequiredListener>();
+            m_listeners = new ArrayList<>();
         }
 
         /**
          * Creates and fills the panel.
-         * @param content The settings content string or null if not present
+         * @param oldMountSettings The old settings, or {@code null} if a new mountpoint is to be created
+         * @since 9.0
          */
-        public abstract void createPanel(String content);
+        public abstract void createPanel(WorkbenchMountPointSettings oldMountSettings);
 
         /**
          * Validate additional information.
@@ -263,9 +175,10 @@ public abstract class AbstractContentProviderFactory {
         public abstract String validate();
 
         /**
-         * @return an {@link AbstractContentProvider} if it can be created from the panel's information.
+         * @return
+         * @since 9.0
          */
-        public abstract AbstractContentProvider createContentProvider();
+        public abstract WorkbenchMountPointStateSettings getStateSettings();
 
         /**
          * @return the parent
@@ -381,29 +294,29 @@ public abstract class AbstractContentProviderFactory {
      * on additional panels.
      * @since 6.0
      */
-    public static interface ValidationRequiredListener {
+    public interface ValidationRequiredListener {
 
         /**
          * Called when validation is required.
          */
-        public void validationRequired();
+        void validationRequired();
 
         /**
          * Called when the default mount ID changes.
          * @param defaultMountID the new default mount ID
          */
-        public void defaultMountIDChanged(String defaultMountID);
+        void defaultMountIDChanged(String defaultMountID);
 
         /**
          * @return the currently entered mount ID
          */
-        public String getCurrentMountID();
+        String getCurrentMountID();
 
         /**
          * Called when an additional panel wants to change the mount ID label.
          * @param label the new label
          */
-        public void setMountIDLabel(String label);
+        void setMountIDLabel(String label);
 
     }
 }

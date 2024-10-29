@@ -44,8 +44,8 @@
  */
 package org.knime.workbench.explorer.view;
 
+import org.knime.core.node.util.CheckUtils;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 
 /**
@@ -67,14 +67,9 @@ public final class ContentObject implements IFileStoreProvider{
      * @param creator
      * @param o
      */
-    ContentObject(final AbstractContentProvider creator,
-            final AbstractExplorerFileStore o) {
-        if (creator == null) {
-            throw new NullPointerException(
-                    "Creator (provider) can't be null for Object " + o);
-        }
+    ContentObject(final AbstractContentProvider creator,final AbstractExplorerFileStore o) {
         m_creator = creator;
-        m_obj = o;
+        m_obj = CheckUtils.checkArgumentNotNull(o, "Creator (provider) can't be null for Object %s", o);
     }
 
     /**
@@ -91,24 +86,17 @@ public final class ContentObject implements IFileStoreProvider{
         return m_creator;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         return m_obj.toString();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean equals(final Object obj) {
         if (obj == this) {
             return true;
         }
-        if (obj instanceof ContentObject) {
-            ContentObject co = (ContentObject)obj;
+        if (obj instanceof ContentObject co) {
             if (m_creator != co.m_creator) {
                 return false;
             }
@@ -123,9 +111,6 @@ public final class ContentObject implements IFileStoreProvider{
         return false;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public int hashCode() {
         return m_obj.hashCode();
@@ -145,11 +130,9 @@ public final class ContentObject implements IFileStoreProvider{
             return null;
         }
         String id = file.getMountID();
-        MountPoint mp = ExplorerMountTable.getMountPoint(id);
-        if (mp == null) {
-            return null;
-        }
-        return new ContentObject(mp.getProvider(), file);
+        return ExplorerMountTable.getContentProvider(id) //
+                .map(mp -> new ContentObject(mp, file)) //
+                .orElse(null);
     }
 
     /**

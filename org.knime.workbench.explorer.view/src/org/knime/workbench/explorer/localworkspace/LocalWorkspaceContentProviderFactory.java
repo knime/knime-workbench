@@ -47,6 +47,9 @@ package org.knime.workbench.explorer.localworkspace;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
+import org.knime.core.workbench.mountpoint.contribution.local.LocalWorkspaceMountPointState;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -59,44 +62,23 @@ import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
  *
  * @author ohl, University of Konstanz
  */
-public class LocalWorkspaceContentProviderFactory extends
-        AbstractContentProviderFactory {
+public class LocalWorkspaceContentProviderFactory extends AbstractContentProviderFactory {
+
+    private static final WorkbenchMountPointType MOUNT_POINT_TYPE = LocalWorkspaceMountPointState.TYPE;
 
     /**
      * The id of this predefined and always existing content provider.
      */
-    public static final String ID = "org.knime.workbench.explorer.workspace";
+    public static final String ID = MOUNT_POINT_TYPE.getTypeIdentifier();
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public String getID() {
-        return ID;
+    public WorkbenchMountPointType getMountPointType() {
+        return MOUNT_POINT_TYPE;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public AbstractContentProvider createContentProvider(final String id) {
-        return new LocalWorkspaceContentProvider(this, id);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean multipleInstances() {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getDefaultMountID() {
-        return "LOCAL";
+    public AbstractContentProvider createContentProvider(final WorkbenchMountPoint mountPoint) {
+        return new LocalWorkspaceContentProvider(this, mountPoint);
     }
 
     @Override
@@ -109,47 +91,25 @@ public class LocalWorkspaceContentProviderFactory extends
         return true;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         return "Local Workspace";
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Image getImage() {
         return ImageRepository.getIconImage(SharedImages.LocalSpaceIcon);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public AbstractContentProvider createContentProvider(final String mountID,
-            final String content) {
-        return new LocalWorkspaceContentProvider(this, mountID);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isAdditionalInformationNeeded() {
         return false;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public AdditionalInformationPanel createAdditionalInformationPanel(final Composite parent,
         final Text mountPointIDInput) {
         // no additional information needed
         return null;
     }
-
 }

@@ -65,7 +65,6 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.knime.core.node.workflow.contextv2.LocationInfo;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.DeletionConfirmationResult;
 
@@ -503,11 +502,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
      *      if the content provider is no longer mounted
      */
     public AbstractContentProvider getContentProvider() {
-        MountPoint mountPoint = ExplorerMountTable.getMountPoint(getMountID());
-        if (mountPoint == null) {
-            return null;
-        }
-        return mountPoint.getProvider();
+        return ExplorerMountTable.getContentProvider(getMountID()).orElse(null);
     }
 
     /* ----------- placeholder store in the tree for string messages ----- */

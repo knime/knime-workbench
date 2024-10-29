@@ -50,7 +50,7 @@ package org.knime.workbench.editor2.actions;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.Map.Entry;
 
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
@@ -164,7 +164,7 @@ public class SaveAsMetaNodeTemplateAction extends AbstractNodeAction {
 
         List<String> validMountPointList = new ArrayList<String>();
 //        Workbench.getInstance().getActiveWorkbenchWindow().getActivePage().findView(ID)
-        for (Map.Entry<String, AbstractContentProvider> entry
+        for (Entry<String, AbstractContentProvider> entry
                 : ExplorerMountTable.getMountedContent().entrySet()) {
             AbstractContentProvider contentProvider = entry.getValue();
             if (contentProvider.isWritable() && contentProvider.canHostMetaNodeTemplates()) {

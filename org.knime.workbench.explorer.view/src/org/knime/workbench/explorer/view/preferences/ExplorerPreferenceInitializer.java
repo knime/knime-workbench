@@ -44,38 +44,17 @@
  */
 package org.knime.workbench.explorer.view.preferences;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
-import org.eclipse.core.runtime.preferences.DefaultScope;
-import org.eclipse.core.runtime.preferences.IEclipsePreferences;
-import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.knime.workbench.explorer.ExplorerActivator;
-import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
-import org.osgi.framework.FrameworkUtil;
-import org.osgi.service.prefs.BackingStoreException;
 
-public class ExplorerPreferenceInitializer extends
-        AbstractPreferenceInitializer {
+/**
+ * Preference initializer for the KNIME Explorer (some prompts to be shown or not by default).
+ */
+public final class ExplorerPreferenceInitializer extends AbstractPreferenceInitializer {
 
-    private static final String MOUNTPOINT_PREFERENCE_LOCATION = ExplorerActivator.PLUGIN_ID + "/defaultMountpoint";
-
-    private static final String DEFAULT_MOUNTPOINTS_LIST = "defaultMountpoints";
-
-    private static final String ENFORCE_EXCLUSION = "enforceExclusion";
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void initializeDefaultPreferences() {
 
@@ -87,110 +66,9 @@ public class ExplorerPreferenceInitializer extends
                 PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
                 MessageDialogWithToggle.PROMPT);
 
-        // Set the default behavior of "Should a warning dialog appear when you connect to a server via EJB".
-        prefStore.setDefault(PreferenceConstants.P_SHOW_EJB_WARNING_DIALOG,
-            PreferenceConstants.P_DEFAULT_SHOW_EJB_WARNING_DIALOG);
-
         // Set the default behavior of "Should a warning dialog appear when you connect to an older server".
         prefStore.setDefault(PreferenceConstants.P_SHOW_OLDER_SERVER_WARNING_DIALOG,
             PreferenceConstants.P_DEFAULT_SHOW_OLDER_SERVER_WARNING_DIALOG);
     }
 
-    /**
-     * Loads the default mount points into default {@link PreferenceConstants#P_EXPLORER_MOUNT_POINT_XML}. This should
-     * be called if there are no other settings and you have to fall back to the old xml format.
-     *
-     * @since 8.5
-     */
-    public static void loadDefaultMountPoints() {
-        final IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        // Set the default mount points
-        final List<AbstractContentProviderFactory> factories = ExplorerMountTable.getAddableContentProviders();
-        final List<MountSettings> settingsList = new ArrayList<MountSettings>();
-        final List<String> include = getIncludedDefaultMountPoints();
-
-        for (AbstractContentProviderFactory fac : factories) {
-            if (fac.getDefaultMountID() != null && include.contains(fac.getDefaultMountID())) {
-                fac.tryCreateContentProvider(fac.getDefaultMountID()).ifPresent(cntProvider -> {
-                    try {
-                        settingsList.add(new MountSettings(cntProvider));
-                    } finally {
-                        cntProvider.dispose();
-                    }
-                });
-            }
-        }
-
-        if (!settingsList.isEmpty()) {
-            prefStore.setDefault(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML,
-                MountSettings.getSettingsString(settingsList));
-        }
-    }
-
-    /**
-     * @return true, if mount settings have been stored in XML yet
-     * @since 6.2
-     */
-    public static boolean existsMountPreferencesXML() {
-        IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(FrameworkUtil.getBundle(
-            ExplorerActivator.class).getSymbolicName());
-        String mpSettings = preferences.get(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, null);
-        return (mpSettings != null && !mpSettings.isEmpty());
-    }
-
-    /**
-     * Returns whether there are MountSettings stored in the {@link ExplorerActivator#PLUGIN_ID} preference node.
-     *
-     * @return Whether there are MountSettingsStored in the {@link ExplorerActivator#PLUGIN_ID} preference node
-     * @since 8.2
-     */
-    public static boolean existMountPointPreferenceNodes() {
-        IEclipsePreferences mountPointNode = InstanceScope.INSTANCE.getNode(ExplorerActivator.PLUGIN_ID);
-        try {
-            return mountPointNode.childrenNames().length > 0;
-        } catch (BackingStoreException e) {
-            // No settings to be found.
-            return false;
-        }
-    }
-
-    /**
-     * Returns a list with all default mount points that shall be added.
-     *
-     * @return List with all default mount points that shall be added.
-     * @since 8.5
-     */
-    public static List<String> getIncludedDefaultMountPoints() {
-        final String mpSetting =
-            DefaultScope.INSTANCE.getNode(MOUNTPOINT_PREFERENCE_LOCATION).get(DEFAULT_MOUNTPOINTS_LIST, null);
-
-        final boolean enforceExclusion =
-            DefaultScope.INSTANCE.getNode(MOUNTPOINT_PREFERENCE_LOCATION).getBoolean(ENFORCE_EXCLUSION, false);
-
-        if (mpSetting == null) {
-            return enforceExclusion ? Collections.emptyList() : ExplorerMountTable.getAddableContentProviders().stream()
-                .map(e -> e.getDefaultMountID()).filter(e -> !StringUtils.isEmpty(e)).collect(Collectors.toList());
-        }
-
-        final String[] mps = mpSetting.split("\\,");
-
-        return Arrays.stream(mps).map(e -> e.trim()).filter(e -> !StringUtils.isEmpty(e)).collect(Collectors.toList());
-    }
-
-    /**
-     * Returns a list with all default mount points that shall be excluded.
-     *
-     * @return List with all default mount points that shall be excluded.
-     * @since 8.5
-     */
-    public static List<String> getExcludedDefaultMountPoints() {
-        if (DefaultScope.INSTANCE.getNode(MOUNTPOINT_PREFERENCE_LOCATION).getBoolean(ENFORCE_EXCLUSION, false)) {
-            final List<String> includedMountPoints = getIncludedDefaultMountPoints();
-
-            return ExplorerMountTable.getAddableContentProviders().stream().map(e -> e.getDefaultMountID())
-                .filter(e -> !StringUtils.isEmpty(e) && !includedMountPoints.contains(e)).collect(Collectors.toList());
-        }
-
-        return Collections.emptyList();
-    }
 }
