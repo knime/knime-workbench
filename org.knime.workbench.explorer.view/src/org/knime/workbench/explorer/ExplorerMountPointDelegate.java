@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -42,84 +43,26 @@
  *  when such Node is propagated with or for interoperation with KNIME.
  * ---------------------------------------------------------------------
  *
- * Created: Mar 17, 2011
- * Author: ohl
+ * History
+ *   30 Oct 2024 (Manuel Hotz, KNIME GmbH, Konstanz, Germany): created
  */
 package org.knime.workbench.explorer;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 
-
 /**
- * Represents a content tree in the KNIME Explorer.
  *
- * @author ohl, University of Konstanz
+ * @author Manuel Hotz, KNIME GmbH, Konstanz, Germany
  */
-public class MountPoint {
+interface ExplorerMountPointDelegate {
 
-    private final AtomicInteger m_refCount = new AtomicInteger();
+    AbstractContentProviderFactory getProviderFactory();
 
-    private final ExplorerMountPointDelegate m_delegate;
+    AbstractContentProvider getProvider();
 
-    /**
-     * Creates a new mount point. Sets the ref count to one.
-     *
-     * @param id the mount id
-     * @param contentProvider the content provider
-     * @param factory the content provider factory
-     */
-    MountPoint(final ExplorerMountPointDelegate delegate) {
-        m_refCount.set(1);
-        m_delegate = delegate;
-    }
+    String getMountID();
 
-    /**
-     * @return factory that created the provider of this mount point
-     */
-    public AbstractContentProviderFactory getProviderFactory() {
-        return m_delegate.getProviderFactory();
-    }
+    void disposeProvider();
 
-    /**
-     * @return the provider of this mount point
-     */
-    public AbstractContentProvider getProvider() {
-        return m_delegate.getProvider();
-    }
-
-    /**
-     * Gets the mount points ID.
-     * @return mount ID
-     */
-    public String getMountID() {
-        return m_delegate.getMountID();
-    }
-
-    /**
-     * Incr the ref count by one and return the new value.
-     *
-     * @return the incremented value
-     */
-    public int incrRefCount() {
-        return m_refCount.incrementAndGet();
-    }
-
-    /**
-     * Decrement the ref count by one and return the new value.
-     *
-     * @return the decremented value.
-     */
-    public int decrRefCount() {
-        return m_refCount.decrementAndGet();
-    }
-
-    /**
-     * Disposes this mount point.
-     */
-    public void dispose() {
-        m_delegate.disposeProvider();
-    }
 }
