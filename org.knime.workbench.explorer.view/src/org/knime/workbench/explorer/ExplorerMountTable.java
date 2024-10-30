@@ -59,6 +59,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -391,8 +392,64 @@ public final class ExplorerMountTable {
      * @return null, if no content is mounted with the specified ID
      */
     public static MountPoint getMountPoint(final String mountID) {
-        final var mp = WorkbenchMountTable.getMountPoint(mountID); // TODO adapter
-        return null;
+        final var mp = WorkbenchMountTable.getMountPoint(mountID);
+        if (mp == null) {
+            return null;
+        }
+        return new MountPoint(new WorkbenchMountPointDelegate(mp));
+    }
+
+    /**
+     * Internal adapter backing the legacy {@link MountPoint} representation.
+     */
+    private static final class WorkbenchMountPointDelegate implements ExplorerMountPointDelegate {
+
+        private final String m_mountID;
+        private final AbstractContentProviderFactory m_parent;
+
+        private AbstractContentProvider m_provider;
+        private Supplier<AbstractContentProvider> m_providerSupplier;
+
+        WorkbenchMountPointDelegate(final WorkbenchMountPoint mp) {
+            m_mountID = mp.getMountID();
+            m_parent = getContentProviderFactory(mp.getDefinition().getTypeIdentifier());
+
+            final var existing = mp.getProvider(AbstractContentProvider.class);
+            if (existing.isEmpty()) {
+                // defer creating the provider until it is actually requested, if it does not yet exist
+                m_providerSupplier = () -> getContentProvider(mp, null);
+            } else {
+                m_provider = existing.get();
+            }
+        }
+
+        @Override
+        public AbstractContentProviderFactory getProviderFactory() {
+            return m_parent;
+        }
+
+        @Override
+        public AbstractContentProvider getProvider() {
+            if (m_provider == null) {
+                m_provider = m_providerSupplier.get();
+                m_providerSupplier = null;
+            }
+            return m_provider;
+        }
+
+        @Override
+        public String getMountID() {
+            return m_mountID;
+        }
+
+        @Override
+        public void disposeProvider() {
+            if (m_provider == null) {
+                m_providerSupplier = null;
+            } else {
+                m_provider.dispose();
+            }
+        }
     }
 
     /**
@@ -619,18 +676,16 @@ public final class ExplorerMountTable {
 
             @Override
             public void mountPointRemoved(final MountPointEvent event) {
-                // TODO adapt to legacy mountpoint
-                final var mountID = event.getMountPointID();
-                final MountPoint mpAdapter = null;
-                listener.propertyChange(new PropertyChangeEvent(mpAdapter, MOUNT_POINT_PROPERTY, mountID, null));
+                final var mp = event.getMountPoint();
+                listener.propertyChange(new PropertyChangeEvent(new MountPoint(new WorkbenchMountPointDelegate(mp)),
+                    MOUNT_POINT_PROPERTY, mp.getMountID(), null));
             }
 
             @Override
             public void mountPointAdded(final MountPointEvent event) {
-                // TODO adapt to legacy mountpoint
-                final var mountID = event.getMountPointID();
-                final MountPoint mpAdapter = null;
-                listener.propertyChange(new PropertyChangeEvent(mpAdapter, MOUNT_POINT_PROPERTY, null, mountID));
+                final var mp = event.getMountPoint();
+                listener.propertyChange(new PropertyChangeEvent(new MountPoint(new WorkbenchMountPointDelegate(mp)),
+                    MOUNT_POINT_PROPERTY, null, mp.getMountID()));
             }
         };
         CHANGE_LISTENERS.put(listener, listenerAdapter);
