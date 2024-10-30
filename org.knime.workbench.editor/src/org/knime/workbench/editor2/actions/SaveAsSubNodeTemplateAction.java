@@ -164,7 +164,7 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
             default:
                 return false;
             }
-            for (AbstractContentProvider p
+            for (AbstractContentProvider<?> p
                     : ExplorerMountTable.getMountedContent().values()) {
                 if (p.canHostComponentTemplates()) {
                     return true;
@@ -185,9 +185,9 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
         WorkflowManager wm = snc.getWorkflowManager();
 
         List<String> validMountPointList = new ArrayList<String>();
-        for (Map.Entry<String, AbstractContentProvider> entry
+        for (Map.Entry<String, AbstractContentProvider<?>> entry
                 : ExplorerMountTable.getMountedContent().entrySet()) {
-            AbstractContentProvider contentProvider = entry.getValue();
+            AbstractContentProvider<?> contentProvider = entry.getValue();
             if (contentProvider.isWritable() && contentProvider.canHostComponentTemplates()) {
                 validMountPointList.add(entry.getKey());
             }
@@ -204,7 +204,7 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
             return;
         }
         AbstractExplorerFileStore target = dialog.getSelection();
-        AbstractContentProvider contentProvider = target.getContentProvider();
+        AbstractContentProvider<?> contentProvider = target.getContentProvider();
         AtomicReference<PortObject[]> exampleInputData = new AtomicReference<PortObject[]>();
         if (dialog.m_isIncludeInputData) {
             //fetch input data

@@ -79,7 +79,7 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
         "com.knime.explorer.server.knime_hub", "com.knime.explorer.server.workflow_hub");
 
     private static String getProviderFactoryId(final String mountId) {
-        return ExplorerMountTable.getMountPoint(mountId).getProviderFactory().getID();
+        return ExplorerMountTable.getMountPoint(mountId).getProviderFactory().getMountPointType().getTypeIdentifier();
     }
 
     @Override

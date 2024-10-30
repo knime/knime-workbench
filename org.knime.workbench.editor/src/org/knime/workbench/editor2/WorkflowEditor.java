@@ -1234,7 +1234,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                                         final var builder2 = builder
                                                 .withCurrentUserAsUserId()
                                                 .withLocalWorkflowPath(localPath);
-                                        if (!contentProvider.getFactory().isTempSpace()) {
+                                        if (!contentProvider.getFactory().getMountPointType().isTemporaryMountPoint()) {
                                             builder2.withMountpoint(contentProvider.getMountID(), mountpointRoot);
                                         }
                                         return builder2;
@@ -1284,7 +1284,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                                 final var builder2 = builder
                                         .withCurrentUserAsUserId()
                                         .withLocalWorkflowPath(localPath);
-                                if (!contentProvider.getFactory().isTempSpace()) {
+                                if (!contentProvider.getFactory().getMountPointType().isTemporaryMountPoint()) {
                                     builder2.withMountpoint(contentProvider.getMountID(), mountpointRoot);
                                 }
                                 return builder2;
@@ -1508,7 +1508,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                     //      no content (in which case, if downloaded from a server, the user will not see a refreshed
                     //      edit button display automatically.)
                     d.asyncExec(() -> {
-                        final EditPart editorPart = (EditPart)viewer.getRootEditPart().getChildren().get(0);
+                        final EditPart editorPart = viewer.getRootEditPart().getChildren().get(0);
                         final List<?> workflowAssets = editorPart.getChildren();
 
                         viewer.deselectAll();
@@ -3055,7 +3055,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         final GraphicalViewer viewer = getGraphicalViewer();
 
         final HashSet<NodeContainer> candidates = new HashSet<>(Arrays.asList(containers));
-        final EditPart rootChild = (EditPart)viewer.getRootEditPart().getChildren().get(0);
+        final EditPart rootChild = viewer.getRootEditPart().getChildren().get(0);
         for (final Object child : rootChild.getChildren()) {
             if (child instanceof NodeContainerEditPart) {
                 final NodeContainerEditPart ncep = (NodeContainerEditPart)child;

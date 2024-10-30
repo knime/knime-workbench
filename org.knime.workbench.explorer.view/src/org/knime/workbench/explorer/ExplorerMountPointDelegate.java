@@ -44,68 +44,25 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   Jun 18, 2019 (Moritz Heine, KNIME GmbH, Konstanz, Germany): created
+ *   30 Oct 2024 (Manuel Hotz, KNIME GmbH, Konstanz, Germany): created
  */
-package org.knime.workbench.core.util;
+package org.knime.workbench.explorer;
 
-import org.eclipse.core.runtime.preferences.DefaultScope;
-import org.eclipse.core.runtime.preferences.IEclipsePreferences;
-import org.eclipse.core.runtime.preferences.InstanceScope;
-import org.knime.core.node.NodeLogger;
-import org.osgi.service.prefs.BackingStoreException;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
+import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 
 /**
- * Workspace utility class that can be used to set and get the workspace version.
- * <p/>
- * This version can be used to determine if an update of AP occurred or if an older workspace has been opened with a
- * newer AP version. The version is usually in the format 'yyyyMMdd'.
  *
- * @author Moritz Heine, KNIME GmbH, Konstanz, Germany
+ * @author Manuel Hotz, KNIME GmbH, Konstanz, Germany
  */
-public final class KNIMEWorkspaceUtil {
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(KNIMEWorkspaceUtil.class);
+interface ExplorerMountPointDelegate {
 
-    private static final String PLUGIN_ID = "org.knime.workbench.core";
+    AbstractContentProviderFactory getProviderFactory();
 
-    private static final String WORKSPACE_VERSION = "knime.workspace.version";
+    AbstractContentProvider getProvider();
 
-    private KNIMEWorkspaceUtil() {
-    }
+    String getMountID();
 
-    /**
-     * Returns the currently version of the workspace, or -1 if the version does not exist yet.
-     * <p/>
-     * Versions are usually in the format 'yyyyMMdd'.
-     *
-     * @return The version.
-     */
-    public synchronized static int getVersion() {
-        final int version = DefaultScope.INSTANCE.getNode(PLUGIN_ID).getInt(WORKSPACE_VERSION, -1);
-
-        if (version != -1) {
-            setVersion(version);
-            return version;
-        }
-
-        final IEclipsePreferences pref = InstanceScope.INSTANCE.getNode(PLUGIN_ID);
-
-        return pref.getInt(WORKSPACE_VERSION, -1);
-    }
-
-    /**
-     * Sets the version that shall be persisted for the workspace.
-     *
-     * @param version The version in format 'yyyyMMdd'.
-     */
-    public synchronized static void setVersion(final int version) {
-        final IEclipsePreferences pref = InstanceScope.INSTANCE.getNode(PLUGIN_ID);
-
-        pref.putInt(WORKSPACE_VERSION, version);
-        try {
-            pref.flush();
-        } catch (BackingStoreException e) {
-            LOGGER.info("Couldn't write version into preference file", e);
-        }
-    }
+    void disposeProvider();
 
 }

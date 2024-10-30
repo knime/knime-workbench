@@ -44,30 +44,22 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   May 31, 2021 (wiswedel): created
+ *   23 Jan 2025 (leonard.woerteler): created
  */
-package org.knime.workbench.explorer.serverinfo;
+package org.knime.workbench.explorer;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.ui.util.IRegisteredServerInfoService;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointStateFactory;
+import org.knime.core.workbench.mountpoint.contribution.NoopMountPointState;
+import org.knime.core.workbench.preferences.MountSettings;
 
 /**
- * Implementation of {@link IRegisteredServerInfoService} that collects info from {@link ExplorerMountTable}.
  *
- * @author wiswedel
+ * @author leonard.woerteler
  */
-public final class RegisteredServerInfoService implements IRegisteredServerInfoService {
+public final class TestMountPointStateFactory implements WorkbenchMountPointStateFactory<NoopMountPointState> {
 
     @Override
-    public List<ServerAndExecutorVersions> getServerAndVersionInfos() {
-        return ExplorerMountTable.getAllMountedIDs().stream()
-            .<AbstractContentProvider<?>>map(id -> ExplorerMountTable.getMountPoint(id).getProvider())
-            .flatMap(provider -> provider.getServerAndExecutorVersions().stream())
-            .collect(Collectors.toList());
+    public NoopMountPointState newInstance(final MountSettings settings) {
+        return NoopMountPointState.INSTANCE;
     }
-
 }
