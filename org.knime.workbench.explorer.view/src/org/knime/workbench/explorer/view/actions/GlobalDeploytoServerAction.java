@@ -219,7 +219,7 @@ public class GlobalDeploytoServerAction extends ExplorerAction {
     }
 
     /** @return a stream of content providers that are remote and writable, i.e. server mount points. */
-    private static Stream<AbstractContentProvider> getValidTargets() {
+    private static Stream<AbstractContentProvider<?>> getValidTargets() {
         return ExplorerMountTable.getMountedContent().values().stream().filter(c -> c.isRemote() && c.isWritable());
     }
 }

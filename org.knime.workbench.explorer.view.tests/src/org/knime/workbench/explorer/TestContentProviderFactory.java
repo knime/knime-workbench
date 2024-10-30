@@ -51,6 +51,10 @@ package org.knime.workbench.explorer;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
+import org.knime.core.workbench.WorkbenchActivator;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
+import org.knime.core.workbench.mountpoint.contribution.NoopMountPointState;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 
@@ -59,10 +63,16 @@ import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
  *
  * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
  */
-public class TestContentProviderFactory extends AbstractContentProviderFactory {
+public class TestContentProviderFactory extends AbstractContentProviderFactory<NoopMountPointState> {
+
+    static final String PROVIDER_ID = "test-provider";
+
+    private static final WorkbenchMountPointType TYPE =
+            WorkbenchActivator.getInstance().getMountPointTypeOrFail(PROVIDER_ID);
+
     @Override
-    public String getID() {
-        return "test-provider";
+    public WorkbenchMountPointType getMountPointType() {
+        return TYPE;
     }
 
     @Override
@@ -76,18 +86,9 @@ public class TestContentProviderFactory extends AbstractContentProviderFactory {
     }
 
     @Override
-    public boolean multipleInstances() {
-        return true;
-    }
-
-    @Override
-    public AbstractContentProvider createContentProvider(final String mountID) {
-        return new TestContentProvider(this, mountID, "");
-    }
-
-    @Override
-    public AbstractContentProvider createContentProvider(final String mountID, final String content) {
-        return new TestContentProvider(this, mountID, content);
+    public AbstractContentProvider<NoopMountPointState> createContentProvider(final WorkbenchMountPoint mountPoint) {
+        // TODO Auto-generated method stub
+        return null;
     }
 
     @Override

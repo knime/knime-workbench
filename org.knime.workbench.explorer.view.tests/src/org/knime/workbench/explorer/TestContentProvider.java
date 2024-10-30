@@ -54,59 +54,44 @@ import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.contribution.NoopMountPointState;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.explorer.view.ExplorerView;
-import org.osgi.service.prefs.Preferences;
 
 /**
  * Content provider for tests.
  *
  * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
  */
-class TestContentProvider extends AbstractContentProvider {
+class TestContentProvider extends AbstractContentProvider<NoopMountPointState> {
+
+    private static final String ADDRESS_KEY = "address";
+
+    private static final String USER_KEY = "user";
+
     private String m_address;
 
     private String m_user;
 
-    TestContentProvider(final AbstractContentProviderFactory myCreator, final String id, final String content) {
-        super(myCreator, id);
-        if (!content.isEmpty()) {
-            final var parts = content.split(";");
-            m_address = parts[0];
-            m_user = parts[1];
-        }
+    TestContentProvider(final AbstractContentProviderFactory<NoopMountPointState> myCreator,
+        final WorkbenchMountPoint mountpoint) {
+        super(myCreator, mountpoint);
+        final var additional = mountpoint.getSettings().getAdditionalSettings();
+        m_address = additional.get(ADDRESS_KEY);
+        m_user = additional.get(USER_KEY);
     }
 
     @Override
     public boolean hasChildren(final Object element) {
         return false;
-    }
-
-    @Override
-    public void saveStateToPreferenceNode(final IEclipsePreferences node) {
-        super.saveStateToPreferenceNode(node);
-        node.put("address", m_address);
-        node.put("user", m_user);
-    }
-
-    @Override
-    public String loadStateFromPreferenceNode(final Preferences node) {
-        m_address = node.get("address", "");
-        m_user = node.get("user", "");
-        return m_address + ";" + m_user;
-    }
-
-    @Override
-    public String saveState() {
-        return null;
     }
 
     @Override
@@ -136,7 +121,7 @@ class TestContentProvider extends AbstractContentProvider {
     @Override
     public void addContextMenuActions(final ExplorerView view, final IMenuManager manager,
         final Set<String> visibleMountIDs,
-        final Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selection) {
+        final Map<AbstractContentProvider<NoopMountPointState>, List<AbstractExplorerFileStore>> selection) {
     }
 
     @Override

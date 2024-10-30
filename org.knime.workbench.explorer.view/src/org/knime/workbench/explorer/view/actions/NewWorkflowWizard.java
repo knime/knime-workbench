@@ -138,7 +138,8 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         }
 
         if ((selection != null) && !selection.isEmpty()) {
-            String defaultLocalID = new LocalWorkspaceContentProviderFactory().getDefaultMountID();
+            String defaultLocalID =
+                new LocalWorkspaceContentProviderFactory().getMountPointType().getDefaultMountID().orElseThrow();
 
             Map<AbstractContentProvider, List<AbstractExplorerFileStore>> providerMap =
                 DragAndDropUtils.getProviderMap(selection);
@@ -148,17 +149,17 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                 //   - the selected mount point isn't writable (e.g. missing teamspace license)
                 //   - a remote workflow is requested to be created (not supported)
                 if (!validMountPointList.contains(firstSelectedItem.getMountID())
-                        || (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote())) {
+                    || (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote())) {
                     // can't create workflow on the selected item (it is remote)
                     if (ExplorerMountTable.getMountPoint(defaultLocalID) != null) {
                         m_initialSelection =
-                                ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getRootStore();
+                            ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getRootStore();
                     } else {
                         // find some local content provider to use as a fallback
-                        Optional<AbstractContentProvider>
-                                defaultLocalContentProvider = ExplorerMountTable.getMountedContent().values().stream()
-                                .filter(cp -> !cp.isRemote()).findFirst();
-                        m_initialSelection = defaultLocalContentProvider.map(AbstractContentProvider::getRootStore).orElse(null);
+                        Optional<AbstractContentProvider<?>> defaultLocalContentProvider = ExplorerMountTable
+                            .getMountedContent().values().stream().filter(cp -> !cp.isRemote()).findFirst();
+                        m_initialSelection =
+                            defaultLocalContentProvider.map(AbstractContentProvider::getRootStore).orElse(null);
                     }
                 } else if (firstSelectedItem.fetchInfo().isWorkflowGroup()) {
                     m_initialSelection = firstSelectedItem;
@@ -329,10 +330,10 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         });
     }
 
-    private Stream<Map.Entry<String, AbstractContentProvider>> getValidMountpoints() {
+    private Stream<Map.Entry<String, AbstractContentProvider<?>>> getValidMountpoints() {
         return ExplorerMountTable.getMountedContent().entrySet().stream()
                 .filter(entry -> {
-                    AbstractContentProvider cp = entry.getValue();
+                    AbstractContentProvider<?> cp = entry.getValue();
                     return cp.isWritable() && !(isWorkflowCreated() && cp.isRemote());
                 });
     }
