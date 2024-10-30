@@ -113,6 +113,7 @@ import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.VMFileLocker;
+import org.knime.core.workbench.mounts.MountPointProvider;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -141,7 +142,7 @@ import org.osgi.service.prefs.Preferences;
  * @author ohl, University of Konstanz
  */
 public abstract class AbstractContentProvider extends LabelProvider implements
-        ITreeContentProvider, Comparable<AbstractContentProvider>, IColorProvider {
+        ITreeContentProvider, Comparable<AbstractContentProvider>, IColorProvider, MountPointProvider {
 
     /**
      * Enumeration for the different link types for metanode templates.
