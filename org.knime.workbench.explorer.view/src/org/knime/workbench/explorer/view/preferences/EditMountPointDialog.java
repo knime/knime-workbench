@@ -91,6 +91,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.dialogs.ListDialog;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -315,7 +316,7 @@ public class EditMountPointDialog extends ListDialog {
                 // we should disconnect the server when we edit it, especially as we get a new content provider.
                 m_contentProvider.disconnect();
             }
-            m_contentProvider = m_additionalPanel.createContentProvider();
+            m_contentProvider = m_additionalPanel;
         } else {
             m_contentProvider = m_factory.createContentProvider(m_mountIDval);
         }
