@@ -44,9 +44,18 @@
  */
 package org.knime.workbench.explorer.localworkspace;
 
+import java.io.IOException;
+
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
+import org.knime.core.node.NodeLogger;
+import org.knime.core.workbench.WorkbenchActivator;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointDefinition;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointSettingsHandler;
+import org.knime.core.workbench.mountpoint.contribution.NoopMountPointSettings;
+import org.knime.core.workbench.mountpoint.contribution.local.LocalWorkspaceMountPointSettingsHandler;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -59,44 +68,40 @@ import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
  *
  * @author ohl, University of Konstanz
  */
-public class LocalWorkspaceContentProviderFactory extends
-        AbstractContentProviderFactory {
+public class LocalWorkspaceContentProviderFactory extends AbstractContentProviderFactory<NoopMountPointSettings> {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalWorkspaceContentProviderFactory.class);
 
     /**
      * The id of this predefined and always existing content provider.
      */
-    public static final String ID = "org.knime.workbench.explorer.workspace";
+    public static final String ID = LocalWorkspaceMountPointSettingsHandler.ID;
 
-    /**
-     * {@inheritDoc}
-     */
+    private static final WorkbenchMountPointDefinition<NoopMountPointSettings> MOUNT_POINT_DEFINITION =
+        WorkbenchActivator.getInstance().getMountPointDefinitionOrFail(LocalWorkspaceMountPointSettingsHandler.ID);
+
     @Override
-    public String getID() {
-        return ID;
+    public WorkbenchMountPointDefinition<NoopMountPointSettings> getDefinition() {
+        return MOUNT_POINT_DEFINITION;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public AbstractContentProvider createContentProvider(final String id) {
-        return new LocalWorkspaceContentProvider(this, id);
+    public AbstractContentProvider<NoopMountPointSettings> createContentProvider(final String mountID) {
+        WorkbenchMountPoint<NoopMountPointSettings> mountPoint;
+        try {
+            mountPoint =
+                MOUNT_POINT_DEFINITION.createMountPoint(mountID, WorkbenchMountPointSettingsHandler.EMPTY_STORAGE);
+        } catch (IOException e) {
+            LOGGER.error("Unable to create mountpoint", e);
+            return null;
+        }
+        return createContentProvider(mountPoint);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public boolean multipleInstances() {
-        return false;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String getDefaultMountID() {
-        return "LOCAL";
+    public AbstractContentProvider<NoopMountPointSettings>
+        createContentProvider(final WorkbenchMountPoint<NoopMountPointSettings> mountPoint) {
+        return new LocalWorkspaceContentProvider(this, mountPoint);
     }
 
     @Override
@@ -125,26 +130,11 @@ public class LocalWorkspaceContentProviderFactory extends
         return ImageRepository.getIconImage(SharedImages.LocalSpaceIcon);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public AbstractContentProvider createContentProvider(final String mountID,
-            final String content) {
-        return new LocalWorkspaceContentProvider(this, mountID);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean isAdditionalInformationNeeded() {
         return false;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public AdditionalInformationPanel createAdditionalInformationPanel(final Composite parent,
         final Text mountPointIDInput) {

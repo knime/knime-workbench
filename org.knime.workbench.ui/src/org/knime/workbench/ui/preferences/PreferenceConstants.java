@@ -46,6 +46,7 @@
 package org.knime.workbench.ui.preferences;
 
 import org.eclipse.swt.graphics.RGB;
+import org.knime.core.workbench.WorkbenchConstants;
 import org.knime.workbench.core.preferences.HeadlessPreferencesConstants;
 
 /**
@@ -115,20 +116,6 @@ public interface PreferenceConstants {
      * @deprecated Use {@link HeadlessPreferencesConstants#P_META_NODE_LINK_UPDATE_ON_LOAD} */
     @Deprecated
     public static final String P_META_NODE_LINK_UPDATE_ON_LOAD = "knime.metanode.updateOnLoad";
-
-    /** Preference constant for mount points for the Explorer. */
-    @Deprecated
-    public static final String P_EXPLORER_MOUNT_POINT =
-        "knime.explorer.mountpoint";
-
-    /** Preference constant for mount points for the Explorer (xml format). */
-    public static final String P_EXPLORER_MOUNT_POINT_XML =
-        "knime.explorer.mountpoint.xml";
-
-    /** Pref constant to link the original meta node to a newly
-     * defined template. */
-    public static final String P_EXPLORER_LINK_ON_NEW_TEMPLATE =
-        "knime.explorer.link_on_new_template";
 
     /** Pref constant whether to show grid in workflow editor (boolean). */
     public static final String P_GRID_SHOW = "knime.showgrid";
@@ -256,7 +243,9 @@ public interface PreferenceConstants {
     public static final boolean P_DEFAULT_SHOW_EJB_WARNING_DIALOG = true;
 
     /** Preference constant for showing a warning dialog when connecting to an older server */
-    public static final String P_SHOW_OLDER_SERVER_WARNING_DIALOG = "knime.explorer.show_older_server_warning";
+    public static final String P_SHOW_OLDER_SERVER_WARNING_DIALOG =
+            WorkbenchConstants.P_SHOW_OLDER_SERVER_WARNING_DIALOG;
     /** The default value for whether a warning dialog should appear when connecting to an older server or not */
-    public static final boolean P_DEFAULT_SHOW_OLDER_SERVER_WARNING_DIALOG = true;
+    public static final boolean P_DEFAULT_SHOW_OLDER_SERVER_WARNING_DIALOG =
+            WorkbenchConstants.P_DEFAULT_SHOW_OLDER_SERVER_WARNING_DIALOG;
 }

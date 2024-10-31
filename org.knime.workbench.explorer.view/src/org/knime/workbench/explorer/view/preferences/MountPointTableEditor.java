@@ -85,11 +85,12 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Widget;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.workbench.WorkbenchConstants;
+import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.osgi.service.prefs.BackingStoreException;
 
 /**
@@ -223,7 +224,7 @@ public class MountPointTableEditor extends FieldEditor {
      * @param parent The parent component
      */
     public MountPointTableEditor(final Composite parent) {
-        init(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, "List of configured mount points:");
+        init(WorkbenchConstants.P_EXPLORER_MOUNT_POINT_XML, "List of configured mount points:");
         createControl(parent);
     }
 
@@ -505,6 +506,7 @@ public class MountPointTableEditor extends FieldEditor {
             new EditMountPointDialog(getShell(),
                     ExplorerMountTable.getAddableContentProviders(getContentProviderIDs()),
                     getAllMountIDs());
+        getAllMountIDs());
         if (dlg.open() != Window.OK) {
             return null;
         }
@@ -550,7 +552,8 @@ public class MountPointTableEditor extends FieldEditor {
     private MountSettings editSelectedObject(final MountSettings settings) {
         List<String> existingMountIDs = getAllMountIDs();
         existingMountIDs.remove(settings.getMountID());
-        AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
+        final String factoryID = settings.getFactoryID();
+        AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactory(factoryID);
         EditMountPointDialog dlg = new EditMountPointDialog(getShell(),
             Arrays.asList(new AbstractContentProviderFactory[]{factory}), existingMountIDs, settings);
         if (dlg.open() != Window.OK) {
@@ -559,7 +562,7 @@ public class MountPointTableEditor extends FieldEditor {
 
         AbstractContentProvider newCP = dlg.getContentProvider();
         if (newCP != null) {
-            MountSettings mountSettings = new MountSettings(newCP);
+            MountSettings mountSettings = new MountSettings(newCP.getMountPoint());
             if (mountSettings.getDefaultMountID() == null) {
                 mountSettings.setDefaultMountID(dlg.getDefaultMountID());
             }

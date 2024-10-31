@@ -53,18 +53,22 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointDefinition;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointSettings;
 import org.knime.workbench.explorer.ExplorerMountTable;
 
 /**
  *
  * @author ohl, University of Konstanz
  */
-public abstract class AbstractContentProviderFactory {
+public abstract class AbstractContentProviderFactory<S extends WorkbenchMountPointSettings> {
 
     /**
-     * @return a unique ID (e.g. "com.knime.explorer.filesystem", etc.)
+     * @return The non-null definition of the mount point implementation, the definition is shared (meta) info
+     * about such as unique ID etc.
      */
-    public abstract String getID();
+    public abstract WorkbenchMountPointDefinition<S> getDefinition();
 
     /**
      * @return a readable name useful for the user (e.g. "Local Workspace",
@@ -79,37 +83,6 @@ public abstract class AbstractContentProviderFactory {
     public abstract Image getImage();
 
     /**
-     *
-     * @return true, if the factory can produce multiple content provider
-     *         instances, false, if not more than one content provider must be
-     *         created.
-     */
-    public abstract boolean multipleInstances();
-
-    /**
-     * Always return false. Except for the one temp space provider implementation.
-     * @return false. Almost always.
-     * @since 6.4
-     */
-    public boolean isTempSpace() {
-        return false;
-    }
-
-
-    /**
-     * @return a unique mount ID if this mount point should appear by default in
-     *         the mount table and the explorer view. Or null, if it shouldn't
-     *         be mounted by default. If an ID is returned the instantiation of
-     *         the corresponding content provider must not open any dialog (or
-     *         cause any other interaction).
-     */
-    public String getDefaultMountID() {
-        return null;
-    }
-
-    /**
-     * Returns whether the mountpoint can be edited.
-     *
      * @return Whether the mountpoint can be edited
      * @since 8.4
      */
@@ -151,46 +124,45 @@ public abstract class AbstractContentProviderFactory {
      * @return a new, fully parameterized instance for a specific content
      *         provider or <code>null</code> if no provider can be created
      */
-    public abstract AbstractContentProvider createContentProvider(final String mountID);
+    public abstract AbstractContentProvider<S> createContentProvider(final String mountID);
 
     /** Restore content provider. Caller needs to dispose returned value when
      * no longer needed!
      *
-     * @param mountID the id of the mount to restore
-     * @param content the string content representing the state of the content
-     *            provider
+     * @param mountPoint the mount point with mountID etc.
      * @return a new instance with its state restored from the passed structure
      */
-    public abstract AbstractContentProvider createContentProvider(final String mountID, final String content);
+    public abstract AbstractContentProvider<S> createContentProvider(final WorkbenchMountPoint<S> mountPoint);
 
     /**
      * Try to create a content provider. If an error occurs, it is printed to the console and the method returns
      * normally.
      *
-     * @param mountID The ID of the mount
+     * @param mountPoint the mount point with mountID etc.
      * @return the created instance, or an empty optional if an error occurred
      * @since 8.14
      */
-    public final Optional<AbstractContentProvider> tryCreateContentProvider(final String mountID) {
-        return wrapFailable(mountID, () -> createContentProvider(mountID));
+    public final Optional<AbstractContentProvider<S>>
+        tryCreateContentProvider(final WorkbenchMountPoint<S> mountPoint) {
+        return wrapFailable(mountPoint.getMountID(), () -> createContentProvider(mountPoint));
     }
 
     /**
      * Try to restore a content provider. If an error occurs, it is printed to the console and the method returns
      * normally.
      *
-     * @param mountID The ID of the mount
+     * @param mountPoint the mount point with mountID etc.
      * @param content The content to restore
      * @return the created instance, or an empty optional if an error occurred
      * @since 8.14
      */
-    public final Optional<AbstractContentProvider> tryCreateContentProvider(final String mountID,
+    public final Optional<AbstractContentProvider<S>> tryCreateContentProvider(final WorkbenchMountPoint<S> mountPoint,
         final String content) {
-        return wrapFailable(mountID, () -> createContentProvider(mountID, content));
+        return wrapFailable(mountPoint.getMountID(), () -> createContentProvider(mountPoint, content));
     }
 
-    private static final Optional<AbstractContentProvider> wrapFailable(final String mountID,
-        final Supplier<AbstractContentProvider> supplier) {
+    private static final <S extends WorkbenchMountPointSettings> Optional<AbstractContentProvider<S>>
+        wrapFailable(final String mountID, final Supplier<AbstractContentProvider<S>> supplier) {
         try {
             return Optional.ofNullable(supplier.get());
         } catch (Throwable t) {

@@ -104,6 +104,7 @@ import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.extension.ConfigurableNodeFactoryMapper;
 import org.knime.core.node.port.PortObject;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.util.ClassUtils;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
 import org.knime.core.node.workflow.NodeContainer;
@@ -114,7 +115,10 @@ import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.VMFileLocker;
-import org.knime.core.workbench.mounts.MountPointProvider;
+import org.knime.core.workbench.WorkbenchConstants;
+import org.knime.core.workbench.mountpoint.api.MountPointProvider;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointSettings;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -130,7 +134,6 @@ import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndExecutorVersions;
 import org.osgi.service.prefs.Preferences;
 
@@ -140,9 +143,10 @@ import org.osgi.service.prefs.Preferences;
  * show the content of that one mount point.
  *
  * @author ohl, University of Konstanz
+ * @param <S> Type of mount point settings used/represented by the mount point
  */
-public abstract class AbstractContentProvider extends LabelProvider implements
-        ITreeContentProvider, Comparable<AbstractContentProvider>, IColorProvider, MountPointProvider {
+public abstract class AbstractContentProvider<S extends WorkbenchMountPointSettings> extends LabelProvider implements
+        ITreeContentProvider, Comparable<AbstractContentProvider<S>>, IColorProvider, MountPointProvider {
 
     /**
      * Enumeration for the different link types for metanode templates.
@@ -178,27 +182,18 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     private static final NodeLogger LOGGER = NodeLogger
             .getLogger(AbstractContentProvider.class);
 
-    private final AbstractContentProviderFactory m_creator;
+    private final AbstractContentProviderFactory<S> m_creator;
 
-    private final String m_id;
+    private final WorkbenchMountPoint<S> m_mountPoint;
 
     /**
      * @param myCreator the factory creating this instance.
-     * @param id mount id of this content provider
-     *
+     * @param mountPoint non-null mount point
      */
-    public AbstractContentProvider(
-            final AbstractContentProviderFactory myCreator, final String id) {
-        if (myCreator == null) {
-            throw new NullPointerException(
-                    "The factory creating this object must be set");
-        }
-        if (id == null || id.isEmpty()) {
-            throw new NullPointerException(
-                    "The mount id can't be null nor empty");
-        }
-        m_creator = myCreator;
-        m_id = id;
+    protected AbstractContentProvider(final AbstractContentProviderFactory<S> myCreator,
+        final WorkbenchMountPoint<S> mountPoint) {
+        m_mountPoint = CheckUtils.checkArgumentNotNull(mountPoint, "Mountpoint must not be null");
+        m_creator = CheckUtils.checkArgumentNotNull(myCreator, "Factory must not be null");
     }
 
     /**
@@ -216,7 +211,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
     /**
      * @return the factory that created this object.
      */
-    public AbstractContentProviderFactory getFactory() {
+    public AbstractContentProviderFactory<S> getFactory() {
         return m_creator;
     }
 
@@ -225,8 +220,15 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      *
      * @return the mount id of this content provider.
      */
-    public String getMountID() {
-        return m_id;
+    public final String getMountID() {
+        return m_mountPoint.getMountID();
+    }
+
+    /**
+     * @return the non-null mount point
+     */
+    public final WorkbenchMountPoint<S> getMountPoint() {
+        return m_mountPoint;
     }
 
     /**
@@ -266,8 +268,8 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      * {@inheritDoc}
      */
     @Override
-    public int compareTo(final AbstractContentProvider provider) {
-        return m_id.compareTo(provider.getMountID());
+    public int compareTo(final AbstractContentProvider<S> provider) {
+        return getMountID().compareTo(provider.getMountID());
     }
 
     /**
@@ -297,7 +299,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
      */
     public AbstractExplorerFileStore getFileStore(final URI uri) {
         String mountID = ExplorerFileSystem.getIDfromURI(uri);
-        if (m_id.equals(mountID)) {
+        if (getMountID().equals(mountID)) {
             return getFileStore(uri.getPath());
         } else {
             return ExplorerFileSystem.INSTANCE.getStore(uri);
@@ -361,7 +363,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             final ExplorerView view,
             final IMenuManager manager,
             final Set<String> visibleMountIDs,
-            final Map<AbstractContentProvider, List<AbstractExplorerFileStore>> selection);
+            final Map<AbstractContentProvider<S>, List<AbstractExplorerFileStore>> selection);
 
     /* ---------------- drag and drop methods ----------------------- */
 
@@ -771,7 +773,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         final Collection<LinkType> allowedLinkTypes, final boolean isSubnode) {
 
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        String linkPrefs = prefStore.getString(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
+        String linkPrefs = prefStore.getString(WorkbenchConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
 
         if (MessageDialogWithToggle.NEVER.equals(linkPrefs)) {
             return LinkType.None;
