@@ -113,6 +113,7 @@ import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.util.VMFileLocker;
+import org.knime.core.workbench.WorkbenchConstants;
 import org.knime.core.workbench.mounts.MountPointProvider;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
@@ -130,7 +131,6 @@ import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidat
 import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
 import org.knime.workbench.repository.util.ConfigurableNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndExecutorVersions;
 import org.osgi.service.prefs.Preferences;
 
@@ -771,7 +771,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
         final Collection<LinkType> allowedLinkTypes, final boolean isSubnode) {
 
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        String linkPrefs = prefStore.getString(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
+        String linkPrefs = prefStore.getString(WorkbenchConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE);
 
         if (MessageDialogWithToggle.NEVER.equals(linkPrefs)) {
             return LinkType.None;

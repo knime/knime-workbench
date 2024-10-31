@@ -62,7 +62,7 @@ import org.hamcrest.Matchers;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.knime.core.node.workflow.BatchExecutor;
-import org.knime.workbench.explorer.view.preferences.MountSettings;
+import org.knime.core.workbench.preferences.MountSettings;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
 

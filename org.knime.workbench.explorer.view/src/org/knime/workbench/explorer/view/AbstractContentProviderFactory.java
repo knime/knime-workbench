@@ -53,6 +53,7 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.workbench.mounts.WorkbenchMountPoint;
 import org.knime.workbench.explorer.ExplorerMountTable;
 
 /**
@@ -151,7 +152,7 @@ public abstract class AbstractContentProviderFactory {
      * @return a new, fully parameterized instance for a specific content
      *         provider or <code>null</code> if no provider can be created
      */
-    public abstract AbstractContentProvider createContentProvider(final String mountID);
+    public abstract AbstractContentProvider createContentProvider(final WorkbenchMountPoint mountPoint);
 
     /** Restore content provider. Caller needs to dispose returned value when
      * no longer needed!

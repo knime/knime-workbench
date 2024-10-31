@@ -76,15 +76,14 @@ import org.eclipse.ui.IMemento;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.ThreadUtils;
+import org.knime.core.workbench.WorkbenchConstants;
+import org.knime.core.workbench.preferences.ExplorerPreferenceInitializer;
+import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializer;
-import org.knime.workbench.explorer.view.preferences.MountSettings;
 import org.knime.workbench.ui.KNIMEUIPlugin;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
-import org.osgi.service.prefs.BackingStoreException;
 
 /**
  * Content and Label provider for the explorer view. Delegates the corresponding
@@ -554,9 +553,9 @@ public class ContentDelegator extends LabelProvider
     }
 
     private void createMountPointXMLPreferences() {
-        String prefKey = PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML;
+        String prefKey = WorkbenchConstants.P_EXPLORER_MOUNT_POINT_XML;
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        String pre29PrefString = prefStore.getString(PreferenceConstants.P_EXPLORER_MOUNT_POINT);
+        String pre29PrefString = prefStore.getString(WorkbenchConstants.P_EXPLORER_MOUNT_POINT);
         if (pre29PrefString != null && !pre29PrefString.isEmpty()) {
             prefStore.setValue(prefKey, pre29PrefString);
         } else {
@@ -593,15 +592,7 @@ public class ContentDelegator extends LabelProvider
     }
 
     private List<MountSettings> getMountSettingsFromPreferences() {
-        List<MountSettings> mountSettings = null;
-
-        try {
-            mountSettings = MountSettings.loadSortedMountSettingsFromPreferences();
-        } catch (BackingStoreException e) {
-            LOGGER.error("Could not load mount point settings:" + e.getMessage(), e);
-        }
-
-        return mountSettings;
+        return MountSettings.loadSortedMountSettingsFromPreferences(true);
     }
 
     private void writeToPreferences(final List<MountSettings> mountSettings) {

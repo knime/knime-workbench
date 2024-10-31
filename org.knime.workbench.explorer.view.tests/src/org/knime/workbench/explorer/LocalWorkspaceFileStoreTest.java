@@ -66,10 +66,10 @@ import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowCreationHelper;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
+import org.knime.core.workbench.WorkbenchConstants;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
  * Tests some method implementations of {@link LocalExplorerFileStore}.
@@ -137,7 +137,7 @@ public class LocalWorkspaceFileStoreTest {
         }
         //deactivate prompt for linking type
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        prefStore.setValue(PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE, MessageDialogWithToggle.NEVER);
+        prefStore.setValue(WorkbenchConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE, MessageDialogWithToggle.NEVER);
 
         NodeID nodeId = METANODE_ROOT.createAndAddProject(name, createWorkflowCreationHelper(parent, name)).getID();
         if (wrap) {

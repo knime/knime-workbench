@@ -85,11 +85,12 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Widget;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.workbench.WorkbenchConstants;
+import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
-import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.osgi.service.prefs.BackingStoreException;
 
 /**
@@ -223,7 +224,7 @@ public class MountPointTableEditor extends FieldEditor {
      * @param parent The parent component
      */
     public MountPointTableEditor(final Composite parent) {
-        init(PreferenceConstants.P_EXPLORER_MOUNT_POINT_XML, "List of configured mount points:");
+        init(WorkbenchConstants.P_EXPLORER_MOUNT_POINT_XML, "List of configured mount points:");
         createControl(parent);
     }
 
