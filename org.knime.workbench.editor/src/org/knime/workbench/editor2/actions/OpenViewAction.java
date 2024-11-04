@@ -61,6 +61,7 @@ import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.util.SWTUtilities;
+import org.knime.core.ui.wrapper.NativeNodeContainerWrapper;
 import org.knime.core.webui.node.view.NodeViewManager;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
@@ -149,7 +150,9 @@ public class OpenViewAction extends Action {
             // 'ui-extension' view
             final var nnc = ((NativeNodeContainer)nc);
             final var viewName = "Interactive View: " + nnc.getNodeViewName(0);
-            OpenNodeViewAction.openNodeView(nnc, OpenNodeViewAction.createNodeView(nnc, false, true), viewName);
+            var nncWrapper = NativeNodeContainerWrapper.wrap(nnc);
+            OpenNodeViewAction.openNodeView(nncWrapper, OpenNodeViewAction.createNodeView(nncWrapper, false, true),
+                viewName);
         } else if (nc.getInteractiveWebViews().size() > 0 || nc.hasInteractiveView()) {
             // legacy js-view
             OpenInteractiveWebViewAction.openView((NativeNodeContainer)nc,

@@ -51,6 +51,7 @@ import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContainerState;
 import org.knime.core.node.workflow.NodeStateChangeListener;
@@ -59,6 +60,7 @@ import org.knime.core.ui.node.workflow.InteractiveWebViewsResultUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
+import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -192,8 +194,9 @@ public class ExecuteAndOpenViewAction extends AbstractNodeAction {
                                     viewAction = new OpenSubnodeWebViewAction((SubNodeContainerUI)cont);
                                 } else if (interactiveWebViews.size() > 0) {
                                     viewAction = new OpenInteractiveWebViewAction(cont, interactiveWebViews.get(0));
-                                } else if(OpenNodeViewAction.hasNodeView(cont)) {
-                                    viewAction = new OpenNodeViewAction(cont);
+                                } else if (OpenNodeViewAction.hasNodeView(cont)) {
+                                    viewAction =
+                                        new OpenNodeViewAction(Wrapper.unwrap(cont, NativeNodeContainer.class));
                                 } else {
                                     viewAction = new OpenViewAction(unwrap(cont, NodeContainer.class), 0);
                                 }

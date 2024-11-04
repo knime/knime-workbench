@@ -73,10 +73,12 @@ import org.knime.core.node.Node;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.NativeNodeContainer;
-import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
+import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.util.SWTUtilities;
+import org.knime.core.ui.wrapper.NativeNodeContainerWrapper;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.webui.node.view.NodeView;
 import org.knime.core.webui.node.view.NodeViewManager;
@@ -96,21 +98,20 @@ public class OpenNodeViewAction extends Action {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(OpenNodeViewAction.class);
 
     private NativeNodeContainer m_nnc;
-    private NodeContainer m_nc;
 
-    OpenNodeViewAction(final NodeContainerUI nc) {
-        m_nnc = Wrapper.unwrap(nc, NativeNodeContainer.class);
-        m_nc = Wrapper.unwrapNC(nc);
+    OpenNodeViewAction(final NativeNodeContainer nnc) {
+        m_nnc = nnc;
     }
 
     @Override
     public boolean isEnabled() {
-        return m_nc.getNodeContainerState().isExecuted();
+        return m_nnc.getNodeContainerState().isExecuted();
     }
 
     @Override
     public void run() {
-        openNodeView(m_nc, createNodeView(m_nc, false, true), getText());
+        var nncWrapper = NativeNodeContainerWrapper.wrap(m_nnc);
+        openNodeView(nncWrapper, createNodeView(nncWrapper, false, true), getText());
     }
 
     @Override
@@ -140,7 +141,7 @@ public class OpenNodeViewAction extends Action {
      * @param view the view to open
      * @param viewName
      */
-    public static void openNodeView(final NodeContainer nc, final AbstractNodeView<?> view,
+    public static void openNodeView(final NodeContainerUI nc, final AbstractNodeView<?> view,
         final String viewName) {
         try {
             Node.invokeOpenView(view, viewName, OpenViewAction.getAppBoundsAsAWTRec());
@@ -150,7 +151,7 @@ public class OpenNodeViewAction extends Action {
 
     }
 
-    private static void showWarningDialog(final NodeContainer nc, final Throwable t) {
+    private static void showWarningDialog(final NodeContainerUI nc, final Throwable t) {
         final MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_ERROR | SWT.OK);
         mb.setText("Node View cannot be opened");
         mb.setMessage("The node view cannot be opened for the following reason:\n" + t.getMessage());
@@ -172,7 +173,8 @@ public class OpenNodeViewAction extends Action {
      * @param isView  whether the view instance is used to actually display a view
      * @return the new view instance
      */
-    public static AbstractNodeView<?> createNodeView(final NodeContainer nc, final boolean isDialog, final boolean isView) {
+    public static AbstractNodeView<?> createNodeView(final NodeContainerUI nc, final boolean isDialog,
+        final boolean isView) {
         IExtensionRegistry registry = Platform.getExtensionRegistry();
         IExtensionPoint point = registry.getExtensionPoint(NODE_VIEW_EXTENSION_ID);
         CheckUtils.checkState(point != null, "Invalid extension point: %s", NODE_VIEW_EXTENSION_ID);
@@ -188,8 +190,8 @@ public class OpenNodeViewAction extends Action {
         try {
             Class<?> nodeViewClass = Platform.getBundle(el.getDeclaringExtension().getContributor().getName())
                 .loadClass(el.getAttribute("class"));
-            return (AbstractNodeView<?>)nodeViewClass
-                .getConstructor(nc.getClass(), boolean.class, boolean.class)
+            var ncClass = nc instanceof NativeNodeContainerUI ? NativeNodeContainerUI.class : SubNodeContainer.class;
+            return (AbstractNodeView<?>)nodeViewClass.getConstructor(ncClass, boolean.class, boolean.class)
                 .newInstance(nc, isDialog, isView);
         } catch (ClassNotFoundException | InvalidRegistryObjectException | InstantiationException
                 | IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
@@ -236,10 +238,7 @@ public class OpenNodeViewAction extends Action {
      */
     public static boolean hasNodeView(final NodeContainerUI nc) {
         if (Wrapper.wraps(nc, NativeNodeContainer.class)) {
-            NativeNodeContainer nnc = Wrapper.unwrap(nc, NativeNodeContainer.class);
-            if (NodeViewManager.hasNodeView(nnc)) {
-                return true;
-            }
+            return NodeViewManager.hasNodeView(Wrapper.unwrap(nc, NativeNodeContainer.class));
         }
         return false;
     }
@@ -252,7 +251,7 @@ public class OpenNodeViewAction extends Action {
      */
     public static Optional<OpenNodeViewAction> createActionIfApplicable(final NodeContainerUI nc) {
         if (hasNodeView(nc)) {
-            return Optional.of(new OpenNodeViewAction(nc));
+            return Optional.of(new OpenNodeViewAction(Wrapper.unwrap(nc, NativeNodeContainer.class)));
         }
         return Optional.empty();
     }

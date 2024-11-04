@@ -48,10 +48,12 @@ package org.knime.workbench.editor2.actions;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.SubNodeContainer;
+import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.core.webui.node.dialog.NodeDialogManager;
 import org.knime.core.webui.node.dialog.SubNodeContainerDialogFactory;
+import org.knime.core.webui.node.dialog.defaultdialog.DefaultNodeDialog;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -147,19 +149,27 @@ public class OpenDialogAction extends AbstractNodeAction {
      * @param nc The wrapped node container
      * @return The {@link DialogType} that is provided by this node container
      */
-    public static DialogType getDialogType(final NodeContainerUI nc) {
-        if (Wrapper.wraps(nc, SubNodeContainer.class)
-            && SubNodeContainerDialogFactory.isSubNodeContainerNodeDialogEnabled()) {
-            if (NodeDialogManager.hasNodeDialog(Wrapper.unwrapNC(nc))) {
+    public static DialogType getDialogType(final NodeContainerUI ncUI) {
+        var nc = Wrapper.unwrapNCOptional(ncUI).orElse(null);
+        if (nc != null) {
+            if (nc instanceof SubNodeContainer && SubNodeContainerDialogFactory.isSubNodeContainerNodeDialogEnabled()) {
+                if (NodeDialogManager.hasNodeDialog(nc)) {
+                    return DialogType.MODERN;
+                } else {
+                    return DialogType.NONE;
+                }
+            } else if (nc instanceof NativeNodeContainer && NodeDialogManager.hasNodeDialog(nc)) {
                 return DialogType.MODERN;
-            } else {
+            }
+        } else if (ncUI instanceof NativeNodeContainerUI nncUI) {
+            var dialog = nncUI.getNodeDialog().orElse(null);
+            if (dialog instanceof DefaultNodeDialog) {
+                return DialogType.MODERN;
+            } else if (dialog != null) {
                 return DialogType.NONE;
             }
-        } else if (Wrapper.wraps(nc, NativeNodeContainer.class)
-            && NodeDialogManager.hasNodeDialog(Wrapper.unwrapNC(nc))) {
-            return DialogType.MODERN;
         }
-        return nc.hasDialog() ? DialogType.SWING : DialogType.NONE;
+        return ncUI.hasDialog() ? DialogType.SWING : DialogType.NONE;
     }
 
     /**
