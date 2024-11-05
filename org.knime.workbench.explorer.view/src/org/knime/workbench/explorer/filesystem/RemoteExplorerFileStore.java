@@ -265,4 +265,16 @@ public abstract class RemoteExplorerFileStore extends AbstractExplorerFileStore 
         // all known subclasses implement this method
         throw new UnsupportedOperationException("Not implemented");
     }
+
+    /**
+     * Refreshes the file store, indicating if a synchronous (waiting) refresh is preferred. The default implementation
+     * just calls {@link #refresh()}.
+     *
+     * @param preferSynchronous indicate that a synchronous refresh is preferred
+     *
+     * @since 8.14
+     */
+    public void refresh(final boolean preferSynchronous) {
+        refresh();
+    }
 }

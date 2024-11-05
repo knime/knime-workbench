@@ -51,6 +51,7 @@ import java.util.concurrent.ExecutionException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.async.AsyncWorkflowManagerUI;
@@ -89,7 +90,7 @@ public class GlobalRefreshAction extends ExplorerAction {
     }
 
     /**
-     * {@inheritDoc}
+     * Runs the glonbal refresh action.
      */
     @Override
     public void run() {
@@ -103,13 +104,29 @@ public class GlobalRefreshAction extends ExplorerAction {
         }
     }
 
+    /**
+     * Runs the refresh job on the given list of file stores only as a {@link Job#setUser(boolean) user job}.
+     * @param stores file stores to refresh
+     *
+     * @since 8.14
+     * @see Job#setUser(boolean)
+     */
+    public static void run(final List<AbstractExplorerFileStore> stores) {
+        final var job = new RefreshJob(stores);
+        job.setUser(true);
+        job.schedule();
+    }
 
     private static class RefreshJob extends ExplorerJob {
         private final List<AbstractExplorerFileStore> m_stores;
 
         public RefreshJob(final List<AbstractExplorerFileStore> stores) {
-            super("Refreshing " + stores.size() + " resources");
+            super(getTaskName(stores.size()));
             m_stores = new ArrayList<>(stores);
+        }
+
+        private static String getTaskName(final int size) {
+            return size == 1 ? "Refreshing resource" : "Refreshing %s resources".formatted(size);
         }
 
         /**
@@ -117,7 +134,7 @@ public class GlobalRefreshAction extends ExplorerAction {
          */
         @Override
         protected IStatus run(final IProgressMonitor monitor) {
-            monitor.beginTask("Refreshing " + m_stores.size() + " resources", m_stores.size());
+            monitor.beginTask(getTaskName(m_stores.size()), m_stores.size());
 
             for (AbstractExplorerFileStore file : m_stores) {
                 if (monitor.isCanceled()) {
