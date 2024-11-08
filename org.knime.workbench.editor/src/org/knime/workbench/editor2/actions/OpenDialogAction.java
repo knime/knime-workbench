@@ -81,7 +81,11 @@ public class OpenDialogAction extends AbstractNodeAction {
             /**
             * No dialog is available at all
             */
-            NONE
+            NONE,
+            /**
+             * The node has a dialog but it is not available in the RWE.
+             */
+            UNAVAILABLE_IN_RWE;
     }
 
     /** unique ID for this action. * */
@@ -140,7 +144,8 @@ public class OpenDialogAction extends AbstractNodeAction {
 
         NodeContainerEditPart part = selected[0];
         var nc = part.getNodeContainer();
-        return getDialogType(nc) != DialogType.NONE;
+        var dialogType = getDialogType(nc);
+        return dialogType != DialogType.UNAVAILABLE_IN_RWE && dialogType != DialogType.NONE;
     }
 
     /**
@@ -166,7 +171,7 @@ public class OpenDialogAction extends AbstractNodeAction {
             if (dialog instanceof DefaultNodeDialog) {
                 return DialogType.MODERN;
             } else if (dialog != null) {
-                return DialogType.NONE;
+                return DialogType.UNAVAILABLE_IN_RWE;
             }
         }
         return ncUI.hasDialog() ? DialogType.SWING : DialogType.NONE;

@@ -867,6 +867,11 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
                 "Dialog - " + container.getDisplayLabel());
         } else if (dialogType == DialogType.SWING) {
             openDialog(container, null);
+        } else if (dialogType == DialogType.UNAVAILABLE_IN_RWE) {
+            MessageBox mb = new MessageBox(SWTUtilities.getActiveShell(), SWT.ICON_WARNING | SWT.OK);
+            mb.setText("Dialog cannot be opened");
+            mb.setMessage("The dialog cannot be opened here. Please, e.g., open the workflow locally.");
+            mb.open();
         }
     }
 
