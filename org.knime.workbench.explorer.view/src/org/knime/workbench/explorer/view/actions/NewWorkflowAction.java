@@ -56,9 +56,12 @@ import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.WizardDialog;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.workflow.NodeTimer;
+import org.knime.core.node.workflow.NodeTimer.GlobalNodeStats.WorkflowType;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerView;
@@ -160,6 +163,10 @@ public class NewWorkflowAction extends ExplorerAction {
             if (currentPage instanceof NewWorkflowWizardPage) {
                 NewWorkflowWizardPage nwwp = (NewWorkflowWizardPage)currentPage;
                 AbstractExplorerFileStore file = nwwp.getNewFile();
+                // Classic only allows creation of new workflows in local repository, but we make sure to report the
+                // correct type in any case
+                NodeTimer.GLOBAL_TIMER.incWorkflowCreate(
+                    file instanceof RemoteExplorerFileStore ? WorkflowType.REMOTE : WorkflowType.LOCAL);
                 Object p = ContentDelegator.getTreeObjectFor(file.getParent());
                 getView().setNextSelection(file);
                 getViewer().refresh(p);
