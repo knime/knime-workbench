@@ -53,6 +53,7 @@ import static org.knime.core.util.URIUtil.createEncodedURI;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Optional;
@@ -80,6 +81,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.KNIMEComponentInformation;
 import org.knime.core.node.NodeCreationContext;
 import org.knime.core.node.NodeFactory;
@@ -99,6 +101,7 @@ import org.knime.workbench.core.imports.ImportForbiddenException;
 import org.knime.workbench.core.imports.NodeImport;
 import org.knime.workbench.core.imports.RepoObjectImport;
 import org.knime.workbench.core.imports.RepoObjectImport.RepoObjectType;
+import org.knime.workbench.core.imports.SecretImport;
 import org.knime.workbench.core.imports.URIImporterFinder;
 import org.knime.workbench.core.imports.URIImporterUtil;
 import org.knime.workbench.core.imports.UpdateSiteInfo;
@@ -232,6 +235,8 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                     return handleNodeDropFromURI(managerUI, (NodeImport)entityImport.get(), cdr);
                 } else if (entityImport.get() instanceof ExtensionImport) {
                     return handleExtensionDropFromURI((ExtensionImport)entityImport.get());
+                } else if (entityImport.get() instanceof SecretImport) {
+                    return handleSecretDropFromURI(managerUI, (SecretImport)entityImport.get(), cdr, uri);
                 }
             }
             showPopup("Unknown URL dropped!", "URL can't be dropped to KNIME workbench! Corresponding Hub not mounted?\n\nUnknown URL:\n" + uri,
@@ -338,23 +343,30 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
 
     private Command handleFileDrop(final WorkflowManager manager, final ReaderNodeSettings settings,
         final CreateDropRequest request) {
+        final NodeCreationContext context = new NodeCreationContext(settings.getUrl());
+        final var factoryId = settings.getFactory();
+
+        return createReaderNodeCommands(manager, request, context, factoryId);
+    }
+
+    private Command createReaderNodeCommands(final WorkflowManager manager, final CreateDropRequest request,
+        final NodeCreationContext context, final ConfigurableNodeFactory<NodeModel> factoryId) {
         final RequestType requestType = request.getRequestType();
         final boolean snapToGrid = WorkflowEditor.getActiveEditorSnapToGrid();
         final Point location = request.getLocation();
-        final NodeCreationContext context = new NodeCreationContext(settings.getUrl());
 
         if (RequestType.CREATE.equals(requestType)) {
-            return new CreateReaderNodeCommand(manager, settings.getFactory(), context, location, snapToGrid);
+            return new CreateReaderNodeCommand(manager, factoryId, context, location, snapToGrid);
         } else {
             final AbstractEditPart dropTarget = request.getEditPart();
 
             if (RequestType.INSERT.equals(requestType)) {
                 final InsertReaderNodeCommand insertCommand = new InsertReaderNodeCommand(manager,
-                    settings.getFactory(), context, location, snapToGrid, (ConnectionContainerEditPart)dropTarget);
+                    factoryId, context, location, snapToGrid, (ConnectionContainerEditPart)dropTarget);
 
                 return potentiallyAugmentCommandForSpacing(insertCommand, request);
             } else if (RequestType.REPLACE.equals(requestType)) {
-                return new ReplaceReaderNodeCommand(manager, settings.getFactory(), context, location, snapToGrid,
+                return new ReplaceReaderNodeCommand(manager, factoryId, context, location, snapToGrid,
                     (NodeContainerEditPart)dropTarget);
             }
 
@@ -401,23 +413,24 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 return null;
             }
         } else {
-            String featureName = nodeImport.getFeatureName();
-            String featureSymbolicName = nodeImport.getFeatureSymbolicName();
-            //try installing the missing extension
-            String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
-            Shell shell = SWTUtilities.getActiveShell();
-            // TODO: derive feature name from feature symbolic name (TODO)
-            MessageDialog dialog = new MessageDialog(shell, "The KNIME Extension for the node is not installed!", null,
-                "The extension '" + featureName + "' is not installed. Do you want to search and install it?"
-                    + "\n\nNote: Please drag and drop the node again once the installation process is finished.",
-                MessageDialog.QUESTION, dialogButtonLabels, 0);
-            if ((dialog.open() == 0) && AbstractP2Action.checkSDKAndReadOnly()) {
-                startInstallationJob(featureName, featureSymbolicName, nodeImport.getUpdateSiteInfo());
-                // TODO: add the node once the extension has been installed
-                return null;
-            } else {
-                return null;
-            }
+            installMissingNode(nodeImport);
+            return null;
+        }
+    }
+
+    private static void installMissingNode(final NodeImport nodeImport) {
+        String featureName = nodeImport.getFeatureName();
+        String featureSymbolicName = nodeImport.getFeatureSymbolicName();
+        //try installing the missing extension
+        String[] dialogButtonLabels = {IDialogConstants.YES_LABEL, IDialogConstants.NO_LABEL};
+        Shell shell = SWTUtilities.getActiveShell();
+        // TODO: derive feature name from feature symbolic name (TODO)
+        MessageDialog dialog = new MessageDialog(shell, "The KNIME Extension for the node is not installed!", null,
+            "The extension '" + featureName + "' is not installed. Do you want to search and install it?"
+                + "\n\nNote: Please drag and drop the node again once the installation process is finished.",
+            MessageDialog.QUESTION, dialogButtonLabels, 0);
+        if ((dialog.open() == 0) && AbstractP2Action.checkSDKAndReadOnly()) {
+            startInstallationJob(featureName, featureSymbolicName, nodeImport.getUpdateSiteInfo());
         }
     }
 
@@ -453,6 +466,50 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 return new ReplaceNodeCommand(unwrapWFM(manager), factory, location, snapToGrid,
                     (NodeContainerEditPart)dropTarget);
             }
+            return null;
+        }
+    }
+
+    private Command handleSecretDropFromURI(final WorkflowManagerUI managerUI, final SecretImport secretImport,
+        final CreateDropRequest request, final URI uri) {
+
+        final var factory = ensureSecretsRetrieverNode(secretImport);
+
+        if (factory == null) {
+            return null;
+        }
+
+        if (!Wrapper.wraps(managerUI, WorkflowManager.class)) {
+            // node insertion and replacement not yet supported for non-standard workflow managers
+            // TODO: in order to enable the support, lines 158 and 167 of DragPositionProcessor need to be adopted,
+            // too
+            return null;
+        }
+        final WorkflowManager manager = Wrapper.unwrapWFMOptional(managerUI).orElse(null);
+        final NodeCreationContext context;
+        try {
+            context = new NodeCreationContext(secretImport.getUri().toURL());
+        } catch (MalformedURLException e) {
+            LOGGER.info("Invalid secret url found: " + secretImport.getUri());
+            return null;
+        }
+
+        return createReaderNodeCommands(manager, request, context, factory);
+    }
+
+    private static ConfigurableNodeFactory<NodeModel> ensureSecretsRetrieverNode(final SecretImport secretImport) {
+        var factoryId = secretImport.getNodeImport().getFactoryId();
+        final var nodeTemplate = RepositoryManager.INSTANCE.getNodeTemplate(factoryId);
+        if (nodeTemplate != null) {
+            try {
+                return (ConfigurableNodeFactory<NodeModel>)nodeTemplate.createFactoryInstance();
+            } catch (Exception e) {
+                //shouldn't happen
+                LOGGER.error("Cannot add node (" + nodeTemplate.getID() + ")", e);
+                return null;
+            }
+        } else {
+            installMissingNode(secretImport.getNodeImport());
             return null;
         }
     }
