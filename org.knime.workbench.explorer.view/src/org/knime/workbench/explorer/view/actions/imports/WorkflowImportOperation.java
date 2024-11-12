@@ -160,7 +160,14 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
         if (renamedElementPath.segmentCount() > 0) {
             destination = m_targetPath.getChild(renamedElementPath.toString());
         } else {
-            throw new IllegalStateException("Cannot import workflow to empty destination path");
+            /* AP-23419: while addressing the overwrite issue, we came accross this if-branch and could not find a
+             * scenario in which we would end up with a renamed path without segments. Since no segments means that we
+             * don't update the destination to a child of the target path, we would clean out the target path itself.
+             * Cleaning the directory _into_ which import elements are supposed to be imported seems not desirable,
+             * especially if the target path is the workspace root. Hence, we disallow this operation here.
+             */
+            throw new IllegalStateException("Cannot import workflow at \"%s\" to empty destination path"
+                .formatted(importElement.getOriginalPath().toString()));
         }
 
         ILeveledImportStructureProvider provider = null;
@@ -229,7 +236,8 @@ public class WorkflowImportOperation extends WorkspaceModifyOperation {
     protected void importWorkflowFromArchive(final WorkflowImportElementFromArchive archiveElement,
         final AbstractExplorerFileStore destination, final IProgressMonitor monitor) throws IOException, CoreException {
         if (!m_importedFiles.contains(archiveElement.getOriginalPath().toString())) {
-            // check if destination (1) exists and (2) can be deleted, then delete its children
+            // AP-23419: When overwriting a workflow, we need to make sure we don't leave unused node settings folders
+            // behind. Hence, we clean the whole destination before importing the workflow.
             deleteIfExists(destination, monitor);
 
             AbstractExplorerFileStore tmpDestDir;
