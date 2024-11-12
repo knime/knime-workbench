@@ -83,6 +83,8 @@ public interface URIImporter {
             return (Optional<I>)importer.createNodeImport(uri);
         } else if (ExtensionImport.class.isAssignableFrom(importClass)) {
             return (Optional<I>)importer.createExtensionImport(uri);
+        } else if (SecretImport.class.isAssignableFrom(importClass)) {
+            return (Optional<I>)importer.createSecretImport(uri);
         } else {
             return Optional.empty();
         }
@@ -152,6 +154,15 @@ public interface URIImporter {
      * @throws ImportForbiddenException in case the uri couldn't be imported because user is not logged in
      */
     Optional<ExtensionImport> createExtensionImport(URI uri) throws ImportForbiddenException;
+
+    /**
+     * Creates the actual {@link SecretImport}.
+     *
+     * @param uri the URI to create the import from
+     * @return the import or an empty optional if it couldn't be created from the given URI
+     * @throws ImportForbiddenException in case the uri couldn't be imported because user is not logged in
+     */
+    Optional<SecretImport> createSecretImport(URI uri) throws ImportForbiddenException;
 
     /**
      * Creates the actual {@link RepoObjectImport}.
