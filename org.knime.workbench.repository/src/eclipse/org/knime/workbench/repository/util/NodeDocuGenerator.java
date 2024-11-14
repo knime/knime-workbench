@@ -136,7 +136,9 @@ public class NodeDocuGenerator implements IApplication {
     @Override
     public Object start(final IApplicationContext context) throws Exception {
         Object o = context.getArguments().get("application.args");
-        Display.getDefault();
+        if (!Boolean.getBoolean("java.awt.headless")) {
+            Display.getDefault();
+        }
         if ((o != null) && (o instanceof String[])) {
             String[] args = (String[])o;
             for (int i = 0; i < args.length; i++) {
