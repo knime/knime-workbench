@@ -73,6 +73,7 @@ import org.eclipse.swt.widgets.Text;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.FreshFileStoreResolver;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.ExplorerViewComparator;
@@ -179,6 +180,30 @@ public class SpaceResourceSelectionDialog extends Dialog {
         m_minInitialY = minInitialSize.y;
         m_maxInitialX = maxInitialSize.x;
         m_maxInitialY = maxInitialSize.y;
+        if (inWebUI()) {
+            // Web UI will gradually implement replacements for instances of this dialog.
+            // With AP-23529, ExplorerFileSystem is no longer automatically refreshed when working in Web UI.
+            FreshFileStoreResolver.refreshContentProvidersWithProgress(mountIDs);
+        }
+    }
+
+    /**
+     * The ID of the web UI ("Modern UI") perspective (in the Eclipse workbench sense).
+     * See {@code org.knime.ui.java.util.PerspectiveUtil}.
+     */
+    private static final String WEB_UI_PERSPECTIVE_ID = "org.knime.ui.java.perspective";
+
+    /**
+     * The value of this system property is kept up-to-date when switching between Web UI and Classic UI.
+     * See {@code org.knime.ui.java.util.PerspectiveUtil}.
+     */
+    private static final String PERSPECTIVE_SYSTEM_PROPERTY = "perspective";
+
+    /**
+     * @return Whether the user is currently operating in the Web UI.
+     */
+    private boolean inWebUI() {
+        return WEB_UI_PERSPECTIVE_ID.equals(System.getProperty(PERSPECTIVE_SYSTEM_PROPERTY));
     }
 
     /**
@@ -326,15 +351,13 @@ public class SpaceResourceSelectionDialog extends Dialog {
         m_tree.setLabelProvider(m_treeInput);
         m_tree.setComparator(new ExplorerViewComparator());
         if (m_initialSelection != null) {
-            m_tree.setInitialSelection(new StructuredSelection(
-                    m_initialSelection));
+            m_tree.setInitialSelection(new StructuredSelection(m_initialSelection));
         }
         m_tree.setInput(m_treeInput);
         m_tree.setMessage(m_message);
         m_tree.setChangeListener(new TreeSelectionChangeListener() {
             @Override
-            public void treeSelectionChanged(final Object newSelection,
-                    final boolean valid) {
+            public void treeSelectionChanged(final Object newSelection, final boolean valid) {
                 handleTreeSelectionChanged(newSelection, valid);
             }
         });
@@ -417,7 +440,6 @@ public class SpaceResourceSelectionDialog extends Dialog {
         validateSelectionValue();
     }
 
-
     /**
      * Creates the result panel.
      *
@@ -493,11 +515,8 @@ public class SpaceResourceSelectionDialog extends Dialog {
         }
     }
 
-
-
     /**
-     * Extracts the file store from the selection. Returns null if the type is
-     * unexpected.
+     * Extracts the file store from the selection. Returns null if the type is unexpected.
      */
     private AbstractExplorerFileStore getSelectedFile(final Object selection) {
         return ContentDelegator.getFileStore(selection);
@@ -516,8 +535,8 @@ public class SpaceResourceSelectionDialog extends Dialog {
      * {@inheritDoc}
      */
     @Override
-    protected Button createButton(final Composite parent, final int id,
-            final String label, final boolean defaultButton) {
+    protected Button createButton(final Composite parent, final int id, final String label,
+        final boolean defaultButton) {
         Button b = super.createButton(parent, id, label, defaultButton);
         if (id == Window.OK && m_validator != null) {
             // sometimes the validator gets called before the button is created
@@ -529,8 +548,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
     /**
      * Sets the validator to use.
      *
-     * @param validator the validator that is used to determin if a selected
-     *          file is valid
+     * @param validator the validator that is used to determin if a selected file is valid
      * @since 6.4
      */
     public void setValidator(final Validator validator) {
@@ -557,6 +575,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     /**
      * Set the initial minimum size of the dialog.
+     * 
      * @param minInitialX negative (or zero) number for default/no change
      * @param minInitialY negative (or zero) number for default/no change
      * @since 6.4
@@ -637,6 +656,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     /**
      * Set the level to which the tree should initially be expanded
+     * 
      * @since 4.6
      * @param level
      */
@@ -651,7 +671,9 @@ public class SpaceResourceSelectionDialog extends Dialog {
         m_resultPanelEnabled = enabled;
     }
 
-    /** Possibly overwritten by subclasses to add a customer footer panel. This implementation is empty.
+    /**
+     * Possibly overwritten by subclasses to add a customer footer panel. This implementation is empty.
+     * 
      * @param parent To add too, not null.
      * @since 7.4
      */
