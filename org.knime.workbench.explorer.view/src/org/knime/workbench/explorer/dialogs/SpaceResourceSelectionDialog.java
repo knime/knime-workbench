@@ -70,6 +70,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
+import org.knime.core.util.EclipseUtil;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -180,30 +181,12 @@ public class SpaceResourceSelectionDialog extends Dialog {
         m_minInitialY = minInitialSize.y;
         m_maxInitialX = maxInitialSize.x;
         m_maxInitialY = maxInitialSize.y;
-        if (inWebUI()) {
+        var inModernUI = EclipseUtil.currentUIPerspective().map(p -> p.equals("modern")).orElse(false);
+        if (inModernUI) {
             // Web UI will gradually implement replacements for instances of this dialog.
             // With AP-23529, ExplorerFileSystem is no longer automatically refreshed when working in Web UI.
             FreshFileStoreResolver.refreshContentProvidersWithProgress(mountIDs);
         }
-    }
-
-    /**
-     * The ID of the web UI ("Modern UI") perspective (in the Eclipse workbench sense).
-     * See {@code org.knime.ui.java.util.PerspectiveUtil}.
-     */
-    private static final String WEB_UI_PERSPECTIVE_ID = "org.knime.ui.java.perspective";
-
-    /**
-     * The value of this system property is kept up-to-date when switching between Web UI and Classic UI.
-     * See {@code org.knime.ui.java.util.PerspectiveUtil}.
-     */
-    private static final String PERSPECTIVE_SYSTEM_PROPERTY = "perspective";
-
-    /**
-     * @return Whether the user is currently operating in the Web UI.
-     */
-    private boolean inWebUI() {
-        return WEB_UI_PERSPECTIVE_ID.equals(System.getProperty(PERSPECTIVE_SYSTEM_PROPERTY));
     }
 
     /**

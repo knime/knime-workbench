@@ -108,7 +108,6 @@ public final class FreshFileStoreResolver {
     public static void refreshContentProvidersWithProgress(final String... mountIds) {
         Predicate<String> isLocal = id -> (new LocalWorkspaceContentProviderFactory()).getDefaultMountID().equals(id);
         var fileStores = findContentProviders(Arrays.stream(mountIds)
-            .filter(isLocal.negate()) // never need to refresh the local provider
             .collect(Collectors.toUnmodifiableSet()));
         if (fileStores.isEmpty()) {
             return;
