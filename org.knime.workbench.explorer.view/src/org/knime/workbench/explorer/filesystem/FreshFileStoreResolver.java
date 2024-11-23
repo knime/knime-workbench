@@ -74,6 +74,9 @@ import org.knime.workbench.explorer.view.AbstractContentProvider;
  * {@link AbstractExplorerFileStore}s are no longer automatically refreshed. Consequently, the file system has to be
  * refreshed before resolving. This is an expensive operation involving network I/O and should be avoided where
  * possible.
+ *
+ * @noreference This class is not intended to be referenced by clients.
+ * @since 8.14
  */
 @Deprecated(forRemoval = true)
 public final class FreshFileStoreResolver {
@@ -121,12 +124,12 @@ public final class FreshFileStoreResolver {
     /**
      * Wait for jobs belonging to {@code family} to finish. In contrast to `new RefreshJob(...).run(monitor)`, this lets
      * us cancel individual jobs or the whole thing. For some reason, the former does not cancel jobs on "Cancel".
-     * 
+     *
      * @param family see {@link Job#belongsTo(Object)} and
      *            {@link org.eclipse.core.runtime.jobs.IJobManager#join(Object, IProgressMonitor)}
      * @return Whether the job family execution has been cancelled.
      */
-    private static boolean joinOnJobFamily(Object family) {
+    private static boolean joinOnJobFamily(final Object family) {
         final var canceled = new AtomicBoolean(false);
         try {
             PlatformUI.getWorkbench().getProgressService().busyCursorWhile(monitor -> { // NOSONAR complexity ok
