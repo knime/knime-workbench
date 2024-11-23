@@ -89,8 +89,21 @@ class SaveProjectComponentRunnable extends AbstractSaveRunnable {
     protected void save(final WorkflowManager wfm, final ExecutionMonitor exec)
         throws IOException, CanceledExecutionException, LockFailedException {
         try {
-            var newLocation = getSaveLocation();
-            ((SubNodeContainer)wfm.getDirectNCParent()).saveAsTemplate(newLocation, exec, null);
+            final File newLocation = getSaveLocation();
+            final SubNodeContainer parent = (SubNodeContainer)wfm.getDirectNCParent();
+            // AP-23528: Component Editor wrongly overwrites component directory when saving
+            if (m_newContext.equals(wfm.getContextV2())) {
+                CheckUtils.checkState(newLocation.equals(parent.getNodeContainerDirectory().getFile()),
+                    "same context but save locations: %s vs %s", newLocation.getAbsolutePath(),
+                    parent.getNodeContainerDirectory().getFile().getAbsolutePath());
+                // calling the saveTemplate without folder argument will make sure:
+                // - node folders of no longer existing nodes are deleted
+                // - previous node folders are kept (e.g. "Table Row To Variable (#3)" vs. "Table Row to Variable (#3)")
+                //   (watch case of "to")
+                parent.saveTemplate(exec);
+            } else {
+                parent.saveAsTemplate(newLocation, exec, null);
+            }
 
             // component is relocated, set the project workflow manager's context accordingly
             wfm.setWorkflowContext(m_newContext);
