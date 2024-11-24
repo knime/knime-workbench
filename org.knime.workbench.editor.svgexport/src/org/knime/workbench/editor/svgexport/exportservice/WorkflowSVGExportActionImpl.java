@@ -1,5 +1,6 @@
 /*
  * ------------------------------------------------------------------------
+ *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -40,57 +41,30 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ------------------------------------------------------------------------
+ * ---------------------------------------------------------------------
+ *
+ * History
+ *   Nov 24, 2024 (magnus): created
  */
-package org.knime.workbench.editor.svgexport.actions;
+package org.knime.workbench.editor.svgexport.exportservice;
 
-import org.eclipse.core.commands.AbstractHandler;
-import org.eclipse.core.commands.ExecutionEvent;
-import org.eclipse.core.commands.ExecutionException;
-import org.eclipse.jface.wizard.WizardDialog;
-import org.eclipse.swt.widgets.Shell;
-import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.PlatformUI;
-import org.knime.workbench.editor2.WorkflowEditor;
+import org.eclipse.jface.action.Action;
+import org.knime.workbench.editor.svgexport.actions.ExportToSVGAction;
+import org.knime.workbench.editor2.svgexport.WorkflowSVGExportAction;
 
 /**
- * Action which initiates the SVG-export wizard.
+ * Implementation of workflow SVG export action.
  *
- * @author Andreas Burger
+ * @author Magnus Gohm, KNIME AG, Konstanz, Germany
  */
-public class ExportToSVGHandler extends AbstractHandler {
-
-    private static final int SIZING_WIZARD_WIDTH = 470;
-
-    private static final int SIZING_WIZARD_HEIGHT = 400;
+public class WorkflowSVGExportActionImpl implements WorkflowSVGExportAction {
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean isEnabled() {
-        IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-        return workbenchWindow != null && workbenchWindow.getActivePage().getActiveEditor() instanceof WorkflowEditor;
+    public Action getAction() {
+        return new ExportToSVGAction();
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @SuppressWarnings("restriction")
-    @Override
-    public Object execute(final ExecutionEvent event) throws ExecutionException {
-        IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-        if (workbenchWindow == null) {
-            // action has been disposed
-            return null;
-        }
-        SVGExportWizard wizard = new SVGExportWizard();
-        wizard.init(workbenchWindow.getWorkbench(), null);
-        Shell parent = workbenchWindow.getShell();
-        WizardDialog dialog = new WizardDialog(parent, wizard);
-        dialog.create();
-        dialog.getShell().setSize(Math.max(SIZING_WIZARD_WIDTH, dialog.getShell().getSize().x), SIZING_WIZARD_HEIGHT);
-        dialog.open();
-        return null;
-    }
 }

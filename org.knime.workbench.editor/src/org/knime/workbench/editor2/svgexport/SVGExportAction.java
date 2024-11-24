@@ -44,60 +44,45 @@
  * ---------------------------------------------------------------------
  *
  * History
- *   May 20, 2020 (hornm): created
+ *   Nov 24, 2024 (magnus): created
  */
-package org.knime.workbench.editor2.workflowsummaryexport;
+package org.knime.workbench.editor2.svgexport;
 
-import java.util.Optional;
-
-import org.eclipse.core.commands.AbstractHandler;
-import org.eclipse.core.commands.ExecutionEvent;
-import org.eclipse.core.commands.ExecutionException;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.jface.dialogs.ErrorDialog;
-import org.eclipse.jface.wizard.WizardDialog;
-import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.PlatformUI;
-import org.knime.core.node.workflow.WorkflowManager;
+import org.eclipse.jface.action.Action;
 import org.knime.workbench.KNIMEEditorPlugin;
-import org.knime.workbench.editor2.WorkflowEditor;
 
 /**
- * Handler for the export workflow summary commands (xml and json).
+ * Workflow SVG export action. This class invokes SVG export fragment.
  *
- * Opens the workflow summary export wizard.
- *
- * @author Martin Horn, KNIME GmbH, Konstanz, Germany
+ * @author Magnus Gohm, KNIME AG, Konstanz, Germany
  */
-public final class ExportWorkflowSummaryHandler extends AbstractHandler {
+public class SVGExportAction extends Action {
+
+    private Action m_action;
+
+    /**
+     * The constructor.
+     */
+    public SVGExportAction() {
+        super("Image (SVG)...");
+        setToolTipText("Export the current workflow as an SVG-image");
+        m_action = KNIMEEditorPlugin.getDefault().getSvgExportAction().getAction();
+    }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public Object execute(final ExecutionEvent event) throws ExecutionException {
-        IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-        if (workbenchWindow == null) {
-            return null;
-        }
+    public String getId() {
+        return m_action.getId();
+    }
 
-        // Obtain currently active workflow editor and the workflow manager
-        WorkflowEditor editor =
-            (WorkflowEditor)PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage().getActiveEditor();
-        Optional<WorkflowManager> wfm = editor.getWorkflowManager();
-        if (!wfm.isPresent()) {
-            ErrorDialog.openError(workbenchWindow.getShell(), "Not a local workflow",
-                "Workflow summary can't be exported.",
-                new Status(IStatus.ERROR, KNIMEEditorPlugin.PLUGIN_ID, "Not a local workflow"));
-            return null;
-        }
-
-        ExportWorkflowSummaryWizard wizard = new ExportWorkflowSummaryWizard(wfm.get());
-        WizardDialog dialog = new WizardDialog(workbenchWindow.getShell(), wizard);
-        dialog.create();
-        dialog.open();
-        return null;
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void run() {
+        m_action.run();
     }
 
     /**
@@ -105,8 +90,7 @@ public final class ExportWorkflowSummaryHandler extends AbstractHandler {
      */
     @Override
     public boolean isEnabled() {
-        IWorkbenchWindow workbenchWindow = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
-        return workbenchWindow != null && workbenchWindow.getActivePage().getActiveEditor() instanceof WorkflowEditor;
+        return m_action.isEnabled();
     }
 
 }

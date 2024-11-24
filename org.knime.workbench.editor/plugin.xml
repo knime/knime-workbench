@@ -202,10 +202,14 @@
             id="knime.commands.linknodes"
             name="Connect selected nodes"/>
        <command
-             defaultHandler="org.knime.workbench.editor2.workflowsummaryexport.ExportWorkflowSummaryHandler"
              description="Export Workflow Summary (JSON/XML)"
              id="knime.commands.exportworkflowsummary"
              name="Export Workflow Summary (JSON/XML)">
+       </command>
+       <command
+       		 description="Export Workflow as SVG"
+             id="org.knime.workbench.editor.svgexport.command"
+             name="Export Workflow as SVG">
        </command>
     </extension>
     <extension
@@ -844,19 +848,6 @@
 		            name="org.knime.workbench.editor2.menu.postmrufilemenu"
 		            visible="true"/>
     	</menuContribution>
-     <menuContribution
-           locationURI="menu:file?after=org.knime.workbench.explorer.view.actions.export.WorkflowExportApplicationAction">
-        <menu
-              icon="icons/knime_export.png"
-              id="org.knime.workbench.editor2.menu.exportas"
-              label="Export"
-              tooltip="Exports the currently active KNIME workflow into another format">
-           <command
-                 commandId="knime.commands.exportworkflowsummary"
-                 label="Workflow Summary (JSON/XML)...">
-           </command>
-        </menu>
-     </menuContribution>
 	</extension>
     <extension
            point="org.eclipse.ui.contexts">

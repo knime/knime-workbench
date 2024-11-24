@@ -1,24 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.4"?>
 <fragment>
-   <extension
-         point="org.eclipse.ui.menus">
-      <menuContribution
-            locationURI="menu:org.knime.workbench.editor2.menu.exportas?endof">
-         <command
-               commandId="org.knime.workbench.editor.svgexport.command"
-               label="Image (SVG)..."
-               tooltip="Export the current workflow as an SVG-image">
-         </command>
-      </menuContribution>
-   </extension>
-   <extension
-         point="org.eclipse.ui.commands">
-      <command
-            defaultHandler="org.knime.workbench.editor.svgexport.actions.ExportToSVGHandler"
-            id="org.knime.workbench.editor.svgexport.command"
-            name="Export Workflow as SVG">
-      </command>
-   </extension>
-
 </fragment>

@@ -60,6 +60,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.core.util.ThreadsafeImageRegistry;
 import org.knime.workbench.editor2.svgexport.WorkflowSVGExport;
+import org.knime.workbench.editor2.svgexport.WorkflowSVGExportAction;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -79,6 +80,8 @@ public class KNIMEEditorPlugin extends AbstractUIPlugin {
 
     /** SVG service provided by *.editor.svgexport fragment, see #start method. */
     private WorkflowSVGExport m_svgExport;
+
+    private WorkflowSVGExportAction m_svgExportAction;
 
     /**
      * The constructor.
@@ -118,6 +121,26 @@ public class KNIMEEditorPlugin extends AbstractUIPlugin {
             } catch (Exception e) {
                 NodeLogger.getLogger(getClass()).error(
                     "Unable to instantiate" + WorkflowSVGExport.class.getName() + " implementation", e);
+            }
+        }
+
+        // the svg export action is provided by the *.editor.svgexport fragment. Fragments can't have bundle activators
+        // so this host plugin does it (not sure what the eclipse standard way is)
+        Class<?> svgExportActionClass = null;
+        final String classNameAction = "org.knime.workbench.editor.svgexport.exportservice.WorkflowSVGExportActionImpl";
+        try {
+            svgExportActionClass = Class.forName(classNameAction);
+        } catch (ClassNotFoundException cnfe) {
+            NodeLogger.getLogger(getClass()).debug("Workflow SVG export not available, unable to instantiate \""
+                + classNameAction + "\"");
+        }
+        if (svgExportActionClass != null) {
+            try {
+                Object instance = svgExportActionClass.newInstance();
+                m_svgExportAction = (WorkflowSVGExportAction)instance;
+            } catch (Exception e) {
+                NodeLogger.getLogger(getClass()).error(
+                    "Unable to instantiate" + WorkflowSVGExportAction.class.getName() + " implementation", e);
             }
         }
         initChromiumSWT();
@@ -174,6 +197,10 @@ public class KNIMEEditorPlugin extends AbstractUIPlugin {
      */
     public WorkflowSVGExport getSvgExport() {
         return m_svgExport;
+    }
+
+    public WorkflowSVGExportAction getSvgExportAction() {
+        return m_svgExportAction;
     }
 
     /**
