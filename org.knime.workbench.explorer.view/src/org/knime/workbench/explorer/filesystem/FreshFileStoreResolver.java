@@ -51,7 +51,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -62,16 +61,15 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
- * Resolve an KNIME URI to an {@link AbstractExplorerFileStore}. This is in principle not a good idea since the latter
+ * Resolve a KNIME URI to an {@link AbstractExplorerFileStore}. This is in principle not a good idea since the latter
  * will be deprecated. For the time being, it is still required to establish compatibility with some legacy code until
  * it is rewritten (see usages).
  * <p>
  * It is important to note that with AP-23529, the {@link ExplorerFileSystem} and any related
- * {@link AbstractExplorerFileStore}s are no longer automatically refreshed. Consequently, the file system has to be
+ * {@link AbstractExplorerFileStore}s are no longer always refreshed automatically. If not, the file system has to be
  * refreshed before resolving. This is an expensive operation involving network I/O and should be avoided where
  * possible.
  *
@@ -87,6 +85,21 @@ public final class FreshFileStoreResolver {
 
     public static AbstractExplorerFileStore resolve(final URI knimeUri) {
         return ExplorerFileSystem.INSTANCE.getStore(knimeUri);
+    }
+
+    /**
+     * Refresh a single item.
+     * 
+     * @param knimeURI The KNIME URI of the item.
+     * @return
+     */
+    public static AbstractExplorerFileStore resolveAndRefreshWithProgress(final URI knimeURI) {
+        var fileStore = resolve(knimeURI);
+        if (!(fileStore instanceof RemoteExplorerFileStore remoteFileStore)) {
+            return fileStore; // not remote, nothing to refresh
+        }
+        refreshWithProgress(List.of(remoteFileStore));
+        return remoteFileStore;
     }
 
     private static List<RemoteExplorerFileStore> findContentProviders(final Set<String> mountIds) {
@@ -109,16 +122,19 @@ public final class FreshFileStoreResolver {
      * cancelled.
      */
     public static void refreshContentProvidersWithProgress(final String... mountIds) {
-        Predicate<String> isLocal = id -> (new LocalWorkspaceContentProviderFactory()).getDefaultMountID().equals(id);
-        var fileStores = findContentProviders(Arrays.stream(mountIds)
-            .collect(Collectors.toUnmodifiableSet()));
+        var fileStores = findContentProviders(Arrays.stream(mountIds).collect(Collectors.toUnmodifiableSet()));
         if (fileStores.isEmpty()) {
             return;
         }
+        refreshWithProgress(fileStores);
+    }
+
+    private static void refreshWithProgress(final List<RemoteExplorerFileStore> fileStores) {
         PlatformUI.getWorkbench().getDisplay().syncCall(() -> { // NOSONAR
             fileStores.forEach(store -> new RefreshJob(store).schedule());
             return joinOnJobFamily(RefreshJob.class);
         });
+
     }
 
     /**
