@@ -48,6 +48,8 @@
  */
 package org.knime.workbench.editor2.svgexport;
 
+import java.util.Optional;
+
 import org.eclipse.jface.action.Action;
 import org.knime.workbench.KNIMEEditorPlugin;
 
@@ -63,10 +65,20 @@ public class SVGExportAction extends Action {
     /**
      * The constructor.
      */
-    public SVGExportAction() {
+    private SVGExportAction(final WorkflowSVGExportAction action) {
         super("Image (SVG)...");
         setToolTipText("Export the current workflow as an SVG-image");
-        m_action = KNIMEEditorPlugin.getDefault().getSvgExportAction().getAction();
+        m_action = action.getAction();
+    }
+
+    /**
+     * Factory method which only creates the SVGExportAction if
+     * the KNIME SVG support extension is installed.
+     *
+     * @return {@link SVGExportAction}.
+     */
+    public static Optional<SVGExportAction> create() {
+        return KNIMEEditorPlugin.getDefault().getSvgExportAction().map(SVGExportAction::new);
     }
 
     /**

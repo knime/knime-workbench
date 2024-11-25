@@ -49,6 +49,7 @@ package org.knime.workbench;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Optional;
 
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.jface.resource.ImageRegistry;
@@ -199,8 +200,12 @@ public class KNIMEEditorPlugin extends AbstractUIPlugin {
         return m_svgExport;
     }
 
-    public WorkflowSVGExportAction getSvgExportAction() {
-        return m_svgExportAction;
+    /**
+     * @return the svgExportAction used to put SVG thumbnail in workflow folder when flow is saved. Might be null if
+     * *.editor.svgexport fragment is not available.
+     */
+    public Optional<WorkflowSVGExportAction> getSvgExportAction() {
+        return Optional.of(m_svgExportAction);
     }
 
     /**
