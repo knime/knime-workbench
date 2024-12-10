@@ -355,6 +355,8 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     public List<NamedItemVersion> getHubItemVersionList(final URI uri) throws ResourceAccessException {
         CheckUtils.checkArgument(uri.getScheme().equals("knime"), "Expected a KNIME URI but got: %s", uri);
 
+        // TODO seems like import version per drag & drop would also need explicit refresh?
+        // or is there even something to refresh?
         var s = ExplorerFileSystem.INSTANCE.getStore(uri);
 
         CheckUtils.checkState(s instanceof RemoteExplorerFileStore,
