@@ -105,7 +105,7 @@
          <attribute name="locked" type="boolean" use="default" value="true">
             <annotation>
                <documentation>
-                  If true, only nodes or sub-categories from org.knime or com.knime plug-ins may be added to this category. If false every plug-in may add nodes and sub-categories.
+                  If true, only nodes or sub-categories from the same vendor or from org.knime or com.knime plug-ins may be added to this category. If false, any plug-in may add nodes and sub-categories.
                </documentation>
             </annotation>
          </attribute>
