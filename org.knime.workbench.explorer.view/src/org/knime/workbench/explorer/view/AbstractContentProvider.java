@@ -118,7 +118,7 @@ import org.knime.core.util.VMFileLocker;
 import org.knime.core.workbench.WorkbenchConstants;
 import org.knime.core.workbench.mountpoint.api.MountPointProvider;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointSettings;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointState;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerActivator;
@@ -145,7 +145,7 @@ import org.osgi.service.prefs.Preferences;
  * @author ohl, University of Konstanz
  * @param <S> Type of mount point settings used/represented by the mount point
  */
-public abstract class AbstractContentProvider<S extends WorkbenchMountPointSettings> extends LabelProvider implements
+public abstract class AbstractContentProvider<S extends WorkbenchMountPointState> extends LabelProvider implements
         ITreeContentProvider, Comparable<AbstractContentProvider<S>>, IColorProvider, MountPointProvider {
 
     /**
@@ -189,6 +189,7 @@ public abstract class AbstractContentProvider<S extends WorkbenchMountPointSetti
     /**
      * @param myCreator the factory creating this instance.
      * @param mountPoint non-null mount point
+     * @since 8.15
      */
     protected AbstractContentProvider(final AbstractContentProviderFactory<S> myCreator,
         final WorkbenchMountPoint<S> mountPoint) {
@@ -226,6 +227,7 @@ public abstract class AbstractContentProvider<S extends WorkbenchMountPointSetti
 
     /**
      * @return the non-null mount point
+     * @since 8.15
      */
     public final WorkbenchMountPoint<S> getMountPoint() {
         return m_mountPoint;

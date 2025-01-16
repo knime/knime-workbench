@@ -58,6 +58,7 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
+import org.knime.core.workbench.mountpoint.contribution.NoopMountPointSettings;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
@@ -71,12 +72,12 @@ import org.osgi.service.prefs.Preferences;
  *
  * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
  */
-class TestContentProvider extends AbstractContentProvider {
+class TestContentProvider extends AbstractContentProvider<NoopMountPointSettings> {
     private String m_address;
 
     private String m_user;
 
-    TestContentProvider(final AbstractContentProviderFactory myCreator, final String id, final String content) {
+    TestContentProvider(final AbstractContentProviderFactory<NoopMountPointSettings> myCreator, final String id, final String content) {
         super(myCreator, id);
         if (!content.isEmpty()) {
             final var parts = content.split(";");

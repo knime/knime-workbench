@@ -100,8 +100,14 @@ public class LocalWorkspaceContentProviderFactory extends AbstractContentProvide
 
     @Override
     public AbstractContentProvider<NoopMountPointSettings>
-        createContentProvider(final WorkbenchMountPoint<NoopMountPointSettings> mountPoint) {
-        return new LocalWorkspaceContentProvider(this, mountPoint);
+        createContentProvider(final WorkbenchMountPoint<?> mountPoint) {
+        return new LocalWorkspaceContentProvider(this, (WorkbenchMountPoint<NoopMountPointSettings>)mountPoint);
+    }
+
+    @Override
+    public AbstractContentProvider<NoopMountPointSettings> createContentProvider(final WorkbenchMountPoint<?> mountPoint,
+        final String content) {
+        return new LocalWorkspaceContentProvider(this, (WorkbenchMountPoint<NoopMountPointSettings>)mountPoint);
     }
 
     @Override

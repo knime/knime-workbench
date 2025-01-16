@@ -506,7 +506,7 @@ public class MountPointTableEditor extends FieldEditor {
             new EditMountPointDialog(getShell(),
                     ExplorerMountTable.getAddableContentProviders(getContentProviderIDs()),
                     getAllMountIDs());
-        getAllMountIDs());
+        getAllMountIDs();
         if (dlg.open() != Window.OK) {
             return null;
         }

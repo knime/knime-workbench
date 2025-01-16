@@ -82,6 +82,7 @@ import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.core.util.urlresolve.KnimeUrlResolver.IdAndPath;
 import org.knime.core.util.urlresolve.KnimeUrlResolver.KnimeUrlVariant;
 import org.knime.core.util.urlresolve.URLResolverUtil;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointDefinition;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -159,11 +160,13 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
      * @return result of check
      */
     static boolean isAbsoluteUrlOnHub(final URI uri) {
+        // TODO port to workbench mount table
         return uri != null && KnimeUrlType.getType(uri).orElse(null) == KnimeUrlType.MOUNTPOINT_ABSOLUTE
             && Optional.ofNullable(ExplorerMountTable.getMountPoint(uri.getAuthority())) //
                 .map(MountPoint::getProvider) //
                 .map(AbstractContentProvider::getFactory) //
-                .map(AbstractContentProviderFactory::getID) //
+                .map(AbstractContentProviderFactory::getDefinition) //
+                .map(WorkbenchMountPointDefinition::getTypeIdentifier) //
                 .filter(id -> id.endsWith("_hub") || id.equals("com.knime.explorer.server.examples")) //
                 .isPresent();
     }
