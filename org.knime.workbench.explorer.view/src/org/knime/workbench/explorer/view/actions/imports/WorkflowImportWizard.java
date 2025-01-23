@@ -110,9 +110,9 @@ public class WorkflowImportWizard extends Wizard {
         if (destination == null) {
             m_initialDestination = null;
             // if no initial selection is made, chose LOCAL, or the first local mountpoint
-            Map<String, AbstractContentProvider> mountedContent = ExplorerMountTable.getMountedContent();
-            AbstractContentProvider firstlocal = null;
-            for (AbstractContentProvider prov : mountedContent.values()) {
+            Map<String, AbstractContentProvider<?>> mountedContent = ExplorerMountTable.getMountedContent();
+            AbstractContentProvider<?> firstlocal = null;
+            for (AbstractContentProvider<?> prov : mountedContent.values()) {
                 if (!prov.isRemote() && prov.isWritable()) {
                     if (firstlocal == null) {
                         firstlocal = prov;
@@ -129,7 +129,7 @@ public class WorkflowImportWizard extends Wizard {
             }
             return;
         } else {
-            AbstractContentProvider prov = destination.getContentProvider();
+            AbstractContentProvider<?> prov = destination.getContentProvider();
             if (prov.isWritable()) {
                 m_initialDestination = destination;
                 while (!AbstractExplorerFileStore.isWorkflowGroup(m_initialDestination)) {

@@ -24,7 +24,35 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="src/org/knime/workbench/explorer/ExplorerMountTable.java" type="org.knime.workbench.explorer.ExplorerMountTable">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.ExplorerMountTable"/>
+                <message_argument value="mount(String, String)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.ExplorerMountTable"/>
+                <message_argument value="mount(String, String, String)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/localworkspace/LocalWorkspaceContentProvider.java" type="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider"/>
+                <message_argument value="saveState()"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="src/org/knime/workbench/explorer/localworkspace/LocalWorkspaceContentProviderFactory.java" type="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory">
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory"/>
+                <message_argument value="createContentProvider(String)"/>
+            </message_arguments>
+        </filter>
         <filter id="338792546">
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory"/>
@@ -57,6 +85,12 @@
                 <message_argument value="AbstractContentProvider(AbstractContentProviderFactory, String)"/>
             </message_arguments>
         </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProvider"/>
+                <message_argument value="saveState()"/>
+            </message_arguments>
+        </filter>
         <filter id="421654647">
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.view.AbstractContentProvider"/>
@@ -68,19 +102,19 @@
         <filter id="336695337">
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.view.AbstractContentProviderFactory"/>
-                <message_argument value="createContentProvider(WorkbenchMountPoint&lt;?&gt;)"/>
+                <message_argument value="createContentProvider(WorkbenchMountPoint)"/>
             </message_arguments>
         </filter>
         <filter id="336695337">
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.view.AbstractContentProviderFactory"/>
-                <message_argument value="createContentProvider(WorkbenchMountPoint&lt;?&gt;, String)"/>
+                <message_argument value="getMountPointType()"/>
             </message_arguments>
         </filter>
-        <filter id="336695337">
+        <filter id="338792546">
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.view.AbstractContentProviderFactory"/>
-                <message_argument value="getDefinition()"/>
+                <message_argument value="createContentProvider(String)"/>
             </message_arguments>
         </filter>
         <filter id="338792546">
@@ -113,12 +147,56 @@
                 <message_argument value="multipleInstances()"/>
             </message_arguments>
         </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProviderFactory"/>
+                <message_argument value="tryCreateContentProvider(String)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProviderFactory"/>
+                <message_argument value="tryCreateContentProvider(String, String)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/AbstractContentProviderFactory.java" type="org.knime.workbench.explorer.view.AbstractContentProviderFactory$AdditionalInformationPanel">
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProviderFactory.AdditionalInformationPanel"/>
+                <message_argument value="createPanel(Map&lt;String,String&gt;)"/>
+            </message_arguments>
+        </filter>
+        <filter id="336695337">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProviderFactory.AdditionalInformationPanel"/>
+                <message_argument value="getAdditionalState()"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProviderFactory.AdditionalInformationPanel"/>
+                <message_argument value="createContentProvider()"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.AbstractContentProviderFactory.AdditionalInformationPanel"/>
+                <message_argument value="createPanel(String)"/>
+            </message_arguments>
+        </filter>
     </resource>
     <resource path="src/org/knime/workbench/explorer/view/preferences/EditMountPointDialog.java" type="org.knime.workbench.explorer.view.preferences.EditMountPointDialog">
         <filter id="338722907">
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.view.preferences.EditMountPointDialog"/>
                 <message_argument value="EditMountPointDialog(Shell, List&lt;AbstractContentProviderFactory&gt;, Collection&lt;String&gt;, MountSettings)"/>
+            </message_arguments>
+        </filter>
+        <filter id="338792546">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.preferences.EditMountPointDialog"/>
+                <message_argument value="getContentProvider()"/>
             </message_arguments>
         </filter>
     </resource>

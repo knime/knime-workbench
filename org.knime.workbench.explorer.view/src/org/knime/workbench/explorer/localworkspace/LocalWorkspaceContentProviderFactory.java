@@ -44,17 +44,13 @@
  */
 package org.knime.workbench.explorer.localworkspace;
 
-import java.io.IOException;
-
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.workbench.WorkbenchActivator;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointDefinition;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointSettingsHandler;
-import org.knime.core.workbench.mountpoint.contribution.NoopMountPointSettings;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
+import org.knime.core.workbench.mountpoint.contribution.NoopMountPointState;
 import org.knime.core.workbench.mountpoint.contribution.local.LocalWorkspaceMountPointSettingsHandler;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
@@ -68,46 +64,24 @@ import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
  *
  * @author ohl, University of Konstanz
  */
-public class LocalWorkspaceContentProviderFactory extends AbstractContentProviderFactory<NoopMountPointSettings> {
-
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalWorkspaceContentProviderFactory.class);
+public class LocalWorkspaceContentProviderFactory extends AbstractContentProviderFactory<NoopMountPointState> {
 
     /**
      * The id of this predefined and always existing content provider.
      */
     public static final String ID = LocalWorkspaceMountPointSettingsHandler.ID;
 
-    private static final WorkbenchMountPointDefinition<NoopMountPointSettings> MOUNT_POINT_DEFINITION =
-        WorkbenchActivator.getInstance().getMountPointDefinitionOrFail(LocalWorkspaceMountPointSettingsHandler.ID);
+    private static final WorkbenchMountPointType MOUNT_POINT_TYPE =
+        WorkbenchActivator.getInstance().getMountPointTypeOrFail(LocalWorkspaceMountPointSettingsHandler.ID);
 
     @Override
-    public WorkbenchMountPointDefinition<NoopMountPointSettings> getDefinition() {
-        return MOUNT_POINT_DEFINITION;
+    public WorkbenchMountPointType getMountPointType() {
+        return MOUNT_POINT_TYPE;
     }
 
     @Override
-    public AbstractContentProvider<NoopMountPointSettings> createContentProvider(final String mountID) {
-        WorkbenchMountPoint<NoopMountPointSettings> mountPoint;
-        try {
-            mountPoint =
-                MOUNT_POINT_DEFINITION.createMountPoint(mountID, WorkbenchMountPointSettingsHandler.EMPTY_STORAGE);
-        } catch (IOException e) {
-            LOGGER.error("Unable to create mountpoint", e);
-            return null;
-        }
-        return createContentProvider(mountPoint);
-    }
-
-    @Override
-    public AbstractContentProvider<NoopMountPointSettings>
-        createContentProvider(final WorkbenchMountPoint<?> mountPoint) {
-        return new LocalWorkspaceContentProvider(this, (WorkbenchMountPoint<NoopMountPointSettings>)mountPoint);
-    }
-
-    @Override
-    public AbstractContentProvider<NoopMountPointSettings> createContentProvider(final WorkbenchMountPoint<?> mountPoint,
-        final String content) {
-        return new LocalWorkspaceContentProvider(this, (WorkbenchMountPoint<NoopMountPointSettings>)mountPoint);
+    public AbstractContentProvider<NoopMountPointState> createContentProvider(final WorkbenchMountPoint mountPoint) {
+        return new LocalWorkspaceContentProvider(this, mountPoint);
     }
 
     @Override
@@ -120,17 +94,11 @@ public class LocalWorkspaceContentProviderFactory extends AbstractContentProvide
         return true;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public String toString() {
         return "Local Workspace";
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Image getImage() {
         return ImageRepository.getIconImage(SharedImages.LocalSpaceIcon);
@@ -147,5 +115,4 @@ public class LocalWorkspaceContentProviderFactory extends AbstractContentProvide
         // no additional information needed
         return null;
     }
-
 }

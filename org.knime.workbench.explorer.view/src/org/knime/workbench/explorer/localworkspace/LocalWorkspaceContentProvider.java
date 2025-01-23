@@ -69,7 +69,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
-import org.knime.core.workbench.mountpoint.contribution.NoopMountPointSettings;
+import org.knime.core.workbench.mountpoint.contribution.NoopMountPointState;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
@@ -92,7 +92,7 @@ import org.knime.workbench.explorer.view.dnd.DragAndDropUtils;
  *
  * @author ohl, University of Konstanz
  */
-public class LocalWorkspaceContentProvider extends AbstractContentProvider<NoopMountPointSettings> {
+public class LocalWorkspaceContentProvider extends AbstractContentProvider<NoopMountPointState> {
     private static final NodeLogger LOGGER = NodeLogger.getLogger(LocalWorkspaceContentProvider.class);
 
     /**
@@ -100,7 +100,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider<NoopM
      * @param mountPoint non-null mount point
      */
     LocalWorkspaceContentProvider(final LocalWorkspaceContentProviderFactory factory,
-        final WorkbenchMountPoint<NoopMountPointSettings> mountPoint) {
+            final WorkbenchMountPoint mountPoint) {
         super(factory, mountPoint);
     }
 
@@ -271,7 +271,7 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider<NoopM
             final ExplorerView viewer,
             final org.eclipse.jface.action.IMenuManager manager,
             final Set<String> visibleIDs,
-            final Map<AbstractContentProvider<NoopMountPointSettings>,
+            final Map<AbstractContentProvider<NoopMountPointState>,
             List<AbstractExplorerFileStore>> selection) {
         // nothing to add so far
     }
@@ -282,14 +282,6 @@ public class LocalWorkspaceContentProvider extends AbstractContentProvider<NoopM
     @Override
     public Image getImage() {
         return ImageRepository.getIconImage(SharedImages.LocalSpaceIcon);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public String saveState() {
-        return ""; // nothing to save here
     }
 
     /**

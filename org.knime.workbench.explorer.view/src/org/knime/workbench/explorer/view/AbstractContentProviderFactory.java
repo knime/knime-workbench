@@ -46,6 +46,7 @@ package org.knime.workbench.explorer.view;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -54,9 +55,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointDefinition;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointState;
-import org.knime.workbench.explorer.ExplorerMountTable;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
 
 /**
  *
@@ -70,7 +70,7 @@ public abstract class AbstractContentProviderFactory<S extends WorkbenchMountPoi
      * about such as unique ID etc.
      * @since 8.15
      */
-    public abstract WorkbenchMountPointDefinition<S> getDefinition();
+    public abstract WorkbenchMountPointType getMountPointType();
 
     /**
      * @return a readable name useful for the user (e.g. "Local Workspace",
@@ -114,36 +114,13 @@ public abstract class AbstractContentProviderFactory<S extends WorkbenchMountPoi
         return 1;
     }
 
-    /**
-     * Not intended to be called. Rather go through the
-     * {@link ExplorerMountTable}.
-     *
-     * <p>The caller needs to make sure the returned value is disposed when
-     * no longer needed!
-     *
-     * @param mountID the mount ID the new content provider is mounted with
-     *
-     * @return a new, fully parameterized instance for a specific content
-     *         provider or <code>null</code> if no provider can be created
-     */
-    public abstract AbstractContentProvider<S> createContentProvider(final String mountID);
-
     /** Restore content provider. Caller needs to dispose returned value when no longer needed!
      *
      * @param mountPoint the mount point with mountID etc.
      * @return a new instance with its state restored from the passed structure
      * @since 8.15
      */
-    public abstract AbstractContentProvider<S> createContentProvider(WorkbenchMountPoint<?> mountPoint);
-
-    /** Restore content provider. Caller needs to dispose returned value when no longer needed!
-     *
-     * @param mountPoint the mount point with mountID etc.
-     * @param content content as a string
-     * @return a new instance with its state restored from the passed structure
-     * @since 8.15
-     */
-    public abstract AbstractContentProvider<S> createContentProvider(WorkbenchMountPoint<?> mountPoint, String content);
+    public abstract AbstractContentProvider<S> createContentProvider(WorkbenchMountPoint mountPoint);
 
     /**
      * Try to create a content provider. If an error occurs, it is printed to the console and the method returns
@@ -154,22 +131,8 @@ public abstract class AbstractContentProviderFactory<S extends WorkbenchMountPoi
      * @since 8.15
      */
     public final Optional<AbstractContentProvider<S>>
-        tryCreateContentProvider(final WorkbenchMountPoint<?> mountPoint) {
+        tryCreateContentProvider(final WorkbenchMountPoint mountPoint) {
         return wrapFailable(mountPoint.getMountID(), () -> createContentProvider(mountPoint));
-    }
-
-    /**
-     * Try to restore a content provider. If an error occurs, it is printed to the console and the method returns
-     * normally.
-     *
-     * @param mountPoint the mount point with mountID etc.
-     * @param content The content to restore
-     * @return the created instance, or an empty optional if an error occurred
-     * @since 8.15
-     */
-    public final Optional<AbstractContentProvider<S>> tryCreateContentProvider(final WorkbenchMountPoint<?> mountPoint,
-        final String content) {
-        return wrapFailable(mountPoint.getMountID(), () -> createContentProvider(mountPoint, content));
     }
 
     private static final <S extends WorkbenchMountPointState> Optional<AbstractContentProvider<S>>
@@ -211,8 +174,7 @@ public abstract class AbstractContentProviderFactory<S extends WorkbenchMountPoi
      * @return the additional information panel
      * @since 6.0
      */
-    public abstract AdditionalInformationPanel createAdditionalInformationPanel(
-            Composite parent, Text mountIDInput);
+    public abstract AdditionalInformationPanel createAdditionalInformationPanel(Composite parent, Text mountIDInput);
 
     /**
      * @since 6.0
@@ -236,8 +198,9 @@ public abstract class AbstractContentProviderFactory<S extends WorkbenchMountPoi
         /**
          * Creates and fills the panel.
          * @param content The settings content string or null if not present
+         * @since 8.15
          */
-        public abstract void createPanel(String content);
+        public abstract void createPanel(Map<String, String> content);
 
         /**
          * Validate additional information.
@@ -246,9 +209,9 @@ public abstract class AbstractContentProviderFactory<S extends WorkbenchMountPoi
         public abstract String validate();
 
         /**
-         * @return an {@link AbstractContentProvider} if it can be created from the panel's information.
+         * @since 8.15
          */
-        public abstract AbstractContentProvider<WorkbenchMountPointState> createContentProvider();
+        public abstract Map<String, String> getAdditionalState();
 
         /**
          * @return the parent

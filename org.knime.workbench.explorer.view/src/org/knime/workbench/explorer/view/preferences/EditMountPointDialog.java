@@ -50,6 +50,7 @@ package org.knime.workbench.explorer.view.preferences;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -96,7 +97,6 @@ import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory.AdditionalInformationPanel;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory.ValidationRequiredListener;
@@ -140,13 +140,13 @@ public class EditMountPointDialog extends ListDialog {
 
     private AdditionalInformationPanel m_additionalPanel;
 
-    private AbstractContentProvider<WorkbenchMountPointState> m_contentProvider;
+    private Map<String, String> m_newAdditionalSettings;
 
     private boolean m_isNew;
 
     private AbstractContentProviderFactory<WorkbenchMountPointState> m_factory;
 
-    private String m_additionalContent;
+    private Map<String, String> m_additionalContent;
 
     private CLabel m_mountIDHeader;
 
@@ -167,7 +167,7 @@ public class EditMountPointDialog extends ListDialog {
      * @param input list of selectable items
      * @param invalidIDs list of invalid ids - rejected in the mountID field.
      */
-    public EditMountPointDialog(final Shell parentShell, final List<AbstractContentProviderFactory<?>> input,
+    public EditMountPointDialog(final Shell parentShell, final List<AbstractContentProviderFactory> input,
         final Collection<String> invalidIDs) {
         super(parentShell);
         init(input, invalidIDs, null);
@@ -182,7 +182,7 @@ public class EditMountPointDialog extends ListDialog {
      * @param settings existing MountSettings to edit
      * @since 8.15
      */
-    public EditMountPointDialog(final Shell parentShell, final List<AbstractContentProviderFactory<?>> input,
+    public EditMountPointDialog(final Shell parentShell, final List<AbstractContentProviderFactory> input,
         final Collection<String> invalidIDs, final MountSettings settings) {
         super(parentShell);
         init(input, invalidIDs, settings);
@@ -199,11 +199,11 @@ public class EditMountPointDialog extends ListDialog {
         return super.close();
     }
 
-    private void init(final List<AbstractContentProviderFactory<?>> input,
+    private void init(final List<AbstractContentProviderFactory> input,
             final Collection<String> invalidIDs, final MountSettings settings) {
         m_isNew = (settings == null);
         m_validationListener = createValidationListener();
-        m_invalidIDs = new HashSet<String>(invalidIDs);
+        m_invalidIDs = new HashSet<>(invalidIDs);
         m_mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
         setAddCancelButton(true);
         setContentProvider(new ContentFactoryProvider(input));
@@ -217,7 +217,7 @@ public class EditMountPointDialog extends ListDialog {
         } else {
             setTitle("Edit Mount Point");
             m_mountIDval = settings.getMountID();
-            m_additionalContent = settings.getContent();
+            m_additionalContent = settings.getAdditionalSettings();
             m_defaultMountID = settings.getDefaultMountID();
             m_oldMountID = m_mountIDval;
             m_isNew = false;
@@ -314,15 +314,7 @@ public class EditMountPointDialog extends ListDialog {
         Object selection = ((IStructuredSelection)getTableViewer().getSelection()).toArray()[0];
         m_factory = (AbstractContentProviderFactory<WorkbenchMountPointState>)selection;
         m_mountIDval = m_mountID.getText().trim();
-        if (m_additionalPanel != null) {
-            if (m_contentProvider != null) {
-                // we should disconnect the server when we edit it, especially as we get a new content provider.
-                m_contentProvider.disconnect();
-            }
-            m_contentProvider = m_additionalPanel.createContentProvider();
-        } else {
-            m_contentProvider = m_factory.createContentProvider(m_mountIDval);
-        }
+        m_newAdditionalSettings = m_additionalPanel == null ? Map.of() : m_additionalPanel.getAdditionalState();
         super.okPressed();
     }
 
@@ -334,10 +326,13 @@ public class EditMountPointDialog extends ListDialog {
     }
 
     /**
-     * @return an {@link AbstractContentProvider} if it can be created from the panel, null if not.
+     * @return
+     * @since 8.15
      */
-    public AbstractContentProvider<WorkbenchMountPointState> getContentProvider() {
-        return m_contentProvider;
+    public MountSettings getMountSettings() {
+        // TODO re-add way to determine whether something has changed
+        return new MountSettings(m_mountIDval, m_factory.getMountPointType().getTypeIdentifier(), m_defaultMountID,
+            true, 0, m_newAdditionalSettings);
     }
 
     /**
@@ -354,9 +349,6 @@ public class EditMountPointDialog extends ListDialog {
         return m_defaultMountID;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected Control createDialogArea(final Composite parent) {
 
@@ -411,7 +403,7 @@ public class EditMountPointDialog extends ListDialog {
                         }
                     } else {
                         m_additionalPanel = null;
-                        String mountID = factory.getDefinition().getDefaultMountID().orElse("");
+                        String mountID = factory.getMountPointType().getDefaultMountID().orElse("");
                         m_mountID.setText(mountID);
                     }
 
@@ -787,9 +779,9 @@ public class EditMountPointDialog extends ListDialog {
     }
 
     private static final class ContentFactoryProvider implements IStructuredContentProvider {
-        private final List<AbstractContentProviderFactory<?>> m_elements;
+        private final List<AbstractContentProviderFactory> m_elements;
 
-        private ContentFactoryProvider(final List<AbstractContentProviderFactory<?>> elements) {
+        private ContentFactoryProvider(final List<AbstractContentProviderFactory> elements) {
             m_elements = elements;
         }
 
@@ -797,7 +789,7 @@ public class EditMountPointDialog extends ListDialog {
         @Override
         public Object[] getElements(final Object inputElement) {
             if (inputElement == m_elements) {
-                return ((List<AbstractContentProviderFactory<?>>)inputElement).toArray();
+                return ((List<?>)inputElement).toArray();
             }
             return new Object[0];
         }

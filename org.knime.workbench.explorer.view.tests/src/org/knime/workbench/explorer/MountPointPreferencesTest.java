@@ -53,6 +53,7 @@ import static org.junit.Assert.assertThat;
 import java.io.File;
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -71,6 +72,7 @@ import org.osgi.framework.FrameworkUtil;
  * @author Ole Ostergaard, KNIME GmbH, Konstanz, Germany
  */
 public class MountPointPreferencesTest {
+
     /**
      * Loads mount point preferences before the tests.
      *
@@ -106,14 +108,13 @@ public class MountPointPreferencesTest {
             Matchers.containsInAnyOrder("test-mountpoint1", "test-mountpoint2"));
 
         String mountID = "new-mountpoint";
-        String content = "https://testing.knime.org/tomee/ejb;oole";
-        String displayName = "new-mountpoint (oole@https://testing.knime.org/tomee/ejb)";
-        String factoryID = "test-provider";
+        String defaultMountID = "test-mountpoint";
+        String factoryID = TestContentProviderFactory.PROVIDER_ID;
         int mountPointNumber = 0;
         boolean active = true;
 
-        MountSettings newMountSettings = new MountSettings(mountID, displayName, factoryID, content, "", active, mountPointNumber);
-
+        MountSettings newMountSettings = new MountSettings(mountID, factoryID, defaultMountID, active, mountPointNumber,
+            Map.of("user", "oole", "address", "https://testing.knime.org/tomee/ejb"));
 
         initialSettings.add(newMountSettings);
 
@@ -150,13 +151,13 @@ public class MountPointPreferencesTest {
         assertThat(oldMountSettings, Matchers.notNullValue());
 
         String mountID = "test-mountpoint1";
-        String content = "https://testing.knime.org/tomee/ejb;oole";
-        String displayName = "test-mountpoint1 (oole@https://testing.knime.org/tomee/ejb)";
-        String factoryID = "test-provider";
+        String defaultMountID = "test-mountpoint";
+        String factoryID = TestContentProviderFactory.PROVIDER_ID;
         int mountPointNumber = 0;
         boolean active = true;
 
-        MountSettings newMountSettings = new MountSettings(mountID, displayName, factoryID, content, "", active, mountPointNumber);
+        MountSettings newMountSettings = new MountSettings(mountID, factoryID, defaultMountID, active, mountPointNumber,
+            Map.of("user", "oole", "address", "https://testing.knime.org/tomee/ejb"));
 
         initialSettings.add(newMountSettings);
 

@@ -179,12 +179,11 @@ public abstract class AbstractContentProvider<S extends WorkbenchMountPointState
         HIDDEN_FILENAMES.add("workflowset.meta");
     }
 
-    private static final NodeLogger LOGGER = NodeLogger
-            .getLogger(AbstractContentProvider.class);
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(AbstractContentProvider.class);
 
     private final AbstractContentProviderFactory<S> m_creator;
 
-    private final WorkbenchMountPoint<S> m_mountPoint;
+    private final WorkbenchMountPoint m_mountPoint;
 
     /**
      * @param myCreator the factory creating this instance.
@@ -192,7 +191,7 @@ public abstract class AbstractContentProvider<S extends WorkbenchMountPointState
      * @since 8.15
      */
     protected AbstractContentProvider(final AbstractContentProviderFactory<S> myCreator,
-        final WorkbenchMountPoint<S> mountPoint) {
+        final WorkbenchMountPoint mountPoint) {
         m_mountPoint = CheckUtils.checkArgumentNotNull(mountPoint, "Mountpoint must not be null");
         m_creator = CheckUtils.checkArgumentNotNull(myCreator, "Factory must not be null");
     }
@@ -229,7 +228,7 @@ public abstract class AbstractContentProvider<S extends WorkbenchMountPointState
      * @return the non-null mount point
      * @since 8.15
      */
-    public final WorkbenchMountPoint<S> getMountPoint() {
+    public final WorkbenchMountPoint getMountPoint() {
         return m_mountPoint;
     }
 
@@ -244,15 +243,6 @@ public abstract class AbstractContentProvider<S extends WorkbenchMountPointState
         fireLabelProviderChanged(new LabelProviderChangedEvent(this,
                 changedChild));
     }
-
-    /**
-     * Save state and parameters.
-     *
-     * @return a string representation of this factory
-     *
-     * @see AbstractContentProviderFactory
-     */
-    public abstract String saveState();
 
     /**
      * {@inheritDoc}

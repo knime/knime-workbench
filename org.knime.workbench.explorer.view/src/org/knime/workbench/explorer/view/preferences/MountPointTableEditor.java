@@ -502,8 +502,7 @@ public class MountPointTableEditor extends FieldEditor {
     }
 
     private MountSettings getNewInputObject() {
-        EditMountPointDialog dlg =
-            new EditMountPointDialog(getShell(),
+        EditMountPointDialog dlg = new EditMountPointDialog(getShell(),
                     ExplorerMountTable.getAddableContentProviders(getContentProviderIDs()),
                     getAllMountIDs());
         getAllMountIDs();
