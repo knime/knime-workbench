@@ -50,23 +50,26 @@ package org.knime.workbench.editor.svgexport.actions;
 import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMResult;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import org.apache.batik.transcoder.TranscoderException;
-import org.apache.batik.transcoder.TranscoderInput;
-import org.apache.batik.transcoder.TranscoderOutput;
-import org.apache.batik.transcoder.svg2svg.SVGTranscoder;
 import org.eclipse.draw2d.IFigure;
 import org.eclipse.draw2d.geometry.Rectangle;
 import org.eclipse.gef.EditPart;
@@ -95,6 +98,16 @@ public final class SVGExporter {
     private static final Pattern NON_XML_CHARS =
             Pattern.compile("[\\u0000-\\u0008\\u000B-\\u000C\\u000E-\\u001F\\uD800-\\uDFFF]");
 
+    private static final String ERROR_TEMPLATE = """
+            <svg xmlns="http://www.w3.org/2000/svg" width="800" height="200"
+                font-family="monospace, monospace" font-size="12px">
+              <text x="400" y="90" font-weight="bold" text-anchor="middle" dominant-baseline="middle">
+                <tspan x="400" dy="0">Workflow preview SVG generation failed:</tspan>
+                <tspan x="400" dy="20">(unknown)</tspan>
+              </text>
+            </svg>
+        """;
+
     private static final NodeLogger LOGGER = NodeLogger.getLogger(SVGExporter.class);
 
     private SVGExporter() {
@@ -114,13 +127,12 @@ public final class SVGExporter {
     public static void export(final WorkflowEditor editor, final File file) throws SVGExportException {
         try {
             exportInternal(editor, file);
-        } catch (IOException | TranscoderException e) {
+        } catch (IOException e) {
             throw new SVGExportException(e);
         }
     }
 
-    private static void exportInternal(final WorkflowEditor editor, final File file)
-            throws IOException, TranscoderException {
+    private static void exportInternal(final WorkflowEditor editor, final File file) throws IOException {
         // Obtain WorkflowRootEditPart, which holds all the nodes
         final GraphicalViewer viewer = editor.getViewer();
         if (viewer == null) {
@@ -136,7 +148,6 @@ public final class SVGExporter {
         int minY = bounds.y + bounds.height;
 
         // clip the bounds and remove unoccupied space at the borders
-        @SuppressWarnings("unchecked")
         var children = part.getChildren();
         for (EditPart ep : children) {
             if (ep instanceof AbstractGraphicalEditPart) {
@@ -203,11 +214,46 @@ public final class SVGExporter {
             }
         });
 
-        final var transcoder = new SVGTranscoder();
-        transcoder.addTranscodingHint(SVGTranscoder.KEY_XML_DECLARATION, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        try (final Writer fileOut =  Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
-            transcoder.transcode(new TranscoderInput(doc), new TranscoderOutput(fileOut));
+        // AP-23888: `org.apache.batik.transcoder.svg2svg.SVGTranscoder` (used here before) doesn't support UTF-16
+        // surrogate pairs, so emoji etc. would break `workflow.svg` generation. Switching to `javax.xml.transform.*`.
+        String svgStr;
+        try {
+            svgStr = serializeXML(doc);
+        } catch (final Exception e) { // NOSONAR
+            LOGGER.error("Saving SVG failed: " + e.getMessage(), e);
+            final var errorDoc = parseErrorTemplate();
+            // replace the contents of the second `tspan` with the exception text
+            visitXPathMatches(errorDoc, "//@dy[.=\"20\"]/..", elem -> elem.setTextContent(e.toString()));
+            try {
+                svgStr = serializeXML(errorDoc);
+            } catch (TransformerException e2) {
+                // exception text must have contained illegal contents, use the unchanged template
+                LOGGER.debug(e2);
+                svgStr = ERROR_TEMPLATE;
+            }
         }
+        Files.writeString(file.toPath(), svgStr);
+    }
+
+    private static Document parseErrorTemplate() {
+        try {
+            final var transformer = TransformerFactory.newInstance().newTransformer();
+            final var domResult = new DOMResult();
+            transformer.transform(new StreamSource(new StringReader(ERROR_TEMPLATE)), domResult);
+            return (Document)domResult.getNode();
+        } catch (final TransformerException e) {
+            throw new IllegalStateException("Could not read SVG template: " + e.getMessage(), e);
+        }
+    }
+
+    private static String serializeXML(final Document doc) throws TransformerException {
+        final var transformer = TransformerFactory.newInstance().newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+
+        final var writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        return writer.toString();
     }
 
     private static void visitXPathMatches(final Document doc, final String xPath, final Consumer<Node> callback) {
