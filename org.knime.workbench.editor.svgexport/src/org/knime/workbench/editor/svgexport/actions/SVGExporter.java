@@ -54,6 +54,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -148,7 +149,8 @@ public final class SVGExporter {
         int minY = bounds.y + bounds.height;
 
         // clip the bounds and remove unoccupied space at the borders
-        var children = part.getChildren();
+        @SuppressWarnings("unchecked")
+        List<EditPart> children = part.getChildren();
         for (EditPart ep : children) {
             if (ep instanceof AbstractGraphicalEditPart) {
                 Rectangle epBounds = ((AbstractGraphicalEditPart)ep).getFigure().getBounds();
