@@ -70,6 +70,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.CheckUtils;
+import org.knime.core.util.EclipseUtil;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.ThreadLocalHTTPAuthenticator;
 import org.knime.core.util.exception.ResourceAccessException;
@@ -81,6 +82,7 @@ import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
+import org.knime.workbench.explorer.filesystem.FreshFileStoreResolver;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 
@@ -89,6 +91,9 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
  * @author Bernd Wiswedel, KNIME AG, Zurich, Switzerland
  */
 public class URIToFileResolveImpl implements URIToFileResolve {
+
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(URIToFileResolveImpl.class);
+
     /** {@inheritDoc} */
     @Override
     public File resolveToFile(final URI uri) throws ResourceAccessException {
@@ -183,11 +188,30 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         if ("file".equals(url.getProtocol())) {
             return FileUtil.getFileFromURL(url);
         } else if (ExplorerFileSystem.SCHEME.equals(url.getProtocol())) {
-            AbstractExplorerFileStore fs = ExplorerFileSystem.INSTANCE.getStore(uri);
+            final AbstractExplorerFileStore fs = ExplorerFileSystem.INSTANCE.getStore(uri);
+
             if (fs instanceof LocalExplorerFileStore) {
                 return resolveStandardUri(uri, monitor);
             } else if (fs instanceof RemoteExplorerFileStore remoteStore) {
-                return fetchRemoteFileStore(remoteStore, monitor, ifModifiedSince);
+                if (EclipseUtil.determineClassicUIUsage()) {
+                    return fetchRemoteFileStore(remoteStore, monitor, ifModifiedSince);
+                } else {
+                    // AP-23901: filestore could be out of date (e.g. item moved),
+                    // because fetchers are not active in ModernUI. Hence, we try once, on error we refresh and retry.
+                    // If the remote resource still exists as expected, we don't block the user with a needless refresh.
+                    try {
+                        return fetchRemoteFileStore(remoteStore, monitor, ifModifiedSince);
+                    } catch (final ResourceAccessException e) {
+                        LOGGER
+                            .debug(() -> "Failed to fetch remote file store for URI \"%s\", refreshing and retrying..."
+                                .formatted(uri), e);
+                        // Refresh with progress dialog
+                        FreshFileStoreResolver.resolveAndRefreshWithProgress(uri);
+                        // resolve again so we get the updated info (e.g. name)
+                        remoteStore = (RemoteExplorerFileStore)ExplorerFileSystem.INSTANCE.getStore(uri);
+                        return fetchRemoteFileStore(remoteStore, monitor, ifModifiedSince);
+                    }
+                }
             } else {
                 throw new ResourceAccessException("Unsupported file store type: " + fs.getClass());
             }
