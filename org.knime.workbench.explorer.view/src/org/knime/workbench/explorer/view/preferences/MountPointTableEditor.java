@@ -50,6 +50,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.core.runtime.Assert;
@@ -85,11 +86,14 @@ import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Widget;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.workbench.WorkbenchActivator;
 import org.knime.core.workbench.WorkbenchConstants;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
 import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
 import org.osgi.service.prefs.BackingStoreException;
 
@@ -138,20 +142,23 @@ public class MountPointTableEditor extends FieldEditor {
 
             case CONTENT_PROP:
                 String mID = settings.getMountID();
+                WorkbenchMountPoint mountPoint2 = WorkbenchMountTable.getMountPoint(mID);
                 MountPoint mountPoint = ExplorerMountTable.getMountPoint(mID);
                 if (mountPoint != null) {
-                    AbstractContentProvider provider = mountPoint.getProvider();
-                    return provider.toString();
+                    return mountPoint2.getDisplayName();
                 } else {
-                    factory = ExplorerMountTable.getContentProviderFactory(settings.getFactoryID());
-                    if (factory == null) {
+                    Optional<WorkbenchMountPointType> type = WorkbenchActivator.getInstance().getMountPointType(settings.getFactoryID());
+                    if (type.isEmpty()) {
                         return null;
                     }
-                    AbstractContentProvider provider =
-                        factory.createContentProvider(settings.getMountID(), settings.getContent());
-                    String value = provider.toString();
-                    provider.dispose();
-                    return value;
+                    try {
+                        mountPoint2 = type.orElseThrow().createMountPoint(settings);
+                        return mountPoint2.getDisplayName();
+                    } catch (Exception e) {
+                        LOGGER.warn("Mount point could not be instantiated (temporarily): " + mID);
+                    } finally {
+                        mountPoint2.dispose();
+                    }
                 }
 
             case TYPE_PROP:
@@ -509,15 +516,7 @@ public class MountPointTableEditor extends FieldEditor {
         if (dlg.open() != Window.OK) {
             return null;
         }
-        AbstractContentProvider newCP = dlg.getContentProvider();
-        if (newCP != null) {
-            MountSettings mountSettings = new MountSettings(newCP);
-            if (mountSettings.getDefaultMountID() == null) {
-                mountSettings.setDefaultMountID(dlg.getDefaultMountID());
-            }
-            return mountSettings;
-        }
-        return null;
+        return dlg.getMountSettings();
     }
 
     private List<String> getContentProviderIDs() {
@@ -559,39 +558,21 @@ public class MountPointTableEditor extends FieldEditor {
             return null;
         }
 
-        AbstractContentProvider newCP = dlg.getContentProvider();
-        if (newCP != null) {
-            MountSettings mountSettings = new MountSettings(newCP.getMountPoint());
-            if (mountSettings.getDefaultMountID() == null) {
-                mountSettings.setDefaultMountID(dlg.getDefaultMountID());
-            }
-            return mountSettings;
-        }
-        return null;
+        return dlg.getMountSettings();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void doLoad() {
-        try {
-            List<MountSettings> mountSettings = MountSettings.loadSortedMountSettingsFromPreferences();
-            m_mountSettings = mountSettings;
-            m_tableViewer.setInput(m_mountSettings);
-            m_tableViewer.refresh();
-        } catch (final BackingStoreException e) {
-            LOGGER.error("Unable to read mount point settings: " + e.getMessage(), e);
-        }
+        doLoad(MountSettings.loadSortedMountSettingsFromPreferenceNode());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected void doLoadDefault() {
-        String s = getPreferenceStore().getDefaultString(getPreferenceName());
-        m_mountSettings = MountSettings.parseSettings(s, true);
+        doLoad(MountSettings.loadSortedMountSettingsFromDefaultPreferenceNode());
+    }
+
+    private void doLoad(final List<MountSettings> mountSettings) {
+        m_mountSettings = mountSettings;
         m_tableViewer.setInput(m_mountSettings);
         m_tableViewer.refresh();
     }

@@ -14,7 +14,7 @@
       </KNIMEExplorerContentProvider>
    </extension>
    <extension
-         point="org.knime.core.workbench.mount">
+         point="org.knime.core.workbench.MountPointType">
       <MountPointType
             stateFactoryClass="org.knime.workbench.explorer.TestMountPointStateFactory"
             supportsMultipleInstances="true"

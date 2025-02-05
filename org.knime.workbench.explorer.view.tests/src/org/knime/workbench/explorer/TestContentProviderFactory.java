@@ -86,17 +86,6 @@ public class TestContentProviderFactory extends AbstractContentProviderFactory<N
     }
 
     @Override
-    public AbstractContentProvider<NoopMountPointState> createContentProvider(final String mountID) {
-        return new TestContentProvider(this, mountID, "");
-    }
-
-    @Override
-    public AbstractContentProvider<NoopMountPointState> createContentProvider(final NoopMountPointState mountPointState) {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
     public AbstractContentProvider<NoopMountPointState> createContentProvider(final WorkbenchMountPoint mountPoint) {
         // TODO Auto-generated method stub
         return null;
