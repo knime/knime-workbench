@@ -102,6 +102,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.progress.IProgressService;
 import org.knime.core.node.ExecutionMonitor;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.extension.ConfigurableNodeFactoryMapper;
 import org.knime.core.node.port.PortObject;
 import org.knime.core.node.util.ClassUtils;
 import org.knime.core.node.workflow.MetaNodeTemplateInformation;
@@ -127,7 +128,6 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.actions.ExplorerAction;
 import org.knime.workbench.explorer.view.actions.validators.FileStoreNameValidator;
 import org.knime.workbench.explorer.view.dialogs.OverwriteAndMergeInfo;
-import org.knime.workbench.repository.util.ConfigurableNodeFactoryMapper;
 import org.knime.workbench.ui.navigator.ProjectWorkflowMap;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 import org.knime.workbench.ui.util.IRegisteredServerInfoService.ServerAndExecutorVersions;
@@ -1319,7 +1319,7 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             return ImageRepository.getIconImage(SharedImages.MetaNodeTemplate);
         }
         if (AbstractExplorerFileStore.isDataFile(efs)) {
-            Image img = ConfigurableNodeFactoryMapper.getImage(efs.getName());
+            Image img = getImage(efs.getName());
             if (img != null) {
                 return img;
             }
@@ -1367,6 +1367,29 @@ public abstract class AbstractContentProvider extends LabelProvider implements
             }
         } else {
             return ImageRepository.getIconImage(SharedImages.WorkflowUnknown);
+        }
+    }
+
+    /**
+     * Return the image to the registered extension, of null, if it is not a registered extension, or the node doesn't
+     * provide an image.
+     *
+     * @param url
+     * @return the image, or {@code null} if the extension is not registered or in case of an error during factory init
+     */
+    private static Image getImage(final String url) {
+        if (Boolean.getBoolean("java.awt.headless")) {
+            return null;
+        }
+        var iconUrl = ConfigurableNodeFactoryMapper.getIconUrl(url);
+        if (iconUrl == null) {
+            if (ConfigurableNodeFactoryMapper.hasNodeFactory(url)) {
+                return ImageRepository.getIconImage(SharedImages.DefaultNodeIcon);
+            } else {
+                return null;
+            }
+        } else {
+            return ImageRepository.getIconImage(iconUrl);
         }
     }
 

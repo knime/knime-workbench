@@ -75,6 +75,7 @@ import org.eclipse.ui.PlatformUI;
 import org.knime.core.node.ConfigurableNodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
+import org.knime.core.node.extension.ConfigurableNodeFactoryMapper;
 import org.knime.core.node.workflow.ConnectionID;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
@@ -89,7 +90,6 @@ import org.knime.workbench.editor2.editparts.WorkflowInPortBarEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowOutPortBarEditPart;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.explorer.view.ContentObject;
-import org.knime.workbench.repository.util.ConfigurableNodeFactoryMapper;
 
 /**
  * @author Dominik Morent, KNIME AG, Zurich, Switzerland
