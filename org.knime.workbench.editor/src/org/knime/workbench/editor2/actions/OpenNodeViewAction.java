@@ -74,9 +74,9 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.NativeNodeContainer;
 import org.knime.core.node.workflow.NodeContext;
-import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.node.workflow.NativeNodeContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
+import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.NativeNodeContainerWrapper;
 import org.knime.core.ui.wrapper.Wrapper;
@@ -190,7 +190,7 @@ public class OpenNodeViewAction extends Action {
         try {
             Class<?> nodeViewClass = Platform.getBundle(el.getDeclaringExtension().getContributor().getName())
                 .loadClass(el.getAttribute("class"));
-            var ncClass = nc instanceof NativeNodeContainerUI ? NativeNodeContainerUI.class : SubNodeContainer.class;
+            var ncClass = nc instanceof NativeNodeContainerUI ? NativeNodeContainerUI.class : SubNodeContainerUI.class;
             return (AbstractNodeView<?>)nodeViewClass.getConstructor(ncClass, boolean.class, boolean.class)
                 .newInstance(nc, isDialog, isView);
         } catch (ClassNotFoundException | InvalidRegistryObjectException | InstantiationException
