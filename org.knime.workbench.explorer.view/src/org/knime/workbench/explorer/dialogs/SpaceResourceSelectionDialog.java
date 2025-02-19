@@ -70,11 +70,9 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
-import org.knime.core.util.EclipseUtil;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.FreshFileStoreResolver;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
 import org.knime.workbench.explorer.view.ExplorerViewComparator;
@@ -181,12 +179,6 @@ public class SpaceResourceSelectionDialog extends Dialog {
         m_minInitialY = minInitialSize.y;
         m_maxInitialX = maxInitialSize.x;
         m_maxInitialY = maxInitialSize.y;
-        var inModernUI = EclipseUtil.currentUIPerspective().map(p -> p.equals("modern")).orElse(false);
-        if (inModernUI) {
-            // Web UI will gradually implement replacements for instances of this dialog.
-            // With AP-23529, ExplorerFileSystem is no longer automatically refreshed when working in Web UI.
-            FreshFileStoreResolver.refreshContentProvidersWithProgress(mountIDs);
-        }
     }
 
     /**
@@ -558,7 +550,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     /**
      * Set the initial minimum size of the dialog.
-     * 
+     *
      * @param minInitialX negative (or zero) number for default/no change
      * @param minInitialY negative (or zero) number for default/no change
      * @since 6.4
@@ -639,7 +631,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     /**
      * Set the level to which the tree should initially be expanded
-     * 
+     *
      * @since 4.6
      * @param level
      */
@@ -656,7 +648,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
 
     /**
      * Possibly overwritten by subclasses to add a customer footer panel. This implementation is empty.
-     * 
+     *
      * @param parent To add too, not null.
      * @since 7.4
      */
