@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<component id="org.knime.workbench.explorer.view" version="2">
+    <resource path="META-INF/MANIFEST.MF" type="org.knime.workbench.explorer.filesystem.FreshFileStoreResolver">
+        <filter comment="Removal of (noreference) internal API class" id="305324134">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.filesystem.FreshFileStoreResolver"/>
+                <message_argument value="org.knime.workbench.explorer.view_8.14.1"/>
+            </message_arguments>
+        </filter>
+    </resource>
+</component>
