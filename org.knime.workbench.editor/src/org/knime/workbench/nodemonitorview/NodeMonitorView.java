@@ -87,6 +87,7 @@ import org.eclipse.ui.actions.RetargetAction;
 import org.eclipse.ui.part.ViewPart;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContainer;
+import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeStateChangeListener;
 import org.knime.core.node.workflow.NodeStateEvent;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
@@ -481,14 +482,18 @@ public class NodeMonitorView extends ViewPart implements ISelectionListener, Loc
      * Loads and setups the table if ordinary node container is given.
      */
     private void loadAndSetupMonitorTableForOrdinaryNC() {
-        assert unwrapNC(m_lastNode) != null;
+        final NodeContainer nc = unwrapNC(m_lastNode);
+        assert nc != null;
+        NodeContext.pushContext(nc);
         try {
             //already load the data in case of an ordinary node monitor
-            m_currentMonitorTable.loadTableData(m_lastNode, unwrapNC(m_lastNode), 0);
+            m_currentMonitorTable.loadTableData(m_lastNode, nc, 0);
             m_currentMonitorTable.setupTable(m_table);
             updateDataTableInfo();
         } catch (LoadingFailedException e) {
             warningMessage(e.getMessage());
+        } finally {
+            NodeContext.removeLastContext();
         }
     }
 
