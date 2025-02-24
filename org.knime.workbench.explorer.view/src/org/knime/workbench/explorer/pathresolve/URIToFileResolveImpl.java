@@ -90,8 +90,6 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
  */
 public class URIToFileResolveImpl implements URIToFileResolve {
 
-    private static final NodeLogger LOGGER = NodeLogger.getLogger(URIToFileResolveImpl.class);
-
     /** {@inheritDoc} */
     @Override
     public File resolveToFile(final URI uri) throws ResourceAccessException {
