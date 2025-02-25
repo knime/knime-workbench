@@ -49,6 +49,7 @@ package org.knime.workbench.core;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.MissingResourceException;
@@ -62,6 +63,9 @@ import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IPerspectiveDescriptor;
+import org.eclipse.ui.IPerspectiveListener;
+import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.KNIMEConstants;
@@ -72,6 +76,7 @@ import org.knime.core.node.port.database.DatabaseConnectionSettings;
 import org.knime.core.node.port.database.DatabaseDriverLoader;
 import org.knime.core.util.KnimeEncryption;
 import org.knime.core.util.Pair;
+import org.knime.ui.java.util.PerspectiveUtil;
 import org.knime.workbench.core.preferences.HeadlessPreferencesConstants;
 import org.knime.workbench.core.util.ThreadsafeImageRegistry;
 import org.osgi.framework.BundleContext;
@@ -246,19 +251,42 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             });
             // end property listener
 
-            final var logLevelConsole = pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE);
+            // perspective listener to turn the log off (remove console view appenders) if switched from CUI to MUI
+            // and to restore the preferences if switched from MUI to CUI
+            PlatformUI.getWorkbench().getActiveWorkbenchWindow().addPerspectiveListener(new IPerspectiveListener() {
+                @Override
+                public void perspectiveChanged(final IWorkbenchPage page, final IPerspectiveDescriptor perspective,
+                    final String changeId) {
+                    if (perspective.getId().equals(PerspectiveUtil.WEB_UI_PERSPECTIVE_ID)) {
+                        setLogLevelOnConsoleView(LEVEL.OFF.name());
+                    } else if (perspective.getId().equals(PerspectiveUtil.CLASSIC_PERSPECTIVE_ID)) {
+                        setLogLevelOnConsoleView(pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE));
+                    }
+                }
+
+                @Override
+                public void perspectiveActivated(final IWorkbenchPage page, final IPerspectiveDescriptor perspective) {
+                    // only check when the perspective got changed
+                }
+            });
+
+            // if CUI is inactive turn the log off (don't add any appender to the console view)
+            final var logLevelConsole = PerspectiveUtil.isClassicPerspectiveActive() ?
+                pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE) : LEVEL.OFF.name();
             if (!Boolean.getBoolean("java.awt.headless") && PlatformUI.isWorkbenchRunning()) {
                 //async exec should fix AP-13234 (deadlock):
                 Display.getDefault().asyncExec(() -> {
-                    try {
-                        ConsoleViewAppender.FORCED_APPENDER.write(
+                    if (!logLevelConsole.equals(Level.OFF.name())) {
+                        try {
+                            ConsoleViewAppender.FORCED_APPENDER.write(
                                 KNIMEConstants.WELCOME_MESSAGE);
-                        ConsoleViewAppender.INFO_APPENDER.write(
-                        "Log file is located at: "
-                        + KNIMEConstants.getKNIMEHomeDir() + File.separator
-                        + NodeLogger.LOG_FILE + "\n");
-                    } catch (IOException ioe) {
-                        LOGGER.error("Could not print welcome message: ", ioe);
+                            ConsoleViewAppender.INFO_APPENDER.write(
+                                "Log file is located at: "
+                                        + KNIMEConstants.getKNIMEHomeDir() + File.separator
+                                        + NodeLogger.LOG_FILE + "\n");
+                        } catch (IOException ioe) {
+                            LOGGER.error("Could not print welcome message: ", ioe);
+                        }
                     }
                     setLogLevelOnConsoleView(logLevelConsole);
                 });
@@ -438,6 +466,12 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             changed |= removeAppender(ConsoleViewAppender.WARN_APPENDER);
             changed |= addAppender(ConsoleViewAppender.ERROR_APPENDER);
             changed |= addAppender(ConsoleViewAppender.FATAL_ERROR_APPENDER);
+        } else if (logLevel.equals(LEVEL.OFF.name())) {
+            changed |= removeAppender(ConsoleViewAppender.DEBUG_APPENDER);
+            changed |= removeAppender(ConsoleViewAppender.INFO_APPENDER);
+            changed |= removeAppender(ConsoleViewAppender.WARN_APPENDER);
+            changed |= removeAppender(ConsoleViewAppender.ERROR_APPENDER);
+            changed |= removeAppender(ConsoleViewAppender.FATAL_ERROR_APPENDER);
         } else {
             LOGGER.warn("Invalid log level " + logLevel + "; setting to "
                     + LEVEL.WARN.name());
