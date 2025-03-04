@@ -62,6 +62,9 @@ import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IPerspectiveDescriptor;
+import org.eclipse.ui.IPerspectiveListener;
+import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.KNIMEConstants;
@@ -91,6 +94,15 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
     /** Make sure that this *always* matches the ID in plugin.xml. */
     public static final String PLUGIN_ID = FrameworkUtil.getBundle(
             KNIMECorePlugin.class).getSymbolicName();
+
+    /** System property that signals the currently active perspective. */
+    private static final String PERSPECTIVE_SYSTEM_PROPERTY = "perspective";
+
+    /** The Web UI perspective. */
+    private static final String WEB_UI_PERSPECTIVE_ID = "org.knime.ui.java.perspective";
+
+    /** The main perspective of the classic AP UI.*/
+    private static final String CLASSIC_PERSPECTIVE_ID = "org.knime.workbench.ui.ModellerPerspective";
 
     // The shared instance.
     private static KNIMECorePlugin plugin;
@@ -246,8 +258,36 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             });
             // end property listener
 
-            final var logLevelConsole = pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE);
+            // add perspective listener on active workbench to turn the logs off (remove console view appenders)
+            // if switched from CUI to MUI and to restore the preferences if switched from MUI to CUI
             if (!Boolean.getBoolean("java.awt.headless") && PlatformUI.isWorkbenchRunning()) {
+                PlatformUI.getWorkbench().getActiveWorkbenchWindow().addPerspectiveListener(new IPerspectiveListener() {
+
+                    @Override
+                    public void perspectiveChanged(final IWorkbenchPage page, final IPerspectiveDescriptor perspective,
+                        final String changeId) {
+                        if (perspective.getId().equals(WEB_UI_PERSPECTIVE_ID)) {
+                            setLogLevelOnConsoleView(LEVEL.OFF.name());
+                        } else if (perspective.getId().equals(CLASSIC_PERSPECTIVE_ID)) {
+                            setLogLevelOnConsoleView(pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE));
+                        }
+                    }
+
+                    @Override
+                    public void perspectiveActivated(final IWorkbenchPage page,
+                        final IPerspectiveDescriptor perspective) {
+                        // only check when the perspective got changed
+                    }
+
+                });
+            }
+            // end of perspective listener
+
+            // if CUI is inactive turn the log off (don't add any appender to the console view)
+            if (!Boolean.getBoolean("java.awt.headless") && PlatformUI.isWorkbenchRunning()) {
+                final var logLevelConsole =
+                        WEB_UI_PERSPECTIVE_ID.equals(System.getProperty(PERSPECTIVE_SYSTEM_PROPERTY)) ?
+                            LEVEL.OFF.name() : pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE);
                 //async exec should fix AP-13234 (deadlock):
                 Display.getDefault().asyncExec(() -> {
                     try {
@@ -438,6 +478,12 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             changed |= removeAppender(ConsoleViewAppender.WARN_APPENDER);
             changed |= addAppender(ConsoleViewAppender.ERROR_APPENDER);
             changed |= addAppender(ConsoleViewAppender.FATAL_ERROR_APPENDER);
+        } else if (logLevel.equals(LEVEL.OFF.name())) {
+            changed |= removeAppender(ConsoleViewAppender.DEBUG_APPENDER);
+            changed |= removeAppender(ConsoleViewAppender.INFO_APPENDER);
+            changed |= removeAppender(ConsoleViewAppender.WARN_APPENDER);
+            changed |= removeAppender(ConsoleViewAppender.ERROR_APPENDER);
+            changed |= removeAppender(ConsoleViewAppender.FATAL_ERROR_APPENDER);
         } else {
             LOGGER.warn("Invalid log level " + logLevel + "; setting to "
                     + LEVEL.WARN.name());
