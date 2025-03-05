@@ -80,6 +80,7 @@ import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.KNIMEComponentInformation;
 import org.knime.core.node.NodeCreationContext;
 import org.knime.core.node.NodeFactory;
@@ -269,7 +270,7 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
             protected IStatus run(final IProgressMonitor monitor) {
                 try {
                     final var tmpDir = FileUtil.createTempDir("knime_download");
-                    final var file = URIImporterUtil.fetchFile(uriImport, tmpDir);
+                    final var file = URIImporterUtil.fetchFile(uriImport, tmpDir, monitor);
                     // will always be non-null - imports are only allowed if D&D from a "known" hub (#handleURLDrop)
                     final String mountId = uriImport.getKnimeURI().getAuthority();
                     final var locationInfo = uriImport.locationInfo().orElse(null);
@@ -278,6 +279,9 @@ public class NewWorkflowContainerEditPolicy extends ContainerEditPolicy {
                 } catch (IOException e) {
                     LOGGER.error("Problem downloading and importing repository object '" + uriImport.getName()
                         + "' from '" + uriImport.getDataURI() + "'", e);
+                } catch (CanceledExecutionException e) {
+                    LOGGER.error("Cancelled importing repository object '" + uriImport.getName()
+                    + "' from '" + uriImport.getDataURI() + "'", e);
                 }
                 return Status.OK_STATUS;
             }

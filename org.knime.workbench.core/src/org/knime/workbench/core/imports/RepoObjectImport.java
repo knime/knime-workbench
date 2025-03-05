@@ -49,12 +49,13 @@
 package org.knime.workbench.core.imports;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Optional;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.workflow.contextv2.LocationInfo;
-import org.knime.core.util.proxy.URLConnectionFactory;
 
 /**
  * Holds the information required to import a repository object (workflow, component, file etc.) in to the AP (e.g., a
@@ -120,10 +121,10 @@ public interface RepoObjectImport extends EntityImport {
     Optional<? extends LocationInfo> locationInfo();
 
     /**
+     * @param monitor the progress monitor
      * @return the connection to download the object
      * @throws IOException if something went wrong while establishing the connection
+     * @throws CanceledExecutionException if the import was cancelled
      */
-    default HttpURLConnection getData() throws IOException {
-        return (HttpURLConnection)URLConnectionFactory.getConnection(getDataURI().toURL());
-    }
+    Path getData(final IProgressMonitor monitor) throws IOException , CanceledExecutionException;
 }
