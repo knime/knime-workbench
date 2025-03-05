@@ -61,6 +61,7 @@ import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.dnd.URLTransfer;
 import org.eclipse.ui.PlatformUI;
+import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.FileUtil;
 import org.knime.workbench.core.imports.EntityImport;
@@ -183,9 +184,12 @@ public class ExplorerURIDropUtil {
                     }
                     RepoObjectImport objImport = ((RepoObjectImport)entityImport.get());
                     tmpDir.set(FileUtil.createTempDir("download"));
-                    file.set(URIImporterUtil.fetchFile(objImport, tmpDir.get()));
+                    file.set(URIImporterUtil.fetchFile(objImport, tmpDir.get(), monitor));
                 } catch (IOException e) {
                     LOGGER.warn("Object from URI '" + knimeURI + "' couldn't be pasted", e);
+                    return;
+                } catch (CanceledExecutionException e) {
+                    LOGGER.warn("Import of object from URI '" + knimeURI + "' was canceled", e);
                     return;
                 }
             });

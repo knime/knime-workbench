@@ -49,18 +49,14 @@
 package org.knime.workbench.core.imports;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.URI;
 import java.util.Optional;
 
-import org.apache.commons.io.IOUtils;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.util.FileUtil;
 import org.knime.core.util.URIUtil;
 import org.knime.workbench.core.imports.RepoObjectImport.RepoObjectType;
 
@@ -80,12 +76,14 @@ public final class URIImporterUtil {
      *
      * @param objImport the import representing where to download the file from
      * @param destDir the destination where to download the file into
+     * @param monitor the progress monitor
      * @return the downloaded file
      * @throws IOException
+     * @throws CanceledExecutionException
      */
-    public static File fetchFile(final RepoObjectImport objImport, final File destDir) throws IOException {
-        HttpURLConnection dataConnection = objImport.getData();
-        File tmpFile = download(dataConnection);
+    public static File fetchFile(final RepoObjectImport objImport, final File destDir, final IProgressMonitor monitor)
+            throws IOException, CanceledExecutionException {
+        File tmpFile = objImport.getData(monitor).toFile();
 
         //change file extension according to the data object to import
         RepoObjectType objType = objImport.getType();
@@ -131,14 +129,6 @@ public final class URIImporterUtil {
             return Optional.empty();
         }
         return entityImport.map(i -> (RepoObjectImport)i);
-    }
-
-    private static File download(final HttpURLConnection connection) throws IOException {
-        File f = FileUtil.createTempFile("download", ".bin");
-        try (InputStream is = connection.getInputStream(); OutputStream os = new FileOutputStream(f)) {
-            IOUtils.copy(is, os);
-        }
-        return f;
     }
 
 }
