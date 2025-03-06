@@ -1508,7 +1508,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                     //      no content (in which case, if downloaded from a server, the user will not see a refreshed
                     //      edit button display automatically.)
                     d.asyncExec(() -> {
-                        final EditPart editorPart = (EditPart)viewer.getRootEditPart().getChildren().get(0);
+                        final EditPart editorPart = viewer.getRootEditPart().getChildren().get(0);
                         final List<?> workflowAssets = editorPart.getChildren();
 
                         viewer.deselectAll();
@@ -3054,7 +3054,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         final GraphicalViewer viewer = getGraphicalViewer();
 
         final HashSet<NodeContainer> candidates = new HashSet<>(Arrays.asList(containers));
-        final EditPart rootChild = (EditPart)viewer.getRootEditPart().getChildren().get(0);
+        final EditPart rootChild = viewer.getRootEditPart().getChildren().get(0);
         for (final Object child : rootChild.getChildren()) {
             if (child instanceof NodeContainerEditPart) {
                 final NodeContainerEditPart ncep = (NodeContainerEditPart)child;
@@ -4155,11 +4155,19 @@ public class WorkflowEditor extends GraphicalEditor implements
                     return false;
                 }
             }
-        } else if (!remoteStore.getParent().fetchInfo().isModifiable()) {
-            MessageDialog.openError(getSite().getShell(), "Workflow not writable",
-                "You don't have permissions to write into the workflow's parent folder. Use \"Save As...\" in order to"
-                    + " save it to a different location.");
-            return false;
+        } else {
+            final AbstractExplorerFileStore parent = remoteStore.getParent();
+            if (parent == null) {
+                MessageDialog.openError(getSite().getShell(), "Workflow's parent folder not accessible",
+                    "You seem to be logged out of the mointpoint this workflow is stored on. "
+                        + "Please reconnect or use \"Save As...\" to save the workflow somewhere else.");
+                return false;
+            } else if (!parent.fetchInfo().isModifiable()) {
+                MessageDialog.openError(getSite().getShell(), "Workflow not writable",
+                    "You don't have permissions to write into the workflow's parent folder. Use \"Save As...\" in order to"
+                        + " save it to a different location.");
+                return false;
+            }
         }
 
         // selected a remote location: save + upload
