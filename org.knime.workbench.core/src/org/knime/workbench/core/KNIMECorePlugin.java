@@ -266,17 +266,17 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
                     @Override
                     public void perspectiveChanged(final IWorkbenchPage page, final IPerspectiveDescriptor perspective,
                         final String changeId) {
-                        if (perspective.getId().equals(WEB_UI_PERSPECTIVE_ID)) {
-                            setLogLevelOnConsoleView(LEVEL.OFF.name());
-                        } else if (perspective.getId().equals(CLASSIC_PERSPECTIVE_ID)) {
-                            setLogLevelOnConsoleView(pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE));
-                        }
+                        // only check if a different perspective got activated.
                     }
 
                     @Override
                     public void perspectiveActivated(final IWorkbenchPage page,
                         final IPerspectiveDescriptor perspective) {
-                        // only check when the perspective got changed
+                        if (perspective.getId().equals(WEB_UI_PERSPECTIVE_ID)) {
+                            setLogLevelOnConsoleView(LEVEL.OFF.name());
+                        } else if (perspective.getId().equals(CLASSIC_PERSPECTIVE_ID)) {
+                            setLogLevelOnConsoleView(pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE));
+                        }
                     }
 
                 });
