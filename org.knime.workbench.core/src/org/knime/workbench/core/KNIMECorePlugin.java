@@ -62,9 +62,6 @@ import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.IPerspectiveDescriptor;
-import org.eclipse.ui.IPerspectiveListener;
-import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.KNIMEConstants;
@@ -100,9 +97,6 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
 
     /** The Web UI perspective. */
     private static final String WEB_UI_PERSPECTIVE_ID = "org.knime.ui.java.perspective";
-
-    /** The main perspective of the classic AP UI.*/
-    private static final String CLASSIC_PERSPECTIVE_ID = "org.knime.workbench.ui.ModellerPerspective";
 
     // The shared instance.
     private static KNIMECorePlugin plugin;
@@ -258,33 +252,8 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             });
             // end property listener
 
-            // add perspective listener on active workbench to turn the logs off (remove console view appenders)
-            // if switched from CUI to MUI and to restore the preferences if switched from MUI to CUI
             if (!Boolean.getBoolean("java.awt.headless") && PlatformUI.isWorkbenchRunning()) {
-                PlatformUI.getWorkbench().getActiveWorkbenchWindow().addPerspectiveListener(new IPerspectiveListener() {
-
-                    @Override
-                    public void perspectiveChanged(final IWorkbenchPage page, final IPerspectiveDescriptor perspective,
-                        final String changeId) {
-                        if (perspective.getId().equals(WEB_UI_PERSPECTIVE_ID)) {
-                            setLogLevelOnConsoleView(LEVEL.OFF.name());
-                        } else if (perspective.getId().equals(CLASSIC_PERSPECTIVE_ID)) {
-                            setLogLevelOnConsoleView(pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE));
-                        }
-                    }
-
-                    @Override
-                    public void perspectiveActivated(final IWorkbenchPage page,
-                        final IPerspectiveDescriptor perspective) {
-                        // only check when the perspective got changed
-                    }
-
-                });
-            }
-            // end of perspective listener
-
-            // if CUI is inactive turn the log off (don't add any appender to the console view)
-            if (!Boolean.getBoolean("java.awt.headless") && PlatformUI.isWorkbenchRunning()) {
+                // if MUI is active on startup, turn the Console log off after forcing the welcome message
                 final var logLevelConsole =
                         WEB_UI_PERSPECTIVE_ID.equals(System.getProperty(PERSPECTIVE_SYSTEM_PROPERTY)) ?
                             LEVEL.OFF.name() : pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE);
@@ -524,6 +493,21 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
         return false;
     }
 
+    /**
+     * Disables the KNIME Workbench Console view (by setting it's log level to OFF).
+     */
+    public static void disableConsoleView() {
+        setLogLevelOnConsoleView(LEVEL.OFF.name());
+    }
+
+    /**
+     * Restores the KNIME Workbench Console view (by restoring its log level as configured in the preferences).
+     */
+    public static void restoreConsoleView() {
+        final var pStore = KNIMECorePlugin.getDefault().getPreferenceStore();
+        setLogLevelOnConsoleView(pStore.getString(HeadlessPreferencesConstants.P_LOGLEVEL_CONSOLE));
+    }
+
 
     /**
      * Returns the shared instance.
@@ -597,4 +581,5 @@ public class KNIMECorePlugin extends AbstractUIPlugin {
             return ref.get();
         }
     }
+
 }
