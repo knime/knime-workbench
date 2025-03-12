@@ -122,4 +122,10 @@ public class MountPoint {
     public void dispose() {
         m_delegate.disposeProvider();
     }
+
+    @Override
+    public String toString() {
+        return "MountPoint[%s]{ typeID=%s }".formatted(m_delegate.getMountID(),
+            m_delegate.getProviderFactory().getMountPointType().getTypeIdentifier());
+    }
 }
