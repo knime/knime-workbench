@@ -2,7 +2,7 @@
 <feature
       id="org.knime.features.explorer.view"
       label="KNIME Explorer view (do not install!)"
-      version="5.4.3.qualifier"
+      version="5.4.4.qualifier"
       provider-name="KNIME AG, Zurich, Switzerland">
 
    <description>
@@ -15,9 +15,6 @@
 
    <plugin
          id="org.knime.workbench.explorer.view"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
+         version="0.0.0"/>
 
 </feature>
