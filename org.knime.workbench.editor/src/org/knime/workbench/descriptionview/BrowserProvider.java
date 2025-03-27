@@ -162,6 +162,9 @@ public class BrowserProvider implements LocationListener {
         }
 
         m_browser = b;
+        if (m_browser != null) {
+            m_browser.setJavascriptEnabled(false);
+        }
         m_fallbackBrowser = fb;
     }
 
