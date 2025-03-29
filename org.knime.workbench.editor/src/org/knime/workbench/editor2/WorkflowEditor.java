@@ -2808,7 +2808,7 @@ public class WorkflowEditor extends GraphicalEditor implements
                         + " or \"Save As...\" to store it in a different location.");
                 } else {
                     sb.append(
-                        "\n  Use \"Save As...\" to store it in your local workspace or a hub you are currently connected to.");
+                        "\n  Use \"Save As...\" to store it in your local workspace or a KNIME Hub you are currently connected to.");
                 }
             } else {
                 sb.append("\n  Use \"Save As...\" to save a permanent copy of the "
