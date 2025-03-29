@@ -2804,16 +2804,16 @@ public class WorkflowEditor extends GraphicalEditor implements
             if (!(uriString.startsWith("knime://EXAMPLE") || uriString.startsWith("file:/"))) {
                 //"Save"-action only allowed for server-workflows, but not temporary workflows from the example-server nor an external file
                 if (isDirty()) {
-                    sb.append("\n  Use \"Save\" to upload it back to its original location on the server"
+                    sb.append("\n  Use \"Save\" to upload it back to its original location "
                         + " or \"Save As...\" to store it in a different location.");
                 } else {
                     sb.append(
-                        "\n  Use \"Save As...\" to store it to your local workspace or a server you are currently logged in.");
+                        "\n  Use \"Save As...\" to store it in your local workspace or a hub you are currently connected to.");
                 }
             } else {
                 sb.append("\n  Use \"Save As...\" to save a permanent copy of the "
                     + (isComponentProjectWFM() ? "component" : "workflow")
-                    + " to your local workspace, or a mounted KNIME Server.");
+                    + " to your local workspace, or a mounted KNIME Hub.");
             }
             viewer.removeMessage(m_lastDisplayedWarningMessageId);
             m_lastDisplayedWarningMessageId = viewer.displayMessage(sb.toString(), MessageAppearance.WARNING,
