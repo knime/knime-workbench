@@ -53,6 +53,8 @@ import java.util.Set;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactoryConfigurationError;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.knime.core.node.NodeFactory;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.NodeModel;
@@ -81,9 +83,10 @@ import org.knime.workbench.repository.model.NodeTemplate;
  *
  * @author Fabian Dill, University of Konstanz
  */
+@SuppressWarnings("restriction")
 public final class DynamicNodeDescriptionCreator {
-    private static final DynamicNodeDescriptionCreator instance =
-            new DynamicNodeDescriptionCreator();
+
+    private static final DynamicNodeDescriptionCreator INSTANCE = new DynamicNodeDescriptionCreator();
 
     private DynamicNodeDescriptionCreator() {
     }
@@ -94,14 +97,14 @@ public final class DynamicNodeDescriptionCreator {
      * @return singleton instance of this class
      */
     public static DynamicNodeDescriptionCreator instance() {
-        return instance;
+        return INSTANCE;
     }
 
     /**
      *
      * @return the HTML header with stylesheet import and opened body tag.
      */
-    public String getHeader() {
+    public static String getHeader() {
         StringBuilder content = new StringBuilder();
         content.append("<html><head>");
         // include stylesheet
@@ -126,32 +129,27 @@ public final class DynamicNodeDescriptionCreator {
             final Set<String> idsDisplayed) {
         bld.append("<dl>");
         bld.append("<dt><h2>In <b>");
-        bld.append(htmlString(cat.getName()));
+        bld.append(StringEscapeUtils.escapeHtml4(cat.getName()));
         bld.append("</b>:</h2></dt> \n");
         if (!cat.hasChildren()) {
             bld.append("<dd> - contains no nodes - </dd>");
         } else {
             bld.append("<dd><dl>");
             for (IRepositoryObject child : cat.getChildren()) {
-                if (child instanceof Category) {
-                    Category childCat = (Category)child;
+                if (child instanceof Category childCat) {
                     if (!idsDisplayed.contains(childCat.getID())) {
                         idsDisplayed.add(childCat.getID());
                         addDescription(childCat, bld, idsDisplayed);
                     }
-                } else if (child instanceof NodeTemplate) {
-                    NodeTemplate templ = (NodeTemplate)child;
+                } else if (child instanceof NodeTemplate templ) {
                     if (!idsDisplayed.contains(templ.getID())) {
                         idsDisplayed.add(templ.getID());
                         addDescription(templ, /* useSingleLine */true, bld);
                     }
-                } else if (child instanceof MetaNodeTemplate) {
-                    MetaNodeTemplate templ = (MetaNodeTemplate)child;
+                } else if (child instanceof MetaNodeTemplate templ) {
                     if (!idsDisplayed.contains(templ.getID())) {
                         idsDisplayed.add(templ.getID());
-                        NodeContainerUI manager =
-                                ((MetaNodeTemplate)child).getManager();
-                        addDescription(manager, /* useSingleLine */true, bld);
+                        addDescription(((MetaNodeTemplate)child).getManager(), /* useSingleLine */true, bld);
                     }
                 } else {
                     bld.append(" - contains unknown object (internal err!) -");
@@ -174,17 +172,17 @@ public final class DynamicNodeDescriptionCreator {
      *            otherwise the entire full description is added
      * @param bld the buffer to add the one line strings to.
      */
-    public void addDescription(final NodeTemplate template,
-            final boolean useSingleLine, final StringBuilder bld) {
+    public static void addDescription(final NodeTemplate template, final boolean useSingleLine,
+            final StringBuilder bld) {
         NodeFactory<? extends NodeModel> nf = null;
         try {
             nf = template.createFactoryInstance();
             if (useSingleLine) {
                 bld.append("<dt><b>");
-                bld.append(nf.getNodeName());
+                bld.append(StringEscapeUtils.escapeHtml4(nf.getNodeName()));
                 bld.append(":</b></dt><dd>");
-                bld.append(goodOneLineDescr(NodeFactoryHTMLCreator.instance.readShortDescriptionFromXML(nf
-                    .getXMLDescription())));
+                bld.append(goodOneLineDescr( //
+                    NodeFactoryHTMLCreator.instance.readShortDescriptionFromXML(nf.getXMLDescription())));
                 bld.append("</dd>");
             } else {
                 bld.append(NodeFactoryHTMLCreator.instance.readFullDescription(nf.getXMLDescription()));
@@ -192,13 +190,13 @@ public final class DynamicNodeDescriptionCreator {
         } catch (Exception e) {
             if (useSingleLine) {
                 bld.append("<dt>");
-                bld.append(template.getName());
+                bld.append(StringEscapeUtils.escapeHtml4(template.getName()));
                 bld.append(":</dt>");
                 bld.append("<dd>no description available ");
                 bld.append("(couldn't inst. NodeFactory!)</dd>");
             } else {
                 bld.append("<html><body><b>");
-                bld.append(template.getName());
+                bld.append(StringEscapeUtils.escapeHtml4(template.getName()));
                 bld.append("<br><br></b>");
                 bld.append("Full description not available.<br>");
                 bld.append("(Internal error: couldn't instantiate ");
@@ -219,36 +217,26 @@ public final class DynamicNodeDescriptionCreator {
      *            otherwise the entire full description is added
      * @param bld the buffer to add the one line strings to.
      */
-    public void addDescription(final NodeContainerUI nc,
-            final boolean useSingleLine, final StringBuilder bld) {
+    public void addDescription(final NodeContainerUI nc, final boolean useSingleLine, final StringBuilder bld) {
 
-        if (!(nc instanceof SingleNodeContainerUI)) {
+        if (!(nc instanceof SingleNodeContainerUI singleNC)) {
             addSubWorkflowDescription(nc, useSingleLine, bld);
         } else {
-            SingleNodeContainerUI singleNC = (SingleNodeContainerUI)nc;
             if (useSingleLine) {
                 bld.append("<dt><b>");
-                bld.append(nc.getName());
+                bld.append(StringEscapeUtils.escapeHtml4(nc.getName()));
                 bld.append(":</b></dt>");
                 bld.append("<dd>");
                 // TODO functionality disabled
-                bld.append(goodOneLineDescr(NodeFactoryHTMLCreator.instance.readShortDescriptionFromXML(singleNC
-                    .getXMLDescription())));
+                bld.append(goodOneLineDescr( //
+                    NodeFactoryHTMLCreator.instance.readShortDescriptionFromXML(singleNC.getXMLDescription())));
                 bld.append("</dd>");
             } else {
                 try {
                     bld.append(NodeFactoryHTMLCreator.instance.readFullDescription(singleNC.getXMLDescription()));
-                } catch (FileNotFoundException ex) {
-                    NodeLogger.getLogger(DynamicNodeDescriptionCreator.class).error(
-                        "Could not create HTML node description: " + ex.getMessage(), ex);
-                    bld.append("<b>No description available, reason: " + ex.getMessage() + "</b>");
-                } catch (TransformerFactoryConfigurationError ex) {
-                    NodeLogger.getLogger(DynamicNodeDescriptionCreator.class).error(
-                        "Could not create HTML node description: " + ex.getMessage(), ex);
-                    bld.append("<b>No description available, reason: " + ex.getMessage() + "</b>");
-                } catch (TransformerException ex) {
-                    NodeLogger.getLogger(DynamicNodeDescriptionCreator.class).error(
-                        "Could not create HTML node description: " + ex.getMessage(), ex);
+                } catch (FileNotFoundException | TransformerFactoryConfigurationError | TransformerException ex) {
+                    NodeLogger.getLogger(DynamicNodeDescriptionCreator.class)
+                        .error("Could not create HTML node description: " + ex.getMessage(), ex);
                     bld.append("<b>No description available, reason: " + ex.getMessage() + "</b>");
                 }
             }
@@ -267,35 +255,35 @@ public final class DynamicNodeDescriptionCreator {
         if (!useSingleLine) {
             builder.append(getHeader());
             builder.append("<h1>");
-            builder.append(manager.getName());
+            builder.append(StringEscapeUtils.escapeHtml4(manager.getName()));
             builder.append("</h1>");
             builder.append("<h2>Description:</h2>");
-            builder.append("<p>" + template.getDescription() + "</p>");
+            builder.append("<p>" + StringEscapeUtils.escapeHtml4(template.getDescription()) + "</p>");
             builder.append("<h2>Contained nodes: </h2>");
             for (NodeContainerUI child : manager.getNodeContainers()) {
                 addDescription(child, true, builder);
             }
             builder.append("</body></html>");
         } else {
-            builder.append("<dt><b>" + manager.getName() + "</b></dt>");
-            builder.append("<dd>" + template.getDescription() + "</dd>");
+            builder.append("<dt><b>" + StringEscapeUtils.escapeHtml4(manager.getName()) + "</b></dt>");
+            builder.append("<dd>" + StringEscapeUtils.escapeHtml4(template.getDescription()) + "</dd>");
         }
     }
 
     private void addSubWorkflowDescription(final NodeContainerUI nc,
             final boolean useSingleLine, final StringBuilder bld) {
         WorkflowManagerUI wfm;
-        if (nc instanceof SubNodeContainerUI) {
-            wfm = ((SubNodeContainerUI)nc).getWorkflowManager();
+        if (nc instanceof SubNodeContainerUI subNode) {
+            wfm = subNode.getWorkflowManager();
         } else {
             wfm = (WorkflowManagerUI)nc;
         }
-        if(wfm instanceof LazyWorkflowManagerUI && !((LazyWorkflowManagerUI)wfm).isLoaded()) {
+        if(wfm instanceof LazyWorkflowManagerUI lazyWFM && !lazyWFM.isLoaded()) {
             String missingDescMessage = "Description will be available once the node has been opened.";
             if (!useSingleLine) {
                 bld.append(getHeader());
                 bld.append("<h1>");
-                bld.append(nc.getName());
+                bld.append(StringEscapeUtils.escapeHtml4(nc.getName()));
                 bld.append("</h1>");
                 bld.append("<p>" + missingDescMessage + "</p>");
                 bld.append("</body></html>");
@@ -312,11 +300,12 @@ public final class DynamicNodeDescriptionCreator {
         if (!useSingleLine) {
             bld.append(getHeader());
             bld.append("<h1>");
-            bld.append(nc.getName());
+            bld.append(StringEscapeUtils.escapeHtml4(nc.getName()));
             bld.append("</h1>");
-            if (nc.getCustomDescription() != null) {
+            final String customDescription = nc.getCustomDescription();
+            if (StringUtils.isNotBlank(customDescription)) {
                 bld.append("<h2>Description:</h2>");
-                bld.append("<p>" + nc.getCustomDescription() + "</p>");
+                bld.append("<p>" + StringEscapeUtils.escapeHtml4(customDescription) + "</p>");
             }
             bld.append("<h2>Contained nodes: </h2>");
             for (NodeContainerUI child : wfm.getNodeContainers()) {
@@ -325,7 +314,7 @@ public final class DynamicNodeDescriptionCreator {
             bld.append("</body></html>");
         } else {
             bld.append("<dt><b>");
-            bld.append(nc.getName() + " contained nodes:");
+            bld.append(StringEscapeUtils.escapeHtml4(nc.getName()) + " contained nodes:");
             bld.append("</b></dt>");
             bld.append("<dd>");
             bld.append("<dl>");
@@ -343,57 +332,8 @@ public final class DynamicNodeDescriptionCreator {
      * @return a not null string containing some (more or less) meaningfull text
      *         with no special characters in html.
      */
-    private String goodOneLineDescr(final String oneLineFromFactory) {
-        if ((oneLineFromFactory == null) || (oneLineFromFactory.length() == 0)) {
-            return " - No node description available - ";
-        } else {
-            return htmlString(oneLineFromFactory);
-        }
-    }
-
-    /**
-     * Converts the specified string into a new string that can be used inside
-     * an html body. All characters with special meaning in html will be
-     * escaped.
-     *
-     * @param s the string to make html ready.
-     * @return a string with no special characters. If s had no spec. chars it
-     *         will returned unchanged, otherwise a new string will be
-     *         allocated.
-     */
-    public static String htmlString(final String s) {
-        boolean escaped = false;
-        StringBuilder result = new StringBuilder(s.length() + 10);
-
-        for (int c = 0; c < s.length(); c++) {
-            char ch = s.charAt(c);
-            switch (ch) {
-                case '<':
-                    escaped = true;
-                    result.append("&lt;");
-                    break;
-                case '>':
-                    escaped = true;
-                    result.append("&gt;");
-                    break;
-                case '&':
-                    escaped = true;
-                    result.append("&amp;");
-                    break;
-                case '\"':
-                    escaped = true;
-                    result.append("&quot;");
-                    break;
-                default:
-                    result.append(ch);
-                    break;
-            }
-        }
-
-        if (escaped) {
-            return result.toString();
-        } else {
-            return s;
-        }
+    private static String goodOneLineDescr(final String oneLineFromFactory) {
+        final var escaped = StringEscapeUtils.escapeHtml4(oneLineFromFactory);
+        return StringUtils.defaultIfBlank(escaped, " - No node description available - ");
     }
 }
