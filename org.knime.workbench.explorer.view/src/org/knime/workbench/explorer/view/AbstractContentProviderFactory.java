@@ -132,6 +132,7 @@ public abstract class AbstractContentProviderFactory {
         return wrapFailable(mountPoint.getMountID(), () -> createContentProvider(mountPoint));
     }
 
+    @SuppressWarnings("java:S1181") // unknown code, catch `Error` for stability
     private static final Optional<AbstractContentProvider> wrapFailable(final String mountID,
         final Supplier<AbstractContentProvider> supplier) {
         try {
@@ -148,13 +149,10 @@ public abstract class AbstractContentProviderFactory {
     }
 
     /**
-     * Indicates if additional information is needed by the factory for
-     * creating a content provider. In general this information is gathered
-     * by the factory in the {@link #createContentProvider(String)} by opening
-     * a dialog.
+     * Indicates if additional information is needed by the factory for creating a content provider. In general this
+     * information is gathered by the factory in the {@link #createContentProvider(String)} by opening a dialog.
      *
-     * @return true, if additional information is needed by the factory for
-     *      creating a content provider, false otherwise
+     * @return true, if additional information is needed by the factory for creating a content provider, false otherwise
      *
      * @since 3.0
      */
