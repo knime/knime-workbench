@@ -47,11 +47,11 @@
 package org.knime.workbench.explorer.view.preferences;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.Assert;
 import org.eclipse.jface.dialogs.IDialogConstants;
@@ -517,7 +517,7 @@ public class MountPointTableEditor extends FieldEditor {
         if (dlg.open() != Window.OK) {
             return null;
         }
-        return dlg.getMountSettings(0);
+        return dlg.getMountSettings().orElseThrow();
     }
 
     private List<String> getContentProviderIDs() {
@@ -525,15 +525,13 @@ public class MountPointTableEditor extends FieldEditor {
         for (MountSettings settings : m_mountSettings) {
             idSet.add(settings.getFactoryID());
         }
-        return new ArrayList<String>(idSet);
+        return new ArrayList<>(idSet);
     }
 
     private List<String> getAllMountIDs() {
-        List<String> result = new ArrayList<String>(m_mountSettings.size());
-        for (MountSettings settings : m_mountSettings) {
-            result.add(settings.getMountID());
-        }
-        return result;
+        return m_mountSettings.stream() //
+            .map(MountSettings::getMountID) //
+            .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private Shell getShell() {
@@ -553,13 +551,12 @@ public class MountPointTableEditor extends FieldEditor {
         existingMountIDs.remove(settings.getMountID());
         final String factoryID = settings.getFactoryID();
         AbstractContentProviderFactory factory = ExplorerMountTable.getContentProviderFactory(factoryID);
-        EditMountPointDialog dlg = new EditMountPointDialog(getShell(),
-            Arrays.asList(new AbstractContentProviderFactory[]{factory}), existingMountIDs, settings);
+        EditMountPointDialog dlg = new EditMountPointDialog(getShell(), List.of(factory), existingMountIDs, settings);
         if (dlg.open() != Window.OK) {
             return null;
         }
 
-        return dlg.getMountSettings(settings.getMountPointNumber());
+        return dlg.getMountSettings().orElse(null);
     }
 
     @Override
