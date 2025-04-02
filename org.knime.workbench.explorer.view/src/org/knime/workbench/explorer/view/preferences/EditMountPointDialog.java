@@ -51,6 +51,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -141,11 +142,7 @@ public class EditMountPointDialog extends ListDialog {
 
     private Map<String, String> m_newAdditionalSettings;
 
-    private boolean m_isNew;
-
     private AbstractContentProviderFactory m_factory;
-
-    private Map<String, String> m_additionalContent;
 
     private CLabel m_mountIDHeader;
 
@@ -158,6 +155,8 @@ public class EditMountPointDialog extends ListDialog {
     private String m_oldMountID;
 
     private Thread m_backgroundWaitThread;
+
+    private MountSettings m_oldMountSettings;
 
     /**
      * Creates a new mount point dialog for creating a new mount point.
@@ -200,7 +199,7 @@ public class EditMountPointDialog extends ListDialog {
 
     private void init(final List<AbstractContentProviderFactory> input,
             final Collection<String> invalidIDs, final MountSettings settings) {
-        m_isNew = (settings == null);
+        m_oldMountSettings = settings;
         m_validationListener = createValidationListener();
         m_invalidIDs = new HashSet<>(invalidIDs);
         m_mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
@@ -212,14 +211,11 @@ public class EditMountPointDialog extends ListDialog {
         if (settings == null) {
             setTitle("Select New Content");
             m_mountIDval = "";
-            m_isNew = true;
         } else {
             setTitle("Edit Mount Point");
             m_mountIDval = settings.getMountID();
-            m_additionalContent = settings.getCustomSettings();
             m_defaultMountID = settings.getDefaultMountID();
             m_oldMountID = m_mountIDval;
-            m_isNew = false;
         }
     }
 
@@ -300,10 +296,9 @@ public class EditMountPointDialog extends ListDialog {
     /**
      * See {@link #okPressed() okPressed}.
      *
-     * @param waitForBackgroundWork {@code true} ift the current thread should wait for the background work to finish,
+     * @param waitForBackgroundWork {@code true} if the current thread should wait for the background work to finish,
      *            {@code false} otherwise.
      */
-    @SuppressWarnings("unchecked")
     private void okPressed(final boolean waitForBackgroundWork) {
         // this method gets called through a double click (if cancel button is added)
         if (!validate(waitForBackgroundWork)) {
@@ -324,13 +319,18 @@ public class EditMountPointDialog extends ListDialog {
     }
 
     /**
+     * Creates new mount settings
+     * @param position
      * @return
      * @since 8.15
      */
-    public MountSettings getMountSettings(final int position) {
-        // TODO re-add way to determine whether something has changed
-        return new MountSettings(m_mountIDval, m_factory.getMountPointType().getTypeIdentifier(), m_defaultMountID,
-            true, position, m_newAdditionalSettings);
+    public Optional<MountSettings> getMountSettings() {
+        final boolean active = m_oldMountSettings == null || m_oldMountSettings.isActive();
+        final int mountPointNumber = m_oldMountSettings == null ? 0 : m_oldMountSettings.getMountPointNumber();
+        final String typeIdentifier = m_factory.getMountPointType().getTypeIdentifier();
+        final var updatedSettings = new MountSettings(m_mountIDval, typeIdentifier, m_defaultMountID, active,
+            mountPointNumber, m_newAdditionalSettings);
+        return updatedSettings.equals(m_oldMountSettings) ? Optional.empty() : Optional.of(updatedSettings);
     }
 
     /**
@@ -384,7 +384,7 @@ public class EditMountPointDialog extends ListDialog {
                     for (Control cont : additionalPanel.getChildren()) {
                         cont.dispose();
                     }
-                    if (m_isNew && !m_mountID.getText().isEmpty()) {
+                    if (isNew() && !m_mountID.getText().isEmpty()) {
                         m_defaultMountID = null;
                         if (!m_mountID.getText().isEmpty()) {
                             m_mountID.setText("");
@@ -392,17 +392,16 @@ public class EditMountPointDialog extends ListDialog {
                     }
                     m_mountIDHeaderText = MOUNT_ID_HEADER_TEXT;
                     m_mountIDHeader.setText(m_mountIDHeaderText);
+
                     if (factory.isAdditionalInformationNeeded()) {
-                        m_additionalPanel =
-                            factory.createAdditionalInformationPanel(additionalPanel, m_mountID);
+                        m_additionalPanel = factory.createAdditionalInformationPanel(additionalPanel, m_mountID);
                         if (m_additionalPanel != null) {
                             m_additionalPanel.addValidationRequiredListener(m_validationListener);
-                            m_additionalPanel.createPanel(m_additionalContent);
+                            m_additionalPanel.createPanel(m_oldMountSettings);
                         }
                     } else {
                         m_additionalPanel = null;
-                        String mountID = factory.getMountPointType().getDefaultMountID().orElse("");
-                        m_mountID.setText(mountID);
+                        m_mountID.setText(factory.getMountPointType().getDefaultMountID().orElse(""));
                     }
 
                     setMountIdStatic(factory.isMountIdStatic());
@@ -474,10 +473,14 @@ public class EditMountPointDialog extends ListDialog {
             //force selectionChanged event
             tableViewer.setSelection(tableViewer.getSelection());
         }
-        if (!m_isNew) {
+        if (!isNew()) {
             tableViewer.getTable().setEnabled(false);
         }
         return c;
+    }
+
+    private boolean isNew() {
+        return m_oldMountSettings == null;
     }
 
     private void setMountIdStatic(final boolean isStatic) {
@@ -642,7 +645,7 @@ public class EditMountPointDialog extends ListDialog {
         new Label(header, SWT.NONE);
         Label exec = new Label(header, SWT.NONE);
         exec.setBackground(white);
-        if (m_isNew) {
+        if (isNew()) {
             exec.setText("Mounting a new resource for display in the KNIME Explorer");
         } else {
             exec.setText("Edit a resource for display in the KNIME Explorer");
@@ -659,11 +662,11 @@ public class EditMountPointDialog extends ListDialog {
         execIcon.setImage(IMG_NEWITEM.createImage());
         execIcon.setLayoutData(new GridData(SWT.END, SWT.BEGINNING, true, true));
         // second row
-        if (m_isNew) {
+        if (isNew()) {
             new Label(header, SWT.None);
             Label txt = new Label(header, SWT.NONE);
             txt.setBackground(white);
-            txt.setText("Please select the type of resource that should " + "be mounted.");
+            txt.setText("Please select the type of resource that should be mounted.");
             txt.setLayoutData(new GridData(GridData.HORIZONTAL_ALIGN_BEGINNING));
             new Label(header, SWT.None);
         }

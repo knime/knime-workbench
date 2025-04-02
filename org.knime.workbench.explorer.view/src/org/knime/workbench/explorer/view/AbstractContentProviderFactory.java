@@ -56,6 +56,7 @@ import org.eclipse.swt.widgets.Text;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
+import org.knime.core.workbench.preferences.MountSettings;
 
 /**
  *
@@ -192,10 +193,10 @@ public abstract class AbstractContentProviderFactory {
 
         /**
          * Creates and fills the panel.
-         * @param content The settings content string or null if not present
+         * @param oldMountSettings The old settings, or {@code null} if a new mountpoint is to be created
          * @since 8.15
          */
-        public abstract void createPanel(Map<String, String> content);
+        public abstract void createPanel(MountSettings oldMountSettings);
 
         /**
          * Validate additional information.

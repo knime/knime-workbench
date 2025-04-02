@@ -172,7 +172,7 @@
         <filter id="336695337">
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.view.AbstractContentProviderFactory.AdditionalInformationPanel"/>
-                <message_argument value="createPanel(Map&lt;String,String&gt;)"/>
+                <message_argument value="createPanel(MountSettings)"/>
             </message_arguments>
         </filter>
         <filter id="336695337">

@@ -180,11 +180,10 @@ public final class ExplorerMountTable {
 //                .formatted(mountID, mountedTypeIdentifier, providerID));
 //    }
 
-    @SuppressWarnings("unchecked")
     private static AbstractContentProvider getContentProvider(final WorkbenchMountPoint mp) {
         // resolve content factory and mount ID at this point, but defer creating the provider until it is needed
         final var fac =
-            CONTENT_FACTORIES.get(mp.getDefinition().getTypeIdentifier());
+            CONTENT_FACTORIES.get(mp.getType().getTypeIdentifier());
         // this call will also register the legacy content provider
         // AbstractContentProvider.class here (or SpaceProviders.class on the modern side)
         return mp.getProvider(AbstractContentProvider.class, state -> fac.createContentProvider(mp));
@@ -257,7 +256,7 @@ public final class ExplorerMountTable {
             getAddableContentProviders(final List<String> existingProviderIDs) {
         return WorkbenchMountTable.getAddableMountPointDefinitions() //
             .stream() //
-            .filter(def -> !existingProviderIDs.contains(def.getTypeIdentifier())) //
+            .filter(def -> def.supportsMultipleInstances() || !existingProviderIDs.contains(def.getTypeIdentifier())) //
             .filter(def -> !def.isTemporaryMountPoint()) //
             // ask legacy provider factory for prio
             .map(def -> ExplorerMountTable.getContentProviderFactory(def.getTypeIdentifier())) //
@@ -378,7 +377,7 @@ public final class ExplorerMountTable {
 
         WorkbenchMountPointDelegate(final WorkbenchMountPoint mp) {
             m_mountID = mp.getMountID();
-            m_parent = getContentProviderFactory(mp.getDefinition().getTypeIdentifier());
+            m_parent = getContentProviderFactory(mp.getType().getTypeIdentifier());
 
             final var existing = mp.getProvider(AbstractContentProvider.class);
             if (existing.isEmpty()) {
@@ -429,7 +428,7 @@ public final class ExplorerMountTable {
      */
     public static boolean isMounted(final String providerID) {
         return WorkbenchMountTable.withMounted(mounted ->
-            mounted.stream().anyMatch(mp -> mp.getDefinition().getTypeIdentifier().equals(providerID))
+            mounted.stream().anyMatch(mp -> mp.getType().getTypeIdentifier().equals(providerID))
         );
     }
 
@@ -448,7 +447,7 @@ public final class ExplorerMountTable {
         }
         return WorkbenchMountTable.withMounted(mounted ->
             mounted.stream() //
-                .filter(mp -> mp.getDefinition().getTypeIdentifier().equals(providerID)) //
+                .filter(mp -> mp.getType().getTypeIdentifier().equals(providerID)) //
                 .map(WorkbenchMountPoint::getMountID)
                 .toList()
         );
