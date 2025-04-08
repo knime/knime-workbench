@@ -48,7 +48,9 @@
  */
 package org.knime.workbench.explorer;
 
+import org.knime.core.workbench.WorkbenchActivator;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointState;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
 
 /**
  * @author Leonard Wörteler, KNIME GmbH, Konstanz, Germany
@@ -61,5 +63,10 @@ public enum TestMountPointState implements WorkbenchMountPointState {
     @Override
     public String getDisplayName() {
         return "TEST";
+    }
+
+    @Override
+    public WorkbenchMountPointType getType() {
+        return WorkbenchActivator.getInstance().getMountPointTypeOrFail(TestMountPointStateFactory.ID);
     }
 }

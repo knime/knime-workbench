@@ -57,6 +57,8 @@ import org.knime.core.workbench.preferences.MountSettings;
  */
 public final class TestMountPointStateFactory implements WorkbenchMountPointStateFactory<TestMountPointState> {
 
+    public static final String ID = "test-provider";
+
     @Override
     public TestMountPointState newInstance(final MountSettings settings) {
         return TestMountPointState.INSTANCE;
