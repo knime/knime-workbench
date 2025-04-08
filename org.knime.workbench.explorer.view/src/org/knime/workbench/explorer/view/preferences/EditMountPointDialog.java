@@ -108,7 +108,7 @@ import org.knime.workbench.ui.KNIMEUIPlugin;
  * @author ohl, University of Konstanz
  * @since 6.0
  */
-
+@SuppressWarnings("java:S6212") // `var` can hinder readability
 public class EditMountPointDialog extends ListDialog {
 
 
@@ -319,9 +319,9 @@ public class EditMountPointDialog extends ListDialog {
     }
 
     /**
-     * Creates new mount settings
-     * @param position
-     * @return
+     * Retrieves the new mount settings if they have changed.
+     *
+     * @return new mount settings if modified, {@link Optional#empty()} otherwise
      * @since 8.15
      */
     public Optional<MountSettings> getMountSettings() {
@@ -500,7 +500,7 @@ public class EditMountPointDialog extends ListDialog {
      * @return true, if the selection/input is okay.
      */
     protected boolean validate() {
-       return validate(false);
+        return validate(false);
     }
 
     /**
@@ -554,12 +554,12 @@ public class EditMountPointDialog extends ListDialog {
             m_resetMountID.setEnabled(true);
         } else if (!StringUtils.isEmpty(m_oldMountID) && !m_oldMountID.equals(id)) {
             mountIDHeaderText += "\n\nChanging the default Mount ID is not recommended since it can cause\n"
-                    + "issues when trying to reference server resources\n"
-                    + "by the Mount ID (e.g. knime://knime-server/resource.txt).\n"
-                    + "Only change the Mount ID if you are certain of what you are doing.\n\n"
-                    + "The old Mount ID is: " + m_oldMountID;
-                mountIDHeaderImage = ImageRepository.getIconImage(SharedImages.Warning);
-                m_resetMountID.setEnabled(true);
+                + "issues when trying to reference server resources\n"
+                + "by the Mount ID (e.g. knime://knime-server/resource.txt).\n"
+                + "Only change the Mount ID if you are certain of what you are doing.\n\n"
+                + "The old Mount ID is: " + m_oldMountID;
+            mountIDHeaderImage = ImageRepository.getIconImage(SharedImages.Warning);
+            m_resetMountID.setEnabled(true);
         } else {
             m_resetMountID.setEnabled(false);
         }
@@ -634,6 +634,7 @@ public class EditMountPointDialog extends ListDialog {
      *
      * @param parent
      */
+    @SuppressWarnings("unused")
     protected void createHeader(final Composite parent) {
         Composite header = new Composite(parent, SWT.FILL);
         Color white = Display.getDefault().getSystemColor(SWT.COLOR_WHITE);

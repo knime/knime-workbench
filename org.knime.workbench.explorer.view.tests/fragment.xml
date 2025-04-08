@@ -16,7 +16,7 @@
    <extension
          point="org.knime.core.workbench.MountPointType">
       <MountPointType
-            stateFactoryClass="org.knime.workbench.explorer.TestMountPointStateFactory"
+            stateFactoryClass="org.knime.workbench.explorer.TestMountPointState$Factory"
             supportsMultipleInstances="true"
             typeIdentifier="test-provider">
       </MountPointType>

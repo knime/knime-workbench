@@ -81,7 +81,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.ThreadUtils;
 import org.knime.core.workbench.WorkbenchConstants;
-import org.knime.core.workbench.preferences.ExplorerPreferenceInitializer;
+import org.knime.core.workbench.preferences.MountPointsPreferenceInitializer;
 import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -481,8 +481,8 @@ public class ContentDelegator extends LabelProvider
             m_pre29Storage = storage.getString(KEY);
             ignoreMemento = Boolean.TRUE.equals(storage.getBoolean(IGNORE_MEMENTO));
         }
-        if (ignoreMemento || ExplorerPreferenceInitializer.existMountPointPreferenceNodes()
-                || ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
+        if (ignoreMemento || MountPointsPreferenceInitializer.existMountPointPreferenceNodes()
+                || MountPointsPreferenceInitializer.existsMountPreferencesXML()) {
             restoreStateFromPreferences();
         } else {
             createMountPointXMLPreferences();

@@ -85,6 +85,13 @@
                 <message_argument value="multipleInstances()"/>
             </message_arguments>
         </filter>
+        <filter id="389242988">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory"/>
+                <message_argument value="ID"/>
+                <message_argument value="org.knime.workbench.explorer.workspace"/>
+            </message_arguments>
+        </filter>
     </resource>
     <resource path="src/org/knime/workbench/explorer/view/AbstractContentProvider.java" type="org.knime.workbench.explorer.view.AbstractContentProvider">
         <filter id="338722907">
@@ -205,6 +212,13 @@
             <message_arguments>
                 <message_argument value="org.knime.workbench.explorer.view.preferences.EditMountPointDialog"/>
                 <message_argument value="getContentProvider()"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="src/org/knime/workbench/explorer/view/preferences/MountPointTableEditor.java" type="org.knime.workbench.explorer.view.preferences.MountPointTableEditor">
+        <filter id="337768515">
+            <message_arguments>
+                <message_argument value="org.knime.workbench.explorer.view.preferences.MountPointTableEditor"/>
             </message_arguments>
         </filter>
     </resource>

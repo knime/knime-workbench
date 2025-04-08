@@ -219,12 +219,12 @@ public final class ExplorerMountTable {
     /**
      * Unmounts all MountPoints.
      */
-    public static synchronized void unmountAll() {
+    public static void unmountAll() {
         WorkbenchMountTable.unmountAll();
     }
 
     private static final Comparator<AbstractContentProviderFactory> DESC_PRIO =
-            Comparator.comparingInt((final AbstractContentProviderFactory fac) -> fac.getSortPriority()).reversed();
+            Comparator.comparingInt(AbstractContentProviderFactory::getSortPriority).reversed();
 
     /**
      * Returns a list of content providers that could be added (that is that

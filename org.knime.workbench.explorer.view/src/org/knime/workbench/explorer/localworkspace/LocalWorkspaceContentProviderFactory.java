@@ -47,10 +47,9 @@ package org.knime.workbench.explorer.localworkspace;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
-import org.knime.core.workbench.WorkbenchActivator;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
-import org.knime.core.workbench.mountpoint.contribution.local.LocalWorkspaceMountPointStateFactory;
+import org.knime.core.workbench.mountpoint.contribution.local.LocalWorkspaceMountPointState;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -65,13 +64,12 @@ import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
  */
 public class LocalWorkspaceContentProviderFactory extends AbstractContentProviderFactory {
 
+    private static final WorkbenchMountPointType MOUNT_POINT_TYPE = LocalWorkspaceMountPointState.TYPE;
+
     /**
      * The id of this predefined and always existing content provider.
      */
-    public static final String ID = LocalWorkspaceMountPointStateFactory.ID;
-
-    private static final WorkbenchMountPointType MOUNT_POINT_TYPE =
-        WorkbenchActivator.getInstance().getMountPointTypeOrFail(LocalWorkspaceMountPointStateFactory.ID);
+    public static final String ID = MOUNT_POINT_TYPE.getTypeIdentifier();
 
     @Override
     public WorkbenchMountPointType getMountPointType() {

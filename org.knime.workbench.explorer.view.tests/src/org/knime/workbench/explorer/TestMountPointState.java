@@ -50,23 +50,43 @@ package org.knime.workbench.explorer;
 
 import org.knime.core.workbench.WorkbenchActivator;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointState;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointStateFactory;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
+import org.knime.core.workbench.preferences.MountSettings;
 
 /**
  * @author Leonard Wörteler, KNIME GmbH, Konstanz, Germany
  */
-public enum TestMountPointState implements WorkbenchMountPointState {
+public final class TestMountPointState implements WorkbenchMountPointState {
 
-    /** Singleton instance. */
-    INSTANCE;
+    /** The type of this mount point. */
+    private static final WorkbenchMountPointType TYPE =
+        WorkbenchActivator.getInstance().getMountPointTypeOrFail("test-provider");
 
-    @Override
-    public String getDisplayName() {
-        return "TEST";
+    /** Factory class. */
+    public static final class Factory implements WorkbenchMountPointStateFactory<TestMountPointState> {
+
+        @Override
+        public TestMountPointState newInstance(final MountSettings settings) {
+            return new TestMountPointState();
+        }
+
+        @Override
+        public String getDisplayName() {
+            return "Test Mountpoint";
+        }
+
+        @Override
+        public String getContentDisplayString(final MountSettings mountSettings) {
+            return "TEST";
+        }
+    }
+
+    private TestMountPointState() {
     }
 
     @Override
     public WorkbenchMountPointType getType() {
-        return WorkbenchActivator.getInstance().getMountPointTypeOrFail(TestMountPointStateFactory.ID);
+        return TYPE;
     }
 }

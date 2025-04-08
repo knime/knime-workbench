@@ -47,13 +47,10 @@ package org.knime.workbench.explorer.view;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.function.Supplier;
 
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
-import org.knime.core.node.NodeLogger;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
 import org.knime.core.workbench.preferences.MountSettings;
@@ -122,36 +119,9 @@ public abstract class AbstractContentProviderFactory {
     public abstract AbstractContentProvider createContentProvider(WorkbenchMountPoint mountPoint);
 
     /**
-     * Try to create a content provider. If an error occurs, it is printed to the console and the method returns
-     * normally.
-     *
-     * @param mountPoint the mount point with mountID etc.
-     * @return the created instance, or an empty optional if an error occurred
-     * @since 8.15
-     */
-    public final Optional<AbstractContentProvider> tryCreateContentProvider(final WorkbenchMountPoint mountPoint) {
-        return wrapFailable(mountPoint.getMountID(), () -> createContentProvider(mountPoint));
-    }
-
-    @SuppressWarnings("java:S1181") // unknown code, catch `Error` for stability
-    private static final Optional<AbstractContentProvider> wrapFailable(final String mountID,
-        final Supplier<AbstractContentProvider> supplier) {
-        try {
-            return Optional.ofNullable(supplier.get());
-        } catch (Throwable t) {
-            if (t instanceof OutOfMemoryError oome) {
-                throw oome;
-            }
-            NodeLogger.getLogger(AbstractContentProviderFactory.class)
-                .error("Error during the creation of the content provider for mount ID \"%s\": %s".formatted(mountID,
-                    t.getMessage()), t);
-            return Optional.empty();
-        }
-    }
-
-    /**
      * Indicates if additional information is needed by the factory for creating a content provider. In general this
-     * information is gathered by the factory in the {@link #createContentProvider(String)} by opening a dialog.
+     * information is gathered by the factory in the {@link #createContentProvider(WorkbenchMountPoint)} by opening
+     * a dialog.
      *
      * @return true, if additional information is needed by the factory for creating a content provider, false otherwise
      *

@@ -52,7 +52,7 @@ import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.workbench.WorkbenchConstants;
-import org.knime.core.workbench.preferences.ExplorerPrefsSyncer;
+import org.knime.core.workbench.preferences.MountPointsPrefsSyncer;
 import org.knime.core.workbench.preferences.MountSettings;
 import org.osgi.service.prefs.BackingStoreException;
 
@@ -99,7 +99,7 @@ public class ExplorerActivator extends AbstractUIPlugin {
     private void addPrefSyncer() {
         if (!m_prefSyncerAdded.getAndSet(true)) {
             // AP-8989 switching to IEclipsePreferences
-            ExplorerPrefsSyncer prefsSyncer = new ExplorerPrefsSyncer();
+            MountPointsPrefsSyncer prefsSyncer = new MountPointsPrefsSyncer();
             IEclipsePreferences defaultPrefs = DefaultScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation());
             defaultPrefs.addPreferenceChangeListener(prefsSyncer);
             IEclipsePreferences preferences = InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation());
