@@ -55,7 +55,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.jface.dialogs.MessageDialog;
@@ -211,12 +210,10 @@ public class SaveAsSubNodeTemplateAction extends AbstractNodeAction {
             IProgressService ps = PlatformUI.getWorkbench().getProgressService();
             try {
                 ps.run(true, false, mon -> {
-                    try {
-                        mon.setTaskName("Executing upstream nodes ...");
-                        exampleInputData.set(snc.fetchInputDataFromParent());
-                    } catch (ExecutionException e) {
-                        throw new InvocationTargetException(e);
-                    }
+                    mon.setTaskName("Executing upstream nodes ...");
+                    // since 5.5, the "fetchInputDataFromParent" method is not executing the workflow anymore
+                    snc.getParent().executePredecessorsAndWait(snc.getID());
+                    exampleInputData.set(snc.fetchInputDataFromParent());
                 });
             } catch (InvocationTargetException e) {
                 String error =
