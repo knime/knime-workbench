@@ -44,16 +44,23 @@
  */
 package org.knime.workbench.explorer.view;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
+import org.knime.core.internal.CorePlugin;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointSettings;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointState.WorkbenchMountPointStateSettings;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
+
+import com.google.common.net.InetAddresses;
 
 /**
  *
@@ -286,6 +293,50 @@ public abstract class AbstractContentProviderFactory {
          */
         public boolean waitForBackgroundWork() {
             return false;
+        }
+
+        /**
+         * Parses and validates the given {@link String} address as an address for a KNIME Server
+         * or a KNIME Hub. If the address is invalid, empty, or {@code null}, this method will return the
+         * empty {@link String} {@code ""} as an indicator.
+         * <p>
+         * If the address (i.e. its host) is disallowed via AP customization, {@link Optional#empty()} is returned.
+         * </p>
+         *
+         * @param address string representation of address (or {@link URI})
+         * @param apiPrefix sub-domain prefix to add to the host, reaching the server API
+         * @return parsed address, if valid as a {@link String} that is present, otherwise {@link Optional#empty()}
+         * @since 9.0
+         */
+        protected static Optional<String> parseServerAddress(final String address, final String apiPrefix) {
+            // Abort if the address is empty.
+            if (StringUtils.isBlank(address)) {
+                return Optional.of("");
+            }
+
+            var serverAddress = address;
+            var host = serverAddress;
+            try {
+                // Validate that its URI form is correct.
+                final var uri = new URI(address.trim());
+                if (uri.getHost() != null) {
+                    host = (InetAddresses.isInetAddress(uri.getHost()) || uri.getHost().startsWith(apiPrefix))
+                        ? uri.getHost() : (apiPrefix + uri.getHost());
+                    serverAddress = uri.getScheme() + "://" + host + ((uri.getPort() > 0) ? (":" + uri.getPort()) : "");
+                }
+            } catch (URISyntaxException ex) { // NOSONAR, no logging necessary
+                // We assume, the server address is a pure host name here.
+            }
+
+            // Validate that the host is allowed via AP customization.
+            final var customization = CorePlugin.getInstance().getCustomizationService() //
+                .map(x -> x.getCustomization().mountpoint());
+            final var finalHost = host;
+            if (customization.map(x -> !x.test(finalHost)).orElse(false)) {
+                return Optional.empty();
+            }
+
+            return Optional.of(serverAddress);
         }
     }
 
