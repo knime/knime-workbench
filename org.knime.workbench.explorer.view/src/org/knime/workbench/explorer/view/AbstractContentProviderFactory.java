@@ -44,16 +44,22 @@
  */
 package org.knime.workbench.explorer.view;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
+import org.knime.core.internal.CorePlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.workbench.explorer.ExplorerMountTable;
+
+import com.google.common.net.InetAddresses;
 
 /**
  *
@@ -236,6 +242,8 @@ public abstract class AbstractContentProviderFactory {
      */
     public abstract static class AdditionalInformationPanel {
 
+        private static final String API_PREFIX = "api.";
+
         private Text m_mountIDInput;
         private Composite m_parent;
         private List<ValidationRequiredListener> m_listeners;
@@ -373,6 +381,45 @@ public abstract class AbstractContentProviderFactory {
          */
         public boolean waitForBackgroundWork() {
             return false;
+        }
+
+        /**
+         * Parses and validates the given {@link String} address as an address for a KNIME Server
+         * or a KNIME Hub. If the address is invalid, {@code null}, or forbidden by customization,
+         * this method will return the empty {@link String} {@code ""} as an indicator.
+         *
+         * @param address string representation of address (or {@link URI})
+         * @return parsed address, also as a {@link String}
+         * @since 8.15
+         */
+        protected static String parseServerAddress(final String address) {
+            // Validate that the address is non-empty.
+            if (StringUtils.isBlank(address)) {
+                return "";
+            }
+            final var customization = CorePlugin.getInstance().getCustomizationService() //
+                .map(x -> x.getCustomization().mountpoint());
+
+            var serverAddress = address;
+            try {
+                // Validate that the URI form is allowed.
+                final var uri = new URI(address.trim());
+                if (customization.map(x -> !x.isHostAllowed(uri)).orElse(false)) {
+                    return "";
+                }
+                if (uri.getHost() != null) {
+                    var host = (InetAddresses.isInetAddress(uri.getHost()) || uri.getHost().startsWith(API_PREFIX))
+                        ? uri.getHost() : (API_PREFIX + uri.getHost());
+                    serverAddress = uri.getScheme() + "://" + host + ((uri.getPort() > 0) ? (":" + uri.getPort()) : "");
+                }
+            } catch (URISyntaxException ex) { // NOSONAR, no logging necessary
+                // We assume a pure hostname here, validate that this hostname form is allowed.
+                if (customization.map(x -> !x.isHostAllowed(address)).orElse(false)) {
+                    return "";
+                }
+            }
+
+            return serverAddress;
         }
     }
 
