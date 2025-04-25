@@ -48,7 +48,10 @@
  */
 package org.knime.workbench.repository.nodalizer;
 
+import java.util.Arrays;
+
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 /**
  * POJO for representing a dynamic port group.
@@ -56,6 +59,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
 @JsonAutoDetect
+@JsonPropertyOrder({"groupName", "groupDescription", "types"})
 public class DynamicPortGroup {
 
     private final String m_groupName;
@@ -72,7 +76,12 @@ public class DynamicPortGroup {
     public DynamicPortGroup(final String groupName, final String groupDescription, final DynamicPortType[] types) {
         m_groupName = groupName;
         m_groupDescription = groupDescription;
-        m_types = types == null ? new DynamicPortType[0] : types;
+        if (types == null) {
+            m_types = new DynamicPortType[0];
+        } else {
+            m_types = types;
+            Arrays.sort(m_types, (t1, t2) -> t1.getObjectClass().compareTo(t2.getObjectClass())); // order by object class for serialization
+        }
     }
 
     /**
@@ -106,6 +115,7 @@ public class DynamicPortGroup {
      * A POJO representing a single port type supported by dynamic port group.
      */
     @JsonAutoDetect
+    @JsonPropertyOrder({"objectClass", "color", "dataType"})
     public static final class DynamicPortType {
 
         private final String m_objectClass;

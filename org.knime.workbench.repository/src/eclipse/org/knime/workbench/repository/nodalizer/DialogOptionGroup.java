@@ -48,12 +48,12 @@
  */
 package org.knime.workbench.repository.nodalizer;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 /**
  * POJO for dialog option group (i.e. one tab in the dialog).
@@ -61,6 +61,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
 @JsonAutoDetect
+@JsonPropertyOrder({"sectionName", "sectionDescription", "fields"})
 public class DialogOptionGroup {
 
     private final String m_sectionName;
@@ -79,13 +80,7 @@ public class DialogOptionGroup {
         m_sectionDescription = sectionDescription;
 
         if (fields != null) {
-            final List<NamedField> cleanedList = new ArrayList<>();
-            for (final NamedField f : fields) {
-                if (!f.isEmpty()) {
-                    cleanedList.add(f);
-                }
-            }
-            m_fields = cleanedList;
+            m_fields = fields.stream().filter(f -> !f.isEmpty()).toList();
         } else {
             m_fields = null;
         }

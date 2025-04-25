@@ -52,6 +52,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 /**
  * POJO for items which have a name and description.
@@ -59,6 +60,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
 @JsonAutoDetect
+@JsonPropertyOrder({"name", "description", "optional"})
 public class NamedField {
 
     private final String m_name;

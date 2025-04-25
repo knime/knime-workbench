@@ -61,6 +61,7 @@ import org.knime.core.util.Version;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 /**
  * POJO for extension information.
@@ -68,6 +69,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
 @JsonAutoDetect
+@JsonPropertyOrder({"id", "symbolicName", "name", "version", "vendor", "owner", "categoryPath", "updateSite",
+    "description", "descriptionUrl", "copyright", "license"})
 public class ExtensionInfo {
 
     private String m_name;
@@ -333,6 +336,7 @@ public class ExtensionInfo {
      * POJO for extension license information.
      */
     @JsonAutoDetect
+    @JsonPropertyOrder({"name", "url", "text"})
     public static class LicenseInfo {
 
         private String m_licenseName;

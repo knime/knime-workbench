@@ -51,7 +51,6 @@ package org.knime.workbench.repository.nodalizer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -66,6 +65,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 /**
  * POJO for KNIME Node information.
@@ -73,6 +73,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
 @JsonAutoDetect
+@JsonPropertyOrder({"title", "nodeType", "id", "factoryName", "factoryId", "path", "owner", "description",
+    "shortDescription", "keywords", "deprecated", "streamable", "tags", "icon", "sinceVersion", "views",
+    "interactiveView", "inPorts", "outPorts", "dynInPorts", "dynOutPorts", "additionalSiteInformation", "dialog",
+    "links", "bundleInformation"})
 public class NodeInfo {
 
     private String m_title;
@@ -431,15 +435,9 @@ public class NodeInfo {
     public void setDialog(final List<DialogOptionGroup> dialog) {
         if (dialog == null) {
             m_dialog = null;
-            return;
+        } else {
+            m_dialog = dialog.stream().filter(d -> !d.isEmpty()).toList();
         }
-        final List<DialogOptionGroup> cleaned = new ArrayList<>();
-        for (final DialogOptionGroup dog : dialog) {
-            if (!dog.isEmpty()) {
-                cleaned.add(dog);
-            }
-        }
-        m_dialog = cleaned;
     }
 
     /**
@@ -450,15 +448,9 @@ public class NodeInfo {
     public void setViews(final List<NamedField> views) {
         if (views == null) {
             m_views = null;
-            return;
+        } else {
+            m_views = views.stream().filter(v -> !v.isEmpty()).toList();
         }
-        final List<NamedField> cleaned = new ArrayList<>();
-        for (final NamedField nf : views) {
-            if (!nf.isEmpty()) {
-                cleaned.add(nf);
-            }
-        }
-        m_views = cleaned;
     }
 
     /**
@@ -469,9 +461,9 @@ public class NodeInfo {
     public void setInteractiveView(final NamedField interactiveView) {
         if (interactiveView != null && !interactiveView.isEmpty()) {
             m_interactiveView = interactiveView;
-            return;
+        } else {
+            m_interactiveView = null;
         }
-        m_interactiveView = null;
     }
 
     /**
@@ -481,6 +473,9 @@ public class NodeInfo {
      */
     public void setLinks(final LinkInformation[] links) {
         m_links = links;
+        if (m_links != null) {
+            Arrays.sort(links, (l1, l2) -> l1.getUrl().compareTo(l2.getUrl()));
+        }
     }
 
     /**
@@ -526,6 +521,9 @@ public class NodeInfo {
      */
     public void setTags(final List<String> tags) {
         m_tags = tags;
+        if (m_tags != null) {
+            Collections.sort(m_tags);
+        }
     }
 
     /**
@@ -580,6 +578,9 @@ public class NodeInfo {
      */
     public void setKeywords(final String[] keywords) {
         m_keywords = keywords;
+        if (m_keywords != null) {
+            Arrays.sort(m_keywords);
+        }
     }
 
     /**
@@ -617,6 +618,8 @@ public class NodeInfo {
     // -- Helper Classes --
 
     @JsonAutoDetect(getterVisibility = Visibility.NON_PRIVATE)
+    @JsonPropertyOrder({"bundleVersion", "bundleName", "bundleSymbolicName", "bundleVendor", "featureSymbolicName",
+        "featureName", "featureVersion", "featureVendor", "extensionId"})
     static final class BundleInformation {
 
         private final NodeAndBundleInformation m_nabi;
@@ -677,6 +680,7 @@ public class NodeInfo {
      * @author Alison Walter, KNIME GmbH, Konstanz, Germany
      */
     @JsonAutoDetect(getterVisibility = Visibility.NON_PRIVATE)
+    @JsonPropertyOrder({"text", "url"})
     public static final class LinkInformation {
 
         private final String m_url;

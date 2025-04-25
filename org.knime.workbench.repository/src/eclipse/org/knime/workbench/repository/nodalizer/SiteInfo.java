@@ -52,6 +52,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.knime.core.util.Version;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 /**
  * POJO for update site information. This includes the url and various boolean flags.
@@ -59,6 +60,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
 @JsonAutoDetect
+@JsonPropertyOrder({"url", "trusted", "enabledByDefault", "name", "version"})
 public class SiteInfo {
 
     private final String m_url;

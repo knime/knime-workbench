@@ -49,6 +49,7 @@
 package org.knime.workbench.repository.nodalizer;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 /**
  * POJO for KNIME port information.
@@ -56,6 +57,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
  * @author Alison Walter, KNIME GmbH, Konstanz, Germany
  */
 @JsonAutoDetect
+@JsonPropertyOrder({"objectClass", "color", "dataType", "optional", "name", "description"})
 public class PortInfo {
 
     private final String m_name;
