@@ -417,7 +417,6 @@ public final class MountPointTableEditor extends FieldEditor {
 
         if (index >= 0) {
             MountSettings settings = (MountSettings)m_table.getItem(index).getData();
-            //settings.getWorkbenchMountPointTypeOrFail().
             AbstractContentProviderFactory contentProviderFactory =
                 ExplorerMountTable.getContentProviderFactories().get(settings.getFactoryID());
             m_editButton.setEnabled(contentProviderFactory.isMountpointEditable());
@@ -500,7 +499,6 @@ public final class MountPointTableEditor extends FieldEditor {
     private MountSettings getNewInputObject() {
         EditMountPointDialog dlg = new EditMountPointDialog(getShell(),
             ExplorerMountTable.getAddableContentProviders(getContentProviderIDs()), getAllMountIDs());
-        getAllMountIDs();
         if (dlg.open() != Window.OK) {
             return null;
         }

@@ -178,7 +178,7 @@ public class EditMountPointDialog extends ListDialog {
      * @param input list of selectable items
      * @param invalidIDs list of invalid ids - rejected in the mountID field.
      * @param settings existing MountSettings to edit
-     * @since 8.15
+     * @since 9.0
      */
     public EditMountPointDialog(final Shell parentShell, final List<AbstractContentProviderFactory> input,
         final Collection<String> invalidIDs, final MountSettings settings) {
@@ -322,7 +322,7 @@ public class EditMountPointDialog extends ListDialog {
      * Retrieves the new mount settings if they have changed.
      *
      * @return new mount settings if modified, {@link Optional#empty()} otherwise
-     * @since 8.15
+     * @since 9.0
      */
     public Optional<MountSettings> getMountSettings() {
         final boolean active = m_oldMountSettings == null || m_oldMountSettings.isActive();

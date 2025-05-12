@@ -182,11 +182,10 @@ public final class ExplorerMountTable {
 
     private static AbstractContentProvider getContentProvider(final WorkbenchMountPoint mp) {
         // resolve content factory and mount ID at this point, but defer creating the provider until it is needed
-        final var fac =
-            CONTENT_FACTORIES.get(mp.getType().getTypeIdentifier());
+        final var fac = CONTENT_FACTORIES.get(mp.getType().getTypeIdentifier());
         // this call will also register the legacy content provider
         // AbstractContentProvider.class here (or SpaceProviders.class on the modern side)
-        return mp.getProvider(AbstractContentProvider.class, state -> fac.createContentProvider(mp));
+        return mp.getProvider(AbstractContentProvider.class, () -> fac.createContentProvider(mp));
     }
 
     // TODO figure out when/where to call this method
@@ -199,7 +198,7 @@ public final class ExplorerMountTable {
      * mountpoint mounted, but the content provider will be disposed of and must be created by mounting again
      * (using any of the {@link #mount(String, String, String)} methods).
      *
-     * @since 8.15
+     * @since 9.0
      */
     public static void dispose(final String mountID) {
         final var mp = WorkbenchMountTable.getMountPoint(mountID);
@@ -429,27 +428,6 @@ public final class ExplorerMountTable {
     public static boolean isMounted(final String providerID) {
         return WorkbenchMountTable.withMounted(mounted ->
             mounted.stream().anyMatch(mp -> mp.getType().getTypeIdentifier().equals(providerID))
-        );
-    }
-
-    /**
-     * Checks whether an instance created by the specified factory is already
-     * mounted and returns the mount IDs for it.
-     *
-     *
-     * @param providerID the id of the provider factory
-     * @return a list with mount IDs (or an empty list if provider is not
-     *         mounted).
-     */
-    public static List<String> getMountIDs(final String providerID) {
-        if (providerID == null || providerID.isEmpty()) {
-            throw new IllegalArgumentException("Internal error: provider ID can't be null");
-        }
-        return WorkbenchMountTable.withMounted(mounted ->
-            mounted.stream() //
-                .filter(mp -> mp.getType().getTypeIdentifier().equals(providerID)) //
-                .map(WorkbenchMountPoint::getMountID)
-                .toList()
         );
     }
 

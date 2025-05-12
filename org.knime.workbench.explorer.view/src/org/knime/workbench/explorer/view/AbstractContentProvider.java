@@ -186,7 +186,7 @@ implements ITreeContentProvider, Comparable<AbstractContentProvider>, IColorProv
     /**
      * @param myCreator the factory creating this instance.
      * @param mountPoint non-null mount point
-     * @since 8.15
+     * @since 9.0
      */
     protected AbstractContentProvider(final AbstractContentProviderFactory myCreator,
         final WorkbenchMountPoint mountPoint) {
@@ -224,7 +224,7 @@ implements ITreeContentProvider, Comparable<AbstractContentProvider>, IColorProv
 
     /**
      * @return the non-null mount point
-     * @since 8.15
+     * @since 9.0
      */
     public final WorkbenchMountPoint getMountPoint() {
         return m_mountPoint;
