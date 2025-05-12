@@ -64,7 +64,7 @@ public abstract class AbstractContentProviderFactory {
     /**
      * @return The non-null definition of the mount point implementation, the definition is shared (meta) info
      * about such as unique ID etc.
-     * @since 8.15
+     * @since 9.0
      */
     public abstract WorkbenchMountPointType getMountPointType();
 
@@ -114,7 +114,7 @@ public abstract class AbstractContentProviderFactory {
      *
      * @param mountPoint the mount point with mountID etc.
      * @return a new instance with its state restored from the passed structure
-     * @since 8.15
+     * @since 9.0
      */
     public abstract AbstractContentProvider createContentProvider(WorkbenchMountPoint mountPoint);
 
@@ -164,7 +164,7 @@ public abstract class AbstractContentProviderFactory {
         /**
          * Creates and fills the panel.
          * @param oldMountSettings The old settings, or {@code null} if a new mountpoint is to be created
-         * @since 8.15
+         * @since 9.0
          */
         public abstract void createPanel(MountSettings oldMountSettings);
 
@@ -176,7 +176,7 @@ public abstract class AbstractContentProviderFactory {
 
         /**
          * @return
-         * @since 8.15
+         * @since 9.0
          */
         public abstract Map<String, String> getAdditionalState();
 

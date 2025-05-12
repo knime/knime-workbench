@@ -9,7 +9,7 @@
 	<packaging>eclipse-test-plugin</packaging>
 
 	<properties>
-		<revision>8.15.0</revision>
+		<revision>9.0.0</revision>
 		<changelist>-SNAPSHOT</changelist>
 		<sonar.sources/>
 		<sonar.tests>src</sonar.tests>

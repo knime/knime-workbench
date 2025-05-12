@@ -55,16 +55,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.eclipse.core.runtime.CoreException;
 import org.junit.Test;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountException;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
-import org.knime.core.workbench.preferences.MountSettings;
+import org.knime.core.workbench.mountpoint.contribution.local.LocalWorkspaceMountPointState;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider;
-import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.mockito.Mockito;
 
@@ -84,10 +82,10 @@ public class AbstractContentProviderTest {
      */
     @Test
     public void testCanHostWorkflowTemplate() throws CoreException, IOException, WorkbenchMountException {
-        final var local = WorkbenchMountTable.mount( //
-            new MountSettings("LOCAL", LocalWorkspaceContentProviderFactory.ID, "LOCAL", true, 0, Map.of()));
+        final var local =
+            WorkbenchMountTable.mount(LocalWorkspaceMountPointState.TYPE.getDefaultSettings().orElseThrow());
         LocalWorkspaceContentProvider localWorkspace =
-                (LocalWorkspaceContentProvider)local.getProvider(AbstractContentProvider.class).orElseThrow();
+                (LocalWorkspaceContentProvider)ExplorerMountTable.toAbstractContentProvider(local).orElseThrow();
         LocalExplorerFileStore localExplorerRoot = (LocalExplorerFileStore)localWorkspace.getRootStore();
 
         LocalExplorerFileStore component = createTemplate(localExplorerRoot, "component", true);

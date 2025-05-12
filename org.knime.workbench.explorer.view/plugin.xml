@@ -27,6 +27,12 @@
                <keywordReference id="MANAGE_MOUNTPOINTS"/>            
          </page>
       </extension>
+      <extension
+            point="org.eclipse.core.runtime.preferences">
+         <initializer
+               class="org.knime.workbench.explorer.view.preferences.ExplorerPreferenceInitializer">
+         </initializer>
+      </extension>
      <extension point="org.eclipse.ui.perspectiveExtensions">
       <perspectiveExtension targetID="org.knime.workbench.ui.ModellerPerspective">
          <newWizardShortcut

@@ -49,15 +49,15 @@ package org.knime.workbench.explorer;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.CoreException;
@@ -72,7 +72,6 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.FileUtil;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
 import org.knime.core.workbench.mountpoint.api.events.MountPointEvent;
 import org.knime.core.workbench.mountpoint.api.events.MountPointListener;
@@ -119,131 +118,6 @@ public final class ExplorerMountTable {
     }
 
     /**
-     * Throws an exception, if the specified id is not a valid mount id (in
-     * terms of contained characters). (@see {@link #isValidMountID(String)})
-     *
-     * @param id to test
-     * @throws IllegalArgumentException if the specified id is not a valid mount
-     *             id (in terms of contained characters). (@see
-     *             {@link #isValidMountID(String)})
-     */
-    public static void checkMountID(final String id) throws IllegalArgumentException {
-        WorkbenchMountTable.checkMountID(id);
-    }
-
-    /**
-     * Sorts the mount points in the same way as in the passed list. It makes
-     * sure that if two entries A and B of the list are mounted and A comes
-     * before B, the mount point A will appear before mount point B in the mount
-     * table.
-     *
-     * @param mountIDs a list of mount ids
-     */
-    public static void setMountOrder(final List<String> mountIDs) {
-        WorkbenchMountTable.setMountOrder(mountIDs);
-    }
-
-//    /**
-//     * Creates a new instance of the specified content provider.
-//     *
-//     * @param mountID name under which the content is mounted
-//     * @param providerID the provider factory id
-//     * @return a new content provider instance - or null if user canceled.
-//     * @throws IOException if the mounting fails
-//     */
-//    public static AbstractContentProvider<?> mount(final String mountID, final String providerID) throws IOException {
-//        // can be null, e.g. when we did need to mount but the user canceled
-//        return WorkbenchMountTable.withMounted(mounted -> getOrMount(mounted, mountID, providerID));
-//    }
-//
-//    private static AbstractContentProvider<?> getOrMount(final Collection<WorkbenchMountPoint> mounted,
-//            final String mountID, final String providerID) throws IOException {
-//        // check if it is already mounted under the ID and of this providerID
-//        final var wmpOpt = mounted.stream() //
-//                .filter(mp -> mp.getMountID().equals(mountID)) //
-//                .findFirst();
-//        final WorkbenchMountPoint wmp;
-//        if (wmpOpt.isEmpty()) {
-//            wmp = WorkbenchMountTable.mount(mountID, providerID);
-//        } else {
-//            wmp = wmpOpt.get();
-//        }
-//        final var mountedTypeIdentifier = wmp.getDefinition().getTypeIdentifier();
-//        if (mountedTypeIdentifier.equals(providerID)) {
-//            // mountID fits and providerID, too
-//            return getContentProvider(wmp, storage);
-//        }
-//
-//        // something is already mounted under the mount ID but from a different provider
-//        throw new IOException(
-//            "Mount ID \"%s\" is already in use by mounted content provided via \"%s\", but requested provider is \"%s\"." // NOSONAR don't break string formatting
-//                .formatted(mountID, mountedTypeIdentifier, providerID));
-//    }
-
-    private static AbstractContentProvider getContentProvider(final WorkbenchMountPoint mp) {
-        // resolve content factory and mount ID at this point, but defer creating the provider until it is needed
-        final var fac =
-            CONTENT_FACTORIES.get(mp.getType().getTypeIdentifier());
-        // this call will also register the legacy content provider
-        // AbstractContentProvider.class here (or SpaceProviders.class on the modern side)
-        return mp.getProvider(AbstractContentProvider.class, state -> fac.createContentProvider(mp));
-    }
-
-    // TODO figure out when/where to call this method
-    //      We want to sever link to fetchers backing content providers as soon as possible:
-    //      - when we switch perspective from classic to modern, this should be called on all mounted mountpoints
-    //      - when a filesystem is closed that uses the content provider, we can dispose it
-    // Do we need a refcount for this?
-    /**
-     * Disposes the content provider for the specified mount point if it is currently mounted. This will leave the
-     * mountpoint mounted, but the content provider will be disposed of and must be created by mounting again
-     * (using any of the {@link #mount(String, String, String)} methods).
-     *
-     * @since 8.15
-     */
-    public static void dispose(final String mountID) {
-        final var mp = WorkbenchMountTable.getMountPoint(mountID);
-        if (mp != null) {
-            mp.dispose(AbstractContentProvider.class);
-        }
-    }
-
-    /**
-     * @param mountID the id to unmount
-     * @return true if unmounting was successful, false otherwise
-     */
-    public static boolean unmount(final String mountID) {
-        return WorkbenchMountTable.unmount(mountID);
-    }
-
-    /**
-     * Unmounts all MountPoints.
-     */
-    public static void unmountAll() {
-        WorkbenchMountTable.unmountAll();
-    }
-
-    private static final Comparator<AbstractContentProviderFactory> DESC_PRIO =
-            Comparator.comparingInt(AbstractContentProviderFactory::getSortPriority).reversed();
-
-    /**
-     * Returns a list of content providers that could be added (that is that
-     * allow multiple instances or are not yet mounted). The list contains the
-     * factory objects. Their toString method should return a useful name.
-     *
-     * @return a map of available content providers (key = name, value = ID).
-     */
-    public static List<AbstractContentProviderFactory> getAddableContentProviders() {
-        return WorkbenchMountTable.getAddableMountPointDefinitions() //
-            .stream() //
-            .map(WorkbenchMountPointType::getTypeIdentifier) //
-            // ask legacy provider factory for prio
-            .map(ExplorerMountTable::getContentProviderFactory) //
-            .sorted(DESC_PRIO) //
-            .toList();
-    }
-
-    /**
      * Returns a list of content providers that could be added (that is that
      * allow multiple instances or are not contained in a provided list). The list contains the
      * factory objects. Their toString method should return a useful name.
@@ -260,7 +134,6 @@ public final class ExplorerMountTable {
             .filter(def -> !def.isTemporaryMountPoint()) //
             // ask legacy provider factory for prio
             .map(def -> ExplorerMountTable.getContentProviderFactory(def.getTypeIdentifier())) //
-            .sorted(DESC_PRIO) //
             .toList();
     }
 
@@ -276,12 +149,34 @@ public final class ExplorerMountTable {
     }
 
     /**
-     * Retrieves the legacy content provider for the corresponding workbench mount point.
-     * @param wmp workbench mount point
-     * @return abstract content provider
+     * Retrieves the legacy content provider for the given mount point only if it is known and has been previously
+     * registered via {@link #toAbstractContentProvider(WorkbenchMountPoint)}.
+     *
+     * @param mp workbench mount point, not null.
+     * @return abstract content provider if available, an empty Optional otherwise
+     * @since 9.0
      */
-    private static AbstractContentProvider toAbstractContentProvider(final WorkbenchMountPoint wmp) {
-        return getContentProvider(wmp);
+    public static Optional<AbstractContentProvider> toAbstractContentProviderIfKnown(final WorkbenchMountPoint mp) {
+        final var fac = CONTENT_FACTORIES.get(mp.getType().getTypeIdentifier());
+        return Optional.ofNullable(fac).map(f -> mp.getProvider(AbstractContentProvider.class, () -> null));
+    }
+
+    /**
+     * Retrieves the legacy content provider for the given mount point. If there is a corresponding factory registered,
+     * it will also register the legacy content provider. It only returns an empty Optional if the factory is not
+     * registered.
+     *
+     * @param mp workbench mount point, not null.
+     * @return abstract content provider if available, an empty Optional otherwise
+     * @since 9.0
+     */
+    public static Optional<AbstractContentProvider> toAbstractContentProvider(final WorkbenchMountPoint mp) {
+        // resolve content factory and mount ID at this point, but defer creating the provider until it is needed
+        final var fac = CONTENT_FACTORIES.get(mp.getType().getTypeIdentifier());
+        // this call will also register the legacy content provider
+        // AbstractContentProvider.class here (or SpaceProviders.class on the modern side)
+        return Optional.ofNullable(fac)
+            .map(f -> mp.getProvider(AbstractContentProvider.class, () -> f.createContentProvider(mp)));
     }
 
     private static final Predicate<AbstractContentProvider> IS_NOT_REMOTE = provider -> !provider.isRemote();
@@ -298,6 +193,7 @@ public final class ExplorerMountTable {
         return WorkbenchMountTable.withMounted(mounted ->
             mounted.stream() //
                 .map(ExplorerMountTable::toAbstractContentProvider) //
+                .flatMap(Optional::stream) //
                 .filter(IS_NOT_TEMP_SPACE) //
                 .map(AbstractContentProvider::getMountID) //
                 .toList());
@@ -311,17 +207,10 @@ public final class ExplorerMountTable {
         return WorkbenchMountTable.withMounted(mounted ->
             mounted.stream() //
                 .map(ExplorerMountTable::toAbstractContentProvider) //
+                .flatMap(Optional::stream) //
                 .filter(IS_NOT_REMOTE.and(IS_NOT_TEMP_SPACE)) //
                 .map(AbstractContentProvider::getMountID) //
                 .toList());
-    }
-
-    /**
-     * @return a list of all mount IDs currently in use.
-     * @since 6.4
-     */
-    public static List<String> getAllMountedIDs() {
-        return WorkbenchMountTable.getAllMountedIDs();
     }
 
     /**
@@ -330,127 +219,35 @@ public final class ExplorerMountTable {
      * @since 6.4
      */
     public static Map<String, AbstractContentProvider> getMountedContentInclTempSpace() {
-        return WorkbenchMountTable.withMounted(mounted ->
-            mounted.stream() //
-                    .map(ExplorerMountTable::toAbstractContentProvider) //
-                    .collect(Collectors.toMap(AbstractContentProvider::getMountID, Function.identity()))
-            );
+        return WorkbenchMountTable.withMounted(mounted -> mounted.stream() //
+            .map(ExplorerMountTable::toAbstractContentProvider) //
+            .flatMap(Optional::stream) //
+            .collect(Collectors.toMap(AbstractContentProvider::getMountID, Function.identity(), (a, b) -> a,
+                LinkedHashMap::new)));
     }
 
     /**
      * @return a map with the currently mounted content providers with their mount ID (temp space is not included).
      */
     public static Map<String, AbstractContentProvider> getMountedContent() {
-        return WorkbenchMountTable.withMounted(mounted ->
-            mounted.stream() //
-                    .map(ExplorerMountTable::toAbstractContentProvider) //
-                    .filter(IS_NOT_TEMP_SPACE)
-                    .collect(Collectors.toMap(AbstractContentProvider::getMountID, Function.identity()))
-            );
+        return WorkbenchMountTable.withMounted(mounted -> mounted.stream() //
+            .map(ExplorerMountTable::toAbstractContentProvider) //
+            .flatMap(Optional::stream) //
+            .filter(IS_NOT_TEMP_SPACE) //
+            .collect(Collectors.toMap(AbstractContentProvider::getMountID, Function.identity(), (a, b) -> a,
+                LinkedHashMap::new)));
     }
 
     /**
-     * The MountPoint (containing the content provider) currently mounted with
-     * the specified ID - or null if the ID is not used as mount point.
+     * The MountPoint (containing the content provider) currently mounted with the specified ID - or an empty optional
+     * if the ID is not used as mount point or no such representation as AbstractContentProvider exists.
      *
      * @param mountID the mount point
-     * @return null, if no content is mounted with the specified ID
+     * @return that content provider or an empty optional if no such mount point exists
+     * @since 9.0
      */
-    public static MountPoint getMountPoint(final String mountID) {
-        final var mp = WorkbenchMountTable.getMountPoint(mountID);
-        if (mp == null) {
-            return null;
-        }
-        return new MountPoint(new WorkbenchMountPointDelegate(mp));
-    }
-
-    /**
-     * Internal adapter backing the legacy {@link MountPoint} representation.
-     */
-    private static final class WorkbenchMountPointDelegate implements ExplorerMountPointDelegate {
-
-        private final String m_mountID;
-        private final AbstractContentProviderFactory m_parent;
-
-        private AbstractContentProvider m_provider;
-        private Supplier<AbstractContentProvider> m_providerSupplier;
-
-        WorkbenchMountPointDelegate(final WorkbenchMountPoint mp) {
-            m_mountID = mp.getMountID();
-            m_parent = getContentProviderFactory(mp.getType().getTypeIdentifier());
-
-            final var existing = mp.getProvider(AbstractContentProvider.class);
-            if (existing.isEmpty()) {
-                // defer creating the provider until it is actually requested, if it does not yet exist
-                m_providerSupplier = () -> getContentProvider(mp);
-            } else {
-                m_provider = existing.get();
-            }
-        }
-
-        @Override
-        public AbstractContentProviderFactory getProviderFactory() {
-            return m_parent;
-        }
-
-        @Override
-        public AbstractContentProvider getProvider() {
-            if (m_provider == null) {
-                m_provider = m_providerSupplier.get();
-                m_providerSupplier = null;
-            }
-            return m_provider;
-        }
-
-        @Override
-        public String getMountID() {
-            return m_mountID;
-        }
-
-        @Override
-        public void disposeProvider() {
-            if (m_provider == null) {
-                m_providerSupplier = null;
-            } else {
-                m_provider.dispose();
-            }
-        }
-    }
-
-    /**
-     * Checks whether an instance created by the specified factory is already
-     * mounted.
-     *
-     *
-     * @param providerID the id of the provider factory
-     * @return true, if an instance created by the specified factory exists
-     *         already, false, if not.
-     */
-    public static boolean isMounted(final String providerID) {
-        return WorkbenchMountTable.withMounted(mounted ->
-            mounted.stream().anyMatch(mp -> mp.getType().getTypeIdentifier().equals(providerID))
-        );
-    }
-
-    /**
-     * Checks whether an instance created by the specified factory is already
-     * mounted and returns the mount IDs for it.
-     *
-     *
-     * @param providerID the id of the provider factory
-     * @return a list with mount IDs (or an empty list if provider is not
-     *         mounted).
-     */
-    public static List<String> getMountIDs(final String providerID) {
-        if (providerID == null || providerID.isEmpty()) {
-            throw new IllegalArgumentException("Internal error: provider ID can't be null");
-        }
-        return WorkbenchMountTable.withMounted(mounted ->
-            mounted.stream() //
-                .filter(mp -> mp.getType().getTypeIdentifier().equals(providerID)) //
-                .map(WorkbenchMountPoint::getMountID)
-                .toList()
-        );
+    public static Optional<AbstractContentProvider> getMountPoint(final String mountID) {
+        return WorkbenchMountTable.getMountPoint(mountID).flatMap(ExplorerMountTable::toAbstractContentProvider);
     }
 
     /**
@@ -585,55 +382,6 @@ public final class ExplorerMountTable {
     }
 
     /*---------------------------------------------------------------*/
-
-    /**
-     * Initializes the explorer mount table based on the preferences of the
-     * plugin's preference store.
-     *
-     * @deprecated This method is deprecated and should not be used anymore. {@link WorkbenchMountTable} is responsible
-     *            for initialization and this method has no effect.
-     * @see WorkbenchMountTable single-source of truth for mountpoint information
-     */
-    @Deprecated(since = "5.4", forRemoval = true)
-    public static void init() {
-        // no-op: WorkbenchMountTable is responsible for initialization
-    }
-
-//    private static List<MountSettings> getMountSettings() {
-//        // AP-8989 switching to IEclipsePreferences
-//
-//        IEclipsePreferences mountPointNode =
-//                InstanceScope.INSTANCE.getNode(MountSettings.getMountpointPreferenceLocation());
-//        String[] childrenNames = null;
-//        try {
-//            childrenNames = mountPointNode.childrenNames();
-//        } catch (BackingStoreException e) {
-//            LOGGER.error("Unabled to read mount point preferences: " + e.getMessage(), e);
-//        }
-//
-//        List<MountSettings> mountSettings;
-//        if (!ArrayUtils.isEmpty(childrenNames)) {
-//            mountSettings = MountSettings.loadSortedMountSettingsFromPreferenceNode();
-//        } else {
-//            IPreferenceStore pStore = ExplorerActivator.getDefault().getPreferenceStore();
-//            String mpSettings;
-//            if (ExplorerPreferenceInitializer.existsMountPreferencesXML()) {
-//                mpSettings = pStore.getString(WorkbenchConstants.P_EXPLORER_MOUNT_POINT_XML);
-//            } else {
-//                mpSettings = pStore.getString(WorkbenchConstants.P_EXPLORER_MOUNT_POINT);
-//            }
-//            if (StringUtils.isEmpty(mpSettings)) {
-//                ExplorerPreferenceInitializer.loadDefaultMountPoints();
-//                mpSettings = pStore.getDefaultString(WorkbenchConstants.P_EXPLORER_MOUNT_POINT_XML);
-//            }
-//            mountSettings = MountSettings.parseSettings(mpSettings, true);
-//            mountSettings.addAll(MountSettings.loadSortedMountSettingsFromDefaultPreferenceNode());
-//        }
-//
-//        return mountSettings;
-//    }
-
-    /*---------------------------------------------------------------*/
     /**
      * Adds a property change listener for mount changes.
      *
@@ -646,15 +394,13 @@ public final class ExplorerMountTable {
             @Override
             public void mountPointRemoved(final MountPointEvent event) {
                 final var mp = event.getMountPoint();
-                listener.propertyChange(new PropertyChangeEvent(new MountPoint(new WorkbenchMountPointDelegate(mp)),
-                    MOUNT_POINT_PROPERTY, mp.getMountID(), null));
+                listener.propertyChange(new PropertyChangeEvent(mp, MOUNT_POINT_PROPERTY, mp.getMountID(), null));
             }
 
             @Override
             public void mountPointAdded(final MountPointEvent event) {
                 final var mp = event.getMountPoint();
-                listener.propertyChange(new PropertyChangeEvent(new MountPoint(new WorkbenchMountPointDelegate(mp)),
-                    MOUNT_POINT_PROPERTY, null, mp.getMountID()));
+                listener.propertyChange(new PropertyChangeEvent(mp, MOUNT_POINT_PROPERTY, null, mp.getMountID()));
             }
         };
         CHANGE_LISTENERS.put(listener, listenerAdapter);

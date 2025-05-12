@@ -138,11 +138,12 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
         }
 
         if ((selection != null) && !selection.isEmpty()) {
-            String defaultLocalID =
+            final String defaultLocalID =
                 new LocalWorkspaceContentProviderFactory().getMountPointType().getDefaultMountID().orElseThrow();
 
             Map<AbstractContentProvider, List<AbstractExplorerFileStore>> providerMap =
                 DragAndDropUtils.getProviderMap(selection);
+            final AbstractContentProvider provider = ExplorerMountTable.getMountPoint(defaultLocalID).orElse(null);
             if (providerMap != null) {
                 AbstractExplorerFileStore firstSelectedItem = providerMap.values().iterator().next().get(0);
                 // use a different default selection if:
@@ -151,9 +152,8 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                 if (!validMountPointList.contains(firstSelectedItem.getMountID())
                     || (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote())) {
                     // can't create workflow on the selected item (it is remote)
-                    if (ExplorerMountTable.getMountPoint(defaultLocalID) != null) {
-                        m_initialSelection =
-                            ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getRootStore();
+                    if (provider != null) {
+                        m_initialSelection = provider.getRootStore();
                     } else {
                         // find some local content provider to use as a fallback
                         Optional<AbstractContentProvider> defaultLocalContentProvider = ExplorerMountTable
@@ -167,7 +167,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                     m_initialSelection = firstSelectedItem.getParent();
                 }
             } else {
-                m_initialSelection = ExplorerMountTable.getMountPoint(defaultLocalID).getProvider().getRootStore();
+                m_initialSelection = provider.getRootStore();
             }
         }
     }

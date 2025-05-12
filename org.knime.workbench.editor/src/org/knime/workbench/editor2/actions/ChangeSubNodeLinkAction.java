@@ -160,7 +160,7 @@ public class ChangeSubNodeLinkAction extends AbstractNodeAction {
      */
     static boolean isAbsoluteUrlOnHub(final URI uri) {
         return uri != null && KnimeUrlType.getType(uri).orElse(null) == KnimeUrlType.MOUNTPOINT_ABSOLUTE
-                && Optional.ofNullable(WorkbenchMountTable.getMountPoint(uri.getAuthority())) //
+                && WorkbenchMountTable.getMountPoint(uri.getAuthority()) //
                 .map(WorkbenchMountPoint::getType) //
                 .map(WorkbenchMountPointType::getTypeIdentifier) //
                 .filter(id -> id.endsWith("_hub") || id.equals("com.knime.explorer.server.examples")) //

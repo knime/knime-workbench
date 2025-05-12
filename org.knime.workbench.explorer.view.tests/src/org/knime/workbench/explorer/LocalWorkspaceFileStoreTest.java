@@ -53,7 +53,6 @@ import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.
 import static org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore.isMetaNodeTemplate;
 
 import java.security.NoSuchAlgorithmException;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import org.eclipse.core.runtime.CoreException;
@@ -69,11 +68,9 @@ import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.workbench.WorkbenchConstants;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountException;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
-import org.knime.core.workbench.preferences.MountSettings;
+import org.knime.core.workbench.mountpoint.contribution.local.LocalWorkspaceMountPointState;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider;
-import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
  * Tests some method implementations of {@link LocalExplorerFileStore}.
@@ -93,10 +90,10 @@ public class LocalWorkspaceFileStoreTest {
      */
     @Before
     public void setup() throws WorkbenchMountException {
-        final var localMountPoint = WorkbenchMountTable.mount( //
-            new MountSettings("LOCAL", LocalWorkspaceContentProviderFactory.ID, "LOCAL", true, 0, Map.of()));
+        final var localMountPoint =
+                WorkbenchMountTable.mount(LocalWorkspaceMountPointState.TYPE.getDefaultSettings().orElseThrow());
         LocalWorkspaceContentProvider localWorkspace =
-                (LocalWorkspaceContentProvider)localMountPoint.getProvider(AbstractContentProvider.class).orElseThrow();
+            (LocalWorkspaceContentProvider)ExplorerMountTable.toAbstractContentProvider(localMountPoint).orElseThrow();
         m_localExplorerRoot = (LocalExplorerFileStore)localWorkspace.getRootStore();
     }
 

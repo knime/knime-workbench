@@ -46,7 +46,6 @@ package org.knime.workbench.explorer.view;
 
 import org.knime.core.node.util.CheckUtils;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 
 /**
@@ -131,11 +130,9 @@ public final class ContentObject implements IFileStoreProvider{
             return null;
         }
         String id = file.getMountID();
-        MountPoint mp = ExplorerMountTable.getMountPoint(id);
-        if (mp == null) {
-            return null;
-        }
-        return new ContentObject(mp.getProvider(), file);
+        return ExplorerMountTable.getMountPoint(id) //
+                .map(mp -> new ContentObject(mp, file)) //
+                .orElse(null);
     }
 
     /**

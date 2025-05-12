@@ -49,8 +49,9 @@
 package org.knime.workbench.explorer.serverinfo;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.ui.util.IRegisteredServerInfoService;
 
@@ -63,10 +64,13 @@ public final class RegisteredServerInfoService implements IRegisteredServerInfoS
 
     @Override
     public List<ServerAndExecutorVersions> getServerAndVersionInfos() {
-        return ExplorerMountTable.getAllMountedIDs().stream()
-            .map(id -> ExplorerMountTable.getMountPoint(id).getProvider())
-            .flatMap(provider -> provider.getServerAndExecutorVersions().stream())
-            .collect(Collectors.toList());
+        return WorkbenchMountTable.getAllMountedIDs().stream() //
+            .map(WorkbenchMountTable::getMountPoint) //
+            .flatMap(Optional::stream) //
+            .map(ExplorerMountTable::toAbstractContentProvider) //
+            .flatMap(Optional::stream) //
+            .flatMap(provider -> provider.getServerAndExecutorVersions().stream()) //
+            .toList();
     }
 
 }

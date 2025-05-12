@@ -117,6 +117,11 @@ public interface PreferenceConstants {
     @Deprecated
     public static final String P_META_NODE_LINK_UPDATE_ON_LOAD = "knime.metanode.updateOnLoad";
 
+    /** Pref constant to link the original meta node to a newly
+     * defined template. */
+    public static final String P_EXPLORER_LINK_ON_NEW_TEMPLATE =
+        "knime.explorer.link_on_new_template";
+
     /** Pref constant whether to show grid in workflow editor (boolean). */
     public static final String P_GRID_SHOW = "knime.showgrid";
 

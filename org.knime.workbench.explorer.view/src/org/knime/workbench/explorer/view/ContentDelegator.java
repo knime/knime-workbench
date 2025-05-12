@@ -56,10 +56,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -79,13 +78,14 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
+import org.knime.core.node.util.CheckUtils;
 import org.knime.core.util.ThreadUtils;
 import org.knime.core.workbench.WorkbenchConstants;
-import org.knime.core.workbench.preferences.MountPointsPreferenceInitializer;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
+import org.knime.core.workbench.preferences.MountPointsPreferencesUtil;
 import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -105,7 +105,7 @@ public class ContentDelegator extends LabelProvider
      * The property for changes in the content IPropertyChangeListener can
      * register for.
      */
-    public static final String CONTENT_CHANGED = "CONTENT_CHANGED";
+    static final String CONTENT_CHANGED = "CONTENT_CHANGED";
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(ContentDelegator.class);
 
@@ -122,7 +122,7 @@ public class ContentDelegator extends LabelProvider
     /**
      * All currently visible providers.
      */
-    private final HashMap<String, MountPoint> m_provider;
+    private final HashMap<String, AbstractContentProvider> m_providerMap;
 
     private final boolean m_updateProvSettings;
 
@@ -144,7 +144,7 @@ public class ContentDelegator extends LabelProvider
      * @since 8.5
      */
     public ContentDelegator(final boolean updateProvSettings) {
-        m_provider = new LinkedHashMap<>();
+        m_providerMap = new LinkedHashMap<>();
         m_changeListener = new CopyOnWriteArrayList<>();
         m_updateProvSettings = updateProvSettings;
         ExplorerMountTable.addPropertyChangeListener(this);
@@ -153,35 +153,29 @@ public class ContentDelegator extends LabelProvider
     /**
      * Adds the specified content provider to the explorer.
      *
-     * @param mountPoint the mount point to add
+     * @param provider the mount point to add
+     * @since 9.0
      */
-    public void addMountPoint(final MountPoint mountPoint) {
-        if (mountPoint == null) {
-            throw new NullPointerException("Mount point can't be null");
-        }
-        m_provider.put(mountPoint.getMountID(), mountPoint);
-        mountPoint.getProvider().addListener(this);
-        notifyListeners(new PropertyChangeEvent(mountPoint, CONTENT_CHANGED,
-                null, mountPoint.getMountID()));
+    public void addMountPoint(final AbstractContentProvider provider) {
+        CheckUtils.checkArgumentNotNull(provider, "Mount point can't be null");
+        m_providerMap.put(provider.getMountID(), provider);
+        provider.addListener(this);
+        notifyListeners(new PropertyChangeEvent(provider, CONTENT_CHANGED, null, provider.getMountID()));
     }
 
     /**
      * @return a set with the ids of the currently shown mount points
      */
     public Set<String> getMountedIds() {
-        return new LinkedHashSet<>(m_provider.keySet());
+        return new LinkedHashSet<>(m_providerMap.keySet());
     }
 
     /**
      * Clears the view content.
      */
-    public void removeAllMountPoints() {
-        for (MountPoint mountPoint : m_provider.values()) {
-            final AbstractContentProvider provider = mountPoint.getProvider();
-            provider.removeListener(this);
-            // don't dispose provider (owned by the mount table)
-        }
-        m_provider.clear();
+    private void removeAllMountPoints() {
+        m_providerMap.values().forEach(provider -> provider.removeListener(ContentDelegator.this));
+        m_providerMap.clear();
     }
 
     @Override
@@ -198,9 +192,7 @@ public class ContentDelegator extends LabelProvider
      * @return a list of providers currently visible in this view
      */
     public Collection<AbstractContentProvider> getVisibleContentProvider() {
-        return m_provider.values().stream() //
-                .map(MountPoint::getProvider) //
-                .collect(Collectors.toCollection(ArrayList::new));
+        return new ArrayList<>(m_providerMap.values());
     }
 
     /**
@@ -286,7 +278,7 @@ public class ContentDelegator extends LabelProvider
     public boolean hasChildren(final Object element) {
         if (element == this) {
             // content providers are the first level children
-            return !m_provider.isEmpty();
+            return !m_providerMap.isEmpty();
         }
         if (element instanceof AbstractContentProvider prov) {
             // content providers are the first level children
@@ -313,14 +305,15 @@ public class ContentDelegator extends LabelProvider
             return null;
         }
         String id = file.getMountID();
-        MountPoint mp = ExplorerMountTable.getMountPoint(id);
-        if (mp == null) {
+        Optional<AbstractContentProvider> providerOptional = ExplorerMountTable.getMountPoint(id);
+        if (providerOptional.isEmpty()) {
             return null;
         }
+        final AbstractContentProvider provider = providerOptional.get();
         if (file.getFullName().equals("/") || file.getParent() == null) {
-            return mp.getProvider();
+            return provider;
         } else {
-            return new ContentObject(mp.getProvider(), file);
+            return new ContentObject(provider, file);
         }
     }
 
@@ -333,8 +326,8 @@ public class ContentDelegator extends LabelProvider
      *         passed mount id.
      */
     public static AbstractContentProvider getTreeObjectFor(final String mountID) {
-        MountPoint mp = ExplorerMountTable.getMountPoint(mountID);
-        return mp.getProvider();
+        return ExplorerMountTable.getMountPoint(mountID)
+            .orElseThrow(() -> new IllegalArgumentException("Mount point with id " + mountID + " not found"));
     }
 
     /**
@@ -426,7 +419,7 @@ public class ContentDelegator extends LabelProvider
             return toString();
         }
         if (obj instanceof AbstractContentProvider acp) {
-            return getMountID(acp) + " (" + acp.toString() + ")";
+            return acp.getMountID() + " (" + acp.toString() + ")";
         }
         if (obj instanceof ContentObject content) {
             return content.getProvider().getText(content.getObject());
@@ -434,15 +427,6 @@ public class ContentDelegator extends LabelProvider
         // all children should be of that type!
         logUnexpectedObject(obj);
         return null;
-    }
-
-    private String getMountID(final AbstractContentProvider p) {
-        for (Entry<String, MountPoint> mp : m_provider.entrySet()) {
-            if (mp.getValue().getProvider() == p) {
-                return mp.getKey();
-            }
-        }
-        return "<?>";
     }
 
     /*
@@ -481,8 +465,7 @@ public class ContentDelegator extends LabelProvider
             m_pre29Storage = storage.getString(KEY);
             ignoreMemento = Boolean.TRUE.equals(storage.getBoolean(IGNORE_MEMENTO));
         }
-        if (ignoreMemento || MountPointsPreferenceInitializer.existMountPointPreferenceNodes()
-                || MountPointsPreferenceInitializer.existsMountPreferencesXML()) {
+        if (ignoreMemento || MountPointsPreferencesUtil.existMountPointPreferenceNodes()) {
             restoreStateFromPreferences();
         } else {
             createMountPointXMLPreferences();
@@ -499,11 +482,15 @@ public class ContentDelegator extends LabelProvider
             }
         }
     }
+    /**
+     * Preference constant for mount points for the Explorer.
+     */
+    private static final String P_EXPLORER_MOUNT_POINT = "knime.explorer.mountpoint"; // NOSONAR (deprecation)
 
     private static void createMountPointXMLPreferences() {
         String prefKey = WorkbenchConstants.P_EXPLORER_MOUNT_POINT_XML;
         IPreferenceStore prefStore = ExplorerActivator.getDefault().getPreferenceStore();
-        String pre29PrefString = prefStore.getString(WorkbenchConstants.P_EXPLORER_MOUNT_POINT);
+        String pre29PrefString = prefStore.getString(P_EXPLORER_MOUNT_POINT);
         if (pre29PrefString != null && !pre29PrefString.isEmpty()) {
             prefStore.setValue(prefKey, pre29PrefString);
         } else {
@@ -549,13 +536,14 @@ public class ContentDelegator extends LabelProvider
         }
     }
 
-    private void tryAddMountPoint(final String mountID) {
-        final MountPoint mp = ExplorerMountTable.getMountPoint(mountID);
-        if (mp != null) {
-            addMountPoint(mp);
-        } else {
+    private boolean tryAddMountPoint(final String mountID) {
+        final Optional<AbstractContentProvider> contentProviderOptional = ExplorerMountTable.getMountPoint(mountID);
+        if (contentProviderOptional.isEmpty()) {
             LOGGER.info("Can't restore mount point to display: " + mountID);
+            return false;
         }
+        addMountPoint(contentProviderOptional.get());
+        return true;
     }
 
     private static boolean hasLoggedBugSRV715;
@@ -564,11 +552,11 @@ public class ContentDelegator extends LabelProvider
     @Override
     public void propertyChange(final PropertyChangeEvent event) {
         if (ExplorerMountTable.MOUNT_POINT_PROPERTY.equals(event.getProperty())) {
-            MountPoint mp = (MountPoint)event.getSource();
+            WorkbenchMountPoint mp = (WorkbenchMountPoint)event.getSource();
             if (event.getNewValue() == null) {
                 // mount point was removed
-                mp.getProvider().removeListener(this);
-                boolean removed = m_provider.remove(mp.getMountID()) != null;
+                ExplorerMountTable.toAbstractContentProviderIfKnown(mp).ifPresent(c -> c.removeListener(this));
+                boolean removed = m_providerMap.remove(mp.getMountID()) != null;
                 if (removed) {
                     notifyListeners(new PropertyChangeEvent(mp,
                             CONTENT_CHANGED, mp.getMountID(), null));
@@ -585,8 +573,9 @@ public class ContentDelegator extends LabelProvider
                         + "\" from view because it was deleted in the " + "preferences.");
                 }
             } else {
-                tryAddMountPoint(((MountPoint)event.getSource()).getMountID());
-                LOGGER.debug("Added mount point with id \"" + mp.getMountID() + ".");
+                if (tryAddMountPoint(((WorkbenchMountPoint)event.getSource()).getMountID())) {
+                    LOGGER.debug("Added mount point with id \"" + mp.getMountID() + ".");
+                }
             }
         }
     }

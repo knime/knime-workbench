@@ -1,6 +1,5 @@
 /*
  * ------------------------------------------------------------------------
- *
  *  Copyright by KNIME AG, Zurich, Switzerland
  *  Website: http://www.knime.com; Email: contact@knime.com
  *
@@ -41,62 +40,35 @@
  *  propagated with or for interoperation with KNIME.  The owner of a Node
  *  may freely choose the license terms applicable to such Node, including
  *  when such Node is propagated with or for interoperation with KNIME.
- * ---------------------------------------------------------------------
- *
- * History
- *   08.05.2020 (thor): created
+ * ------------------------------------------------------------------------
  */
-package org.knime.workbench.explorer;
+package org.knime.workbench.explorer.view.preferences;
 
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Text;
-import org.knime.core.workbench.WorkbenchActivator;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
-import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
+import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
+import org.eclipse.jface.dialogs.MessageDialogWithToggle;
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.knime.workbench.explorer.ExplorerActivator;
+import org.knime.workbench.ui.preferences.PreferenceConstants;
 
 /**
- * Content provider factory for testcases.
- *
- * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
+ * Preference initializer for the KNIME Explorer (some prompts to be shown or not by default).
  */
-public class TestContentProviderFactory extends AbstractContentProviderFactory {
-
-    static final String PROVIDER_ID = "test-provider";
-
-    private static final WorkbenchMountPointType TYPE =
-            WorkbenchActivator.getInstance().getMountPointTypeOrFail(PROVIDER_ID);
+public final class ExplorerPreferenceInitializer extends AbstractPreferenceInitializer {
 
     @Override
-    public WorkbenchMountPointType getMountPointType() {
-        return TYPE;
+    public void initializeDefaultPreferences() {
+
+        IPreferenceStore prefStore =
+                ExplorerActivator.getDefault().getPreferenceStore();
+
+        // Set the default behavior of "Do you want to link this metanode".
+        prefStore.setDefault(
+                PreferenceConstants.P_EXPLORER_LINK_ON_NEW_TEMPLATE,
+                MessageDialogWithToggle.PROMPT);
+
+        // Set the default behavior of "Should a warning dialog appear when you connect to an older server".
+        prefStore.setDefault(PreferenceConstants.P_SHOW_OLDER_SERVER_WARNING_DIALOG,
+            PreferenceConstants.P_DEFAULT_SHOW_OLDER_SERVER_WARNING_DIALOG);
     }
 
-    @Override
-    public String toString() {
-        return "Test provider";
-    }
-
-    @Override
-    public Image getImage() {
-        return null;
-    }
-
-    @Override
-    public AbstractContentProvider createContentProvider(final WorkbenchMountPoint mountPoint) {
-        return new TestContentProvider(this, mountPoint);
-    }
-
-    @Override
-    public boolean isAdditionalInformationNeeded() {
-        return false;
-    }
-
-    @Override
-    public AdditionalInformationPanel createAdditionalInformationPanel(final Composite parent,
-        final Text mountIDInput) {
-        return null;
-    }
 }
