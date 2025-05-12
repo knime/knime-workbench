@@ -70,8 +70,8 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ContentObject;
@@ -314,7 +314,7 @@ public class SpaceResourceSelectionDialog extends Dialog {
     protected void createTreeControl(final Composite parent) {
         m_treeInput = new ContentDelegator(false);
         for (String id : m_mountIDs) {
-            MountPoint mp = ExplorerMountTable.getMountPoint(id);
+            WorkbenchMountPoint mp = ExplorerMountTable.getMountPoint(id);
             if (mp != null) {
                 m_treeInput.addMountPoint(mp);
             }

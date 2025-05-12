@@ -64,13 +64,14 @@ import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.CoreConstants;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.ExplorerURLStreamHandler;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 import org.knime.workbench.explorer.view.ContentDelegator;
 import org.knime.workbench.explorer.view.ExplorerJob;
 import org.knime.workbench.explorer.view.ExplorerView;
@@ -166,7 +167,7 @@ public class OpenKnimeUrlAction extends Action {
                                 "Opening of relative KNIME URLs is not supported!", null));
                             return;
                         }
-                        MountPoint mountPoint = ExplorerMountTable.getMountPoint(host);
+                        final WorkbenchMountPoint mountPoint = ExplorerMountTable.getMountPoint(host);
                         if (mountPoint == null) {
                             LOGGER.error("Failed to open URL. Mount point does not exist: " + host);
                             returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID, 1,
@@ -185,9 +186,10 @@ public class OpenKnimeUrlAction extends Action {
                         if (part instanceof ExplorerView) {
                             ExplorerView view = (ExplorerView)part;
                             view.setNextSelection(fileStore);
-                            if (mountPoint.getProvider().isRemote()) {
+                            AbstractContentProvider provider = ExplorerMountTable.toAbstractContentProvider(mountPoint);
+                            if (provider.isRemote()) {
                                 try {
-                                    mountPoint.getProvider().connectAndWaitForRepository(30 * 1000);
+                                    provider.connectAndWaitForRepository(30 * 1000);
                                 } catch (TimeoutException e) {
                                     LOGGER.error("Failed to open item denoted by '" + m_url + "': " + e.getMessage());
                                     returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID,
@@ -207,7 +209,7 @@ public class OpenKnimeUrlAction extends Action {
                                 view.getViewer().setSelection(new StructuredSelection(object));
                             }
                             if (AbstractExplorerFileStore.isWorkflow(fileStore)) {
-                                if (mountPoint.getProvider().isRemote()) {
+                                if (provider.isRemote()) {
                                     if (fileStore instanceof RemoteExplorerFileStore) {
                                         List<RemoteExplorerFileStore> downloadList =
                                             new ArrayList<RemoteExplorerFileStore>(1);

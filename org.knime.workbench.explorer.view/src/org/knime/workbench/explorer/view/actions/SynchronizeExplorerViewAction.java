@@ -61,10 +61,10 @@ import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -163,14 +163,15 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         File wfDir = wfFileRef.getFile();
 
         for (String id : mountedIds) {
-            MountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
-            AbstractExplorerFileStore root = mountPoint.getProvider().getRootStore();
+            final WorkbenchMountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
+            final AbstractContentProvider provider = ExplorerMountTable.toAbstractContentProvider(mountPoint);
+            final AbstractExplorerFileStore root = provider.getRootStore();
             try {
                 File localRoot = root.toLocalFile();
                 if (localRoot != null) {
                     String relPath = AbstractContentProvider.getRelativePath(wfDir, localRoot);
                     if (relPath != null) {
-                        return mountPoint.getProvider().getFileStore(relPath);
+                        return provider.getFileStore(relPath);
                     }
                 }
             } catch (CoreException e) {

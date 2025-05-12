@@ -242,12 +242,8 @@ implements ITreeContentProvider, Comparable<AbstractContentProvider>, IColorProv
                 changedChild));
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public abstract void dispose();
-
     /**
      * @return displayed name of this instance. {@inheritDoc}
      */

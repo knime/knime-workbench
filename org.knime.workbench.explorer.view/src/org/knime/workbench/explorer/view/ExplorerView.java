@@ -835,8 +835,9 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
             Display.getCurrent().asyncExec(new Runnable() {
                 @Override
                 public void run() {
-                    Arrays.stream(finalVar).map(i -> ExplorerMountTable.getMountPoint(i))
-                    .filter(Objects::nonNull).map(mp -> mp.getProvider())
+                    Arrays.stream(finalVar).map(ExplorerMountTable::getMountPoint)
+                    .filter(Objects::nonNull) //
+                    .map(ExplorerMountTable::toAbstractContentProvider) //
                     .filter(mp -> !mp.isRemote()).forEach(s -> m_viewer.expandToLevel(s, 1));
                 }
             });

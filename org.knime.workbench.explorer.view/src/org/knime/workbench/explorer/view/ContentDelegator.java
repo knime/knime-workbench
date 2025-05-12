@@ -81,11 +81,11 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.ThreadUtils;
 import org.knime.core.workbench.WorkbenchConstants;
+import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.core.workbench.preferences.MountPointsPreferenceInitializer;
 import org.knime.core.workbench.preferences.MountSettings;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.MountPoint;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 
@@ -122,7 +122,7 @@ public class ContentDelegator extends LabelProvider
     /**
      * All currently visible providers.
      */
-    private final HashMap<String, MountPoint> m_provider;
+    private final HashMap<String, WorkbenchMountPoint> m_provider;
 
     private final boolean m_updateProvSettings;
 
@@ -154,13 +154,15 @@ public class ContentDelegator extends LabelProvider
      * Adds the specified content provider to the explorer.
      *
      * @param mountPoint the mount point to add
+     * @since 9.0
      */
-    public void addMountPoint(final MountPoint mountPoint) {
+    public void addMountPoint(final WorkbenchMountPoint mountPoint) {
         if (mountPoint == null) {
             throw new NullPointerException("Mount point can't be null");
         }
         m_provider.put(mountPoint.getMountID(), mountPoint);
-        mountPoint.getProvider().addListener(this);
+        // adapter is cached, so ok to register listener with it
+        ExplorerMountTable.toAbstractContentProvider(mountPoint).addListener(this);
         notifyListeners(new PropertyChangeEvent(mountPoint, CONTENT_CHANGED,
                 null, mountPoint.getMountID()));
     }
@@ -176,8 +178,8 @@ public class ContentDelegator extends LabelProvider
      * Clears the view content.
      */
     public void removeAllMountPoints() {
-        for (MountPoint mountPoint : m_provider.values()) {
-            final AbstractContentProvider provider = mountPoint.getProvider();
+        for (WorkbenchMountPoint mountPoint : m_provider.values()) {
+            final AbstractContentProvider provider = ExplorerMountTable.toAbstractContentProvider(mountPoint);
             provider.removeListener(this);
             // don't dispose provider (owned by the mount table)
         }
@@ -199,7 +201,7 @@ public class ContentDelegator extends LabelProvider
      */
     public Collection<AbstractContentProvider> getVisibleContentProvider() {
         return m_provider.values().stream() //
-                .map(MountPoint::getProvider) //
+                .map(ExplorerMountTable::toAbstractContentProvider) //
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
@@ -313,14 +315,15 @@ public class ContentDelegator extends LabelProvider
             return null;
         }
         String id = file.getMountID();
-        MountPoint mp = ExplorerMountTable.getMountPoint(id);
+        WorkbenchMountPoint mp = ExplorerMountTable.getMountPoint(id);
         if (mp == null) {
             return null;
         }
+        final AbstractContentProvider adapter = ExplorerMountTable.toAbstractContentProvider(mp);
         if (file.getFullName().equals("/") || file.getParent() == null) {
-            return mp.getProvider();
+            return adapter;
         } else {
-            return new ContentObject(mp.getProvider(), file);
+            return new ContentObject(adapter, file);
         }
     }
 
@@ -333,8 +336,8 @@ public class ContentDelegator extends LabelProvider
      *         passed mount id.
      */
     public static AbstractContentProvider getTreeObjectFor(final String mountID) {
-        MountPoint mp = ExplorerMountTable.getMountPoint(mountID);
-        return mp.getProvider();
+        WorkbenchMountPoint mp = ExplorerMountTable.getMountPoint(mountID);
+        return ExplorerMountTable.toAbstractContentProvider(mp);
     }
 
     /**
@@ -437,8 +440,8 @@ public class ContentDelegator extends LabelProvider
     }
 
     private String getMountID(final AbstractContentProvider p) {
-        for (Entry<String, MountPoint> mp : m_provider.entrySet()) {
-            if (mp.getValue().getProvider() == p) {
+        for (Entry<String, WorkbenchMountPoint> mp : m_provider.entrySet()) {
+            if (ExplorerMountTable.toAbstractContentProvider(mp.getValue()) == p) {
                 return mp.getKey();
             }
         }
@@ -550,7 +553,7 @@ public class ContentDelegator extends LabelProvider
     }
 
     private void tryAddMountPoint(final String mountID) {
-        final MountPoint mp = ExplorerMountTable.getMountPoint(mountID);
+        final WorkbenchMountPoint mp = ExplorerMountTable.getMountPoint(mountID);
         if (mp != null) {
             addMountPoint(mp);
         } else {
@@ -564,10 +567,10 @@ public class ContentDelegator extends LabelProvider
     @Override
     public void propertyChange(final PropertyChangeEvent event) {
         if (ExplorerMountTable.MOUNT_POINT_PROPERTY.equals(event.getProperty())) {
-            MountPoint mp = (MountPoint)event.getSource();
+            WorkbenchMountPoint mp = (WorkbenchMountPoint)event.getSource();
             if (event.getNewValue() == null) {
                 // mount point was removed
-                mp.getProvider().removeListener(this);
+                ExplorerMountTable.toAbstractContentProvider(mp).removeListener(this);
                 boolean removed = m_provider.remove(mp.getMountID()) != null;
                 if (removed) {
                     notifyListeners(new PropertyChangeEvent(mp,
@@ -585,7 +588,7 @@ public class ContentDelegator extends LabelProvider
                         + "\" from view because it was deleted in the " + "preferences.");
                 }
             } else {
-                tryAddMountPoint(((MountPoint)event.getSource()).getMountID());
+                tryAddMountPoint(((WorkbenchMountPoint)event.getSource()).getMountID());
                 LOGGER.debug("Added mount point with id \"" + mp.getMountID() + ".");
             }
         }

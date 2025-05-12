@@ -126,7 +126,7 @@ public class ExplorerFileSystem extends FileSystem {
         }
 
         String mountID = getIDfromURI(resolvedUri);
-        var mountPoint = ExplorerMountTable.getMountPoint(mountID);
+        final var mountPoint = ExplorerMountTable.getMountPoint(mountID);
         if (mountPoint == null) {
             return null;
         }
@@ -136,7 +136,7 @@ public class ExplorerFileSystem extends FileSystem {
                 String combinedPath = relPath.get() + resolvedUri.getPath();
                 try {
                     URI newUri = new URI(resolvedUri.getScheme(), mountID, combinedPath, null).normalize();
-                    return mountPoint.getProvider().getFileStore(newUri);
+                    return ExplorerMountTable.toAbstractContentProvider(mountPoint).getFileStore(newUri);
                 } catch (URISyntaxException ex) {
                     NodeLogger.getLogger(getClass())
                         .error("Could not create absolute URI from relative URI '" + resolvedUri + "': "
@@ -144,7 +144,7 @@ public class ExplorerFileSystem extends FileSystem {
                 }
             }
         }
-        return mountPoint.getProvider().getFileStore(resolvedUri);
+        return ExplorerMountTable.toAbstractContentProvider(mountPoint).getFileStore(resolvedUri);
     }
 
     /**

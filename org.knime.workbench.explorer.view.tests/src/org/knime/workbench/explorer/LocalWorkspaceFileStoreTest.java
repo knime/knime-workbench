@@ -71,7 +71,6 @@ import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
 import org.knime.core.workbench.mountpoint.contribution.local.LocalWorkspaceMountPointState;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProvider;
-import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
  * Tests some method implementations of {@link LocalExplorerFileStore}.
@@ -94,7 +93,7 @@ public class LocalWorkspaceFileStoreTest {
         final var localMountPoint =
                 WorkbenchMountTable.mount(LocalWorkspaceMountPointState.TYPE.getDefaultSettings().orElseThrow());
         LocalWorkspaceContentProvider localWorkspace =
-                (LocalWorkspaceContentProvider)localMountPoint.getProvider(AbstractContentProvider.class).orElseThrow();
+                (LocalWorkspaceContentProvider)ExplorerMountTable.toAbstractContentProvider(localMountPoint);
         m_localExplorerRoot = (LocalExplorerFileStore)localWorkspace.getRootStore();
     }
 
