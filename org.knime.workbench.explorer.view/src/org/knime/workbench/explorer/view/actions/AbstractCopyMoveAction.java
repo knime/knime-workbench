@@ -194,7 +194,7 @@ public abstract class AbstractCopyMoveAction extends ExplorerAction {
         List<String> mountIDs = new ArrayList<String>();
         for (String mountID : getView().getMountedIds()) {
             AbstractContentProvider acp =
-                ExplorerMountTable.toAbstractContentProvider(ExplorerMountTable.getMountPoint(mountID));
+                ExplorerMountTable.toAbstractContentProviderOrFail(ExplorerMountTable.getMountPoint(mountID));
             /* Add servers only if a single file is selected and if the user
              * can write to it (e.g. is authenticated and the server is not
              * read-only. */

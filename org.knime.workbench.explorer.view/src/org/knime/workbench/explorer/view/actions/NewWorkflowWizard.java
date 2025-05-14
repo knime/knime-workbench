@@ -78,7 +78,6 @@ import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.localworkspace.LocalWorkspaceContentProviderFactory;
@@ -144,7 +143,9 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
 
             Map<AbstractContentProvider, List<AbstractExplorerFileStore>> providerMap =
                 DragAndDropUtils.getProviderMap(selection);
-            final WorkbenchMountPoint mountPoint = ExplorerMountTable.getMountPoint(defaultLocalID);
+            final AbstractContentProvider provider =
+                Optional.ofNullable(ExplorerMountTable.getMountPoint(defaultLocalID))
+                    .flatMap(ExplorerMountTable::toAbstractContentProvider).orElse(null);
             if (providerMap != null) {
                 AbstractExplorerFileStore firstSelectedItem = providerMap.values().iterator().next().get(0);
                 // use a different default selection if:
@@ -153,8 +154,8 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                 if (!validMountPointList.contains(firstSelectedItem.getMountID())
                     || (isWorkflowCreated() && firstSelectedItem.getContentProvider().isRemote())) {
                     // can't create workflow on the selected item (it is remote)
-                    if (mountPoint != null) {
-                        m_initialSelection = ExplorerMountTable.toAbstractContentProvider(mountPoint).getRootStore();
+                    if (provider != null) {
+                        m_initialSelection = provider.getRootStore();
                     } else {
                         // find some local content provider to use as a fallback
                         Optional<AbstractContentProvider> defaultLocalContentProvider = ExplorerMountTable
@@ -168,7 +169,7 @@ public class NewWorkflowWizard extends Wizard implements INewWizard {
                     m_initialSelection = firstSelectedItem.getParent();
                 }
             } else {
-                m_initialSelection = ExplorerMountTable.toAbstractContentProvider(mountPoint).getRootStore();
+                m_initialSelection = provider.getRootStore();
             }
         }
     }

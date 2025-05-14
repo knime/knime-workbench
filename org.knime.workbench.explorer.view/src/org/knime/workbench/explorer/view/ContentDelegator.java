@@ -57,6 +57,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
@@ -162,7 +163,10 @@ public class ContentDelegator extends LabelProvider
         }
         m_provider.put(mountPoint.getMountID(), mountPoint);
         // adapter is cached, so ok to register listener with it
-        ExplorerMountTable.toAbstractContentProvider(mountPoint).addListener(this);
+        ExplorerMountTable.toAbstractContentProvider(mountPoint) //
+            .orElseThrow(() -> new IllegalStateException("No content provider for mount point %s, type %s"
+                .formatted(mountPoint.getMountID(), mountPoint.getType().getTypeIdentifier())))
+            .addListener(this);
         notifyListeners(new PropertyChangeEvent(mountPoint, CONTENT_CHANGED,
                 null, mountPoint.getMountID()));
     }
@@ -179,8 +183,7 @@ public class ContentDelegator extends LabelProvider
      */
     public void removeAllMountPoints() {
         for (WorkbenchMountPoint mountPoint : m_provider.values()) {
-            final AbstractContentProvider provider = ExplorerMountTable.toAbstractContentProvider(mountPoint);
-            provider.removeListener(this);
+            ExplorerMountTable.toAbstractContentProvider(mountPoint).ifPresent(p -> p.removeListener(this));
             // don't dispose provider (owned by the mount table)
         }
         m_provider.clear();
@@ -202,6 +205,7 @@ public class ContentDelegator extends LabelProvider
     public Collection<AbstractContentProvider> getVisibleContentProvider() {
         return m_provider.values().stream() //
                 .map(ExplorerMountTable::toAbstractContentProvider) //
+                .flatMap(Optional::stream) //
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
@@ -319,7 +323,7 @@ public class ContentDelegator extends LabelProvider
         if (mp == null) {
             return null;
         }
-        final AbstractContentProvider adapter = ExplorerMountTable.toAbstractContentProvider(mp);
+        final AbstractContentProvider adapter = ExplorerMountTable.toAbstractContentProviderOrFail(mp);
         if (file.getFullName().equals("/") || file.getParent() == null) {
             return adapter;
         } else {
@@ -337,7 +341,7 @@ public class ContentDelegator extends LabelProvider
      */
     public static AbstractContentProvider getTreeObjectFor(final String mountID) {
         WorkbenchMountPoint mp = ExplorerMountTable.getMountPoint(mountID);
-        return ExplorerMountTable.toAbstractContentProvider(mp);
+        return ExplorerMountTable.toAbstractContentProviderOrFail(mp);
     }
 
     /**
@@ -441,7 +445,7 @@ public class ContentDelegator extends LabelProvider
 
     private String getMountID(final AbstractContentProvider p) {
         for (Entry<String, WorkbenchMountPoint> mp : m_provider.entrySet()) {
-            if (ExplorerMountTable.toAbstractContentProvider(mp.getValue()) == p) {
+            if (ExplorerMountTable.toAbstractContentProvider(mp.getValue()).orElse(null) == p) {
                 return mp.getKey();
             }
         }
@@ -570,7 +574,7 @@ public class ContentDelegator extends LabelProvider
             WorkbenchMountPoint mp = (WorkbenchMountPoint)event.getSource();
             if (event.getNewValue() == null) {
                 // mount point was removed
-                ExplorerMountTable.toAbstractContentProvider(mp).removeListener(this);
+                ExplorerMountTable.toAbstractContentProvider(mp).ifPresent(c -> c.removeListener(this));
                 boolean removed = m_provider.remove(mp.getMountID()) != null;
                 if (removed) {
                     notifyListeners(new PropertyChangeEvent(mp,

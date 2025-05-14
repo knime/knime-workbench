@@ -49,6 +49,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -64,7 +65,6 @@ import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.ide.IDE;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.util.CoreConstants;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -167,8 +167,11 @@ public class OpenKnimeUrlAction extends Action {
                                 "Opening of relative KNIME URLs is not supported!", null));
                             return;
                         }
-                        final WorkbenchMountPoint mountPoint = ExplorerMountTable.getMountPoint(host);
-                        if (mountPoint == null) {
+                        final AbstractContentProvider provider =
+                            Optional.ofNullable(ExplorerMountTable.getMountPoint(host))
+                                .flatMap(ExplorerMountTable::toAbstractContentProvider).orElse(null);
+
+                        if (provider == null) {
                             LOGGER.error("Failed to open URL. Mount point does not exist: " + host);
                             returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID, 1,
                                 "Failed to open URL. Mount point does not exist: " + host, null));
@@ -186,7 +189,6 @@ public class OpenKnimeUrlAction extends Action {
                         if (part instanceof ExplorerView) {
                             ExplorerView view = (ExplorerView)part;
                             view.setNextSelection(fileStore);
-                            AbstractContentProvider provider = ExplorerMountTable.toAbstractContentProvider(mountPoint);
                             if (provider.isRemote()) {
                                 try {
                                     provider.connectAndWaitForRepository(30 * 1000);

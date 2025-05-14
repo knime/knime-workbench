@@ -61,7 +61,6 @@ import org.eclipse.ui.ide.FileStoreEditorInput;
 import org.knime.core.internal.ReferencedFile;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.node.workflow.WorkflowPersistor;
-import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -163,8 +162,11 @@ public class SynchronizeExplorerViewAction extends ExplorerAction {
         File wfDir = wfFileRef.getFile();
 
         for (String id : mountedIds) {
-            final WorkbenchMountPoint mountPoint = ExplorerMountTable.getMountPoint(id);
-            final AbstractContentProvider provider = ExplorerMountTable.toAbstractContentProvider(mountPoint);
+            final AbstractContentProvider provider = Optional.ofNullable(ExplorerMountTable.getMountPoint(id))
+                    .flatMap(ExplorerMountTable::toAbstractContentProvider).orElse(null);
+            if (provider == null) {
+                continue;
+            }
             final AbstractExplorerFileStore root = provider.getRootStore();
             try {
                 File localRoot = root.toLocalFile();

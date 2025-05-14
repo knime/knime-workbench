@@ -53,6 +53,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -69,7 +70,6 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.knime.core.node.NodeLogger;
-import org.knime.core.node.util.CheckUtils;
 import org.knime.core.util.FileUtil;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
@@ -115,17 +115,6 @@ public final class ExplorerMountTable {
      */
 	public static boolean isValidMountID(final String id) {
         return WorkbenchMountTable.isValidMountID(id);
-    }
-
-    private static AbstractContentProvider getContentProvider(final WorkbenchMountPoint mp) {
-        // resolve content factory and mount ID at this point, but defer creating the provider until it is needed
-        final var fac = CONTENT_FACTORIES.get(mp.getType().getTypeIdentifier());
-        CheckUtils.checkState(fac != null,
-            "Unable to provide content provider for mount point \"%s\" - no factory registered for type \"%s\"",
-            mp.getMountID(), mp.getType().getTypeIdentifier());
-        // this call will also register the legacy content provider
-        // AbstractContentProvider.class here (or SpaceProviders.class on the modern side)
-        return mp.getProvider(AbstractContentProvider.class, () -> fac.createContentProvider(mp));
     }
 
     // TODO figure out when/where to call this method
@@ -178,16 +167,32 @@ public final class ExplorerMountTable {
     }
 
     /**
-     * Retrieves the legacy content provider for the corresponding workbench mount point.
-     * @param wmp workbench mount point
-     * @return abstract content provider
+     * Retrieves the legacy content provider for the corresponding workbench mount point, if available.
+     * @param mp workbench mount point, not null.
+     * @return abstract content provider if available, an empty Optional otherwise
      * @since 9.0
      */
-    public static AbstractContentProvider toAbstractContentProvider(final WorkbenchMountPoint wmp) {
-        if (wmp == null) {
-            return null;
-        }
-        return getContentProvider(wmp);
+    public static Optional<AbstractContentProvider> toAbstractContentProvider(final WorkbenchMountPoint mp) {
+        // resolve content factory and mount ID at this point, but defer creating the provider until it is needed
+        final var fac = CONTENT_FACTORIES.get(mp.getType().getTypeIdentifier());
+        return Optional.ofNullable(fac).map(f -> {
+            // this call will also register the legacy content provider
+            // AbstractContentProvider.class here (or SpaceProviders.class on the modern side)
+            return mp.getProvider(AbstractContentProvider.class, () -> f.createContentProvider(mp));
+        });
+    }
+
+    /**
+     * Same as {@link #toAbstractContentProvider(WorkbenchMountPoint)} but failing if no mapping is available.
+     * @param mp workbench mount point
+     * @return abstract content provider
+     * @throws IllegalStateException if no mapping is available
+     * @since 9.0
+     */
+    public static AbstractContentProvider toAbstractContentProviderOrFail(final WorkbenchMountPoint mp) {
+        return toAbstractContentProvider(mp).orElseThrow(
+            () -> new IllegalStateException("Unable to provide content provider for mount point \"" + mp.getMountID()
+                + "\" - no factory registered for type \"" + mp.getType().getTypeIdentifier() + "\""));
     }
 
     private static final Predicate<AbstractContentProvider> IS_NOT_REMOTE = provider -> !provider.isRemote();
@@ -204,6 +209,7 @@ public final class ExplorerMountTable {
         return WorkbenchMountTable.withMounted(mounted ->
             mounted.stream() //
                 .map(ExplorerMountTable::toAbstractContentProvider) //
+                .flatMap(Optional::stream) //
                 .filter(IS_NOT_TEMP_SPACE) //
                 .map(AbstractContentProvider::getMountID) //
                 .toList());
@@ -217,6 +223,7 @@ public final class ExplorerMountTable {
         return WorkbenchMountTable.withMounted(mounted ->
             mounted.stream() //
                 .map(ExplorerMountTable::toAbstractContentProvider) //
+                .flatMap(Optional::stream) //
                 .filter(IS_NOT_REMOTE.and(IS_NOT_TEMP_SPACE)) //
                 .map(AbstractContentProvider::getMountID) //
                 .toList());
@@ -238,6 +245,7 @@ public final class ExplorerMountTable {
     public static Map<String, AbstractContentProvider> getMountedContentInclTempSpace() {
         return WorkbenchMountTable.withMounted(mounted -> mounted.stream() //
             .map(ExplorerMountTable::toAbstractContentProvider) //
+            .flatMap(Optional::stream) //
             .collect(Collectors.toMap(AbstractContentProvider::getMountID, Function.identity(), (a, b) -> a,
                 LinkedHashMap::new)));
     }
@@ -248,6 +256,7 @@ public final class ExplorerMountTable {
     public static Map<String, AbstractContentProvider> getMountedContent() {
         return WorkbenchMountTable.withMounted(mounted -> mounted.stream() //
             .map(ExplorerMountTable::toAbstractContentProvider) //
+            .flatMap(Optional::stream) //
             .filter(IS_NOT_TEMP_SPACE) //
             .collect(Collectors.toMap(AbstractContentProvider::getMountID, Function.identity(), (a, b) -> a,
                 LinkedHashMap::new)));

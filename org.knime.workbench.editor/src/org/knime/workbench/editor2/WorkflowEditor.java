@@ -2446,7 +2446,7 @@ public class WorkflowEditor extends GraphicalEditor implements
         List<String> selIDs = new LinkedList<>();
         for (String id : ExplorerMountTable.getAllVisibleMountIDs()) {
             AbstractContentProvider provider =
-                ExplorerMountTable.toAbstractContentProvider(ExplorerMountTable.getMountPoint(id));
+                ExplorerMountTable.toAbstractContentProviderOrFail(ExplorerMountTable.getMountPoint(id));
             if (!provider.isRemote() || (allowRemoteLocation && provider.isWritable())) {
                 selIDs.add(id);
             }

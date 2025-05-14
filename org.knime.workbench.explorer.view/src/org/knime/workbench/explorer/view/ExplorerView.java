@@ -55,6 +55,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -838,6 +839,7 @@ public class ExplorerView extends ViewPart implements WorkflowListener,
                     Arrays.stream(finalVar).map(ExplorerMountTable::getMountPoint)
                     .filter(Objects::nonNull) //
                     .map(ExplorerMountTable::toAbstractContentProvider) //
+                    .flatMap(Optional::stream) //)
                     .filter(mp -> !mp.isRemote()).forEach(s -> m_viewer.expandToLevel(s, 1));
                 }
             });

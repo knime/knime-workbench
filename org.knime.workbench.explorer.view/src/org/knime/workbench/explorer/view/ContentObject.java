@@ -44,6 +44,8 @@
  */
 package org.knime.workbench.explorer.view;
 
+import java.util.Optional;
+
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -135,7 +137,11 @@ public final class ContentObject implements IFileStoreProvider{
         if (mp == null) {
             return null;
         }
-        return new ContentObject(ExplorerMountTable.toAbstractContentProvider(mp), file);
+        final Optional<AbstractContentProvider> provider = ExplorerMountTable.toAbstractContentProvider(mp);
+        if (provider.isEmpty()) {
+            return null;
+        }
+        return new ContentObject(provider.get(), file);
     }
 
     /**

@@ -93,7 +93,7 @@ public class LocalWorkspaceFileStoreTest {
         final var localMountPoint =
                 WorkbenchMountTable.mount(LocalWorkspaceMountPointState.TYPE.getDefaultSettings().orElseThrow());
         LocalWorkspaceContentProvider localWorkspace =
-                (LocalWorkspaceContentProvider)ExplorerMountTable.toAbstractContentProvider(localMountPoint);
+                (LocalWorkspaceContentProvider)ExplorerMountTable.toAbstractContentProviderOrFail(localMountPoint);
         m_localExplorerRoot = (LocalExplorerFileStore)localWorkspace.getRootStore();
     }
 

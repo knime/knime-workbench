@@ -507,7 +507,7 @@ public abstract class AbstractExplorerFileStore extends FileStore {
         if (mountPoint == null) {
             return null;
         }
-        return ExplorerMountTable.toAbstractContentProvider(mountPoint);
+        return ExplorerMountTable.toAbstractContentProvider(mountPoint).orElse(null);
     }
 
     /* ----------- placeholder store in the tree for string messages ----- */

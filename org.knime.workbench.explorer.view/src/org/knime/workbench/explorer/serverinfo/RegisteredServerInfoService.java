@@ -49,6 +49,7 @@
 package org.knime.workbench.explorer.serverinfo;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.ui.util.IRegisteredServerInfoService;
@@ -65,6 +66,7 @@ public final class RegisteredServerInfoService implements IRegisteredServerInfoS
         return ExplorerMountTable.getAllMountedIDs().stream() //
             .map(ExplorerMountTable::getMountPoint) //
             .map(ExplorerMountTable::toAbstractContentProvider) //
+            .flatMap(Optional::stream) //
             .flatMap(provider -> provider.getServerAndExecutorVersions().stream()) //
             .toList();
     }
