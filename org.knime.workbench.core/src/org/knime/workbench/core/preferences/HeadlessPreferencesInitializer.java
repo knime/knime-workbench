@@ -52,6 +52,7 @@ import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOG_FILE_LOCATION;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_LOG_GLOBAL_IN_WF_DIR;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_MAXIMUM_THREADS;
+import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_META_NODE_LINK_FORCE_UPDATE_ON_ERROR;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_META_NODE_LINK_UPDATE_ON_LOAD;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_SEND_ANONYMOUS_STATISTICS;
 import static org.knime.workbench.core.preferences.HeadlessPreferencesConstants.P_TEMP_DIR;
@@ -108,6 +109,7 @@ public class HeadlessPreferencesInitializer extends AbstractPreferenceInitialize
         store.setDefault(P_WORKFLOW_MIGRATION_NOTIFICATION_ENABLED, true);
 
         store.setDefault(P_META_NODE_LINK_UPDATE_ON_LOAD, "prompt");
+        store.setDefault(P_META_NODE_LINK_FORCE_UPDATE_ON_ERROR, false);
     }
 
 }

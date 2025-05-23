@@ -104,4 +104,10 @@ public final class HeadlessPreferencesConstants {
 
     /** Preference constant for whether meta node links should be updated on workflow load. */
     public static final String P_META_NODE_LINK_UPDATE_ON_LOAD = "knime.metanode.updateOnLoad";
+
+    /**
+     * Preference constant for whether updates should be performed despite workflow load errors.
+     * Was introduced with AP-24087 (defaulting to false), but can be set to true to restore old behavior.
+     */
+    public static final String P_META_NODE_LINK_FORCE_UPDATE_ON_ERROR = "knime.metanode.forceUpdateOnLoadError";
 }

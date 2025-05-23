@@ -227,26 +227,36 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                 showLoadErrorDialog(result, status, message, true);
             }
 
-            callOnWorkflowEditor(e -> {
-                final List<NodeID> linkedMNs = wfm.getLinkedMetaNodes(true);
-                if (!linkedMNs.isEmpty()) {
-                    e.addAfterOpenRunnable(() -> postLoadCheckForMetaNodeUpdates(e, wfm, linkedMNs));
-                }
-                final Collection<WorkflowEditorEventListener> workflowEditorEventListeners =
-                    WorkflowEditorEventListeners.getListeners();
-                if (!workflowEditorEventListeners.isEmpty()) {
-                    e.addAfterOpenRunnable(() -> {
-                        final var event = WorkflowEditorEventListeners.createActiveWorkflowEditorEvent(e);
-                        for (final WorkflowEditorEventListener listener : workflowEditorEventListeners) {
-                            try {
-                                listener.workflowLoaded(event);
-                            } catch (final Throwable throwable) {
-                                LOGGER.error("Workflow editor listener error.", throwable);
-                            }
+            // only check for updates if the load status is OK (unless forced via preference), for example
+            // after re-loading the WF after installing missing extensions (see AP-24087)
+            final var corePrefStore = KNIMECorePlugin.getDefault().getPreferenceStore();
+            if (corePrefStore.getBoolean(HeadlessPreferencesConstants.P_META_NODE_LINK_FORCE_UPDATE_ON_ERROR)
+                || status.isOK()) {
+                callOnWorkflowEditor(e -> {
+                    final List<NodeID> linkedMNs = wfm.getLinkedMetaNodes(true);
+                    if (!linkedMNs.isEmpty()) {
+                        e.addAfterOpenRunnable(() -> postLoadCheckForMetaNodeUpdates(e, wfm, linkedMNs));
+                    }
+                });
+            } else {
+                LOGGER.warn("Skipping to check for component and metanode updates, load errors occurred.");
+            }
+
+            // always notify workflow editor event listeners (whether status is OK - or not)
+            final Collection<WorkflowEditorEventListener> workflowEditorEventListeners =
+                WorkflowEditorEventListeners.getListeners();
+            if (!workflowEditorEventListeners.isEmpty()) {
+                callOnWorkflowEditor(e -> e.addAfterOpenRunnable(() -> {
+                    final var event = WorkflowEditorEventListeners.createActiveWorkflowEditorEvent(e);
+                    for (final WorkflowEditorEventListener listener : workflowEditorEventListeners) {
+                        try {
+                            listener.workflowLoaded(event);
+                        } catch (final Throwable throwable) {
+                            LOGGER.error("Workflow editor listener error.", throwable);
                         }
-                    });
-                }
-            });
+                    }
+                }));
+            }
             callWfmLoadedCallback(wfm, false);
         } catch (FileNotFoundException fnfe) {
             m_throwable = fnfe;
