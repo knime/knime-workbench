@@ -93,7 +93,6 @@ import org.knime.core.workbench.mountpoint.api.WorkbenchMountPointType;
 import org.knime.core.workbench.preferences.MountPointsPreferencesUtil;
 import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
-import org.osgi.service.prefs.BackingStoreException;
 
 /**
  * Classic UI editor for the mount table.
@@ -111,8 +110,6 @@ public final class MountPointTableEditor extends FieldEditor {
     private static final int CONTENT_PROP = 1;
 
     private static final int TYPE_PROP = 2;
-
-    private final List<String> m_removedMountPointNames = new ArrayList<>();
 
     private static final class MountPointTableLabelProvider implements ITableLabelProvider {
 
@@ -419,7 +416,7 @@ public final class MountPointTableEditor extends FieldEditor {
         int size = m_table.getItemCount();
 
         if (index >= 0) {
-            EnablementMountPointSettingsWrapper settings = (EnablementMountPointSettingsWrapper)m_table.getItem(index).getData();
+            EnablementMountPointSettingsWrapper settings = getSettingsAt(index);
             AbstractContentProviderFactory contentProviderFactory =
                 ExplorerMountTable.getContentProviderFactories().get(settings.factoryID());
             m_editButton.setEnabled(contentProviderFactory.isMountpointEditable());
@@ -449,16 +446,13 @@ public final class MountPointTableEditor extends FieldEditor {
         setPresentsDefaultValue(false);
         int index = m_table.getSelectionIndex();
         if (index >= 0) {
-            EnablementMountPointSettingsWrapper settings = (EnablementMountPointSettingsWrapper)m_table.getItem(index).getData();
+            EnablementMountPointSettingsWrapper settings = getSettingsAt(index);
             EnablementMountPointSettingsWrapper edited = editSelectedObject(settings);
             if (edited != null) {
                 removeItemFromTable(settings);
                 addItemToTable(edited, index);
                 m_table.setSelection(index);
                 selectionChanged();
-                if (!settings.mountID().equals(edited.mountID())) {
-                    m_removedMountPointNames.add(settings.mountID());
-                }
             }
         }
     }
@@ -467,11 +461,14 @@ public final class MountPointTableEditor extends FieldEditor {
         setPresentsDefaultValue(false);
         int index = m_table.getSelectionIndex();
         if (index >= 0) {
-            EnablementMountPointSettingsWrapper settings = (EnablementMountPointSettingsWrapper)m_table.getItem(index).getData();
-            m_removedMountPointNames.add(settings.mountID());
+            EnablementMountPointSettingsWrapper settings = getSettingsAt(index);
             removeItemFromTable(settings);
             selectionChanged();
         }
+    }
+
+    private EnablementMountPointSettingsWrapper getSettingsAt(final int index) {
+        return (EnablementMountPointSettingsWrapper)m_table.getItem(index).getData();
     }
 
     private void upPressed() {
@@ -551,7 +548,7 @@ public final class MountPointTableEditor extends FieldEditor {
 
     @Override
     protected void doLoad() {
-        doLoad(MountPointsPreferencesUtil.loadSortedMountSettingsFromPreferenceNode());
+        doLoad(MountPointsPreferencesUtil.loadSortedMountSettingsFromPreferences(true));
     }
 
     @Override
@@ -572,13 +569,6 @@ public final class MountPointTableEditor extends FieldEditor {
     @Override
     protected void doStore() {
         // AP-8989 Switching to IEclipsePreferences
-        if (!m_removedMountPointNames.isEmpty()) {
-            try {
-                MountPointsPreferencesUtil.removeMountSettings(m_removedMountPointNames);
-            } catch (BackingStoreException e) {
-                LOGGER.error("Unable to save mount point settings: " + e.getMessage(), e);
-            }
-        }
         List<WorkbenchMountPointSettings> mountSettings = Arrays.stream(m_table.getItems()) //
                 .map(item -> (EnablementMountPointSettingsWrapper)item.getData()) //
                 .map(EnablementMountPointSettingsWrapper::toSettings) //
@@ -600,6 +590,7 @@ public final class MountPointTableEditor extends FieldEditor {
         m_tableViewer.refresh();
     }
 
+    @SuppressWarnings("java:S2250") // not a performance hotspot
     private void removeItemFromTable(final EnablementMountPointSettingsWrapper settings) {
         m_mountSettings.remove(settings);
         m_tableViewer.remove(settings);
