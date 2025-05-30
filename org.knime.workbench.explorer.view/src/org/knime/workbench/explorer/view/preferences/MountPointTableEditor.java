@@ -101,7 +101,7 @@ import org.knime.workbench.explorer.view.AbstractContentProviderFactory;
  * @since 6.0
  */
 @SuppressWarnings("java:S6212") // `var` can hinder readability
-public final class MountPointTableEditor extends FieldEditor {
+final class MountPointTableEditor extends FieldEditor {
 
     private static final NodeLogger LOGGER = NodeLogger.getLogger(MountPointTableEditor.class);
 
@@ -223,7 +223,7 @@ public final class MountPointTableEditor extends FieldEditor {
      *
      * @param parent The parent component
      */
-    public MountPointTableEditor(final Composite parent) {
+    MountPointTableEditor(final Composite parent) {
         init(WorkbenchConstants.P_EXPLORER_MOUNT_POINT_XML, "List of configured mount points:");
         createControl(parent);
     }
@@ -553,7 +553,7 @@ public final class MountPointTableEditor extends FieldEditor {
 
     @Override
     protected void doLoadDefault() {
-        doLoad(MountPointsPreferencesUtil.loadSortedMountSettingsFromDefaultPreferenceNode());
+        doLoad(MountPointsPreferencesUtil.loadDefaultMountPoints());
     }
 
     private void doLoad(final List<WorkbenchMountPointSettings> mountSettings) {
@@ -561,6 +561,9 @@ public final class MountPointTableEditor extends FieldEditor {
             .collect(Collectors.toCollection(ArrayList::new));
         m_tableViewer.setInput(m_mountSettings);
         m_tableViewer.refresh();
+        // BW, 2025-05: I don't fully understand why this is necessary, but without it it would need to clicks to
+        // "Apply" to store the changes (otherwise the first call by-passes our mount table storing)
+        setPresentsDefaultValue(false);
     }
 
     /**
@@ -568,7 +571,6 @@ public final class MountPointTableEditor extends FieldEditor {
      */
     @Override
     protected void doStore() {
-        // AP-8989 Switching to IEclipsePreferences
         List<WorkbenchMountPointSettings> mountSettings = Arrays.stream(m_table.getItems()) //
                 .map(item -> (EnablementMountPointSettingsWrapper)item.getData()) //
                 .map(EnablementMountPointSettingsWrapper::toSettings) //
