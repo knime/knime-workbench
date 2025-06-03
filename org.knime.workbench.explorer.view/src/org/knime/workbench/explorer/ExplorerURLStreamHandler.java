@@ -67,6 +67,8 @@ import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.contextv2.JobExecutorInfo;
 import org.knime.core.node.workflow.contextv2.RestLocationInfo;
 import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
+import org.knime.core.node.workflow.virtual.VirtualNodeContext;
+import org.knime.core.node.workflow.virtual.VirtualNodeContext.Restriction;
 import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
 import org.knime.core.ui.node.workflow.WorkflowContextUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
@@ -155,7 +157,9 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
 
     @Override
     public URLConnection openConnection(final URL url, final Proxy p) throws IOException {
-        final var resolvedUrl = resolveKNIMEURL(url);
+        var urlType = getUrlType(url);
+        checkCanOpen(urlType);
+        final var resolvedUrl = resolveKNIMEURL(url, urlType);
         if (p != null && !Proxy.NO_PROXY.equals(p)) {
             NodeLogger.getLogger(ExplorerURLStreamHandler.class).debug(
                 String.format("Ignoring proxy \"%s\" for unresolved URL \"%s\", will apply for proxy for resolved URL "
@@ -163,6 +167,25 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
         }
         // global proxy settings will be applied if and when an actual remote connection is opened
         return openConnectionForResolved(resolvedUrl);
+    }
+
+    private static void checkCanOpen(final KnimeUrlType urlType) throws IOException {
+        if (!urlType.isRelative()) {
+            return;
+        }
+        var errorMessage = VirtualNodeContext.getContext().map(vnc -> {
+            if (vnc.hasRestriction(Restriction.RELATIVE_RESOURCE_ACCESS)) {
+                return "Node is not allowed to access resources relative to '" + urlType.getAuthority()
+                    + "' because it's executed within in a restricted (virtual) scope.";
+            } else if (vnc.hasRestriction(Restriction.WORKFLOW_DATA_AREA_ACCESS)) {
+                return "Node is not allowed to access workflow data area because it's executed within in a restricted (virtual) scope.";
+            } else {
+                return null;
+            }
+        }).orElse(null);
+        if (errorMessage != null) {
+            throw new IOException(errorMessage);
+        }
     }
 
     /**
@@ -204,10 +227,17 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      * @return the resolved URL
      * @throws ResourceAccessException if an error occurs while resolving the URL
      */
+
     public static URL resolveKNIMEURL(final URL url) throws ResourceAccessException {
-        final var urlType = KnimeUrlType.getType(url).orElseThrow(
-            () -> new ResourceAccessException("Unexpected protocol: " + url.getProtocol() + ". Only "
-                        + KnimeUrlType.SCHEME + " is supported by this handler."));
+        return resolveKNIMEURL(url, getUrlType(url));
+    }
+
+    private static KnimeUrlType getUrlType(final URL url) throws ResourceAccessException {
+        return KnimeUrlType.getType(url).orElseThrow(() -> new ResourceAccessException("Unexpected protocol: "
+            + url.getProtocol() + ". Only " + KnimeUrlType.SCHEME + " is supported by this handler."));
+    }
+
+    private static URL resolveKNIMEURL(final URL url, final KnimeUrlType urlType) throws ResourceAccessException {
 
         final var nodeContext = Optional.ofNullable(NodeContext.getContext());
         final var wfmUI = nodeContext.flatMap(ctx -> ctx.getContextObjectForClass(WorkflowManagerUI.class));
