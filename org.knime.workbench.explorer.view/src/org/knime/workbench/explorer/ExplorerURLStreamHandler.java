@@ -174,9 +174,8 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
             return;
         }
         var errorMessage = VirtualNodeContext.getContext().map(vnc -> {
-            if (vnc.hasRestriction(Restriction.RELATIVE_RESOURCE_ACCESS)) {
-                return "Node is not allowed to access resources relative to '" + urlType.getAuthority()
-                    + "' because it's executed within in a restricted (virtual) scope.";
+            if (vnc.hasRestriction(Restriction.WORKFLOW_RELATIVE_RESOURCE_ACCESS)) {
+                return "Node is not allowed to access workflow-relative resources because it's executed within in a restricted (virtual) scope.";
             } else if (vnc.hasRestriction(Restriction.WORKFLOW_DATA_AREA_ACCESS)) {
                 return "Node is not allowed to access workflow data area because it's executed within in a restricted (virtual) scope.";
             } else {
