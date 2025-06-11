@@ -192,6 +192,9 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
             progressMonitor.addProgressListener(progressHandler);
 
             var parentFile = ResolverUtil.resolveURItoLocalOrTempFile(m_templateURI, pm);
+            if (pm.isCanceled()) {
+                throw new InterruptedException();
+            }
             if (parentFile.isFile()) {
                 //unzip
                 final var tempDir = FileUtil.createTempDir("template-workflow");
@@ -214,7 +217,9 @@ public class LoadMetaNodeTemplateRunnable extends PersistWorkflowRunnable {
                 GUIWorkflowLoadHelper.forTemplate(d, parentFile.getName(), m_context, m_isComponentProject);
             final var loadPersistor = loadHelper.createTemplateLoadPersistor(parentFile, m_templateURI);
             final var loadResult = new MetaNodeLinkUpdateResult("Shared instance from \"" + m_templateURI + "\"");
-            m_parentWFM.load(loadPersistor, loadResult, new ExecutionMonitor(progressMonitor), false);
+            // NXT-3549 (workaround) - cancelation of component load has side effects/bug
+            final ExecutionMonitor execMon = new ExecutionMonitor(progressMonitor).createNonCancelableSubProgress();
+            m_parentWFM.load(loadPersistor, loadResult, execMon, false);
 
             m_result = loadResult;
             if (pm.isCanceled()) {
