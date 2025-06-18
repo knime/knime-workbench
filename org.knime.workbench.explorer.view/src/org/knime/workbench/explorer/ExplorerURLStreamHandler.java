@@ -170,7 +170,7 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     }
 
     private static void checkCanOpen(final KnimeUrlType urlType) throws IOException {
-        if (!urlType.isRelative()) {
+        if (urlType != KnimeUrlType.WORKFLOW_RELATIVE) {
             return;
         }
         var errorMessage = VirtualNodeContext.getContext().map(vnc -> {
