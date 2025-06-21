@@ -47,6 +47,8 @@
  */
 package org.knime.workbench.editor2.commands;
 
+import static org.knime.core.ui.wrapper.Wrapper.wraps;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -58,7 +60,11 @@ import org.eclipse.gef.EditPartViewer;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.node.workflow.ConnectionID;
 import org.knime.core.node.workflow.ConnectionUIInformation;
+import org.knime.core.node.workflow.NativeNodeContainer;
+import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeID;
+import org.knime.core.node.workflow.NodeTimer;
+import org.knime.core.node.workflow.NodeTimer.GlobalNodeStats.NodeCreationType;
 import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.node.workflow.WorkflowAnnotation;
 import org.knime.core.node.workflow.WorkflowAnnotationID;
@@ -67,6 +73,7 @@ import org.knime.core.ui.node.workflow.ConnectionContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
 import org.knime.core.ui.wrapper.WorkflowDefWrapper;
+import org.knime.core.ui.wrapper.Wrapper;
 import org.knime.shared.workflow.def.WorkflowDef;
 import org.knime.shared.workflow.storage.clipboard.DefClipboardContent;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -74,6 +81,7 @@ import org.knime.workbench.editor2.WorkflowEditorMode;
 import org.knime.workbench.editor2.actions.ToggleEditorModeAction;
 import org.knime.workbench.editor2.commands.PasteFromWorkflowPersistorCommand.ShiftCalculator;
 import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
+import org.knime.workbench.repository.NodeUsageRegistry;
 
 /**
  * Pastes workflow content specified by a {@link WorkflowDef} into the workflow.
@@ -155,13 +163,25 @@ public final class PasteFromWorkflowDefCommand
         m_shiftCalculator = new PasteFromWorkflowPersistorCommand.FixedShiftCalculator(moveDist);
         for (final NodeID id : pastedNodes) {
             newIDs.add(id);
-            final NodeContainerUI nc = syncWfmUI.getNodeContainer(id);
-            final NodeUIInformation oldUI = nc.getUIInformation();
+            final NodeContainerUI ncUI = syncWfmUI.getNodeContainer(id);
+            final NodeUIInformation oldUI = ncUI.getUIInformation();
             final NodeUIInformation newUI = NodeUIInformation.builder(oldUI).translate(moveDist).build();
-            nc.setUIInformation(newUI);
+            ncUI.setUIInformation(newUI);
+
+            // update global node timer (usage statistics)
+            if (wraps(ncUI, NodeContainer.class)) {
+                NodeContainer nc = Wrapper.unwrapNC(ncUI);
+                NodeTimer.GLOBAL_TIMER.addNodeCreation(nc);
+                NodeTimer.GLOBAL_TIMER.incNodeCreatedVia(NodeCreationType.JAVA_UI);
+                if (nc instanceof NativeNodeContainer nnc) {
+                    NodeUsageRegistry.addNode(nnc.getNode().getFactory());
+                }
+            }
         }
         for (final ConnectionContainerUI conn : syncWfmUI.getConnectionContainers()) {
-            if (newIDs.contains(conn.getDest()) && newIDs.contains(conn.getSource())) {
+            final var source = conn.getSource();
+            final var destination = conn.getDest();
+            if (newIDs.contains(destination) && newIDs.contains(source)) {
                 // get bend points and move them
                 final ConnectionUIInformation oldUI = conn.getUIInfo();
                 if (oldUI != null) {
@@ -169,6 +189,12 @@ public final class PasteFromWorkflowDefCommand
                         ConnectionUIInformation.builder(oldUI).translate(moveDist).build();
                     conn.setUIInfo(newUI);
                 }
+
+                // update global node timer (usage statistics)
+                NodeTimer.GLOBAL_TIMER.addConnectionCreation( //
+                    getHostWFM().getNodeContainer(source), //
+                    getHostWFM().getNodeContainer(destination) //
+                );
             }
         }
         for (final WorkflowAnnotation a : pastedAnnos) {
