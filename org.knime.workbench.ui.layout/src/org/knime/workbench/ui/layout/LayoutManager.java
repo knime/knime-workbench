@@ -56,7 +56,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.draw2d.geometry.Point;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.ConnectionID;
 import org.knime.core.node.workflow.ConnectionUIInformation;
@@ -65,7 +64,6 @@ import org.knime.core.node.workflow.NodeUIInformation;
 import org.knime.core.ui.node.workflow.ConnectionContainerUI;
 import org.knime.core.ui.node.workflow.NodeContainerUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
-import org.knime.workbench.editor2.WorkflowEditor;
 import org.knime.workbench.ui.layout.Graph.Edge;
 import org.knime.workbench.ui.layout.Graph.Node;
 import org.knime.workbench.ui.layout.layeredlayout.SimpleLayeredLayouter;
@@ -140,14 +138,14 @@ public class LayoutManager {
         int X_STRETCH = 100;
         int Y_STRETCH = 120;
 
-        if (WorkflowEditor.getActiveEditorSnapToGrid()) {
-            if (WorkflowEditor.getActiveEditorGridX() >= 70) {
-                X_STRETCH = WorkflowEditor.getActiveEditorGridX();
-            } else {
-                X_STRETCH = WorkflowEditor.getActiveEditorGridXOffset(X_STRETCH);
-            }
-            Y_STRETCH = WorkflowEditor.getActiveEditorGridYOffset(Y_STRETCH);
-        }
+//        if (WorkflowEditor.getActiveEditorSnapToGrid()) {
+//            if (WorkflowEditor.getActiveEditorGridX() >= 70) {
+//                X_STRETCH = WorkflowEditor.getActiveEditorGridX();
+//            } else {
+//                X_STRETCH = WorkflowEditor.getActiveEditorGridXOffset(X_STRETCH);
+//            }
+//            Y_STRETCH = WorkflowEditor.getActiveEditorGridYOffset(Y_STRETCH);
+//        }
         // add all nodes that should be laid out to the graph
         Collection<NodeContainerUI> allNodes = nodes;
         if (allNodes == null || allNodes.size() <= 1) {
@@ -164,11 +162,11 @@ public class LayoutManager {
             NodeUIInformation ui = nc.getUIInformation();
             minX = (ui.getBounds()[0] < minX) ? ui.getBounds()[0] : minX;
             minY = (ui.getBounds()[1] < minY) ? ui.getBounds()[1] : minY;
-            if (WorkflowEditor.getActiveEditorSnapToGrid()) {
-                Point nextGridLocation = WorkflowEditor.getActiveEditorNextGridLocation(new Point(minX, minY));
-                minX = nextGridLocation.x;
-                minY = nextGridLocation.y;
-            }
+//            if (WorkflowEditor.getActiveEditorSnapToGrid()) {
+//                Point nextGridLocation = WorkflowEditor.getActiveEditorNextGridLocation(new Point(minX, minY));
+//                minX = nextGridLocation.x;
+//                minY = nextGridLocation.y;
+//            }
         }
 
         // find all connections that connect from/to our nodes,
@@ -284,7 +282,7 @@ public class LayoutManager {
         }
 
         SimpleLayeredLayouter layouter = new SimpleLayeredLayouter(m_initPlacementSeed);
-        layouter.setBalanceBranchings(!WorkflowEditor.getActiveEditorSnapToGrid());
+//        layouter.setBalanceBranchings(!WorkflowEditor.getActiveEditorSnapToGrid());
         if (anchorsExist) {
             layouter.doLayout(m_g, anchorNodes);
         } else {
@@ -319,7 +317,8 @@ public class LayoutManager {
                 NodeUIInformation newCoord = NodeUIInformation.builder()
                         .setNodeLocation(x, y, b[2], b[3])
                         .setHasAbsoluteCoordinates(uiInfo.hasAbsoluteCoordinates())
-                        .setSnapToGrid(WorkflowEditor.getActiveEditorSnapToGrid()).build();
+//                        .setSnapToGrid(WorkflowEditor.getActiveEditorSnapToGrid())
+                        .build();
                 LOGGER.debug("Node " + nc + " gets auto-layout coordinates "
                         + newCoord);
                 // save old coordinates for undo
