@@ -55,6 +55,7 @@ import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -779,16 +780,17 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
     /**
      * @return all outgoing connections of this node part
      */
+    @SuppressWarnings("unchecked")
     public ConnectionContainerEditPart[] getOutgoingConnections() {
 
         List<ConnectionContainerEditPart> result = new ArrayList<ConnectionContainerEditPart>();
 
         for (Object part : getChildren()) {
 
-            if (part instanceof NodeOutPortEditPart) {
-                result.addAll(((NodeOutPortEditPart)part).getSourceConnections());
-            } else if (part instanceof MetaNodeOutPortEditPart) {
-                result.addAll(((MetaNodeOutPortEditPart)part).getSourceConnections());
+            if (part instanceof NodeOutPortEditPart nopEditPart) {
+                result.addAll((Collection<? extends ConnectionContainerEditPart>)nopEditPart.getSourceConnections());
+            } else if (part instanceof MetaNodeOutPortEditPart metaNodePart) {
+                result.addAll((Collection<? extends ConnectionContainerEditPart>)metaNodePart.getSourceConnections());
             }
         }
 
@@ -798,14 +800,15 @@ public class NodeContainerEditPart extends AbstractWorkflowEditPart implements C
     /**
      * @return all incoming connections of this node part
      */
+    @SuppressWarnings("unchecked")
     public ConnectionContainerEditPart[] getIncomingConnections() {
 
         List<ConnectionContainerEditPart> result = new ArrayList<ConnectionContainerEditPart>();
 
         for (Object part : getChildren()) {
 
-            if (part instanceof NodeInPortEditPart) {
-                result.addAll(((NodeInPortEditPart)part).getTargetConnections());
+            if (part instanceof NodeInPortEditPart nipEditPart) {
+                result.addAll((Collection<? extends ConnectionContainerEditPart>)nipEditPart.getTargetConnections());
             }
         }
 
