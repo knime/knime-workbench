@@ -166,7 +166,7 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
         Collection<ConnectionEditPart> connections = new ArrayList<ConnectionEditPart>();
         for (Iterator<GraphicalEditPart> nodes = newSelections.iterator(); nodes.hasNext();) {
             GraphicalEditPart node = nodes.next();
-            for (Iterator<ConnectionEditPart> itr = node.getSourceConnections().iterator(); itr.hasNext();) {
+            for (Iterator<? extends ConnectionEditPart> itr = node.getSourceConnections().iterator(); itr.hasNext();) {
                 ConnectionEditPart sourceConn = itr.next();
                 if (sourceConn.getSelected() == EditPart.SELECTED_NONE
                         && (newSelections.contains(sourceConn.getTarget()) || currentNodes
@@ -174,7 +174,7 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
                     connections.add(sourceConn);
                 }
             }
-            for (Iterator<ConnectionEditPart> itr = node.getTargetConnections().iterator(); itr.hasNext();) {
+            for (Iterator<? extends ConnectionEditPart> itr = node.getTargetConnections().iterator(); itr.hasNext();) {
                 ConnectionEditPart targetConn = itr.next();
                 if (targetConn.getSelected() == EditPart.SELECTED_NONE
                         && (newSelections.contains(targetConn.getSource()) || currentNodes
@@ -189,13 +189,13 @@ public class WorkflowMarqueeSelectionTool extends AbstractTool implements DragTr
         connections = new HashSet<ConnectionEditPart>();
         for (Iterator<GraphicalEditPart> nodes = deselections.iterator(); nodes.hasNext();) {
             GraphicalEditPart node = nodes.next();
-            for (Iterator<ConnectionEditPart> itr = node.getSourceConnections().iterator(); itr.hasNext();) {
+            for (Iterator<? extends ConnectionEditPart> itr = node.getSourceConnections().iterator(); itr.hasNext();) {
                 ConnectionEditPart sourceConn = itr.next();
                 if (sourceConn.getSelected() != EditPart.SELECTED_NONE) {
                     connections.add(sourceConn);
                 }
             }
-            for (Iterator<ConnectionEditPart> itr = node.getTargetConnections().iterator(); itr.hasNext();) {
+            for (Iterator<? extends ConnectionEditPart> itr = node.getTargetConnections().iterator(); itr.hasNext();) {
                 ConnectionEditPart targetConn = itr.next();
                 if (targetConn.getSelected() != EditPart.SELECTED_NONE) {
                     connections.add(targetConn);
