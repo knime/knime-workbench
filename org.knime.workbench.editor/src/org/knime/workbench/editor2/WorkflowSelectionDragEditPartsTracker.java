@@ -48,6 +48,7 @@
 package org.knime.workbench.editor2;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -216,7 +217,7 @@ public class WorkflowSelectionDragEditPartsTracker extends DragEditPartsTracker 
      * @return the connections whose source and target is contained in the argument list.
      */
     public static ConnectionContainerEditPart[] getEmbracedConnections(
-            final List<EditPart> parts) {
+            final List<? extends EditPart> parts) {
 
         // result list
         List<ConnectionContainerEditPart> result =
@@ -263,15 +264,13 @@ public class WorkflowSelectionDragEditPartsTracker extends DragEditPartsTracker 
     @SuppressWarnings("unchecked")
     private static ConnectionContainerEditPart[] getOutportConnections(final EditPart containerPart) {
         // result list
-        List<ConnectionContainerEditPart> result = new ArrayList<ConnectionContainerEditPart>();
+        final List<ConnectionContainerEditPart> result = new ArrayList<>();
         var children = containerPart.getChildren();
 
         for (EditPart part : children) {
-            if (part instanceof AbstractPortEditPart) {
-                AbstractPortEditPart outPortPart = (AbstractPortEditPart)part;
-
+            if (part instanceof AbstractPortEditPart outPortPart) {
                 // append all connection edit parts
-                result.addAll(outPortPart.getSourceConnections());
+                result.addAll((Collection<? extends ConnectionContainerEditPart>) outPortPart.getSourceConnections());
             }
         }
 
@@ -279,7 +278,7 @@ public class WorkflowSelectionDragEditPartsTracker extends DragEditPartsTracker 
     }
 
     private static boolean isPartInList(final EditPart partToCheck,
-            final List<EditPart> parts) {
+            final List<? extends EditPart> parts) {
 
         for (EditPart part : parts) {
 

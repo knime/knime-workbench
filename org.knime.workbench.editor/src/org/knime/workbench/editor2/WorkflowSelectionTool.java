@@ -51,8 +51,8 @@ import org.eclipse.draw2d.Cursors;
 import org.eclipse.draw2d.FigureCanvas;
 import org.eclipse.draw2d.geometry.Point;
 import org.eclipse.gef.EditPartViewer;
-import org.eclipse.gef.Request;
 import org.eclipse.gef.editparts.ZoomManager;
+import org.eclipse.gef.requests.SelectionRequest;
 import org.eclipse.gef.tools.SelectionTool;
 import org.eclipse.swt.events.MouseEvent;
 
@@ -124,8 +124,8 @@ public class WorkflowSelectionTool extends SelectionTool {
      */
     @SuppressWarnings("unchecked")
     @Override
-    protected Request getTargetRequest() {
-        Request targetRequest = super.getTargetRequest();
+    protected SelectionRequest getTargetRequest() {
+        final var targetRequest = super.getTargetRequest();
         Point start = new Point(m_xLocation, m_yLocation);
         ZoomManager zm = (ZoomManager)getCurrentViewer().getProperty(ZoomManager.class.toString());
         WorkflowEditor.adaptZoom(zm, start, true);
