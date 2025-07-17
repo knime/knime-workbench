@@ -54,6 +54,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.eclipse.draw2d.ConnectionAnchor;
+// GEF 3.23 has draw2d ZoomListener as drop-in replacement for deprecated gef.editparts.ZoomListener
+import org.eclipse.draw2d.zoom.ZoomListener;
 import org.eclipse.gef.ConnectionEditPart;
 import org.eclipse.gef.DragTracker;
 import org.eclipse.gef.EditPart;
@@ -61,7 +63,6 @@ import org.eclipse.gef.EditPolicy;
 import org.eclipse.gef.NodeEditPart;
 import org.eclipse.gef.Request;
 import org.eclipse.gef.editparts.AbstractGraphicalEditPart;
-import org.eclipse.gef.editparts.ZoomListener;
 import org.eclipse.gef.editparts.ZoomManager;
 import org.eclipse.gef.requests.SelectionRequest;
 import org.eclipse.gef.tools.ConnectionDragCreationTool;
