@@ -285,7 +285,6 @@ import org.knime.workbench.editor2.editparts.WorkflowRootEditPart;
 import org.knime.workbench.editor2.figures.ProgressPolylineConnection;
 import org.knime.workbench.editor2.figures.WorkflowFigure;
 import org.knime.workbench.editor2.menu.MRUFileMenuItem;
-import org.knime.workbench.editor2.svgexport.WorkflowSVGExport;
 import org.knime.workbench.editor2.viewport.MessageAppearance;
 import org.knime.workbench.editor2.viewport.ViewportPinningGraphicalViewer;
 import org.knime.workbench.explorer.ExplorerMountTable;
@@ -2072,15 +2071,6 @@ public class WorkflowEditor extends GraphicalEditor implements
             wasInProgress = state.isExecutionInProgress() && !state.isExecutingRemotely();
 
             ps.run(true, false, saveRunnable);
-            // this code is usually (always?) run in the UI thread but in case it's not we schedule in UI thread
-            // (SVG export always in UI thread)
-            final File svgFile = new File(workflowDir, WorkflowPersistor.SVG_WORKFLOW_FILE);
-            svgFile.delete();
-            if (m_manager.isProject()) {
-                d.syncExec(() -> {
-                    saveSVGImage(svgFile);
-                });
-            }
             // mark command stack (no undo beyond this point)
             getCommandStack().markSaveLocation();
 
@@ -2149,19 +2139,6 @@ public class WorkflowEditor extends GraphicalEditor implements
             }
         }
     }
-
-    private void saveSVGImage(final File svgFile) {
-        // If SVGExporter available try to export
-        WorkflowSVGExport svgExporter = KNIMEEditorPlugin.getDefault().getSvgExport();
-        if (svgExporter != null) {
-            try {
-                svgExporter.exportToSVG(this, svgFile);
-            } catch (Exception e) {
-                LOGGER.error("Could not save workflow SVG", e);
-            }
-        }
-    }
-
 
     /** {@inheritDoc} */
     @Override
