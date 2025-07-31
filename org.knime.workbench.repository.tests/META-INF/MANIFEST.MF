@@ -8,5 +8,5 @@ Fragment-Host: org.knime.workbench.repository;bundle-version="[5.6.0,6.0.0)"
 Require-Bundle: org.junit;bundle-version="[4.8.2,5.0.0)",
  org.knime.testing;bundle-version="[5.6.0,6.0.0)",
  org.knime.base;bundle-version="[5.6.0,6.0.0)"
-Bundle-RequiredExecutionEnvironment: JavaSE-11
+Bundle-RequiredExecutionEnvironment: JavaSE-17
 Automatic-Module-Name: org.knime.workbench.repository.tests

@@ -24,7 +24,7 @@ Require-Bundle: org.eclipse.jface;bundle-version="[3.11.0,4.0.0)",
  org.knime.workbench.explorer.view;bundle-version="[9.1.0,10.0.0)",
  org.knime.core.ui;bundle-version="[5.6.0,6.0.0)",
  jakarta.ws.rs-api;bundle-version="[3.1.0,4.0.0)"
-Bundle-RequiredExecutionEnvironment: JavaSE-11
+Bundle-RequiredExecutionEnvironment: JavaSE-17
 Eclipse-RegisterBuddy: org.knime.base
 Bundle-ActivationPolicy: lazy
 Automatic-Module-Name: org.knime.workbench.workflowcoach
