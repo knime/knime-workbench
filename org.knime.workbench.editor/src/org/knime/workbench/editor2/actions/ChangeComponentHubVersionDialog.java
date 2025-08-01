@@ -436,7 +436,7 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
             final List<Integer> versions =
                 m_versions.stream().map(NamedItemVersion::version).collect(Collectors.toList());
             int idx = versions.indexOf(version);
-            return Optional.ofNullable(idx == -1 ? null : idx);
+            return Optional.ofNullable(idx == -1 ? null : Integer.valueOf(idx));
         }
     }
 
