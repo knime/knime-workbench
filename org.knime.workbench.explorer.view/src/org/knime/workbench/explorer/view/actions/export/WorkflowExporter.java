@@ -322,6 +322,10 @@ public final class WorkflowExporter {
                 continue;
             }
             if (!child.isDirectory()) {
+                // Files to exclude on root level. Exclusion here is independent of the "exclude data" option.
+                if (child.getName().startsWith("knime.log")) {
+                    continue;
+                }
                 resources.add(child);
             } else {
                 addEntireDirContent(resources, child, excludeData);
