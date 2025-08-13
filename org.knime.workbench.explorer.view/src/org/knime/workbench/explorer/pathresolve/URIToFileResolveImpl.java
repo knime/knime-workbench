@@ -68,8 +68,10 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.knime.core.internal.knimeurl.ExplorerURLStreamHandler;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.CheckUtils;
+import org.knime.core.util.CoreConstants;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.ThreadLocalHTTPAuthenticator;
 import org.knime.core.util.exception.ResourceAccessException;
@@ -78,7 +80,6 @@ import org.knime.core.util.pathresolve.SpaceVersion;
 import org.knime.core.util.pathresolve.URIToFileResolve;
 import org.knime.core.util.proxy.URLConnectionFactory;
 import org.knime.core.util.urlresolve.URLResolverUtil;
-import org.knime.workbench.explorer.ExplorerURLStreamHandler;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -270,7 +271,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     @Override
     public boolean isMountpointRelative(final URI uri) {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
-            && ExplorerURLStreamHandler.MOUNTPOINT_RELATIVE.equalsIgnoreCase(uri.getHost());
+            && CoreConstants.MOUNTPOINT_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 
     /**
@@ -281,7 +282,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     @Override
     public boolean isWorkflowRelative(final URI uri) {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
-            && ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equalsIgnoreCase(uri.getHost());
+            && CoreConstants.WORKFLOW_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 
     /**
@@ -292,13 +293,13 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     @Override
     public boolean isNodeRelative(final URI uri) {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
-            && ExplorerURLStreamHandler.NODE_RELATIVE.equalsIgnoreCase(uri.getHost());
+            && CoreConstants.NODE_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 
     @Override
     public boolean isSpaceRelative(final URI uri) {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
-                && ExplorerURLStreamHandler.SPACE_RELATIVE.equalsIgnoreCase(uri.getHost());
+                && CoreConstants.SPACE_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 
     @Override

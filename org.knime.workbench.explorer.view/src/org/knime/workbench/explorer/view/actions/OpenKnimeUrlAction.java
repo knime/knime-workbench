@@ -67,7 +67,6 @@ import org.knime.core.util.CoreConstants;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.core.util.ImageRepository.SharedImages;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.ExplorerURLStreamHandler;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
@@ -158,9 +157,9 @@ public class OpenKnimeUrlAction extends Action {
                 public void run() {
                     try {
                         String host = m_url.getHost();
-                        if (host.equals(ExplorerURLStreamHandler.NODE_RELATIVE)
-                            || host.equals(ExplorerURLStreamHandler.WORKFLOW_RELATIVE)
-                            || host.equals(ExplorerURLStreamHandler.MOUNTPOINT_RELATIVE)) {
+                        if (host.equals(CoreConstants.NODE_RELATIVE)
+                            || host.equals(CoreConstants.WORKFLOW_RELATIVE)
+                            || host.equals(CoreConstants.MOUNTPOINT_RELATIVE)) {
                             LOGGER.error("Opening of relative KNIME URLs is not supported!");
                             returnStatus.set(new Status(IStatus.ERROR, PLUGIN_ID, 1,
                                 "Opening of relative KNIME URLs is not supported!", null));
