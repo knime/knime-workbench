@@ -59,6 +59,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
+import org.knime.core.internal.knimeurl.ExplorerURLStreamHandler;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountPoint;
 import org.knime.core.workbench.mountpoint.api.WorkbenchMountTable;
 import org.knime.filehandling.core.connections.base.attributes.BaseFileAttributes;

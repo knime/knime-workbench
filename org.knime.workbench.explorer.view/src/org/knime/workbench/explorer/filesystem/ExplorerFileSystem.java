@@ -60,12 +60,12 @@ import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.WorkflowContext;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.util.CoreConstants;
 import org.knime.core.util.FileUtil;
 import org.knime.core.util.KnimeUrlType;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.urlresolve.KnimeUrlResolver;
 import org.knime.workbench.explorer.ExplorerMountTable;
-import org.knime.workbench.explorer.ExplorerURLStreamHandler;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
@@ -130,7 +130,7 @@ public class ExplorerFileSystem extends FileSystem {
         if (contentProvider == null) {
             return null;
         }
-        if (ExplorerURLStreamHandler.WORKFLOW_RELATIVE.equals(resolvedUri.getHost())) {
+        if (CoreConstants.WORKFLOW_RELATIVE.equals(resolvedUri.getHost())) {
             Optional<String> relPath = getRelativePathFromContext();
             if (relPath.isPresent()) {
                 String combinedPath = relPath.get() + resolvedUri.getPath();
