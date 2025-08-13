@@ -48,42 +48,12 @@
 package org.knime.workbench.explorer;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Proxy;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Optional;
 
-import javax.net.ssl.HttpsURLConnection;
-
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.runtime.CoreException;
-import org.knime.core.node.NodeLogger;
-import org.knime.core.node.util.ClassUtils;
-import org.knime.core.node.workflow.NodeContext;
-import org.knime.core.node.workflow.contextv2.JobExecutorInfo;
-import org.knime.core.node.workflow.contextv2.RestLocationInfo;
-import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
-import org.knime.core.node.workflow.virtual.VirtualNodeContext;
-import org.knime.core.node.workflow.virtual.VirtualNodeContext.Restriction;
-import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
-import org.knime.core.ui.node.workflow.WorkflowContextUI;
-import org.knime.core.ui.node.workflow.WorkflowManagerUI;
-import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.util.KNIMEServerHostnameVerifier;
-import org.knime.core.util.KnimeUrlType;
-import org.knime.core.util.auth.Authenticator;
-import org.knime.core.util.auth.CouldNotAuthorizeException;
+import org.knime.core.util.CoreConstants;
 import org.knime.core.util.exception.ResourceAccessException;
-import org.knime.core.util.proxy.URLConnectionFactory;
-import org.knime.core.util.urlresolve.KnimeUrlResolver;
-import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
-import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
-import org.osgi.framework.FrameworkUtil;
-import org.osgi.framework.ServiceReference;
 import org.osgi.service.url.AbstractURLStreamHandlerService;
 
 /**
@@ -96,125 +66,46 @@ import org.osgi.service.url.AbstractURLStreamHandlerService;
  *
  * @author ohl, University of Konstanz
  * @author Thorsten Meinl, KNIME AG, Zurich, Switzerland
+ * @deprecated moved to org.knime.core.internal.knimeurl.ExplorerURLStreamHandler
  */
+@Deprecated(since = "9.3", forRemoval = true)
 public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
     /**
      * The magic hostname for workflow-relative URLs.
      *
      * @since 5.0
      */
-    public static final String WORKFLOW_RELATIVE = "knime.workflow";
+    public static final String WORKFLOW_RELATIVE = CoreConstants.WORKFLOW_RELATIVE;
 
     /**
      * The magic hostname for mountpoint-relative URLs.
      *
      * @since 5.0
      */
-    public static final String MOUNTPOINT_RELATIVE = "knime.mountpoint";
+    public static final String MOUNTPOINT_RELATIVE = CoreConstants.MOUNTPOINT_RELATIVE;
 
     /**
      * The magic hostname for node-relative URLs.
      *
      * @since 6.4
      */
-    public static final String NODE_RELATIVE = "knime.node";
+    public static final String NODE_RELATIVE = CoreConstants.NODE_RELATIVE;
 
     /**
      * The magic hostname for space-relative URLs.
      *
      * @since 8.9
      */
-    public static final String SPACE_RELATIVE = "knime.space";
-
-    private final ServerRequestModifier m_requestModifier;
-
-    /**
-     * Creates a new URL stream handler.
-     */
-    public ExplorerURLStreamHandler() {
-        final var myself = FrameworkUtil.getBundle(getClass());
-        if (myself != null) {
-            final var ctx = myself.getBundleContext();
-            final ServiceReference<ServerRequestModifier> ser = ctx.getServiceReference(ServerRequestModifier.class);
-            if (ser != null) {
-                try {
-                    m_requestModifier = ctx.getService(ser);
-                } finally {
-                    ctx.ungetService(ser);
-                }
-            } else {
-                m_requestModifier = (p, c) -> {};
-            }
-        } else {
-            m_requestModifier = (p, c) -> {};
-        }
-    }
+    public static final String SPACE_RELATIVE = CoreConstants.SPACE_RELATIVE;
 
     @Override
     public URLConnection openConnection(final URL url) throws IOException {
-        return openConnection(url, null);
+        return new org.knime.core.internal.knimeurl.ExplorerURLStreamHandler().openConnection(url);
     }
 
     @Override
     public URLConnection openConnection(final URL url, final Proxy p) throws IOException {
-        var urlType = getUrlType(url);
-        checkCanOpen(urlType);
-        final var resolvedUrl = resolveKNIMEURL(url, urlType);
-        if (p != null && !Proxy.NO_PROXY.equals(p)) {
-            NodeLogger.getLogger(ExplorerURLStreamHandler.class).debug(
-                String.format("Ignoring proxy \"%s\" for unresolved URL \"%s\", will apply for proxy for resolved URL "
-                    + "(could be the same as ignored here)", p, url));
-        }
-        // global proxy settings will be applied if and when an actual remote connection is opened
-        return openConnectionForResolved(resolvedUrl);
-    }
-
-    private static void checkCanOpen(final KnimeUrlType urlType) throws IOException {
-        if (urlType != KnimeUrlType.WORKFLOW_RELATIVE) {
-            return;
-        }
-        var errorMessage = VirtualNodeContext.getContext().map(vnc -> {
-            if (vnc.hasRestriction(Restriction.WORKFLOW_RELATIVE_RESOURCE_ACCESS)) {
-                return "Node is not allowed to access workflow-relative resources because it's executed within in a restricted (virtual) scope.";
-            } else if (vnc.hasRestriction(Restriction.WORKFLOW_DATA_AREA_ACCESS)) {
-                return "Node is not allowed to access workflow data area because it's executed within in a restricted (virtual) scope.";
-            } else {
-                return null;
-            }
-        }).orElse(null);
-        if (errorMessage != null) {
-            throw new IOException(errorMessage);
-        }
-    }
-
-    /**
-     * Opens the connection to an *already resolved* URL, distinguishes between KNIME URLs (opens the connection via the
-     * mount table) and other URLs, like HTTP(S).
-     *
-     * @param resolvedUrl
-     * @return opened connection to the given URL
-     * @throws IOException
-     */
-    private URLConnection openConnectionForResolved(final URL resolvedUrl) throws IOException {
-        if (ExplorerFileSystem.SCHEME.equals(resolvedUrl.getProtocol())) {
-            return openExternalMountConnection(resolvedUrl);
-        } else if ("http".equals(resolvedUrl.getProtocol()) || "https".equals(resolvedUrl.getProtocol())) {
-            // neither the node context nor the workflow context can be null here, otherwise resolveKNIMEURL would have
-            // already failed
-            final var workflowContext =
-                NodeContext.getContext().getContextObjectForClass(WorkflowManagerUI.class).orElseThrow().getContext();
-            final var conn = URLConnectionFactory.getConnection(resolvedUrl);
-            authorizeClient(workflowContext, conn);
-
-            getRemoteRepositoryAddress(workflowContext).ifPresent(u -> m_requestModifier.modifyRequest(u, conn));
-
-            if (conn instanceof HttpsURLConnection httpsConnection) {
-                httpsConnection.setHostnameVerifier(KNIMEServerHostnameVerifier.getInstance());
-            }
-            return conn;
-        } else {
-            return URLConnectionFactory.getConnection(resolvedUrl);
-        }
+        return new org.knime.core.internal.knimeurl.ExplorerURLStreamHandler().openConnection(url, p);
     }
 
     /**
@@ -228,136 +119,6 @@ public class ExplorerURLStreamHandler extends AbstractURLStreamHandlerService {
      */
 
     public static URL resolveKNIMEURL(final URL url) throws ResourceAccessException {
-        return resolveKNIMEURL(url, getUrlType(url));
-    }
-
-    private static KnimeUrlType getUrlType(final URL url) throws ResourceAccessException {
-        return KnimeUrlType.getType(url).orElseThrow(() -> new ResourceAccessException("Unexpected protocol: "
-            + url.getProtocol() + ". Only " + KnimeUrlType.SCHEME + " is supported by this handler."));
-    }
-
-    private static URL resolveKNIMEURL(final URL url, final KnimeUrlType urlType) throws ResourceAccessException {
-
-        final var nodeContext = Optional.ofNullable(NodeContext.getContext());
-        final var wfmUI = nodeContext.flatMap(ctx -> ctx.getContextObjectForClass(WorkflowManagerUI.class));
-        final var workflowContextUI = wfmUI.map(WorkflowManagerUI::getContext).orElse(null);
-        if (urlType.isRelative()) {
-            if (nodeContext.isEmpty()) {
-                throw new ResourceAccessException("No context for relative URL available");
-            } else if (workflowContextUI == null) {
-                throw new ResourceAccessException("Workflow " + wfmUI + " does not have a context");
-            }
-        }
-
-        final KnimeUrlResolver resolver;
-        if (workflowContextUI instanceof RemoteWorkflowContext remoteCtx) {
-            final var mountpointURI = remoteCtx.getMountpointURI();
-            final var contextV2 = remoteCtx.getWorkflowContextV2().orElse(null);
-            resolver = KnimeUrlResolver.getRemoteWorkflowResolver(mountpointURI, contextV2);
-        } else {
-            final var contextV2 = workflowContextUI == null ? null
-                : Wrapper.unwrap(workflowContextUI, WorkflowContextV2.class);
-            resolver = KnimeUrlResolver.getResolver(contextV2);
-        }
-
-        return resolver.resolve(url);
-    }
-
-    private static Optional<URI> getRemoteRepositoryAddress(final WorkflowContextUI workflowContext) {
-        if (workflowContext instanceof RemoteWorkflowContext remoteCtx) {
-            return Optional.of(remoteCtx.getRepositoryAddress());
-        } else {
-            return Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
-                    .filter(ctx -> ctx.getExecutorInfo() instanceof JobExecutorInfo)
-                    .flatMap(ctx -> ClassUtils.castOptional(RestLocationInfo.class, ctx.getLocationInfo()))
-                    .map(RestLocationInfo::getRepositoryAddress);
-        }
-    }
-
-    private static Optional<Authenticator> getServerAuthenticator(final WorkflowContextUI workflowContext) {
-        if (workflowContext instanceof RemoteWorkflowContext remoteCtx) {
-            return Optional.of(remoteCtx.getServerAuthenticator());
-        } else {
-            return Wrapper.unwrapOptional(workflowContext, WorkflowContextV2.class)
-                    .filter(ctx -> ctx.getExecutorInfo() instanceof JobExecutorInfo)
-                    .flatMap(ctx -> ClassUtils.castOptional(RestLocationInfo.class, ctx.getLocationInfo()))
-                    .map(RestLocationInfo::getAuthenticator);
-        }
-    }
-
-    private static void authorizeClient(final WorkflowContextUI workflowContext, final URLConnection conn)
-        throws IOException {
-        final Optional<Authenticator> authenticator = getServerAuthenticator(workflowContext);
-        if (authenticator.isPresent()) {
-            try {
-                authenticator.get().authorizeClient(conn);
-            } catch (CouldNotAuthorizeException e) {
-                throw new IOException("Error while authenticating the client: " + e.getMessage(), e);
-            }
-        }
-    }
-
-    private static URLConnection openExternalMountConnection(final URL url) throws IOException {
-        try {
-            final var efs = ExplorerMountTable.getFileSystem().getStore(url.toURI());
-            return new ExplorerURLConnection(url, efs);
-        } catch (URISyntaxException e) {
-            throw new IOException(e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Allows the communication with a "knime" URL.
-     *
-     * @author ohl, University of Konstanz
-     */
-    static class ExplorerURLConnection extends URLConnection {
-        private final AbstractExplorerFileStore m_file;
-
-        ExplorerURLConnection(final URL u, final AbstractExplorerFileStore file) {
-            super(u);
-            m_file = file;
-        }
-
-        @Override
-        public void connect() throws IOException {
-            // nothing to do
-        }
-
-        @Override
-        public InputStream getInputStream() throws IOException {
-            if (m_file == null) {
-                throw new IOException("Resource associated with \"" + getURL() + "\" does not exist");
-            }
-            try {
-                return m_file.openInputStream(EFS.NONE, null);
-            } catch (CoreException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-        }
-
-        @Override
-        public OutputStream getOutputStream() throws IOException {
-            if (m_file == null) {
-                throw new IOException("Resource associated with \"" + getURL() + "\" does not exist");
-            }
-            try {
-                return m_file.openOutputStream(EFS.NONE, null);
-            } catch (CoreException e) {
-                throw new IOException(e.getMessage(), e);
-            }
-        }
-
-        @Override
-        public int getContentLength() {
-            if (m_file == null) {
-                return -1;
-            }
-            long length = m_file.fetchInfo().getLength();
-            if (length > Integer.MAX_VALUE) {
-                return -1;
-            }
-            return EFS.NONE == length ? -1 : (int)length;
-        }
+        return org.knime.core.internal.knimeurl.ExplorerURLStreamHandler.resolveKNIMEURL(url);
     }
 }

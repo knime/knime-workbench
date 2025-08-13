@@ -48,17 +48,16 @@
  */
 package org.knime.workbench.explorer;
 
-import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.StringContains.containsString;
-import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLConnection;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.junit.After;
@@ -66,10 +65,12 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.knime.core.internal.knimeurl.ExplorerURLStreamHandler;
 import org.knime.core.node.workflow.NodeContainer;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.WorkflowManager;
+import org.knime.core.node.workflow.contextv2.WorkflowContextV2;
 import org.knime.core.ui.node.workflow.RemoteWorkflowContext;
 import org.knime.core.ui.node.workflow.WorkflowContextUI;
 import org.knime.core.ui.node.workflow.WorkflowManagerUI;
@@ -131,52 +132,16 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
     @Test
     public void testNoWorkflowContext() throws Exception {
         URL url = new URL("knime://knime.workflow/workflow.knime");
+        URI mountpointUri = new URI(
+                "knime://knime-server-mountpoint/test?exec=8443aad7-e59e-4be1-b31b-4b287f5bf466&name=test%2B2019-01-02%2B09.57.19");
 
-        NodeContext.pushContext(createWorkflowManagerUIMock(null));
+        RemoteWorkflowContext ctx = new RemoteWorkflowContext(null, null, "path", new SimpleTokenAuthenticator("token"),
+            "mount id", mountpointUri, null, null);
+        NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
 
         m_expectedException.expect(IOException.class);
         m_expectedException.expectMessage(containsString("does not have a context"));
         m_handler.openConnection(url);
-    }
-
-    /**
-     * Checks if mountpoint-relative knime-URIs are correctly resolved to server mountpoint URIs.
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testResolveMountpointRelativeURIToServerMountpointURI() throws Exception {
-        URL url = new URL("knime://knime.mountpoint/some where/outside.txt");
-        URI mountpointUri = new URI(
-            "knime://knime-server-mountpoint/test?exec=8443aad7-e59e-4be1-b31b-4b287f5bf466&name=test%2B2019-01-02%2B09.57.19");
-
-        RemoteWorkflowContext ctx = new RemoteWorkflowContext(null, null, "path", new SimpleTokenAuthenticator("token"),
-            "mount id", mountpointUri, null, null);
-        NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
-
-        URLConnection conn = m_handler.openConnection(url);
-        URI expectedUri = new URI("knime://knime-server-mountpoint/some%20where/outside.txt");
-        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedUri));
-    }
-
-    /**
-     * Checks if workflow-relative knime-URIs are correctly resolved to server mountpoint URIs.
-     *
-     * @throws Exception
-     */
-    @Test
-    public void testResolveWorkfowRelativeURIToServerMountpointURI() throws Exception {
-        URL url = new URL("knime://knime.workflow/../some where/outside.txt");
-        URI mountpointUri = new URI(
-            "knime://knime-server-mountpoint/test?exec=8443aad7-e59e-4be1-b31b-4b287f5bf466&name=test%2B2019-01-02%2B09.57.19");
-
-        RemoteWorkflowContext ctx = new RemoteWorkflowContext(null, null, "path", new SimpleTokenAuthenticator("token"),
-            "mount id", mountpointUri, null, null);
-        NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
-
-        URLConnection conn = m_handler.openConnection(url);
-        URI expectedUri = new URI("knime://knime-server-mountpoint/some%20where/outside.txt");
-        assertThat("Unexpected resolved URL", conn.getURL().toURI(), is(expectedUri));
     }
 
     /**
@@ -190,7 +155,20 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
         URI mountpointUri = new URI(
             "knime://knime-server-mountpoint/test?exec=8443aad7-e59e-4be1-b31b-4b287f5bf466&name=test%2B2019-01-02%2B09.57.19");
 
-        RemoteWorkflowContext ctx = new RemoteWorkflowContext(null, null, "path", new SimpleTokenAuthenticator("token"),
+        final var contextV2 = WorkflowContextV2.builder() //
+                .withServerJobExecutor(exec -> exec //
+                    .withUserId("user") //
+                    .withLocalWorkflowPath(Path.of("some where/inside.txt")) //
+                    .withJobId(UUID.randomUUID()) //
+                    .withRemoteExecutor("knime-server-mountpoint", "executor-version")) //
+                .withServerLocation(loc -> loc
+                    .withRepositoryAddress(URI.create("https://localhost:8080/knime"))
+                    .withWorkflowPath("/some where/inside.txt")
+                    .withAuthenticator(new SimpleTokenAuthenticator("token"))
+                    .withDefaultMountId("knime-server-mountpoint"))
+                .build();
+
+        RemoteWorkflowContext ctx = new RemoteWorkflowContext(contextV2, null, "path", new SimpleTokenAuthenticator("token"),
             "mount id", mountpointUri, null, null);
         NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
 

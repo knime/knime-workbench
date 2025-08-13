@@ -2,9 +2,9 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Testcase for KNIME Explorer View
 Bundle-SymbolicName: org.knime.workbench.explorer.view.tests;singleton:=true
-Bundle-Version: 9.1.0.qualifier
+Bundle-Version: 9.3.0.qualifier
 Bundle-Vendor: KNIME AG, Zurich, Switzerland
-Fragment-Host: org.knime.workbench.explorer.view;bundle-version="[9.1.0,10.0.0)"
+Fragment-Host: org.knime.workbench.explorer.view;bundle-version="[9.3.0,10.0.0)"
 Require-Bundle: org.junit;bundle-version="[4.13.2,5.0.0)",
  org.knime.testing;bundle-version="[5.6.0,6.0.0)",
  org.mockito.mockito-core;bundle-version="[2.18.3,3.0.0)",

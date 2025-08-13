@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: KNIME Explorer View
 Bundle-SymbolicName: org.knime.workbench.explorer.view;singleton:=true
-Bundle-Version: 9.2.0.qualifier
+Bundle-Version: 9.3.0.qualifier
 Bundle-Activator: org.knime.workbench.explorer.ExplorerActivator
 Bundle-Vendor: KNIME AG, Zurich, Switzerland
 Export-Package: org.knime.workbench.explorer,
@@ -19,7 +19,7 @@ Export-Package: org.knime.workbench.explorer,
   org.knime.workbench.explorer.view.dnd,
   org.knime.workbench.explorer.view.preferences
 Require-Bundle: org.knime.core;bundle-version="[5.7.0,6.0.0)",
- org.knime.core.workbench;bundle-version="[5.6.0,6.0.0)",
+ org.knime.core.workbench;bundle-version="[5.7.0,6.0.0)",
  org.eclipse.ui;bundle-version="[3.106.0,4.0.0)",
  org.eclipse.core.resources;bundle-version="[3.9.1,4.0.0)",
  org.knime.workbench.ui;bundle-version="[5.6.0,6.0.0)",
@@ -41,6 +41,5 @@ Require-Bundle: org.knime.core;bundle-version="[5.7.0,6.0.0)",
  com.sun.mail.jakarta.mail;bundle-version="[1.6.7,2.0.0)"
 Bundle-RequiredExecutionEnvironment: JavaSE-17
 Bundle-ActivationPolicy: lazy
-Service-Component: OSGI-INF/IRegisteredServerInfoService.xml,
- OSGI-INF/URIToFileResolveService.xml
+Service-Component: OSGI-INF/IRegisteredServerInfoService.xml
 Automatic-Module-Name: org.knime.workbench.explorer.view
