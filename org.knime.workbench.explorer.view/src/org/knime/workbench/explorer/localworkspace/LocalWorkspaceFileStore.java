@@ -66,9 +66,9 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Status;
-import org.knime.core.internal.KNIMEPath;
 import org.knime.core.node.workflow.contextv2.LocalLocationInfo;
 import org.knime.core.util.PathUtils;
+import org.knime.core.workbench.KNIMEWorkspacePath;
 import org.knime.workbench.explorer.ExplorerActivator;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
@@ -94,7 +94,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      */
     public LocalWorkspaceFileStore(final String mountID, final String absolutePath) {
         super(mountID, absolutePath);
-        IPath rootPath = Path.fromPortableString(KNIMEPath.getWorkspaceDirPath().getAbsolutePath());
+        IPath rootPath = Path.fromPortableString(KNIMEWorkspacePath.getWorkspaceDirPath().getAbsolutePath());
         IPath filePath = rootPath.append(new Path(getFullName()));
         m_file = EFS.getLocalFileSystem().getStore(filePath);
     }
@@ -114,7 +114,7 @@ public class LocalWorkspaceFileStore extends LocalExplorerFileStore {
      * @since 8.14
      */
     public static LocalWorkspaceFileStore fromRelativeToWorkspacePath(final String mountID, final String relativePath) {
-        final var workspacePath = Path.fromPortableString(KNIMEPath.getWorkspaceDirPath().getAbsolutePath());
+        final var workspacePath = Path.fromPortableString(KNIMEWorkspacePath.getWorkspaceDirPath().getAbsolutePath());
         IPath filePath = workspacePath.append(new Path(relativePath));
         // this is how workspace-relative WFs pass their "relative" paths - as an absolute path from root
         final var absolutePath = Paths.get("/").resolve(relativePath).toString();
