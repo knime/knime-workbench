@@ -61,6 +61,7 @@ import java.util.stream.Stream;
 
 import javax.swing.UIManager;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -331,6 +332,7 @@ public final class LoadWorkflowRunnable extends PersistWorkflowRunnable {
                     String missingExtensions = Stream.concat(missingNodes.stream(), missingTableFormats.stream()) //
                             .map(KNIMEComponentInformation::getComponentName) //
                             .distinct() //
+                            .map(s -> StringUtils.replace(s, "&", "&&")) // escape ampersands (mnemonic in SWT dialog)
                             .collect(Collectors.joining(", "));
 
                     String missingPrefix = determineMissingPrefix(missingNodes, missingTableFormats);
