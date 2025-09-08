@@ -69,6 +69,7 @@ import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.TmpLocalExplorerFile;
+import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
  * Implementation Of {@link MountPointFileSystemAccess} backed by {@link ExplorerMountTable}.
@@ -276,18 +277,32 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
     }
 
     /**
+     * {@inheritDoc}
+     *
      * @since 8.13
      */
     @Override
     public boolean isAuthenticated(final URI uri) {
+        return getContentProvider(uri).isAuthenticated();
+    }
+
+    /**
+     * Method to get the content provider for a given URI that does not go through the FileStore API.
+     *
+     * @param uri uri to get the content provider for
+     * @return the content provider
+     * @throws IllegalArgumentException if mountpoint does not exist
+     * @throws IllegalStateException if no factory is registered for the content provider (unexpected)
+     */
+    private static AbstractContentProvider getContentProvider(final URI uri) {
         final var mountID = ExplorerFileSystem.getIDfromURI(uri);
-        final var contentProviderOpt = ExplorerMountTable.getMountedContent() //
-            .values().stream() //
-            .filter(contentProvider -> mountID.equals(contentProvider.getMountID())).findFirst();
-        if (contentProviderOpt.isEmpty()) {
-            throw new IllegalStateException(String.format("Mountpoint %s does not exist.", mountID));
-        }
-        return contentProviderOpt.get().isAuthenticated();
+        return WorkbenchMountTable.getMountPoint(mountID) //
+            // same call as ExplorerMountTable#getMountedContent does, but we only need a single one
+            .map(wmp -> ExplorerMountTable.toAbstractContentProvider(wmp) //
+                            .orElseThrow(() -> new IllegalStateException( //
+                                "Factory for mountpoint \"%s\" is not registered.".formatted(mountID)))) //
+            // same exception as with getStore before
+            .orElseThrow(() -> new IllegalArgumentException("Mountpoint \"%s\" does not exist.".formatted(mountID)));
     }
 
     /**
