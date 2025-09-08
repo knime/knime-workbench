@@ -49,7 +49,6 @@
 package org.knime.workbench.explorer.filesystem;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -69,40 +68,56 @@ import org.knime.workbench.explorer.ExplorerMountTable;
 import org.knime.workbench.explorer.view.AbstractContentProvider;
 
 /**
- * Refreshes the remote content provider. This is a workaround for the fetcher not being used anymore
- * in nodes which use an old files selection dialog.
- * <p>
- * This is an expensive operation involving network I/O and should be avoided where possible.
+ * This class provides a workaround to use the {@link RemoteExplorerFileStore} API of Hub mountpoints while ModernUI is
+ * in use.
+ * In older versions, Hub mountpoints were continuously fetching remote Explorer content in
+ * the background based on configurable TTLs, even when ModernUI was in use.
  *
- * @since 9.2
+ * In order to still use the {@link RemoteExplorerFileStore} API in this context (Hub mountpoint and ModernUI),
+ * {@link #refreshContentProvidersWithProgress(Shell, List)} has to be called prior to using any methods of
+ * {@link RemoteExplorerFileStore} instances, in order to obtain up to date content.
+ *
+ * <b>Note:</b> This is an expensive operation involving network I/O, blocking the user with progress,
+ * and thus should be avoided where possible.
+ *
+ * @since 9.3
+ * @apiNote This class will be removed once the RemoteExplorerFileStore API for Hub connectivity is fully replaced by a
+ * modern API based on the HubClient SDK.
  */
-public final class FreshFileStoreResolver {
+public final class ExplorerRemoteContentRefresher {
 
-    private FreshFileStoreResolver() {
+    private ExplorerRemoteContentRefresher() {
     }
 
     /**
-     * Refresh if necessary remote, authenticated content providers. The progress is displayed in the
-     * given active display shell which blocks calls until all jobs are finished or cancelled.
+     * Refresh if necessary remote, authenticated content providers. The progress is displayed in the given active
+     * display shell which blocks calls until <em>all</em> jobs are finished or cancelled.
+     *
+     * @param activeShell shell to use for displaying progress dialog
+     * @param mountIds mount IDs to refresh
+     *
+     * @return mountIds that were passed in
      */
-    public static void refreshContentProvidersWithProgress(final Shell activeShell, final String... mountIds) {
+    public static List<String> refreshContentProvidersWithProgress(final Shell activeShell,
+        final List<String> mountIds) {
         // don't refresh in non-AP contexts
         if (!EclipseUtil.determineAPUsage()) {
-            return;
+            return mountIds;
         }
         // don't refresh in classic UI
         if (EclipseUtil.determineClassicUIUsage()) {
-            return;
+            return mountIds;
         }
 
-        var fileStores = findContentProviders(Arrays.stream(mountIds).collect(Collectors.toUnmodifiableSet()));
-        if (fileStores.isEmpty()) {
-            return;
+        var stores = findRootStores(mountIds.stream().collect(Collectors.toUnmodifiableSet()));
+        if (stores.isEmpty()) {
+            return mountIds;
         }
-        refreshWithProgress(activeShell, fileStores);
+        refreshWithProgress(activeShell, stores);
+        return mountIds;
     }
 
-    private static List<RemoteExplorerFileStore> findContentProviders(final Set<String> mountIds) {
+    private static List<RemoteExplorerFileStore> findRootStores(final Set<String> mountIds) {
         return ExplorerMountTable.getMountedContent() //
                 .values().stream() //
                 // filter mounted with current space providers, to not refresh remotes that are not visible in
@@ -136,7 +151,7 @@ public final class FreshFileStoreResolver {
     private static boolean joinOnJobFamily(final Shell activeShell, final Object family) {
         final var canceled = new AtomicBoolean(false);
         try {
-            ProgressMonitorDialog dialog = new ProgressMonitorDialog(activeShell);
+            final var dialog = new ProgressMonitorDialog(activeShell);
             dialog.run(true, true, monitor -> { // NOSONAR complexity ok
                 try {
                     // We wait for our refresh jobs to finish.
@@ -153,7 +168,7 @@ public final class FreshFileStoreResolver {
                 }
             });
         } catch (final InvocationTargetException e) {
-            NodeLogger.getLogger(FreshFileStoreResolver.class)
+            NodeLogger.getLogger(ExplorerRemoteContentRefresher.class)
                 .warn("Failed to refresh remote content before opening dialog – content might be stale.", e);
         } catch (final InterruptedException e) { // NOSONAR we recover from that
             // we got interrupted while waiting for refresh, so we cancel the whole thing
