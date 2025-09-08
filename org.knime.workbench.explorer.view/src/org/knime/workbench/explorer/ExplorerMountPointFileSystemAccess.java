@@ -66,6 +66,7 @@ import org.knime.filehandling.core.connections.base.attributes.BaseFileAttribute
 import org.knime.filehandling.core.util.MountPointFileSystemAccess;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileInfo;
 import org.knime.workbench.explorer.filesystem.AbstractExplorerFileStore;
+import org.knime.workbench.explorer.filesystem.ExplorerFileSystem;
 import org.knime.workbench.explorer.filesystem.LocalExplorerFileStore;
 import org.knime.workbench.explorer.filesystem.TmpLocalExplorerFile;
 
@@ -279,7 +280,14 @@ public class ExplorerMountPointFileSystemAccess implements MountPointFileSystemA
      */
     @Override
     public boolean isAuthenticated(final URI uri) {
-        return getStore(uri).getContentProvider().isAuthenticated();
+        final var mountID = ExplorerFileSystem.getIDfromURI(uri);
+        final var contentProviderOpt = ExplorerMountTable.getMountedContent() //
+            .values().stream() //
+            .filter(contentProvider -> mountID.equals(contentProvider.getMountID())).findFirst();
+        if (contentProviderOpt.isEmpty()) {
+            throw new IllegalStateException(String.format("Mountpoint %s does not exist.", mountID));
+        }
+        return contentProviderOpt.get().isAuthenticated();
     }
 
     /**
