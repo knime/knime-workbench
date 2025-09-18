@@ -138,7 +138,7 @@ public final class NodeUtil {
             Node n = new Node((NodeFactory<NodeModel>)nodeFactoryCreator.get());
             nodeModelClass = n.getNodeModel().getClass();
             try {
-                n.cleanup();
+                n.cleanup(null);
             } catch (Exception e) {
                 //we want to catch all errors here because the cleanup-method (and the subsequent NodeModel#onDispose)
                 //assumes a NodeContext to be available, but we don't have a NodeContext here because node is not part of a NodeContainer
