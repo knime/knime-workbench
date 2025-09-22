@@ -61,6 +61,9 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
+import javax.mail.internet.ContentDisposition;
+import javax.mail.internet.ParseException;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -298,7 +301,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     @Override
     public boolean isSpaceRelative(final URI uri) {
         return ExplorerFileSystem.SCHEME.equalsIgnoreCase(uri.getScheme())
-                && ExplorerURLStreamHandler.SPACE_RELATIVE.equalsIgnoreCase(uri.getHost());
+            && ExplorerURLStreamHandler.SPACE_RELATIVE.equalsIgnoreCase(uri.getHost());
     }
 
     @Override
@@ -308,23 +311,50 @@ public class URIToFileResolveImpl implements URIToFileResolve {
                 final var file = FileUtil.getFileFromURL(uri.toURL());
                 return Optional.of(new KNIMEURIDescription(uri.getHost(), file.getAbsolutePath(), file.getName()));
             } catch (final MalformedURLException e) {
+                NodeLogger.getLogger(URIToFileResolveImpl.class).debug("Failed to resolve name from file", e);
                 return Optional.empty();
             }
         }
 
-        final var fileStore = ExplorerFileSystem.INSTANCE.getStore(uri);
-        if (fileStore == null) {
+        return getDescriptionFromFilestore(uri).or(() -> getDescriptionFromResponseHeaders(uri));
+
+    }
+
+    private static Optional<KNIMEURIDescription> getDescriptionFromFilestore(final URI uri) {
+        var fileStore = ExplorerFileSystem.INSTANCE.getStore(uri);
+        if (fileStore != null) {
+            var fileStoreInfo = fileStore.fetchInfo();
+            if (fileStoreInfo.exists()) {
+                final var mountId = fileStore.getMountID();
+                var path = StringUtils.substringAfterLast(fileStore.getMountIDWithFullPath(), ":");
+                return Optional.of(new KNIMEURIDescription(mountId, path, fileStoreInfo.getName()));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<KNIMEURIDescription> getDescriptionFromResponseHeaders(final URI uri) {
+        try (final var c = ThreadLocalHTTPAuthenticator.suppressAuthenticationPopups()) {
+            final var connection = URLConnectionFactory.getConnection(URLResolverUtil.toURL(uri));
+            // A HEAD request is not enough, the Content-Disposition response header is
+            // not provided there; the below will implicitly connect
+            var itemName = new ContentDisposition( //
+                    String.valueOf(connection.getHeaderField("Content-Disposition")) //
+            ).getParameter("filename");
+            if (StringUtils.isBlank(itemName)) {
+                throw new IllegalArgumentException("Content-Disposition header value does not contain a filename");
+            }
+            if (itemName.endsWith(".knar")) {
+                itemName = itemName.substring(0, itemName.length() - ".knar".length());
+            }
+            if (connection instanceof HttpURLConnection httpURLConnection) {
+                httpURLConnection.disconnect();
+            }
+            return Optional.of(new KNIMEURIDescription(uri.getHost(), uri.toString(), itemName));
+        } catch (IOException | IllegalArgumentException | ParseException e) {
+            NodeLogger.getLogger(URIToFileResolveImpl.class).debug("Failed to resolve name from header", e);
             return Optional.empty();
         }
-
-        final var info = fileStore.fetchInfo();
-        if (!info.exists()) {
-            return Optional.empty();
-        }
-
-        final var mountId = fileStore.getMountID();
-        var path = StringUtils.substringAfterLast(fileStore.getMountIDWithFullPath(), ":");
-        return Optional.of(new KNIMEURIDescription(mountId, path, info.getName()));
     }
 
     @Override
