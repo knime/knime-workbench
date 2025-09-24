@@ -54,12 +54,14 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import javax.mail.internet.ContentDisposition;
 import javax.mail.internet.ParseException;
@@ -67,6 +69,7 @@ import javax.mail.internet.ParseException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.hc.core5.http.HttpHeaders;
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -74,6 +77,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.CheckUtils;
 import org.knime.core.util.FileUtil;
+import org.knime.core.util.KnimeUrlType;
 import org.knime.core.util.ThreadLocalHTTPAuthenticator;
 import org.knime.core.util.exception.ResourceAccessException;
 import org.knime.core.util.hub.NamedItemVersion;
@@ -93,30 +97,29 @@ import org.knime.workbench.explorer.filesystem.RemoteExplorerFileStore;
  */
 public class URIToFileResolveImpl implements URIToFileResolve {
 
-    /** {@inheritDoc} */
+    private static final NodeLogger LOGGER = NodeLogger.getLogger(URIToFileResolveImpl.class);
+
+    private static final Pattern KNWF_KNAR_PATTERN = Pattern.compile("\\.kn(wf|ar)$", Pattern.CASE_INSENSITIVE);
+
+    private static final String FILE_PROTOCOL = "file";
+
     @Override
     public File resolveToFile(final URI uri) throws ResourceAccessException {
         return resolveToFile(uri, new NullProgressMonitor());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public File resolveToLocalOrTempFile(final URI uri) throws ResourceAccessException {
         return resolveToLocalOrTempFile(uri, new NullProgressMonitor());
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public File resolveToFile(final URI uri, final IProgressMonitor monitor) throws ResourceAccessException {
         if (uri == null) {
             throw new IllegalArgumentException("Can't resolve null URI to file");
         }
         String scheme = uri.getScheme();
-        if ("file".equalsIgnoreCase(scheme)) {
+        if (FILE_PROTOCOL.equalsIgnoreCase(scheme)) {
             try {
                 return new File(uri);
             } catch (IllegalArgumentException e) {
@@ -125,7 +128,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         } else if (ExplorerFileSystem.SCHEME.equalsIgnoreCase(scheme)) {
             var url = ExplorerURLStreamHandler.resolveKNIMEURL(URLResolverUtil.toURL(uri));
 
-            if ("file".equals(url.getProtocol())) {
+            if (FILE_PROTOCOL.equalsIgnoreCase(url.getProtocol())) {
                 return FileUtil.getFileFromURL(url);
             } else if (ExplorerFileSystem.SCHEME.equals(url.getProtocol())) {
                 return resolveStandardUri(uri, monitor);
@@ -152,9 +155,6 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public File resolveToLocalOrTempFile(final URI uri, final IProgressMonitor monitor) throws ResourceAccessException {
         return resolveToLocalOrTempFileInternal(uri, monitor, null);
@@ -166,7 +166,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
             throw new IllegalArgumentException("Can't resolve null URI to file");
         }
         String scheme = uri.getScheme();
-        if ("file".equalsIgnoreCase(scheme)) {
+        if (FILE_PROTOCOL.equalsIgnoreCase(scheme)) {
             try {
                 return new File(uri);
             } catch (IllegalArgumentException e) {
@@ -184,7 +184,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
     private static File resolveKnimeUriToLocalOrTempFile(final URI uri, final IProgressMonitor monitor,
         final ZonedDateTime ifModifiedSince) throws ResourceAccessException {
         var url = ExplorerURLStreamHandler.resolveKNIMEURL(URLResolverUtil.toURL(uri));
-        if ("file".equals(url.getProtocol())) {
+        if (FILE_PROTOCOL.equalsIgnoreCase(url.getProtocol())) {
             return FileUtil.getFileFromURL(url);
         } else if (ExplorerFileSystem.SCHEME.equals(url.getProtocol())) {
             final AbstractExplorerFileStore fs = ExplorerFileSystem.INSTANCE.getStore(uri);
@@ -202,9 +202,6 @@ public class URIToFileResolveImpl implements URIToFileResolve {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public Optional<File> resolveToLocalOrTempFileConditional(final URI uri, final IProgressMonitor monitor,
         final ZonedDateTime ifModifiedSince) throws ResourceAccessException {
@@ -254,8 +251,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
                 uc.connect();
                 if (uc instanceof HttpURLConnection huc
                     && huc.getResponseCode() == HttpURLConnection.HTTP_NOT_MODIFIED) {
-                    NodeLogger.getLogger(URIToFileResolveImpl.class)
-                        .debug("Download of resource at '" + url + "' skipped. Resource not modified.");
+                    LOGGER.debug("Download of resource at '" + url + "' skipped. Resource not modified.");
                     return null;
                 }
             }
@@ -306,60 +302,87 @@ public class URIToFileResolveImpl implements URIToFileResolve {
 
     @Override
     public Optional<KNIMEURIDescription> toDescription(final URI uri, final IProgressMonitor monitor) {
-        if (uri.getScheme().equals("file")) {
+        if (FILE_PROTOCOL.equalsIgnoreCase(uri.getScheme())) {
             try {
-                final var file = FileUtil.getFileFromURL(uri.toURL());
-                return Optional.of(new KNIMEURIDescription(uri.getHost(), file.getAbsolutePath(), file.getName()));
+                return getDescriptionFromFile(uri.toURL());
             } catch (final MalformedURLException e) {
-                NodeLogger.getLogger(URIToFileResolveImpl.class).debug("Failed to resolve name from file", e);
+                LOGGER.debug("Failed to resolve name from file '%s'".formatted(uri), e);
                 return Optional.empty();
             }
         }
 
-        return getDescriptionFromFilestore(uri).or(() -> getDescriptionFromResponseHeaders(uri));
+        if (KnimeUrlType.getType(uri).isPresent()) {
+            return getDescriptionFromFilestore(uri) // try to get from filestore (mount point) in local AP
+                .or(() -> getDescriptionFromURLConnection(uri)); // try to get from URLConnection in executor
+        }
 
+        // neither a knime:// nor a file:// URL
+        return Optional.empty();
+    }
+
+    private static Optional<KNIMEURIDescription> getDescriptionFromFile(final URL url) {
+        final var file = FileUtil.getFileFromURL(url);
+        return Optional.of(new KNIMEURIDescription(url.getHost(), file.getAbsolutePath(), file.getName()));
     }
 
     private static Optional<KNIMEURIDescription> getDescriptionFromFilestore(final URI uri) {
-        var fileStore = ExplorerFileSystem.INSTANCE.getStore(uri);
+        AbstractExplorerFileStore fileStore = ExplorerFileSystem.INSTANCE.getStore(uri);
         if (fileStore != null) {
-            var fileStoreInfo = fileStore.fetchInfo();
+            final var fileStoreInfo = fileStore.fetchInfo();
             if (fileStoreInfo.exists()) {
                 final var mountId = fileStore.getMountID();
-                var path = StringUtils.substringAfterLast(fileStore.getMountIDWithFullPath(), ":");
+                final var path = StringUtils.substringAfterLast(fileStore.getMountIDWithFullPath(), ":");
                 return Optional.of(new KNIMEURIDescription(mountId, path, fileStoreInfo.getName()));
             }
         }
         return Optional.empty();
     }
 
-    private static Optional<KNIMEURIDescription> getDescriptionFromResponseHeaders(final URI uri) {
+    private static Optional<KNIMEURIDescription> getDescriptionFromURLConnection(final URI uri) {
+        URLConnection connection = null;
         try (final var c = ThreadLocalHTTPAuthenticator.suppressAuthenticationPopups()) {
-            final var connection = URLConnectionFactory.getConnection(URLResolverUtil.toURL(uri));
-            // A HEAD request is not enough, the Content-Disposition response header is
-            // not provided there; the below will implicitly connect
-            var itemName = new ContentDisposition( //
-                    String.valueOf(connection.getHeaderField("Content-Disposition")) //
-            ).getParameter("filename");
-            if (StringUtils.isBlank(itemName)) {
-                throw new IllegalArgumentException("Content-Disposition header value does not contain a filename");
+            connection = URLConnectionFactory.getConnection(URLResolverUtil.toURL(uri));
+
+            if (connection instanceof HttpURLConnection httpURLConnection) {
+                // HTTP URL, probably on an executor
+                return getDescriptionFromResponseHeader(uri, httpURLConnection);
             }
-            if (itemName.endsWith(".knar")) {
-                itemName = itemName.substring(0, itemName.length() - ".knar".length());
+
+            // KNIME URLs can be resolved to file:// URLs inside the workflow
+            final var resolvedUrl = connection.getURL();
+            if (FILE_PROTOCOL.equalsIgnoreCase(resolvedUrl.getProtocol())) {
+                return getDescriptionFromFile(resolvedUrl);
             }
+
+            // we don't know how to extract a name from other protocols
+            return Optional.empty();
+        } catch (IOException | IllegalArgumentException | ParseException e) {
+            LOGGER.debug("Failed to resolve name from Content-Disposition header", e);
+            return Optional.empty();
+        } finally {
             if (connection instanceof HttpURLConnection httpURLConnection) {
                 httpURLConnection.disconnect();
             }
-            return Optional.of(new KNIMEURIDescription(uri.getHost(), uri.toString(), itemName));
-        } catch (IOException | IllegalArgumentException | ParseException e) {
-            NodeLogger.getLogger(URIToFileResolveImpl.class).debug("Failed to resolve name from header", e);
+        }
+    }
+
+    private static Optional<KNIMEURIDescription> getDescriptionFromResponseHeader(final URI uri,
+        final HttpURLConnection httpURLConnection) throws ParseException {
+        // A HEAD request is not enough, the Content-Disposition response header is
+        // not provided there; the below will implicitly connect
+        final var header = httpURLConnection.getHeaderField(HttpHeaders.CONTENT_DISPOSITION);
+        final var itemName = header == null ? null : new ContentDisposition(header).getParameter("filename");
+        if (StringUtils.isBlank(itemName)) {
+            LOGGER.debug("Expected Content-Disposition header with filename parameter, but got none");
             return Optional.empty();
         }
+        return Optional.of(new KNIMEURIDescription(uri.getHost(), uri.toString(),
+            KNWF_KNAR_PATTERN.matcher(itemName).replaceFirst("")));
     }
 
     @Override
     public Optional<List<SpaceVersion>> getSpaceVersions(final URI uri) throws Exception {
-        if (uri.getScheme().equals("file")) {
+        if (FILE_PROTOCOL.equalsIgnoreCase(uri.getScheme())) {
             return Optional.empty();
         }
 
@@ -385,7 +408,7 @@ public class URIToFileResolveImpl implements URIToFileResolve {
 
     @Override
     public List<NamedItemVersion> getHubItemVersionList(final URI uri) throws ResourceAccessException {
-        CheckUtils.checkArgument(uri.getScheme().equals("knime"), "Expected a KNIME URI but got: %s", uri);
+        CheckUtils.checkArgument(KnimeUrlType.getType(uri).isPresent(), "Expected a KNIME URI but got: %s", uri);
 
         var s = ExplorerFileSystem.INSTANCE.getStore(uri);
 
