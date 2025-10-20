@@ -62,6 +62,8 @@ import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.progress.IProgressService;
@@ -230,6 +232,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         throw new IllegalStateException("Not to be called");
     }
 
+    @SuppressWarnings("restriction")
     @Override
     public void runInSWT() {
         List<NodeID> candidateList = getMetaNodesToCheck(false);
@@ -240,7 +243,12 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
         final var runner = new CheckUpdateRunnableWithProgress(getManager(), candidateList);
         Status status;
         try {
-            ps.busyCursorWhile(runner);
+            if (isAnyModalShellOpen(shell.getDisplay())) {
+                MessageDialog.openWarning(shell, "Update Check Unavailable", //
+                    "Cannot check for component and metanode updates while another dialog is open.");
+            } else {
+                ps.busyCursorWhile(runner);
+            }
             status = runner.getStatus();
         } catch (InvocationTargetException | IllegalStateException e) {
             var message = e instanceof InvocationTargetException ite ? ite.getTargetException().getMessage()
@@ -250,7 +258,7 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
             }
             LOGGER.warn("Failed to check for updates: " + message, e);
             status = new Status(IStatus.WARNING, KNIMEEditorPlugin.PLUGIN_ID, message);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException e) { // NOSONAR
             return;
         }
         List<NodeID> updateList = runner.getUpdateList();
@@ -323,6 +331,16 @@ public class CheckUpdateMetaNodeLinkAction extends AbstractNodeAction {
                 execute(new UpdateMetaNodeLinkCommand(getManager(), updateList.toArray(NodeID[]::new)));
             }
         }
+    }
+
+    static boolean isAnyModalShellOpen(final Display display) {
+        for (var shell : display.getShells()) {
+            if (!shell.isDisposed() && shell.isVisible()
+                && (shell.getStyle() & (SWT.APPLICATION_MODAL | SWT.SYSTEM_MODAL | SWT.PRIMARY_MODAL)) != 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
