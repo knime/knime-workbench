@@ -60,6 +60,8 @@ import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.ImageDataProvider;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.internal.DPIUtil;
+import org.eclipse.swt.widgets.Display;
 import org.knime.core.node.KNIMEConstants;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.util.ViewUtils;
@@ -239,6 +241,15 @@ public class KNIMEImageProvider implements ImageDataProvider {
 
     @Override
     public ImageData getImageData(final int zoom) {
+        ImageData origImageData = getImageDataOld(zoom);
+        if (zoom == 100) {
+            return origImageData;
+        }
+        // since 5.9, KNIME is high-DPI aware (to some extent), see QA-1304
+        return DPIUtil.scaleImageData(Display.getCurrent(), origImageData, zoom, 100);
+    }
+
+    private ImageData getImageDataOld(final int zoom) {
         if (zoom < 150 || !Boolean.getBoolean(KNIMEConstants.PROPERTY_HIGH_DPI_SUPPORT)) {
             try (InputStream i = open100()) {
                 ImageData img = new ImageData(i);

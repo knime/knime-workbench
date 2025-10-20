@@ -52,12 +52,14 @@ import java.io.IOException;
 import java.net.URL;
 
 import org.eclipse.swt.graphics.ImageData;
-import org.knime.core.node.KNIMEConstants;
 
 /**
  * ImageDataProvider for icon images. Always scales provided image to 16x16 or 24/32px depending on system/display zoom.
  * If higher resolution is required the filename must contain the image size (like /tmp/foo_24x24.png and
  * /tmp/foo_32x32.png). If no higher resolution file is provided the 16x16 image is scaled up.
+ *
+ * EDIT: Since 5.9, this class no longer scales the images to fixed sizes, but returns the original image data,
+ * correctly scaled. (QA-1304)
  *
  * @author ohl
  * @since 3.0
@@ -86,14 +88,17 @@ public class KNIMEIconImageProvider extends KNIMEImageProvider {
     @Override
     public ImageData getImageData(final int zoom) {
         ImageData img = super.getImageData(zoom);
-        // icons have a fixed size
-        if (zoom < 150 || !Boolean.getBoolean(KNIMEConstants.PROPERTY_HIGH_DPI_SUPPORT)) {
-            return scaleImageTo(16, img);
-        } else if (zoom < 200) {
-            return scaleImageTo(24, img);
-        } else {
-            return scaleImageTo(32, img);
-        }
+        return img;
+        // disabled as part of QA-1304 - after updates to eclipse (2025-06) and java (21),
+        // high-dpi scaling caused issues on Windows
+//        // icons have a fixed size
+//        if (zoom < 150 || !Boolean.getBoolean(KNIMEConstants.PROPERTY_HIGH_DPI_SUPPORT)) {
+//            return scaleImageTo(16, img);
+//        } else if (zoom < 200) {
+//            return scaleImageTo(24, img);
+//        } else {
+//            return scaleImageTo(32, img);
+//        }
     }
 
 }
