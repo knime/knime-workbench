@@ -90,8 +90,11 @@ public final class ExplorerRemoteContentRefresher {
     }
 
     /**
-     * Refresh if necessary remote, authenticated content providers. The progress is displayed in the given active
+     * Refresh, if necessary, the content providers identified by the given mount IDs.
+     * The progress is displayed in the given active
      * display shell which blocks calls until <em>all</em> jobs are finished or cancelled.
+     *
+     * <b>Note:</b> prefer {@link #refreshContentProviders(Shell, List)} to get access to the cancelation flag.
      *
      * @param activeShell shell to use for displaying progress dialog
      * @param mountIds mount IDs to refresh
@@ -100,21 +103,40 @@ public final class ExplorerRemoteContentRefresher {
      */
     public static List<String> refreshContentProvidersWithProgress(final Shell activeShell,
         final List<String> mountIds) {
+        refresh(activeShell, mountIds);
+        return mountIds;
+    }
+
+    /**
+     * Refreshes, if necessary, the content providers identified by the given mount IDs.
+     * The progress dialog is displayed in the given active display shell, which blocks calls until <em>all</em> jobs
+     * are finished or canceled.
+     *
+     * @param activeShell shell to use for displaying progress dialog
+     * @param mountIds mountIDs to refresh
+     *
+     * @return {@code true} if the refresh was canceled by user action, {@code false} otherwise
+     *
+     * @since 9.3
+     */
+    public static boolean refreshContentProviders(final Shell activeShell, final List<String> mountIds) {
+        return refresh(activeShell, mountIds);
+    }
+
+    private static boolean refresh(final Shell activeShell, final List<String> mountIds) {
         // don't refresh in non-AP contexts
         if (!EclipseUtil.determineAPUsage()) {
-            return mountIds;
+            return false;
         }
         // don't refresh in classic UI
         if (EclipseUtil.determineClassicUIUsage()) {
-            return mountIds;
+            return false;
         }
-
         var stores = findRootStores(mountIds.stream().collect(Collectors.toUnmodifiableSet()));
         if (stores.isEmpty()) {
-            return mountIds;
+            return false;
         }
-        refreshWithProgress(activeShell, stores);
-        return mountIds;
+        return refreshWithProgress(activeShell, stores);
     }
 
     private static List<RemoteExplorerFileStore> findRootStores(final Set<String> mountIds) {
@@ -131,9 +153,9 @@ public final class ExplorerRemoteContentRefresher {
                 .toList();
     }
 
-
-    private static void refreshWithProgress(final Shell activeShell, final List<RemoteExplorerFileStore> fileStores) {
-        PlatformUI.getWorkbench().getDisplay().syncCall(() -> { // NOSONAR
+    private static boolean refreshWithProgress(final Shell activeShell,
+            final List<RemoteExplorerFileStore> fileStores) {
+        return PlatformUI.getWorkbench().getDisplay().syncCall(() -> {
             fileStores.forEach(store -> new RefreshJob(store).schedule());
             return joinOnJobFamily(activeShell, RefreshJob.class);
         });
