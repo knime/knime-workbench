@@ -93,6 +93,10 @@ public final class ImageRepository {
     // used for the missing icon
     private static final String MISSING_ICON_KEY = "###MISSING_ICON###";
 
+    /** System property to disable Hi-DPI scaling in classic UI (default: false). */
+    private static final boolean CLASSIC_UI_HIDPI_DISABLED =
+        Boolean.getBoolean("knime.classicui.hidpi.disabled");
+
     /**
      * Enumeration for shared images.
      *
@@ -492,10 +496,14 @@ public final class ImageRepository {
      * @param resourceURL to the icon image
      * @return an image in its original size (no high DPI system zoom factor scaling)
      */
-     public static Image getUnscaledImage(final URL resourceURL) {
-         if (resourceURL == null) {
-             return null;
-         }
+    public static Image getUnscaledImage(final URL resourceURL) {
+        if (!CLASSIC_UI_HIDPI_DISABLED) {
+            // When HiDPI is enabled, redirect to the scaled version
+            return getImage(resourceURL);
+        }
+        if (resourceURL == null) {
+            return null;
+        }
         final String key = resourceURL.toString() + NOTSCALED_KEY;
         Image img = KNIMECorePlugin.getDefault().getImageRegistry().get(key);
         if (img != null) {
@@ -510,7 +518,7 @@ public final class ImageRepository {
         }
         KNIMECorePlugin.getDefault().getImageRegistry().put(key, img);
         return img;
-     }
+    }
 
      /**
       * @see #getUnscaledImage(URL)
@@ -553,10 +561,14 @@ public final class ImageRepository {
       * @param resourceURL to the icon image
       * @return a potentially scaled image
       */
-      public static Image getUnscaledIconImage(final URL resourceURL) {
-          if (resourceURL == null) {
-              return null;
-          }
+     public static Image getUnscaledIconImage(final URL resourceURL) {
+         if (!CLASSIC_UI_HIDPI_DISABLED) {
+             // When HiDPI is enabled, redirect to the scaled version
+             return getIconImage(resourceURL);
+         }
+         if (resourceURL == null) {
+             return null;
+         }
          final String key = resourceURL.toString() + ICONIFIED_KEY + NOTSCALED_KEY;
          Image img = KNIMECorePlugin.getDefault().getImageRegistry().get(key);
          if (img != null) {
@@ -571,7 +583,7 @@ public final class ImageRepository {
          }
          KNIMECorePlugin.getDefault().getImageRegistry().put(key, img);
          return img;
-      }
+     }
 
 
      /**
