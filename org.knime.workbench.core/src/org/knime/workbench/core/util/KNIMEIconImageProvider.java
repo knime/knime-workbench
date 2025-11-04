@@ -101,4 +101,10 @@ public class KNIMEIconImageProvider extends KNIMEImageProvider {
 //        }
     }
 
+    @Override
+    protected final int getZoomAfterNormalization(final int originalImageSize, final int requestedZoom) {
+        // 3rd party code might provide icon images not complying to our expected size of 16px.
+        return requestedZoom * 16 / originalImageSize;
+    }
+
 }

@@ -242,11 +242,26 @@ public class KNIMEImageProvider implements ImageDataProvider {
     @Override
     public ImageData getImageData(final int zoom) {
         ImageData origImageData = getImageDataOld(zoom);
-        if (zoom == 100) {
+        int actualZoom = getZoomAfterNormalization(Math.max(origImageData.width, origImageData.height), zoom);
+        if (actualZoom == 100) {
             return origImageData;
         }
         // since 5.9, KNIME is high-DPI aware (to some extent), see QA-1304
-        return DPIUtil.scaleImageData(Display.getCurrent(), origImageData, zoom, 100);
+        return DPIUtil.scaleImageData(Display.getCurrent(), origImageData, actualZoom, 100);
+    }
+
+    /**
+     * The corrected zoom level, assuming the image should be of an expected size at 100% zoom. This implementation
+     * returns the requested zoom level unchanged but the icon image provider overrides this to return a zoom level
+     * based on an expected 16px image at 100% zoom.
+     *
+     * @param originalImageSize the size of the original image (largest of width or height)
+     * @param requestedZoom the requested zoom level
+     * @return the corrected zoom level
+     * @since 5.9
+     */
+    protected int getZoomAfterNormalization(final int originalImageSize, final int requestedZoom) {
+        return requestedZoom;
     }
 
     private ImageData getImageDataOld(final int zoom) {
