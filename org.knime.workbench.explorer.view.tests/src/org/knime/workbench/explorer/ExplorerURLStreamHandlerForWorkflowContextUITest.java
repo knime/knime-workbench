@@ -140,7 +140,7 @@ public class ExplorerURLStreamHandlerForWorkflowContextUITest {
         NodeContext.pushContext(createWorkflowManagerUIMock(ctx));
 
         m_expectedException.expect(IOException.class);
-        m_expectedException.expectMessage(containsString("does not have a context"));
+        m_expectedException.expectMessage(containsString("without a workflow context"));
         m_handler.openConnection(url);
     }
 
