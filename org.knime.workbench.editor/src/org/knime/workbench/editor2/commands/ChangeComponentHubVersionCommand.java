@@ -46,14 +46,17 @@
  */
 package org.knime.workbench.editor2.commands;
 
+import java.net.URISyntaxException;
 import java.time.Instant;
 
+import org.apache.hc.core5.net.URIBuilder;
 import org.eclipse.gef.commands.CompoundCommand;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeID;
 import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.node.workflow.WorkflowManager;
-import org.knime.core.util.hub.HubItemVersion;
+import org.knime.core.util.hub.ItemVersion;
+import org.knime.core.util.urlresolve.URLResolverUtil;
 
 /**
  * A compound command that first changes the link (source URI) of a linked Component and then performs an update.
@@ -64,7 +67,7 @@ public class ChangeComponentHubVersionCommand extends AbstractKNIMECommand {
 
     private final SubNodeContainer m_component;
 
-    private final HubItemVersion m_targetVersion;
+    private final ItemVersion m_targetVersion;
 
     /** To achieve a version change, the source URI is modified and then an update is performed. */
     private final CompoundCommand m_commandRegistry = new CompoundCommand();
@@ -75,7 +78,7 @@ public class ChangeComponentHubVersionCommand extends AbstractKNIMECommand {
      * @param targetVersion
      */
     public ChangeComponentHubVersionCommand(final WorkflowManager manager, final SubNodeContainer component,
-            final HubItemVersion targetVersion) {
+            final ItemVersion targetVersion) {
         super(manager);
 
         m_component = component;
@@ -93,12 +96,19 @@ public class ChangeComponentHubVersionCommand extends AbstractKNIMECommand {
     private void doLinkURIChange() {
         final var templateInfo = m_component.getTemplateInformation();
         final var oldUri = templateInfo.getSourceURI();
-        final var targetUri = m_targetVersion.applyTo(oldUri);
-        final var changeCommand = new ChangeSubNodeLinkCommand(getHostWFM(), m_component,
-            oldUri, templateInfo.getTimestampInstant(), targetUri, Instant.EPOCH);
-        if (changeCommand.canExecute()) {
-            changeCommand.execute();
-            m_commandRegistry.add(changeCommand);
+        final var targetUriBuilder = new URIBuilder(oldUri);
+        final var queryParams = URLResolverUtil.applyTo(m_targetVersion, targetUriBuilder.getQueryParams());
+        targetUriBuilder.setParameters(queryParams);
+
+        try {
+            final var changeCommand = new ChangeSubNodeLinkCommand(getHostWFM(), m_component, oldUri,
+                templateInfo.getTimestampInstant(), targetUriBuilder.build(), Instant.EPOCH);
+            if (changeCommand.canExecute()) {
+                changeCommand.execute();
+                m_commandRegistry.add(changeCommand);
+            }
+        } catch (URISyntaxException e) {
+            LOGGER.error("Unable to construct new URI for component", e);
         }
     }
 

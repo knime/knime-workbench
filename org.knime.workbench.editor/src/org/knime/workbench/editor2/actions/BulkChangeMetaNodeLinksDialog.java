@@ -63,6 +63,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 
+import org.apache.hc.core5.net.URIBuilder;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -104,6 +105,7 @@ import org.knime.core.util.Version;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
 import org.knime.core.util.urlresolve.KnimeUrlResolver.KnimeUrlVariant;
+import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.core.imports.ImportForbiddenException;
 import org.knime.workbench.core.imports.RepoObjectImport;
 import org.knime.workbench.core.imports.URIImporterFinder;
@@ -568,10 +570,16 @@ public final class BulkChangeMetaNodeLinksDialog extends Dialog {
             return;
         }
         final var targetVersion = dialog.getSelectedVersion();
-        final var newUri = targetVersion.applyTo(m_selectedLinkURI);
-        m_selectedLinkURI = newUri;
-        m_uriTextField.setText(newUri.toString());
-        m_uriInputViaText = false;
+        final var newUriBuilder = new URIBuilder(m_selectedLinkURI);
+        final var queryParams = URLResolverUtil.applyTo(targetVersion, newUriBuilder.getQueryParams());
+        newUriBuilder.setParameters(queryParams);
+        try {
+            m_selectedLinkURI = newUriBuilder.build();
+            m_uriTextField.setText(m_selectedLinkURI.toString());
+            m_uriInputViaText = false;
+        } catch (URISyntaxException e) {
+            LOGGER.error("Unable to construct new URI for component", e);
+        }
     }
 
     /**
