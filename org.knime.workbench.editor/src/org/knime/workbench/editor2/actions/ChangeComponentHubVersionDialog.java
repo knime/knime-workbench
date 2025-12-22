@@ -87,13 +87,16 @@ import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.NodeLogger;
 import org.knime.core.node.workflow.NodeContext;
 import org.knime.core.node.workflow.SubNodeContainer;
-import org.knime.core.node.workflow.TemplateUpdateUtil.LinkType;
 import org.knime.core.node.workflow.WorkflowManager;
 import org.knime.core.ui.util.SWTUtilities;
-import org.knime.core.util.hub.HubItemVersion;
+import org.knime.core.util.hub.CurrentState;
+import org.knime.core.util.hub.ItemVersion;
+import org.knime.core.util.hub.MostRecent;
 import org.knime.core.util.hub.NamedItemVersion;
+import org.knime.core.util.hub.SpecificVersion;
 import org.knime.core.util.pathresolve.ResolverUtil;
 import org.knime.core.util.pathresolve.URIToFileResolve.KNIMEURIDescription;
+import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.ui.KNIMEUIPlugin;
 import org.knime.workbench.ui.preferences.PreferenceConstants;
 
@@ -114,9 +117,7 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
     /** The component to change version of. */
     private final SubNodeContainer m_component;
 
-    private LinkType m_selectedLinkType;
-
-    private Integer m_selectedItemVersion;
+    private ItemVersion m_selectedItemVersion;
 
 
     /** Fetched using a {@link FetchVersionListJob} */
@@ -153,8 +154,7 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
         super(parent);
         m_manager = manager;
         m_component = subNodeContainer;
-        m_selectedLinkType = LinkType.LATEST_STATE;
-        m_selectedItemVersion = null;
+        m_selectedItemVersion = ItemVersion.currentState();
     }
 
     @Override
@@ -177,22 +177,22 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
         final var buttonGroup = new Composite(content, SWT.NONE);
         buttonGroup.setLayout(new RowLayout());
 
-        final var link = HubItemVersion.of(m_component.getTemplateInformation().getSourceURI()) //
-                .orElse(HubItemVersion.currentState());
+        final var uri = m_component.getTemplateInformation().getSourceURI();
+        final var version = URLResolverUtil.parseVersion(uri.getQuery()).orElseGet(ItemVersion::currentState);
 
         m_useSpecificVersionCheckBox = new Button(buttonGroup, SWT.RADIO);
         m_useSpecificVersionCheckBox.setText("Specific version    ");
-        m_useSpecificVersionCheckBox.setSelection(link.linkType() == LinkType.FIXED_VERSION);
+        m_useSpecificVersionCheckBox.setSelection(version instanceof SpecificVersion);
         m_useSpecificVersionCheckBox.addListener(SWT.Selection, l -> sync());
 
         m_useLatestVersionCheckBox = new Button(buttonGroup, SWT.RADIO);
         m_useLatestVersionCheckBox.setText("Latest version     ");
-        m_useLatestVersionCheckBox.setSelection(link.linkType() == LinkType.LATEST_VERSION);
+        m_useLatestVersionCheckBox.setSelection(version instanceof MostRecent);
         m_useLatestVersionCheckBox.addListener(SWT.Selection, l -> sync());
 
         m_useLatestStateCheckBox = new Button(buttonGroup, SWT.RADIO);
         m_useLatestStateCheckBox.setText("Latest edits");
-        m_useLatestStateCheckBox.setSelection(link.linkType() == LinkType.LATEST_STATE);
+        m_useLatestStateCheckBox.setSelection(version instanceof CurrentState);
         m_useLatestStateCheckBox.addListener(SWT.Selection, l -> sync());
         // holds the table and defines its resizing behavior
         var tableComp = new Composite(parent1, SWT.NONE);
@@ -227,27 +227,24 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
 
         final boolean okEnabled;
         final var table = m_tableViewer.getTable();
-        final LinkType selectedLinkType;
-        Integer selectedItemVersion = null;
+        ItemVersion selectedItemVersion = null;
         if (m_useLatestStateCheckBox.getSelection()) {
-            selectedLinkType = LinkType.LATEST_STATE;
+            selectedItemVersion = ItemVersion.currentState();
             okEnabled = m_useLatestStateCheckBox.isEnabled();
             table.setEnabled(false);
         } else if (m_useLatestVersionCheckBox.getSelection()) {
-            selectedLinkType = LinkType.LATEST_VERSION;
+            selectedItemVersion = ItemVersion.mostRecent();
             okEnabled = m_useLatestVersionCheckBox.isEnabled();
             table.setEnabled(false);
         } else {
-            selectedLinkType = LinkType.FIXED_VERSION;
             if (table.getSelectionIndex() != -1 && m_versions != null) {
                 int index = table.getSelectionIndex();
                 // the table is not sortable, the i-th row always corresponds to the i-th item version
-                selectedItemVersion = m_versions.get(index).version();
+                selectedItemVersion = ItemVersion.of(m_versions.get(index).version());
             }
             table.setEnabled(m_useSpecificVersionCheckBox.isEnabled());
             okEnabled = m_useSpecificVersionCheckBox.isEnabled() && selectedItemVersion != null;
         }
-        m_selectedLinkType = selectedLinkType;
         m_selectedItemVersion = selectedItemVersion;
 
         final var okButton = getButton(IDialogConstants.OK_ID);
@@ -295,9 +292,8 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
     /**
      * @return selected link item version
      */
-    public HubItemVersion getSelectedVersion() {
-        return new HubItemVersion(m_selectedLinkType,
-            m_selectedLinkType == LinkType.FIXED_VERSION ? m_selectedItemVersion : null);
+    public ItemVersion getSelectedVersion() {
+        return m_selectedItemVersion;
     }
 
     @Override
@@ -418,16 +414,14 @@ public final class ChangeComponentHubVersionDialog extends Dialog {
 
             m_tableViewer.setInput(m_versions);
             final var uri = m_component.getTemplateInformation().getSourceURI();
-            final var initialLinkPair = HubItemVersion.of(uri).orElse(HubItemVersion.currentState());
+            final var version = URLResolverUtil.parseVersion(uri.getQuery()).orElseGet(ItemVersion::currentState);
 
-            if (initialLinkPair.linkType() == LinkType.FIXED_VERSION) {
+            if (version instanceof SpecificVersion(var versionNumber)) {
                 // pre-select current version in the list
-
-                rowIdxForItemVersion(initialLinkPair.versionNumber())//
+                rowIdxForItemVersion(versionNumber)//
                     .map(m_tableViewer::getElementAt)//
                     .ifPresent(o -> m_tableViewer.setSelection(new StructuredSelection(o), true));
             }
-
             sync();
         }
 

@@ -58,7 +58,8 @@ import org.knime.core.node.workflow.SubNodeContainer;
 import org.knime.core.ui.node.workflow.SubNodeContainerUI;
 import org.knime.core.ui.util.SWTUtilities;
 import org.knime.core.ui.wrapper.Wrapper;
-import org.knime.core.util.hub.HubItemVersion;
+import org.knime.core.util.hub.ItemVersion;
+import org.knime.core.util.urlresolve.URLResolverUtil;
 import org.knime.workbench.KNIMEEditorPlugin;
 import org.knime.workbench.core.util.ImageRepository;
 import org.knime.workbench.editor2.WorkflowEditor;
@@ -188,15 +189,15 @@ public class ChangeComponentHubVersionAction extends AbstractNodeAction {
             return;
         }
 
-        final var previousVersion = HubItemVersion.of(component.getTemplateInformation().getSourceURI()) //
-                .orElse(HubItemVersion.currentState());
-
         // prompt for target version
         final var dialog = new ChangeComponentHubVersionDialog(shell, component, manager);
         if (dialog.open() != 0) {
             // dialog has been cancelled - no changes
             return;
         }
+
+        final var uri = component.getTemplateInformation().getSourceURI();
+        final var previousVersion = URLResolverUtil.parseVersion(uri.getQuery()).orElseGet(ItemVersion::currentState);
 
         // only do something if versions differ
         final var targetVersion = dialog.getSelectedVersion();
